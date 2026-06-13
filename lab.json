@@ -16,5 +16,5 @@
   "icon": "flask",
   "accent": "#22c55e",
   "pinned": false,
-  "notes": "Monorepo na zabawki, public, podpięte do chmury (GitHub). Żywe wersje publikowane na GitHub Pages (workflow .github/workflows/deploy.yml); strona główna index.html linkuje do projektów (lithos, hello)."
+  "notes": "Monorepo na zabawki, public, podpięte do chmury (GitHub). Żywe wersje publikowane na GitHub Pages (workflow .github/workflows/deploy.yml); strona główna index.html linkuje do projektów (aura, lithos, hello)."
 }

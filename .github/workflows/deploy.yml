@@ -30,10 +30,18 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: lithos/package-lock.json
+          cache-dependency-path: |
+            lithos/package-lock.json
+            aura/package-lock.json
 
       - name: Build Lithos
         working-directory: lithos
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Aura
+        working-directory: aura
         run: |
           npm ci
           npm run build
@@ -45,6 +53,7 @@ jobs:
           cp index.html _site/index.html
           cp -r hello _site/hello
           cp -r lithos/dist _site/lithos
+          cp -r aura/dist _site/aura
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
