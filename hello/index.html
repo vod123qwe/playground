@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>hello, playground</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      display: grid; place-items: center;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(120% 120% at 50% 0%, #0f172a 0%, #020617 60%);
+      color: #e2e8f0;
+    }
+    .card {
+      text-align: center; padding: 48px 40px; max-width: 460px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    }
+    h1 { font-size: 38px; margin: 0 0 10px; letter-spacing: -0.02em; }
+    .wave { display: inline-block; transform-origin: 70% 70%; animation: wave 2.4s ease-in-out infinite; }
+    @keyframes wave {
+      0%, 60%, 100% { transform: rotate(0); }
+      10% { transform: rotate(14deg); }
+      20% { transform: rotate(-8deg); }
+      30% { transform: rotate(14deg); }
+      40% { transform: rotate(-4deg); }
+      50% { transform: rotate(10deg); }
+    }
+    p { margin: 0; color: #94a3b8; line-height: 1.6; }
+    .pill {
+      margin-top: 26px; display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px; color: #4ade80;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 12px #22c55e; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1><span class="wave">👋</span> hello, playground</h1>
+    <p>Piaskownica działa. Załóż obok kolejny podfolder i baw się dalej.</p>
+    <div class="pill"><span class="dot"></span> połączone z chmurą</div>
+  </main>
+</body>
+</html>

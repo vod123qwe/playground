@@ -1,0 +1,20 @@
+{
+  "name": "Playground",
+  "tagline": "Piaskownica na szybkie eksperymenty i zabawki",
+  "description": "Publiczne monorepo na GitHubie do projektów testowych. Każdy eksperyment to osobny podfolder. Połączone z chmurą przez git remote (origin → vod123qwe/playground).",
+  "category": "experiment",
+  "status": "active",
+  "type": "web-static",
+  "tags": ["sandbox", "experiments", "github"],
+  "tech": ["html", "js", "git"],
+  "launch": {
+    "file": "hello/index.html"
+  },
+  "links": {
+    "repo": "https://github.com/vod123qwe/playground"
+  },
+  "icon": "flask",
+  "accent": "#22c55e",
+  "pinned": false,
+  "notes": "Świeżo założone monorepo na zabawki, public, podpięte do chmury (GitHub)."
+}
