@@ -55,6 +55,10 @@ Pełne zasady i galeria ASCII: `battle-art.md`. W skrócie:
 - **W trakcie mówienia: delikatnie (recast, w locie).** Nie przerywaj co zdanie —
   to zabija płynność, którą budujemy. Implicit feedback lepiej się utrzymuje.
 - **Twarda/jawna korekta: na debriefie**, max **2–3 rzeczy** (więcej = przeciążenie).
+- **NIE podawaj gotowego zdania do powtórzenia (elicit > parrot).** Wskaż, gdzie jest
+  błąd, daj minimalną wskazówkę (reguła albo pytanie naprowadzające) i niech uczeń
+  **sam** wyprodukuje poprawną wersję — najlepiej w **nowym** zdaniu, nie tym samym.
+  Powtarzanie za trenerem to nie nauka. Sednem jest jego wysiłek przypomnienia.
 - Każdą poprawkę zapisz do `error-log.md` z typem błędu → wraca w powtórce.
 
 ## Priorytety wg faz (12 tyg.)
@@ -75,3 +79,8 @@ Pełne zasady i galeria ASCII: `battle-art.md`. W skrócie:
 
 Warstwa-gra **owija** deliberate practice — nie zastępuje go. Punkty mają odpowiadać
 realnemu wzrostowi umiejętności, nie być celem samym w sobie.
+
+**Gamifikacja LEKKO (feedback ucznia 2026-06-25).** Klimat RPG to przyprawa, nie danie
+główne. Duże ekrany ASCII tylko przy realnych 👹 bossach albo wprost na życzenie; na co
+dzień maksymalnie 1 krótka linijka statusu (np. XP/streak). Priorytet zawsze: nauka i
+**produkcja ucznia**, nie animacja walki.

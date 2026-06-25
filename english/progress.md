@@ -7,7 +7,7 @@
 
 - **Klasa:** UX / Design Systems Specialist
 - **Poziom:** 1  *(awans na 2 przy 100 XP)*
-- **XP:** 50
+- **XP:** 70
 - **Akt kampanii:** Akt I — Płynność (tyg. 1–4)
 - **Trudność:** Normal *(→ Nightmare → Hell, w miarę wzrostu)*
 
@@ -56,8 +56,8 @@ Pokonany w pojedynczej walce, ale jeszcze nie wymarły → **respawnuje słabszy
 |---|---|---|---|
 | 🧟 Present Perfect Wraith (`#tense`) | 2 | ✅✅☐ | 🩸 ranny — 1 czysty hit do śmierci |
 | 🐛 Preposition Slime (`#prep` — work **on**) | 2 | ✅☐☐ | 🩸 ranny |
-| 🦂 "to + -ing" Imp (`#collocation`) | 2 | ☐☐☐ | 😈 **uniknął ciosu** — „to **make**" zamiast „making" |
-| 👻 Article Phantom (`#articles` — głównie **the**) | 4 | ☐☐☐ | active — „a" już łapiesz, „the" ucieka |
+| 🦂 "to + -ing" Imp (`#collocation`) | 2 | ✅☐☐ | 🩸 trafiony — „to making" wskoczyło |
+| 👻 Article Phantom (`#articles` — głównie **the**) | 4 | ✅☐☐ | „the" zaczyna wskakiwać |
 
 ---
 *Ostatnia aktualizacja: 2026-06-25 (Quest 1 retry — walka z Present Perfect Wraith)*

@@ -25,6 +25,16 @@ sam siebie ulepsza w czasie.
 - Szybka wygrana do utrwalenia: "looking forward to **+ -ing**".
 - Obserwacja do pilnowania: przyimek "work **on** (a project)", nie "work with".
 - Imię: w intro użył "Jarek" (zdrobnienie). Zapytać, czy do klientów woli Jakub/Jarek.
+- 2026-06-25 (retry + walki): present perfect poprawiony **w 1. podejściu retry** (2× czysto)
+  → automatyzacja zadziałała szybko. "to + -ing" poprawiony w 2. podejściu. "the" zaczyna
+  wskakiwać. **Battle mode mocno go napędził** (sam poprosił o rozbudowę) — utrzymać i rozwijać.
+- Do pilnowania: filler **"uh"** pojawił się raz przy „like we did, uh…" — drobna pauza,
+  ale nie zamarł (ok). Na płynności: ćwiczyć zamianę fillerów na świadomą pauzę/„let me see".
+- ⚠️ **WAŻNY feedback ucznia 2026-06-25:** „nie mów mi dokładnie co mam powiedzieć,
+  bardziej ucz mnie; za bardzo idziesz w formę RPG". Trafne. Błąd: podałem gotowe zdanie
+  do powtórzenia → uczeń tylko parrotował, zero wysiłku przypomnienia. Korekta metody
+  wdrożona w `CLAUDE.md`: (1) elicit > parrot — naprowadzać, nie podawać; produkcja w
+  nowym zdaniu. (2) Gamifikacja lekko — duże ASCII tylko przy bossach/na życzenie.
 
 ## Hipotezy do sprawdzenia
 
