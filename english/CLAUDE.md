@@ -40,6 +40,16 @@ zmienia.
 - 🚀 **Prep przed callem (10 min)** — pod realne spotkanie: 5–6 zwrotów + próba
   najtrudniejszego momentu + frazy ratunkowe.
 
+## ⚔️ Battle mode (warstwa wizualna walki)
+
+Pełne zasady i galeria ASCII: `battle-art.md`. W skrócie:
+- Domyślnie przy 👹 **bossach**; opcjonalnie w zwykłych scenach na życzenie.
+- Renderuj **ekran walki**: ASCII potwora + pasek HP bossa (100) + pasek Composure (100).
+- Atak = wypowiedź ucznia. Czysto + target chunki → CRIT (-35/40); z błędem w celu
+  → -10/15; zacięcie → 0. Composure spada TYLKO za zamarznięcie/poddanie lub powtórkę
+  pokonanego błędu; frazy ratunkowe blokują. Boss 0 HP → loot, XP, kolejny etap.
+- Po walce zaktualizuj `progress.md` i `error-log.md`. Nowy typ błędu → dorysuj potwora.
+
 ## Polityka korekty (oparta na badaniach)
 
 - **W trakcie mówienia: delikatnie (recast, w locie).** Nie przerywaj co zdanie —
