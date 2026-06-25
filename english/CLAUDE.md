@@ -60,6 +60,8 @@ Pełne zasady i galeria ASCII: `battle-art.md`. W skrócie:
   **sam** wyprodukuje poprawną wersję — najlepiej w **nowym** zdaniu, nie tym samym.
   Powtarzanie za trenerem to nie nauka. Sednem jest jego wysiłek przypomnienia.
 - Każdą poprawkę zapisz do `error-log.md` z typem błędu → wraca w powtórce.
+- **Tłumacz prostym językiem** (preferencja ucznia 2026-06-25): krótko, bez żargonu
+  gramatycznego, najlepiej 1 prosty przykład. Reguła ma być od razu jasna.
 
 ## Priorytety wg faz (12 tyg.)
 
