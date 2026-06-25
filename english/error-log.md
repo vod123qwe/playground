@@ -14,10 +14,11 @@ i te najczęściej się powtarzające. Gdy coś powiesz poprawnie 3× z rzędu �
 | Data | Co powiedziałeś | Poprawnie | Typ | Reps ✅ |
 |---|---|---|---|---|
 | _przykład_ | _"I am working on this since Monday"_ | _"I **have been** working on this since Monday"_ | `#tense` | ☐☐☐ |
-| 2026-06-25 | "I'm designer for 15 years" / "lately I was working" | "I've **been a** designer for over 15 years" / "I've **been working**" | `#tense` | ☐☐☐ |
+| 2026-06-25 | "I'm designer for 15 years" / "lately I was working" | "I've **been a** designer for over 15 years" / "I've **been working**" | `#tense` | ✅✅☐ |
 | 2026-06-25 | "looking forward to **make**" | "looking forward to **making**" | `#collocation` | ☐☐☐ |
 | 2026-06-25 | "I'm product designer" / "I'm person who" | "I'm **a** product designer" / "I'm **the** person who" | `#articles` | ☐☐☐ |
-| 2026-06-25 | "work **with** similar projects" | "work **on** similar projects" | `#prep` | ☐☐☐ |
+| 2026-06-25 | "work **with** similar projects" | "work **on** similar projects" | `#prep` | ✅☐☐ |
+| 2026-06-25 | "in web stream" / "with web project" | "in **the** web stream" / "the web project" | `#articles` | ☐☐☐ |
 
 <!--
 Format wpisu:

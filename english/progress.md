@@ -6,8 +6,8 @@
 ## 🧙 Postać
 
 - **Klasa:** UX / Design Systems Specialist
-- **Poziom:** 1
-- **XP:** 20
+- **Poziom:** 1  *(awans na 2 przy 100 XP)*
+- **XP:** 50
 - **Akt kampanii:** Akt I — Płynność (tyg. 1–4)
 - **Trudność:** Normal *(→ Nightmare → Hell, w miarę wzrostu)*
 
@@ -23,14 +23,14 @@
 
 | Tor | Poziom | Pasek |
 |---|---|---|
-| 🗣️ Fluency (płynność) | 8 | `█░░░░░░░░░` |
-| 💼 Register (rejestr/słownictwo) | 6 | `█░░░░░░░░░` |
+| 🗣️ Fluency (płynność) | 14 | `██░░░░░░░░` |
+| 💼 Register (rejestr/słownictwo) | 12 | `██░░░░░░░░` |
 | 👂 Listening (słuchanie) | 4 | `░░░░░░░░░░` |
 
 ## 🗺️ Kampania — questy
 
 ### Akt I — Płynność (Normal)
-- [x] **Quest 1:** Self-intro — pierwsza próba zaliczona ✅ (2026-06-25). Polish przez retry.
+- [x] **Quest 1:** Self-intro ✅ — retry zaliczony, present perfect opanowany w boju (2026-06-25)
 - [ ] **Quest 2:** Opisz jeden projekt, z którego jesteś dumny (2 min, 4/3/2)
 - [ ] **Quest 3:** Small talk z klientem przed spotkaniem
 - [ ] 👹 **BOSS:** „Walk me through what you do" — płynnie, bez zamierania
@@ -45,18 +45,19 @@
 
 Zdobyte chunki lądują tu jako „loot of the day", a na stałe w `chunks.md`.
 - 2026-06-25: ⭐ "I've been a [role] for over X years" · ⭐ "I'm the person who makes sure…"
-  · "looking forward to **making**…"
+  · ⭐ "I've been working **with you on** other projects" · "looking forward to **making**…"
 
 ## 📖 Bestiariusz (Twoje powtarzające się błędy = potwory)
 
-Potwory grupowane **wg reguły** (nie wg pojedynczego wystąpienia). „Pokonany" = 3× poprawnie.
+Potwory grupowane **wg reguły**. „Pokonany" = 3× poprawnie z rzędu (✅✅✅).
+Pokonany w pojedynczej walce, ale jeszcze nie wymarły → **respawnuje słabszy**, aż 3×.
 
-| Potwór (reguła) | Spotkań | Status |
-|---|---|---|
-| 🧟 Present Perfect Wraith (`#tense` — `have been` na trwanie/doświadczenie) | 2 | active |
-| 👻 Article Phantom (`#articles` — brak a/the) | 3 | active |
-| 🦂 "to + -ing" Imp (`#collocation` — looking forward to **+ -ing**) | 1 | active |
-| 🐛 Preposition Slime (`#prep` — work **on**, nie work with) | 1 | active |
+| Potwór (reguła) | Spotkań | Postęp | Status |
+|---|---|---|---|
+| 🧟 Present Perfect Wraith (`#tense`) | 2 | ✅✅☐ | 🩸 ranny — 1 czysty hit do śmierci |
+| 🐛 Preposition Slime (`#prep` — work **on**) | 2 | ✅☐☐ | 🩸 ranny |
+| 🦂 "to + -ing" Imp (`#collocation`) | 2 | ☐☐☐ | 😈 **uniknął ciosu** — „to **make**" zamiast „making" |
+| 👻 Article Phantom (`#articles` — głównie **the**) | 4 | ☐☐☐ | active — „a" już łapiesz, „the" ucieka |
 
 ---
-*Ostatnia aktualizacja: 2026-06-25 (Quest 1, pierwsza próba)*
+*Ostatnia aktualizacja: 2026-06-25 (Quest 1 retry — walka z Present Perfect Wraith)*
