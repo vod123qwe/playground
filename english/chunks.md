@@ -4,6 +4,13 @@ Płynni mówcy nie składają zdań słowo po słowie — wklejają gotowe klock
 kupują czas na myślenie i likwidują zacinanie. Cel: ~150 chunków z Twojej domeny.
 Zdobywasz je jako „loot" w scenach. ⭐ = priorytet do utrwalenia.
 
+## 👋 Self-intro (na call z klientem)
+
+- ⭐ "I've been a [role] for over X years" — *doświadczenie* (uwaga: present perfect!)
+- ⭐ "I'm the person who makes sure…" — rola bez żargonu
+- "I mainly work on…" — prosta rama na to, czym się zajmujesz
+- "I'm really looking forward to **working** with you." — ciepłe domknięcie (+ -ing!)
+
 ## 🎤 Prezentowanie / prowadzenie
 
 - ⭐ "Let me walk you through…" — *Pozwólcie, że przeprowadzę was przez…*

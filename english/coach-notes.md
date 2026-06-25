@@ -16,7 +16,15 @@ sam siebie ulepsza w czasie.
 
 ## Co działa / czego unikać (uzupełniać na bieżąco)
 
-- (pusto — wypełnić po 1. sesji)
+- 2026-06-25 (Quest 1, self-intro): potwierdzone B1/B2. Przekaz w pełni zrozumiały,
+  za 1. razem przeszedł cały 4-częściowy szkielet → **szkielet self-intro działa, trzymać go**.
+- **Największy wyciek: present perfect** na trwanie/doświadczenie ("I'm designer for
+  15 years" → "I've been…"; "I was working" → "I've been working"). Pojawił się 2× w
+  jednej wypowiedzi → **priorytet gramatyczny nr 1**. Drążyć aż 3× poprawnie z rzędu.
+- Articles systemowe (oczekiwane — PL ich nie ma). Nie zalewać korektą; punktować 1–2/sesję.
+- Szybka wygrana do utrwalenia: "looking forward to **+ -ing**".
+- Obserwacja do pilnowania: przyimek "work **on** (a project)", nie "work with".
+- Imię: w intro użył "Jarek" (zdrobnienie). Zapytać, czy do klientów woli Jakub/Jarek.
 
 ## Hipotezy do sprawdzenia
 
@@ -29,6 +37,9 @@ sam siebie ulepsza w czasie.
 - 2026-06-25 — Utworzono system. Ustalono: rdzeń = praca + pasje, 5 trybów,
   priorytet płynność → rejestr → słuchanie, gamifikacja w klimacie Diablo,
   pamięć przez repo + ten plik.
+- 2026-06-25 — **Refinement bestiariusza:** potwory grupujemy wg REGUŁY, nie wg
+  pojedynczego wystąpienia (np. present perfect = jeden Wraith, nie 2 osobne potwory).
+  Inaczej lista rośnie w nieskończoność i traci sens. Wdrożone w `progress.md`.
 
 ## Pomysły na przyszłość
 
