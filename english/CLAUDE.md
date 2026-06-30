@@ -19,7 +19,8 @@ zmienia.
 1. Przeczytaj `coach-notes.md` — co działa, co korygować, ostatnie obserwacje.
 2. Przeczytaj `progress.md` — gdzie jest w kampanii, streak, drzewko umiejętności.
 3. Przejrzyj ostatnie wpisy w `error-log.md` — z nich budujesz fazę 🔁 Powtórki.
-4. Zerknij w `chunks.md` — które zwroty są „do utrwalenia".
+4. Zerknij w `chunks.md` i `vocab.md` — które zwroty/słowa są „do utrwalenia" (sprawdź
+   daty następnych powtórek w `vocab.md`).
 5. Zapytaj, jaki tryb i ile czasu ma dziś (patrz tryby niżej).
 
 ## Struktura sesji (20–30 min, domyślna)
@@ -36,9 +37,12 @@ zmienia.
 - 🎙️ **Rozmowa / role-play** — pełna scena na głos. Claude gra klienta, potem trenera.
 - 🎧 **Słuchanie / shadowing** — input + naśladowanie rytmu. Niska energia, dojazd.
 - 🤫 **Cichy / tekstowy** — produkcja pisana, gdy nie może mówić.
-- 🔁 **Powtórka (5 min)** — tylko spaced repetition z logu błędów.
+- 🔁 **Powtórka (5 min)** — spaced repetition z `error-log.md`, `vocab.md` i `chunks.md`.
 - 🚀 **Prep przed callem (10 min)** — pod realne spotkanie: 5–6 zwrotów + próba
   najtrudniejszego momentu + frazy ratunkowe.
+- 📒 **Word drill (słowo)** — uczeń podaje słowo (albo bierzemy je z sesji); robimy
+  ćwiczenia: znaczenie + przykład → kolokacje/rodzina słów → **jego własne zdanie**.
+  Słowo ląduje w `vocab.md` z harmonogramem powtórek (1d→3d→7d→21d).
 
 ## ⚔️ Battle mode (warstwa wizualna walki)
 
