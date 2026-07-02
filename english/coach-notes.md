@@ -56,3 +56,7 @@ sam siebie ulepsza w czasie.
 - Etap 1: single-file appka = talia + SRS + streak + launcher sesji (gdy nawyk
   utrzyma się ~2 tyg.).
 - Etap 2: generowanie scen przez API + ewentualnie TTS.
+- ⭐ **PRIORYTET (2026-07-02):** uczeń oczekuje, że tag `//en`/`//n` **odtworzy realny
+  głos lektora**. W czacie to niemożliwe (tekst-only). To najmocniejszy argument za
+  narzędziem z **TTS** — wtedy tag naprawdę odpala audio. Do tego czasu: tryb głosowy
+  apki Claude albo czytnik systemowy (Mac Speech / Windows Narrator / „Read aloud").
