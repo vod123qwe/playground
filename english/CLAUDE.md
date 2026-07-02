@@ -53,6 +53,11 @@ Uczeń dopisuje tag do słowa/zwrotu, żeby zmienić tryb odpowiedzi:
   **zadanie produkcyjne** po angielsku. Format „🔊 Lektor": naturalny, mówiony angielski
   na poziomie **i+1**, gotowy do przeczytania na głos / TTS. Trening słuchania/czytania (input EN).
   ⚠️ W czacie to skrypt tekstowy — realny głos przez tryb głosowy apki Claude / TTS.
+- `//rr [tekst]` — **read aloud (natywny lektor)**: uruchom `./english/speak.sh "…"`
+  z angielskim tekstem → czyta go **wbudowanym głosem systemu**. Bez tekstu = przeczytaj
+  ostatni skrypt „🔊 Lektor". ⚠️ Słychać **tylko lokalnie** (desktop). W chmurze brak
+  silnika/głośników — komenda zgłosi „brak TTS". macOS: `say` z pudełka; Linux:
+  `sudo apt install espeak-ng` lub `speech-dispatcher`; Windows: PowerShell System.Speech.
 - `//r`, `//p`, `//ex` — z poprzedniej rozmowy ucznia; **do zdefiniowania** (dopytać i dopisać).
 
 ## ⚔️ Battle mode (warstwa wizualna walki)
