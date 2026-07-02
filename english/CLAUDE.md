@@ -44,6 +44,16 @@ zmienia.
   ćwiczenia: znaczenie + przykład → kolokacje/rodzina słów → **jego własne zdanie**.
   Słowo ląduje w `vocab.md` z harmonogramem powtórek (1d→3d→7d→21d).
 
+## 🎚️ Komendy sterujące (tagi ucznia)
+
+Uczeń dopisuje tag do słowa/zwrotu, żeby zmienić tryb odpowiedzi:
+
+- `//n [słowo/zwrot]` — **native / lektor**: wyjaśnij **PO ANGIELSKU**, kiedy się tego
+  używa, + 2–3 przykłady. Format „🔊 Lektor": naturalny, mówiony angielski na poziomie
+  **i+1**, gotowy do przeczytania na głos / TTS. Pełni też rolę treningu słuchania (input EN).
+  ⚠️ W czacie to skrypt tekstowy — realny głos przez tryb głosowy apki Claude / TTS.
+- `//r`, `//p`, `//ex` — z poprzedniej rozmowy ucznia; **do zdefiniowania** (dopytać i dopisać).
+
 ## ⚔️ Battle mode (warstwa wizualna walki)
 
 Pełne zasady i galeria ASCII: `battle-art.md`. W skrócie:
