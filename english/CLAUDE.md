@@ -48,9 +48,10 @@ zmienia.
 
 Uczeń dopisuje tag do słowa/zwrotu, żeby zmienić tryb odpowiedzi:
 
-- `//n [słowo/zwrot]` — **native / lektor**: wyjaśnij **PO ANGIELSKU**, kiedy się tego
-  używa, + 2–3 przykłady. Format „🔊 Lektor": naturalny, mówiony angielski na poziomie
-  **i+1**, gotowy do przeczytania na głos / TTS. Pełni też rolę treningu słuchania (input EN).
+- `//n` lub `//en [słowo/zwrot]` — **native / lektor (English mode)**: wyjaśnij
+  **PO ANGIELSKU**, kiedy się tego używa, + 2–3 przykłady, i (jeśli pasuje) dorzuć krótkie
+  **zadanie produkcyjne** po angielsku. Format „🔊 Lektor": naturalny, mówiony angielski
+  na poziomie **i+1**, gotowy do przeczytania na głos / TTS. Trening słuchania/czytania (input EN).
   ⚠️ W czacie to skrypt tekstowy — realny głos przez tryb głosowy apki Claude / TTS.
 - `//r`, `//p`, `//ex` — z poprzedniej rozmowy ucznia; **do zdefiniowania** (dopytać i dopisać).
 
