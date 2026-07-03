@@ -19,6 +19,8 @@ i te najczęściej się powtarzające. Gdy coś powiesz poprawnie 3× z rzędu �
 | 2026-06-25 | "I'm product designer" / "I'm person who" | "I'm **a** product designer" / "I'm **the** person who" | `#articles` | ☐☐☐ |
 | 2026-06-25 | "work **with** similar projects" | "work **on** similar projects" | `#prep` | ✅☐☐ |
 | 2026-06-25 | "in web stream" / "with web project" | "in **the** web stream" / "the web project" | `#articles` | ✅☐☐ |
+| 2026-07-02 | "it might **be not** a good idea" | "it might **not be** a good idea" | `#word-order` | ☐☐☐ |
+| 2026-07-02 | "the video **is taking** much more energy" | "video **uses** much more power" | `#tense` | ☐☐☐ |
 
 <!--
 Format wpisu:

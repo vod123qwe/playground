@@ -24,7 +24,7 @@ wraca w trybie 🔁 Powtórka wg harmonogramu, aż wejdzie w nawyk.
 ### frankly speaking — szczerze mówiąc, mówiąc wprost
 - 📌 Przykład: "**Frankly speaking**, I don't think this works on mobile."
 - 🔗 Warianty (to samo znaczenie): to be honest · honestly · to be frank · skrót: "Frankly, …"
-- ✍️ Twoje zdanie: *(czeka — ułóż własne z „Frankly speaking, …")*
+- ✍️ Twoje zdanie: "Frankly speaking, it's not a good idea, because of the cognitive overload." ✅ (2026-07-02, użyte poprawnie)
 - 🔁 Powtórki: ☐ 1d  ☐ 3d  ☐ 7d  ☐ 21d   | następna: **2026-07-03**
 
 ## ✅ Opanowane
