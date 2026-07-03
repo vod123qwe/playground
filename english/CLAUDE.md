@@ -51,8 +51,10 @@ Uczeń dopisuje tag do słowa/zwrotu, żeby zmienić tryb odpowiedzi:
 - `//n` lub `//en [słowo/zwrot]` — **native / lektor (English mode)**: wyjaśnij
   **PO ANGIELSKU**, kiedy się tego używa, + 2–3 przykłady, i (jeśli pasuje) dorzuć krótkie
   **zadanie produkcyjne** po angielsku. Format „🔊 Lektor": naturalny, mówiony angielski
-  na poziomie **i+1**, gotowy do przeczytania na głos / TTS. Trening słuchania/czytania (input EN).
-  ⚠️ W czacie to skrypt tekstowy — realny głos przez tryb głosowy apki Claude / TTS.
+  na poziomie **i+1**. Trening słuchania/czytania (input EN).
+  **Auto-lektor:** jeśli działasz **lokalnie**, po wypisaniu skryptu od razu uruchom
+  `./english/speak.sh "…"` (jak `//rr`), żeby przeczytać go na głos. W chmurze pomiń
+  audio (brak silnika) — pokaż tylko tekst.
 - `//rr [tekst]` — **read aloud (natywny lektor)**: uruchom `./english/speak.sh "…"`
   z angielskim tekstem → czyta go **wbudowanym głosem systemu**. Bez tekstu = przeczytaj
   ostatni skrypt „🔊 Lektor". ⚠️ Słychać **tylko lokalnie** (desktop). W chmurze brak
