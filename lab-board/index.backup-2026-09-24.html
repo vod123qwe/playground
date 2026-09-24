@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>lab board</title>
+<meta name="description" content="Infinite draggable board of experiments. WebGL bends the field while it moves; click a piece to open its side panel.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<script>(function(){var t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.dataset.theme=t;})();</script>
+<style>
+  :root{
+    --paper:#e9e6df; --ink:#141414; --muted:#6f6c66; --line:rgba(20,20,20,.15); --grain-opacity:.14; --dim:rgba(20,20,20,.25);
+    --header:56px; --gutter:clamp(16px,2.5vw,32px);
+    --panel-ease:cubic-bezier(.8,0,.17,1); --panel-time:1400ms;
+    --card-ease:cubic-bezier(.2,.8,.2,1); --card-time:650ms; --card-close:450ms;
+  }
+  :root[data-theme="dark"]{ --paper:#161616; --ink:#ecebe6; --muted:#9a978f; --line:rgba(236,235,230,.14); --grain-opacity:.09; --dim:rgba(0,0,0,.45) }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Google Sans Flex","Segoe UI",system-ui,sans-serif; font-size:13px; line-height:1.4;
+    overflow:hidden; overscroll-behavior:none; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  button{font:inherit;color:inherit}
+
+  /* ---------- stage ---------- */
+  .stage{position:fixed; inset:0; width:100%; height:100dvh; isolation:isolate; overflow:hidden; touch-action:none}
+  .board{position:absolute; inset:0; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; transition:transform var(--card-time) var(--card-ease)}
+  .board.is-dragging{cursor:grabbing}
+  .board.recede{transform:scale(.96)}
+  .stage.has-cursor .board{cursor:none}
+  .board canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+  .slots{position:absolute; inset:0}
+  .slots a{
+    position:absolute; top:0; left:0; width:0; height:0; display:none;
+    transform-origin:top left; will-change:transform; text-decoration:none; cursor:inherit;
+    -webkit-user-drag:none; outline-offset:4px;
+  }
+  .slots a:focus-visible{outline:2px solid var(--ink)}
+  .slots.no-hit{pointer-events:none}
+  .board.fallback .slots a{background-size:cover; background-position:center; background-color:var(--ink)}
+
+  /* ---------- custom cursor (pointer: fine only) ---------- */
+  .cursor{
+    position:absolute; top:0; left:0; z-index:8; pointer-events:none; mix-blend-mode:difference; color:#fff;
+    display:none; will-change:transform;
+  }
+  .stage.has-cursor .cursor{display:block}
+  .cursor.hidden{opacity:0}
+  .cur-ring{
+    position:absolute; left:0; top:0; width:8px; height:8px; border-radius:50%; background:#fff;
+    transform:translate(-50%,-50%); will-change:transform,width,height,box-shadow;
+  }
+  .cur-pulse{position:absolute; left:0; top:0; width:8px; height:8px; border-radius:50%; border:1.5px solid #fff; transform:translate(-50%,-50%); opacity:0}
+  .cur-label{
+    position:absolute; left:0; top:0; white-space:nowrap; font-weight:500; font-size:13px; line-height:1;
+    transform:translate(28px,-50%); opacity:0; transition:opacity .2s, transform .35s var(--card-ease);
+  }
+  .cur-label b{font-weight:500; opacity:.55; margin-right:8px}
+  .cursor.on .cur-label{opacity:1}
+  .cursor.drag .cur-label{opacity:0; transform:translate(20px,-50%)}
+
+  /* ---------- hover words: simple english words in word-wide containers, gone after a moment ---------- */
+  .tilelayer{position:absolute; top:0; left:0; width:0; height:0; z-index:4; pointer-events:none; overflow:hidden; display:none; will-change:transform}
+  .tilelayer.on{display:block}
+  .fg img{position:absolute; display:block}
+  /* liquid glass: blur + saturate the video behind, a cool light tint, a bright rim and a refractive inner edge */
+  .fg .glass{
+    position:absolute; display:none; overflow:hidden;
+    -webkit-backdrop-filter:blur(9px) saturate(1.45) brightness(1.05); backdrop-filter:blur(9px) saturate(1.45) brightness(1.05);
+    background:
+      radial-gradient(120% 140% at 28% 18%, rgba(255,255,255,.28), rgba(255,255,255,.08) 60%),
+      linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 40%, rgba(0,0,0,.08));
+    box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.42), inset 0 -10px 24px -14px rgba(255,255,255,.55), inset 0 12px 28px -18px rgba(0,0,0,.35), 0 12px 40px -18px rgba(0,0,0,.6);
+  }
+  .fg .glass.on{display:block}
+  .fg .glass::after{content:""; position:absolute; inset:2px; border-radius:inherit; box-shadow:inset 0 0 18px -6px rgba(255,255,255,.5); pointer-events:none}
+  .word{
+    position:absolute; top:0; left:0; width:36px; height:36px; border-radius:0; overflow:hidden;
+    will-change:width,transform,opacity; display:block;
+  }
+  .word svg{position:absolute; left:0; top:0; width:36px; height:36px; display:block; shape-rendering:crispEdges}
+
+  /* ---------- header / footer ---------- */
+  .top{
+    position:absolute; inset:0 0 auto 0; height:var(--header); z-index:4; pointer-events:none;
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 var(--gutter);
+    mix-blend-mode:difference; color:#fff;
+  }
+  .top *{pointer-events:auto}
+  .brand{font-weight:700; letter-spacing:-.01em; text-decoration:none}
+  .nav{display:flex; gap:18px; justify-self:center}
+  .nav a{text-decoration:none; opacity:.6}
+  .nav a.is-current{opacity:1; font-weight:700}
+  .top .right{justify-self:end; text-decoration:underline; text-underline-offset:3px}
+  .foot{
+    position:absolute; inset:auto 0 0 0; z-index:4; pointer-events:none; padding:0 var(--gutter) 16px;
+    display:flex; justify-content:space-between; gap:24px; mix-blend-mode:difference; color:#fff; font-size:12px;
+  }
+  .foot > span{white-space:nowrap}
+  .foot .k{opacity:.6}
+  .foot .switch{pointer-events:auto; display:flex; gap:10px; align-items:center}
+  .foot .switch button{border:0; background:transparent; padding:0; cursor:pointer; opacity:.6; font:inherit; color:inherit}
+  .foot .switch button:hover{opacity:1}
+  .foot .switch button.is-on{opacity:1; font-weight:700; text-decoration:underline; text-underline-offset:3px}
+  .foot .v{font-variant-numeric:tabular-nums}
+
+  /* ---------- grain ---------- */
+  .grain{
+    position:absolute; inset:0; z-index:3; pointer-events:none; opacity:var(--grain-opacity);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size:160px 160px;
+  }
+
+  /* ---------- dim ---------- */
+  .dim{
+    position:fixed; inset:0; z-index:5; background:var(--dim); opacity:0; pointer-events:none;
+    transition:opacity var(--card-time) var(--card-ease);
+  }
+  .dim.on{opacity:1; pointer-events:auto}
+
+  /* ---------- card (container transform) ---------- */
+  .card{
+    position:fixed; z-index:7; left:0; top:0; width:0; height:0; display:none; overflow:hidden;
+    background:var(--paper); color:var(--ink); border-radius:0; box-shadow:0 30px 80px rgba(20,20,20,.25);
+    will-change:left,top,width,height;
+  }
+  .card.on{display:block}
+  .card-scroll{position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none}
+  .card-scroll::-webkit-scrollbar{display:none}
+  .card-hero{display:block; width:100%; object-fit:cover; background:var(--ink)}
+  .card-x{
+    position:absolute; top:12px; right:12px; z-index:2; width:40px; height:40px; border-radius:50%; border:0; cursor:pointer;
+    background:rgba(20,20,20,.55); color:#fff; display:grid; place-items:center; backdrop-filter:blur(6px);
+    opacity:0; transition:opacity .25s;
+  }
+  .card.ready .card-x{opacity:1}
+  .card-x::before{content:"×"; font-size:22px; line-height:1; transform:translateY(-1px)}
+  .card-body{padding:22px var(--gutter) 40px; opacity:0}
+  .card.ready .card-body{opacity:1}
+  .card h1{
+    font-family:"Google Sans Flex",system-ui,sans-serif; font-weight:700; letter-spacing:-.025em; line-height:.95;
+    font-size:clamp(36px,3.8vw,56px); margin:0;
+  }
+  .card hr{margin:16px 0 0; border:0; border-top:1px solid var(--line)}
+  .card .desc{margin:16px 0 0; max-width:40ch; color:var(--muted); font-size:14px}
+  .card .meta{margin:14px 0 0; display:flex; gap:18px; flex-wrap:wrap; color:var(--muted)}
+  .card .meta b{color:var(--ink); font-weight:500}
+  .card .poster{display:block; width:100%; margin-top:28px; background:var(--ink)}
+  .card .links{margin-top:18px; display:flex; gap:16px}
+  .card .links a,.panel .links a{display:inline-flex; align-items:center; gap:6px; text-decoration:none}
+  .card .links a::before,.panel .links a::before{content:""; width:1em; height:1em; background:currentColor; clip-path:polygon(50% 0,0 100%,100% 100%); transform:rotate(90deg) scale(.55)}
+  .card .links a:hover,.panel .links a:hover{text-decoration:underline; text-underline-offset:3px}
+  .card .fine{margin-top:36px; color:var(--muted); font-size:12px}
+
+  /* ---------- legacy side panel (CFG.detail = 'panel') ---------- */
+  .panel{
+    position:fixed; inset:0 0 0 auto; z-index:6; width:clamp(480px,40vw,640px); max-width:100vw;
+    background:var(--paper); border-left:1px solid var(--line); overflow:hidden;
+    transform:translateX(102%); transition:transform var(--panel-time) var(--panel-ease); visibility:hidden;
+  }
+  /* thin faded scroll indicator instead of the native bar */
+  .scrollbar{position:absolute; top:12px; bottom:12px; right:6px; width:2px; pointer-events:none; opacity:0; transition:opacity .3s}
+  .scrollbar.show{opacity:1}
+  .scrollbar i{position:absolute; left:0; top:0; width:100%; height:24px; border-radius:1px; background:var(--ink); opacity:.28; transition:opacity .3s}
+  .scrollbar.active i{opacity:.55}
+  .panel.on{transform:translateX(0); visibility:visible}
+  .panel.closing{visibility:visible}
+  .panel-in{position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; display:flex; flex-direction:column; padding:0 var(--gutter) 48px}
+  .panel-in::-webkit-scrollbar{display:none}
+  .panel-in > *{flex-shrink:0}
+  .panel-head{display:flex; height:var(--header); flex-shrink:0; align-items:center; justify-content:flex-end}
+  .close{border:0; background:transparent; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
+  .panel h1{font-family:"Google Sans Flex",system-ui,sans-serif; font-weight:700; letter-spacing:-.025em; line-height:.95; font-size:clamp(40px,4.2vw,64px); margin:clamp(24px,4vh,48px) 0 0}
+  .panel hr{margin:18px 0 0; border:0; border-top:1px solid var(--line)}
+  .panel .desc{margin:18px 0 0; max-width:36ch; color:var(--muted)}
+  .panel .meta{margin:14px 0 0; display:flex; gap:18px; flex-wrap:wrap; color:var(--muted)}
+  .panel .meta b{color:var(--ink); font-weight:500}
+  .panel img{margin-top:32px; max-height:55vh; max-width:100%; align-self:flex-start; background:var(--ink); display:block}
+  .panel .links{margin-top:18px; display:flex; gap:16px}
+
+  @media (orientation:portrait){
+    .panel{inset:auto 0 0 0; width:100%; height:80svh; border-left:0; border-top:1px solid var(--line); border-radius:12px 12px 0 0; transform:translateY(102%)}
+    .panel.on{transform:translateY(0)}
+    .top{mix-blend-mode:normal; color:var(--ink); background:var(--paper); border-bottom:1px solid var(--line)}
+    .foot{mix-blend-mode:normal; color:var(--ink)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .panel,.dim,.board{transition-duration:.25s}
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="board" id="board">
+    <canvas id="gl"></canvas>
+    <div class="slots" id="slots"></div>
+  </div>
+  <div class="tilelayer words" id="words-back" aria-hidden="true"></div>
+  <div class="tilelayer fg" id="fg" aria-hidden="true"><div class="glass" id="fg-glass"></div><img id="fg-img" alt=""></div>
+  <div class="tilelayer words" id="words-front" aria-hidden="true"></div>
+  <div class="cursor" id="cursor" aria-hidden="true">
+    <div class="cur-pulse" id="curpulse"></div>
+    <div class="cur-ring" id="curring"></div>
+    <div class="cur-label" id="curlabel"></div>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+  <header class="top">
+    <a class="brand" href="#">lab board</a>
+    <nav class="nav" aria-label="Sections"><a href="#" aria-disabled="true">work</a><a href="#" aria-disabled="true">about</a><a href="#" class="is-current">lab</a></nav>
+    <a class="right" href="#" aria-disabled="true">contact</a>
+  </header>
+  <footer class="foot">
+    <span><span class="k">drag to pan · scroll to zoom · </span><span class="v" id="count"></span></span>
+    <span class="switch" id="covers-switch"><span class="k">covers · </span><button data-v="plain">plain</button><button data-v="circle">circle</button><button data-v="mixed">mixed</button><button data-v="motif">motif</button></span>
+    <span class="switch" id="theme-switch"><span class="k">theme · </span><button data-v="light">light</button><button data-v="dark">dark</button></span>
+    <span class="k" id="mode">idle</span>
+  </footer>
+  <div class="dim" id="dim"></div>
+
+  <article class="card" id="card" role="dialog" aria-modal="true" aria-label="piece detail">
+    <button class="card-x" id="card-x" type="button" aria-label="Close"></button>
+    <div class="card-scroll" id="card-scroll">
+      <img class="card-hero" id="c-hero" alt="">
+      <div class="card-body">
+        <h1 id="c-title"></h1>
+        <hr>
+        <p class="desc" id="c-desc"></p>
+        <p class="meta" id="c-meta"></p>
+        <img class="poster" id="c-poster" alt="">
+        <div class="links" id="c-links"></div>
+        <p class="fine">Placeholder content. Titles and one-liners are real experiments from this workspace; years and details still need checking.</p>
+      </div>
+    </div>
+  </article>
+
+  <aside class="panel" id="panel" aria-label="piece detail" aria-hidden="true">
+    <div class="panel-in">
+      <div class="panel-head"><button class="close" id="close" type="button">Close</button></div>
+      <h1 id="p-title"></h1>
+      <hr>
+      <p class="desc" id="p-desc"></p>
+      <p class="meta" id="p-meta"></p>
+      <img id="p-img" alt="">
+      <div class="links" id="p-links"></div>
+    </div>
+    <div class="scrollbar" id="p-scrollbar" aria-hidden="true"><i></i></div>
+  </aside>
+</div>
+
+<script>
+/* =====================================================================
+   lab board v2 — infinite draggable field, WebGL bend, magnetic cursor,
+   container-transform card (or legacy side panel via CFG.detail).
+   Vanilla JS, zero deps, works from file://.
+   ===================================================================== */
+
+// ---------- tunables ----------
+const CFG = {
+  detail: 'panel',                 // 'panel' = side panel (chosen) · 'card' = piece grows into a scrollable card (kept for comparison)
+  cluster: { w: 3000, h: 2000 },   // world units; wraps like a torus
+  baseWidth: 1380,                 // world → px scale = max(vw, 900) / baseWidth (1728 → 1380 = tiles ~25% larger by default)
+  dragThreshold: 6,                // px before a press becomes a drag
+  momentumDecay: 0.92,             // per 1/60 s
+  dragDecay: 0.80,                 // velocity decay while finger rests
+  stopSpeed: 8,                    // world units / s
+  // wheel = a very light zoom: tiles grow a little and pull together (scroll in), shrink and spread (scroll out)
+  // wheel = a light, uniform zoom that STAYS where you leave it: scroll moves a target, the view follows on a
+  // slightly underdamped spring, so when you stop scrolling it brakes softly with a touch of overshoot
+  zoom: { gain: 0.0024, range: 1, scale: 0.32, stiffness: 42, damping: 7.2 },   // ±32% of scale across the range
+  hoverChips: false,               // the symbol squares on hover are parked; the cursor alone carries the hover
+  bend: 0.85,                      // × viewport height → z amplitude in px
+  strengthDragGain: 12.5,          // bend gain while dragging
+  strengthCoastGain: 4,            // bend gain while coasting (original: 1)
+  strengthSmooth: 0.15,
+  hoverGain: 15e-5, hoverMax: 0.03, hoverDecay: 0.86, hoverFloor: 3e-4,
+  aberrThreshold: 0.006, aberrScale: 0.42,
+  entrance: { time: 1.1, drop: 340, push: 1.8 },
+  planeSegments: 20,
+  cursor: { dot: 8, ring: 40, press: 14, magnet: 0.12, follow: 0.35, pulseMax: 1.2, pulseDecay: 0.9 },
+  card: { openPush: 0.18 },        // vertical bend impulse when a card lifts off the field
+  words: { step: 44, minGap: 150, enter: 220, hold: 900, exit: 240, max: 7, spread: 34 }, // hover words: px travelled per word, ms between, timings
+  theme: (new URLSearchParams(location.search).get('theme')) || 'light',   // 'light' paper · 'dark' graphite (Material "Color" sheet mood)
+  covers: (new URLSearchParams(location.search).get('covers')) || 'plain', // 'plain' = dark grey where no thumbnail yet · 'circle' / 'mixed' = colour field + shape · 'motif' = v1 sketches
+  plain: '#262626',                // the "no thumbnail yet" grey
+};
+
+// ---------- content (placeholder data: Jarek's own experiments) ----------
+const PIECES = [
+  { slug:'grid-blob', back:'#252525', front:{ src:'thumbs/grid-blob-front.png', x:0, y:0, w:1, h:1 },      title:'Grid Blob',      what:'Banner generator: a 9×4 grid melted into a goo blob, exported as true vector.', year:'2026', kind:'tool',   code:'https://github.com/vod123qwe/playground', words:["goo", "grid", "banner", "vector"], rect:{x:90,y:100,w:330,h:460},   hue:212, motif:'blob' },
+  { slug:'typestorm',      title:'TypeStorm',      what:'Typing shooter on Canvas. Words fall, you type them down before they land.', year:'2026', kind:'game',   words:["type fast", "canvas", "words fall", "arcade"], rect:{x:560,y:70,w:460,h:260},   hue:8,   motif:'rain' },
+  { slug:'wiredraft',      title:'WireDraft',      what:'Wireframe editor that loads a mockup from the URL hash and exports SVG or Figma.', year:'2026', kind:'tool', words:["wireframe", "hash url", "svg out", "boxes"], rect:{x:1160,y:140,w:270,h:480}, hue:40,  motif:'wire' },
+  { slug:'lottie-studio',  title:'Lottie Studio',  what:'Tiny keyframe editor with a timeline that writes Lottie JSON.', year:'2026', kind:'tool',                 words:["keyframes", "timeline", "json", "motion"], rect:{x:1570,y:60,w:440,h:230},  hue:280, motif:'wave' },
+  { slug:'win98-music',    title:'Win98 Music',    what:'A Windows 98 desktop in React that plays music. Draggable windows included.', year:'2026', kind:'toy', code:'https://github.com/vod123qwe/win98-music', words:["desktop", "1998", "windows", "player"], rect:{x:2150,y:120,w:280,h:500}, hue:190, motif:'win' },
+  { slug:'kronika', image:'thumbs/kronika.png',        title:'Kronika',        what:'Settlement roguelite drawn entirely in ASCII. Seasons turn, expeditions leave, fog hides the hexes.', year:'2026', kind:'game', words:["ascii", "seasons", "fog", "settlement"], rect:{x:2570,y:70,w:320,h:450}, hue:120, motif:'ascii' },
+  { slug:'parkove',        title:'Parkove',        what:'Outdoor game for Kraków parks: fog-of-war map, quests, a design system first.', year:'2026', kind:'mobile', words:["kraków", "fog of war", "quests", "outdoors"], rect:{x:100,y:680,w:480,h:250}, hue:140, motif:'fog' },
+  { slug:'emilka',         title:'Emilka',         what:'Tablet learning game for a five-year-old, with Polish text-to-speech.', year:'2026', kind:'game',        words:["for kids", "tablet", "polish tts", "play"], rect:{x:700,y:480,w:260,h:460},  hue:330, motif:'dots' },
+  { slug:'meander',        title:'Meander',        what:'Mobile trip generator: pick a mood and a distance, get a route.', year:'2026', kind:'mobile', code:'https://github.com/vod123qwe/meander', words:["trip", "mood", "distance", "route"], rect:{x:1080,y:760,w:300,h:300}, hue:170, motif:'path' },
+  { slug:'portfel', video:'thumbs/portfel.mp4', front:{ src:'thumbs/portfel-front.png', x:67/460, y:46/250, w:327/460, h:159/250, glass:{ radius:30 } },        title:'Portfel',        what:'Single-file budget PWA. Reads live data from a Gist and renders a mortgage dashboard.', year:'2025', kind:'personal', words:["budget", "pwa", "gist", "mortgage"], rect:{x:1520,y:420,w:460,h:250}, hue:48, motif:'bars' },
+  { slug:'type-tokens', back:'#001e42', front:{ src:'thumbs/type-tokens-front.png', x:91/270, y:210/480, w:89/270, h:61/480 },    title:'Type Tokens',    what:'Figma plugin that turns Material 3 text styles into variables you can theme.', year:'2026', kind:'plugin', words:["material 3", "variables", "type ramp", "figma"], rect:{x:2080,y:740,w:270,h:480}, hue:230, motif:'type' },
+  { slug:'contrast-audit', title:'Contrast Audit', what:'Figma plugin checking WCAG and APCA contrast across a whole file, with review mode.', year:'2026', kind:'plugin', words:["wcag", "apca", "contrast", "review"], rect:{x:2490,y:640,w:450,h:240}, hue:0, motif:'rings' },
+  { slug:'stickies',       title:'Stickies',       what:'Twelve sticky-note variants and a plugin that drops them where you point.', year:'2026', kind:'plugin', words:["notes", "twelve", "drop", "figma"], rect:{x:140,y:1050,w:260,h:470}, hue:52, motif:'notes' },
+  { slug:'audit-suite',    title:'Audit Suite',    what:'Design-system audit hub: components, types, contrast, one message router.', year:'2026', kind:'plugin', code:'https://github.com/vod123qwe/figma-audit-suite', words:["audit", "components", "types", "router"], rect:{x:520,y:1080,w:470,h:250}, hue:205, motif:'grid' },
+  { slug:'runebound',      title:'Runebound',      what:'Isometric action RPG proof of concept in Godot. CC0 assets only.', year:'2026', kind:'game',              words:["isometric", "arpg", "godot", "cc0"], rect:{x:1130,y:1180,w:330,h:470}, hue:265, motif:'iso' },
+  { slug:'cardrush',       title:'Cardrush',       what:'Horde survival meets a card deck. Isometric, Godot, waiting for its proof of concept.', year:'2026', kind:'game', words:["horde", "cards", "isometric", "godot"], rect:{x:1600,y:800,w:270,h:480}, hue:20, motif:'cards' },
+  { slug:'spellbeat',      title:'Spellbeat',      what:'Deckbuilder crossed with a rhythm game. Parked, not forgotten.', year:'2025', kind:'game',                words:["rhythm", "deck", "parked", "beats"], rect:{x:2020,y:1350,w:450,h:240}, hue:300, motif:'beat' },
+  { slug:'file-audit',     title:'File Audit',     what:'The first Figma audit plugin: scans a design-system file and reports what drifted.', year:'2025', kind:'plugin', code:'https://github.com/vod123qwe/figma-file-audit', words:["drift", "scan", "design system", "v1"], rect:{x:2560,y:1010,w:280,h:500}, hue:95, motif:'scan' },
+];
+const pad2 = n => String(n).padStart(2, '0');
+
+// ---------- procedural covers ----------
+// colour pairs in the spirit of the Material "Color" sheet: saturated field + one shape in a sibling tone
+const PAIRS = [
+  ['#7B2D8E', '#D7B8F0'], ['#B5DA2E', '#0C4A3A'], ['#19BFE3', '#0E6F82'], ['#FF8A2A', '#B5410A'], ['#A80A3B', '#D2286C'],
+  ['#1F3A5F', '#B8C9E6'], ['#C81D7A', '#F7A2A2'], ['#9A3608', '#F08A2A'], ['#0A4A3A', '#C5E33A'], ['#2A2A72', '#9DB4FF'],
+  ['#E8C400', '#5A4A00'], ['#00857C', '#BDF2E8'], ['#5B1E8A', '#F4C2FF'], ['#D94F04', '#FFD6B0'], ['#123B2E', '#7FE3B0'],
+  ['#8E1B1B', '#FFB3B3'], ['#0B5EA8', '#BFE0FF'], ['#6B7A00', '#EEF7A0'],
+];
+const SHAPES = ['circle', 'triangle', 'x', 'ring', 'plus', 'diamond', 'half', 'pill', 'quarter'];
+function roundedPoly(g, pts, r) {                 // polygon with rounded corners via stroke join
+  g.beginPath(); pts.forEach(([x, y], k) => k ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath();
+  g.lineJoin = 'round'; g.lineWidth = r * 2; g.stroke(); g.fill();
+}
+function drawShape(g, kind, cx, cy, s, color) {   // s = side of the shape's bounding square
+  g.save(); g.translate(cx, cy); g.fillStyle = color; g.strokeStyle = color;
+  const r = s / 2, k = s * 0.07;
+  switch (kind) {
+    case 'circle': {                               // soft superellipse, like the sheet's not-quite-round dots
+      g.beginPath(); const n = 2.7;
+      for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.02) { const c = Math.cos(a), sn = Math.sin(a); g.lineTo(Math.sign(c) * Math.pow(Math.abs(c), 2 / n) * r, Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n) * r); }
+      g.closePath(); g.fill(); break; }
+    case 'triangle': { const h = r * 0.9; roundedPoly(g, [[0, -h], [r * 0.95, h * 0.75], [-r * 0.95, h * 0.75]], k); break; }
+    case 'x': { g.rotate(Math.PI / 4); const w = s * 0.24; g.beginPath(); g.roundRect(-r, -w / 2, s, w, w / 2); g.roundRect(-w / 2, -r, w, s, w / 2); g.fill(); break; }
+    case 'plus': { const w = s * 0.26; g.beginPath(); g.roundRect(-r, -w / 2, s, w, k); g.roundRect(-w / 2, -r, w, s, k); g.fill(); break; }
+    case 'ring': { g.beginPath(); g.arc(0, 0, r, 0, 7); g.arc(0, 0, r * 0.52, 0, 7, true); g.fill('evenodd'); break; }
+    case 'diamond': { roundedPoly(g, [[0, -r], [r * 0.8, 0], [0, r], [-r * 0.8, 0]], k); break; }
+    case 'half': { g.beginPath(); g.arc(0, r * 0.25, r, Math.PI, 0); g.closePath(); g.lineJoin = 'round'; g.lineWidth = k; g.stroke(); g.fill(); break; }
+    case 'pill': { g.beginPath(); g.roundRect(-r, -r * 0.42, s, r * 0.84, r); g.fill(); break; }
+    case 'quarter': { g.beginPath(); g.moveTo(-r * 0.8, r * 0.8); g.arc(-r * 0.8, r * 0.8, s * 0.8, -Math.PI / 2, 0); g.closePath(); g.lineJoin = 'round'; g.lineWidth = k; g.stroke(); g.fill(); break; }
+  }
+  g.restore();
+}
+function makeShapeCover(p, i, mixed) {
+  const scale = Math.min(2.4, 1400 / Math.max(p.rect.w, p.rect.h));
+  const W = Math.round(p.rect.w * scale), H = Math.round(p.rect.h * scale);
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const [bg, fg] = PAIRS[i % PAIRS.length];
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  const kind = mixed ? SHAPES[(i * 4 + 1) % SHAPES.length] : 'circle';
+  drawShape(g, kind, W / 2, H / 2, Math.min(W, H) * 0.56, fg);
+  return c;
+}
+// ---------- real thumbnails: flat images, or layers (back colour / video + front PNG) ----------
+const imageCovers = new Map();                       // index → canvas painted from a flat exported PNG
+const frontImages = new Map();                       // index → loaded <img> of the front layer
+const backCovers = new Map();                        // index → canvas with the back only (shown while hovering, words + front go on top in DOM)
+const videos = new Map();                            // index → <video>, created on first hover
+function plainCanvas(p, color) {
+  const scale = Math.min(2.4, 1400 / Math.max(p.rect.w, p.rect.h));
+  const c = document.createElement('canvas'); c.width = Math.round(p.rect.w * scale); c.height = Math.round(p.rect.h * scale);
+  const g = c.getContext('2d'); g.fillStyle = color; g.fillRect(0, 0, c.width, c.height); return c;
+}
+function compositeCanvas(p, i) {                    // back colour + (glass slab) + front PNG, what WebGL shows when the tile is not hovered
+  const c = plainCanvas(p, p.back || CFG.plain), img = frontImages.get(i), g = c.getContext('2d');
+  if (p.front) {
+    const x = p.front.x * c.width, y = p.front.y * c.height, w = p.front.w * c.width, h = p.front.h * c.height;
+    if (p.front.glass) paintGlass(g, x, y, w, h, p.front.glass.radius * (c.width / p.rect.w));
+    if (img) g.drawImage(img, x, y, w, h);
+  }
+  return c;
+}
+function paintGlass(g, x, y, w, h, r) {               // static stand-in for the CSS liquid glass: tint, edge light, soft inner shade
+  g.save(); g.beginPath(); g.roundRect(x, y, w, h, r); g.clip();
+  const tint = g.createRadialGradient(x + w * 0.3, y + h * 0.2, 0, x + w * 0.3, y + h * 0.2, Math.max(w, h));
+  tint.addColorStop(0, 'rgba(255,255,255,0.26)'); tint.addColorStop(1, 'rgba(255,255,255,0.10)');
+  g.fillStyle = tint; g.fillRect(x, y, w, h);
+  const edge = g.createLinearGradient(x, y, x, y + h);
+  edge.addColorStop(0, 'rgba(255,255,255,0.28)'); edge.addColorStop(0.35, 'rgba(255,255,255,0)'); edge.addColorStop(1, 'rgba(0,0,0,0.10)');
+  g.fillStyle = edge; g.fillRect(x, y, w, h);
+  g.restore();
+  g.save(); g.beginPath(); g.roundRect(x + 0.75, y + 0.75, w - 1.5, h - 1.5, r - 0.75); g.strokeStyle = 'rgba(255,255,255,0.42)'; g.lineWidth = 1.5; g.stroke(); g.restore();
+}
+function refreshCover(i) {
+  covers[i] = makeCover(PIECES[i], i); coverUrls.delete(i);
+  if (R) R.invalidate(); else slots.forEach(a => { if (a.dataset.index === String(i)) a.dataset.index = ''; });
+}
+function loadImageCovers() {
+  PIECES.forEach((p, i) => {
+    if (p.image && !imageCovers.has(i)) {
+      const img = new Image();
+      img.onload = () => { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0); imageCovers.set(i, c); refreshCover(i); };
+      img.src = p.image;
+    }
+    if (p.front && !frontImages.has(i)) {
+      const img = new Image();
+      img.onload = () => { frontImages.set(i, img); refreshCover(i); };
+      img.src = p.front.src;
+    }
+  });
+}
+function isLayered(i) { return !!PIECES[i].front; }
+function backCoverFor(i) {                          // back-only canvas for the hovered layered tile
+  if (!backCovers.has(i)) backCovers.set(i, plainCanvas(PIECES[i], PIECES[i].back || CFG.plain));
+  return backCovers.get(i);
+}
+function videoFor(i) {                              // created lazily on first hover, loops muted while hovered
+  const p = PIECES[i]; if (!p.video) return null;
+  if (!videos.has(i)) {
+    const v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+    v.src = p.video; v.dataset.ok = ''; v.addEventListener('error', () => { v.dataset.ok = 'no'; }, { once: true });
+    videos.set(i, v);
+  }
+  return videos.get(i);
+}
+function makeCover(p, i) {
+  if (imageCovers.has(i)) return imageCovers.get(i);
+  if (p.front || p.back || p.video) return compositeCanvas(p, i);
+  if (CFG.covers === 'plain') return plainCanvas(p, CFG.plain);
+  if (CFG.covers === 'circle') return makeShapeCover(p, i, false);
+  if (CFG.covers === 'mixed') return makeShapeCover(p, i, true);
+  return makeMotifCover(p, i);
+}
+function makeMotifCover(p, i) {
+  // painted large enough to survive the card growing to ~760px wide
+  const scale = Math.min(2.4, 1400 / Math.max(p.rect.w, p.rect.h));
+  const W = Math.round(p.rect.w * scale), H = Math.round(p.rect.h * scale);
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const dark = i % 3 !== 1;
+  const bg = dark ? `hsl(${p.hue} 18% 12%)` : `hsl(${p.hue} 22% 90%)`;
+  const fg = dark ? `hsl(${p.hue} 30% 92%)` : `hsl(${p.hue} 30% 14%)`;
+  const ac = `hsl(${p.hue} 70% ${dark ? 62 : 46}%)`;
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  const rnd = mulberry(i * 7919 + 13);
+  g.save(); g.strokeStyle = ac; g.fillStyle = ac; g.lineWidth = Math.max(2, W / 120);
+  const m = Math.min(W, H);
+  switch (p.motif) {
+    case 'blob': { g.beginPath(); const cx = W/2, cy = H*0.42, r = m*0.28; for (let a = 0; a <= Math.PI*2+0.01; a += 0.05) { const rr = r*(1+0.18*Math.sin(a*3+1)+0.1*Math.cos(a*5)); g.lineTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr); } g.fill(); break; }
+    case 'rain': { g.font = `700 ${m*0.09}px "Google Sans Flex"`; for (let k = 0; k < 26; k++) { g.globalAlpha = 0.25+rnd()*0.75; g.fillText(String.fromCharCode(65+Math.floor(rnd()*26)), rnd()*W, rnd()*H*0.8); } break; }
+    case 'wire': { g.globalAlpha = .9; for (let k = 0; k < 6; k++) { const y = H*0.12 + k*(H*0.12); g.strokeRect(W*0.12, y, W*0.76*(0.4+rnd()*0.6), H*0.06); } break; }
+    case 'wave': { g.beginPath(); for (let x = 0; x <= W; x += 4) g.lineTo(x, H/2 + Math.sin(x/W*Math.PI*4)*H*0.22*Math.sin(x/W*Math.PI)); g.stroke(); g.setLineDash([4, 10]); g.beginPath(); g.moveTo(0, H/2); g.lineTo(W, H/2); g.stroke(); break; }
+    case 'win': { g.fillStyle = dark ? '#c0c0c0' : '#808080'; g.fillRect(W*0.1, H*0.2, W*0.8, H*0.5); g.fillStyle = '#000080'; g.fillRect(W*0.1, H*0.2, W*0.8, H*0.05); g.fillStyle = ac; g.fillRect(W*0.15, H*0.3, W*0.7, H*0.02); g.fillRect(W*0.15, H*0.36, W*0.5, H*0.02); break; }
+    case 'ascii': { g.font = `${m*0.06}px "Cascadia Mono", Consolas, monospace`; const chars = '.,:;~#^"'; for (let y = H*0.1; y < H*0.85; y += m*0.07) { let s = ''; for (let x = 0; x < 22; x++) s += chars[Math.floor(rnd()*chars.length)]; g.globalAlpha = .7; g.fillText(s, W*0.08, y); } break; }
+    case 'fog': { for (let k = 0; k < 40; k++) { g.globalAlpha = 0.06+rnd()*0.12; g.beginPath(); g.arc(rnd()*W, rnd()*H, m*(0.08+rnd()*0.2), 0, 7); g.fill(); } break; }
+    case 'dots': { for (let y = 0; y < 8; y++) for (let x = 0; x < 5; x++) { g.globalAlpha = rnd() > .3 ? 1 : .25; g.beginPath(); g.arc(W*0.15+x*W*0.175, H*0.1+y*H*0.1, m*0.035, 0, 7); g.fill(); } break; }
+    case 'path': { g.beginPath(); let x = W*0.15, y = H*0.8; g.moveTo(x, y); for (let k = 0; k < 7; k++) { x += W*0.1; y -= (rnd()-0.3)*H*0.25; g.lineTo(x, y); } g.stroke(); g.beginPath(); g.arc(x, y, m*0.03, 0, 7); g.fill(); break; }
+    case 'bars': { for (let k = 0; k < 12; k++) { const h = H*(0.15+rnd()*0.55); g.globalAlpha = .85; g.fillRect(W*0.08+k*W*0.072, H*0.85-h, W*0.05, h); } break; }
+    case 'type': { g.fillStyle = fg; g.font = `800 ${m*0.55}px "Google Sans Flex"`; g.fillText('Aa', W*0.1, H*0.55); g.fillStyle = ac; g.font = `500 ${m*0.09}px "Google Sans Flex"`; g.fillText('headline / 57', W*0.1, H*0.66); break; }
+    case 'rings': { for (let k = 6; k > 0; k--) { g.globalAlpha = 0.2+k*0.12; g.beginPath(); g.arc(W*0.35, H*0.5, k*m*0.07, 0, 7); g.stroke(); } break; }
+    case 'notes': { for (let k = 0; k < 5; k++) { g.save(); g.translate(W*(0.2+rnd()*0.6), H*(0.15+rnd()*0.6)); g.rotate((rnd()-0.5)*0.5); g.globalAlpha = .9; g.fillRect(-m*0.15, -m*0.15, m*0.3, m*0.3); g.restore(); } break; }
+    case 'grid': { g.globalAlpha = .6; for (let x = 0; x <= 10; x++) { g.beginPath(); g.moveTo(W*0.1+x*W*0.08, H*0.15); g.lineTo(W*0.1+x*W*0.08, H*0.85); g.stroke(); } for (let y = 0; y <= 5; y++) { g.beginPath(); g.moveTo(W*0.1, H*0.15+y*H*0.14); g.lineTo(W*0.9, H*0.15+y*H*0.14); g.stroke(); } break; }
+    case 'iso': { for (let k = 0; k < 14; k++) { const x = W*0.15+rnd()*W*0.7, y = H*0.2+rnd()*H*0.55, s = m*0.09; g.globalAlpha = .8; g.beginPath(); g.moveTo(x, y-s/2); g.lineTo(x+s, y); g.lineTo(x, y+s/2); g.lineTo(x-s, y); g.closePath(); g.fill(); } break; }
+    case 'cards': { for (let k = 0; k < 4; k++) { g.save(); g.translate(W*0.5, H*0.5); g.rotate(-0.4+k*0.27); g.globalAlpha = .9; g.fillStyle = k % 2 ? ac : fg; g.fillRect(-W*0.2, -H*0.28, W*0.4, H*0.56); g.restore(); } break; }
+    case 'beat': { for (let k = 0; k < 24; k++) { const h = H*0.1+Math.abs(Math.sin(k*0.7))*H*0.4; g.globalAlpha = .9; g.fillRect(W*0.06+k*W*0.037, H*0.5-h/2, W*0.02, h); } break; }
+    case 'scan': { g.globalAlpha = .9; g.fillRect(0, H*0.44, W, H*0.012); for (let k = 0; k < 9; k++) { g.globalAlpha = .15+rnd()*.5; g.fillRect(W*0.1, H*0.1+k*H*0.08, W*0.8*rnd(), H*0.03); } break; }
+  }
+  g.restore();
+  g.fillStyle = fg;
+  g.font = `800 ${m*0.22}px "Google Sans Flex",sans-serif`;
+  g.fillText(pad2(i+1), W*0.07, H*0.94);
+  g.font = `500 ${Math.max(12, m*0.07)}px "Google Sans Flex",sans-serif`;
+  g.fillText(p.title.toLowerCase(), W*0.07, H*0.06 + m*0.07);
+  return c;
+}
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// ---------- math helpers ----------
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const wrap = (v, n) => n <= 0 ? 0 : ((v % n) + n) % n;
+const decay = (v, dt, k) => v * Math.pow(k, 60 * dt);
+const PI = Math.PI;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+// ---------- shaders ----------
+const VERT = `
+attribute vec2 aPos;
+attribute vec2 aUv;
+uniform mat4 uPV;
+uniform vec2 uPiecePos;
+uniform vec2 uPieceSize;
+uniform vec2 uStrength;
+uniform float uBend;
+uniform vec2 uViewport;
+varying vec2 vUv;
+void main () {
+  vec3 p = vec3(uPiecePos + aPos * uPieceSize, 0.0);
+  float wx = sin(p.x / uViewport.x * ${PI} + ${PI / 2});
+  float wy = sin(p.y / uViewport.y * ${PI} + ${PI / 2});
+  p.z += (wx * -uStrength.x + wy * -uStrength.y) * uBend;
+  vUv = aUv;
+  gl_Position = uPV * vec4(p, 1.0);
+}`;
+const FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform sampler2D uTex;
+uniform float uHasTex;
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform vec2 uImageSize;
+uniform vec2 uPieceSize;
+uniform vec2 uStrength;
+uniform vec2 uHover;
+uniform float uAberrThreshold;
+uniform float uAberrScale;
+varying vec2 vUv;
+void main () {
+  if (uHasTex < 0.5) { gl_FragColor = vec4(uColor, uOpacity); return; }
+  vec2 ratio = vec2(
+    min((uPieceSize.x / uPieceSize.y) / (uImageSize.x / uImageSize.y), 1.0),
+    min((uImageSize.x / uImageSize.y) / (uPieceSize.x / uPieceSize.y), 1.0));
+  vec2 uv = vec2(vUv.x * ratio.x + (1.0 - ratio.x) * 0.5, vUv.y * ratio.y + (1.0 - ratio.y) * 0.5);
+  vec2 excess = max(abs(uStrength) - vec2(uAberrThreshold), 0.0);
+  float shortSide = min(uPieceSize.x, uPieceSize.y);
+  vec2 aspect = uPieceSize / shortSide;
+  vec2 off = excess * sign(uStrength) * uAberrScale + uHover / aspect;
+  float r = texture2D(uTex, uv + off).r;
+  float g = texture2D(uTex, uv).g;
+  float b = texture2D(uTex, uv - off).b;
+  gl_FragColor = vec4(r, g, b, uOpacity);
+}`;
+
+// ---------- WebGL renderer ----------
+function createGL(canvas) {
+  const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: true })
+         || canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: true });
+  if (!gl) return null;
+  const isGL2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const U = {}; for (const n of ['uPV','uPiecePos','uPieceSize','uStrength','uBend','uViewport','uTex','uHasTex','uColor','uOpacity','uImageSize','uHover','uAberrThreshold','uAberrScale']) U[n] = gl.getUniformLocation(prog, n);
+  const N = CFG.planeSegments, pos = [], uv = [], idx = [];
+  for (let y = 0; y <= N; y++) for (let x = 0; x <= N; x++) { pos.push(x / N - 0.5, 0.5 - y / N); uv.push(x / N, y / N); }
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const a = y * (N + 1) + x, b = a + 1, c = a + N + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const buf = (data, loc, size) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0); };
+  buf(pos, gl.getAttribLocation(prog, 'aPos'), 2); buf(uv, gl.getAttribLocation(prog, 'aUv'), 2);
+  const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.DEPTH_TEST); gl.clearColor(0, 0, 0, 0);
+  gl.uniform1f(U.uAberrThreshold, CFG.aberrThreshold); gl.uniform1f(U.uAberrScale, CFG.aberrScale);
+  gl.uniform1i(U.uTex, 0);
+  const textures = new Map();
+  function texFor(i, cover) {
+    if (textures.has(i)) return textures.get(i);
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cover);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    if (isGL2) { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); }
+    else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    textures.set(i, t); return t;
+  }
+  const pv = new Float32Array(16);
+  function resize(w, h, dpr) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    const camZ = 1200, near = 100, far = 2400, f = camZ / (h / 2);
+    const aspect = w / h, nf = 1 / (near - far);
+    pv.set([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) * nf, -1, 0, 0, 2 * far * near * nf, 0]);
+    pv[12] += pv[8] * -camZ; pv[13] += pv[9] * -camZ; pv[14] += pv[10] * -camZ; pv[15] += pv[11] * -camZ;
+    gl.uniformMatrix4fv(U.uPV, false, pv);
+    gl.uniform2f(U.uViewport, w, h); gl.uniform1f(U.uBend, CFG.bend * h);
+  }
+  const liveTex = new Map();                          // per-index texture re-uploaded every frame (video)
+  function liveFor(i, source) {
+    let t = liveTex.get(i);
+    if (!t) { t = gl.createTexture(); liveTex.set(i, t); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); }
+    gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    return t;
+  }
+  function draw(instances, strength, opacity, hovers, covers, skipIndex, pick) {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(U.uStrength, strength.x, strength.y); gl.uniform1f(U.uOpacity, opacity);
+    for (const it of instances) {
+      if (it.index === skipIndex) continue;
+      let cover = covers[it.index], t;
+      const alt = pick && pick(it);                      // { source, live } for the hovered layered tile
+      if (alt && alt.live) { cover = alt.source; t = liveFor(it.index, alt.source); }
+      else if (alt) { cover = alt.source; t = texFor(10000 + it.index, alt.source); }
+      else t = texFor(it.index, cover);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.uniform1f(U.uHasTex, 1); gl.uniform2f(U.uImageSize, cover.videoWidth || cover.width, cover.videoHeight || cover.height);
+      gl.uniform2f(U.uPiecePos, it.cx, it.cy); gl.uniform2f(U.uPieceSize, it.width, it.height);
+      gl.uniform2f(U.uHover, hovers[it.index].x, hovers[it.index].y);
+      gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
+    }
+  }
+  const invalidate = () => { for (const t of textures.values()) gl.deleteTexture(t); textures.clear(); };
+  return { gl, resize, draw, invalidate, lost: () => gl.isContextLost() };
+}
+
+// ---------- the field ----------
+const stage = document.getElementById('stage'), board = document.getElementById('board'), slotsEl = document.getElementById('slots'), canvas = document.getElementById('gl');
+const modeEl = document.getElementById('mode'); document.getElementById('count').textContent = `${PIECES.length} pieces`;
+
+const covers = PIECES.map(makeCover);
+loadImageCovers();
+let R = null; try { R = createGL(canvas); } catch (e) { console.warn('WebGL unavailable, DOM fallback', e); }
+if (!R) board.classList.add('fallback');
+
+const cam = { x: 0, y: 0, vx: 0, vy: 0 };
+let mode = 'idle', locked = false;
+let vw = 1, vh = 1, T = 1;
+let dispX = 0, dispY = 0;
+let zoomT = 0, zoomV = 0, zoomVel = 0;            // target (persistent), spring position, spring velocity
+const strength = { x: 0, y: 0 };
+let pushY = 0;                                    // one-off vertical bend impulses (card lift-off)
+const hovers = PIECES.map(() => ({ x: 0, y: 0 }));
+let entrance = reduceMotion ? 1 : 0, lastT = 0, startT = performance.now(), lastIW = 0, lastIH = 0;
+let instances = [];
+const slots = [];
+let hoverSlot = -1, hoverIndex = -1, openIndex = -1;
+
+function resize() {
+  const r = board.getBoundingClientRect(); vw = Math.max(1, r.width); vh = Math.max(1, r.height);
+  T = Math.max(vw, 900) / CFG.baseWidth;
+  if (R) R.resize(vw, vh, Math.min(devicePixelRatio || 1, 2));
+}
+new ResizeObserver(resize).observe(board); resize();
+
+function layout(ox, oy) {
+  const out = [], W = CFG.cluster.w, H = CFG.cluster.h;
+  const Tp = T * (1 + CFG.zoom.scale * zoomV), Ts = Tp;   // uniform zoom: spacing and tiles scale together
+  const shiftX = vw / 2 * (1 - Tp / T), shiftY = vh / 2 * (1 - Tp / T);   // keep the viewport centre fixed
+  const pad = 0.25, ww = vw / Tp * (1 + pad), wh = vh / Tp * (1 + pad), ex = vw / Tp * pad / 2, ey = vh / Tp * pad / 2;
+  PIECES.forEach((p, index) => {
+    const r = p.rect;
+    const i0 = Math.ceil((ox - ex - r.x - r.w) / W), i1 = Math.floor((ox - ex + ww - r.x) / W);
+    const j0 = Math.ceil((oy - ey - r.y - r.h) / H), j1 = Math.floor((oy - ey + wh - r.y) / H);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const ccx = (r.x + r.w / 2 + i * W - ox) * Tp + shiftX, ccy = (r.y + r.h / 2 + j * H - oy) * Tp + shiftY;
+      const width = r.w * Ts, height = r.h * Ts, left = ccx - width / 2, top = ccy - height / 2;
+      if (left > vw || top > vh || left + width < 0 || top + height < 0) continue;
+      out.push({ index, left, top, width, height, cx: left + width / 2 - vw / 2, cy: vh / 2 - (top + height / 2) });
+    }
+  });
+  return out;
+}
+
+function syncSlots() {
+  while (slots.length < instances.length) {
+    const a = document.createElement('a'); a.dataset.slot = String(slots.length); a.draggable = false;
+    slotsEl.appendChild(a); slots.push(a);
+  }
+  slots.forEach((a, k) => {
+    if (k >= instances.length || instances[k].index === openIndex) { a.style.display = 'none'; return; }
+    const it = instances[k];
+    a.style.display = 'block';
+    a.style.transform = `translate(${it.left}px, ${it.top}px)`;
+    a.style.width = `${it.width}px`; a.style.height = `${it.height}px`;
+    if (a.dataset.index !== String(it.index)) {
+      a.dataset.index = String(it.index);
+      const p = PIECES[it.index];
+      a.href = `#/${p.slug}`; a.setAttribute('aria-label', `${p.title} — open piece`);
+      if (!R) a.style.backgroundImage = `url(${coverUrl(it.index)})`;
+    }
+  });
+  wordsFrame();
+}
+const coverUrls = new Map();
+function coverUrl(i) { if (!coverUrls.has(i)) coverUrls.set(i, covers[i].toDataURL('image/png')); return coverUrls.get(i); }
+function repaintCovers() {
+  PIECES.forEach((p, i) => { covers[i] = makeCover(p, i); });
+  coverUrls.clear(); if (R) R.invalidate(); else slots.forEach(a => { a.dataset.index = ''; });
+}
+// covers are painted synchronously with fallback fonts; repaint once the web fonts are in
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaintCovers);
+// live switch between cover styles (also via ?covers=circle|mixed|motif)
+const coversSwitch = document.getElementById('covers-switch');
+function setCovers(v) {
+  CFG.covers = v; repaintCovers();
+  coversSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === v));
+  const u = new URL(location.href); u.searchParams.set('covers', v); history.replaceState(null, '', u);
+}
+coversSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setCovers(b.dataset.v); });
+const themeSwitch = document.getElementById('theme-switch');
+function setTheme(v) {
+  CFG.theme = v; document.documentElement.dataset.theme = v;
+  themeSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === v));
+  const u = new URL(location.href); u.searchParams.set('theme', v); history.replaceState(null, '', u);
+  if (CFG.covers === 'motif') repaintCovers();     // motif sketches pick their paper from the theme
+}
+themeSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTheme(b.dataset.v); });
+setTheme(CFG.theme);
+coversSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.covers));
+
+function frame(t) {
+  requestAnimationFrame(frame);
+  const dt = lastT ? Math.min((t - lastT) / 1000, 1 / 30) : 1 / 60; lastT = t;
+  if (innerWidth !== lastIW || innerHeight !== lastIH) { lastIW = innerWidth; lastIH = innerHeight; resize(); }
+  if (mode === 'momentum') {
+    const nx = cam.x + cam.vx * dt, ny = cam.y + cam.vy * dt;
+    dispX += nx - cam.x; dispY += ny - cam.y;
+    cam.x = wrap(nx, CFG.cluster.w); cam.y = wrap(ny, CFG.cluster.h);
+    cam.vx = decay(cam.vx, dt, CFG.momentumDecay); cam.vy = decay(cam.vy, dt, CFG.momentumDecay);
+    if (Math.hypot(cam.vx, cam.vy) < CFG.stopSpeed) { cam.vx = cam.vy = 0; setMode('idle'); }
+  } else if (mode === 'drag') {
+    cam.vx = decay(cam.vx, dt, CFG.dragDecay); cam.vy = decay(cam.vy, dt, CFG.dragDecay);
+  }
+  const gain = mode === 'drag' ? CFG.strengthDragGain : CFG.strengthCoastGain;
+  const ax = clamp(dispX * T / vw * gain, -1, 1), ay = clamp(dispY * T / vh * gain, -1, 1);
+  dispX = dispY = 0;
+  strength.x += (ax - strength.x) * CFG.strengthSmooth;
+  strength.y += (ay - strength.y) * CFG.strengthSmooth;
+  pushY = decay(pushY, dt, 0.9);
+  { // spring toward the persistent target; semi-implicit Euler keeps it stable at low frame rates
+    const k = CFG.zoom.stiffness, c = CFG.zoom.damping;
+    zoomVel += (k * (zoomT - zoomV) - c * zoomVel) * dt; zoomV += zoomVel * dt;
+    if (Math.abs(zoomT - zoomV) < 1e-4 && Math.abs(zoomVel) < 1e-3) { zoomV = zoomT; zoomVel = 0; }
+  }
+  for (const h of hovers) { h.x = decay(h.x, dt, CFG.hoverDecay); h.y = decay(h.y, dt, CFG.hoverDecay); if (Math.abs(h.x) < CFG.hoverFloor && Math.abs(h.y) < CFG.hoverFloor) h.x = h.y = 0; }
+  if (entrance < 1) entrance = Math.min(1, (t - startT) / 1000 / CFG.entrance.time);
+  const ease = 1 - Math.pow(1 - entrance, 3);
+  const oy = cam.y - CFG.entrance.drop * (1 - ease) / T;
+  instances = layout(cam.x, oy);
+  syncSlots();
+  cursorFrame(dt);
+  if (R && !R.lost()) R.draw(instances, { x: strength.x, y: -(strength.y + CFG.entrance.push * (1 - ease) * 0.1 + pushY) }, ease, hovers, covers, openIndex, pickHoverTexture);
+}
+requestAnimationFrame(frame);
+
+function setMode(m) { mode = m; modeEl.textContent = m; board.classList.toggle('is-dragging', m === 'drag'); cursorEl.classList.toggle('drag', m === 'drag'); }
+
+// ---------- input ----------
+let pressed = false, dragging = false, sx = 0, sy = 0, px = 0, py = 0, moveT = 0;
+let pointer = null, prevHoverPointer = null;
+board.addEventListener('pointerdown', e => {
+  if (!e.isPrimary || locked || pressed || e.button !== 0) return;
+  pressed = true; sx = px = e.clientX; sy = py = e.clientY; moveT = performance.now();
+  cursorPress(true);
+});
+board.addEventListener('pointermove', e => {
+  if (!e.isPrimary) return;
+  if (hoverIndex >= 0 && prevHoverPointer) {
+    const dx = e.clientX - prevHoverPointer.x, dy = e.clientY - prevHoverPointer.y, h = hovers[hoverIndex];
+    h.x = clamp(h.x + dx * CFG.hoverGain, -CFG.hoverMax, CFG.hoverMax); h.y = clamp(h.y - dy * CFG.hoverGain, -CFG.hoverMax, CFG.hoverMax);
+  }
+  if (hoverIndex >= 0 && !pressed && pointer) {
+    if (wordPrev) wordTravel += Math.hypot(e.clientX - wordPrev.x, e.clientY - wordPrev.y);
+    wordPrev = { x: e.clientX, y: e.clientY };
+    if (wordTravel >= CFG.words.step) { wordTravel = 0; spawnWord(pointer.x, pointer.y); }
+  } else wordPrev = null;
+  prevHoverPointer = { x: e.clientX, y: e.clientY };
+  if (!pressed) return;
+  if (!dragging && Math.hypot(e.clientX - sx, e.clientY - sy) >= CFG.dragThreshold) {
+    dragging = true; board.setPointerCapture(e.pointerId); slotsEl.classList.add('no-hit'); clearHover(); setMode('drag');
+  }
+  if (dragging) {
+    const now = performance.now(), dt = Math.max((now - moveT) / 1000, 1 / 240); moveT = now;
+    const dx = e.clientX - px, dy = e.clientY - py;
+    const wx = -dx / T, wy = -dy / T;
+    cam.x = wrap(cam.x + wx, CFG.cluster.w); cam.y = wrap(cam.y + wy, CFG.cluster.h);
+    dispX += wx; dispY += wy;
+    cam.vx += (wx / dt - cam.vx) * 0.6; cam.vy += (wy / dt - cam.vy) * 0.6;
+  }
+  px = e.clientX; py = e.clientY;
+});
+function endPress(e) {
+  if (!e.isPrimary) return;
+  const speed = Math.hypot(cam.vx, cam.vy);
+  if (dragging) { slotsEl.classList.remove('no-hit'); setMode(speed < CFG.stopSpeed ? 'idle' : 'momentum'); }
+  if (pressed) cursorRelease(dragging ? speed : 0);
+  pressed = dragging = false;
+}
+board.addEventListener('pointerup', endPress); board.addEventListener('pointercancel', endPress);
+board.addEventListener('dragstart', e => e.preventDefault());
+window.addEventListener('wheel', e => {
+  if (locked) return; e.preventDefault();
+  const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;              // lines → px
+  zoomT = clamp(zoomT - d * CFG.zoom.gain, -CFG.zoom.range, CFG.zoom.range);   // the level you leave it at is where it stays
+}, { passive: false });
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && location.hash.length > 2) closeDetail(); });
+
+// hover tracking (drives the cursor label + per-piece split)
+slotsEl.addEventListener('pointerover', e => {
+  const a = e.target.closest('a'); if (!a || a.dataset.index === undefined) return;
+  const was = hoverIndex;
+  hoverSlot = Number(a.dataset.slot); hoverIndex = Number(a.dataset.index);
+  const p = PIECES[hoverIndex];
+  curLabel.textContent = p.title; cursorEl.classList.add('on');
+  if (was !== hoverIndex) { clearWords(); wordCursor = 0; wordTravel = CFG.words.step; wordLast = 0; hoverMedia(hoverIndex); if (pointer) spawnWord(pointer.x, pointer.y); }
+});
+
+// ---------- hover words ----------
+const wordsBack = document.getElementById('words-back'), wordsFront = document.getElementById('words-front'), fgEl = document.getElementById('fg'), fgImg = document.getElementById('fg-img'), fgGlass = document.getElementById('fg-glass');
+let wordCursor = 0, wordTravel = 0, wordLast = 0, wordPrev = null, wordSide = 1;
+const EASE_IN = 'cubic-bezier(.2,.8,.2,1)', EASE_OUT = 'cubic-bezier(.6,0,.8,.2)';
+// chip colours: field + a text tint from the same family (Material "Color" sheet pairs)
+const CHIP_PAIRS = [['#7B2D8E', '#EBD2FF'], ['#B5DA2E', '#173A2E'], ['#19BFE3', '#063A47'], ['#FF8A2A', '#4A1A02'], ['#A80A3B', '#FFD1DE'], ['#1F3A5F', '#CFE0FF'], ['#E8C400', '#3A2F00'], ['#00857C', '#D6FFF7']];
+function hoveredTile() { return hoverSlot >= 0 && hoverSlot < instances.length ? instances[hoverSlot] : null; }
+function placeLayer(el, it) { el.classList.add('on'); el.style.transform = `translate3d(${it.left}px, ${it.top}px, 0)`; el.style.width = `${it.width}px`; el.style.height = `${it.height}px`; }
+function wordsFrame() {                            // every frame from syncSlots: the three DOM layers ride on the hovered tile
+  const it = hoveredTile();
+  if (!it) { wordsBack.classList.remove('on'); wordsFront.classList.remove('on'); fgEl.classList.remove('on'); return; }
+  placeLayer(wordsBack, it); placeLayer(wordsFront, it);
+  const p = PIECES[hoverIndex];
+  if (p.front && frontImages.has(hoverIndex)) {
+    placeLayer(fgEl, it);
+    if (fgImg.dataset.src !== p.front.src) { fgImg.src = p.front.src; fgImg.dataset.src = p.front.src; }
+    const L = `${p.front.x * it.width}px`, Tp = `${p.front.y * it.height}px`, W = `${p.front.w * it.width}px`, H = `${p.front.h * it.height}px`;
+    fgImg.style.left = L; fgImg.style.top = Tp; fgImg.style.width = W; fgImg.style.height = H;
+    if (p.front.glass) { fgGlass.classList.add('on'); fgGlass.style.left = L; fgGlass.style.top = Tp; fgGlass.style.width = W; fgGlass.style.height = H; fgGlass.style.borderRadius = `${p.front.glass.radius * (it.width / p.rect.w)}px`; }
+    else fgGlass.classList.remove('on');
+  } else fgEl.classList.remove('on');
+}
+// what WebGL should draw for the hovered layered tile: the back only (front is DOM now) or the live video
+function pickHoverTexture(it) {
+  if (it.index !== hoverIndex || !isLayered(it.index) || !frontImages.has(it.index)) return null;
+  const v = videos.get(it.index);
+  if (v && v.dataset.ok !== 'no' && v.readyState >= 2 && !v.paused) return { source: v, live: true };
+  return { source: backCoverFor(it.index), live: false };
+}
+function hoverMedia(i) {                           // start the tile's video on hover, pause it on leave
+  videos.forEach((v, k) => { if (k !== i && !v.paused) v.pause(); });
+  if (i >= 0 && PIECES[i].video) { const v = videoFor(i); if (v && v.dataset.ok !== 'no') v.play().catch(() => {}); }
+}
+// sharp symbols (no rounding anywhere), drawn on a 36×36 grid, in the tint colour
+const SYMBOLS = {
+  triangle: '<polygon points="18,8 29,27 7,27"/>',
+  x:        '<polygon points="9,11.5 11.5,9 18,15.5 24.5,9 27,11.5 20.5,18 27,24.5 24.5,27 18,20.5 11.5,27 9,24.5 15.5,18"/>',
+  plus:     '<polygon points="16,8 20,8 20,16 28,16 28,20 20,20 20,28 16,28 16,20 8,20 8,16 16,16"/>',
+  diamond:  '<polygon points="18,7 29,18 18,29 7,18"/>',
+  square:   '<polygon points="9,9 27,9 27,27 9,27 9,12 12,12 12,24 24,24 24,12 9,12"/>',
+  chevron:  '<polygon points="10,9 18,17 26,9 28.5,11.5 18,22 7.5,11.5"/>',
+  bars:     '<polygon points="8,9 28,9 28,13 8,13"/><polygon points="8,16 28,16 28,20 8,20"/><polygon points="8,23 28,23 28,27 8,27"/>',
+  half:     '<polygon points="8,27 28,27 28,23 12,23 12,9 8,9"/>',
+  arrow:    '<polygon points="8,16 20,16 20,10 29,18 20,26 20,20 8,20"/>',
+  stair:    '<polygon points="8,28 8,22 14,22 14,16 20,16 20,10 28,10 28,28"/>',
+};
+const SYMBOL_KEYS = Object.keys(SYMBOLS);
+function makeChip(kind, host, colors) {
+  const el = document.createElement('span'); el.className = 'word';
+  el.style.background = colors[0];
+  el.innerHTML = `<svg viewBox="0 0 36 36" fill="${colors[1]}" aria-hidden="true">${SYMBOLS[kind] || SYMBOLS.square}</svg>`;
+  host.appendChild(el); return el;
+}
+function collapse(el, ms) {
+  if (!el || !el.isConnected) return;
+  el.animate([{ width: `${el.offsetWidth}px`, opacity: 1 }, { width: '0px', opacity: .6 }], { duration: ms, easing: EASE_OUT, fill: 'forwards' }).onfinish = () => el.remove();
+}
+function spawnWord(x, y) {                         // x, y in stage px; the chip lands inside the tile, alternating in front of / behind the front layer
+  if (!CFG.hoverChips) return;
+  const it = hoveredTile();
+  if (!it || locked || dragging) return;
+  const now = performance.now(); if (now - wordLast < CFG.words.minGap) return; wordLast = now;
+  wordsFrame();
+  // symbol and colour both walk their lists, offset by the tile index so neighbours never look alike
+  const kind = SYMBOL_KEYS[(hoverIndex * 3 + wordCursor) % SYMBOL_KEYS.length], colors = CHIP_PAIRS[(hoverIndex + wordCursor) % CHIP_PAIRS.length];
+  const host = (wordCursor % 2 === 0) ? wordsFront : wordsBack; wordCursor++;
+  const live = [...wordsBack.children, ...wordsFront.children];
+  while (live.length >= CFG.words.max) live.shift().remove();
+  const el = makeChip(kind, host, colors);
+  const w = 36, h = 36, m = 10;
+  wordSide = -wordSide;
+  const jx = (wordCursor % 3 - 1) * 14, jy = wordSide * (CFG.words.spread + (wordCursor % 2) * 12);
+  const lx = clamp(x - it.left - w / 2 + jx, m, Math.max(m, it.width - w - m));
+  const ly = clamp(y - it.top - h / 2 + jy, m, Math.max(m, it.height - h - m));
+  el.style.transform = `translate(${Math.round(lx)}px, ${Math.round(ly)}px)`;
+  const enter = reduceMotion ? 80 : CFG.words.enter, exit = reduceMotion ? 80 : CFG.words.exit;
+  el.animate([{ width: '0px' }, { width: `${w}px` }], { duration: enter, easing: EASE_IN, fill: 'forwards' });
+  setTimeout(() => collapse(el, exit), enter + CFG.words.hold);
+}
+function clearWords() {
+  const exit = reduceMotion ? 80 : CFG.words.exit;
+  [...wordsBack.children, ...wordsFront.children].forEach(c => collapse(c, exit));
+}
+slotsEl.addEventListener('pointerout', e => { const to = e.relatedTarget; if (to && slotsEl.contains(to) && to.closest('a')) return; if (e.target.closest('a')) clearHover(); });
+function clearHover() { hoverSlot = hoverIndex = -1; cursorEl.classList.remove('on'); clearWords(); hoverMedia(-1); }
+
+// click → route (modifier clicks fall through to the browser)
+let openedHere = false, originRect = null;
+slotsEl.addEventListener('click', e => {
+  const a = e.target.closest('a'); if (!a || a.dataset.index === undefined) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+  e.preventDefault();
+  const r = a.getBoundingClientRect(); originRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+  openedHere = true; location.hash = `/${PIECES[Number(a.dataset.index)].slug}`;
+});
+
+// ---------- custom cursor ----------
+const cursorEl = document.getElementById('cursor'), curRing = document.getElementById('curring'), curPulse = document.getElementById('curpulse'), curLabel = document.getElementById('curlabel');
+const cur = { x: -100, y: -100, size: CFG.cursor.dot, pressed: false, pulse: 0, pulseR: 0 };
+if (finePointer) stage.classList.add('has-cursor');
+document.addEventListener('pointermove', e => {
+  if (!e.isPrimary) return;
+  const r = stage.getBoundingClientRect(); pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
+  // native cursor wins over UI chrome and the detail surfaces
+  cursorEl.classList.toggle('hidden', !!e.target.closest('.top, .card, .panel, .foot') || locked);
+});
+document.addEventListener('pointerleave', () => { pointer = null; });
+function cursorPress(on) { cur.pressed = on; }
+function cursorRelease(speed) {
+  cur.pressed = false;
+  cur.pulse = clamp(speed / 2500, 0.3, CFG.cursor.pulseMax); cur.pulseR = 0;
+}
+function cursorFrame(dt) {
+  if (!finePointer || !pointer) return;
+  // magnetism: over a piece the cursor leans toward the piece centre
+  let tx = pointer.x, ty = pointer.y;
+  if (hoverSlot >= 0 && hoverSlot < instances.length && !dragging) {
+    const it = instances[hoverSlot]; const cx = it.left + it.width / 2, cy = it.top + it.height / 2;
+    tx += (cx - tx) * CFG.cursor.magnet; ty += (cy - ty) * CFG.cursor.magnet;
+  }
+  const f = 1 - Math.pow(1 - CFG.cursor.follow, 60 * dt);
+  cur.x += (tx - cur.x) * f; cur.y += (ty - cur.y) * f;
+  const target = cur.pressed ? CFG.cursor.press : (hoverIndex >= 0 ? CFG.cursor.ring : CFG.cursor.dot);
+  cur.size += (target - cur.size) * f;
+  cursorEl.style.transform = `translate3d(${cur.x}px, ${cur.y}px, 0)`;
+  // ring: filled dot when small, hollow ring when large (box-shadow inset trick keeps it one element)
+  const hollow = clamp((cur.size - CFG.cursor.press) / (CFG.cursor.ring - CFG.cursor.press), 0, 1);
+  const border = 1.5 + (1 - hollow) * cur.size / 2;
+  let stretch = 1, angle = 0;
+  if (mode === 'drag') { const sp = Math.hypot(cam.vx, cam.vy) * T; stretch = 1 + Math.min(sp / 3000, 0.6); angle = Math.atan2(-cam.vy, -cam.vx); }
+  curRing.style.width = curRing.style.height = `${cur.size}px`;
+  curRing.style.background = `rgba(255,255,255,${(1 - hollow).toFixed(3)})`;
+  curRing.style.boxShadow = `inset 0 0 0 ${border.toFixed(2)}px #fff`;
+  curRing.style.transform = `translate(-50%,-50%) rotate(${angle}rad) scale(${stretch}, ${1 / Math.sqrt(stretch)})`;
+  // release pulse: a ring that expands and fades, sized by the speed you let go with
+  if (cur.pulse > 0.01) {
+    cur.pulseR += dt * 3.2; const life = clamp(cur.pulseR, 0, 1);
+    const r = cur.size + life * 60 * cur.pulse;
+    curPulse.style.width = curPulse.style.height = `${r}px`; curPulse.style.opacity = String((1 - life) * 0.9);
+    if (life >= 1) cur.pulse = 0;
+  } else curPulse.style.opacity = '0';
+}
+
+// ---------- detail: card (container transform) ----------
+const dim = document.getElementById('dim');
+const card = document.getElementById('card'), cardScroll = document.getElementById('card-scroll');
+const cHero = document.getElementById('c-hero'), cTitle = document.getElementById('c-title'), cDesc = document.getElementById('c-desc'), cMeta = document.getElementById('c-meta'), cPoster = document.getElementById('c-poster'), cLinks = document.getElementById('c-links');
+let cardAnim = null, cardState = 'closed';
+
+function cardTarget() {
+  const portrait = matchMedia('(orientation: portrait)').matches || innerWidth < 720;
+  if (portrait) return { left: 0, top: 0, width: innerWidth, height: innerHeight, radius: 0 };
+  const width = clamp(innerWidth * 0.46, 560, 760), height = Math.round(innerHeight * 0.82);
+  return { left: Math.round((innerWidth - width) / 2), top: Math.round((innerHeight - height) / 2), width, height, radius: 12 };
+}
+function rectOf(index) {
+  const it = instances.find(i => i.index === index);
+  if (!it) return null;
+  const b = board.getBoundingClientRect();
+  return { left: b.left + it.left, top: b.top + it.top, width: it.width, height: it.height };
+}
+function fillDetail(i, els) {
+  const p = PIECES[i];
+  els.title.textContent = p.title; els.desc.textContent = p.what;
+  els.meta.innerHTML = `<span>index <b>${pad2(i + 1)}</b></span><span>kind <b>${p.kind}</b></span><span>year <b>${p.year}</b></span>`;
+  els.links.innerHTML = (p.live ? `<a href="${p.live}" target="_blank" rel="noreferrer">Visit live</a>` : '') + (p.code ? `<a href="${p.code}" target="_blank" rel="noreferrer">View code</a>` : '');
+}
+function applyRect(el, r) { el.style.left = `${r.left}px`; el.style.top = `${r.top}px`; el.style.width = `${r.width}px`; el.style.height = `${r.height}px`; }
+
+function openCard(i) {
+  const from = originRect || rectOf(i) || (() => { const t = cardTarget(); return { left: t.left + t.width * 0.3, top: t.top + t.height * 0.3, width: t.width * 0.4, height: t.height * 0.4 }; })();
+  originRect = null;
+  const to = cardTarget();
+  fillDetail(i, { title: cTitle, desc: cDesc, meta: cMeta, links: cLinks });
+  cHero.src = coverUrl(i); cHero.alt = PIECES[i].title; cPoster.src = coverUrl(i); cPoster.alt = '';
+  card.setAttribute('aria-label', `${PIECES[i].title} — piece detail`);
+  openIndex = i; locked = true; clearHover(); cursorEl.classList.add('hidden');
+  if (mode === 'drag') { pressed = dragging = false; slotsEl.classList.remove('no-hit'); setMode('idle'); }
+  pushY += CFG.card.openPush;                       // the field flinches as the card lifts off
+  board.classList.add('recede'); dim.classList.add('on');
+  card.classList.add('on'); card.classList.remove('ready'); cardScroll.scrollTop = 0;
+  applyRect(card, from); card.style.borderRadius = '0px';
+  const heroTo = Math.round(to.height * 0.46);
+  cHero.style.height = `${from.height}px`;
+  if (cardAnim) cardAnim.forEach(a => a.cancel());
+  const dur = reduceMotion ? 200 : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-time')) || 650;
+  const ease = 'cubic-bezier(.2,.8,.2,1)';
+  cardAnim = [
+    card.animate([{ left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, borderRadius: '0px' },
+                  { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px`, borderRadius: `${to.radius}px` }], { duration: dur, easing: ease, fill: 'forwards' }),
+    cHero.animate([{ height: `${from.height}px` }, { height: `${heroTo}px` }], { duration: dur, easing: ease, fill: 'forwards' }),
+  ];
+  cardState = 'opening';
+  cardAnim[0].onfinish = () => { applyRect(card, to); card.style.borderRadius = `${to.radius}px`; cHero.style.height = `${heroTo}px`; cardAnim.forEach(a => a.cancel()); cardAnim = null; cardState = 'open'; };
+  setTimeout(() => { card.classList.add('ready'); document.getElementById('card-x').focus({ preventScroll: true }); }, dur * 0.6);
+}
+function closeCard() {
+  if (cardState === 'closed' || cardState === 'closing') return;
+  const i = openIndex;
+  const to = rectOf(i);                              // where the piece sits now (field is locked, so same place)
+  const from = card.getBoundingClientRect();
+  card.classList.remove('ready'); board.classList.remove('recede'); dim.classList.remove('on'); locked = false;
+  if (cardAnim) { cardAnim.forEach(a => a.cancel()); cardAnim = null; }
+  const dur = reduceMotion ? 200 : 450, ease = 'cubic-bezier(.2,.8,.2,1)';
+  cardState = 'closing';
+  const end = () => { card.classList.remove('on'); card.style.opacity = ''; openIndex = -1; cardState = 'closed'; };
+  if (!to) { card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur * 0.6, fill: 'forwards' }).onfinish = end; return; }
+  const a = card.animate([{ left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, borderRadius: getComputedStyle(card).borderRadius },
+                          { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px`, borderRadius: '0px' }], { duration: dur, easing: ease, fill: 'forwards' });
+  cHero.animate([{ height: `${cHero.offsetHeight}px` }, { height: `${to.height}px` }], { duration: dur, easing: ease, fill: 'forwards' });
+  cardScroll.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  a.onfinish = () => { end(); a.cancel(); };
+}
+// portrait: drag down from the top of the card to close
+let cdY = null;
+card.addEventListener('pointerdown', e => { if (cardScroll.scrollTop <= 0 && e.isPrimary) cdY = e.clientY; });
+card.addEventListener('pointermove', e => { if (cdY !== null && e.clientY - cdY > 90 && cardScroll.scrollTop <= 0) { cdY = null; closeDetail(); } });
+card.addEventListener('pointerup', () => { cdY = null; }); card.addEventListener('pointercancel', () => { cdY = null; });
+document.getElementById('card-x').addEventListener('click', closeDetail);
+window.addEventListener('resize', () => { if (cardState === 'open') { const to = cardTarget(); applyRect(card, to); card.style.borderRadius = `${to.radius}px`; cHero.style.height = `${Math.round(to.height * 0.46)}px`; } });
+
+// ---------- detail: legacy side panel ----------
+const panel = document.getElementById('panel'), panelIn = panel.querySelector('.panel-in');
+const pBar = document.getElementById('p-scrollbar'), pThumb = pBar.firstElementChild;
+let closeTimer = null, barIdle = null;
+function updateScrollbar() {
+  const view = panelIn.clientHeight, total = panelIn.scrollHeight;
+  if (total <= view + 1) { pBar.classList.remove('show'); return; }
+  pBar.classList.add('show');
+  const track = pBar.clientHeight, th = Math.max(24, view / total * track);
+  const top = panelIn.scrollTop / (total - view) * (track - th);
+  pThumb.style.height = `${th}px`; pThumb.style.transform = `translateY(${top}px)`;
+}
+panelIn.addEventListener('scroll', () => { updateScrollbar(); pBar.classList.add('active'); clearTimeout(barIdle); barIdle = setTimeout(() => pBar.classList.remove('active'), 700); }, { passive: true });
+new ResizeObserver(updateScrollbar).observe(panelIn);
+function openPanel(i) {
+  fillDetail(i, { title: document.getElementById('p-title'), desc: document.getElementById('p-desc'), meta: document.getElementById('p-meta'), links: document.getElementById('p-links') });
+  const img = document.getElementById('p-img'); img.src = coverUrl(i); img.alt = PIECES[i].title;
+  panel.setAttribute('aria-label', `${PIECES[i].title} — piece detail`);
+  clearTimeout(closeTimer); panel.classList.remove('closing'); panel.classList.add('on'); dim.classList.add('on');
+  panel.setAttribute('aria-hidden', 'false'); locked = true; clearHover(); cursorEl.classList.add('hidden');
+  if (mode === 'drag') { pressed = dragging = false; slotsEl.classList.remove('no-hit'); setMode('idle'); }
+  panelIn.scrollTop = 0; document.getElementById('close').focus({ preventScroll: true });
+  requestAnimationFrame(updateScrollbar); img.onload = updateScrollbar;
+}
+function hidePanel() {
+  if (!panel.classList.contains('on')) return;
+  if (panel.contains(document.activeElement)) document.activeElement.blur();   // never aria-hide a focused subtree
+  panel.classList.remove('on'); panel.classList.add('closing'); dim.classList.remove('on');
+  panel.setAttribute('aria-hidden', 'true'); locked = false;
+  closeTimer = setTimeout(() => panel.classList.remove('closing'), reduceMotion ? 250 : 1400);
+}
+document.getElementById('close').addEventListener('click', closeDetail);
+
+// ---------- routing ----------
+function route() {
+  const slug = location.hash.replace(/^#\/?/, '');
+  const i = PIECES.findIndex(p => p.slug === slug);
+  if (i < 0) { if (CFG.detail === 'card') closeCard(); else hidePanel(); document.title = 'lab board'; return; }
+  document.title = `${PIECES[i].title} · lab board`;
+  if (CFG.detail === 'card') openCard(i); else openPanel(i);
+}
+function closeDetail() { if (openedHere) { openedHere = false; history.back(); } else { history.replaceState(null, '', location.pathname + location.search); route(); } }
+dim.addEventListener('click', closeDetail);
+window.addEventListener('hashchange', route); route();
+
+// ---------- debug ----------
+window.LB = { cfg: CFG, state: () => ({ mode, cam: { ...cam }, strength: { ...strength }, zoom: { target: zoomT, value: zoomV, velocity: zoomVel }, T, vw, vh, instances: instances.length, gl: !!R, openIndex, cardState }), zoom: z => { zoomT = clamp(z, -CFG.zoom.range, CFG.zoom.range); }, push: (vx, vy) => { cam.vx += vx; cam.vy += vy; setMode('momentum'); } };
+</script>
+</body>
+</html>

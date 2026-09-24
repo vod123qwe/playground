@@ -16,6 +16,7 @@ git push
 ## Co tu jest
 
 - `hello/` to przykładowy mini projekt na rozgrzewkę (otwórz `hello/index.html`)
+- `lab-board/` to nieskończona przesuwana plansza eksperymentów w WebGL z zaginaniem podczas ruchu i panelem bocznym (otwórz `lab-board/index.html`)
 
 ## Zasada
 
