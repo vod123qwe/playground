@@ -47,26 +47,22 @@ Mechanika przeniesiona z sekcji Lab na juanmoraromero.com (analiza w pamięci Cl
 
 ## Miniatury przykładowe
 
-14 kafli bez własnych grafik ma zdjęcia makiet brandingowych z Unsplash (licencja Unsplash, darmowe użycie; źródło celowo zamiast prac konkretnego studia, bo repo jest publiczne). Pliki w `thumbs/brand/`, przycięte do proporcji kafla w 2×. Identyfikatory zdjęć:
+8 kafli ma referencje wizualne dostarczone przez Jarka (`thumbs/ref/`): zrzuty cudzych prac (interfejs Framera, LAM, aevion / Riotters, portfolio Maksyma Bleibtgleicha, noho, Pasticcino World Tour, dwie ilustracje). To WYŁĄCZNIE placeholdery podglądu, nie realizacje Jarka i nie mają związku z tytułami projektów na kaflach. Przed udostępnieniem strony komukolwiek albo przed portfolio trzeba je zastąpić własnymi okładkami.
 
-| kafel | Unsplash |
-|---|---|
-| typestorm | photo-1636247499734-893da2bcfc1c |
-| lottie-studio | photo-1633533447057-56ccf997f4fe |
-| parkove | photo-1632062549850-44a0a6eede16 |
-| contrast-audit | photo-1777652918753-d66882b15391 |
-| audit-suite | photo-1636247497842-81ee9c80f9df |
-| spellbeat | photo-1614036634955-ae5e90f9b9eb |
-| meander | photo-1713878198172-bcb152888a74 |
-| wiredraft | photo-1677890465835-ab8c5c621771 |
-| win98-music | photo-1770558570565-ba20528f2ccb |
-| emilka | photo-1633533446213-a438ff5f0629 |
-| stickies | photo-1682961159647-dc795fa531b0 |
-| runebound | photo-1636247499180-13285c86be9b |
-| cardrush | photo-1606937492590-2c6e942b1951 |
-| file-audit | photo-1634814407060-de5879efd7a8 |
+Obrazy mają 4:3, kafle są panoramiczne, kwadratowe albo pionowe, więc każdy dostał kafel o najbliższych proporcjach i punkt kadru `focus:[x, y]` w PIECES (shader kadruje wokół niego, panel projektu pokazuje pełny obraz):
 
-Pozostałe 4 kafle to placeholdery Jarka z Figmy (telefon, Echo Peak, karta „Find shelter” z wideo lasu, logo FIA). Wideo i logo FIA to materiały stron trzecich, przed publikacją portfolio podmienić.
+| kafel | referencja | focus |
+|---|---|---|
+| typestorm | interfejs „Ask Framer” z poświatą | 0.5, 0.6 |
+| lottie-studio | LAM, wielki napis | 0.5, 0 |
+| parkove | aevion, dron | środek |
+| contrast-audit | ilustracja, dwie postacie | 0.5, 0.3 |
+| audit-suite | noho, meble | środek |
+| spellbeat | Pasticcino, wnętrze pociągu | 0.5, 0.55 |
+| meander (kwadrat) | Maksym Bleibtgleich, portfolio z rozmyciem | środek |
+| wiredraft (pion) | ilustracja z kwiatem | 0.47, 0.5 |
+
+Pozostałe 6 kafli (win98-music, emilka, stickies, runebound, cardrush, file-audit) jest ciemnoszarych, zdjęcia ze stocka usunięte. Cztery kafle z Figmy bez zmian (telefon, Echo Peak, karta „Find shelter” z wideo lasu, logo FIA).
 
 ## Pokrętła
 

@@ -330,23 +330,23 @@ const CFG = {
 // ---------- content (placeholder data: Jarek's own experiments) ----------
 const PIECES = [
   { slug:'grid-blob', back:'#252525', front:{ src:'thumbs/grid-blob-front.png', x:0, y:0, w:1, h:1 },      title:'Grid Blob',      what:'Banner generator: a 9×4 grid melted into a goo blob, exported as true vector.', year:'2026', kind:'tool',   code:'https://github.com/vod123qwe/playground', words:["goo", "grid", "banner", "vector"], rect:{x:90,y:100,w:330,h:460},   hue:212, motif:'blob' },
-  { slug:'typestorm', image:'thumbs/brand/typestorm.jpg',      title:'TypeStorm',      what:'Typing shooter on Canvas. Words fall, you type them down before they land.', year:'2026', kind:'game',   words:["type fast", "canvas", "words fall", "arcade"], rect:{x:560,y:70,w:460,h:260},   hue:8,   motif:'rain' },
-  { slug:'wiredraft', image:'thumbs/brand/wiredraft.jpg',      title:'WireDraft',      what:'Wireframe editor that loads a mockup from the URL hash and exports SVG or Figma.', year:'2026', kind:'tool', words:["wireframe", "hash url", "svg out", "boxes"], rect:{x:1160,y:140,w:270,h:480}, hue:40,  motif:'wire' },
-  { slug:'lottie-studio', image:'thumbs/brand/lottie-studio.jpg',  title:'Lottie Studio',  what:'Tiny keyframe editor with a timeline that writes Lottie JSON.', year:'2026', kind:'tool',                 words:["keyframes", "timeline", "json", "motion"], rect:{x:1570,y:60,w:440,h:230},  hue:280, motif:'wave' },
-  { slug:'win98-music', image:'thumbs/brand/win98-music.jpg',    title:'Win98 Music',    what:'A Windows 98 desktop in React that plays music. Draggable windows included.', year:'2026', kind:'toy', code:'https://github.com/vod123qwe/win98-music', words:["desktop", "1998", "windows", "player"], rect:{x:2150,y:120,w:280,h:500}, hue:190, motif:'win' },
+  { slug:'typestorm', image:'thumbs/ref/typestorm.webp', focus:[0.5, 0.6],      title:'TypeStorm',      what:'Typing shooter on Canvas. Words fall, you type them down before they land.', year:'2026', kind:'game',   words:["type fast", "canvas", "words fall", "arcade"], rect:{x:560,y:70,w:460,h:260},   hue:8,   motif:'rain' },
+  { slug:'wiredraft', image:'thumbs/ref/wiredraft.png', focus:[0.47, 0.5],      title:'WireDraft',      what:'Wireframe editor that loads a mockup from the URL hash and exports SVG or Figma.', year:'2026', kind:'tool', words:["wireframe", "hash url", "svg out", "boxes"], rect:{x:1160,y:140,w:270,h:480}, hue:40,  motif:'wire' },
+  { slug:'lottie-studio', image:'thumbs/ref/lottie-studio.png', focus:[0.5, 0.0],  title:'Lottie Studio',  what:'Tiny keyframe editor with a timeline that writes Lottie JSON.', year:'2026', kind:'tool',                 words:["keyframes", "timeline", "json", "motion"], rect:{x:1570,y:60,w:440,h:230},  hue:280, motif:'wave' },
+  { slug:'win98-music',    title:'Win98 Music',    what:'A Windows 98 desktop in React that plays music. Draggable windows included.', year:'2026', kind:'toy', code:'https://github.com/vod123qwe/win98-music', words:["desktop", "1998", "windows", "player"], rect:{x:2150,y:120,w:280,h:500}, hue:190, motif:'win' },
   { slug:'kronika', image:'thumbs/kronika.png',        title:'Kronika',        what:'Settlement roguelite drawn entirely in ASCII. Seasons turn, expeditions leave, fog hides the hexes.', year:'2026', kind:'game', words:["ascii", "seasons", "fog", "settlement"], rect:{x:2570,y:70,w:320,h:450}, hue:120, motif:'ascii' },
-  { slug:'parkove', image:'thumbs/brand/parkove.jpg',        title:'Parkove',        what:'Outdoor game for Kraków parks: fog-of-war map, quests, a design system first.', year:'2026', kind:'mobile', words:["kraków", "fog of war", "quests", "outdoors"], rect:{x:100,y:680,w:480,h:250}, hue:140, motif:'fog' },
-  { slug:'emilka', image:'thumbs/brand/emilka.jpg',         title:'Emilka',         what:'Tablet learning game for a five-year-old, with Polish text-to-speech.', year:'2026', kind:'game',        words:["for kids", "tablet", "polish tts", "play"], rect:{x:700,y:480,w:260,h:460},  hue:330, motif:'dots' },
-  { slug:'meander', image:'thumbs/brand/meander.jpg',        title:'Meander',        what:'Mobile trip generator: pick a mood and a distance, get a route.', year:'2026', kind:'mobile', code:'https://github.com/vod123qwe/meander', words:["trip", "mood", "distance", "route"], rect:{x:1080,y:760,w:300,h:300}, hue:170, motif:'path' },
+  { slug:'parkove', image:'thumbs/ref/parkove.png', focus:[0.5, 0.5],        title:'Parkove',        what:'Outdoor game for Kraków parks: fog-of-war map, quests, a design system first.', year:'2026', kind:'mobile', words:["kraków", "fog of war", "quests", "outdoors"], rect:{x:100,y:680,w:480,h:250}, hue:140, motif:'fog' },
+  { slug:'emilka',         title:'Emilka',         what:'Tablet learning game for a five-year-old, with Polish text-to-speech.', year:'2026', kind:'game',        words:["for kids", "tablet", "polish tts", "play"], rect:{x:700,y:480,w:260,h:460},  hue:330, motif:'dots' },
+  { slug:'meander', image:'thumbs/ref/meander.png', focus:[0.5, 0.5],        title:'Meander',        what:'Mobile trip generator: pick a mood and a distance, get a route.', year:'2026', kind:'mobile', code:'https://github.com/vod123qwe/meander', words:["trip", "mood", "distance", "route"], rect:{x:1080,y:760,w:300,h:300}, hue:170, motif:'path' },
   { slug:'portfel', video:'thumbs/portfel.mp4', front:{ src:'thumbs/portfel-front.png', x:67/460, y:46/250, w:327/460, h:159/250, glass:{ radius:30 } },        title:'Portfel',        what:'Single-file budget PWA. Reads live data from a Gist and renders a mortgage dashboard.', year:'2025', kind:'personal', words:["budget", "pwa", "gist", "mortgage"], rect:{x:1520,y:420,w:460,h:250}, hue:48, motif:'bars' },
   { slug:'type-tokens', back:'#001e42', front:{ src:'thumbs/type-tokens-front.png', x:91/270, y:210/480, w:89/270, h:61/480 },    title:'Type Tokens',    what:'Figma plugin that turns Material 3 text styles into variables you can theme.', year:'2026', kind:'plugin', words:["material 3", "variables", "type ramp", "figma"], rect:{x:2080,y:740,w:270,h:480}, hue:230, motif:'type' },
-  { slug:'contrast-audit', image:'thumbs/brand/contrast-audit.jpg', title:'Contrast Audit', what:'Figma plugin checking WCAG and APCA contrast across a whole file, with review mode.', year:'2026', kind:'plugin', words:["wcag", "apca", "contrast", "review"], rect:{x:2490,y:640,w:450,h:240}, hue:0, motif:'rings' },
-  { slug:'stickies', image:'thumbs/brand/stickies.jpg',       title:'Stickies',       what:'Twelve sticky-note variants and a plugin that drops them where you point.', year:'2026', kind:'plugin', words:["notes", "twelve", "drop", "figma"], rect:{x:140,y:1050,w:260,h:470}, hue:52, motif:'notes' },
-  { slug:'audit-suite', image:'thumbs/brand/audit-suite.jpg',    title:'Audit Suite',    what:'Design-system audit hub: components, types, contrast, one message router.', year:'2026', kind:'plugin', code:'https://github.com/vod123qwe/figma-audit-suite', words:["audit", "components", "types", "router"], rect:{x:520,y:1080,w:470,h:250}, hue:205, motif:'grid' },
-  { slug:'runebound', image:'thumbs/brand/runebound.jpg',      title:'Runebound',      what:'Isometric action RPG proof of concept in Godot. CC0 assets only.', year:'2026', kind:'game',              words:["isometric", "arpg", "godot", "cc0"], rect:{x:1130,y:1180,w:330,h:470}, hue:265, motif:'iso' },
-  { slug:'cardrush', image:'thumbs/brand/cardrush.jpg',       title:'Cardrush',       what:'Horde survival meets a card deck. Isometric, Godot, waiting for its proof of concept.', year:'2026', kind:'game', words:["horde", "cards", "isometric", "godot"], rect:{x:1600,y:800,w:270,h:480}, hue:20, motif:'cards' },
-  { slug:'spellbeat', image:'thumbs/brand/spellbeat.jpg',      title:'Spellbeat',      what:'Deckbuilder crossed with a rhythm game. Parked, not forgotten.', year:'2025', kind:'game',                words:["rhythm", "deck", "parked", "beats"], rect:{x:2020,y:1350,w:450,h:240}, hue:300, motif:'beat' },
-  { slug:'file-audit', image:'thumbs/brand/file-audit.jpg',     title:'File Audit',     what:'The first Figma audit plugin: scans a design-system file and reports what drifted.', year:'2025', kind:'plugin', code:'https://github.com/vod123qwe/figma-file-audit', words:["drift", "scan", "design system", "v1"], rect:{x:2560,y:1010,w:280,h:500}, hue:95, motif:'scan' },
+  { slug:'contrast-audit', image:'thumbs/ref/contrast-audit.png', focus:[0.5, 0.3], title:'Contrast Audit', what:'Figma plugin checking WCAG and APCA contrast across a whole file, with review mode.', year:'2026', kind:'plugin', words:["wcag", "apca", "contrast", "review"], rect:{x:2490,y:640,w:450,h:240}, hue:0, motif:'rings' },
+  { slug:'stickies',       title:'Stickies',       what:'Twelve sticky-note variants and a plugin that drops them where you point.', year:'2026', kind:'plugin', words:["notes", "twelve", "drop", "figma"], rect:{x:140,y:1050,w:260,h:470}, hue:52, motif:'notes' },
+  { slug:'audit-suite', image:'thumbs/ref/audit-suite.png', focus:[0.5, 0.5],    title:'Audit Suite',    what:'Design-system audit hub: components, types, contrast, one message router.', year:'2026', kind:'plugin', code:'https://github.com/vod123qwe/figma-audit-suite', words:["audit", "components", "types", "router"], rect:{x:520,y:1080,w:470,h:250}, hue:205, motif:'grid' },
+  { slug:'runebound',      title:'Runebound',      what:'Isometric action RPG proof of concept in Godot. CC0 assets only.', year:'2026', kind:'game',              words:["isometric", "arpg", "godot", "cc0"], rect:{x:1130,y:1180,w:330,h:470}, hue:265, motif:'iso' },
+  { slug:'cardrush',       title:'Cardrush',       what:'Horde survival meets a card deck. Isometric, Godot, waiting for its proof of concept.', year:'2026', kind:'game', words:["horde", "cards", "isometric", "godot"], rect:{x:1600,y:800,w:270,h:480}, hue:20, motif:'cards' },
+  { slug:'spellbeat', image:'thumbs/ref/spellbeat.webp', focus:[0.5, 0.55],      title:'Spellbeat',      what:'Deckbuilder crossed with a rhythm game. Parked, not forgotten.', year:'2025', kind:'game',                words:["rhythm", "deck", "parked", "beats"], rect:{x:2020,y:1350,w:450,h:240}, hue:300, motif:'beat' },
+  { slug:'file-audit',     title:'File Audit',     what:'The first Figma audit plugin: scans a design-system file and reports what drifted.', year:'2025', kind:'plugin', code:'https://github.com/vod123qwe/figma-file-audit', words:["drift", "scan", "design system", "v1"], rect:{x:2560,y:1010,w:280,h:500}, hue:95, motif:'scan' },
 ];
 const pad2 = n => String(n).padStart(2, '0');
 
@@ -568,6 +568,7 @@ uniform float uRipple;     // lens: seconds since hover start
 uniform vec2 uRippleUv;    // lens: where the ripple started
 uniform float uPixel;      // focus: pixel size in px (<= 1.5 = sharp)
 uniform float uDim;        // how much this (not hovered) tile recedes, 0..1
+uniform vec2 uFocus;       // which part of the image the cover crop keeps (0.5, 0.5 = centre)
 varying vec2 vUv;
 void main () {
   if (uHasTex < 0.5) { gl_FragColor = vec4(uColor, uOpacity); return; }
@@ -596,7 +597,7 @@ void main () {
   vec2 ratio = vec2(
     min((uPieceSize.x / uPieceSize.y) / (uImageSize.x / uImageSize.y), 1.0),
     min((uImageSize.x / uImageSize.y) / (uPieceSize.x / uPieceSize.y), 1.0));
-  vec2 uv = vec2(st.x * ratio.x + (1.0 - ratio.x) * 0.5, st.y * ratio.y + (1.0 - ratio.y) * 0.5);
+  vec2 uv = vec2(st.x * ratio.x + (1.0 - ratio.x) * uFocus.x, st.y * ratio.y + (1.0 - ratio.y) * uFocus.y);
   vec2 excess = max(abs(uStrength) - vec2(uAberrThreshold), 0.0);
   vec2 off = excess * sign(uStrength) * uAberrScale + uHover / aspect + lensOff;
   float r = texture2D(uTex, uv + off).r;
@@ -624,7 +625,7 @@ function createGL(canvas) {
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
   gl.useProgram(prog);
-  const U = {}; for (const n of ['uPV','uPiecePos','uPieceSize','uStrength','uBend','uViewport','uTex','uHasTex','uColor','uOpacity','uImageSize','uHover','uAberrThreshold','uAberrScale','uLift','uTilt','uMousePx','uBulge','uBulgeR','uMode','uAmt','uMouseUv','uParallax','uInnerZoom','uRipple','uRippleUv','uPixel','uDim']) U[n] = gl.getUniformLocation(prog, n);
+  const U = {}; for (const n of ['uPV','uPiecePos','uPieceSize','uStrength','uBend','uViewport','uTex','uHasTex','uColor','uOpacity','uImageSize','uHover','uAberrThreshold','uAberrScale','uLift','uTilt','uMousePx','uBulge','uBulgeR','uMode','uAmt','uMouseUv','uParallax','uInnerZoom','uRipple','uRippleUv','uPixel','uDim','uFocus']) U[n] = gl.getUniformLocation(prog, n);
   const N = CFG.planeSegments, pos = [], uv = [], idx = [];
   for (let y = 0; y <= N; y++) for (let x = 0; x <= N; x++) { pos.push(x / N - 0.5, 0.5 - y / N); uv.push(x / N, y / N); }
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const a = y * (N + 1) + x, b = a + 1, c = a + N + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
@@ -679,6 +680,8 @@ function createGL(canvas) {
       gl.uniform1f(U.uHasTex, 1); gl.uniform2f(U.uImageSize, cover.videoWidth || cover.width, cover.videoHeight || cover.height);
       gl.uniform2f(U.uPiecePos, it.cx, it.cy); gl.uniform2f(U.uPieceSize, it.width, it.height);
       gl.uniform2f(U.uHover, hovers[it.index].x, hovers[it.index].y);
+      const fo = (PIECES[it.index] && PIECES[it.index].focus) || [0.5, 0.5];
+      gl.uniform2f(U.uFocus, fo[0], fo[1]);
       const fx = fxFor ? fxFor(it) : null;
       if (fx) {
         gl.uniform1f(U.uMode, fx.mode); gl.uniform1f(U.uAmt, fx.amt);
@@ -797,7 +800,7 @@ function syncSlots() {
       a.dataset.index = String(it.index);
       const p = PIECES[it.index];
       a.href = `#/${p.slug}`; a.setAttribute('aria-label', `${p.title} — open piece`);
-      if (!R) a.style.backgroundImage = `url(${coverUrl(it.index)})`;
+      if (!R) { a.style.backgroundImage = `url(${coverUrl(it.index)})`; const fo = p.focus || [0.5, 0.5]; a.style.backgroundPosition = `${fo[0] * 100}% ${fo[1] * 100}%`; }
     }
   });
   wordsFrame();
