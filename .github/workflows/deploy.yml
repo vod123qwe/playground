@@ -54,6 +54,7 @@ jobs:
           cp -r hello _site/hello
           cp -r lithos/dist _site/lithos
           cp -r aura/dist _site/aura
+          cp -r lab-board _site/lab-board
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
