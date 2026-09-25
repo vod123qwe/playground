@@ -1,6 +1,6 @@
 # 01 · Glass Button
 
-Pierwszy eksperyment labu. Szklany przycisk-launcher agentów („Ask an agent”) z menu, studium po ujęciu znalezionym na recent.design, dalej rozwijane po zdjęciach fizycznych przycisków z akrylu i ujęciu „Liquid glass”.
+Pierwszy eksperyment labu. Szklany przycisk „Ask AI” z menu (Write, Summarise, Translate). Zaczęło się od studium ujęcia z recent.design, ale to już osobna rzecz, więc strona nie ma podpisu.
 
 ## v5 (2026-09-25): panel „Tune”, dowolna bryła, szklana kulka, tła i upload
 
@@ -8,7 +8,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 
 **Bryła** to pole odległości (SDF) śledzone krokami (sphere tracing): obrys to prostokąt z zaokrąglonymi rogami (aż do pełnej pigułki), a na nim profil wysokości od góry i od spodu. Kopuła > 0 daje soczewkę wypukłą, kopuła < 0 wklęsłą misę; przy wklęsłości ścianka sama się podnosi, żeby zawsze był rant.
 
-**Panel „Tune”** (przycisk w prawym górnym rogu; na telefonie wysuwa się od dołu):
+**Panel „Tune”** (przycisk w prawym górnym rogu; na telefonie wysuwa się od dołu). Grupy w kolejności pracy: Presets, Shape, Glass, Light, Shadow & glow, Icon, Menu, Label, Layout, Background, Sound. Każdą grupę można zwinąć (stan jest pamiętany), nagłówki przyklejają się przy przewijaniu, Reset i Copy są przyklejone na dole, a opcje zależne pokazują się tylko wtedy, gdy coś robią. Wszystkie 52 opcje przeszły automatyczny test (min i max zmieniają obraz albo układ).
 - *Presets*: **Signature** (pełny wygląd Jarka: gruba, lekko wklęsła płyta z miękkim brzegiem uniesiona nad stroną, IOR 2,28 z mocnym rozszczepieniem, orb, większy layout, dźwięk Bubble, płynne menu; bez treści) i kształty, które zmieniają tylko bryłę i optykę: M&M, Puck (gruby krążek), Tile (płytka z zaokrąglonymi rogami), Lens (wysoka, dwustronnie wypukła), Pebble (miękki kamyk), Dish (wklęsła), Prism (kanciasty kryształ, IOR 2,3), Droplet (woda, IOR 1,33). Po wybraniu kształtu ikonka sama dopasowuje się do nowej bryły.
 - *Shape*: rogi, kopuła (wypukła / wklęsła), ścianka, spód, profil (1 = stożek, 2 = łuk koła, więcej = płaski wierzch z ostrzejszym brzegiem), zaokrąglenie krawędzi, uniesienie nad stroną. *Press grow*: o ile przycisk rośnie przy przytrzymaniu (domyślnie 8%).
 - *Optics*: współczynnik załamania, dyspersja, zmatowienie (frost), kolor i siła zabarwienia szkła.
@@ -27,7 +27,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 
 **Przytrzymanie i puszczenie**: przytrzymany przycisk pompuje się jak w Liquid Glass (szkło, nadruk i kulka rosną razem wokół środka, na sprężynie), a po puszczeniu wraca z lekkim, płynnym dobiciem i dopiero wtedy w pełni wypływa szuflada menu. Tak samo z klawiatury: Enter albo spacja otwierają przy puszczeniu.
 
-**Treść**: przycisk domyślnie „Ask an agent”, po wyborze „Research agent” itd. Pozycje menu to pęcherzyk powietrza w szkle jako punktor (ciemny obrys, jasny środek, odblask) i mocniejsza, większa nazwa, z dużymi odstępami; skróty 1, 2, 3 działają (gdy przycisk ma fokus albo menu jest otwarte), bez nadruku. *Liquid* na maksimum zlewa przycisk i menu w jedną miękką bryłę.
+**Treść**: przycisk domyślnie „Ask AI”, po wyborze np. „Write with AI”; pozycje Write, Summarise, Translate (symbole: stalówka, skracające się linijki tekstu, globus). Pozycje menu to pęcherzyk powietrza w szkle jako punktor (ciemny obrys, jasny środek, odblask) i mocniejsza, większa nazwa, z dużymi odstępami; skróty 1, 2, 3 działają (gdy przycisk ma fokus albo menu jest otwarte), bez nadruku. *Liquid* na maksimum zlewa przycisk i menu w jedną miękką bryłę.
 
 **Kulka** jest z przezroczystego, lekko przydymionego szkła i działa jak soczewka kulista: pokazuje odwróconą i powiększoną stronę za sobą. Gwiazdka leży na płaszczyźnie przez jej środek, a jej gradient obraca się za światłem, przesuwa z kątem patrzenia jak hologram i lekko „oddycha”.
 

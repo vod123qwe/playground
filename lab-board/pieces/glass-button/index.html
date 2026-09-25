@@ -94,18 +94,35 @@
   .tune:focus-visible{outline:2px solid rgba(20,20,20,.4); outline-offset:2px}
   .tune svg{width:15px; height:15px}
   .panel{
-    position:fixed; top:54px; right:12px; bottom:12px; width:300px; z-index:5; overflow:auto; overscroll-behavior:contain;
-    padding:2px 16px 16px; border-radius:14px; font-size:12px; color:var(--ink);
+    position:fixed; top:54px; right:12px; bottom:12px; width:328px; z-index:5; overflow:auto; overscroll-behavior:contain;
+    padding:0 18px; border-radius:16px; font-size:12.5px; color:var(--ink); scroll-behavior:smooth; scrollbar-gutter:stable;
     background:rgba(248,248,250,.82); -webkit-backdrop-filter:blur(18px) saturate(1.3); backdrop-filter:blur(18px) saturate(1.3);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.9), 0 20px 50px -24px rgba(20,24,30,.5);
     transform:translateX(calc(100% + 24px)); visibility:hidden; transition:transform .45s var(--ease), visibility 0s .45s;
     touch-action:pan-y; scrollbar-width:thin; scrollbar-color:rgba(20,20,20,.18) transparent;
   }
   body.tuning .panel{transform:none; visibility:visible; transition:transform .45s var(--ease)}
-  .panel h3{margin:16px 0 4px; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(20,20,20,.48)}
-  .row{display:grid; grid-template-columns:1fr auto; align-items:center; gap:0 8px; padding:4px 0}
+  .panel::-webkit-scrollbar{width:10px}
+  .panel::-webkit-scrollbar-thumb{border:3px solid transparent; border-radius:10px; background:rgba(20,20,20,.16) padding-box}
+  .panel::-webkit-scrollbar-thumb:hover{background:rgba(20,20,20,.3) padding-box}
+  .panel::-webkit-scrollbar-track{background:transparent}
+  .grp + .grp{border-top:1px solid rgba(20,20,20,.07)}
+  .gh{
+    position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; width:calc(100% + 36px); margin:0 -18px;
+    height:46px; padding:0 18px; border:0; font:inherit; font-size:13px; font-weight:600; letter-spacing:-.005em; color:var(--ink); cursor:pointer;
+    background:rgba(247,247,249,.94); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  }
+  .gh:hover{color:#000}
+  .gh svg{width:16px; height:16px; opacity:.45; transition:transform .3s var(--ease)}
+  .grp.open .gh svg{transform:rotate(180deg)}
+  .gh:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:-2px}
+  .gb{display:grid; grid-template-rows:0fr; transition:grid-template-rows .32s var(--ease)}
+  .grp.open .gb{grid-template-rows:1fr}
+  .gi{overflow:hidden; min-height:0}
+  .grp.open .gi{padding-bottom:14px}
+  .row{display:grid; grid-template-columns:1fr auto; align-items:center; gap:2px 10px; padding:7px 0; color:rgba(20,20,20,.82)}
   .row[hidden]{display:none}
-  .row .v{display:flex; align-items:center; gap:3px; font-variant-numeric:tabular-nums; color:rgba(20,20,20,.55); font-size:11.5px}
+  .row .v{display:flex; align-items:center; gap:3px; font-variant-numeric:tabular-nums; color:rgba(20,20,20,.5); font-size:12px}
   .row .v .num{width:52px; padding:2px 5px; margin:0 -5px 0 0; border:0; border-radius:5px; font:inherit; font-size:inherit; color:inherit; text-align:right; background:transparent; box-shadow:none;
                user-select:text; -webkit-user-select:text; outline:none; cursor:text}
   .row .v .num:hover{background:rgba(20,20,20,.06)}
@@ -156,11 +173,12 @@
   .presets button:hover, .acts button:hover{background:#fff}
   .presets button[aria-pressed=true]{background:var(--ink); color:#fff; box-shadow:none}
   .panel button:focus-visible{outline:2px solid rgba(20,20,20,.4); outline-offset:1px}
-  .acts{display:flex; gap:6px; margin-top:18px}
+  .acts{position:sticky; bottom:0; z-index:2; display:flex; gap:8px; margin:0 -18px; padding:12px 18px 16px;
+        background:rgba(247,247,249,.94); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border-top:1px solid rgba(20,20,20,.07)}
   .acts button{flex:1}
   @media (min-width:761px){
-    body.tuning .stage{right:324px}
-    body.tuning .chip{left:calc(50% - 162px)}
+    body.tuning .stage{right:352px}
+    body.tuning .chip{left:calc(50% - 176px)}
   }
   @media (max-width:760px){
     .panel{top:auto; left:8px; right:8px; bottom:8px; width:auto; max-height:50vh; transform:translateY(calc(100% + 16px))}
@@ -190,10 +208,10 @@
       <span class="label" id="label">Ask agents</span>
       <svg class="chev" id="chev" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
     </button>
-    <ul class="menu" id="menu" role="menu" aria-label="Agents">
-      <li role="menuitem" tabindex="-1" data-agent="research" aria-keyshortcuts="1"><span class="dot" style="background:#ff8a3b"></span><span class="nm">Research</span></li>
-      <li role="menuitem" tabindex="-1" data-agent="design" aria-keyshortcuts="2"><span class="dot" style="background:#3d86ff"></span><span class="nm">Design</span></li>
-      <li role="menuitem" tabindex="-1" data-agent="build" aria-keyshortcuts="3"><span class="dot" style="background:#35c27a"></span><span class="nm">Build</span></li>
+    <ul class="menu" id="menu" role="menu" aria-label="Ask AI to">
+      <li role="menuitem" tabindex="-1" data-agent="write" aria-keyshortcuts="1"><span class="dot"></span><span class="nm">Write</span></li>
+      <li role="menuitem" tabindex="-1" data-agent="summarise" aria-keyshortcuts="2"><span class="dot"></span><span class="nm">Summarise</span></li>
+      <li role="menuitem" tabindex="-1" data-agent="translate" aria-keyshortcuts="3"><span class="dot"></span><span class="nm">Translate</span></li>
     </ul>
   </div>
 </main>
@@ -204,7 +222,7 @@
 <aside class="panel" id="panel" aria-label="Tune the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
-<div class="meta bottom"><span>move · press · open · zoom · orbit · tune</span><span>study after a shot found on <a href="https://recent.design" target="_blank" rel="noreferrer">recent.design</a></span></div>
+<div class="meta bottom"><span>move · press · open · zoom · orbit · tune</span></div>
 
 <script>
 // Glass Button v5: a small ray tracer in one fragment shader, with a tuning panel.
@@ -231,7 +249,7 @@ const DEF = {
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
   follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
-  text: 'Ask an agent', agent: '', icon: 'glyph', beadFlat: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
+  text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'grid', bgColor: '#39435a', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
@@ -258,21 +276,8 @@ const PRESETS = {
   'Prism':   { corner: .2, dome: .45, wall: .15, under: .15, profile: 1.1, edge: .01, lift: .08, ior: 2.3, disp: .12 },
   'Droplet': { corner: 1, dome: 1.25, wall: 0, under: .05, profile: 2.6, edge: .01, lift: 0, ior: 1.33, disp: .01 },
 };
+const isBead = () => P.icon === 'glyph' || P.icon === 'orb';
 const CTRL = [
-  { g: 'Background' },
-  { k: 'bg', l: 'Background', t: 'bgs' },
-  { k: 'bgColor', l: 'Background colour', t: 'color' },
-  { k: 'gridDensity', l: 'Grid density', min: .3, max: 4, s: .01 },
-  { k: 'grid', l: 'Grid lines', min: 0, max: 1, s: .01 },
-  { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01 },
-  { g: 'Sound' },
-  { k: 'sound', l: 'Click', t: 'sounds' },
-  { k: 'release', l: 'Click on release too', t: 'check' },
-  { k: 'volume', l: 'Volume', min: 0, max: 1, s: .01 },
-  { g: 'Menu' },
-  { k: 'menuGap', l: 'Gap to the button', min: 0, max: 1.5, s: .01, u: 'em' },
-  { k: 'liquid', l: 'Liquid (melts together)', min: 0, max: 1, s: .01 },
-  { k: 'menuLift', l: 'Height (Z)', min: 0, max: 2, s: .01 },
   { g: 'Shape' },
   { k: 'corner', l: 'Corner', min: 0, max: 1, s: .01 },
   { k: 'dome', l: 'Dome', min: -1, max: 1.3, s: .01 },
@@ -282,52 +287,66 @@ const CTRL = [
   { k: 'edge', l: 'Edge round', min: 0, max: .4, s: .01 },
   { k: 'lift', l: 'Lift', min: 0, max: .6, s: .01 },
   { k: 'pressGrow', l: 'Press grow', min: 0, max: .25, s: .005 },
-  { g: 'Optics' },
+  { g: 'Glass' },
   { k: 'ior', l: 'Refraction (IOR)', min: 1, max: 2.4, s: .01 },
   { k: 'disp', l: 'Dispersion', min: 0, max: .15, s: .002 },
   { k: 'frost', l: 'Frost', min: 0, max: 12, s: .1 },
-  { k: 'tint', l: 'Tint', t: 'color' },
   { k: 'tintK', l: 'Tint strength', min: 0, max: 8, s: .05 },
+  { k: 'tint', l: 'Tint colour', t: 'color', show: () => P.tintK > 0 },
   { g: 'Light' },
   { k: 'follow', l: 'Follow cursor', t: 'check' },
-  { k: 'lightAng', l: 'Angle', min: 0, max: 360, s: 1, u: '°' },
-  { k: 'lightEl', l: 'Height', min: 8, max: 85, s: 1, u: '°' },
+  { k: 'lightAng', l: 'Angle', min: 0, max: 360, s: 1, u: '°', show: () => !P.follow },
+  { k: 'lightEl', l: 'Elevation', min: 8, max: 85, s: 1, u: '°', show: () => !P.follow },
   { k: 'key', l: 'Highlight', min: 0, max: 3, s: .01 },
   { k: 'env', l: 'Reflections', min: 0, max: 2, s: .01 },
   { k: 'rim', l: 'Rim spectrum', min: 0, max: 3, s: .01 },
-  { g: 'Shadow' },
+  { g: 'Shadow & glow' },
   { k: 'shadow', l: 'Shadow strength', min: 0, max: 2, s: .01 },
   { k: 'glowOn', l: 'Glow (a coloured backlight)', t: 'check' },
-  { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'star', 'ocean', 'ember'], dep: 'glowOn' },
-  { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, dep: 'glowOn' },
-  { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, dep: 'glowOn' },
-  { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, dep: 'glowOn' },
+  { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'star', 'ocean', 'ember'], show: () => P.glowOn },
+  { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, show: () => P.glowOn },
+  { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, show: () => P.glowOn },
+  { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, show: () => P.glowOn },
   { g: 'Icon' },
   { k: 'icon', l: 'Style', t: 'seg', o: ['glyph', 'orb', 'emboss'] },
-  { k: 'fitIcon', l: 'Fit the icon inside the glass', t: 'action', dep: 'icon', depv: ['glyph', 'orb'] },
-  { k: 'beadSize', l: 'Size', min: .4, max: 3, s: .01, dep: 'icon', depv: ['glyph', 'orb'] },
-  { k: 'beadFlat', l: 'Roundness (1 = sphere, less = M&M)', min: .2, max: 1, s: .01, dep: 'icon', depv: ['glyph', 'orb'] },
-  { k: 'sink', l: 'Sink into glass', min: -.8, max: 3, s: .01, dep: 'icon', depv: ['glyph', 'orb'] },
-  { k: 'smoke', l: 'Smoke', min: 0, max: 1, s: .01, dep: 'icon', depv: ['glyph', 'orb'] },
-  { k: 'starSize', l: 'Symbol size', min: 0, max: 1, s: .01, dep: 'icon', depv: ['glyph'] },
-  { k: 'starMotion', l: 'Gradient motion', min: 0, max: 2, s: .01, dep: 'icon', depv: ['glyph'] },
-  { k: 'orbSpeed', l: 'Flow speed', min: 0, max: 3, s: .01, dep: 'icon', depv: ['orb'] },
-  { k: 'orbGlow', l: 'Brightness', min: 0, max: 2, s: .01, dep: 'icon', depv: ['orb'] },
-  { k: 'embSize', l: 'Carving size', min: .4, max: 1.8, s: .01, dep: 'icon', depv: ['emboss'] },
-  { k: 'embDepth', l: 'Carving depth', min: 0, max: 1, s: .01, dep: 'icon', depv: ['emboss'] },
-  { k: 'embFrost', l: 'Frost in the carving', min: 0, max: 1, s: .01, dep: 'icon', depv: ['emboss'] },
-  { g: 'Content' },
-  { k: 'text', l: 'Label', t: 'text' },
+  { k: 'fitIcon', l: 'Fit the icon inside the glass', t: 'action', show: isBead },
+  { k: 'beadSize', l: 'Bead size', min: .4, max: 3, s: .01, show: isBead },
+  { k: 'beadFlat', l: 'Roundness (1 = sphere, less = M&M)', min: .2, max: 1, s: .01, show: isBead },
+  { k: 'sink', l: 'Sink into glass', min: -.8, max: 3, s: .01, show: isBead },
+  { k: 'smoke', l: 'Smoke', min: 0, max: 1, s: .01, show: isBead },
+  { k: 'starSize', l: 'Symbol size', min: 0, max: 1, s: .01, show: () => P.icon === 'glyph' },
+  { k: 'starMotion', l: 'Gradient motion', min: 0, max: 2, s: .01, show: () => P.icon === 'glyph' },
+  { k: 'orbSpeed', l: 'Flow speed', min: 0, max: 3, s: .01, show: () => P.icon === 'orb' },
+  { k: 'orbGlow', l: 'Brightness', min: 0, max: 2, s: .01, show: () => P.icon === 'orb' },
+  { k: 'embSize', l: 'Carving size', min: .4, max: 1.8, s: .01, show: () => P.icon === 'emboss' },
+  { k: 'embDepth', l: 'Carving depth', min: 0, max: 1, s: .01, show: () => P.icon === 'emboss' },
+  { k: 'embFrost', l: 'Frost in the carving', min: 0, max: 1, s: .01, show: () => P.icon === 'emboss' },
+  { g: 'Menu' },
+  { k: 'menuGap', l: 'Gap to the button', min: 0, max: 1.5, s: .01, u: 'em' },
+  { k: 'liquid', l: 'Liquid (melts together)', min: 0, max: 1, s: .01 },
+  { k: 'menuLift', l: 'Float (Z)', min: 0, max: 2, s: .01 },
+  { g: 'Label' },
+  { k: 'text', l: 'Text', t: 'text' },
   { k: 'ink', l: 'Ink', t: 'color' },
   { k: 'inkA', l: 'Ink opacity', min: 0, max: 1, s: .01 },
   { k: 'chevron', l: 'Chevron', t: 'check' },
   { g: 'Layout' },
-  { k: 'scale', l: 'Size', min: .5, max: 2.2, s: .01 },
+  { k: 'scale', l: 'Scale', min: .5, max: 2.2, s: .01 },
   { k: 'h', l: 'Height', min: 1.6, max: 5, s: .01, u: 'em' },
   { k: 'pl', l: 'Padding left', min: 0, max: 2.5, s: .01, u: 'em' },
   { k: 'pr', l: 'Padding right', min: 0, max: 3, s: .01, u: 'em' },
   { k: 'gap', l: 'Gap', min: 0, max: 1.6, s: .01, u: 'em' },
   { k: 'weight', l: 'Weight', min: 400, max: 600, s: 10 },
+  { g: 'Background' },
+  { k: 'bg', l: 'Background', t: 'bgs' },
+  { k: 'bgColor', l: 'Background colour', t: 'color' },
+  { k: 'gridDensity', l: 'Grid density', min: .3, max: 4, s: .01 },
+  { k: 'grid', l: 'Grid lines', min: 0, max: 1, s: .01 },
+  { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01, show: () => P.bg === 'upload' },
+  { g: 'Sound' },
+  { k: 'sound', l: 'Click', t: 'sounds' },
+  { k: 'release', l: 'Click on release too', t: 'check', show: () => P.sound !== 'none' },
+  { k: 'volume', l: 'Volume', min: 0, max: 1, s: .01, show: () => P.sound !== 'none' },
 ];
 const KEY = 'lab.glass-button.v5';
 const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
@@ -344,8 +363,9 @@ let P = STILL ? Object.assign({}, DEF) : load();
 delete P.bgTint;
 if (P.icon === 'star') P.icon = 'glyph';                                   // the star style is gone
 P.bead = true;                                                             // no bead is now the emboss style
-{ const m = /^Ask (agents|research|design|build)$/.exec(P.text || '');       // the old labels
-  if (m) { if (m[1] === 'agents') { P.text = DEF.text; P.agent = ''; } else { P.agent = m[1]; P.text = m[1][0].toUpperCase() + m[1].slice(1) + ' agent'; } } }
+// the agent labels became Ask AI (write, summarise, translate)
+if (/^(Ask (agents|an agent|research|design|build)|(Research|Design|Build) agent|Select)$/.test(P.text || '')) { P.text = DEF.text; P.agent = ''; }
+if (!['write', 'summarise', 'translate'].includes(P.agent)) P.agent = '';
 if (P.shadowStyle === 'glow') P.glowOn = true; delete P.shadowStyle;     // the old style switch became a toggle
 if (P.sound === 'custom') P.sound = 'glass';                           // a sound file is not kept between visits
 if (P.page === 'dark' && P.bg === 'grid') P.bg = 'grid-dark';          // settings saved before backgrounds existed
@@ -483,7 +503,7 @@ items.forEach(li => {
 function choose(li) {
   click(false, .7);
   P.agent = li.dataset.agent;
-  set('text', `${li.querySelector('.nm').textContent} agent`);
+  set('text', `${li.querySelector('.nm').textContent} with AI`);
   setMenu(false); s.jiggle = 1;
 }
 const byKey = e => { const n = +e.key; return n >= 1 && n <= items.length ? items[n - 1] : null; };
@@ -684,7 +704,23 @@ const fmt = (c, v) => c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 
 const pre = (c, v) => c.k === 'dome' ? (v < 0 ? 'concave' : v > 0 ? 'convex' : 'flat') : '';
 function buildPanel() {
   const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
-  const h = el('h3', null, 'Presets'); panel.appendChild(h);
+  // collapsible groups; which ones are open is remembered
+  let open = { Presets: true, Shape: true };
+  try { open = Object.assign(open, JSON.parse(localStorage.getItem(KEY + '.panel') || '{}')); } catch (e) {}
+  let body = null;
+  const group = name => {
+    const sec = el('section', 'grp'), hd = el('button', 'gh'), bd = el('div', 'gb'), inner = el('div', 'gi');
+    hd.type = 'button'; hd.innerHTML = '<span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+    hd.firstChild.textContent = name; hd.setAttribute('aria-controls', `grp-${name}`); bd.id = `grp-${name}`;
+    const setOpen = v => { sec.classList.toggle('open', v); hd.setAttribute('aria-expanded', String(v)); inner.inert = !v; };
+    setOpen(!!open[name]);
+    hd.addEventListener('click', () => {
+      const v = !sec.classList.contains('open'); setOpen(v); open[name] = v;
+      try { localStorage.setItem(KEY + '.panel', JSON.stringify(open)); } catch (e) {}
+    });
+    bd.appendChild(inner); sec.append(hd, bd); panel.appendChild(sec); body = inner;
+  };
+  group('Presets');
   const pr = el('div', 'presets');
   for (const name in PRESETS) {
     const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name;
@@ -700,9 +736,9 @@ function buildPanel() {
     });
     pr.appendChild(b);
   }
-  panel.appendChild(pr);
+  body.appendChild(pr);
   for (const c of CTRL) {
-    if (c.g) { panel.appendChild(el('h3', null, c.g)); continue; }
+    if (c.g) { group(c.g); continue; }
     const row = el('div', 'row'), id = `in-${c.k}`, lab = el('label', null, c.l); lab.htmlFor = id; row.appendChild(lab);
     let inp;
     if (c.t === 'action') {
@@ -774,7 +810,7 @@ function buildPanel() {
       });
       row.appendChild(inp); inp._v = v; inp._pre = pr;
     }
-    inp.id = id; inputs[c.k] = inp; panel.appendChild(row); inp._row = row;
+    inp.id = id; inputs[c.k] = inp; body.appendChild(row); inp._row = row;
   }
   const acts = el('div', 'acts');
   const reset = el('button', null, 'Reset all'); reset.type = 'button';
@@ -803,9 +839,7 @@ function syncInputs() {
     else if (c.t === 'seg' || c.t === 'bgs' || c.t === 'sounds') [...inp.children].forEach(b => b.dataset.v && b.setAttribute('aria-pressed', String(b.dataset.v === v)));
     else { inp.value = v; paintRange(c, inp, inp._v); }
   }
-  inputs.lightAng.disabled = inputs.lightEl.disabled = !!P.follow;
-  inputs.bgScale.disabled = bg.mode === 0;
-  for (const c of CTRL) if (c.dep && inputs[c.k]) inputs[c.k]._row.hidden = c.depv ? !c.depv.includes(P[c.dep]) : !P[c.dep];   // options show only for their style / switch
+  for (const c of CTRL) if (c.show && inputs[c.k]) inputs[c.k]._row.hidden = !c.show();   // options show only when they do something
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const pr = PRESETS[b.dataset.preset]; b.setAttribute('aria-pressed', String(Object.keys(pr).every(k => typeof pr[k] === 'number' ? Math.abs(P[k] - pr[k]) < 1e-6 : P[k] === pr[k])));
   }
@@ -816,7 +850,7 @@ function set(k, v) {
   if (k === 'bg' || k === 'bgColor') useBg(P.bg);
   if (k === 'bgColor' || k === 'gridDensity') paintSwatches(panel.querySelector('.bgs'));
   if (k === 'glowOn' && v && P.glowK < 0.05) P.glowK = DEF.glowK;      // switching the glow on should show something
-  apply(); save(); if (k === 'bg' || k === 'bgColor' || k === 'glowOn' || k === 'glow' || k === 'icon') syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
+  apply(); save(); if (['bg', 'bgColor', 'glowOn', 'glow', 'icon', 'sound'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   const st = anchor.style;
@@ -1064,11 +1098,10 @@ vec3 envAt(vec3 p, vec3 d){
 float sdSeg(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 float glyphD(float id, vec2 p){
   if (id < 0.5) return min(length(p - vec2(0.0, -0.42)), min(length(p - vec2(-0.42, 0.3)), length(p - vec2(0.42, 0.3)))) - 0.3;   // any agent: three dots
-  if (id < 1.5) {                                                                                  // research: a lens
-    float ring = abs(length(p - vec2(-0.14)) - 0.44) - 0.14;
-    return min(ring, sdSeg(p, vec2(0.2), vec2(0.7)) - 0.15);
+  if (id < 1.5) {                                                                                  // summarise: lines of text, shorter and shorter
+    return min(sdSeg(p, vec2(-0.66, -0.46), vec2(0.66, -0.46)), min(sdSeg(p, vec2(-0.66, 0.0), vec2(0.3, 0.0)), sdSeg(p, vec2(-0.66, 0.46), vec2(-0.08, 0.46)))) - 0.14;
   }
-  if (id < 2.5) {                                                                                  // design: a pen nib
+  if (id < 2.5) {                                                                                  // write: a pen nib
     p /= 1.25;
     vec2 q = vec2(0.7071 * (p.x + p.y), 0.7071 * (p.y - p.x));
     vec2 a = abs(q); float r = 0.98, d0 = 0.66, b = sqrt(r * r - d0 * d0);
@@ -1076,9 +1109,11 @@ float glyphD(float id, vec2 p){
     float cut = min(length(q - vec2(0.0, -0.08)) - 0.12, max(abs(q.x) - 0.035, -q.y - 0.08));
     return max(ves, -cut) * 1.25;
   }
-  vec2 a = abs(p); float hexd = max(a.x, a.x * 0.5 + a.y * 0.866) - 0.7;                         // build: a cube
-  float gr = min(sdSeg(p, vec2(0.0), vec2(0.0, 0.81)), min(sdSeg(p, vec2(0.0), vec2(-0.7, -0.405)), sdSeg(p, vec2(0.0), vec2(0.7, -0.405)))) - 0.05;
-  return max(hexd, -gr);
+  float r = length(p);                                                                             // translate: a globe
+  float ring = abs(r - 0.72) - 0.1;
+  float mer = max(abs(length(vec2(p.x * 2.2, p.y)) - 0.72) / 1.8 - 0.07, r - 0.72);
+  float eq = max(abs(p.y) - 0.07, r - 0.72);
+  return min(ring, min(mer, eq));
 }
 // the glyph now: one shape melting into the next when the agent changes
 float glyph(vec2 p){ return mix(glyphD(uIcon.y, p), glyphD(uIcon.z, p), smoothstep(0.0, 1.0, uIcon.w)); }
@@ -1425,7 +1460,7 @@ function frame(t) {
   gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
   gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
   // the icon: star, the chosen agent's glyph (melting from the last one), a flowing orb, or carved into the glass
-  const AG = { research: [1, '#ff8a3b'], design: [2, '#3d86ff'], build: [3, '#35c27a'] }, ag = AG[P.agent];
+  const AG = { write: [2, '#ff8a3b'], summarise: [1, '#3d86ff'], translate: [3, '#35c27a'] }, ag = AG[P.agent];
   const mode = { glyph: 1, orb: 2, emboss: 3 }[P.icon] || 1;
   const tg = ag ? ag[0] : 0;
   if (tg !== s.gTo) { s.gFrom = s.gT >= 0.5 ? s.gTo : s.gFrom; s.gTo = tg; s.gT = 0; }
