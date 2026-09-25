@@ -109,6 +109,11 @@
   .rv-btn svg{width:18px; height:18px}
   .rv-btn + .rv-label, .rv-label + .rv-btn, .rv-btn + .rv-btn{border-left:1px solid var(--line)}
   .rv-label{min-width:156px; height:44px; padding:0 14px; border:0; background:transparent; color:inherit; font:inherit; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer}
+  .rv-group{height:44px; min-width:66px; padding:0 12px; border:0; border-right:1px solid var(--line); background:transparent; color:var(--muted); font:inherit; font-size:11px; letter-spacing:.06em; text-transform:uppercase; cursor:pointer}
+  .rv-group::after{content:" ▾"; opacity:.6}
+  .rv-group{white-space:nowrap}
+  @media (max-width:400px){ .rv-group{min-width:0; padding:0 10px} .rv-label{min-width:104px !important; padding:0 10px} }
+  .rv-label{min-width:128px !important}
   .rv-k,.rv-n{opacity:.5; font-size:11px; font-variant-numeric:tabular-nums}
   .rv-name{font-weight:700; font-size:14px}
   .rv-btn:active,.rv-label:active{background:var(--line)}
@@ -262,8 +267,9 @@
     <span><span class="k" id="hint">drag to pan · scroll to zoom · </span><span class="v" id="count"></span></span>
   </footer>
   <nav class="review" id="review" aria-label="Review">
+    <button class="rv-group" id="rv-group" type="button" aria-label="What the arrows change">space</button>
     <button class="rv-btn" id="rv-prev" type="button" aria-label="Previous hover effect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <button class="rv-label" id="rv-label" type="button" aria-haspopup="dialog" aria-controls="options" aria-expanded="false"><span class="rv-k">hover</span><span class="rv-name" id="rv-name">lift</span><span class="rv-n" id="rv-n">2/10</span></button>
+    <button class="rv-label" id="rv-label" type="button" aria-haspopup="dialog" aria-controls="options" aria-expanded="false"><span class="rv-name" id="rv-name">lift</span><span class="rv-n" id="rv-n">2/10</span></button>
     <button class="rv-btn" id="rv-next" type="button" aria-label="Next hover effect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
     <button class="rv-btn" id="rv-menu" type="button" aria-label="All options" aria-controls="options" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><path d="M16 5v4M10 15v4"/></svg></button>
   </nav>
@@ -271,6 +277,9 @@
   <div class="options" id="options" role="dialog" aria-label="Review options" hidden>
     <div class="opt-grab" aria-hidden="true"></div>
     <div class="opt-head"><strong>Review</strong><button class="opt-x" id="opt-x" type="button">close</button></div>
+    <section class="opt-sec"><h3>space <span class="opt-hint">układ kafli w przestrzeni</span></h3>
+      <div class="switch" id="space-switch"><button data-v="plane">plane</button><button data-v="field">field</button><button data-v="tunnel">tunnel</button><button data-v="ring">ring</button><button data-v="sphere">sphere</button><button data-v="stack">stack</button></div>
+      <p class="opt-desc" id="desc-space"></p></section>
     <section class="opt-sec"><h3>hover <span class="opt-hint">myszą: najedź · telefon: przytrzymaj kafel</span></h3>
       <div class="switch" id="hover-switch"><button data-v="none">none</button><button data-v="lift">lift</button><button data-v="lens">lens</button><button data-v="focus">focus</button><button data-v="depth">depth</button><button data-v="topo">topo</button><button data-v="scan">scan</button><button data-v="dof">dof</button><button data-v="light">light</button><button data-v="relief">relief</button></div>
       <p class="opt-desc" id="desc-hover"></p></section>
@@ -285,7 +294,7 @@
       <p class="opt-desc" id="desc-covers"></p></section>
     <section class="opt-sec"><h3>theme</h3>
       <div class="switch" id="theme-switch"><button data-v="light">light</button><button data-v="dark">dark</button></div></section>
-    <p class="opt-foot">state <span id="mode">idle</span> · ← → zmienia hover · O otwiera panel</p>
+    <p class="opt-foot">state <span id="mode">idle</span> · ← → zmienia wybraną grupę z paska · O otwiera panel</p>
   </div>
   <div class="overlay" id="overlay" aria-hidden="true">
     <div class="ov ov-grain" id="ov-grain"></div>
@@ -361,7 +370,12 @@ const CFG = {
   hoverGain: 15e-5, hoverMax: 0.03, hoverDecay: 0.86, hoverFloor: 3e-4,
   aberrThreshold: 0.006, aberrScale: 0.42,
   entrance: { time: 1.1, drop: 340, push: 1.8 },
-  planeSegments: 40,               // finer mesh so the relief mode reads as a surface, not facets
+  planeSegments: 28,
+  // space layouts: tiles live in real 3D instead of on the flat board
+  layout: (new URLSearchParams(location.search).get('space')) || 'plane',   // plane · field · tunnel · ring · sphere · stack
+  space: { wheel: 7, maxV: 5200, travDecay: 0.9, dolly: 700, bend: 0.3,
+           drift: { field: 70, tunnel: 110, ring: 20, sphere: 26, stack: 0 },
+           fieldCount: 34, fieldDepth: 5200, tunnelPerWall: 9, tunnelSpacing: 760, stackGap: 1100, sphereCount: 54 },               // finer mesh so the relief mode reads as a surface, not facets
   cursor: { dot: 8, ring: 40, press: 14, magnet: 0.12, follow: 0.35, pulseMax: 1.2, pulseDecay: 0.9 },
   card: { openPush: 0.18 },        // vertical bend impulse when a card lifts off the field
   words: { step: 44, minGap: 150, enter: 220, hold: 900, exit: 240, max: 7, spread: 34 }, // hover words: px travelled per word, ms between, timings
@@ -569,6 +583,8 @@ attribute vec2 aPos;
 attribute vec2 aUv;
 uniform mat4 uPV;
 uniform vec2 uPiecePos;
+uniform float uPieceZ;     // depth of the tile centre, 0 = the screen plane
+uniform vec3 uRot;         // yaw, pitch, roll (space layouts)
 uniform vec2 uPieceSize;
 uniform vec2 uStrength;
 uniform float uBend;
@@ -582,14 +598,21 @@ uniform float uBulgeR;
 varying vec2 vUv;
 void main () {
   vec2 local = aPos * uPieceSize;
-  vec3 p = vec3(uPiecePos + local, 0.0);
+  vec3 lp = vec3(local, 0.0);                      // hover effects work in the tile's own frame
+  lp.z += uLift - (uTilt.x * local.x + uTilt.y * local.y);
+  vec2 dm = local - uMousePx;
+  lp.z += uBulge * exp(-dot(dm, dm) / max(uBulgeR * uBulgeR, 1.0));
+/*VTF_MAIN*/
+  float cp = cos(uRot.y), sp = sin(uRot.y);
+  lp = vec3(lp.x, lp.y * cp - lp.z * sp, lp.y * sp + lp.z * cp);
+  float cy = cos(uRot.x), sy = sin(uRot.x);
+  lp = vec3(lp.x * cy + lp.z * sy, lp.y, -lp.x * sy + lp.z * cy);
+  float cr = cos(uRot.z), sr = sin(uRot.z);
+  lp = vec3(lp.x * cr - lp.y * sr, lp.x * sr + lp.y * cr, lp.z);
+  vec3 p = vec3(uPiecePos, uPieceZ) + lp;
   float wx = sin(p.x / uViewport.x * ${PI} + ${PI / 2});
   float wy = sin(p.y / uViewport.y * ${PI} + ${PI / 2});
   p.z += (wx * -uStrength.x + wy * -uStrength.y) * uBend;
-  p.z += uLift - (uTilt.x * local.x + uTilt.y * local.y);
-  vec2 dm = local - uMousePx;
-  p.z += uBulge * exp(-dot(dm, dm) / max(uBulgeR * uBulgeR, 1.0));
-/*VTF_MAIN*/
   vUv = aUv;
   gl_Position = uPV * vec4(p, 1.0);
 }`;
@@ -603,7 +626,7 @@ const VTF_MAIN = `
   if (uRelief > 0.0 && uHasDepth > 0.5) {
     vec2 rr = vec2(min((uPieceSize.x / uPieceSize.y) / (uImageSize.x / uImageSize.y), 1.0), min((uImageSize.x / uImageSize.y) / (uPieceSize.x / uPieceSize.y), 1.0));
     vec2 duv = vec2(aUv.x * rr.x + (1.0 - rr.x) * uFocus.x, aUv.y * rr.y + (1.0 - rr.y) * uFocus.y);
-    p.z += (texture2DLod(uDepth, duv, 0.0).r - 0.35) * uRelief;
+    lp.z += (texture2DLod(uDepth, duv, 0.0).r - 0.35) * uRelief;
   }`;
 const FRAG = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -635,6 +658,7 @@ uniform sampler2D uDepth;  // grayscale depth map, 1 = near (Depth Anything V2)
 uniform float uHasDepth;
 uniform vec2 uTiltVec;     // eased viewer direction -1..1 (cursor or gyro)
 uniform float uDepthAmt;   // depth parallax strength in image uv
+uniform float uFade;       // space layouts: fog toward far and near planes
 varying vec2 vUv;
 float depthAt(vec2 q) { return uHasDepth > 0.5 ? texture2D(uDepth, q).r : 0.5; }
 vec2 coverUv(vec2 q, vec2 ratio) { return vec2(q.x * ratio.x + (1.0 - ratio.x) * uFocus.x, q.y * ratio.y + (1.0 - ratio.y) * uFocus.y); }
@@ -738,7 +762,7 @@ void main () {
     col = mix(col, vec3(l), uDim * mix(0.15, 0.9, focus));
     col *= 1.0 - uDim * mix(0.2, 0.55, focus);
   }
-  gl_FragColor = vec4(col, uOpacity);
+  gl_FragColor = vec4(col * uFade, uOpacity * uFade);
 }`;
 
 // ---------- WebGL renderer ----------
@@ -755,7 +779,7 @@ function createGL(canvas) {
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
   gl.useProgram(prog);
-  const U = {}; for (const n of ['uPV','uPiecePos','uPieceSize','uStrength','uBend','uViewport','uTex','uHasTex','uColor','uOpacity','uImageSize','uHover','uAberrThreshold','uAberrScale','uLift','uTilt','uMousePx','uBulge','uBulgeR','uMode','uAmt','uMouseUv','uParallax','uInnerZoom','uRipple','uRippleUv','uPixel','uDim','uFocus','uDepth','uHasDepth','uTiltVec','uDepthAmt','uRelief']) U[n] = gl.getUniformLocation(prog, n);
+  const U = {}; for (const n of ['uPV','uPiecePos','uPieceSize','uStrength','uBend','uViewport','uTex','uHasTex','uColor','uOpacity','uImageSize','uHover','uAberrThreshold','uAberrScale','uLift','uTilt','uMousePx','uBulge','uBulgeR','uMode','uAmt','uMouseUv','uParallax','uInnerZoom','uRipple','uRippleUv','uPixel','uDim','uFocus','uDepth','uHasDepth','uTiltVec','uDepthAmt','uRelief','uPieceZ','uRot','uFade']) U[n] = gl.getUniformLocation(prog, n);
   const N = CFG.planeSegments, pos = [], uv = [], idx = [];
   for (let y = 0; y <= N; y++) for (let x = 0; x <= N; x++) { pos.push(x / N - 0.5, 0.5 - y / N); uv.push(x / N, y / N); }
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const a = y * (N + 1) + x, b = a + 1, c = a + N + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
@@ -798,7 +822,7 @@ function createGL(canvas) {
   function resize(w, h, dpr) {
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    const camZ = 1200, near = 100, far = 2400, f = camZ / (h / 2);
+    const camZ = 1200, near = 10, far = 30000, f = camZ / (h / 2);   // deep far plane: space layouts fly kilometres in
     const aspect = w / h, nf = 1 / (near - far);
     pv.set([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) * nf, -1, 0, 0, 2 * far * near * nf, 0]);
     pv[12] += pv[8] * -camZ; pv[13] += pv[9] * -camZ; pv[14] += pv[10] * -camZ; pv[15] += pv[11] * -camZ;
@@ -828,7 +852,9 @@ function createGL(canvas) {
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, dtx || greyDepth); gl.activeTexture(gl.TEXTURE0);
       gl.uniform1f(U.uHasDepth, dtx ? 1 : 0);
       gl.uniform1f(U.uHasTex, 1); gl.uniform2f(U.uImageSize, cover.videoWidth || cover.width, cover.videoHeight || cover.height);
-      gl.uniform2f(U.uPiecePos, it.cx, it.cy); gl.uniform2f(U.uPieceSize, it.width, it.height);
+      gl.uniform2f(U.uPiecePos, it.cx, it.cy); gl.uniform2f(U.uPieceSize, it.w || it.width, it.h || it.height);
+      gl.uniform1f(U.uPieceZ, it.z || 0); gl.uniform3f(U.uRot, it.yaw || 0, it.pitch || 0, it.roll || 0);
+      gl.uniform1f(U.uFade, it.fade === undefined ? 1 : it.fade);
       gl.uniform2f(U.uHover, hovers[it.index].x, hovers[it.index].y);
       const fo = (PIECES[it.index] && PIECES[it.index].focus) || [0.5, 0.5];
       gl.uniform2f(U.uFocus, fo[0], fo[1]);
@@ -908,7 +934,7 @@ function fxFor(it) {
     lift: (isLift || isRelief ? CFG.fx.lift : fam ? CFG.fx.depthLift : 0) * a,
     tilt: [f.tx * tiltK * a, -f.ty * tiltK * a],
     tiltVec: [f.tx, f.ty], depthAmt: fam ? CFG.fx.depth * a : 0, relief: isRelief ? CFG.fx.relief * a : 0,
-    mousePx: [(f.mu - 0.5) * it.width, (0.5 - f.mv) * it.height],
+    mousePx: [(f.mu - 0.5) * (it.w || it.width), (0.5 - f.mv) * (it.h || it.height)],
     bulge: m === 'lens' ? CFG.fx.bulge * a : 0, bulgeR: CFG.fx.bulgeR,
     mouseUv: [f.mu, f.mv],
     parallax: m === 'lift' ? [-f.tx * CFG.fx.parallax * a, -f.ty * CFG.fx.parallax * a] : [0, 0],
@@ -919,7 +945,7 @@ function fxFor(it) {
   };
 }
 // the tile that is lifting draws last, so it overlaps its neighbours
-const byLift = (a, b) => FX[a.index].amt - FX[b.index].amt;
+const byLift = (a, b) => ((a.z || 0) + FX[a.index].amt * 60) - ((b.z || 0) + FX[b.index].amt * 60);   // far first, lifting tile last
 let instances = [];
 const slots = [];
 let hoverSlot = -1, hoverIndex = -1, openIndex = -1;
@@ -944,9 +970,93 @@ function layout(ox, oy) {
       const ccx = (r.x + r.w / 2 + i * W - ox) * Tp + shiftX, ccy = (r.y + r.h / 2 + j * H - oy) * Tp + shiftY;
       const width = r.w * Ts, height = r.h * Ts, left = ccx - width / 2, top = ccy - height / 2;
       if (left > vw || top > vh || left + width < 0 || top + height < 0) continue;
-      out.push({ index, left, top, width, height, cx: left + width / 2 - vw / 2, cy: vh / 2 - (top + height / 2) });
+      out.push({ index, left, top, width, height, cx: left + width / 2 - vw / 2, cy: vh / 2 - (top + height / 2), z: 0, w: width, h: height, fade: 1 });
     }
   });
+  return out;
+}
+
+// ---------- space layouts ----------
+const LAYOUT_ORDER = ['plane', 'field', 'tunnel', 'ring', 'sphere', 'stack'];
+const camU = { x: 0, y: 0 };                         // unwrapped pan (cam.x/cam.y wrap with the board)
+let trav = 0, travVel = 0;                           // travel along the layout's own axis (fly, spin)
+const fract = v => v - Math.floor(v);
+const wrapC = (v, span) => ((v % span) + span * 1.5) % span - span / 2;
+const h01 = (k, s2) => { const x = Math.sin(k * 127.1 + s2 * 311.7) * 43758.5453; return x - Math.floor(x); };
+function rot3(x, y, z, yaw, pitch, roll) {            // same order as the vertex shader: pitch, yaw, roll
+  const cp = Math.cos(pitch), sp = Math.sin(pitch); [y, z] = [y * cp - z * sp, y * sp + z * cp];
+  const cy = Math.cos(yaw), sy = Math.sin(yaw); [x, z] = [x * cy + z * sy, -x * sy + z * cy];
+  const cr = Math.cos(roll), sr = Math.sin(roll); [x, y] = [x * cr - y * sr, x * sr + y * cr];
+  return [x, y, z];
+}
+function depthFade(Z, D) { return (1 - clamp((Z - 380) / 380, 0, 1)) * clamp((Z - (720 - D)) / (D * 0.25), 0, 1); }
+function pushItem(out, index, X, Y, Z, yaw, pitch, roll, w, h, fade) {
+  if (fade <= 0.01 || 1200 - Z < 60) return;                               // behind or on the camera
+  const n = rot3(0, 0, 1, yaw, pitch, roll);
+  if (n[0] * -X + n[1] * -Y + n[2] * (1200 - Z) <= 0) return;               // facing away
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [cx, cy] of [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]]) {
+    const r = rot3(cx, cy, 0, yaw, pitch, roll), pz = Z + r[2];
+    const k = 1200 / Math.max(1200 - pz, 20), sx = vw / 2 + (X + r[0]) * k, sy = vh / 2 - (Y + r[1]) * k;
+    x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+  }
+  if (x1 < 0 || x0 > vw || y1 < 0 || y0 > vh) return;
+  out.push({ index, left: x0, top: y0, width: x1 - x0, height: y1 - y0, cx: X, cy: Y, z: Z, yaw, pitch, roll, w, h, fade });
+}
+function layout3D(kind) {
+  const out = [], S = CFG.space, dolly = zoomV * S.dolly, tile = i => [PIECES[i].rect.w * T, PIECES[i].rect.h * T];
+  if (kind === 'field') {                      // depth field: fly through scattered tiles, they pass the camera
+    const D = S.fieldDepth, spanX = vw * 2.2, spanY = vh * 2.2;
+    for (let k = 0; k < S.fieldCount; k++) {
+      const i = k % PIECES.length, [w, h] = tile(i);
+      const Z = 720 - fract(h01(k, 3) - trav / D) * D + dolly, fade = depthFade(Z, D);
+      const X0 = wrapC(h01(k, 1) * spanX - camU.x * T, spanX), Y0 = wrapC(h01(k, 2) * spanY + camU.y * T, spanY);
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) pushItem(out, i, X0 + a * spanX, Y0 + b * spanY, Z, 0, 0, 0, w * 0.8, h * 0.8, fade);
+    }
+  } else if (kind === 'tunnel') {              // corridor: tiles on walls, floor and ceiling rush past
+    const Hx = Math.max(vw * 0.55, 360), Hy = Math.max(vh * 0.5, 320), per = S.tunnelPerWall, L = per * S.tunnelSpacing;
+    const roll = -camU.x * T * 0.0022, tr = trav + camU.y * T * 1.6, c = Math.cos(roll), sn = Math.sin(roll);
+    const walls = [[-Hx, 0, Math.PI / 2, 0, 1, Hy], [Hx, 0, -Math.PI / 2, 0, 1, Hy], [0, -Hy, 0, -Math.PI / 2, 0, Hx], [0, Hy, 0, Math.PI / 2, 0, Hx]];
+    walls.forEach(([wx, wy, yaw, pitch, alongY, half], wi) => {
+      for (let k = 0; k < per; k++) {
+        const nidx = wi * per + k, i = (nidx * 7) % PIECES.length, [w, h] = tile(i);
+        const Z = 720 - fract((k + 0.5 * (wi % 2)) / per - tr / L) * L + dolly;
+        const off = (h01(nidx, 5) - 0.5) * half * 0.8;
+        const X = wx + (alongY ? 0 : off), Y = wy + (alongY ? off : 0);
+        pushItem(out, i, X * c - Y * sn, X * sn + Y * c, Z, yaw, pitch, roll, w, h, depthFade(Z, L));
+      }
+    });
+  } else if (kind === 'ring') {                // carousel: three rows on a cylinder
+    const R = Math.max(vw * 1.1, 900), Zc = -R - 200 + dolly, rows = 3, rowH = 500 * T + 60;   // front of the drum sits just behind the screen
+    const n = Math.max(8, Math.floor(2 * Math.PI * R / (420 * T + 90))), spin = (-camU.x * T + trav) / R, spanY = rows * rowH;
+    for (let r = 0; r < rows; r++) for (let k = 0; k < n; k++) {
+      const nidx = r * n + k, i = (nidx * 5 + r * 3) % PIECES.length, [w, h] = tile(i);
+      const th = (k + (r % 2) * 0.5) / n * Math.PI * 2 + spin;
+      const Y0 = wrapC((r - 1) * rowH + camU.y * T, spanY);
+      for (let b = -1; b <= 1; b++) pushItem(out, i, R * Math.sin(th), Y0 + b * spanY, Zc + R * Math.cos(th), th, 0, 0, w, h, 1);
+    }
+  } else if (kind === 'sphere') {              // globe: fibonacci-spread tiles, drag to spin it
+    const N = S.sphereCount, R = Math.min(vw, vh) * 0.85 + 240, Zc = -R - 400 + dolly;   // whole globe in view
+    const ay = (-camU.x * T + trav) / R, ax = -camU.y * T / R;
+    const sc = Math.sqrt(4 * Math.PI * R * R / N) / (420 * T) * 0.62;
+    for (let k = 0; k < N; k++) {
+      const i = k % PIECES.length, [w, h] = tile(i);
+      const yy = 1 - 2 * (k + 0.5) / N, rr = Math.sqrt(1 - yy * yy), ph = k * 2.399963;
+      let [dx, dy, dz] = rot3(Math.cos(ph) * rr, yy, Math.sin(ph) * rr, ay, 0, 0);
+      [dy, dz] = [dy * Math.cos(ax) - dz * Math.sin(ax), dy * Math.sin(ax) + dz * Math.cos(ax)];
+      const fade = clamp(dz * 3 + 0.4, 0, 1);
+      pushItem(out, i, dx * R, dy * R, Zc + dz * R, Math.atan2(dx, dz), -Math.asin(clamp(dy, -1, 1)), 0, w * sc, h * sc, fade);
+    }
+  } else if (kind === 'stack') {               // deck in depth: the nearest tile flies out of the screen
+    const N = PIECES.length, L = N * S.stackGap, tr = trav + camU.y * T * 1.4, sway = -Math.tanh(camU.x * T / 900) * vw * 0.3;
+    for (let k = 0; k < N; k++) {
+      const [w, h] = tile(k), side = k % 2 ? 1 : -1;
+      const Z = 680 - fract(k / N - tr / L) * L + dolly;
+      const X = side * vw * 0.15 * (0.6 + h01(k, 7) * 0.8) + sway, Y = (h01(k, 8) - 0.5) * vh * 0.32;
+      pushItem(out, k, X, Y, Z, side * -0.14, (h01(k, 9) - 0.5) * 0.12, 0, w * 1.15, h * 1.15, depthFade(Z, L));
+    }
+  }
+  out.sort((a, b) => a.z - b.z);                 // far first: painter's order and on-top hit targets for the nearest
   return out;
 }
 
@@ -1048,6 +1158,14 @@ var DESC = {                                  // var: the covers switch initiali
     light: 'Kursor jak lampka: światło modeluje wypukłości zdjęcia wyliczone z głębi.',
     relief: 'Kafel wypycha się w bryłę według głębi i mocniej przechyla. Najmocniejsze 3D, najwięcej artefaktów.',
   },
+  space: {
+    plane: 'Płaska, nieskończona plansza, jak dotąd. Drag przesuwa, scroll zoomuje.',
+    field: 'Pole głębi: kafle rozsiane w przestrzeni, lecisz przez nie, a bliskie przelatują obok kamery poza ekran. Scroll = lot, drag = rozglądanie z paralaksą.',
+    tunnel: 'Tunel: kafle na ścianach, podłodze i suficie mijają cię po bokach. Scroll albo drag w pionie = lot, drag w poziomie obraca tunel.',
+    ring: 'Karuzela: trzy rzędy kafli na walcu. Drag w poziomie albo scroll kręci, drag w pionie przewija rzędy.',
+    sphere: 'Kula oklejona kaflami. Drag obraca jak globus, scroll przybliża.',
+    stack: 'Stos w głąb: kafle jeden za drugim, najbliższy wylatuje poza ekran. Scroll albo drag w pionie = następny.',
+  },
   motion: { off: 'Efekty głębi tylko pod kursorem albo palcem.', on: 'Przechylanie telefonu steruje efektami głębi na wszystkich kaflach. iOS zapyta o zgodę.' },
   overlay: { static: 'Stałe ziarno z pierwszej wersji.', off: 'Czysto, bez ziarna.', film: 'Żywe ziarno 24 kl/s i delikatna winieta.', crt: 'Linie kineskopu, maska RGB i winieta.', tv: 'Linie i jasny pas przetaczający się w dół.', dither: 'Raster Bayera, jeden punkt na piksel.', live: 'Ziarno i linie budzą się przy ruchu i gasną w spoczynku.' },
   covers: { plain: 'Ciemnoszare tło tam, gdzie nie ma miniatury.', circle: 'Kolorowe pole z kołem.', mixed: 'Kolorowe pole z różnymi figurami.', motif: 'Szkice proceduralne z pierwszej wersji.' },
@@ -1060,9 +1178,39 @@ function setOptions(open) {
   optionsEl.hidden = !open; scrimEl.hidden = !open;
   rvLabel.setAttribute('aria-expanded', String(open)); rvMenu.setAttribute('aria-expanded', String(open));
 }
-function stepHover(dir) { const i = HOVER_ORDER.indexOf(CFG.hover); setHover(HOVER_ORDER[(i + dir + HOVER_ORDER.length) % HOVER_ORDER.length]); }
+const GROUPS = {
+  space:   { order: () => LAYOUT_ORDER,          get: () => CFG.layout,  set: v => setLayout(v) },
+  hover:   { order: () => HOVER_ORDER,           get: () => CFG.hover,   set: v => setHover(v) },
+  overlay: { order: () => Object.keys(OVERLAYS), get: () => CFG.overlay, set: v => setOverlay(v) },
+};
+let rvGroup = 'space';
+function updateReview() {
+  const g = GROUPS[rvGroup], order = g.order(), v = g.get();
+  document.getElementById('rv-group').textContent = rvGroup;
+  document.getElementById('rv-name').textContent = v;
+  document.getElementById('rv-n').textContent = `${order.indexOf(v) + 1}/${order.length}`;
+}
+function stepHover(dir) { const g = GROUPS[rvGroup], o = g.order(), i = o.indexOf(g.get()); g.set(o[(i + dir + o.length) % o.length]); }
 document.getElementById('rv-prev').addEventListener('click', () => stepHover(-1));
 document.getElementById('rv-next').addEventListener('click', () => stepHover(1));
+document.getElementById('rv-group').addEventListener('click', () => { const ks = Object.keys(GROUPS); rvGroup = ks[(ks.indexOf(rvGroup) + 1) % ks.length]; updateReview(); });
+const spaceSwitch = document.getElementById('space-switch');
+function hintText() {
+  const touch = !finePointer, L = CFG.layout;
+  if (L === 'plane') return touch ? 'drag to pan · pinch to zoom · ' : 'drag to pan · scroll to zoom · ';
+  if (L === 'sphere') return touch ? 'drag to spin · pinch to zoom · ' : 'drag to spin · scroll to zoom · ';
+  if (L === 'ring') return touch ? 'drag to spin · ' : 'drag or scroll to spin · ';
+  return touch ? 'drag up to fly · pinch to push in · ' : 'scroll to fly · drag to look around · ';
+}
+function setLayout(v, init) {
+  CFG.layout = LAYOUT_ORDER.includes(v) ? v : 'plane';
+  trav = 0; travVel = 0; zoomT = 0; if (!init) clearHover();   // cursor code is further down the file; skip on first call
+  spaceSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.layout)); setDesc('space', CFG.layout);
+  document.getElementById('hint').textContent = hintText();
+  const u = new URL(location.href); u.searchParams.set('space', CFG.layout); history.replaceState(null, '', u);
+  updateReview();
+}
+spaceSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setLayout(b.dataset.v); });
 rvLabel.addEventListener('click', () => setOptions(optionsEl.hidden));
 rvMenu.addEventListener('click', () => setOptions(optionsEl.hidden));
 document.getElementById('opt-x').addEventListener('click', () => setOptions(false));
@@ -1090,11 +1238,12 @@ async function setMotion(on) {
 motionSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMotion(b.dataset.v === 'on'); });
 setMotion(false);
 setDesc('covers', CFG.covers);
-if (!finePointer) document.getElementById('hint').textContent = 'drag to pan · pinch to zoom · ';
+setLayout(CFG.layout, true);
 const overlaySwitch = document.getElementById('overlay-switch');
 function setOverlay(v) {
   CFG.overlay = OVERLAYS[v] ? v : 'static'; document.documentElement.dataset.overlay = CFG.overlay;
   overlaySwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.overlay)); setDesc('overlay', CFG.overlay);
+  if (typeof GROUPS !== 'undefined') updateReview();
   const u = new URL(location.href); u.searchParams.set('overlay', CFG.overlay); history.replaceState(null, '', u);
 }
 overlaySwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setOverlay(b.dataset.v); });
@@ -1103,8 +1252,7 @@ const hoverSwitch = document.getElementById('hover-switch');
 function setHover(v) {
   CFG.hover = HOVER_MODES[v] !== undefined ? v : 'lift';
   hoverSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.hover)); setDesc('hover', CFG.hover);
-  document.getElementById('rv-name').textContent = CFG.hover;
-  document.getElementById('rv-n').textContent = `${HOVER_ORDER.indexOf(CFG.hover) + 1}/${HOVER_ORDER.length}`;
+  updateReview();
   const u = new URL(location.href); u.searchParams.set('hover', CFG.hover); history.replaceState(null, '', u);
 }
 hoverSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setHover(b.dataset.v); });
@@ -1135,7 +1283,10 @@ function frame(t) {
   }
   const gain = mode === 'drag' ? CFG.strengthDragGain : CFG.strengthCoastGain;
   const ax = clamp(dispX * T / vw * gain, -1, 1), ay = clamp(dispY * T / vh * gain, -1, 1);
+  camU.x += dispX; camU.y += dispY;
   dispX = dispY = 0;
+  travVel = decay(travVel, dt, CFG.space.travDecay);
+  trav += (travVel + (locked || reduceMotion ? 0 : (CFG.space.drift[CFG.layout] || 0))) * dt;
   strength.x += (ax - strength.x) * CFG.strengthSmooth;
   strength.y += (ay - strength.y) * CFG.strengthSmooth;
   pushY = decay(pushY, dt, 0.9);
@@ -1148,13 +1299,14 @@ function frame(t) {
   if (entrance < 1) entrance = Math.min(1, (t - startT) / 1000 / CFG.entrance.time);
   const ease = 1 - Math.pow(1 - entrance, 3);
   const oy = cam.y - CFG.entrance.drop * (1 - ease) / T;
-  instances = layout(cam.x, oy);
+  instances = CFG.layout === 'plane' ? layout(cam.x, oy) : layout3D(CFG.layout);
   syncSlots();
   cursorFrame(dt);
   fxFrame(dt);
   if (reviewEl.hidden !== (locked || !CFG.review)) { reviewEl.hidden = locked || !CFG.review; if (locked) setOptions(false); }
   overlayFrame(t, dt);
-  if (R && !R.lost()) R.draw(instances.slice().sort(byLift), { x: strength.x, y: -(strength.y + CFG.entrance.push * (1 - ease) * 0.1 + pushY) }, ease, hovers, covers, openIndex, pickHoverTexture, fxFor);
+  const bk = CFG.layout === 'plane' ? 1 : CFG.space.bend;
+  if (R && !R.lost()) R.draw(instances.slice().sort(byLift), { x: strength.x * bk, y: -(strength.y + CFG.entrance.push * (1 - ease) * 0.1 + pushY) * bk }, ease, hovers, covers, openIndex, pickHoverTexture, fxFor);
 }
 requestAnimationFrame(frame);
 
@@ -1234,7 +1386,8 @@ board.addEventListener('dragstart', e => e.preventDefault());
 window.addEventListener('wheel', e => {
   if (locked || (e.target.closest && e.target.closest('.options'))) return; e.preventDefault();
   const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;              // lines → px
-  zoomT = clamp(zoomT - d * CFG.zoom.gain, -CFG.zoom.range, CFG.zoom.range);   // the level you leave it at is where it stays
+  if (CFG.layout === 'plane' || CFG.layout === 'sphere') zoomT = clamp(zoomT - d * CFG.zoom.gain, -CFG.zoom.range, CFG.zoom.range);   // the level you leave it at is where it stays
+  else travVel = clamp(travVel + d * CFG.space.wheel, -CFG.space.maxV, CFG.space.maxV);   // scroll = fly / spin
 }, { passive: false });
 window.addEventListener('keydown', e => { if (e.key === 'Escape' && location.hash.length > 2) closeDetail(); });
 
@@ -1262,7 +1415,7 @@ const EASE_IN = 'cubic-bezier(.2,.8,.2,1)', EASE_OUT = 'cubic-bezier(.6,0,.8,.2)
 const CHIP_PAIRS = [['#7B2D8E', '#EBD2FF'], ['#B5DA2E', '#173A2E'], ['#19BFE3', '#063A47'], ['#FF8A2A', '#4A1A02'], ['#A80A3B', '#FFD1DE'], ['#1F3A5F', '#CFE0FF'], ['#E8C400', '#3A2F00'], ['#00857C', '#D6FFF7']];
 function hoveredTile() { return hoverSlot >= 0 && hoverSlot < instances.length ? instances[hoverSlot] : null; }
 // the front layer leaves WebGL for the DOM only when it must: glass needs backdrop-filter, video needs the back alone, chips go between layers
-function splitFront(i) { const p = PIECES[i]; return !!(p.front && (CFG.hoverChips || p.front.glass || p.video)); }
+function splitFront(i) { const p = PIECES[i]; if (CFG.layout !== 'plane') return false; return !!(p.front && (CFG.hoverChips || p.front.glass || p.video)); }
 function placeLayer(el, it) { el.classList.add('on'); el.style.transform = `translate3d(${it.left}px, ${it.top}px, 0)`; el.style.width = `${it.width}px`; el.style.height = `${it.height}px`; }
 function wordsFrame() {                            // every frame from syncSlots: the three DOM layers ride on the hovered tile
   const it = hoveredTile();
@@ -1293,7 +1446,7 @@ function pickHoverTexture(it) {
 }
 function hoverMedia(i) {                           // start the tile's video on hover, pause it on leave
   videos.forEach((v, k) => { if (k !== i && !v.paused) v.pause(); });
-  if (i >= 0 && PIECES[i].video) { const v = videoFor(i); if (v && v.dataset.ok !== 'no') v.play().catch(() => {}); }
+  if (i >= 0 && PIECES[i].video && splitFront(i)) { const v = videoFor(i); if (v && v.dataset.ok !== 'no') v.play().catch(() => {}); }
 }
 // sharp symbols (no rounding anywhere), drawn on a 36×36 grid, in the tint colour
 const SYMBOLS = {
