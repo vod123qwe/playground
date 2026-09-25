@@ -1250,7 +1250,12 @@ function frame(t) {
     const mw = Math.max(2, mix1(sw, fw)), mh = Math.max(2, mix1(sh, fh));
     const gap = Math.max(0, mr[1] - (geo.cy + hh)), lz = P.menuLift * hh;
     // liquid 0: two separate pieces; 1: they melt into one, bridging the gap and the height between them
-    const blend = P.liquid > 0.001 ? P.liquid * (gap * 2.2 + lz * 1.2 + hh * 0.35) + Math.min(14, Math.abs(s.menuV) * 3) * P.liquid : 0.0001;
+    const rest = P.liquid > 0.001 ? P.liquid * (gap * 2.2 + lz * 1.2 + hh * 0.35) + Math.min(14, Math.abs(s.menuV) * 3) * P.liquid : 0.0001;
+    // the morph: while it travels, the menu flows out of the button on a liquid neck, then pinches off like a drop
+    // (and on the way back it melts in again); at rest the Liquid slider decides
+    const sm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+    const morph = (gap * 2.3 + lz * 1.2 + hh * 0.7) * sm(0.0, 0.18, mt) * (1 - sm(0.62, 0.97, mt));
+    const blend = Math.max(rest, morph);
     gl.uniform1f(uni('uMenuZ'), lz * Math.max(0, Math.min(1, mt)));
     gl.uniform4f(uni('uMenu'), mix1(geo.cx, fx), mix1(geo.cy, fy), mw, mh);
     gl.uniform4f(uni('uMenuK'), Math.min(corner * 0.55 + 4, mw, mh), blend, Math.max(0, Math.min(1, (mt - 0.55) / 0.45)), 1);
