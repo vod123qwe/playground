@@ -99,7 +99,12 @@
   body.tuning .panel{transform:none; visibility:visible; transition:transform .45s var(--ease)}
   .panel h3{margin:16px 0 4px; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(20,20,20,.48)}
   .row{display:grid; grid-template-columns:1fr auto; align-items:center; gap:0 8px; padding:4px 0}
-  .row .v{font-variant-numeric:tabular-nums; color:rgba(20,20,20,.55); font-size:11.5px}
+  .row .v{display:flex; align-items:center; gap:3px; font-variant-numeric:tabular-nums; color:rgba(20,20,20,.55); font-size:11.5px}
+  .row .v .num{width:52px; padding:2px 5px; margin:0 -5px 0 0; border:0; border-radius:5px; font:inherit; font-size:inherit; color:inherit; text-align:right; background:transparent; box-shadow:none;
+               user-select:text; -webkit-user-select:text; outline:none; cursor:text}
+  .row .v .num:hover{background:rgba(20,20,20,.06)}
+  .row .v .num:focus{background:#fff; color:var(--ink); box-shadow:inset 0 0 0 1.5px rgba(20,20,20,.4); margin-right:0}
+  .row .v .unit:empty, .row .v .pre:empty{display:none}
   .row .full{grid-column:1 / -1}
   .row input[type=range]{
     -webkit-appearance:none; appearance:none; width:100%; height:18px; margin:2px 0 0; background:transparent; cursor:pointer;
@@ -219,8 +224,10 @@ const DEF = {
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
   text: 'Ask agents', ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
-  bg: 'grid', bgTint: 'neutral', gridDensity: 1, bgScale: 1, grid: .3,
+  bg: 'grid', bgColor: '#39435a', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
+  menuGap: .35, liquid: 0, menuLift: 0,
+  shadowStyle: 'solid', glow: 'aurora', glowK: 1, glowSize: 1, glowSpeed: 1,
 };
 const PRESETS = {
   'M&M':     { corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02, ior: 1.5, disp: .026 },
@@ -233,7 +240,7 @@ const PRESETS = {
 const CTRL = [
   { g: 'Background' },
   { k: 'bg', l: 'Background', t: 'bgs' },
-  { k: 'bgTint', l: 'Tint', t: 'seg', o: ['neutral', 'warm', 'cool'] },
+  { k: 'bgColor', l: 'Background colour', t: 'color' },
   { k: 'gridDensity', l: 'Grid density', min: .3, max: 4, s: .01 },
   { k: 'grid', l: 'Grid lines', min: 0, max: 1, s: .01 },
   { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01 },
@@ -241,6 +248,10 @@ const CTRL = [
   { k: 'sound', l: 'Click', t: 'sounds' },
   { k: 'release', l: 'Click on release too', t: 'check' },
   { k: 'volume', l: 'Volume', min: 0, max: 1, s: .01 },
+  { g: 'Menu' },
+  { k: 'menuGap', l: 'Gap to the button', min: 0, max: 1.5, s: .01, u: 'em' },
+  { k: 'liquid', l: 'Liquid (melts together)', min: 0, max: 1, s: .01 },
+  { k: 'menuLift', l: 'Height (Z)', min: 0, max: 2, s: .01 },
   { g: 'Shape' },
   { k: 'corner', l: 'Corner', min: 0, max: 1, s: .01 },
   { k: 'dome', l: 'Dome', min: -1, max: 1.3, s: .01 },
@@ -263,6 +274,12 @@ const CTRL = [
   { k: 'env', l: 'Reflections', min: 0, max: 2, s: .01 },
   { k: 'rim', l: 'Rim spectrum', min: 0, max: 3, s: .01 },
   { k: 'shadow', l: 'Shadow', min: 0, max: 2, s: .01 },
+  { g: 'Shadow' },
+  { k: 'shadowStyle', l: 'Style', t: 'seg', o: ['solid', 'glow'] },
+  { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'star', 'ocean', 'ember'] },
+  { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01 },
+  { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01 },
+  { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01 },
   { g: 'Bead' },
   { k: 'bead', l: 'Show bead', t: 'check' },
   { k: 'beadSize', l: 'Size', min: .8, max: 3, s: .01 },
@@ -284,6 +301,7 @@ const CTRL = [
   { k: 'weight', l: 'Weight', min: 400, max: 600, s: 10 },
 ];
 const KEY = 'lab.glass-button.v5';
+const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
 function load() {
   try { const v = JSON.parse(localStorage.getItem(KEY) || '{}'); return Object.assign({}, DEF, v); } catch (e) { return Object.assign({}, DEF); }
 }
@@ -294,6 +312,8 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {}
 }
 let P = STILL ? Object.assign({}, DEF) : load();
+delete P.bgTint;
+if (P.sound === 'custom') P.sound = 'glass';                           // a sound file is not kept between visits
 if (P.page === 'dark' && P.bg === 'grid') P.bg = 'grid-dark';          // settings saved before backgrounds existed
 delete P.page;
 if (P.bg === 'upload') P.bg = 'grid';
@@ -430,12 +450,19 @@ const PAGES = {
            warm:    [[.184, .165, .149], [.122, .106, .094], [.075, .063, .055]],
            cool:    [[.145, .169, .208], [.094, .110, .141], [.055, .067, .090]] },
 };
-const pageStops = proc => (PAGES[proc] || PAGES.light)[P.bgTint] || (PAGES[proc] || PAGES.light).neutral;
+function pageStops(proc) {
+  if (proc === 'color') {                               // your colour, with the same soft diagonal falloff as the greys
+    const c = hex(P.bgColor);
+    return [c.map(v => v + (1 - v) * 0.1), c, c.map(v => v * 0.62)];
+  }
+  return (PAGES[proc] || PAGES.light).neutral;
+}
 const css3 = c => `rgb(${c.map(v => Math.round(v * 255)).join(',')})`;
 const FONT = '"Inter Tight", system-ui, sans-serif';
 const BGS = [
   { id: 'grid', name: 'Grid', proc: 'light' },
   { id: 'grid-dark', name: 'Grid dark', proc: 'dark' },
+  { id: 'color', name: 'Colour', proc: 'color' },
 ];
 const bg = { canvas: document.createElement('canvas'), video: null, w: 1, h: 1, avg: [.78, .79, .81], dirty: true, mode: 0, url: null, thumb: null,
              up: null };   // up: your file { canvas | video, w, h, avg }
@@ -455,6 +482,12 @@ function drawBg(def, c, w, h) {
   } else def.draw(g, w, h, w / 2048);
 }
 const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+const GLOWS = {                                        // three colours each, cycling along the button
+  aurora: [hex('#ff5ecf'), hex('#7a5cff'), hex('#2fd8ff')],
+  star:   [hex('#ff7a2e'), hex('#fff1e0'), hex('#2f7bff')],
+  ocean:  [hex('#2fd8ff'), hex('#3dffb5'), hex('#3f6bff')],
+  ember:  [hex('#ff3b3b'), hex('#ffb13b'), hex('#ff4fa0')],
+};
 function useBg(id) {
   const def = BGS.find(b => b.id === id);
   if (bg.up && bg.up.video && id !== 'upload') bg.up.video.pause();
@@ -536,6 +569,16 @@ const SOUNDS = {
   key:    { name: 'Key',    play(a, o, t, up) { burst(a, o, t, .008, .7, 'bandpass', up ? 2600 : 1700, 1.2); burst(a, o, t + .012, .01, .3, 'bandpass', up ? 3200 : 2100, 1.2); } },
   none:   { name: 'Off',    play() {} },
 };
+let customBuf = null;                                   // your own sound, decoded; played lighter and a touch higher on release
+SOUNDS.custom = { name: 'Your sound', play(a, o, t, up) { if (!customBuf) return; const src = a.createBufferSource(); src.buffer = customBuf; src.playbackRate.value = up ? 1.15 : 1; src.connect(o); src.start(t); } };
+const soundIn = document.createElement('input'); soundIn.type = 'file'; soundIn.accept = 'audio/*'; soundIn.hidden = true; document.body.appendChild(soundIn);
+soundIn.addEventListener('change', async () => {
+  const f = soundIn.files[0]; soundIn.value = ''; if (!f) return;
+  const a = ac(); if (!a) return;
+  try { customBuf = await a.decodeAudioData(await f.arrayBuffer()); } catch (e) { return; }
+  const b = panel.querySelector('[data-v=custom]'); if (b) b.hidden = false;
+  set('sound', 'custom'); syncInputs(); click(false);
+});
 function click(up, scale = 1) {
   const snd = SOUNDS[P.sound]; if (!snd || P.sound === 'none' || P.volume <= 0 || STILL) return;
   const a = ac(); if (!a) return;
@@ -549,13 +592,8 @@ btn.addEventListener('keyup', e => { if ((e.key === 'Enter' || e.key === ' ') &&
 
 // ---------- the panel ----------
 const inputs = {};
-const fmt = (c, v) => {
-  if (c.u === '°') return `${Math.round(v)}°`;
-  let t = c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 ? 3 : 2);
-  if (c.u) t += ` ${c.u}`;
-  if (c.k === 'dome') t = (v < 0 ? 'concave ' : v > 0 ? 'convex ' : 'flat ') + t;
-  return t;
-};
+const fmt = (c, v) => c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 ? 3 : 2);   // the number you can edit
+const pre = (c, v) => c.k === 'dome' ? (v < 0 ? 'concave' : v > 0 ? 'convex' : 'flat') : '';
 function buildPanel() {
   const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
   const h = el('h3', null, 'Presets'); panel.appendChild(h);
@@ -577,10 +615,12 @@ function buildPanel() {
       row.replaceChildren();
       inp = el('div', 'presets full'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', 'Click sound');
       for (const id in SOUNDS) {
-        const b = el('button', null, SOUNDS[id].name); b.type = 'button'; b.dataset.v = id;
+        const b = el('button', null, SOUNDS[id].name); b.type = 'button'; b.dataset.v = id; if (id === 'custom') b.hidden = true;
         b.addEventListener('click', () => { set('sound', id); syncInputs(); click(false); if (P.release) setTimeout(() => click(true), 110); });
         inp.appendChild(b);
       }
+      const upS = el('button', null, 'Upload sound…'); upS.type = 'button'; upS.addEventListener('click', () => soundIn.click());
+      inp.appendChild(upS);
       row.appendChild(inp);
     }
     else if (c.t === 'bgs') {
@@ -610,10 +650,28 @@ function buildPanel() {
       for (const o of c.o) { const b = el('button', null, o); b.type = 'button'; b.dataset.v = o; b.addEventListener('click', () => { set(c.k, o); syncInputs(); }); inp.appendChild(b); }
       row.appendChild(inp);
     } else {
-      const v = el('span', 'v'); row.appendChild(v);
+      // the value is a field too: click it and type a number (Enter or leaving it applies, Esc cancels, arrows step)
+      const vw = el('span', 'v'), pr = el('span', 'pre'), v = el('input', 'num'), un = el('span', 'unit', c.u || '');
+      v.type = 'text'; v.inputMode = 'decimal'; v.spellcheck = false; v.setAttribute('aria-label', `${c.l} value`);
+      vw.append(pr, v, un); row.appendChild(vw);
       inp = el('input', 'full'); inp.type = 'range'; inp.min = c.min; inp.max = c.max; inp.step = c.s;
       inp.addEventListener('input', () => { set(c.k, +inp.value); paintRange(c, inp, v); });
-      row.appendChild(inp); inp._v = v;
+      const commit = () => {
+        const n = parseFloat(v.value.replace(',', '.'));
+        if (Number.isFinite(n)) { const x = Math.max(c.min, Math.min(c.max, n)); inp.value = x; set(c.k, +inp.value); }
+        paintRange(c, inp, v, true);
+      };
+      v.addEventListener('focus', () => v.select());
+      v.addEventListener('change', commit);
+      v.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { commit(); v.blur(); }
+        else if (e.key === 'Escape') { e.stopPropagation(); paintRange(c, inp, v, true); v.blur(); }
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault(); const st = (+c.s) * (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
+          inp.value = Math.max(c.min, Math.min(c.max, +inp.value + st)); set(c.k, +inp.value); paintRange(c, inp, v, true); v.select();
+        }
+      });
+      row.appendChild(inp); inp._v = v; inp._pre = pr;
     }
     inp.id = id; inputs[c.k] = inp; panel.appendChild(row);
   }
@@ -631,9 +689,10 @@ function buildPanel() {
 function paintSwatches(box) {
   for (const b of box.children) if (b._d) { const r = Math.min(devicePixelRatio || 1, 2); drawBg(b._d, b._c, Math.round(72 * r), Math.round(45 * r)); }
 }
-function paintRange(c, inp, v) {
+function paintRange(c, inp, v, force) {
   inp.style.setProperty('--p', `${((inp.value - c.min) / (c.max - c.min)) * 100}%`);
-  if (v) v.textContent = fmt(c, +inp.value);
+  if (v && (force || document.activeElement !== v)) v.value = fmt(c, +inp.value);
+  if (inp._pre) inp._pre.textContent = pre(c, +inp.value);
 }
 function syncInputs() {
   for (const c of CTRL) {
@@ -650,9 +709,11 @@ function syncInputs() {
   }
 }
 function set(k, v) {
-  P[k] = v; if (k === 'bg' || k === 'bgTint') useBg(P.bg);
-  if (k === 'bgTint' || k === 'gridDensity') paintSwatches(panel.querySelector('.bgs'));
-  apply(); save(); if (k === 'bg' || k === 'bgTint') syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
+  P[k] = v;
+  if (k === 'bgColor') P.bg = 'color';                    // picking a colour switches to it
+  if (k === 'bg' || k === 'bgColor') useBg(P.bg);
+  if (k === 'bgColor' || k === 'gridDensity') paintSwatches(panel.querySelector('.bgs'));
+  apply(); save(); if (k === 'bg' || k === 'bgColor' || k === 'shadowStyle' || k === 'glow') syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   const st = anchor.style;
@@ -662,6 +723,7 @@ function apply() {
   bs.setProperty('--gap', `${P.gap}em`); bs.setProperty('--fw', P.weight); bs.setProperty('--orb', `${P.beadSize}em`);
   bs.setProperty('--rad', `${P.corner * P.h * 0.5}em`);
   btn.classList.toggle('no-bead', !P.bead); btn.classList.toggle('no-chev', !P.chevron);
+  menu.style.top = `calc(100% + ${P.menuGap * 2}em)`;   // the menu's em is half the button's
   if (labelEl.textContent !== P.text) labelEl.textContent = P.text;
 }
 function setTuning(on) {
@@ -755,6 +817,11 @@ uniform float uBgMode, uBgTexel; // texels per css px, for the level of detail
 uniform vec4 uBgXf;            // css px → uv: 1 / size, centre
 uniform vec3 uSkyHor, uSkyZen; // the room the glass reflects, tuned to the background
 uniform float uGrid, uGridA, uCamDist;
+uniform vec3 uGridCol;
+uniform float uMenuZ;          // how high the menu floats (px)
+uniform float uShadowMode;     // 0 a shadow with a caustic, 1 a coloured glow like a TV backlight
+uniform vec3 uGlowA, uGlowB, uGlowC;
+uniform vec4 uGlowK;           // strength, size (px), phase, -
 uniform vec3 uCamR, uCamD, uCamF;
 uniform int uSamples;
 uniform float uLabelLod;
@@ -767,30 +834,44 @@ float ZM, BR; vec3 BC, L, LO, HI;          // mid plane of the solid, bead, ligh
 // ---------- the solid: footprint + height profile, as a distance field ----------
 float box2(vec2 p, vec4 b, float r){ vec2 q = abs(p - b.xy) - b.zw + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 float smin2(float a, float b, float k){ float h = max(k - abs(a - b), 0.0) / max(k, 1e-4); return min(a, b) - h * h * k * 0.25; }
-// the footprint: the button, and when open the menu, melted together by a smooth union (a liquid bridge)
-float foot(vec2 p){
-  float e = box2(p, uBox, uShape.x);
-  if (uMenuK.w > 0.5) e = smin2(e, box2(p, uMenu, uMenuK.x), uMenuK.y);
-  return e;
-}
+float footB(vec2 p){ return box2(p, uBox, uShape.x); }
+float footM(vec2 p){ return uMenuK.w > 0.5 ? box2(p, uMenu, uMenuK.x) : 1e5; }
+float foot(vec2 p){ return min(footB(p), footM(p)); }
 vec2 prof(float x){                       // 0 at the rim, 1 inside; n = 2 is a circular arc (the M&M), big n a flat top
   float n = uShape2.x, a = max(1.0 - x, 1e-5), s = max(1.0 - pow(a, n), 1e-5), f = pow(s, 1.0 / n);
   return vec2(f, f / s * pow(a, n - 1.0));
 }
 float smax(float a, float b, float k){ float h = max(k - abs(a - b), 0.0) / max(k, 1e-4); return max(a, b) + h * h * k * 0.25; }
-float topAt(vec2 p){ return ZM + uShape.y + uShape.z * prof(clamp(-foot(p) / uBox.w, 0.0, 1.0)).x; }
-float map(vec3 p){
-  float e = foot(p.xy), x = clamp(-e / uBox.w, 0.0, 1.0);
+float topAt(vec2 p){ return ZM + uShape.y + uShape.z * prof(clamp(-footB(p) / uBox.w, 0.0, 1.0)).x; }
+// one piece of glass: a footprint distance e and a height z above the page
+float solid(float e, float z){
+  float x = clamp(-e / uBox.w, 0.0, 1.0);
   vec2 pr = prof(x);
   float sl = (x > 0.0 && x < 1.0) ? pr.y / uBox.w : 0.0;
   float top = ZM + uShape.y + uShape.z * pr.x, st = min(abs(uShape.z * sl), 16.0);
   float bot = ZM - uShape.w * pr.x, sb = min(abs(uShape.w * sl), 16.0);
-  float dT = (p.z - top) / sqrt(1.0 + st * st), dB = (bot - p.z) / sqrt(1.0 + sb * sb);
+  float dT = (z - top) / sqrt(1.0 + st * st), dB = (bot - z) / sqrt(1.0 + sb * sb);
   return smax(e, smax(dT, dB, uShape2.y), uShape2.y);
 }
+// the button, and when open the menu at its own height; "liquid" melts them together (a smooth union in 3D)
+float map(vec3 p){
+  float d = 1e5;
+  int n = uMenuK.w > 0.5 ? 2 : 1;
+  for (int i = 0; i < 2 * uOne; i++) {
+    if (i >= n) break;
+    vec2 ez = i == 0 ? vec2(footB(p.xy), p.z) : vec2(footM(p.xy), p.z - uMenuZ);
+    float di = solid(ez.x, ez.y);
+    d = i == 0 ? di : smin2(d, di, uMenuK.y);
+  }
+  return d;
+}
 vec3 nrm(vec3 p){
-  const vec2 k = vec2(1.0, -1.0); const float h = 0.3;
-  return normalize(k.xyy * map(p + k.xyy * h) + k.yyx * map(p + k.yyx * h) + k.yxy * map(p + k.yxy * h) + k.xxx * map(p + k.xxx * h));
+  vec3 n = vec3(0.0);
+  for (int i = 0; i < 4 * uOne; i++) {                 // tetrahedron of samples, one call site
+    vec3 e = i == 0 ? vec3(1, -1, -1) : i == 1 ? vec3(-1, -1, 1) : i == 2 ? vec3(-1, 1, -1) : vec3(1, 1, 1);
+    n += e * map(p + e * 0.3);
+  }
+  return normalize(n);
 }
 vec2 boxInt(vec3 ro, vec3 rd){
   vec3 r = vec3(abs(rd.x) < 1e-9 ? 1e-9 : rd.x, abs(rd.y) < 1e-9 ? 1e-9 : rd.y, abs(rd.z) < 1e-9 ? 1e-9 : rd.z);
@@ -805,8 +886,12 @@ float trace(vec3 ro, vec3 rd){
 }
 float exitT(vec3 q, vec3 d){                // q inside: how far until the ray leaves the solid
   float tmax = max(boxInt(q, d).y, 0.0) + 1.0, t = 0.0, tp = 0.0;
-  for (int i = 0; i < 40 * uOne; i++) { float m = map(q + d * t); if (m > 0.0) break; tp = t; t += max(-m * 0.9, 0.6); if (t > tmax) return tmax; }
-  for (int j = 0; j < 5 * uOne; j++) { float tm = 0.5 * (tp + t); if (map(q + d * tm) > 0.0) t = tm; else tp = tm; }
+  bool bis = false; int nb = 0;
+  for (int i = 0; i < 46 * uOne; i++) {               // march out, then bisect the crossing; one call site
+    float tm = bis ? 0.5 * (tp + t) : t, m = map(q + d * tm);
+    if (!bis) { if (m > 0.0) bis = true; else { tp = t; t += max(-m * 0.9, 0.6); if (t > tmax) return tmax; } }
+    else { if (m > 0.0) t = tm; else tp = tm; if (++nb >= 5) break; }
+  }
   return 0.5 * (tp + t);
 }
 vec2 sphInt(vec3 ro, vec3 rd, vec3 c, float r){
@@ -814,7 +899,7 @@ vec2 sphInt(vec3 ro, vec3 rd, vec3 c, float r){
   if (h < 0.0 || r < 0.5) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h);
 }
 
-// ---------- the page: gradient, faint grid, the rounded frame, shadows ----------
+// ---------- the page: gradient, faint grid, shadows ----------
 float lineA(float dist, float w, float fp){ fp = max(fp, 0.35); return clamp((w * 0.5 + fp * 0.5 - dist) / fp, 0.0, 1.0) * min(1.0, w / fp); }
 vec3 sky(vec3 d){
   vec3 c = mix(uSkyHor, uSkyZen, smoothstep(-0.05, 0.7, d.z));
@@ -832,15 +917,12 @@ vec3 pageAt(vec2 q, float fp){
   } else {
     float t = clamp((q.x / uRes.x + q.y / uRes.y) * 0.5, 0.0, 1.0);
     c = t < 0.5 ? mix(uPage0, uPage1, t * 2.0) : mix(uPage1, uPage2, t * 2.0 - 1.0);
-    vec2 fc = vec2(0.69, 0.84) * uRes, fh = vec2(0.6) * uRes; float fr = 72.0;
-    vec2 fq = abs(q - fc) - fh + fr; float fd = abs(length(max(fq, 0.0)) + min(max(fq.x, fq.y), 0.0) - fr);
-    g = max(g, lineA(fd, 1.2, fp) * min(uGridA * 1.8, 1.0));
   }
-  c = mix(c, vec3(1.0), g);
+  c = mix(c, uGridCol, g);
   // shadow thrown away from the light; a convex solid focuses light into a caustic, a dish spreads it into a ring
   float R = uBox.w, hmid = ZM + (uShape.y + max(uShape.z, 0.0)) * 0.5;
-  vec2 so = -L.xy / max(L.z, 0.25) * hmid * 0.4;
-  float ds = -foot(q - so);
+  vec2 so = -L.xy / max(L.z, 0.25) * hmid * 0.4, som = -L.xy / max(L.z, 0.25) * (hmid + uMenuZ) * 0.4;
+  float ds = max(-footB(q - so), -footM(q - som));      // a menu floating higher throws its shadow further
   float shadow = smoothstep(-R * 0.75 - uShape2.z, R * 0.45, ds) * 0.2;
   float conv = clamp(uShape.z / R / 0.72, 0.0, 1.4), dish = clamp(-uShape.z / R, 0.0, 1.0);
   float caus = smoothstep(R * 0.12, R * 0.8, ds) * (0.38 + 0.25 * uOptics.w) * conv * (uOptics.x - 1.0) * 2.0;
@@ -849,7 +931,18 @@ vec3 pageAt(vec2 q, float fp){
   float db = BR - length(q - BC.xy + L.xy / max(L.z, 0.25) * BC.z * 0.35);
   shadow = max(shadow, smoothstep(-BR * 0.5, BR * 0.6, db) * 0.18 * (0.35 + 0.65 * uBead2.x));
   caus += smoothstep(BR * 0.3, BR * 0.8, db) * 0.25 * (1.0 - uBead2.x);
-  c = c * (1.0 - shadow * uLightK.w) + vec3(1.0, 0.985, 0.95) * caus * 0.38 * uLightK.w;
+  if (uShadowMode < 0.5) c = c * (1.0 - shadow * uLightK.w) + vec3(1.0, 0.985, 0.95) * caus * 0.38 * uLightK.w;
+  else {
+    // a glow spilled on the page around and under the glass, its colours drifting slowly along it (like a TV backlight)
+    float e = foot(q);
+    float glow = exp(-max(e, 0.0) / max(uGlowK.y, 1.0)) * (0.55 + 0.45 * smoothstep(-R * 0.8, 0.0, e));
+    float u = (q.x - uBox.x) / (uBox.z * 2.0 + R) * 0.55 + (q.y - uBox.y) / (R * 6.0) * 0.25 + uGlowK.z;
+    float f = fract(u), w = f * 3.0;
+    vec3 gc = w < 1.0 ? mix(uGlowA, uGlowB, smoothstep(0.0, 1.0, w)) : w < 2.0 ? mix(uGlowB, uGlowC, smoothstep(1.0, 2.0, w)) : mix(uGlowC, uGlowA, smoothstep(2.0, 3.0, w));
+    vec3 light = gc * glow * uGlowK.x;
+    c = 1.0 - (1.0 - c) * (1.0 - clamp(light, 0.0, 1.0));            // screen: it lights the page, never darkens it
+    c *= 1.0 - smoothstep(-R * 0.3, R * 0.05, ds) * (1.0 - smoothstep(R * 0.05, R * 0.6, ds)) * 0.08 * uLightK.w;   // a faint contact shadow
+  }
   float far = smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uBox.xy));
   return mix(c, sky(vec3(0.0, -0.3, 0.12)) * 0.93, far);
 }
@@ -933,7 +1026,14 @@ vec3 glassShade(vec3 P, vec3 rd){
     t = reflect(t, -no); q -= no * 0.3; blur += 1.0;       // total internal reflection: this is what folds the page at the rim
   }
   if (state > 1.5) trans = beadShade(bp, bd);
-  else if (state > 0.5) trans = dsp > 0.0005 ? vec3(pageThrough(q, tr, blur).r, pageThrough(q, tg, blur).g, pageThrough(q, tb, blur).b) : pageThrough(q, tg, blur);
+  else if (state > 0.5) {
+    int nc = dsp > 0.0005 ? 3 : 1;
+    for (int ch = 0; ch < 3 * uOne; ch++) {            // one IOR per channel, one call site
+      if (ch >= nc) break;
+      vec3 pc = pageThrough(q, nc == 1 ? tg : ch == 0 ? tr : ch == 1 ? tg : tb, blur);
+      if (nc == 1) trans = pc; else trans[ch] = pc[ch];
+    }
+  }
   else trans = sky(t) * 0.85;
   trans *= exp(-path * uAbs);
   vec3 col = trans * (1.0 - F) + refl * F;
@@ -967,8 +1067,8 @@ vec3 glassShade(vec3 P, vec3 rd){
 }
 
 // ---------- one ray ----------
-vec3 shade(vec3 ro, vec3 rd, out float id){
-  float tl = trace(ro, rd); vec2 tb = sphInt(ro, rd, BC, BR);
+vec3 shade(vec3 ro, vec3 rd, float tlPre, out float id){   // tlPre: the hit already traced, or -2 to trace here
+  float tl = tlPre > -1.5 ? tlPre : trace(ro, rd); vec2 tb = sphInt(ro, rd, BC, BR);
   bool hitL = tl > 0.0, hitB = tb.x < tb.y && tb.x > 0.0;
   id = 0.0;
   if (hitB && (!hitL || tb.x < tl)) { id = 2.0; return beadShade(ro + rd * tb.x, rd); }
@@ -990,22 +1090,22 @@ void main(){
   BC = vec3(uBead.xy, topAt(uBead.xy) - BR * uBead.w);
   float topMax = ZM + uShape.y + max(uShape.z, 0.0);
   vec2 lo2 = uBox.xy - uBox.zw, hi2 = uBox.xy + uBox.zw;
-  if (uMenuK.w > 0.5) { lo2 = min(lo2, uMenu.xy - uMenu.zw) - uMenuK.y * 0.25; hi2 = max(hi2, uMenu.xy + uMenu.zw) + uMenuK.y * 0.25; }
+  if (uMenuK.w > 0.5) { lo2 = min(lo2, uMenu.xy - uMenu.zw) - uMenuK.y * 0.35; hi2 = max(hi2, uMenu.xy + uMenu.zw) + uMenuK.y * 0.35; }
   LO = vec3(lo2 - 2.0, min(uShape2.z, BR > 0.5 ? BC.z - BR : 1e5) - 2.0);
-  HI = vec3(hi2 + 2.0, max(topMax, BR > 0.5 ? BC.z + BR : 0.0) + 2.0);
+  HI = vec3(hi2 + 2.0, max(topMax + (uMenuK.w > 0.5 ? max(uMenuZ, 0.0) + uMenuK.y * 0.25 : 0.0), BR > 0.5 ? BC.z + BR : 0.0) + 2.0);
   vec3 ro, rd; camRay(p, ro, rd);
-  float id;
-  vec3 col = shade(ro, rd, id);
-  // silhouettes only (where neighbouring pixels hit different things): 3 more rays
-  if (fwidth(id) > 0.0 && uSamples > 1) {
-    float d;
-    for (int i = 0; i < 3 * uOne; i++) {
-      vec2 o = i == 0 ? vec2(-0.375, 0.125) : i == 1 ? vec2(0.375, -0.125) : vec2(-0.125, -0.375);
-      camRay(p + o / uScale, ro, rd); col += shade(ro, rd, d);
-    }
-    col *= 0.25;
+  // what does this pixel hit? a cheap test first, so the silhouettes (where neighbours differ) get 4 rays
+  vec2 tb0 = sphInt(ro, rd, BC, BR);
+  float tl0 = trace(ro, rd);
+  float id0 = (tb0.x < tb0.y && tb0.x > 0.0) ? 2.0 : tl0 > 0.0 ? 1.0 : 0.0;
+  int ns = (fwidth(id0) > 0.0 && uSamples > 1) ? 4 : 1;
+  vec3 col = vec3(0.0); float id;
+  for (int i = 0; i < 4 * uOne; i++) {                 // one call site for the whole shading
+    if (i >= ns) break;
+    vec2 o = i == 0 ? vec2(0.0) : i == 1 ? vec2(-0.375, 0.125) : i == 2 ? vec2(0.375, -0.125) : vec2(-0.125, -0.375);
+    camRay(p + o / uScale, ro, rd); col += shade(ro, rd, i == 0 ? tl0 : -2.0, id);
   }
-  fragColor = vec4(col, 1.0);
+  fragColor = vec4(col / float(ns), 1.0);
 }`;
 let prog = null, tex = null, ready = false;
 const U = {};
@@ -1093,7 +1193,6 @@ function camBasis(yaw, pitch) {
   const r = [f[1] * d[2] - f[2] * d[1], f[2] * d[0] - f[0] * d[2], f[0] * d[1] - f[1] * d[0]];
   return [r, d, f];
 }
-const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
 
 let last = performance.now();
 function frame(t) {
@@ -1133,7 +1232,7 @@ function frame(t) {
   const corner = Math.min(P.corner * hh, geo.hw, hh);
   // tint → absorption per px
   const tc = hex(P.tint), ab = tc.map(c => (1 - c) * P.tintK * 0.003);
-  const dk = bg.mode === 0 && P.bg === 'grid-dark', pg = pageStops(dk ? 'dark' : 'light');
+  const proc = (BGS.find(b => b.id === P.bg) || {}).proc || 'light', pg = pageStops(proc), dk = bg.mode === 0 && lum(pg[1]) < 0.42;
   const [cr, cd, cf] = camBasis(s.yaw + s.lx * 0.1, s.pitch - s.ly * 0.08);   // the view leans a little towards the cursor
   gl.uniform2f(uni('uRes'), W, H); gl.uniform1f(uni('uScale'), cv.width / W); gl.uniform1f(uni('uTime'), T);
   gl.uniform4f(uni('uBox'), geo.cx, geo.cy, geo.hw, hh);
@@ -1149,8 +1248,10 @@ function frame(t) {
     const fx = (mr[0] + mr[2]) / 2, fy = (mr[1] + mr[3]) / 2, fw = (mr[2] - mr[0]) / 2, fh = (mr[3] - mr[1]) / 2;
     const sw = Math.max(geo.hw - hh, 4), sh = hh * 0.6, mix1 = (a, b) => a + (b - a) * mt;
     const mw = Math.max(2, mix1(sw, fw)), mh = Math.max(2, mix1(sh, fh));
-    const gap = Math.max(0, mr[1] - (geo.cy + hh));
-    const blend = Math.max(20, gap * 2.8) + Math.min(28, Math.abs(s.menuV) * 6);
+    const gap = Math.max(0, mr[1] - (geo.cy + hh)), lz = P.menuLift * hh;
+    // liquid 0: two separate pieces; 1: they melt into one, bridging the gap and the height between them
+    const blend = P.liquid > 0.001 ? P.liquid * (gap * 2.2 + lz * 1.2 + hh * 0.35) + Math.min(14, Math.abs(s.menuV) * 3) * P.liquid : 0.0001;
+    gl.uniform1f(uni('uMenuZ'), lz * Math.max(0, Math.min(1, mt)));
     gl.uniform4f(uni('uMenu'), mix1(geo.cx, fx), mix1(geo.cy, fy), mw, mh);
     gl.uniform4f(uni('uMenuK'), Math.min(corner * 0.55 + 4, mw, mh), blend, Math.max(0, Math.min(1, (mt - 0.55) / 0.45)), 1);
   } else gl.uniform4f(uni('uMenuK'), 0, 1, 0, 0);
@@ -1162,6 +1263,10 @@ function frame(t) {
   gl.uniform3f(uni('uAbs'), ab[0], ab[1], ab[2]);
   const ic = hex(P.ink); gl.uniform4f(uni('uInk'), ic[0], ic[1], ic[2], P.inkA);
   gl.uniform3fv(uni('uPage0'), pg[0]); gl.uniform3fv(uni('uPage1'), pg[1]); gl.uniform3fv(uni('uPage2'), pg[2]);
+  { const gp = bg.mode === 0 ? pg[1] : bg.avg; const lt = lum(gp) > 0.8; gl.uniform3f(uni('uGridCol'), lt ? .1 : 1, lt ? .1 : 1, lt ? .12 : 1); }
+  gl.uniform1f(uni('uShadowMode'), P.shadowStyle === 'glow' ? 1 : 0);
+  { const gp = GLOWS[P.glow] || GLOWS.aurora; gl.uniform3fv(uni('uGlowA'), gp[0]); gl.uniform3fv(uni('uGlowB'), gp[1]); gl.uniform3fv(uni('uGlowC'), gp[2]);
+    gl.uniform4f(uni('uGlowK'), P.glowK * (dk || lum(bg.mode ? bg.avg : pg[1]) < 0.42 ? 0.55 : 0.8), hh * 1.1 * P.glowSize, (reduce || STILL ? 0.1 : T * 0.045 * P.glowSpeed), 0); }
   gl.uniform1f(uni('uGrid'), Math.max(10, Math.max(72, Math.round(Math.min(W, H) / 7)) / P.gridDensity)); gl.uniform1f(uni('uGridA'), P.grid);
   gl.uniform1f(uni('uCamDist'), Math.max(W, H) * 1.3);
   gl.uniform1f(uni('uBgMode'), bg.mode);
