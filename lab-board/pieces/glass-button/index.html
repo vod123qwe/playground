@@ -4,126 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Glass Button · lab</title>
-<meta name="description" content="A glass button that catches the light: the highlight follows your cursor, the rim glints in spectral colours and the glass dome bends the light as you move.">
+<meta name="description" content="A button made of a convex slab of glass. It magnifies the print under it, folds a mirrored copy along its edge and throws a shadow with a bright caustic; the bead and the star inside are real 3D.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..600&display=swap" rel="stylesheet">
 <style>
-  @property --rim  { syntax: '<angle>'; initial-value: 0deg; inherits: true; }
-  :root{
-    --ink:#141414;
-    --bg-a:#e4e6e9; --bg-b:#b8bcc2; --bg-c:#7e848b;
-    --ease:cubic-bezier(.2,.8,.2,1); --spring:cubic-bezier(.2,1.6,.4,1);
-    --warm:#ff5b3c;
-  }
+  :root{ --ink:#1b1c20; --ease:cubic-bezier(.2,.8,.2,1); --spring:cubic-bezier(.2,1.6,.4,1); }
   *{box-sizing:border-box}
   html,body{height:100%; margin:0}
   body{
-    background:linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 48%, var(--bg-c) 100%);
-    color:#fff; font-family:"Inter Tight", system-ui, sans-serif; overflow:hidden;
+    background:linear-gradient(135deg, #e7e8eb 0%, #c3c6cb 50%, #8f959c 100%);
+    color:var(--ink); font-family:"Inter Tight", system-ui, sans-serif; overflow:hidden;
     -webkit-font-smoothing:antialiased; touch-action:none; user-select:none; -webkit-user-select:none;
   }
-  .frame{position:fixed; left:9vw; top:24vh; right:-12vw; bottom:-30vh; border:1px solid rgba(255,255,255,.34); border-radius:72px; pointer-events:none}
-  .stage{position:fixed; inset:0; display:grid; place-items:center; perspective:900px}
+  #gl{position:fixed; inset:0; width:100%; height:100%; display:block}
+  .stage{position:fixed; inset:0; display:grid; place-items:center}
   .anchor{position:relative; font-size:clamp(20px, 3.4vw, 36px)}
 
-  /* coloured light the glass throws onto the background */
-  .caustic{
-    position:absolute; left:var(--cx, 45%); top:74%; width:80%; height:120%; pointer-events:none;
-    transform:translate(-50%, 0); filter:blur(28px); opacity:calc(.42 + var(--hov, 0) * .3);
-    background:
-      radial-gradient(closest-side at 42% 30%, rgba(176,255,150,.55), transparent 70%),
-      radial-gradient(closest-side at 64% 36%, rgba(255,226,120,.45), transparent 70%),
-      radial-gradient(closest-side at 30% 44%, rgba(190,160,255,.28), transparent 70%);
-    mix-blend-mode:soft-light;
-  }
-
-  /* ---------- the button: a slab of glass with a rounded, slightly convex edge ---------- */
+  /* The DOM button is the real, accessible control. With WebGL it is invisible and only gives the
+     canvas its geometry (pill, bead, label, chevron); the glass itself is drawn in the shader. */
   .btn{
-    --mx:30%; --my:20%; --hov:0; --press:1; --px:0px; --py:0px; --rx:0deg; --ry:0deg;
     position:relative; display:inline-flex; align-items:center; gap:.62em;
     height:3.1em; padding:0 1.2em 0 .5em; border:0; border-radius:999px; cursor:pointer;
-    color:#fff; font:inherit; font-weight:500; letter-spacing:-.01em; line-height:1;
-    background:
-      radial-gradient(120% 160% at 50% 50%, transparent 58%, rgba(255,255,255,.16) 100%),
-      linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.12) 56%, rgba(255,255,255,.2));
-    -webkit-backdrop-filter:blur(14px) saturate(1.4); backdrop-filter:blur(14px) saturate(1.4);
-    box-shadow:
-      inset 0 1.5px 0 rgba(255,255,255,.8),
-      inset 0 -1.5px 0 rgba(255,255,255,.34),
-      inset 0 0 0 1px rgba(255,255,255,.26),
-      inset 0 .5em .8em -.5em rgba(255,255,255,.5),
-      inset 0 -.6em .8em -.55em rgba(0,0,0,.12),
-      0 .8em 1.6em -.8em rgba(38,46,56,.5),
-      0 .05em .14em rgba(0,0,0,.06);
-    text-shadow:0 1px 2px rgba(0,0,0,.14);
-    transform:translate(var(--px), var(--py)) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--press));
-    transform-style:preserve-3d; transition:transform .5s var(--spring);
+    font:inherit; font-weight:500; letter-spacing:-.01em; line-height:1; color:transparent; background:transparent;
     outline:none; -webkit-tap-highlight-color:transparent;
   }
-  .btn:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.9), 0 0 0 6px rgba(20,20,20,.35)}
-  /* a second line a few px inside the edge: reads as the thickness of the glass */
-  .btn .bevel{position:absolute; inset:.1em; border-radius:inherit; pointer-events:none;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(255,255,255,.16), inset 1px 0 0 rgba(255,255,255,.12), inset -1px 0 0 rgba(255,255,255,.12)}
-  .btn .light{
-    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:radial-gradient(4.6em 3.4em at var(--mx) var(--my), rgba(255,255,255,.46), rgba(255,255,255,.1) 45%, transparent 72%);
-    opacity:calc(.3 + var(--hov) * .7);
-  }
-  /* the edge catches the light where the cursor is: a white rim glow masked to the border */
-  .btn .edge{
-    position:absolute; inset:0; border-radius:inherit; padding:2px; pointer-events:none;
-    background:radial-gradient(3.2em 2.6em at var(--mx) var(--my), rgba(255,255,255,.95), transparent 70%);
-    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
-    mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-    opacity:var(--hov);
-  }
-  .btn .sheen{position:absolute; inset:0; border-radius:inherit; overflow:hidden; pointer-events:none}
-  .btn .sheen::before{
-    content:""; position:absolute; inset:-20% -60%;
-    background:linear-gradient(105deg, transparent 42%, rgba(255,255,255,.3) 49%, rgba(255,255,255,.07) 53%, transparent 58%);
-    transform:translateX(var(--sweep, -60%));
-  }
-  .btn .rim{
-    position:absolute; inset:0; border-radius:inherit; padding:1.6px; pointer-events:none;
-    background:conic-gradient(from var(--rim),
-      transparent 0deg 40deg, rgba(186,140,255,.95) 58deg, rgba(128,240,208,.95) 72deg, rgba(255,226,122,.95) 86deg, transparent 104deg 210deg,
-      rgba(255,154,213,.9) 232deg, rgba(138,215,255,.95) 246deg, rgba(215,255,138,.9) 260deg, transparent 280deg 360deg);
-    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
-    mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-    opacity:calc(.4 + var(--hov) * .6);
-  }
-  .btn .label{position:relative; white-space:nowrap}
-  .btn .chev{position:relative; width:.66em; height:.66em; margin-left:.02em; transition:transform .45s var(--spring)}
-  .btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
-
-  /* ---------- the lens: a thick glass dome (WebGL) with the star under it ---------- */
-  .orb{
-    --lx:0; --ly:0;
-    position:relative; flex:none; width:2.12em; height:2.12em; border-radius:50%;
-    background:radial-gradient(circle at 50% 42%, #5c6066 0%, #34373c 60%, #22242a 100%);          /* no-WebGL fallback */
-    box-shadow:
-      calc(var(--lx) * -.09em) calc(.12em - var(--ly) * .06em) .26em rgba(0,0,0,.32),         /* shadow on the pill, opposite the light */
-      0 0 0 .22em rgba(255,255,255,.05);
-    transform:translateZ(14px);
-  }
-  .orb canvas{position:absolute; inset:0; width:100%; height:100%; border-radius:50%; display:block}
-  .orb .star{
-    position:absolute; inset:23%;
-    background:linear-gradient(var(--sa, 155deg), var(--warm) 0%, var(--warm) 22%, #ffb44a 36%, #ffffff 50%, #7fb6ff 60%, #2f7bff 80%);
-    -webkit-mask:var(--star-shape) center / contain no-repeat; mask:var(--star-shape) center / contain no-repeat;
-    transform:translate(calc(var(--lx) * -.035em), calc(var(--ly) * -.035em));               /* sits a touch deeper than the glass */
-    filter:saturate(1.1);
-  }
-  :root{ --star-shape:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 3 C54 34 66 46 97 50 C66 54 54 66 50 97 C46 66 34 54 3 50 C34 46 46 34 50 3 Z'/%3E%3C/svg%3E"); }
+  .btn:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.95), 0 0 0 6px rgba(20,20,20,.3)}
+  .btn .orb{flex:none; width:2.12em; height:2.12em; border-radius:50%}
+  .btn .label{white-space:nowrap}
+  .btn .chev{width:.66em; height:.66em; margin-left:.02em; stroke:transparent}
+  /* fallback when WebGL is not there: a plain frosted pill */
+  .no-gl .btn{color:var(--ink); background:rgba(255,255,255,.4); box-shadow:inset 0 1px 0 #fff, 0 .6em 1.2em -.6em rgba(0,0,0,.35); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)}
+  .no-gl .btn .orb{background:radial-gradient(circle at 40% 35%, #6a6e75, #1f2125)}
+  .no-gl .btn .chev{stroke:currentColor}
 
   /* ---------- glass menu ---------- */
   .menu{
-    position:absolute; left:0; top:calc(100% + .32em); min-width:100%; padding:.2em; margin:0; list-style:none;
-    border-radius:.7em; font-size:.5em;
-    background:linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.16));
-    -webkit-backdrop-filter:blur(16px) saturate(1.5); backdrop-filter:blur(16px) saturate(1.5);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.75), inset 0 0 0 1px rgba(255,255,255,.24), 0 1.2em 2.4em -1.2em rgba(38,46,56,.5);
+    position:absolute; left:0; top:calc(100% + .38em); min-width:100%; padding:.2em; margin:0; list-style:none;
+    border-radius:.7em; font-size:.5em; color:var(--ink);
+    background:linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.38));
+    -webkit-backdrop-filter:blur(16px) saturate(1.4); backdrop-filter:blur(16px) saturate(1.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(255,255,255,.4), 0 1.2em 2.4em -1.2em rgba(38,46,56,.45);
     transform-origin:1.4em 0; transform:scale(.92) translateY(-.3em); opacity:0; pointer-events:none;
     transition:transform .45s var(--spring), opacity .2s var(--ease);
   }
@@ -132,84 +53,75 @@
     display:flex; align-items:center; gap:.7em; padding:.8em 1em; border-radius:.5em; cursor:pointer; outline:none;
     background:radial-gradient(6em 3em at var(--ix, 50%) 50%, rgba(255,255,255,var(--ia, 0)), transparent 70%);
   }
-  .menu li:focus-visible{box-shadow:inset 0 0 0 2px rgba(255,255,255,.8)}
-  .menu li .dot{width:.5em; height:.5em; border-radius:50%; flex:none; box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)}
-  .menu li .k{margin-left:auto; opacity:.55; font-size:.86em}
+  .menu li:focus-visible{box-shadow:inset 0 0 0 2px rgba(20,20,20,.35)}
+  .menu li .dot{width:.5em; height:.5em; border-radius:50%; flex:none}
+  .menu li .k{margin-left:auto; opacity:.45; font-size:.86em}
 
-  .meta{position:fixed; left:clamp(16px, 3vw, 32px); right:clamp(16px, 3vw, 32px); display:flex; justify-content:space-between; font-size:13px; color:rgba(20,20,20,.72); pointer-events:none}
+  .meta{position:fixed; left:clamp(16px, 3vw, 32px); right:clamp(16px, 3vw, 32px); display:flex; justify-content:space-between; font-size:13px; color:rgba(20,20,20,.72); pointer-events:none; z-index:2}
   .meta a{color:inherit; pointer-events:auto}
   .meta.top{top:18px} .meta.bottom{bottom:18px}
   .meta b{font-weight:600; color:var(--ink)}
   body.bare .meta{display:none}
   @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} }
-  @media (prefers-reduced-motion:reduce){ .btn,.menu,.btn .chev{transition-duration:.01s} }
+  @media (prefers-reduced-motion:reduce){ .menu{transition-duration:.01s} }
 </style>
 </head>
 <body>
-<div class="frame" aria-hidden="true"></div>
+<canvas id="gl" aria-hidden="true"></canvas>
 <div class="meta top"><a href="../../">← lab</a><span><b>01</b> · glass button</span></div>
 <main class="stage">
   <div class="anchor" id="anchor">
-    <div class="caustic" aria-hidden="true"></div>
     <button class="btn" id="btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu">
-      <span class="light" aria-hidden="true"></span>
-      <span class="sheen" aria-hidden="true"></span>
-      <span class="orb" id="orb" aria-hidden="true"><canvas id="lens"></canvas><span class="star"></span></span>
-      <span class="label">Ask agents</span>
-      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
-      <span class="bevel" aria-hidden="true"></span>
-      <span class="edge" aria-hidden="true"></span>
-      <span class="rim" aria-hidden="true"></span>
+      <span class="orb" id="orb" aria-hidden="true"></span>
+      <span class="label" id="label">Ask agents</span>
+      <svg class="chev" id="chev" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
     </button>
     <ul class="menu" id="menu" role="menu" aria-label="Agents">
-      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#ffb13b"></span>Research<span class="k">R</span></li>
-      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#6bb8ff"></span>Design<span class="k">D</span></li>
-      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#7dffb2"></span>Build<span class="k">B</span></li>
+      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#ff8a3b"></span>Research<span class="k">R</span></li>
+      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#3d86ff"></span>Design<span class="k">D</span></li>
+      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#35c27a"></span>Build<span class="k">B</span></li>
     </ul>
   </div>
 </main>
 <div class="meta bottom"><span>move · press · open</span><span>study after a shot found on <a href="https://recent.design" target="_blank" rel="noreferrer">recent.design</a></span></div>
 
 <script>
-// Glass Button v2: CSS variables for the slab, a WebGL glass dome for the lens; one loop eases everything.
+// Glass Button v3: the whole scene is one fragment shader.
+// Under the glass lies a "print": the page background, a faint grid, the label and the chevron (a 2D canvas
+// texture) plus an analytic 3D bead with a puffy star. Over it sits a convex capsule of glass, M&M-like:
+// its height is a circular arc across the short axis. Rays refract through it (three IORs for dispersion)
+// down to the print, so the print is magnified in the middle, squeezed at the edge and folded into a mirrored
+// copy along the rim. The glass throws a soft shadow with a bright caustic. The cursor is both the viewer and
+// the light, so the refraction and the glints move with the mouse.
 const q = new URLSearchParams(location.search);
 const STILL = q.has('still');
 if (q.has('bare')) document.body.classList.add('bare');
-const btn = document.getElementById('btn'), anchor = document.getElementById('anchor'), menu = document.getElementById('menu'), orb = document.getElementById('orb');
+const btn = document.getElementById('btn'), anchor = document.getElementById('anchor'), menu = document.getElementById('menu');
+const orbEl = document.getElementById('orb'), labelEl = document.getElementById('label'), chevEl = document.getElementById('chev');
 const items = [...menu.querySelectorAll('li')];
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const s = { mx: .3, my: .2, tmx: .3, tmy: .2, hov: 0, thov: 0, px: 0, py: 0, tpx: 0, tpy: 0, rx: 0, ry: 0, trx: 0, try_: 0,
-            lx: 0, ly: 0, tlx: 0, tly: 0, rim: 200, sweep: -60, sweeping: false, jiggle: 0, seen: false };
+// ---------- interaction state ----------
+const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, jiggle: 0, seen: false, open: false };
 function onMove(x, y) {
   s.seen = true;
-  const r = btn.getBoundingClientRect();
-  s.tmx = (x - r.left) / r.width; s.tmy = (y - r.top) / r.height;
-  const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom), d = Math.hypot(dx, dy);
-  const prox = Math.max(0, 1 - d / 160);
-  const was = s.thov; s.thov = prox;
-  if (prox > .95 && was <= .95) sweep();
-  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  const nx = Math.max(-1, Math.min(1, (x - cx) / r.width)), ny = Math.max(-1, Math.min(1, (y - cy) / r.height));
-  s.tpx = nx * 6 * prox; s.tpy = ny * 4 * prox;
-  s.try_ = nx * 7 * prox; s.trx = -ny * 9 * prox;              // the slab tips toward you a few degrees
-  // the lens looks toward the cursor: its view direction follows the pointer around the orb, even from afar
-  const o = orb.getBoundingClientRect(), ox = o.left + o.width / 2, oy = o.top + o.height / 2;
-  s.tlx = Math.max(-1, Math.min(1, (x - ox) / 320)); s.tly = Math.max(-1, Math.min(1, (y - oy) / 320));
+  const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  s.tlx = Math.max(-1, Math.min(1, (x - cx) / (r.width * 0.9))); s.tly = Math.max(-1, Math.min(1, (y - cy) / (r.height * 2.2)));
+  const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
+  s.thov = Math.max(0, 1 - Math.hypot(dx, dy) / 160);
 }
-function sweep() { if (reduce) return; s.sweep = -60; s.sweeping = true; }
 window.addEventListener('pointermove', e => onMove(e.clientX, e.clientY), { passive: true });
-window.addEventListener('pointerleave', () => { s.thov = 0; s.tpx = s.tpy = s.trx = s.try_ = 0; s.seen = false; });
-btn.addEventListener('pointerdown', e => { btn.style.setProperty('--press', '.965'); onMove(e.clientX, e.clientY); s.jiggle = 1; });
-window.addEventListener('pointerup', () => btn.style.setProperty('--press', '1'));
-window.addEventListener('pointercancel', () => btn.style.setProperty('--press', '1'));
+window.addEventListener('pointerleave', () => { s.seen = false; s.thov = 0; });
+btn.addEventListener('pointerdown', e => { onMove(e.clientX, e.clientY); s.tpress = 1; s.jiggle = 1; });
+window.addEventListener('pointerup', () => { s.tpress = 0; });
+window.addEventListener('pointercancel', () => { s.tpress = 0; });
 
-// menu
+// ---------- menu ----------
 function setMenu(open, focusFirst) {
-  btn.setAttribute('aria-expanded', String(open)); menu.classList.toggle('open', open);
+  s.open = open; btn.setAttribute('aria-expanded', String(open)); menu.classList.toggle('open', open); drawPrint();
   if (open && focusFirst) items[0].focus(); if (!open) btn.focus({ preventScroll: true });
 }
-btn.addEventListener('click', () => { setMenu(btn.getAttribute('aria-expanded') !== 'true', false); sweep(); });
+btn.addEventListener('click', () => setMenu(!s.open, false));
 btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); setMenu(true, true); } });
 menu.addEventListener('keydown', e => {
   const i = items.indexOf(document.activeElement);
@@ -219,125 +131,208 @@ menu.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(items[i]); }
 });
 items.forEach(li => {
-  li.addEventListener('pointermove', e => { const r = li.getBoundingClientRect(); li.style.setProperty('--ix', `${((e.clientX - r.left) / r.width) * 100}%`); li.style.setProperty('--ia', '.38'); });
+  li.addEventListener('pointermove', e => { const r = li.getBoundingClientRect(); li.style.setProperty('--ix', `${((e.clientX - r.left) / r.width) * 100}%`); li.style.setProperty('--ia', '.6'); });
   li.addEventListener('pointerleave', () => li.style.setProperty('--ia', '0'));
   li.addEventListener('click', () => choose(li));
 });
-function choose(li) { btn.querySelector('.label').textContent = `Ask ${li.textContent.replace(/[A-Z]$/, '').trim().toLowerCase()}`; setMenu(false); sweep(); }
-document.addEventListener('pointerdown', e => { if (!anchor.contains(e.target)) setMenu(false); });
+function choose(li) { labelEl.textContent = `Ask ${li.textContent.replace(/[A-Z]$/, '').trim().toLowerCase()}`; setMenu(false); s.jiggle = 1; }
+document.addEventListener('pointerdown', e => { if (!anchor.contains(e.target)) { if (s.open) setMenu(false); } });
 
-// ---------- the lens: a thick glass dome ----------
-// Height field of a cabochon (flat top, rounded rim). Looking through it refracts a slowly drifting dark
-// "room behind the glass", with three IORs for dispersion; the rim reflects a small studio whose key light
-// sits where your cursor is, so the rainbow fringes and the bright bevel move with the mouse.
-const lens = (() => {
-  const cv = document.getElementById('lens'), gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: true });
-  if (!gl) return null;
-  const vs = `attribute vec2 a; varying vec2 vUv; void main(){ vUv = a * 0.5 + 0.5; gl_Position = vec4(a, 0.0, 1.0); }`;
-  const fs = `precision highp float;
-  uniform float uTime, uJiggle; uniform vec2 uLook; varying vec2 vUv;
-  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y); }
-  float fbm(vec2 p){ float v = 0.0, a = 0.55; for (int k = 0; k < 4; k++) { v += a * noise(p); p = p * 2.03 + 11.7; a *= 0.5; } return v; }
-  float room(vec2 p){                          // what the glass sits on: dark grey with soft drifting bands
-    float t = uTime * 0.06;
-    float n = fbm(p * 1.15 + vec2(t, -t * 0.7));
-    float b = smoothstep(0.44, 0.56, n);
-    return mix(0.17, 0.6, b) + 0.05 * sin(p.y * 2.0 + t * 3.0);
+// ---------- the print under the glass (2D canvas → texture) ----------
+const print = document.createElement('canvas'), pg = print.getContext('2d');
+let W = 1, H = 1, DPR = 1, geo = null, printDirty = true;
+function layout() {
+  W = innerWidth; H = innerHeight; DPR = Math.min(devicePixelRatio || 1, 2);
+  const b = btn.getBoundingClientRect(), o = orbEl.getBoundingClientRect(), l = labelEl.getBoundingClientRect(), c = chevEl.getBoundingClientRect();
+  geo = { cx: b.left + b.width / 2, cy: b.top + b.height / 2, a: (b.width - b.height) / 2, R: b.height / 2,
+          orb: [o.left + o.width / 2, o.top + o.height / 2, o.width / 2], label: l, chev: c,
+          font: getComputedStyle(btn).fontSize };
+}
+function drawPrint() { printDirty = true; }
+function paintPrint() {
+  print.width = Math.round(W * DPR); print.height = Math.round(H * DPR);
+  const g = pg; g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = g.createLinearGradient(0, 0, W, H);                  // same gradient as the page
+  bg.addColorStop(0, '#e7e8eb'); bg.addColorStop(0.5, '#c3c6cb'); bg.addColorStop(1, '#8f959c');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 1;          // a faint grid, so the glass has something to bend
+  const step = Math.max(72, Math.round(Math.min(W, H) / 7));
+  const ox = (geo.cx % step), oy = (geo.cy % step);
+  g.beginPath();
+  for (let x = ox - step * 0.5; x < W; x += step) { g.moveTo(Math.round(x) + 0.5, 0); g.lineTo(Math.round(x) + 0.5, H); }
+  for (let y = oy - step * 0.5; y < H; y += step) { g.moveTo(0, Math.round(y) + 0.5); g.lineTo(W, Math.round(y) + 0.5); }
+  g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.2;        // the rounded frame, like the window the button lives in
+  g.beginPath(); g.roundRect(W * 0.09, H * 0.24, W * 1.2, H * 1.2, 72); g.stroke();
+  // the print itself: dark ink, sits on the base under the glass
+  const L = geo.label, C = geo.chev;
+  g.fillStyle = '#1b1c20'; g.font = `500 ${geo.font} "Inter Tight", system-ui, sans-serif`; g.textBaseline = 'middle';
+  g.fillText(labelEl.textContent, L.left, L.top + L.height / 2 + 1);
+  g.save(); g.translate(C.left + C.width / 2, C.top + C.height / 2); if (s.open) g.rotate(Math.PI);
+  const k = C.width / 24; g.strokeStyle = '#1b1c20'; g.lineWidth = 2.5 * k; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(-7 * k, -3 * k); g.lineTo(0, 4 * k); g.lineTo(7 * k, -3 * k); g.stroke(); g.restore();
+  // a soft contact shadow on the base right under the bead
+  const [bx, by, br] = geo.orb, sh = g.createRadialGradient(bx + br * 0.12, by + br * 0.2, br * 0.6, bx + br * 0.12, by + br * 0.2, br * 1.25);
+  sh.addColorStop(0, 'rgba(0,0,0,.35)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = sh; g.beginPath(); g.arc(bx, by, br * 1.3, 0, 7); g.fill();
+  printDirty = false; return true;
+}
+
+// ---------- WebGL ----------
+const cv = document.getElementById('gl');
+const gl = cv.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false });
+const VS = `attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }`;
+const FS = `precision highp float;
+uniform sampler2D uPrint;
+uniform vec2 uRes; uniform float uDpr, uTime;
+uniform vec4 uPill;          // centre x, y (css px), half length of the straight part, radius
+uniform vec3 uOrb;           // bead centre x, y and radius (css px)
+uniform vec2 uLook;          // cursor relative to the button, -1..1: the viewer and the light
+uniform float uHov, uPress, uJiggle, uWarm;
+
+vec3 lightDir(){ return normalize(vec3(-0.45 + uLook.x * 0.9, -0.62 + uLook.y * 0.9, 0.75)); }   // x right, y down, z to viewer
+
+// the bead: a dark glass sphere with a puffy four-point star floating in it
+vec4 bead(vec2 p){
+  vec2 d = (p - uOrb.xy) / uOrb.z; float r = length(d);
+  if (r > 1.0) return vec4(0.0);
+  vec3 n = vec3(d, sqrt(max(1.0 - r * r, 0.0)));
+  vec3 L = lightDir(), V = vec3(0.0, 0.0, 1.0);
+  float diff = max(dot(n, L), 0.0);
+  vec3 col = vec3(0.10, 0.11, 0.13) * (0.5 + 0.7 * diff);
+  col += vec3(0.12, 0.13, 0.16) * smoothstep(-0.2, 0.9, d.y) * (1.0 - r * 0.6);               // light gathered at the bottom, like thick glass
+  // the star, refracted by the sphere and a little deeper than its surface (parallax with the view)
+  vec2 sp = (d * (1.0 - 0.18 * n.z) - uLook * 0.07) / 0.56;
+  float e = 0.62, f = pow(abs(sp.x), e) + pow(abs(sp.y), e);
+  if (f < 1.06) {
+    float h = 0.012;
+    float fx = pow(abs(sp.x + h), e) - pow(abs(sp.x - h), e);
+    float fy = pow(abs(sp.y + h), e) - pow(abs(sp.y - h), e);
+    vec3 ns = normalize(vec3(fx / (2.0 * h) * 0.34, fy / (2.0 * h) * 0.34, 1.0));
+    float t = clamp(0.5 + (sp.x + sp.y) * 0.75, 0.0, 1.0);                   // warm top-left, white middle, blue bottom-right
+    vec3 warm = mix(vec3(1.0, 0.33, 0.2), vec3(1.0, 0.7, 0.22), uWarm);
+    vec3 g = t < 0.5 ? mix(warm, vec3(1.0, 0.98, 0.95), t * 2.0) : mix(vec3(1.0, 0.98, 0.95), vec3(0.16, 0.46, 1.0), (t - 0.5) * 2.0);
+    float sd = max(dot(ns, L), 0.0), ss = pow(max(dot(reflect(-L, ns), V), 0.0), 26.0);
+    vec3 sc = g * (0.78 + 0.38 * sd) + vec3(1.0) * ss * 0.5;                     // mostly its own colour, shaded just enough to read as puffy
+    float edge = 1.0 - smoothstep(0.97, 1.06, f);
+    col = mix(col, sc, edge);
+    col += g * 0.12 * (1.0 - smoothstep(0.9, 1.6, f));                                          // glow around it
   }
-  vec3 studio(vec3 r, vec3 key){               // reflected environment: grazing directions are bright, plus a key light
-    float wrap = smoothstep(0.55, 0.05, abs(r.z)) * 0.9;
-    float top = smoothstep(0.2, 0.9, r.y) * 0.35;
-    float k = pow(max(dot(r, key), 0.0), 24.0) * 1.6;
-    return vec3(0.12) + vec3(wrap + top) + vec3(1.0, 0.98, 0.95) * k;
+  float spec = pow(max(dot(reflect(-L, n), V), 0.0), 48.0);
+  float fres = pow(1.0 - n.z, 3.0);
+  col += vec3(1.0) * spec * 0.95 + vec3(0.75, 0.77, 0.82) * fres * 0.55;
+  col = mix(col, vec3(0.9, 0.91, 0.94), smoothstep(0.88, 0.97, r) * (1.0 - smoothstep(0.975, 1.0, r)) * (0.5 + 0.5 * max(dot(normalize(vec3(d, 0.0) + 1e-5), L), 0.0)));
+  return vec4(col, 1.0 - smoothstep(0.97, 1.0, r));
+}
+vec3 printAt(vec2 p, float bias){
+  vec3 c = texture2D(uPrint, p / uRes, bias).rgb;
+  vec4 b = bead(p);
+  return mix(c, b.rgb, b.a);
+}
+float capsule(vec2 p, out vec2 dir){                 // signed depth inside the capsule (px, > 0 inside)
+  vec2 q = p - uPill.xy; vec2 cl = vec2(clamp(q.x, -uPill.z, uPill.z), 0.0); vec2 dv = q - cl; float l = length(dv);
+  dir = l > 1e-3 ? dv / l : vec2(0.0, 1.0);
+  return uPill.w - l;
+}
+void main(){
+  vec2 p = vec2(gl_FragCoord.x, uRes.y * uDpr - gl_FragCoord.y) / uDpr;     // css px, y down
+  vec3 L = lightDir();
+  vec3 col = texture2D(uPrint, p / uRes).rgb;
+  float R = uPill.w;
+  // shadow on the ground, thrown away from the light, with light focused into a caustic inside it
+  vec2 so = -normalize(L.xy) * R * (0.42 + uPress * 0.08);
+  vec2 dd; float ds = capsule(p - so, dd);
+  float shadow = smoothstep(-R * 0.75, R * 0.45, ds) * 0.26 * (1.0 - uPress * 0.25);
+  float caus = smoothstep(R * 0.12, R * 0.8, ds) * (0.3 + 0.25 * uHov);
+  col = col * (1.0 - shadow) + vec3(1.0, 0.985, 0.95) * caus * 0.38;
+  vec2 dir; float d = capsule(p, dir);
+  if (d > -2.0) {
+    float x = clamp(d / R, 0.0, 1.0);
+    float Hm = R * (0.82 - uPress * 0.12);
+    float arc = sqrt(max(2.0 * x - x * x, 0.0));                             // circular cross-section: an M&M, not a slab
+    float h = Hm * arc;
+    float dhdd = Hm * (1.0 - x) / max(arc, 0.03) / R;
+    dhdd *= 1.0 + uJiggle * 0.18 * sin(d * 0.35 - uTime * 18.0);
+    vec3 n = normalize(vec3(dir * dhdd, 1.0));
+    vec3 V = normalize(vec3(uLook * 0.3, 1.0)), I = -V;
+    // through the glass down to the print, one IOR per channel
+    vec3 tr = refract(I, n, 1.0 / 1.475), tg = refract(I, n, 1.0 / 1.50), tb = refract(I, n, 1.0 / 1.527);
+    float k = 0.95;                                                            // gentle magnification; dispersion shows at the rim, not on the letters
+    vec2 orr = tr.xy / max(-tr.z, 0.3) * h * k, org = tg.xy / max(-tg.z, 0.3) * h * k, orb = tb.xy / max(-tb.z, 0.3) * h * k;
+    float bias = (1.0 - x) * 1.1;                                              // crisp in the middle, a touch milky at the rim
+    vec3 inner = vec3(printAt(p + orr, bias).r, printAt(p + org, bias).g, printAt(p + orb, bias).b);
+    // along the rim the glass shows a folded, mirrored copy of what lies inside (like the physical pills)
+    float band = smoothstep(0.42, 0.06, x);
+    vec3 mir = printAt(p - dir * (d * 2.6 + R * 0.18), bias + 0.6);
+    inner = mix(inner, mir, band * 0.42);
+    inner = inner * 1.02 + 0.015;
+    // the surface: a soft studio reflection that brightens at grazing angles, the key light, a tight glint
+    vec3 rf = reflect(I, n);
+    float fres = 0.04 + 0.96 * pow(1.0 - max(dot(n, V), 0.0), 5.0);
+    vec3 env = vec3(0.96) * smoothstep(0.62, 0.04, abs(rf.z)) + vec3(0.25) * smoothstep(0.0, -0.9, rf.y);
+    float key = pow(max(dot(rf, L), 0.0), 260.0) * (0.35 + uHov * 0.25), glint = pow(max(dot(rf, L), 0.0), 1400.0) * 1.1;
+    vec3 glass = inner + env * fres * 0.9 + vec3(1.0) * (key + glint);
+    // spectral sparks on the rim, where it faces the light
+    float rimb = smoothstep(0.2, 0.015, x);
+    float facing = pow(max(dot(dir, normalize(L.xy)), 0.0), 3.0);
+    vec3 rainbow = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + (p.x - uPill.x) / R * 0.09 + x * 4.0 + uTime * 0.025));
+    glass = mix(glass, rainbow * 1.05, rimb * facing * (0.35 + 0.3 * uHov));
+    glass += vec3(0.3) * (1.0 - smoothstep(0.0, 1.8, d));                    // the very edge catches light
+    col = mix(col, glass, smoothstep(-1.2, 0.8, d));
   }
-  void main(){
-    vec2 p = vUv * 2.0 - 1.0; float r = length(p);
-    if (r > 1.0) { gl_FragColor = vec4(0.0); return; }
-    // cabochon: h = H * sqrt(1 - r^6)  (flat in the middle, steep only near the rim)
-    float H = 0.42, r5 = pow(max(r, 1e-4), 5.0), e = max(1.0 - r5 * r, 1e-4);
-    float dhdr = -H * 3.0 * r5 / sqrt(e);
-    vec3 n = normalize(vec3(-(p / max(r, 1e-4)) * dhdr * (1.0 + uJiggle * 0.25 * sin(r * 30.0 - uTime * 20.0)), 1.0));
-    vec3 v = normalize(vec3(-uLook * 0.28, 1.0));              // we look at the lens from the cursor's side
-    vec3 I = -v;
-    vec2 base = p * 0.62 + uLook * 0.18;                       // magnified room, shifted by the viewing angle
-    float th = 0.85;
-    vec3 tr = refract(I, n, 1.0 / 1.40), tg = refract(I, n, 1.0 / 1.50), tb = refract(I, n, 1.0 / 1.62);   // wide spread = iridescent band edges
-    vec3 col = vec3(room(base + tr.xy * th), room(base + tg.xy * th), room(base + tb.xy * th));
-    vec3 key = normalize(vec3(uLook.x, -uLook.y, 0.9));
-    float fres = 0.04 + 0.96 * pow(1.0 - clamp(dot(n, v), 0.0, 1.0), 5.0);
-    col = mix(col, studio(reflect(I, n), key), clamp(fres * 1.35, 0.0, 1.0));
-    // rim: bright rounded bevel, a thin dark line just inside it, rainbow fringes where the light hits
-    float ang = atan(p.y, p.x), lightAng = atan(-uLook.y + 0.6, uLook.x + 0.0001);
-    float near = 0.5 + 0.5 * cos(ang - lightAng);
-    // silver bevel all the way round, brighter on the side the light comes from
-    float ring = smoothstep(0.845, 0.9, r) * (1.0 - smoothstep(0.965, 0.995, r));
-    col = mix(col, vec3(0.93, 0.94, 0.96), ring * (0.62 + 0.38 * near));
-    col *= 1.0 - 0.6 * exp(-pow((r - 0.835) * 60.0, 2.0));             // thin dark line where the bevel starts
-    // a few narrow spectral sparks on the bevel, gathered around the light and slowly travelling
-    vec3 rainbow = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + ang * 1.4 + r * 4.0));
-    float spark = pow(0.5 + 0.5 * sin(ang * 5.0 + uTime * 0.35 + uLook.x * 2.2), 8.0);
-    float fringe = smoothstep(0.88, 0.915, r) * (1.0 - smoothstep(0.935, 0.965, r)) * max(spark * 0.8, pow(near, 7.0));
-    col = mix(col, rainbow, fringe * 0.7);
-    float a = 1.0 - smoothstep(0.985, 1.0, r);
-    gl_FragColor = vec4(col * a, a);
-  }`;
-  const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  gl_FragColor = vec4(col, 1.0);
+}`;
+let prog = null, U = {}, tex = null;
+if (gl) {
   try {
-    const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
-    gl.useProgram(pr);
-    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    const U = { t: gl.getUniformLocation(pr, 'uTime'), j: gl.getUniformLocation(pr, 'uJiggle'), l: gl.getUniformLocation(pr, 'uLook') };
-    orb.style.background = 'transparent';
-    return (time, lx, ly, jig) => {
-      const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
-      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; gl.viewport(0, 0, w, h); }
-      gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform1f(U.t, time); gl.uniform1f(U.j, jig); gl.uniform2f(U.l, lx, ly);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    };
-  } catch (err) { console.warn('glass lens off:', err); return null; }
-})();
+    const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+    prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    gl.useProgram(prog);
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    for (const n of ['uPrint', 'uRes', 'uDpr', 'uTime', 'uPill', 'uOrb', 'uLook', 'uHov', 'uPress', 'uJiggle', 'uWarm']) U[n] = gl.getUniformLocation(prog, n);
+    tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.uniform1i(U.uPrint, 0);
+  } catch (err) { console.warn('glass off:', err); prog = null; }
+}
+if (!prog) document.body.classList.add('no-gl');
 
-// ---------- one loop ----------
+function upload() {
+  if (!paintPrint() || !prog) return;
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, print);
+  gl.generateMipmap(gl.TEXTURE_2D);
+}
+function resize() {
+  layout(); printDirty = true;
+  if (!prog) return;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); gl.viewport(0, 0, cv.width, cv.height);
+}
+new ResizeObserver(resize).observe(document.documentElement);
+new ResizeObserver(() => { layout(); printDirty = true; }).observe(btn);
+resize();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { layout(); printDirty = true; });
+
 let last = performance.now();
 function frame(t) {
   requestAnimationFrame(frame);
   const dt = Math.min((t - last) / 1000, 1 / 20); last = t;
-  const k = 1 - Math.pow(1 - .14, dt * 60);
-  // with no cursor around, the lens drifts on its own so the light keeps moving, like the reference
-  if (!s.seen && !reduce) { const w = t / 1000; s.tlx = Math.sin(w * 0.5) * 0.6; s.tly = Math.cos(w * 0.37) * 0.45 - 0.2; }
-  s.mx += (s.tmx - s.mx) * k; s.my += (s.tmy - s.my) * k; s.hov += (s.thov - s.hov) * k;
-  s.px += (s.tpx - s.px) * k; s.py += (s.tpy - s.py) * k; s.rx += (s.trx - s.rx) * k; s.ry += (s.try_ - s.ry) * k;
-  s.lx += (s.tlx - s.lx) * k * 0.8; s.ly += (s.tly - s.ly) * k * 0.8;
-  s.jiggle *= Math.pow(0.9, dt * 60);
-  const toCursor = Math.atan2(s.my - .5, (s.mx - .5) * 3.2) * 180 / Math.PI + 90;
-  const idle = reduce ? 200 : (s.rim + dt * 22);
-  const d = ((toCursor - 70 - idle) % 360 + 540) % 360 - 180;
-  s.rim = idle + d * s.hov * k * 1.4;
-  if (s.sweeping) { s.sweep += dt * 260; if (s.sweep > 60) s.sweeping = false; }
-  const st = btn.style;
-  st.setProperty('--mx', `${(s.mx * 100).toFixed(2)}%`); st.setProperty('--my', `${(s.my * 100).toFixed(2)}%`);
-  st.setProperty('--hov', s.hov.toFixed(3)); st.setProperty('--px', `${s.px.toFixed(2)}px`); st.setProperty('--py', `${s.py.toFixed(2)}px`);
-  st.setProperty('--rx', `${s.rx.toFixed(2)}deg`); st.setProperty('--ry', `${s.ry.toFixed(2)}deg`);
-  st.setProperty('--sweep', `${s.sweep.toFixed(1)}%`);
-  document.documentElement.style.setProperty('--rim', `${s.rim.toFixed(1)}deg`);
-  orb.style.setProperty('--lx', s.lx.toFixed(3)); orb.style.setProperty('--ly', s.ly.toFixed(3));
-  // the star's gradient swings with the viewing angle and its warm tip breathes from red to amber
-  orb.style.setProperty('--sa', `${(155 + s.lx * 22).toFixed(1)}deg`);
-  const warm = 0.5 + 0.5 * Math.sin(t / 2600);
-  document.documentElement.style.setProperty('--warm', `hsl(${(8 + warm * 32).toFixed(1)} 100% ${(58 + warm * 4).toFixed(1)}%)`);
-  anchor.style.setProperty('--cx', `${(30 + s.mx * 30).toFixed(1)}%`);
-  anchor.style.setProperty('--hov', s.hov.toFixed(3));
-  if (lens) lens(reduce ? 3 : t / 1000, s.lx, s.ly, s.jiggle);
+  const k = 1 - Math.pow(1 - .12, dt * 60);
+  if (!s.seen && !reduce && !STILL) { const w = t / 1000; s.tlx = Math.sin(w * 0.45) * 0.55 - 0.1; s.tly = Math.cos(w * 0.33) * 0.4 - 0.35; }
+  s.lx += (s.tlx - s.lx) * k; s.ly += (s.tly - s.ly) * k; s.hov += (s.thov - s.hov) * k;
+  s.press += (s.tpress - s.press) * (1 - Math.pow(1 - .3, dt * 60)); s.jiggle *= Math.pow(0.9, dt * 60);
+  if (!prog) return;
+  if (printDirty) upload();
+  gl.uniform2f(U.uRes, W, H); gl.uniform1f(U.uDpr, DPR); gl.uniform1f(U.uTime, reduce || STILL ? 2 : t / 1000);
+  gl.uniform4f(U.uPill, geo.cx, geo.cy, geo.a, geo.R); gl.uniform3f(U.uOrb, geo.orb[0], geo.orb[1], geo.orb[2]);
+  gl.uniform2f(U.uLook, s.lx, s.ly); gl.uniform1f(U.uHov, s.hov); gl.uniform1f(U.uPress, s.press); gl.uniform1f(U.uJiggle, s.jiggle);
+  gl.uniform1f(U.uWarm, 0.5 + 0.5 * Math.sin(t / 2600));
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
-if (STILL) {                                    // one composed frame for thumbnails
-  Object.assign(s, { mx: .32, my: .18, tmx: .32, tmy: .18, hov: .55, thov: .55, rim: 205, lx: -.35, ly: -.45, tlx: -.35, tly: -.45, seen: true });
-  frame(performance.now()); requestAnimationFrame = () => 0;
-} else requestAnimationFrame(frame);
+if (STILL) Object.assign(s, { hov: .5, thov: .5, seen: true });   // frozen light and time, the loop keeps the canvas painted
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
