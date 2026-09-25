@@ -208,6 +208,34 @@
   .card .links a:hover,.panel .links a:hover{text-decoration:underline; text-underline-offset:3px}
   .card .fine{margin-top:36px; color:var(--muted); font-size:12px}
 
+  /* ---------- play popup: the experiment itself, live, in a white window ---------- */
+  .play{
+    position:fixed; z-index:7; left:50%; top:50%; width:min(80vw, 1400px); height:80vh; height:80dvh;
+    transform:translate(-50%, -50%); display:none; flex-direction:column;
+    background:#fff; color:#141414; border-radius:14px; overflow:hidden; touch-action:auto;
+    box-shadow:0 40px 120px -30px rgba(0,0,0,.65), 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .play.on{display:flex}
+  .play-head{flex:none; display:flex; align-items:center; gap:14px; height:52px; padding:0 10px 0 18px; font-size:13px}
+  .play-head .pi{color:#8a8780; font-variant-numeric:tabular-nums}
+  .play-head .pt{font-weight:600}
+  .play-head .pk{color:#8a8780}
+  .play-head .sp{flex:1}
+  .play-head a,.play-head button{border:0; background:transparent; color:inherit; font:inherit; text-decoration:none; padding:8px 10px; border-radius:8px; cursor:pointer}
+  .play-head a:hover,.play-head button:hover{background:#f1f0ec}
+  .play-x{width:36px; height:36px; display:grid; place-items:center; padding:0 !important}
+  .play-x svg{width:18px; height:18px}
+  .play-body{position:relative; flex:1; margin:0 10px 10px; border-radius:9px; overflow:hidden; background:#d9dbde}
+  .play-body img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:blur(6px); transform:scale(1.04); transition:opacity .4s}
+  .play-body iframe{position:absolute; inset:0; width:100%; height:100%; border:0; opacity:0; transition:opacity .45s}
+  .play.loaded .play-body iframe{opacity:1}
+  .play.loaded .play-body img{opacity:0}
+  @media (max-width:720px){
+    .play{width:calc(100vw - 16px); height:calc(100dvh - 90px); top:calc(50% + 20px); border-radius:12px}
+    .play-head .pk{display:none}
+    .play-head{padding-left:14px}
+  }
+
   /* ---------- legacy side panel (CFG.detail = 'panel') ---------- */
   .panel{
     position:fixed; inset:0 0 0 auto; z-index:6; width:clamp(480px,40vw,640px); max-width:100vw;
@@ -323,6 +351,16 @@
     </div>
   </article>
 
+  <div class="play" id="play" role="dialog" aria-modal="true" aria-label="experiment">
+    <div class="play-head">
+      <span class="pi" id="play-i">01</span><span class="pt" id="play-t"></span><span class="pk" id="play-k"></span>
+      <span class="sp"></span>
+      <a id="play-open" href="#" target="_blank" rel="noreferrer">open ↗</a>
+      <a id="play-code" href="#" target="_blank" rel="noreferrer">code</a>
+      <button class="play-x" id="play-x" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="play-body"><img id="play-img" alt=""><iframe id="play-frame" title="experiment" allow="accelerometer; gyroscope"></iframe></div>
+  </div>
   <aside class="panel" id="panel" aria-label="piece detail" aria-hidden="true">
     <div class="panel-in">
       <div class="panel-head"><button class="close" id="close" type="button">Close</button></div>
@@ -346,7 +384,7 @@
 
 // ---------- tunables ----------
 const CFG = {
-  detail: 'panel',                 // 'panel' = side panel (chosen) · 'card' = piece grows into a scrollable card (kept for comparison)
+  detail: 'play',                  // 'play' = white popup (~80%) with the live experiment · 'panel' = side panel · 'card' = container transform
   cluster: { w: 3000, h: 2000 },   // world units; wraps like a torus
   baseWidth: 1380,                 // world → px scale = max(vw, 900) / baseWidth (1728 → 1380 = tiles ~25% larger by default)
   dragThreshold: 6,                // px before a press becomes a drag
@@ -1531,7 +1569,7 @@ document.addEventListener('pointermove', e => {
   if (!e.isPrimary) return;
   const r = stage.getBoundingClientRect(); pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
   // native cursor wins over UI chrome and the detail surfaces
-  cursorEl.classList.toggle('hidden', !!e.target.closest('.top, .card, .panel, .foot, .options, .review') || locked);
+  cursorEl.classList.toggle('hidden', !!e.target.closest('.top, .card, .panel, .play, .foot, .options, .review') || locked);
 });
 document.addEventListener('pointerleave', () => { pointer = null; });
 function cursorPress(on) { cur.pressed = on; }
@@ -1662,6 +1700,45 @@ function updateScrollbar() {
 }
 panelIn.addEventListener('scroll', () => { updateScrollbar(); pBar.classList.add('active'); clearTimeout(barIdle); barIdle = setTimeout(() => pBar.classList.remove('active'), 700); }, { passive: true });
 new ResizeObserver(updateScrollbar).observe(panelIn);
+// ---------- play popup ----------
+const playEl = document.getElementById('play'), playFrame = document.getElementById('play-frame'), playImg = document.getElementById('play-img');
+let playAnim = null;
+playFrame.addEventListener('load', () => { if (playFrame.getAttribute('src')) playEl.classList.add('loaded'); });
+function openPlay(i) {
+  const p = PIECES[i];
+  document.getElementById('play-i').textContent = pad2(i + 1);
+  document.getElementById('play-t').textContent = p.title;
+  document.getElementById('play-k').textContent = [p.kind, p.year].filter(Boolean).join(' · ');
+  const openA = document.getElementById('play-open'), codeA = document.getElementById('play-code');
+  openA.href = p.live; codeA.hidden = !p.code; if (p.code) codeA.href = p.code;
+  playEl.setAttribute('aria-label', `${p.title} — experiment`);
+  playImg.src = coverUrl(i); playEl.classList.remove('loaded');
+  const url = p.live + (p.live.includes('?') ? '&' : '?') + 'bare=1';
+  if (playFrame.getAttribute('src') !== url) playFrame.setAttribute('src', url); else playEl.classList.add('loaded');
+  playEl.classList.add('on'); dim.classList.add('on');
+  locked = true; clearHover(); cursorEl.classList.add('hidden');
+  if (mode === 'drag') { pressed = dragging = false; slotsEl.classList.remove('no-hit'); setMode('idle'); }
+  // grow out of the tile that was clicked (FLIP), otherwise a soft scale-in
+  const to = playEl.getBoundingClientRect(), from = originRect;
+  originRect = null;
+  if (playAnim) playAnim.cancel();
+  const kf = from && !reduceMotion
+    ? [{ transform: `translate(calc(-50% + ${from.left + from.width / 2 - (to.left + to.width / 2)}px), calc(-50% + ${from.top + from.height / 2 - (to.top + to.height / 2)}px)) scale(${from.width / to.width}, ${from.height / to.height})`, borderRadius: '2px', opacity: 0.6 },
+       { transform: 'translate(-50%, -50%)', borderRadius: getComputedStyle(playEl).borderRadius, opacity: 1 }]
+    : [{ transform: 'translate(-50%, -50%) scale(.96)', opacity: 0 }, { transform: 'translate(-50%, -50%)', opacity: 1 }];
+  playAnim = playEl.animate(kf, { duration: reduceMotion ? 160 : 620, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  document.getElementById('play-x').focus({ preventScroll: true });
+}
+function hidePlay() {
+  if (!playEl.classList.contains('on')) return;
+  if (playEl.contains(document.activeElement)) document.activeElement.blur();
+  dim.classList.remove('on'); locked = false;
+  if (playAnim) playAnim.cancel();
+  playAnim = playEl.animate([{ transform: 'translate(-50%, -50%)', opacity: 1 }, { transform: 'translate(-50%, -50%) scale(.97)', opacity: 0 }], { duration: reduceMotion ? 120 : 260, easing: 'cubic-bezier(.6,0,.8,.2)' });
+  playAnim.onfinish = () => { playEl.classList.remove('on'); playAnim = null; };
+}
+document.getElementById('play-x').addEventListener('click', () => closeDetail());
+
 function openPanel(i) {
   fillDetail(i, { title: document.getElementById('p-title'), desc: document.getElementById('p-desc'), meta: document.getElementById('p-meta'), links: document.getElementById('p-links') });
   const img = document.getElementById('p-img'); img.src = coverUrl(i); img.alt = PIECES[i].title;
@@ -1685,9 +1762,11 @@ document.getElementById('close').addEventListener('click', closeDetail);
 function route() {
   const slug = location.hash.replace(/^#\/?/, '');
   const i = PIECES.findIndex(p => p.slug === slug);
-  if (i < 0) { if (CFG.detail === 'card') closeCard(); else hidePanel(); document.title = 'lab board'; return; }
+  if (i < 0) { if (CFG.detail === 'card') closeCard(); else { hidePlay(); hidePanel(); } document.title = 'lab board'; return; }
   document.title = `${PIECES[i].title} · lab board`;
-  if (CFG.detail === 'card') openCard(i); else openPanel(i);
+  if (CFG.detail === 'card') openCard(i);
+  else if (CFG.detail === 'play' && PIECES[i].live) openPlay(i);
+  else openPanel(i);
 }
 function closeDetail() { if (openedHere) { openedHere = false; history.back(); } else { history.replaceState(null, '', location.pathname + location.search); route(); } }
 dim.addEventListener('click', closeDetail);
