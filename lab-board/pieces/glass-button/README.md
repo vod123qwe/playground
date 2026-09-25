@@ -10,7 +10,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 
 **Panel „Tune”** (przycisk w prawym górnym rogu; na telefonie wysuwa się od dołu):
 - *Presets*: M&M (domyślny), Pebble, Slab, Dish (wklęsła), Droplet (woda, IOR 1,33), Crystal (IOR 2,2, mocna dyspersja).
-- *Shape*: rogi, kopuła (wypukła / wklęsła), ścianka, spód, profil (1 = stożek, 2 = łuk koła, więcej = płaski wierzch z ostrzejszym brzegiem), zaokrąglenie krawędzi, uniesienie nad stroną.
+- *Shape*: rogi, kopuła (wypukła / wklęsła), ścianka, spód, profil (1 = stożek, 2 = łuk koła, więcej = płaski wierzch z ostrzejszym brzegiem), zaokrąglenie krawędzi, uniesienie nad stroną. *Press grow*: o ile przycisk rośnie przy przytrzymaniu (domyślnie 8%).
 - *Optics*: współczynnik załamania, dyspersja, zmatowienie (frost), kolor i siła zabarwienia szkła.
 - *Light*: za kursorem albo ręcznie (kąt, wysokość), siła odblasku, odbić, tęczy na rancie i cienia.
 - *Bead*: pokaż / ukryj, rozmiar, zatopienie w szkle, zadymienie, wielkość gwiazdki, ruch gradientu.
@@ -24,6 +24,8 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 - „Reset all” i „Copy settings” (kopiuje do schowka JSON z różnicami względem domyślnych). Ustawienia zapisują się w przeglądarce (localStorage).
 
 **Menu jest częścią szkła**: przycisk i menu to jedna bryła. Ich obrysy zlewają się w 2D (gładka suma w polu odległości), a wysokość szkła liczy się ze wspólnego kształtu, więc przy otwieraniu szkło przycisku rozciąga się w dół w menu, jak w pierwszej wersji: menu startuje jako płyta schowana w środku przycisku i wypływa na sprężynie. W trakcie ruchu kształty zawsze się zlewają; w spoczynku decyduje *Liquid* (0: szyjka pęka i menu stoi osobno w swoim odstępie). *Height (Z)* unosi część menu tej samej bryły, z płynnym przejściem przez szyjkę. Menu ma te same właściwości co przycisk (profil, grubość, załamanie, zabarwienie, światło), obraca się i przybliża razem z nim; pozycje są nadrukiem na jego powierzchni, a pozycja pod kursorem albo z fokusem świeci miękko w szkle. Prawdziwa lista w DOM zostaje pod spodem, niewidoczna, dla klawiatury i czytników ekranu.
+
+**Przytrzymanie i puszczenie**: przytrzymany przycisk pompuje się jak w Liquid Glass (szkło, nadruk i kulka rosną razem wokół środka, na sprężynie), a po puszczeniu wraca z lekkim, płynnym dobiciem i dopiero wtedy w pełni wypływa szuflada menu. Tak samo z klawiatury: Enter albo spacja otwierają przy puszczeniu.
 
 **Kulka** jest z przezroczystego, lekko przydymionego szkła i działa jak soczewka kulista: pokazuje odwróconą i powiększoną stronę za sobą. Gwiazdka leży na płaszczyźnie przez jej środek, a jej gradient obraca się za światłem, przesuwa z kątem patrzenia jak hologram i lekko „oddycha”.
 
