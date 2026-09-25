@@ -2,19 +2,35 @@
 
 Pierwszy eksperyment labu. Szklany przycisk „Ask agents” z menu, studium po ujęciu znalezionym na recent.design, dalej rozwijane po zdjęciach fizycznych przycisków z akrylu i ujęciu „Liquid glass”.
 
-## v4 (2026-09-25): prawdziwe 3D, napis na szkle
+## v5 (2026-09-25): panel „Tune”, dowolna bryła, szklana kulka
 
-Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy `<button>` zostaje jako prawdziwa, dostępna kontrolka (fokus, klawiatura, menu), ale jest niewidoczny i podaje shaderowi tylko geometrię: pigułkę, kulkę, napis i strzałkę.
+Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy `<button>` zostaje prawdziwą, dostępną kontrolką (fokus, klawiatura, menu) i silnikiem layoutu: jego rozmiar dopasowuje się do napisu (auto layout), a shader co klatkę czyta z niego geometrię.
 
-- **Bryła jak M&M**: kapsuła leżąca na stronie, wysoka kopuła na górze (0,72 promienia), płaskie dno (0,26). Przecięcie promienia liczone dokładnie (analitycznie), bez marchingu: górna i dolna połówka to ta sama kapsuła przeskalowana w osi z.
-- **Załamanie przez objętość**: promień wchodzi w szkło, może odbić się w środku do dwóch razy (całkowite wewnętrzne odbicie przy rancie, stąd złożony, lustrzany pas strony przy krawędzi), wychodzi z trzema współczynnikami załamania (rozszczepienie na kanały) i trafia w stronę: gradient, siatka, ramka, cień z kaustyką. Delikatny chłodny odcień rośnie z grubością szkła.
-- **Napis i strzałka na wierzchu**: nadruk (tekstura z Inter Tight 500) rzutowany z góry na górną powierzchnię, jak farba na akrylu. Jest ostry i leży nad tym, co robi szkło, więc czyta się jak interfejs, a nie jak coś pod szybą.
-- **Kulka osadzona w szkle**: ciemna szklana kula, której czubek wystaje ponad kopułę. W środku, na płaszczyźnie przez jej środek, wypukła czteroramienna gwiazdka (superelipsa z własnymi normalnymi), gradient ciepły → biały → niebieski. Z boku widać ją pod kątem.
-- **Powierzchnia**: odbicie „studia” (softbox od strony światła i długi pasek), Fresnel, światło kluczowe i wąski błysk, tęczowe iskry na rancie od strony światła.
-- **Obrót 3D**: przytrzymaj kółko myszy (albo Alt) i przeciągnij, na dotyku dwa palce. Poziom zawsze zostaje poziomem. Widok zostaje tam, gdzie go zostawisz; wraca po kliknięciu „reset view” albo klawiszem R / 0. Kursor dodatkowo lekko przechyla widok i steruje światłem.
-- **Wygładzanie**: 4 promienie na piksel na obiekcie, 1 na tle.
-- **Menu**: jasna szklana lista (Research, Design, Build) z ciemnym tekstem, klawiatura: strzałki, Enter, Escape.
-- `?still=1&bare=1`: zamrożone światło i czas, bez chrome'u; z tego robiona jest miniatura (`../../thumbs/glass-button.jpg`, headless Edge 920×520 @2x) i jej mapa głębi.
-- Bez WebGL2: zwykła matowa pigułka w CSS.
+**Bryła** to pole odległości (SDF) śledzone krokami (sphere tracing): obrys to prostokąt z zaokrąglonymi rogami (aż do pełnej pigułki), a na nim profil wysokości od góry i od spodu. Kopuła > 0 daje soczewkę wypukłą, kopuła < 0 wklęsłą misę; przy wklęsłości ścianka sama się podnosi, żeby zawsze był rant.
 
-Poprzednie wersje są w historii gita: v1 rtęć, v2 szklana kopułka w płaskiej pigułce, v3 wypukła płyta szkła nad „nadrukiem” (napis był pod szkłem, co wyglądało nienaturalnie).
+**Panel „Tune”** (przycisk w prawym górnym rogu; na telefonie wysuwa się od dołu):
+- *Presets*: M&M (domyślny), Pebble, Slab, Dish (wklęsła), Droplet (woda, IOR 1,33), Crystal (IOR 2,2, mocna dyspersja).
+- *Shape*: rogi, kopuła (wypukła / wklęsła), ścianka, spód, profil (1 = stożek, 2 = łuk koła, więcej = płaski wierzch z ostrzejszym brzegiem), zaokrąglenie krawędzi, uniesienie nad stroną.
+- *Optics*: współczynnik załamania, dyspersja, zmatowienie (frost), kolor i siła zabarwienia szkła.
+- *Light*: za kursorem albo ręcznie (kąt, wysokość), siła odblasku, odbić, tęczy na rancie i cienia.
+- *Bead*: pokaż / ukryj, rozmiar, zatopienie w szkle, zadymienie, wielkość gwiazdki, ruch gradientu.
+- *Content*: tekst przycisku, kolor i krycie nadruku, strzałka.
+- *Layout*: skala, wysokość, paddingi, odstęp, grubość fontu (Inter Tight 400–600).
+- *Page*: jasna / ciemna (nadruk sam przechodzi na jasny), siła siatki.
+- „Reset all” i „Copy settings” (kopiuje do schowka JSON z różnicami względem domyślnych). Ustawienia zapisują się w przeglądarce (localStorage).
+
+**Kulka** jest z przezroczystego, lekko przydymionego szkła i działa jak soczewka kulista: pokazuje odwróconą i powiększoną stronę za sobą. Gwiazdka leży na płaszczyźnie przez jej środek, a jej gradient obraca się za światłem, przesuwa z kątem patrzenia jak hologram i lekko „oddycha”.
+
+**Reszta** bez zmian od v4: nadruk (napis i strzałka) na górnej powierzchni, ostry i nad refrakcją; do dwóch odbić wewnętrznych przy rancie; wyjście z trzema IOR (rozszczepienie); cień z kaustyką (wypukła skupia światło, wklęsła rozprasza je w pierścień); obrót 3D środkowym przyciskiem myszy / Alt / dwoma palcami, „reset view” albo R / 0.
+
+**Wydajność** (ważne na Windows, gdzie WebGL idzie przez ANGLE/D3D):
+- pętle mają długości zależne od uniformu `uOne`, bo kompilator D3D rozwijałby stałe pętle w nieskończoność (kompilacja trwała ponad minutę i kończyła się utratą kontekstu);
+- nadruk jest czytany przez `textureLod` (bez pochodnych w rozgałęzieniach);
+- kulka jest liczona w jednym miejscu kodu;
+- shader kompiluje się w tle (`KHR_parallel_shader_compile`), a do tego czasu widać zwykłą pigułkę z CSS;
+- 4 promienie na piksel tylko na krawędziach bryły (tam, gdzie sąsiednie piksele trafiają w co innego);
+- rozdzielczość sama spada, gdy klatki są wolne; utrata kontekstu WebGL wraca do wersji CSS.
+
+`?still=1&bare=1`: zamrożone światło i czas, domyślne ustawienia, bez chrome'u i panelu; z tego robiona jest miniatura (`../../thumbs/glass-button.jpg`, headless Edge 920×520 @2x) i jej mapa głębi.
+
+Poprzednie wersje są w historii gita: v1 rtęć, v2 szklana kopułka w płaskiej pigułce, v3 wypukła płyta nad „nadrukiem” (napis pod szkłem wyglądał nienaturalnie), v4 analityczna kapsuła M&M z obrotem 3D.

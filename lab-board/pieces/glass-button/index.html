@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Glass Button · lab</title>
-<meta name="description" content="A button made of a real, ray-traced lens of glass. The label is printed on its surface, a dark glass bead with a puffy star is set into it, and you can orbit around it to study how it bends the light.">
+<meta name="description" content="A button made of a real, ray-traced solid of glass with a tuning panel: shape, dome or dish, refraction, light, label and layout. The label is printed on its surface and a clear glass bead with a holographic star is set into it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..600&display=swap" rel="stylesheet">
@@ -17,28 +17,31 @@
     color:var(--ink); font-family:"Inter Tight", system-ui, sans-serif; overflow:hidden;
     -webkit-font-smoothing:antialiased; touch-action:none; user-select:none; -webkit-user-select:none;
   }
+  body.dark{background:linear-gradient(135deg, #2a2c31 0%, #1c1d21 50%, #111215 100%)}
   body.orbiting{cursor:grabbing}
   #gl{position:fixed; inset:0; width:100%; height:100%; display:block}
-  .stage{position:fixed; inset:0; display:grid; place-items:center}
-  .anchor{position:relative; font-size:clamp(20px, 3.4vw, 36px)}
+  .stage{position:fixed; inset:0; display:grid; place-items:center; transition:right .45s var(--ease), bottom .45s var(--ease)}
+  .anchor{position:relative; font-size:calc(clamp(20px, 3.4vw, 36px) * var(--scale, 1))}
 
-  /* The DOM button is the real, accessible control. With WebGL it is invisible and only gives the
-     canvas its geometry (lens, bead, label, chevron); the glass itself is ray traced in the shader. */
+  /* The DOM button is the real, accessible control and the layout engine: its size hugs the label (auto layout),
+     and the canvas reads its geometry every frame. With WebGL it is invisible; the solid is ray traced in the shader. */
   .btn{
-    position:relative; display:inline-flex; align-items:center; gap:.62em;
-    height:3.1em; padding:0 1.2em 0 .5em; border:0; border-radius:999px; cursor:pointer;
-    font:inherit; font-weight:500; letter-spacing:-.01em; line-height:1; color:transparent; background:transparent;
+    position:relative; display:inline-flex; align-items:center; gap:var(--gap, .62em);
+    height:var(--h, 3.1em); padding:0 var(--pr, 1.2em) 0 var(--pl, .5em); border:0; border-radius:var(--rad, 999px); cursor:pointer;
+    font:inherit; font-weight:var(--fw, 500); letter-spacing:-.01em; line-height:1; color:transparent; background:transparent;
     outline:none; -webkit-tap-highlight-color:transparent;
   }
   .btn:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.95), 0 0 0 6px rgba(20,20,20,.3)}
-  .btn .orb{flex:none; width:2.12em; height:2.12em; border-radius:50%}
+  .btn .orb{flex:none; width:var(--orb, 2.12em); height:var(--orb, 2.12em); border-radius:50%}
   .btn .label{white-space:nowrap}
-  .btn .chev{width:.66em; height:.66em; margin-left:.02em; stroke:transparent}
+  .btn .chev{width:.66em; height:.66em; margin-left:.02em; stroke:transparent; flex:none}
+  .btn.no-bead .orb, .btn.no-chev .chev{display:none}
   /* fallback when WebGL 2 is not there: a plain frosted pill */
   .no-gl .btn{color:var(--ink); background:rgba(255,255,255,.4); box-shadow:inset 0 1px 0 #fff, 0 .6em 1.2em -.6em rgba(0,0,0,.35); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)}
   .no-gl .btn .orb{background:radial-gradient(circle at 40% 35%, #6a6e75, #1f2125)}
   .no-gl .btn .chev{stroke:currentColor}
-  .no-gl .chip{display:none}
+  .no-gl .chip, .no-gl .tune, .no-gl .panel{display:none}
+  .no-gl #gl{visibility:hidden}
 
   /* ---------- glass menu ---------- */
   .menu{
@@ -65,28 +68,93 @@
     padding:7px 13px; border:0; border-radius:999px; font:inherit; font-size:12px; line-height:1; color:rgba(20,20,20,.72);
     background:rgba(255,255,255,.42); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.8), 0 6px 16px -8px rgba(20,24,30,.4);
-    opacity:0; pointer-events:none; transition:opacity .35s var(--ease); white-space:nowrap;
+    opacity:0; pointer-events:none; transition:opacity .35s var(--ease), left .45s var(--ease); white-space:nowrap;
   }
   .chip.show{opacity:1}
   .chip.reset{pointer-events:auto; cursor:pointer; color:var(--ink)}
   .chip.reset:hover{background:rgba(255,255,255,.62)}
   .chip:focus-visible{outline:2px solid rgba(20,20,20,.4); outline-offset:2px}
-  body.still .chip{display:none}
+
+  /* ---------- tuning panel ---------- */
+  .tune{
+    position:fixed; top:12px; right:12px; z-index:6; display:flex; align-items:center; gap:7px; height:32px; padding:0 13px 0 11px;
+    border:0; border-radius:999px; font:inherit; font-size:12px; font-weight:500; color:var(--ink); cursor:pointer;
+    background:rgba(255,255,255,.5); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.8), 0 6px 16px -8px rgba(20,24,30,.4);
+  }
+  .tune:hover{background:rgba(255,255,255,.7)}
+  .tune:focus-visible{outline:2px solid rgba(20,20,20,.4); outline-offset:2px}
+  .tune svg{width:15px; height:15px}
+  .panel{
+    position:fixed; top:54px; right:12px; bottom:12px; width:300px; z-index:5; overflow:auto; overscroll-behavior:contain;
+    padding:2px 16px 16px; border-radius:14px; font-size:12px; color:var(--ink);
+    background:rgba(248,248,250,.82); -webkit-backdrop-filter:blur(18px) saturate(1.3); backdrop-filter:blur(18px) saturate(1.3);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9), 0 20px 50px -24px rgba(20,24,30,.5);
+    transform:translateX(calc(100% + 24px)); visibility:hidden; transition:transform .45s var(--ease), visibility 0s .45s;
+    touch-action:pan-y; scrollbar-width:thin; scrollbar-color:rgba(20,20,20,.18) transparent;
+  }
+  body.tuning .panel{transform:none; visibility:visible; transition:transform .45s var(--ease)}
+  .panel h3{margin:16px 0 4px; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(20,20,20,.48)}
+  .row{display:grid; grid-template-columns:1fr auto; align-items:center; gap:0 8px; padding:4px 0}
+  .row .v{font-variant-numeric:tabular-nums; color:rgba(20,20,20,.55); font-size:11.5px}
+  .row .full{grid-column:1 / -1}
+  .row input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:18px; margin:2px 0 0; background:transparent; cursor:pointer;
+    --p:50%;
+  }
+  .row input[type=range]::-webkit-slider-runnable-track{height:2px; border-radius:2px; background:linear-gradient(to right, var(--ink) var(--p), rgba(20,20,20,.16) var(--p))}
+  .row input[type=range]::-moz-range-track{height:2px; border-radius:2px; background:rgba(20,20,20,.16)}
+  .row input[type=range]::-moz-range-progress{height:2px; border-radius:2px; background:var(--ink)}
+  .row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px; margin-top:-6px; border-radius:50%; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.22), 0 2px 5px rgba(0,0,0,.2)}
+  .row input[type=range]::-moz-range-thumb{width:14px; height:14px; border:0; border-radius:50%; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.22), 0 2px 5px rgba(0,0,0,.2)}
+  .row input[type=range]:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:2px; border-radius:4px}
+  .row input[type=checkbox]{width:15px; height:15px; margin:0; accent-color:#1b1c20; cursor:pointer}
+  .row input[type=color]{width:34px; height:22px; padding:0; border:0; border-radius:6px; background:none; cursor:pointer}
+  .row input[type=color]::-webkit-color-swatch-wrapper{padding:0} .row input[type=color]::-webkit-color-swatch{border:1px solid rgba(0,0,0,.15); border-radius:6px}
+  .row input[type=text]{
+    width:100%; margin-top:4px; padding:7px 9px; border:0; border-radius:8px; font:inherit; font-size:13px; color:var(--ink);
+    background:rgba(255,255,255,.75); box-shadow:inset 0 0 0 1px rgba(20,20,20,.12); user-select:text; -webkit-user-select:text; outline:none;
+  }
+  .row input[type=text]:focus{box-shadow:inset 0 0 0 1.5px rgba(20,20,20,.45)}
+  .seg{display:flex; gap:2px; padding:2px; border-radius:8px; background:rgba(20,20,20,.07)}
+  .seg button{border:0; padding:4px 10px; border-radius:6px; font:inherit; font-size:11.5px; color:rgba(20,20,20,.65); background:transparent; cursor:pointer}
+  .seg button[aria-pressed=true]{background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.14)}
+  .presets{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px}
+  .presets button, .acts button{
+    border:0; padding:6px 10px; border-radius:999px; font:inherit; font-size:11.5px; color:var(--ink); cursor:pointer;
+    background:rgba(255,255,255,.75); box-shadow:inset 0 0 0 1px rgba(20,20,20,.1);
+  }
+  .presets button:hover, .acts button:hover{background:#fff}
+  .presets button[aria-pressed=true]{background:var(--ink); color:#fff; box-shadow:none}
+  .panel button:focus-visible{outline:2px solid rgba(20,20,20,.4); outline-offset:1px}
+  .acts{display:flex; gap:6px; margin-top:18px}
+  .acts button{flex:1}
+  @media (min-width:761px){
+    body.tuning .stage{right:324px}
+    body.tuning .chip{left:calc(50% - 162px)}
+  }
+  @media (max-width:760px){
+    .panel{top:auto; left:8px; right:8px; bottom:8px; width:auto; max-height:50vh; transform:translateY(calc(100% + 16px))}
+    body.tuning .stage{bottom:50vh}
+    body.tuning .chip{display:none}
+  }
 
   .meta{position:fixed; left:clamp(16px, 3vw, 32px); right:clamp(16px, 3vw, 32px); display:flex; justify-content:space-between; font-size:13px; color:rgba(20,20,20,.72); pointer-events:none; z-index:2}
   .meta a{color:inherit; pointer-events:auto}
-  .meta.top{top:18px} .meta.bottom{bottom:18px}
+  .meta.top{top:18px; right:112px} .meta.bottom{bottom:18px}
   .meta b{font-weight:600; color:var(--ink)}
+  body.dark .meta{color:rgba(255,255,255,.62)} body.dark .meta b{color:#fff}
   body.bare .meta{display:none}
+  body.still .chip, body.still .tune, body.still .panel{display:none}
   body:not(.bare) .chip{bottom:52px}
   @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} body:not(.bare) .chip{bottom:70px} }
-  @media (prefers-reduced-motion:reduce){ .menu{transition-duration:.01s} }
+  @media (prefers-reduced-motion:reduce){ .menu, .panel, .stage{transition-duration:.01s} }
 </style>
 </head>
 <body>
 <canvas id="gl" aria-hidden="true"></canvas>
 <div class="meta top"><a href="../../">← lab</a><span><b>01</b> · glass button</span></div>
-<main class="stage">
+<main class="stage" id="stage">
   <div class="anchor" id="anchor">
     <button class="btn" id="btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu">
       <span class="orb" id="orb" aria-hidden="true"></span>
@@ -101,26 +169,105 @@
   </div>
 </main>
 <button class="chip" id="chip" type="button" tabindex="-1"></button>
-<div class="meta bottom"><span>move · press · open · orbit</span><span>study after a shot found on <a href="https://recent.design" target="_blank" rel="noreferrer">recent.design</a></span></div>
+<button class="tune" id="tune" type="button" aria-expanded="false" aria-controls="panel">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Tune
+</button>
+<aside class="panel" id="panel" aria-label="Tune the button"></aside>
+<div class="meta bottom"><span>move · press · open · orbit · tune</span><span>study after a shot found on <a href="https://recent.design" target="_blank" rel="noreferrer">recent.design</a></span></div>
 
 <script>
-// Glass Button v4: a small ray tracer in one fragment shader.
-// The button is a real solid: a lens shaped like an M&M (a capsule, domed on top, flatter underneath) resting on the
-// page. Rays from the camera hit it, refract in (three IORs for dispersion), bounce inside when they hit the rim at a
-// grazing angle, refract out and land on the page, so the grid and the shadow are magnified, bent and folded by the
-// glass itself. The label and the chevron are printed on the top surface (a decal), crisp and above the refraction,
-// like ink on acrylic. The bead is a dark glass sphere set into the lens with a puffy star floating in it.
-// Hold the mouse wheel (or Alt) and drag, or use two fingers, to orbit around it.
+// Glass Button v5: a small ray tracer in one fragment shader, with a tuning panel.
+// The solid is general: a rounded-rectangle footprint (up to a full pill) with a height profile on top (a dome, or a
+// dish when the dome goes negative) and underneath, sphere traced as a signed distance field. Rays refract in (three
+// IORs for dispersion), bounce inside at the rim (total internal reflection folds the page there), refract out and
+// land on the page. The label and the chevron are printed on the top surface (a decal), crisp and above the glass.
+// The bead is a clear, slightly smoky glass sphere set into the solid: a ball lens that flips the page behind it, with
+// a puffy star whose gradient follows the light and the view angle. Hold the wheel (or Alt) and drag to orbit.
 const q = new URLSearchParams(location.search);
 const STILL = q.has('still');
 if (q.has('bare')) document.body.classList.add('bare');
 if (STILL) document.body.classList.add('still');
 const btn = document.getElementById('btn'), anchor = document.getElementById('anchor'), menu = document.getElementById('menu');
 const orbEl = document.getElementById('orb'), labelEl = document.getElementById('label'), chevEl = document.getElementById('chev');
-const chip = document.getElementById('chip');
+const chip = document.getElementById('chip'), tuneBtn = document.getElementById('tune'), panel = document.getElementById('panel');
 const items = [...menu.querySelectorAll('li')];
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches;
+
+// ---------- parameters (shape values are in units of the button's half height) ----------
+const DEF = {
+  corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02,
+  ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
+  follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
+  bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
+  text: 'Ask agents', ink: '#1b1c20', inkA: .94, chevron: true,
+  scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
+  page: 'light', grid: .3,
+};
+const PRESETS = {
+  'M&M':     { corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02, ior: 1.5, disp: .026 },
+  'Pebble':  { corner: 1, dome: .34, wall: .06, under: .14, profile: 1.5, edge: .12, lift: .02, ior: 1.5, disp: .02 },
+  'Slab':    { corner: .55, dome: .06, wall: .42, under: 0, profile: 4.5, edge: .14, lift: 0, ior: 1.49, disp: .02 },
+  'Dish':    { corner: 1, dome: -.45, wall: .62, under: .04, profile: 2, edge: .1, lift: 0, ior: 1.5, disp: .03 },
+  'Droplet': { corner: 1, dome: 1.05, wall: 0, under: .08, profile: 2.4, edge: .02, lift: 0, ior: 1.33, disp: .012 },
+  'Crystal': { corner: .35, dome: .5, wall: .2, under: .2, profile: 1.15, edge: .02, lift: .04, ior: 2.2, disp: .09 },
+};
+const CTRL = [
+  { g: 'Shape' },
+  { k: 'corner', l: 'Corner', min: 0, max: 1, s: .01 },
+  { k: 'dome', l: 'Dome', min: -1, max: 1.3, s: .01 },
+  { k: 'wall', l: 'Wall', min: 0, max: 1, s: .01 },
+  { k: 'under', l: 'Underside', min: 0, max: 1, s: .01 },
+  { k: 'profile', l: 'Profile', min: 1, max: 6, s: .05 },
+  { k: 'edge', l: 'Edge round', min: 0, max: .4, s: .01 },
+  { k: 'lift', l: 'Lift', min: 0, max: .6, s: .01 },
+  { g: 'Optics' },
+  { k: 'ior', l: 'Refraction (IOR)', min: 1, max: 2.4, s: .01 },
+  { k: 'disp', l: 'Dispersion', min: 0, max: .15, s: .002 },
+  { k: 'frost', l: 'Frost', min: 0, max: 12, s: .1 },
+  { k: 'tint', l: 'Tint', t: 'color' },
+  { k: 'tintK', l: 'Tint strength', min: 0, max: 8, s: .05 },
+  { g: 'Light' },
+  { k: 'follow', l: 'Follow cursor', t: 'check' },
+  { k: 'lightAng', l: 'Angle', min: 0, max: 360, s: 1, u: '°' },
+  { k: 'lightEl', l: 'Height', min: 8, max: 85, s: 1, u: '°' },
+  { k: 'key', l: 'Highlight', min: 0, max: 3, s: .01 },
+  { k: 'env', l: 'Reflections', min: 0, max: 2, s: .01 },
+  { k: 'rim', l: 'Rim spectrum', min: 0, max: 3, s: .01 },
+  { k: 'shadow', l: 'Shadow', min: 0, max: 2, s: .01 },
+  { g: 'Bead' },
+  { k: 'bead', l: 'Show bead', t: 'check' },
+  { k: 'beadSize', l: 'Size', min: .8, max: 3, s: .01 },
+  { k: 'sink', l: 'Sink into glass', min: -.8, max: 1.4, s: .01 },
+  { k: 'smoke', l: 'Smoke', min: 0, max: 1, s: .01 },
+  { k: 'starSize', l: 'Star size', min: 0, max: 1, s: .01 },
+  { k: 'starMotion', l: 'Star motion', min: 0, max: 2, s: .01 },
+  { g: 'Content' },
+  { k: 'text', l: 'Label', t: 'text' },
+  { k: 'ink', l: 'Ink', t: 'color' },
+  { k: 'inkA', l: 'Ink opacity', min: 0, max: 1, s: .01 },
+  { k: 'chevron', l: 'Chevron', t: 'check' },
+  { g: 'Layout' },
+  { k: 'scale', l: 'Size', min: .5, max: 2.2, s: .01 },
+  { k: 'h', l: 'Height', min: 1.6, max: 5, s: .01, u: 'em' },
+  { k: 'pl', l: 'Padding left', min: 0, max: 2.5, s: .01, u: 'em' },
+  { k: 'pr', l: 'Padding right', min: 0, max: 3, s: .01, u: 'em' },
+  { k: 'gap', l: 'Gap', min: 0, max: 1.6, s: .01, u: 'em' },
+  { k: 'weight', l: 'Weight', min: 400, max: 600, s: 10 },
+  { g: 'Page' },
+  { k: 'page', l: 'Page', t: 'seg', o: ['light', 'dark'] },
+  { k: 'grid', l: 'Grid', min: 0, max: 1, s: .01 },
+];
+const KEY = 'lab.glass-button.v5';
+function load() {
+  try { const v = JSON.parse(localStorage.getItem(KEY) || '{}'); return Object.assign({}, DEF, v); } catch (e) { return Object.assign({}, DEF); }
+}
+function save() {
+  if (STILL) return;
+  const d = {}; for (const k in DEF) if (P[k] !== DEF[k]) d[k] = P[k];
+  try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {}
+}
+let P = STILL ? Object.assign({}, DEF) : load();
 
 // ---------- interaction state ----------
 const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, jiggle: 0, seen: false, open: false,
@@ -132,7 +279,8 @@ function onMove(x, y) {
   const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
   s.thov = Math.max(0, 1 - Math.hypot(dx, dy) / 160);
 }
-window.addEventListener('pointermove', e => onMove(e.clientX, e.clientY), { passive: true });
+const overUi = e => e.target && e.target.closest && e.target.closest('.panel, .tune');
+window.addEventListener('pointermove', e => { if (!overUi(e)) onMove(e.clientX, e.clientY); }, { passive: true });
 window.addEventListener('pointerleave', () => { s.seen = false; s.thov = 0; });
 btn.addEventListener('pointerdown', e => { if (e.button !== 0 || e.altKey || touches.size > 1) return; onMove(e.clientX, e.clientY); s.tpress = 1; s.jiggle = 1; });
 window.addEventListener('pointerup', () => { s.tpress = 0; });
@@ -140,7 +288,7 @@ window.addEventListener('pointercancel', () => { s.tpress = 0; });
 
 // ---------- orbit: hold the wheel (or Alt) and drag, or two fingers ----------
 const LIM = 1.35, SPEED = 0.0075;
-const orbit = { id: null, x: 0, y: 0, moved: 0 };
+const orbit = { id: null, x: 0, y: 0 };
 const touches = new Map();
 function turn(dx, dy) {
   s.tyaw = Math.max(-LIM, Math.min(LIM, s.tyaw - dx * SPEED));
@@ -149,6 +297,7 @@ function turn(dx, dy) {
 window.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });      // no autoscroll
 window.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 window.addEventListener('pointerdown', e => {
+  if (overUi(e)) return;
   if (e.pointerType === 'touch') {
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (touches.size === 2) { s.tpress = 0; document.body.classList.add('orbiting'); }
@@ -156,7 +305,7 @@ window.addEventListener('pointerdown', e => {
   }
   if (e.button === 1 || (e.button === 0 && e.altKey)) {
     e.preventDefault();
-    orbit.id = e.pointerId; orbit.x = e.clientX; orbit.y = e.clientY; orbit.moved = 0;
+    orbit.id = e.pointerId; orbit.x = e.clientX; orbit.y = e.clientY;
     try { document.documentElement.setPointerCapture(e.pointerId); } catch (err) {}
     document.body.classList.add('orbiting');
   }
@@ -169,7 +318,6 @@ window.addEventListener('pointermove', e => {
   }
   if (e.pointerId !== orbit.id) return;
   turn(e.clientX - orbit.x, e.clientY - orbit.y);
-  orbit.moved += Math.abs(e.clientX - orbit.x) + Math.abs(e.clientY - orbit.y);
   orbit.x = e.clientX; orbit.y = e.clientY;
 });
 function endPointer(e) {
@@ -179,14 +327,16 @@ function endPointer(e) {
 window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
 function resetView() { s.tyaw = 0; s.tpitch = 0; }
-window.addEventListener('keydown', e => { if ((e.key === 'r' || e.key === 'R' || e.key === '0') && !menu.contains(document.activeElement)) resetView(); });
+window.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, select, textarea')) return;
+  if ((e.key === 'r' || e.key === 'R' || e.key === '0') && !menu.contains(document.activeElement)) resetView();
+});
 chip.addEventListener('click', () => { resetView(); btn.focus({ preventScroll: true }); });
-chip.textContent = coarse ? 'two fingers to orbit' : 'hold the wheel and drag to orbit';
 let hintUntil = performance.now() + 6000;
 
 // ---------- menu ----------
 function setMenu(open, focusFirst) {
-  s.open = open; btn.setAttribute('aria-expanded', String(open)); menu.classList.toggle('open', open); labelDirty = true;
+  s.open = open; btn.setAttribute('aria-expanded', String(open)); menu.classList.toggle('open', open);
   if (open && focusFirst) items[0].focus(); if (!open) btn.focus({ preventScroll: true });
 }
 btn.addEventListener('click', e => { if (e.altKey) return; setMenu(!s.open, false); });
@@ -203,30 +353,123 @@ items.forEach(li => {
   li.addEventListener('pointerleave', () => li.style.setProperty('--ia', '0'));
   li.addEventListener('click', () => choose(li));
 });
-function choose(li) { labelEl.textContent = `Ask ${li.textContent.replace(/[A-Z]$/, '').trim().toLowerCase()}`; setMenu(false); s.jiggle = 1; }
-document.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && !anchor.contains(e.target) && e.target !== chip) { if (s.open) setMenu(false); } });
+function choose(li) { set('text', `Ask ${li.textContent.replace(/[A-Z]$/, '').trim().toLowerCase()}`); setMenu(false); s.jiggle = 1; }
+document.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && !anchor.contains(e.target) && e.target !== chip && !overUi(e)) { if (s.open) setMenu(false); } });
+
+// ---------- the panel ----------
+const inputs = {};
+const fmt = (c, v) => {
+  if (c.u === '°') return `${Math.round(v)}°`;
+  let t = c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 ? 3 : 2);
+  if (c.u) t += ` ${c.u}`;
+  if (c.k === 'dome') t = (v < 0 ? 'concave ' : v > 0 ? 'convex ' : 'flat ') + t;
+  return t;
+};
+function buildPanel() {
+  const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
+  const h = el('h3', null, 'Presets'); panel.appendChild(h);
+  const pr = el('div', 'presets');
+  for (const name in PRESETS) {
+    const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name;
+    b.addEventListener('click', () => { Object.assign(P, PRESETS[name]); apply(); syncInputs(); save(); });
+    pr.appendChild(b);
+  }
+  panel.appendChild(pr);
+  for (const c of CTRL) {
+    if (c.g) { panel.appendChild(el('h3', null, c.g)); continue; }
+    const row = el('div', 'row'), id = `in-${c.k}`, lab = el('label', null, c.l); lab.htmlFor = id; row.appendChild(lab);
+    let inp;
+    if (c.t === 'check') { inp = el('input'); inp.type = 'checkbox'; inp.addEventListener('change', () => set(c.k, inp.checked)); row.appendChild(inp); }
+    else if (c.t === 'color') { inp = el('input'); inp.type = 'color'; inp.addEventListener('input', () => set(c.k, inp.value)); row.appendChild(inp); }
+    else if (c.t === 'text') { inp = el('input', 'full'); inp.type = 'text'; inp.maxLength = 32; inp.spellcheck = false; inp.addEventListener('input', () => set(c.k, inp.value || ' ')); row.appendChild(el('span')); row.appendChild(inp); }
+    else if (c.t === 'seg') {
+      inp = el('div', 'seg'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
+      for (const o of c.o) { const b = el('button', null, o); b.type = 'button'; b.dataset.v = o; b.addEventListener('click', () => { set(c.k, o); syncInputs(); }); inp.appendChild(b); }
+      row.appendChild(inp);
+    } else {
+      const v = el('span', 'v'); row.appendChild(v);
+      inp = el('input', 'full'); inp.type = 'range'; inp.min = c.min; inp.max = c.max; inp.step = c.s;
+      inp.addEventListener('input', () => { set(c.k, +inp.value); paintRange(c, inp, v); });
+      row.appendChild(inp); inp._v = v;
+    }
+    inp.id = id; inputs[c.k] = inp; panel.appendChild(row);
+  }
+  const acts = el('div', 'acts');
+  const reset = el('button', null, 'Reset all'); reset.type = 'button';
+  reset.addEventListener('click', () => { P = Object.assign({}, DEF); apply(); syncInputs(); save(); });
+  const copy = el('button', null, 'Copy settings'); copy.type = 'button';
+  copy.addEventListener('click', async () => {
+    const d = {}; for (const k in DEF) if (P[k] !== DEF[k]) d[k] = P[k];
+    try { await navigator.clipboard.writeText(JSON.stringify(d, null, 2)); copy.textContent = 'Copied'; } catch (e) { copy.textContent = 'Copy failed'; }
+    setTimeout(() => { copy.textContent = 'Copy settings'; }, 1400);
+  });
+  acts.appendChild(reset); acts.appendChild(copy); panel.appendChild(acts);
+}
+function paintRange(c, inp, v) {
+  inp.style.setProperty('--p', `${((inp.value - c.min) / (c.max - c.min)) * 100}%`);
+  if (v) v.textContent = fmt(c, +inp.value);
+}
+function syncInputs() {
+  for (const c of CTRL) {
+    if (c.g) continue; const inp = inputs[c.k], v = P[c.k];
+    if (c.t === 'check') inp.checked = !!v;
+    else if (c.t === 'color' || c.t === 'text') { if (document.activeElement !== inp) inp.value = v; }
+    else if (c.t === 'seg') [...inp.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    else { inp.value = v; paintRange(c, inp, inp._v); }
+  }
+  inputs.lightAng.disabled = inputs.lightEl.disabled = !!P.follow;
+  for (const b of panel.querySelectorAll('[data-preset]')) {
+    const pr = PRESETS[b.dataset.preset]; b.setAttribute('aria-pressed', String(Object.keys(pr).every(k => Math.abs(P[k] - pr[k]) < 1e-6)));
+  }
+}
+function set(k, v) {
+  if (k === 'page') { if (v === 'dark' && P.ink === DEF.ink) P.ink = '#f2f3f5'; if (v === 'light' && P.ink === '#f2f3f5') P.ink = DEF.ink; }
+  P[k] = v; apply(); save(); if (k === 'page') syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
+// the DOM button is the layout: CSS variables, label, what is shown
+function apply() {
+  const st = anchor.style;
+  st.setProperty('--scale', P.scale);
+  const bs = btn.style;
+  bs.setProperty('--h', `${P.h}em`); bs.setProperty('--pl', `${P.pl}em`); bs.setProperty('--pr', `${P.pr}em`);
+  bs.setProperty('--gap', `${P.gap}em`); bs.setProperty('--fw', P.weight); bs.setProperty('--orb', `${P.beadSize}em`);
+  bs.setProperty('--rad', `${P.corner * P.h * 0.5}em`);
+  btn.classList.toggle('no-bead', !P.bead); btn.classList.toggle('no-chev', !P.chevron);
+  if (labelEl.textContent !== P.text) labelEl.textContent = P.text;
+  document.body.classList.toggle('dark', P.page === 'dark');
+}
+function setTuning(on) {
+  document.body.classList.toggle('tuning', on); tuneBtn.setAttribute('aria-expanded', String(on));
+  if (on) syncInputs();
+}
+tuneBtn.addEventListener('click', () => setTuning(!document.body.classList.contains('tuning')));
+panel.addEventListener('keydown', e => { if (e.key === 'Escape') { setTuning(false); tuneBtn.focus(); } });
+buildPanel(); apply();
 
 // ---------- geometry from the DOM, and the print on the glass (label + chevron → a small mask texture) ----------
-let W = 1, H = 1, RS = 1, geo = null, labelDirty = true;
+let W = 1, H = 1, RS = 1, geo = null, labelDirty = true, labelSig = '';
 function layout() {
   W = innerWidth; H = innerHeight; RS = Math.min(Math.max(devicePixelRatio || 1, 1.25), 2);
   const b = btn.getBoundingClientRect(), o = orbEl.getBoundingClientRect(), l = labelEl.getBoundingClientRect(), c = chevEl.getBoundingClientRect();
-  geo = { cx: b.left + b.width / 2, cy: b.top + b.height / 2, a: (b.width - b.height) / 2, R: b.height / 2,
+  geo = { cx: b.left + b.width / 2, cy: b.top + b.height / 2, hw: b.width / 2, hh: b.height / 2,
           orb: [o.left + o.width / 2, o.top + o.height / 2, o.width / 2], label: l, chev: c,
-          font: getComputedStyle(btn).fontSize, rect: [0, 0, 1, 1] };
+          font: getComputedStyle(btn).fontSize, rect: geo ? geo.rect : [0, 0, 1, 1] };
+  const sig = [P.text, P.weight, P.chevron, s.open, geo.font, b.left, b.top, b.width, b.height, l.left, l.width, c.left].join('|');
+  if (sig !== labelSig) { labelSig = sig; labelDirty = true; }
 }
 const lab = document.createElement('canvas'), lg = lab.getContext('2d');
 function paintLabel() {
-  const pad = 6, x0 = geo.cx - geo.a - geo.R - pad, y0 = geo.cy - geo.R - pad, w = (geo.a + geo.R) * 2 + pad * 2, h = geo.R * 2 + pad * 2;
+  const pad = 6, x0 = geo.cx - geo.hw - pad, y0 = geo.cy - geo.hh - pad, w = geo.hw * 2 + pad * 2, h = geo.hh * 2 + pad * 2;
   const sc = Math.min(4, RS * 2);
-  lab.width = Math.ceil(w * sc); lab.height = Math.ceil(h * sc);
+  lab.width = Math.max(1, Math.ceil(w * sc)); lab.height = Math.max(1, Math.ceil(h * sc));
   const g = lg; g.setTransform(sc, 0, 0, sc, -x0 * sc, -y0 * sc); g.clearRect(x0, y0, w, h);
   const L = geo.label, C = geo.chev;
-  g.fillStyle = '#fff'; g.font = `500 ${geo.font} "Inter Tight", system-ui, sans-serif`; g.textBaseline = 'middle';
+  g.fillStyle = '#fff'; g.font = `${P.weight} ${geo.font} "Inter Tight", system-ui, sans-serif`; g.textBaseline = 'middle';
   g.fillText(labelEl.textContent, L.left, L.top + L.height / 2 + 1);
-  g.save(); g.translate(C.left + C.width / 2, C.top + C.height / 2); if (s.open) g.rotate(Math.PI);
-  const k = C.width / 24; g.strokeStyle = '#fff'; g.lineWidth = 2.5 * k; g.lineCap = 'round'; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(-7 * k, -3 * k); g.lineTo(0, 4 * k); g.lineTo(7 * k, -3 * k); g.stroke(); g.restore();
+  if (P.chevron) {
+    g.save(); g.translate(C.left + C.width / 2, C.top + C.height / 2); if (s.open) g.rotate(Math.PI);
+    const k = C.width / 24; g.strokeStyle = '#fff'; g.lineWidth = 2.5 * k; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(-7 * k, -3 * k); g.lineTo(0, 4 * k); g.lineTo(7 * k, -3 * k); g.stroke(); g.restore();
+  }
   geo.rect = [x0, y0, w, h];
   labelDirty = false;
 }
@@ -241,46 +484,102 @@ precision highp float;
 uniform sampler2D uLabel;
 uniform vec2 uRes;             // viewport, css px
 uniform float uScale, uTime;   // canvas px per css px
-uniform vec4 uPill;            // centre x, y (css px), half length of the straight part, radius
-uniform vec3 uOrb;             // bead x, y, radius from the DOM
-uniform vec4 uLabelRect;       // where the print texture lies on the button (css px)
-uniform vec2 uLook;            // cursor relative to the button, -1..1: drives the light
-uniform float uHov, uPress, uJiggle, uWarm, uGrid, uCamDist;
-uniform vec3 uCamR, uCamD, uCamF;   // camera right, screen-down, forward (world: x right, y down, z up to the viewer)
+uniform vec4 uBox;             // centre x, y, half width, half height (css px)
+uniform vec4 uShape;           // corner radius, wall, dome (< 0 = dish), underside (px)
+uniform vec4 uShape2;          // profile exponent, edge rounding (px), lift (px), -
+uniform vec4 uBead;            // x, y, radius (0 = none), sink (in radii)
+uniform vec4 uBead2;           // smoke, star size, star motion, -
+uniform vec4 uLabelRect;       // where the print texture lies (css px)
+uniform vec3 uL;               // light direction (x right, y down, z up to the viewer)
+uniform vec4 uLightK;          // highlight, reflections, rim spectrum, shadow
+uniform vec4 uOptics;          // ior, dispersion, frost (px), hover
+uniform vec3 uAbs;             // absorption per px
+uniform vec4 uInk;             // ink colour, opacity
+uniform vec3 uPage0, uPage1, uPage2;
+uniform float uGrid, uGridA, uDark, uCamDist;
+uniform vec3 uCamR, uCamD, uCamF;
+uniform int uSamples;
+uniform float uLabelLod;
+uniform int uOne;                // always 1: loop bounds the compiler cannot unroll (D3D would take minutes)
 out vec4 fragColor;
 
-float ZC, HT, HB, BR; vec3 BC, L;   // lens centre plane, top and bottom heights, bead, light
+float ZM, BR; vec3 BC, L, LO, HI;          // mid plane of the solid, bead, light, bounds
+
+// ---------- the solid: footprint + height profile, as a distance field ----------
+float foot(vec2 p){ vec2 q = abs(p - uBox.xy) - uBox.zw + uShape.x; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uShape.x; }
+vec2 prof(float x){                       // 0 at the rim, 1 inside; n = 2 is a circular arc (the M&M), big n a flat top
+  float n = uShape2.x, a = max(1.0 - x, 1e-5), s = max(1.0 - pow(a, n), 1e-5), f = pow(s, 1.0 / n);
+  return vec2(f, f / s * pow(a, n - 1.0));
+}
+float smax(float a, float b, float k){ float h = max(k - abs(a - b), 0.0) / max(k, 1e-4); return max(a, b) + h * h * k * 0.25; }
+float topAt(vec2 p){ return ZM + uShape.y + uShape.z * prof(clamp(-foot(p) / uBox.w, 0.0, 1.0)).x; }
+float map(vec3 p){
+  float e = foot(p.xy), x = clamp(-e / uBox.w, 0.0, 1.0);
+  vec2 pr = prof(x);
+  float sl = (x > 0.0 && x < 1.0) ? pr.y / uBox.w : 0.0;
+  float top = ZM + uShape.y + uShape.z * pr.x, st = min(abs(uShape.z * sl), 16.0);
+  float bot = ZM - uShape.w * pr.x, sb = min(abs(uShape.w * sl), 16.0);
+  float dT = (p.z - top) / sqrt(1.0 + st * st), dB = (bot - p.z) / sqrt(1.0 + sb * sb);
+  return smax(e, smax(dT, dB, uShape2.y), uShape2.y);
+}
+vec3 nrm(vec3 p){
+  const vec2 k = vec2(1.0, -1.0); const float h = 0.3;
+  return normalize(k.xyy * map(p + k.xyy * h) + k.yyx * map(p + k.yyx * h) + k.yxy * map(p + k.yxy * h) + k.xxx * map(p + k.xxx * h));
+}
+vec2 boxInt(vec3 ro, vec3 rd){
+  vec3 r = vec3(abs(rd.x) < 1e-9 ? 1e-9 : rd.x, abs(rd.y) < 1e-9 ? 1e-9 : rd.y, abs(rd.z) < 1e-9 ? 1e-9 : rd.z);
+  vec3 t0 = (LO - ro) / r, t1 = (HI - ro) / r, mn = min(t0, t1), mx = max(t0, t1);
+  return vec2(max(max(mn.x, mn.y), mn.z), min(min(mx.x, mx.y), mx.z));
+}
+float trace(vec3 ro, vec3 rd){
+  vec2 b = boxInt(ro, rd); if (b.x > b.y || b.y < 0.0) return -1.0;
+  float t = max(b.x, 0.0);
+  for (int i = 0; i < 64 * uOne; i++) { float d = map(ro + rd * t); if (d < 0.05) return t; t += d * 0.9 + 0.04; if (t > b.y) break; }
+  return -1.0;
+}
+float exitT(vec3 q, vec3 d){                // q inside: how far until the ray leaves the solid
+  float tmax = max(boxInt(q, d).y, 0.0) + 1.0, t = 0.0, tp = 0.0;
+  for (int i = 0; i < 40 * uOne; i++) { float m = map(q + d * t); if (m > 0.0) break; tp = t; t += max(-m * 0.9, 0.6); if (t > tmax) return tmax; }
+  for (int j = 0; j < 5 * uOne; j++) { float tm = 0.5 * (tp + t); if (map(q + d * tm) > 0.0) t = tm; else tp = tm; }
+  return 0.5 * (tp + t);
+}
+vec2 sphInt(vec3 ro, vec3 rd, vec3 c, float r){
+  vec3 oc = ro - c; float b = dot(oc, rd), h = b * b - dot(oc, oc) + r * r;
+  if (h < 0.0 || r < 0.5) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h);
+}
 
 // ---------- the page: gradient, faint grid, the rounded frame, shadows ----------
 float lineA(float dist, float w, float fp){ fp = max(fp, 0.35); return clamp((w * 0.5 + fp * 0.5 - dist) / fp, 0.0, 1.0) * min(1.0, w / fp); }
-float cap2(vec2 q){ vec2 d = q - uPill.xy; d.x -= clamp(d.x, -uPill.z, uPill.z); return uPill.w - length(d); }
 vec3 sky(vec3 d){
-  vec3 c = mix(vec3(0.86, 0.87, 0.9), vec3(0.97, 0.975, 0.985), smoothstep(-0.05, 0.7, d.z));
+  vec3 hor = mix(vec3(0.86, 0.87, 0.9), vec3(0.15, 0.16, 0.18), uDark), zen = mix(vec3(0.97, 0.975, 0.985), vec3(0.32, 0.33, 0.36), uDark);
+  vec3 c = mix(hor, zen, smoothstep(-0.05, 0.7, d.z));
   c += vec3(1.0) * smoothstep(0.9, 0.985, dot(d, L)) * 0.7;                                     // the key softbox
   c += vec3(0.95, 0.97, 1.0) * smoothstep(0.16, 0.04, abs(d.y + 0.34)) * smoothstep(0.25, 0.55, d.z) * 0.35;   // a long strip light
   return c;
 }
 vec3 pageAt(vec2 q, float fp){
   float t = clamp((q.x / uRes.x + q.y / uRes.y) * 0.5, 0.0, 1.0);
-  vec3 c = t < 0.5 ? mix(vec3(0.906, 0.910, 0.922), vec3(0.765, 0.776, 0.796), t * 2.0)
-                   : mix(vec3(0.765, 0.776, 0.796), vec3(0.561, 0.584, 0.612), t * 2.0 - 1.0);
-  vec2 f = fract((q - uPill.xy) / uGrid + 0.5), gd = min(f, 1.0 - f) * uGrid;
-  float g = max(lineA(gd.x, 1.0, fp), lineA(gd.y, 1.0, fp)) * 0.3;
+  vec3 c = t < 0.5 ? mix(uPage0, uPage1, t * 2.0) : mix(uPage1, uPage2, t * 2.0 - 1.0);
+  vec2 f = fract((q - uBox.xy) / uGrid + 0.5), gd = min(f, 1.0 - f) * uGrid;
+  float g = max(lineA(gd.x, 1.0, fp), lineA(gd.y, 1.0, fp)) * uGridA;
   vec2 fc = vec2(0.69, 0.84) * uRes, fh = vec2(0.6) * uRes; float fr = 72.0;
   vec2 fq = abs(q - fc) - fh + fr; float fd = abs(length(max(fq, 0.0)) + min(max(fq.x, fq.y), 0.0) - fr);
-  g = max(g, lineA(fd, 1.2, fp) * 0.55);
+  g = max(g, lineA(fd, 1.2, fp) * min(uGridA * 1.8, 1.0));
   c = mix(c, vec3(1.0), g);
-  // shadow thrown away from the light, with light focused into a caustic inside it
-  float R = uPill.w;
-  vec2 so = -normalize(L.xy) * R * (0.42 + uPress * 0.08);
-  float ds = cap2(q - so);
-  float shadow = smoothstep(-R * 0.75, R * 0.45, ds) * 0.2 * (1.0 - uPress * 0.25);
-  float caus = smoothstep(R * 0.12, R * 0.8, ds) * (0.38 + 0.25 * uHov);
-  float db = BR - length(q - BC.xy + normalize(L.xy) * BR * 0.7);
-  shadow = max(shadow, smoothstep(-BR * 0.5, BR * 0.6, db) * 0.18);
-  c = c * (1.0 - shadow) + vec3(1.0, 0.985, 0.95) * caus * 0.38;
-  // far away the floor fades into the room
-  float far = smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uPill.xy));
+  // shadow thrown away from the light; a convex solid focuses light into a caustic, a dish spreads it into a ring
+  float R = uBox.w, hmid = ZM + (uShape.y + max(uShape.z, 0.0)) * 0.5;
+  vec2 so = -L.xy / max(L.z, 0.25) * hmid * 0.4;
+  float ds = -foot(q - so);
+  float shadow = smoothstep(-R * 0.75 - uShape2.z, R * 0.45, ds) * 0.2;
+  float conv = clamp(uShape.z / R / 0.72, 0.0, 1.4), dish = clamp(-uShape.z / R, 0.0, 1.0);
+  float caus = smoothstep(R * 0.12, R * 0.8, ds) * (0.38 + 0.25 * uOptics.w) * conv * (uOptics.x - 1.0) * 2.0;
+  caus += smoothstep(0.0, R * 0.25, ds) * (1.0 - smoothstep(R * 0.25, R * 0.6, ds)) * dish * 0.35;
+  // the bead: a lighter shadow with a small bright focus, since it is clear glass
+  float db = BR - length(q - BC.xy + L.xy / max(L.z, 0.25) * BC.z * 0.35);
+  shadow = max(shadow, smoothstep(-BR * 0.5, BR * 0.6, db) * 0.18 * (0.35 + 0.65 * uBead2.x));
+  caus += smoothstep(BR * 0.3, BR * 0.8, db) * 0.25 * (1.0 - uBead2.x);
+  c = c * (1.0 - shadow * uLightK.w) + vec3(1.0, 0.985, 0.95) * caus * 0.38 * uLightK.w;
+  float far = smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uBox.xy));
   return mix(c, sky(vec3(0.0, -0.3, 0.12)) * 0.93, far);
 }
 vec3 envAt(vec3 p, vec3 d){
@@ -288,209 +587,200 @@ vec3 envAt(vec3 p, vec3 d){
   return sky(d);
 }
 
-// ---------- the bead: a dark glass sphere with a puffy four-point star floating in it ----------
+// ---------- the bead: a clear, smoky glass sphere (a ball lens) with a puffy holographic star ----------
 vec3 beadShade(vec3 P, vec3 rd){
   vec3 n = normalize(P - BC), lp = P - BC;
-  float diff = max(dot(n, L), 0.0);
-  vec3 col = vec3(0.10, 0.11, 0.13) * (0.5 + 0.7 * diff);
-  col += vec3(0.12, 0.13, 0.16) * smoothstep(-0.2, 0.9, n.y) * (0.4 + 0.6 * max(n.z, 0.0));  // light gathered at the bottom
-  vec3 t = refract(rd, n, 1.0 / 1.5);
-  float tf = -2.0 * dot(lp, t);
-  if (abs(t.z) > 1e-4) {
-    float tp = -lp.z / t.z;                                   // the star lies on the plane through the centre
+  float ior = max(uOptics.x, 1.02);
+  vec3 t = refract(rd, n, 1.0 / ior);
+  float tf = max(-2.0 * dot(lp, t), 0.0);
+  // what is behind: out through the far side, flipped and magnified, then darkened by the smoke
+  vec3 X = P + t * tf, nx = normalize(X - BC), to = refract(t, -nx, ior);
+  if (dot(to, to) == 0.0) to = reflect(t, -nx);
+  vec3 col = to.z < -1e-3 ? pageAt(X.xy + to.xy * (-X.z / to.z), 1.5 + uOptics.z) : sky(to);
+  col *= exp(-(tf / BR) * uBead2.x * vec3(2.3, 2.1, 1.8));
+  col += vec3(0.10, 0.11, 0.14) * smoothstep(-0.2, 0.9, n.y) * uBead2.x;                  // light gathered at the bottom
+  // the star lies on the plane through the centre, parallel to the page
+  if (abs(t.z) > 1e-4 && uBead2.y > 0.01) {
+    float tp = -lp.z / t.z;
     if (tp > 0.0 && tp < tf) {
-      vec2 sp = (lp.xy + t.xy * tp) / (BR * 0.6);
+      vec2 sp = (lp.xy + t.xy * tp) / (BR * uBead2.y);
       float e = 0.62, f = pow(abs(sp.x), e) + pow(abs(sp.y), e);
       if (f < 1.6) {
         float h = 0.012;
         float fx = pow(abs(sp.x + h), e) - pow(abs(sp.x - h), e), fy = pow(abs(sp.y + h), e) - pow(abs(sp.y - h), e);
         vec3 ns = normalize(vec3(fx / (2.0 * h) * 0.34, fy / (2.0 * h) * 0.34, 1.0));
-        float g0 = clamp(0.5 + (sp.x + sp.y) * 0.75, 0.0, 1.0);          // warm top-left, white middle, blue bottom-right
-        vec3 warm = mix(vec3(1.0, 0.33, 0.2), vec3(1.0, 0.7, 0.22), uWarm);
+        // the gradient axis turns towards the light, slides with the view angle and breathes a little
+        float mo = uBead2.z;
+        vec2 ax = normalize(mix(vec2(0.7071), normalize(-L.xy + 1e-5), clamp(mo, 0.0, 1.0)));
+        float g0 = 0.5 + dot(sp, ax) * 0.75 + dot(rd.xy, ax) * 0.9 * mo + dot(ns.xy, ax) * 0.35 * mo + sin(uTime * 0.7) * 0.06 * mo;
+        g0 = clamp(g0, 0.0, 1.0);
+        vec3 warm = mix(vec3(1.0, 0.33, 0.2), vec3(1.0, 0.7, 0.22), 0.5 + 0.5 * sin(uTime * 0.38));
         vec3 g = g0 < 0.5 ? mix(warm, vec3(1.0, 0.98, 0.95), g0 * 2.0) : mix(vec3(1.0, 0.98, 0.95), vec3(0.16, 0.46, 1.0), (g0 - 0.5) * 2.0);
         float sd = max(dot(ns, L), 0.0), ss = pow(max(dot(reflect(-L, ns), -t), 0.0), 26.0);
         vec3 sc = g * (0.78 + 0.38 * sd) + vec3(1.0) * ss * 0.5;
         col = mix(col, sc, 1.0 - smoothstep(0.97, 1.06, f));
-        col += g * 0.12 * (1.0 - smoothstep(0.9, 1.6, f));
+        col += g * 0.14 * (1.0 - smoothstep(0.9, 1.6, f));
       }
     }
   }
   vec3 rf = reflect(rd, n);
   float F = 0.04 + 0.96 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
-  col = mix(col, envAt(P, rf), F * 0.85);
-  col += vec3(1.0) * pow(max(dot(rf, L), 0.0), 48.0) * 0.95;
+  col = mix(col, envAt(P, rf), clamp(F * uLightK.y, 0.0, 1.0));
+  col += vec3(1.0) * pow(max(dot(rf, L), 0.0), 60.0) * 0.95 * uLightK.x;
   return col;
 }
 
-// ---------- the lens: an M&M capsule, exact ray intersection ----------
-vec2 capInt(vec3 ro, vec3 rd, float a, float R){        // capsule along x through the origin; (near, far), empty if near > far
-  float tn = 1e9, tf = -1e9;
-  float A = dot(rd.yz, rd.yz), B = dot(ro.yz, rd.yz), C = dot(ro.yz, ro.yz) - R * R;
-  if (A > 1e-9) {
-    float h = B * B - A * C;
-    if (h > 0.0) {
-      h = sqrt(h); float t0 = (-B - h) / A, t1 = (-B + h) / A;
-      if (abs(rd.x) > 1e-9) { float s0 = (-a - ro.x) / rd.x, s1 = (a - ro.x) / rd.x; t0 = max(t0, min(s0, s1)); t1 = min(t1, max(s0, s1)); }
-      else if (abs(ro.x) > a) t1 = t0 - 1.0;
-      if (t0 < t1) { tn = min(tn, t0); tf = max(tf, t1); }
-    }
-  }
-  float A2 = dot(rd, rd);
-  for (int i = 0; i < 2; i++) {
-    vec3 oc = ro - vec3(i == 0 ? -a : a, 0.0, 0.0);
-    float B2 = dot(oc, rd), C2 = dot(oc, oc) - R * R, h = B2 * B2 - A2 * C2;
-    if (h > 0.0) { h = sqrt(h); tn = min(tn, (-B2 - h) / A2); tf = max(tf, (-B2 + h) / A2); }
-  }
-  return vec2(tn, tf);
-}
-vec2 lensInt(vec3 ro, vec3 rd){                         // top half squashed to HT, bottom half to HB
-  vec3 o = ro - vec3(uPill.xy, ZC); float a = uPill.z, R = uPill.w;
-  vec2 res = vec2(1e9, -1e9);
-  for (int k = 0; k < 2; k++) {
-    float sc = R / (k == 0 ? HT : HB);
-    vec2 t = capInt(vec3(o.xy, o.z * sc), vec3(rd.xy, rd.z * sc), a, R);
-    if (t.x < t.y) {
-      if (abs(rd.z) > 1e-9) { float tz = -o.z / rd.z; if ((k == 0) == (rd.z > 0.0)) t.x = max(t.x, tz); else t.y = min(t.y, tz); }
-      else if ((k == 0) != (o.z >= 0.0)) t.y = t.x - 1.0;
-      if (t.x < t.y) { res.x = min(res.x, t.x); res.y = max(res.y, t.y); }
-    }
-  }
-  return res;
-}
-vec3 lensN(vec3 p){
-  vec3 o = p - vec3(uPill.xy, ZC); float a = uPill.z;
-  float sc = uPill.w / (o.z >= 0.0 ? HT : HB);
-  vec3 q = vec3(o.xy, o.z * sc); q.x -= clamp(q.x, -a, a);
-  return normalize(vec3(q.x, q.y, q.z * sc));
-}
-vec2 sphInt(vec3 ro, vec3 rd, vec3 c, float r){
-  vec3 oc = ro - c; float b = dot(oc, rd), h = b * b - dot(oc, oc) + r * r;
-  if (h < 0.0) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h);
-}
-vec3 outside(vec3 q, vec3 d, float blur){                // what a ray sees after it leaves the glass
-  vec2 bi = sphInt(q, d, BC, BR);
-  if (bi.x < bi.y && bi.x > 0.0) return beadShade(q + d * bi.x, d);
+// ---------- through the glass ----------
+vec3 pageThrough(vec3 q, vec3 d, float blur){
   if (d.z < -1e-3) { float t = -q.z / d.z; return pageAt(q.xy + d.xy * t, blur + t * 0.015); }
   return sky(d);
 }
 vec3 glassShade(vec3 P, vec3 rd){
-  vec3 n = lensN(P);
+  vec3 n = nrm(P);
+  float ior = uOptics.x, dsp = uOptics.y;
   float F = 0.04 + 0.96 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
+  F = clamp(F * uLightK.y, 0.0, 1.0);
   vec3 rf = reflect(rd, n), refl = envAt(P, rf);
-  float blur = 0.6 + (1.0 - abs(n.z)) * 2.4;             // crisp in the middle, a touch milky towards the rim
-  // into the glass, bounce inside at most twice, then out with one IOR per channel
-  vec3 t = refract(rd, n, 1.0 / 1.5), q = P + t * 0.05, trans = vec3(0.0);
-  float path = 0.0; bool out_ = false;
-  for (int b = 0; b < 3; b++) {
-    float tf = max(lensInt(q, t).y, 0.0);
+  float blur = 0.6 + (1.0 - abs(n.z)) * 2.4 + uOptics.z;
+  vec3 t = refract(rd, n, 1.0 / ior); if (dot(t, t) == 0.0) t = rd;
+  vec3 q = P - n * 0.25, trans = vec3(0.0), tg = t, tr = t, tb = t;
+  float path = 0.0, state = 0.0;            // 0 still inside, 1 out, 2 the ray ends on the bead
+  vec3 bp = vec3(0.0), bd = vec3(0.0);
+  for (int b = 0; b < 2 * uOne; b++) {
+    float tf = exitT(q, t);
     vec2 bi = sphInt(q, t, BC, BR);
-    if (bi.x < bi.y && bi.x > 0.0 && bi.x < tf) { trans = beadShade(q + t * bi.x, t); path += bi.x; out_ = true; break; }
+    if (bi.x < bi.y && bi.x > 0.0 && bi.x < tf) { bp = q + t * bi.x; bd = t; path += bi.x; state = 2.0; break; }
     q += t * tf; path += tf;
-    vec3 no = lensN(q), tg = refract(t, -no, 1.5);
+    vec3 no = nrm(q); tg = refract(t, -no, ior);
     if (dot(tg, tg) > 0.0) {
-      vec3 tr = refract(t, -no, 1.475), tb = refract(t, -no, 1.527);
+      tr = refract(t, -no, ior - dsp); tb = refract(t, -no, ior + dsp);
       if (dot(tr, tr) == 0.0) tr = tg; if (dot(tb, tb) == 0.0) tb = tg;
-      trans = vec3(outside(q, tr, blur).r, outside(q, tg, blur).g, outside(q, tb, blur).b);
-      out_ = true; break;
+      vec2 bo = sphInt(q, tg, BC, BR);      // out of the glass, straight into the part of the bead that stands proud
+      if (bo.x < bo.y && bo.x > 0.0) { bp = q + tg * bo.x; bd = tg; state = 2.0; } else state = 1.0;
+      break;
     }
-    t = reflect(t, -no); q += t * 0.05; blur += 1.0;       // total internal reflection: this is what folds the page at the rim
+    t = reflect(t, -no); q -= no * 0.3; blur += 1.0;       // total internal reflection: this is what folds the page at the rim
   }
-  if (!out_) trans = sky(t) * 0.85;
-  trans *= exp(-path * vec3(0.0005, 0.00038, 0.00034));    // a faint cool tint through thick glass
+  if (state > 1.5) trans = beadShade(bp, bd);
+  else if (state > 0.5) trans = dsp > 0.0005 ? vec3(pageThrough(q, tr, blur).r, pageThrough(q, tg, blur).g, pageThrough(q, tb, blur).b) : pageThrough(q, tg, blur);
+  else trans = sky(t) * 0.85;
+  trans *= exp(-path * uAbs);
   vec3 col = trans * (1.0 - F) + refl * F;
   // spectral sparks on the rim, where it faces the light
   float rim = 1.0 - smoothstep(0.08, 0.5, abs(n.z));
-  float facing = pow(max(dot(normalize(n.xy + 1e-5), normalize(L.xy)), 0.0), 3.0);
-  vec3 rainbow = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + (P.x - uPill.x) / uPill.w * 0.09 + n.z * 3.0 + uTime * 0.025));
-  col = mix(col, rainbow * 1.05, rim * facing * (0.2 + 0.25 * uHov));
+  float facing = pow(max(dot(normalize(n.xy + 1e-5), normalize(L.xy + 1e-5)), 0.0), 3.0);
+  vec3 rainbow = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + (P.x - uBox.x) / uBox.w * 0.09 + n.z * 3.0 + uTime * 0.025));
+  col = mix(col, rainbow * 1.05, clamp(rim * facing * (0.2 + 0.25 * uOptics.w) * uLightK.z, 0.0, 1.0));
   // the print: ink on the top surface, above everything the glass does
   float ink = 0.0;
-  if (n.z > 0.3 && P.z > ZC) {
+  if (n.z > 0.3) {                                        // any upward face: the dome, the slab top or the dish
     vec2 uv = (P.xy - uLabelRect.xy) / uLabelRect.zw;
-    if (uv.x > 0.0 && uv.y > 0.0 && uv.x < 1.0 && uv.y < 1.0) ink = texture(uLabel, uv).a;
+    if (uv.x > 0.0 && uv.y > 0.0 && uv.x < 1.0 && uv.y < 1.0) ink = textureLod(uLabel, uv, uLabelLod).a * uInk.a;   // explicit LOD: no derivatives inside branches
   }
-  col = mix(col, vec3(0.106, 0.110, 0.125) * (0.75 + 0.35 * max(dot(n, L), 0.0)), ink * 0.94);
-  float key = pow(max(dot(rf, L), 0.0), 260.0) * (0.35 + uHov * 0.25), glint = pow(max(dot(rf, L), 0.0), 1400.0) * 1.1;
-  col += vec3(1.0) * (key + glint) * (1.0 - ink * 0.5);
+  col = mix(col, uInk.rgb * (0.75 + 0.35 * max(dot(n, L), 0.0)), ink);
+  float spec = max(dot(rf, L), 0.0);
+  float key = pow(spec, 260.0) * (0.35 + uOptics.w * 0.25) + pow(spec, 1400.0) * 1.1;
+  col += vec3(1.0) * key * uLightK.x * (1.0 - ink * 0.5);
   return col;
 }
 
 // ---------- one ray ----------
-vec3 shade(vec3 ro, vec3 rd){
-  vec2 tl = lensInt(ro, rd), tb = sphInt(ro, rd, BC, BR);
-  bool hitL = tl.x < tl.y && tl.x > 0.0, hitB = tb.x < tb.y && tb.x > 0.0;
-  if (hitB && (!hitL || tb.x < tl.x)) return beadShade(ro + rd * tb.x, rd);
-  if (hitL) return glassShade(ro + rd * tl.x, rd);
+vec3 shade(vec3 ro, vec3 rd, out float id){
+  float tl = trace(ro, rd); vec2 tb = sphInt(ro, rd, BC, BR);
+  bool hitL = tl > 0.0, hitB = tb.x < tb.y && tb.x > 0.0;
+  id = 0.0;
+  if (hitB && (!hitL || tb.x < tl)) { id = 2.0; return beadShade(ro + rd * tb.x, rd); }
+  if (hitL) { id = 1.0; return glassShade(ro + rd * tl, rd); }
   if (rd.z < -1e-3) { float t = -ro.z / rd.z; return pageAt((ro + rd * t).xy, t / uCamDist / uScale / max(-rd.z, 0.08)); }
   return sky(rd);
 }
 void camRay(vec2 p, out vec3 ro, out vec3 rd){
-  vec3 T = vec3(uPill.xy, ZC);
+  vec3 T = vec3(uBox.xy, ZM);
   ro = T - uCamF * uCamDist;
-  rd = normalize(uCamF * uCamDist + uCamR * (p.x - uPill.x) + uCamD * (p.y - uPill.y));
-}
-bool nearBox(vec3 ro, vec3 rd){
-  vec3 lo = vec3(uPill.x - uPill.z - uPill.w - 3.0, uPill.y - uPill.w - 3.0, -1.0);
-  vec3 hi = vec3(uPill.x + uPill.z + uPill.w + 3.0, uPill.y + uPill.w + 3.0, max(ZC + HT, BC.z + BR) + 3.0);
-  vec3 inv = 1.0 / (rd + vec3(1e-9)), t0 = (lo - ro) * inv, t1 = (hi - ro) * inv;
-  vec3 mn = min(t0, t1), mx = max(t0, t1);
-  return max(max(mn.x, mn.y), mn.z) < min(min(mx.x, mx.y), mx.z);
+  rd = normalize(uCamF * uCamDist + uCamR * (p.x - uBox.x) + uCamD * (p.y - uBox.y));
 }
 void main(){
   vec2 p = vec2(gl_FragCoord.x, uRes.y * uScale - gl_FragCoord.y) / uScale;    // css px, y down
-  float R = uPill.w;
-  L = normalize(vec3(-0.45 + uLook.x * 0.9, -0.62 + uLook.y * 0.9, 0.75));
-  HT = R * 0.72 * (1.0 - uPress * 0.12) * (1.0 + uJiggle * 0.05 * sin(uTime * 22.0));
-  HB = R * 0.26; ZC = HB + R * 0.02;
-  BR = uOrb.z * 0.7; BC = vec3(uOrb.xy, ZC + HT * 0.4);     // set into the glass, its cap just proud of the dome
+  L = uL;
+  ZM = uShape2.z + uShape.w;
+  BR = uBead.z;
+  BC = vec3(uBead.xy, topAt(uBead.xy) - BR * uBead.w);
+  float topMax = ZM + uShape.y + max(uShape.z, 0.0);
+  LO = vec3(uBox.xy - uBox.zw - 2.0, min(uShape2.z, BR > 0.5 ? BC.z - BR : 1e5) - 2.0);
+  HI = vec3(uBox.xy + uBox.zw + 2.0, max(topMax, BR > 0.5 ? BC.z + BR : 0.0) + 2.0);
   vec3 ro, rd; camRay(p, ro, rd);
-  vec3 col;
-  if (nearBox(ro, rd)) {                                  // 4 rays per pixel on the object, 1 on the page
-    col = vec3(0.0);
-    for (int i = 0; i < 4; i++) {
-      vec2 o = i == 0 ? vec2(0.125, 0.375) : i == 1 ? vec2(-0.375, 0.125) : i == 2 ? vec2(0.375, -0.125) : vec2(-0.125, -0.375);
-      camRay(p + o / uScale, ro, rd); col += shade(ro, rd);
+  float id;
+  vec3 col = shade(ro, rd, id);
+  // silhouettes only (where neighbouring pixels hit different things): 3 more rays
+  if (fwidth(id) > 0.0 && uSamples > 1) {
+    float d;
+    for (int i = 0; i < 3 * uOne; i++) {
+      vec2 o = i == 0 ? vec2(-0.375, 0.125) : i == 1 ? vec2(0.375, -0.125) : vec2(-0.125, -0.375);
+      camRay(p + o / uScale, ro, rd); col += shade(ro, rd, d);
     }
     col *= 0.25;
-  } else col = shade(ro, rd);
+  }
   fragColor = vec4(col, 1.0);
 }`;
-let prog = null, U = {}, tex = null, aniso = null;
+let prog = null, tex = null, ready = false;
+const U = {};
+const uni = n => (n in U ? U[n] : (U[n] = gl.getUniformLocation(prog, n)));
+document.body.classList.add('no-gl');                // the CSS pill shows until the glass is compiled
 if (gl) {
   try {
-    const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
-    prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-    gl.useProgram(prog);
+    // compile in the background where the browser can (the shader is big), so the page never freezes
+    const par = gl.getExtension('KHR_parallel_shader_compile');
+    const mk = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
+    const vs = mk(gl.VERTEX_SHADER, VS), fs = mk(gl.FRAGMENT_SHADER, FS);
+    prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+    const finish = () => {
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('glass off:', gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(prog)); prog = null; document.body.classList.add('no-gl'); return; }
+      gl.useProgram(prog); initGL(); ready = true; document.body.classList.remove('no-gl'); resize();
+    };
+    const poll = () => { if (gl.getProgramParameter(prog, par.COMPLETION_STATUS_KHR)) finish(); else setTimeout(poll, 30); };
+    if (par && !STILL) poll(); else setTimeout(finish, 0);   // the thumbnail shot runs on virtual time: compile in one go
+    cv.addEventListener('webglcontextlost', e => { e.preventDefault(); ready = false; document.body.classList.add('no-gl'); });
+  } catch (err) { console.warn('glass off:', err); prog = null; }
+}
+function initGL() {
+  {
     const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    for (const n of ['uLabel', 'uRes', 'uScale', 'uTime', 'uPill', 'uOrb', 'uLabelRect', 'uLook', 'uHov', 'uPress', 'uJiggle', 'uWarm', 'uGrid', 'uCamDist', 'uCamR', 'uCamD', 'uCamF']) U[n] = gl.getUniformLocation(prog, n);
     tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
     if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
-    gl.uniform1i(U.uLabel, 0);
-  } catch (err) { console.warn('glass off:', err); prog = null; }
+    gl.uniform1i(uni('uLabel'), 0);
+  }
 }
-if (!prog) document.body.classList.add('no-gl');
 
 function upload() {
   paintLabel();
-  if (!prog) return;
+  if (!ready) return;
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, lab);
   gl.generateMipmap(gl.TEXTURE_2D);
 }
+let quality = 1, qAcc = 0, qN = 0;                     // render scale multiplier, lowered when frames get slow
 function resize() {
   layout(); labelDirty = true;
-  if (!prog) return;
-  cv.width = Math.round(W * RS); cv.height = Math.round(H * RS); gl.viewport(0, 0, cv.width, cv.height);
+  if (!ready) return;
+  cv.width = Math.round(W * RS * quality); cv.height = Math.round(H * RS * quality); gl.viewport(0, 0, cv.width, cv.height);
+}
+function tuneQuality(dt) {
+  if (STILL) return;
+  qAcc += dt; qN++;
+  if (qN < 40) return;
+  const avg = qAcc / qN; qAcc = 0; qN = 0;
+  const q0 = quality;
+  if (avg > 1 / 40) quality = Math.max(0.5, quality * 0.85);
+  else if (avg < 1 / 75 && quality < 1) quality = Math.min(1, quality * 1.1);
+  if (Math.abs(q0 - quality) > 0.01) resize();
 }
 new ResizeObserver(resize).observe(document.documentElement);
-new ResizeObserver(() => { layout(); labelDirty = true; }).observe(btn);
 resize();
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { layout(); labelDirty = true; });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { labelSig = ''; });
 
 // camera basis: yaw swings the camera left/right, pitch up/down; screen-down stays aligned with the page's y,
 // so the horizon never rolls
@@ -501,6 +791,11 @@ function camBasis(yaw, pitch) {
   const r = [f[1] * d[2] - f[2] * d[1], f[2] * d[0] - f[0] * d[2], f[0] * d[1] - f[1] * d[0]];
   return [r, d, f];
 }
+const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
+const PAGES = {
+  light: [[.906, .910, .922], [.765, .776, .796], [.561, .584, .612]],
+  dark: [[.165, .173, .192], [.110, .114, .129], [.067, .071, .082]],
+};
 
 let last = performance.now();
 function frame(t) {
@@ -514,19 +809,46 @@ function frame(t) {
   // orbit hint first, then a reset chip while the view is turned
   const turned = Math.abs(s.tyaw) + Math.abs(s.tpitch) > 0.03;
   chip.classList.toggle('reset', turned); chip.tabIndex = turned ? 0 : -1;
-  chip.textContent = turned ? 'reset view' : (coarse ? 'two fingers to orbit' : 'hold the wheel and drag to orbit');
+  const txt = turned ? 'reset view' : (coarse ? 'two fingers to orbit' : 'hold the wheel and drag to orbit');
+  if (chip.textContent !== txt) chip.textContent = txt;
   chip.classList.toggle('show', turned || t < hintUntil);
-  if (!prog) return;
+  if (!ready) return;
+  tuneQuality(dt);
+  layout();
   if (labelDirty) upload();
-  // the view leans a little towards the cursor, the orbit adds on top
-  const [cr, cd, cf] = camBasis(s.yaw + s.lx * 0.1, s.pitch - s.ly * 0.08);
-  gl.uniform2f(U.uRes, W, H); gl.uniform1f(U.uScale, cv.width / W); gl.uniform1f(U.uTime, reduce || STILL ? 2 : t / 1000);
-  gl.uniform4f(U.uPill, geo.cx, geo.cy, geo.a, geo.R); gl.uniform3f(U.uOrb, geo.orb[0], geo.orb[1], geo.orb[2]);
-  gl.uniform4f(U.uLabelRect, geo.rect[0], geo.rect[1], geo.rect[2], geo.rect[3]);
-  gl.uniform2f(U.uLook, s.lx, s.ly); gl.uniform1f(U.uHov, s.hov); gl.uniform1f(U.uPress, s.press); gl.uniform1f(U.uJiggle, s.jiggle);
-  gl.uniform1f(U.uWarm, 0.5 + 0.5 * Math.sin(t / 2600));
-  gl.uniform1f(U.uGrid, Math.max(72, Math.round(Math.min(W, H) / 7))); gl.uniform1f(U.uCamDist, Math.max(W, H) * 1.3);
-  gl.uniform3fv(U.uCamR, cr); gl.uniform3fv(U.uCamD, cd); gl.uniform3fv(U.uCamF, cf);
+  const T = reduce || STILL ? 2 : t / 1000;
+  // light: from the cursor, or from the panel
+  let Lx, Ly, Lz;
+  if (P.follow) { Lx = -0.45 + s.lx * 0.9; Ly = -0.62 + s.ly * 0.9; Lz = 0.75; }
+  else { const a = P.lightAng * Math.PI / 180, e = P.lightEl * Math.PI / 180; Lx = Math.sin(a) * Math.cos(e); Ly = -Math.cos(a) * Math.cos(e); Lz = Math.sin(e); }
+  const ll = Math.hypot(Lx, Ly, Lz);
+  // shape in px; pressing squashes the dome and makes it shiver
+  const hh = geo.hh;
+  let dome = P.dome * (1 - s.press * 0.12) * (1 + s.jiggle * 0.05 * Math.sin(T * 22));
+  const wall = Math.max(P.wall, -dome - P.under + 0.08);          // a dish needs a rim: the wall rises with the concavity
+  const corner = Math.min(P.corner * hh, geo.hw, hh);
+  // tint → absorption per px
+  const tc = hex(P.tint), ab = tc.map(c => (1 - c) * P.tintK * 0.003);
+  const pg = PAGES[P.page] || PAGES.light;
+  const [cr, cd, cf] = camBasis(s.yaw + s.lx * 0.1, s.pitch - s.ly * 0.08);   // the view leans a little towards the cursor
+  gl.uniform2f(uni('uRes'), W, H); gl.uniform1f(uni('uScale'), cv.width / W); gl.uniform1f(uni('uTime'), T);
+  gl.uniform4f(uni('uBox'), geo.cx, geo.cy, geo.hw, hh);
+  gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
+  gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
+  gl.uniform4f(uni('uBead'), geo.orb[0], geo.orb[1], P.bead ? geo.orb[2] * 0.7 : 0, P.sink);
+  gl.uniform4f(uni('uBead2'), P.smoke, P.starSize, reduce ? 0 : P.starMotion, 0);
+  gl.uniform4f(uni('uLabelRect'), geo.rect[0], geo.rect[1], geo.rect[2], geo.rect[3]);
+  gl.uniform3f(uni('uL'), Lx / ll, Ly / ll, Lz / ll);
+  gl.uniform4f(uni('uLightK'), P.key, P.env, P.rim, P.shadow);
+  gl.uniform4f(uni('uOptics'), P.ior, P.disp, P.frost, s.hov);
+  gl.uniform3f(uni('uAbs'), ab[0], ab[1], ab[2]);
+  const ic = hex(P.ink); gl.uniform4f(uni('uInk'), ic[0], ic[1], ic[2], P.inkA);
+  gl.uniform3fv(uni('uPage0'), pg[0]); gl.uniform3fv(uni('uPage1'), pg[1]); gl.uniform3fv(uni('uPage2'), pg[2]);
+  gl.uniform1f(uni('uGrid'), Math.max(72, Math.round(Math.min(W, H) / 7))); gl.uniform1f(uni('uGridA'), P.grid);
+  gl.uniform1f(uni('uDark'), P.page === 'dark' ? 1 : 0); gl.uniform1f(uni('uCamDist'), Math.max(W, H) * 1.3);
+  gl.uniform3fv(uni('uCamR'), cr); gl.uniform3fv(uni('uCamD'), cd); gl.uniform3fv(uni('uCamF'), cf);
+  gl.uniform1i(uni('uSamples'), coarse ? 1 : 4); gl.uniform1i(uni('uOne'), 1);
+  gl.uniform1f(uni('uLabelLod'), Math.max(0, Math.log2(lab.width / Math.max(1, geo.rect[2]) / (cv.width / W))));
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
 if (STILL) Object.assign(s, { hov: .5, thov: .5, seen: true });   // frozen light and time, the loop keeps the canvas painted
