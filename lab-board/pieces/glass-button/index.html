@@ -60,10 +60,13 @@
   }
   .menu li:focus-visible{box-shadow:inset 0 0 0 2px rgba(20,20,20,.35)}
   .menu li .dot{width:.5em; height:.5em; border-radius:50%; flex:none}
-  .menu li .k{margin-left:auto; opacity:.45; font-size:.86em}
+  .menu li .tx{display:flex; flex-direction:column; gap:.22em; line-height:1.1}
+  .menu li .ds{font-size:.76em; opacity:.55}
+  .menu li .k{margin-left:auto; padding:.18em .5em; border:1px solid rgba(20,20,20,.25); border-radius:.35em; font:inherit; font-size:.8em; opacity:.7}
+  .menu{min-width:max(100%, 15em)}
   /* with WebGL the menu is drawn as part of the glass; the DOM list stays for focus, keys and screen readers */
   .gl .menu{background:none; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; color:transparent; transform:none; transition:opacity 0s}
-  .gl .menu li{background:none} .gl .menu li .dot{visibility:hidden} .gl .menu li:focus-visible{box-shadow:none}
+  .gl .menu li{background:none} .gl .menu li .dot{visibility:hidden} .gl .menu li:focus-visible{box-shadow:none} .gl .menu li .k{border-color:transparent}
 
   /* ---------- orbit hint / reset ---------- */
   .chip{
@@ -183,9 +186,9 @@
       <svg class="chev" id="chev" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
     </button>
     <ul class="menu" id="menu" role="menu" aria-label="Agents">
-      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#ff8a3b"></span>Research<span class="k">R</span></li>
-      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#3d86ff"></span>Design<span class="k">D</span></li>
-      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#35c27a"></span>Build<span class="k">B</span></li>
+      <li role="menuitem" tabindex="-1" data-agent="research" aria-keyshortcuts="1"><span class="dot" style="background:#ff8a3b"></span><span class="tx"><span class="nm">Research</span><span class="ds">Find sources, sum up</span></span><kbd class="k" aria-hidden="true">1</kbd></li>
+      <li role="menuitem" tabindex="-1" data-agent="design" aria-keyshortcuts="2"><span class="dot" style="background:#3d86ff"></span><span class="tx"><span class="nm">Design</span><span class="ds">Sketch flows and layouts</span></span><kbd class="k" aria-hidden="true">2</kbd></li>
+      <li role="menuitem" tabindex="-1" data-agent="build" aria-keyshortcuts="3"><span class="dot" style="background:#35c27a"></span><span class="tx"><span class="nm">Build</span><span class="ds">Turn ideas into code</span></span><kbd class="k" aria-hidden="true">3</kbd></li>
     </ul>
   </div>
 </main>
@@ -223,7 +226,7 @@ const DEF = {
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
   follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
-  text: 'Ask agents', ink: '#1b1c20', inkA: .94, chevron: true,
+  text: 'Ask an agent', agent: '', icon: 'star', ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'grid', bgColor: '#39435a', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
@@ -282,7 +285,8 @@ const CTRL = [
   { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, dep: 'glowOn' },
   { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, dep: 'glowOn' },
   { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, dep: 'glowOn' },
-  { g: 'Bead' },
+  { g: 'Icon' },
+  { k: 'icon', l: 'Style', t: 'seg', o: ['star', 'glyph', 'orb', 'emboss'] },
   { k: 'bead', l: 'Show bead', t: 'check' },
   { k: 'beadSize', l: 'Size', min: .8, max: 3, s: .01 },
   { k: 'sink', l: 'Sink into glass', min: -.8, max: 1.4, s: .01 },
@@ -315,6 +319,8 @@ function save() {
 }
 let P = STILL ? Object.assign({}, DEF) : load();
 delete P.bgTint;
+{ const m = /^Ask (agents|research|design|build)$/.exec(P.text || '');       // the old labels
+  if (m) { if (m[1] === 'agents') { P.text = DEF.text; P.agent = ''; } else { P.agent = m[1]; P.text = m[1][0].toUpperCase() + m[1].slice(1) + ' agent'; } } }
 if (P.shadowStyle === 'glow') P.glowOn = true; delete P.shadowStyle;     // the old style switch became a toggle
 if (P.sound === 'custom') P.sound = 'glass';                           // a sound file is not kept between visits
 if (P.page === 'dark' && P.bg === 'grid') P.bg = 'grid-dark';          // settings saved before backgrounds existed
@@ -323,7 +329,7 @@ if (P.bg === 'upload') P.bg = 'grid';
 
 // ---------- interaction state ----------
 const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, seen: false, open: false,
-            menuT: 0, menuV: 0, hi: null, hiA: 0, hiX: 0,
+            menuT: 0, menuV: 0, gFrom: 0, gTo: 0, gT: 1, orbPh: 0, hi: null, hiA: 0, hiX: 0,
             yaw: 0, pitch: 0, tyaw: 0, tpitch: 0, zoom: 1, tzoom: 1, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
   s.seen = true;
@@ -429,13 +435,14 @@ function setMenu(open, focusFirst) {
   if (open && focusFirst) items[0].focus(); if (!open) btn.focus({ preventScroll: true });
 }
 btn.addEventListener('click', e => { if (e.altKey) return; setMenu(!s.open, false); });
-btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); setMenu(true, true); } });
+btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); setMenu(true, true); } const li = byKey(e); if (li) { e.preventDefault(); choose(li); } });
 menu.addEventListener('keydown', e => {
   const i = items.indexOf(document.activeElement);
   if (e.key === 'Escape') setMenu(false);
   if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
   if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(items[i]); }
+  const li = byKey(e); if (li) { e.preventDefault(); choose(li); }
 });
 items.forEach(li => {
   li.addEventListener('pointermove', e => { const r = li.getBoundingClientRect(); li.style.setProperty('--ix', `${((e.clientX - r.left) / r.width) * 100}%`); li.style.setProperty('--ia', '.6'); });
@@ -448,7 +455,13 @@ items.forEach(li => {
   li.addEventListener('focus', () => { s.hi = li; const r = li.getBoundingClientRect(); s.hiX = r.left + r.width * 0.3; });
   li.addEventListener('blur', () => { if (s.hi === li) s.hi = null; });
 });
-function choose(li) { click(false, .7); set('text', `Ask ${li.textContent.replace(/[A-Z]$/, '').trim().toLowerCase()}`); setMenu(false); s.jiggle = 1; }
+function choose(li) {
+  click(false, .7);
+  P.agent = li.dataset.agent;
+  set('text', `${li.querySelector('.nm').textContent} agent`);
+  setMenu(false); s.jiggle = 1;
+}
+const byKey = e => { const n = +e.key; return n >= 1 && n <= items.length ? items[n - 1] : null; };
 document.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && !anchor.contains(e.target) && e.target !== chip && !overUi(e)) { if (s.open) setMenu(false); } });
 
 // ---------- backgrounds under the glass: the grid (light / dark, three tints, any density), or your own image / video ----------
@@ -784,14 +797,17 @@ function paintLabel() {
     g.beginPath(); g.moveTo(-7 * k, -3 * k); g.lineTo(0, 4 * k); g.lineTo(7 * k, -3 * k); g.stroke(); g.restore();
   }
   for (const li of items) {                             // the menu items, printed on the menu's glass
-    const cs = getComputedStyle(li), dot = li.querySelector('.dot'), kk = li.querySelector('.k');
-    const tn = [...li.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+    const dot = li.querySelector('.dot'), nm = li.querySelector('.nm'), ds = li.querySelector('.ds'), kk = li.querySelector('.k');
+    const font = el => { const c = getComputedStyle(el); return `${c.fontWeight} ${c.fontSize} "Inter Tight", system-ui, sans-serif`; };
     const dr = dot.getBoundingClientRect();
     g.fillStyle = dot.style.background; g.beginPath(); g.arc(dr.left + dr.width / 2, dr.top + dr.height / 2, dr.width / 2, 0, 7); g.fill();
-    g.fillStyle = P.ink; g.font = `${cs.fontWeight} ${cs.fontSize} "Inter Tight", system-ui, sans-serif`; g.textBaseline = 'middle';
-    if (tn) { const rg = document.createRange(); rg.selectNodeContents(tn); const tr = rg.getBoundingClientRect(); g.fillText(tn.textContent.trim(), tr.left, tr.top + tr.height / 2 + 0.5); }
-    const kr = kk.getBoundingClientRect(); g.globalAlpha = .45; g.font = `${cs.fontWeight} ${getComputedStyle(kk).fontSize} "Inter Tight", system-ui, sans-serif`;
-    g.fillText(kk.textContent, kr.left, kr.top + kr.height / 2 + 0.5); g.globalAlpha = 1;
+    g.fillStyle = P.ink; g.textBaseline = 'middle';
+    const nr = nm.getBoundingClientRect(); g.font = font(nm); g.fillText(nm.textContent, nr.left, nr.top + nr.height / 2 + 0.5);
+    const sr = ds.getBoundingClientRect(); g.font = font(ds); g.globalAlpha = .55; g.fillText(ds.textContent, sr.left, sr.top + sr.height / 2 + 0.5);
+    const kr = kk.getBoundingClientRect(); g.globalAlpha = .35; g.strokeStyle = P.ink; g.lineWidth = 1;   // a keycap
+    g.beginPath(); g.roundRect(kr.left + .5, kr.top + .5, kr.width - 1, kr.height - 1, Math.min(kr.height * 0.3, 6)); g.stroke();
+    g.globalAlpha = .7; g.font = font(kk); g.textAlign = 'center'; g.fillText(kk.textContent, kr.left + kr.width / 2, kr.top + kr.height / 2 + 0.5);
+    g.textAlign = 'left'; g.globalAlpha = 1;
   }
   geo.rect = [x0, y0, w, h];
   labelDirty = false;
@@ -812,6 +828,10 @@ uniform vec4 uShape;           // corner radius, wall, dome (< 0 = dish), unders
 uniform vec4 uShape2;          // profile exponent, edge rounding (px), lift (px), -
 uniform vec4 uBead;            // x, y, radius (0 = none), sink (in radii)
 uniform vec4 uBead2;           // smoke, star size, star motion, -
+uniform vec4 uIcon;            // style (0 star, 1 glyph, 2 orb, 3 emboss), glyph from, glyph to, morph 0..1
+uniform vec3 uIconTint;        // the agent's colour
+uniform vec3 uIconPos;         // where the icon sits (x, y, radius), also when there is no bead
+uniform float uOrbPh;          // the orb's flow, faster while pressed
 uniform vec4 uLabelRect;       // where the print texture lies (css px)
 uniform vec4 uMenu;            // the menu slab now: centre, half size
 uniform vec4 uMenuK;           // its corner radius, the blend radius of the liquid bridge, print fade, on
@@ -963,7 +983,30 @@ vec3 envAt(vec3 p, vec3 d){
   return sky(d);
 }
 
-// ---------- the bead: a clear, smoky glass sphere (a ball lens) with a puffy holographic star ----------
+// ---------- icons: puffy glyphs as distance fields (< 0 inside), in the icon's unit space ----------
+float sdSeg(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+float glyphD(float id, vec2 p){
+  if (id < 0.5) { float e = 0.62; return (pow(abs(p.x), e) + pow(abs(p.y), e) - 1.0) * 0.5; }          // the star
+  if (id < 1.5) {                                                                                  // research: a lens
+    float ring = abs(length(p - vec2(-0.14)) - 0.44) - 0.14;
+    return min(ring, sdSeg(p, vec2(0.2), vec2(0.7)) - 0.15);
+  }
+  if (id < 2.5) {                                                                                  // design: a pen nib
+    p /= 1.25;
+    vec2 q = vec2(0.7071 * (p.x + p.y), 0.7071 * (p.y - p.x));
+    vec2 a = abs(q); float r = 0.98, d0 = 0.66, b = sqrt(r * r - d0 * d0);
+    float ves = ((a.y - b) * d0 > a.x * b) ? length(a - vec2(0.0, b)) : length(a - vec2(-d0, 0.0)) - r;
+    float cut = min(length(q - vec2(0.0, -0.08)) - 0.12, max(abs(q.x) - 0.035, -q.y - 0.08));
+    return max(ves, -cut) * 1.25;
+  }
+  vec2 a = abs(p); float hexd = max(a.x, a.x * 0.5 + a.y * 0.866) - 0.7;                         // build: a cube
+  float gr = min(sdSeg(p, vec2(0.0), vec2(0.0, 0.81)), min(sdSeg(p, vec2(0.0), vec2(-0.7, -0.405)), sdSeg(p, vec2(0.0), vec2(0.7, -0.405)))) - 0.05;
+  return max(hexd, -gr);
+}
+// the glyph now: one shape melting into the next when the agent changes
+float glyph(vec2 p){ return mix(glyphD(uIcon.y, p), glyphD(uIcon.z, p), smoothstep(0.0, 1.0, uIcon.w)); }
+
+// ---------- the bead: a clear, smoky glass sphere (a ball lens) with a puffy holographic glyph, or a flowing orb ----------
 vec3 beadShade(vec3 P, vec3 rd){
   vec3 n = normalize(P - BC), lp = P - BC;
   float ior = max(uOptics.x, 1.02);
@@ -975,16 +1018,31 @@ vec3 beadShade(vec3 P, vec3 rd){
   vec3 col = to.z < -1e-3 ? pageAt(X.xy + to.xy * (-X.z / to.z), 1.5 + uOptics.z) : sky(to);
   col *= exp(-(tf / BR) * uBead2.x * vec3(2.3, 2.1, 1.8));
   col += vec3(0.10, 0.11, 0.14) * smoothstep(-0.2, 0.9, n.y) * uBead2.x;                  // light gathered at the bottom
-  // the star lies on the plane through the centre, parallel to the page
-  if (abs(t.z) > 1e-4 && uBead2.y > 0.01) {
+  if (uIcon.x > 1.5) {
+    // the orb: soft plasma drifting through the sphere, tinted by the agent
+    vec3 acc = vec3(0.0);
+    for (int i = 0; i < 6 * uOne; i++) {
+      vec3 q = (lp + t * (tf * (float(i) + 0.5) / 6.0)) / BR;
+      float ph = uOrbPh;
+      float v = sin(q.x * 3.1 + ph) + sin(q.y * 3.7 - ph * 1.3 + q.z * 2.0) + sin((q.x - q.y) * 2.3 + q.z * 3.0 + ph * 0.7);
+      vec3 c = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + v * 0.2 + ph * 0.05));
+      c = mix(c, uIconTint, 0.22);
+      acc += c * max(1.0 - dot(q, q), 0.0) * smoothstep(-0.3, 1.0, sin(v * 2.2 + ph));   // streaks, with dark glass between
+    }
+    col = mix(col, acc * 0.55, 0.8) + acc * 0.08;
+  }
+  // the glyph lies on the plane through the centre, parallel to the page
+  else if (abs(t.z) > 1e-4 && uBead2.y > 0.01) {
     float tp = -lp.z / t.z;
     if (tp > 0.0 && tp < tf) {
       vec2 sp = (lp.xy + t.xy * tp) / (BR * uBead2.y);
-      float e = 0.62, f = pow(abs(sp.x), e) + pow(abs(sp.y), e);
-      if (f < 1.6) {
-        float h = 0.012;
-        float fx = pow(abs(sp.x + h), e) - pow(abs(sp.x - h), e), fy = pow(abs(sp.y + h), e) - pow(abs(sp.y - h), e);
-        vec3 ns = normalize(vec3(fx / (2.0 * h) * 0.34, fy / (2.0 * h) * 0.34, 1.0));
+      if (dot(sp, sp) < 3.0) {
+        vec3 hv = vec3(0.0); float d0 = 0.0;                // its height and slope, one call site
+        for (int i = 0; i < 3 * uOne; i++) {
+          float d = glyph(sp + (i == 0 ? vec2(0.0) : i == 1 ? vec2(0.02, 0.0) : vec2(0.0, 0.02)));
+          hv[i] = smoothstep(0.02, -0.28, d); if (i == 0) d0 = d;
+        }
+        vec3 ns = normalize(vec3(-(hv.yz - hv.x) / 0.02 * 0.14, 1.0));
         // the gradient axis turns towards the light, slides with the view angle and breathes a little
         float mo = uBead2.z;
         vec2 ax = normalize(mix(vec2(0.7071), normalize(-L.xy + 1e-5), clamp(mo, 0.0, 1.0)));
@@ -994,8 +1052,8 @@ vec3 beadShade(vec3 P, vec3 rd){
         vec3 g = g0 < 0.5 ? mix(warm, vec3(1.0, 0.98, 0.95), g0 * 2.0) : mix(vec3(1.0, 0.98, 0.95), vec3(0.16, 0.46, 1.0), (g0 - 0.5) * 2.0);
         float sd = max(dot(ns, L), 0.0), ss = pow(max(dot(reflect(-L, ns), -t), 0.0), 26.0);
         vec3 sc = g * (0.78 + 0.38 * sd) + vec3(1.0) * ss * 0.5;
-        col = mix(col, sc, 1.0 - smoothstep(0.97, 1.06, f));
-        col += g * 0.14 * (1.0 - smoothstep(0.9, 1.6, f));
+        col = mix(col, sc, 1.0 - smoothstep(-0.015, 0.02, d0));
+        col += g * 0.14 * (1.0 - smoothstep(0.0, 0.3, d0));
       }
     }
   }
@@ -1013,6 +1071,16 @@ vec3 pageThrough(vec3 q, vec3 d, float blur){
 }
 vec3 glassShade(vec3 P, vec3 rd){
   vec3 n = nrm(P);
+  float emb = 0.0;
+  if (uIcon.x > 2.5 && n.z > 0.3) {                      // emboss: the glyph is a shallow dent in the surface
+    vec2 sp = (P.xy - uIconPos.xy) / max(uIconPos.z * 0.8, 1.0);   // its own size: the bead's star slider does not apply
+    if (dot(sp, sp) < 3.0) {
+      vec3 hv = vec3(0.0);
+      for (int i = 0; i < 3 * uOne; i++) hv[i] = smoothstep(0.02, -0.18, glyph(sp + (i == 0 ? vec2(0.0) : i == 1 ? vec2(0.02, 0.0) : vec2(0.0, 0.02))));
+      n = normalize(n + vec3((hv.yz - hv.x) / 0.02, 0.0) * 0.2);   // the slopes lean into the dent
+      emb = hv.x;
+    }
+  }
   float ior = uOptics.x, dsp = uOptics.y;
   float F = 0.04 + 0.96 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
   F = clamp(F * uLightK.y, 0.0, 1.0);
@@ -1075,6 +1143,7 @@ vec3 glassShade(vec3 P, vec3 rd){
   float spec = max(dot(rf, L), 0.0);
   float key = pow(spec, 260.0) * (0.35 + uOptics.w * 0.25) + pow(spec, 1400.0) * 1.1;
   col += vec3(1.0) * key * uLightK.x * (1.0 - ink * 0.5);
+  col = mix(col, col * 0.85 + 0.16, emb * 0.7);          // a soft frost in the carving, so it reads
   return col;
 }
 
@@ -1252,7 +1321,18 @@ function frame(t) {
   gl.uniform4f(uni('uBox'), geo.cx, geo.cy, hw, hh);
   gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
   gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
-  gl.uniform4f(uni('uBead'), gx(geo.orb[0]), gy(geo.orb[1]), P.bead ? geo.orb[2] * 0.7 * g : 0, P.sink);
+  // the icon: star, the chosen agent's glyph (melting from the last one), a flowing orb, or carved into the glass
+  const AG = { research: [1, '#ff8a3b'], design: [2, '#3d86ff'], build: [3, '#35c27a'] }, ag = AG[P.agent];
+  const mode = { star: 0, glyph: 1, orb: 2, emboss: 3 }[P.icon] || 0;
+  const tg = mode === 0 || !ag ? 0 : ag[0];
+  if (tg !== s.gTo) { s.gFrom = s.gT >= 0.5 ? s.gTo : s.gFrom; s.gTo = tg; s.gT = 0; }
+  s.gT = reduce ? 1 : Math.min(1, s.gT + dt * 2.6);
+  if (!STILL) s.orbPh += dt * (reduce ? 0.2 : 0.55 + 2.6 * Math.max(0, s.press) + 0.6 * s.hov);
+  gl.uniform4f(uni('uIcon'), mode, s.gFrom, s.gTo, s.gT);
+  gl.uniform3fv(uni('uIconTint'), hex(ag ? ag[1] : '#8a7dff'));
+  gl.uniform3f(uni('uIconPos'), gx(geo.orb[0]), gy(geo.orb[1]), geo.orb[2] * 0.7 * g);
+  gl.uniform1f(uni('uOrbPh'), s.orbPh);
+  gl.uniform4f(uni('uBead'), gx(geo.orb[0]), gy(geo.orb[1]), P.bead && mode !== 3 ? geo.orb[2] * 0.7 * g : 0, P.sink);
   gl.uniform4f(uni('uBead2'), P.smoke, P.starSize, reduce ? 0 : P.starMotion, 0);
   gl.uniform4f(uni('uLabelRect'), gx(geo.rect[0]), gy(geo.rect[1]), geo.rect[2] * g, geo.rect[3] * g);
   const mr = geo.menu, mt = s.menuT;
