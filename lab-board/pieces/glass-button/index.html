@@ -45,7 +45,7 @@
 
   /* ---------- glass menu ---------- */
   .menu{
-    position:absolute; left:0; top:calc(100% + .38em); min-width:100%; padding:.2em; margin:0; list-style:none;
+    position:absolute; left:0; top:calc(100% + .38em); min-width:100%; padding:.4em; margin:0; list-style:none;
     border-radius:.7em; font-size:.5em; color:var(--ink);
     background:linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.38));
     -webkit-backdrop-filter:blur(16px) saturate(1.4); backdrop-filter:blur(16px) saturate(1.4);
@@ -55,7 +55,7 @@
   }
   .menu.open{transform:none; opacity:1; pointer-events:auto}
   .menu li{
-    display:flex; align-items:center; gap:.7em; padding:.8em 1em; border-radius:.5em; cursor:pointer; outline:none;
+    display:flex; align-items:center; gap:.8em; padding:1.15em 1.5em; border-radius:.5em; cursor:pointer; outline:none;
     background:radial-gradient(6em 3em at var(--ix, 50%) 50%, rgba(255,255,255,var(--ia, 0)), transparent 70%);
   }
   .menu li:focus-visible{box-shadow:inset 0 0 0 2px rgba(20,20,20,.35)}
@@ -144,6 +144,9 @@
         opacity:0; pointer-events:none; transition:opacity .2s var(--ease)}
   body.dragging .drop{opacity:1}
   .presets{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px}
+  .row .act{margin-top:4px; padding:7px 10px; border:0; border-radius:8px; font:inherit; font-size:11.5px; color:var(--ink); cursor:pointer;
+    background:rgba(255,255,255,.75); box-shadow:inset 0 0 0 1px rgba(20,20,20,.1)}
+  .row .act:hover{background:#fff}
   .presets button, .acts button{
     border:0; padding:6px 10px; border-radius:999px; font:inherit; font-size:11.5px; color:var(--ink); cursor:pointer;
     background:rgba(255,255,255,.75); box-shadow:inset 0 0 0 1px rgba(20,20,20,.1);
@@ -186,9 +189,9 @@
       <svg class="chev" id="chev" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
     </button>
     <ul class="menu" id="menu" role="menu" aria-label="Agents">
-      <li role="menuitem" tabindex="-1" data-agent="research" aria-keyshortcuts="1"><span class="dot" style="background:#ff8a3b"></span><span class="tx"><span class="nm">Research</span><span class="ds">Find sources, sum up</span></span><kbd class="k" aria-hidden="true">1</kbd></li>
-      <li role="menuitem" tabindex="-1" data-agent="design" aria-keyshortcuts="2"><span class="dot" style="background:#3d86ff"></span><span class="tx"><span class="nm">Design</span><span class="ds">Sketch flows and layouts</span></span><kbd class="k" aria-hidden="true">2</kbd></li>
-      <li role="menuitem" tabindex="-1" data-agent="build" aria-keyshortcuts="3"><span class="dot" style="background:#35c27a"></span><span class="tx"><span class="nm">Build</span><span class="ds">Turn ideas into code</span></span><kbd class="k" aria-hidden="true">3</kbd></li>
+      <li role="menuitem" tabindex="-1" data-agent="research" aria-keyshortcuts="1"><span class="dot" style="background:#ff8a3b"></span><span class="nm">Research</span></li>
+      <li role="menuitem" tabindex="-1" data-agent="design" aria-keyshortcuts="2"><span class="dot" style="background:#3d86ff"></span><span class="nm">Design</span></li>
+      <li role="menuitem" tabindex="-1" data-agent="build" aria-keyshortcuts="3"><span class="dot" style="background:#35c27a"></span><span class="nm">Build</span></li>
     </ul>
   </div>
 </main>
@@ -226,7 +229,7 @@ const DEF = {
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
   follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
-  text: 'Ask an agent', agent: '', icon: 'star', ink: '#1b1c20', inkA: .94, chevron: true,
+  text: 'Ask an agent', agent: '', icon: 'glyph', ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'grid', bgColor: '#39435a', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
@@ -286,10 +289,11 @@ const CTRL = [
   { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, dep: 'glowOn' },
   { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, dep: 'glowOn' },
   { g: 'Icon' },
-  { k: 'icon', l: 'Style', t: 'seg', o: ['star', 'glyph', 'orb', 'emboss'] },
+  { k: 'icon', l: 'Style', t: 'seg', o: ['glyph', 'orb', 'emboss'] },
+  { k: 'fitIcon', l: 'Fit the icon inside the glass', t: 'action' },
   { k: 'bead', l: 'Show bead', t: 'check' },
-  { k: 'beadSize', l: 'Size', min: .8, max: 3, s: .01 },
-  { k: 'sink', l: 'Sink into glass', min: -.8, max: 1.4, s: .01 },
+  { k: 'beadSize', l: 'Size', min: .4, max: 3, s: .01 },
+  { k: 'sink', l: 'Sink into glass', min: -.8, max: 3, s: .01 },
   { k: 'smoke', l: 'Smoke', min: 0, max: 1, s: .01 },
   { k: 'starSize', l: 'Star size', min: 0, max: 1, s: .01 },
   { k: 'starMotion', l: 'Star motion', min: 0, max: 2, s: .01 },
@@ -319,6 +323,7 @@ function save() {
 }
 let P = STILL ? Object.assign({}, DEF) : load();
 delete P.bgTint;
+if (P.icon === 'star') P.icon = 'glyph';                                   // the star style is gone
 { const m = /^Ask (agents|research|design|build)$/.exec(P.text || '');       // the old labels
   if (m) { if (m[1] === 'agents') { P.text = DEF.text; P.agent = ''; } else { P.agent = m[1]; P.text = m[1][0].toUpperCase() + m[1].slice(1) + ' agent'; } } }
 if (P.shadowStyle === 'glow') P.glowOn = true; delete P.shadowStyle;     // the old style switch became a toggle
@@ -613,6 +618,44 @@ window.addEventListener('pointerup', () => { if (s.tpress > 0 && P.release) clic
 btn.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) click(false); });
 btn.addEventListener('keyup', e => { if ((e.key === 'Enter' || e.key === ' ') && P.release) click(true); });
 
+// ---------- fit the icon inside the glass ----------
+// The same solid as the shader (the button alone, at rest), in css px: < 0 inside.
+function solidAt(x, y, z) {
+  const hh = geo.hh, hw = geo.hw, corner = Math.min(P.corner * hh, hw, hh);
+  const qx = Math.abs(x - geo.cx) - hw + corner, qy = Math.abs(y - geo.cy) - hh + corner;
+  const e = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - corner;
+  const X = Math.min(1, Math.max(0, -e / hh)), n = P.profile, a = Math.max(1 - X, 1e-5), f = Math.pow(Math.max(1 - Math.pow(a, n), 1e-5), 1 / n);
+  const wall = Math.max(P.wall, -P.dome - P.under + 0.08), zm = (P.lift + P.under) * hh;
+  const top = zm + (wall + P.dome * f) * hh, bot = zm - P.under * f * hh;
+  return { d: Math.max(e, z - top, bot - z), top, bot };
+}
+const SPHERE = [];                                     // directions to test the sphere's surface with
+for (let i = 0; i < 60; i++) { const y = 1 - (i + 0.5) / 30, r = Math.sqrt(Math.max(0, 1 - y * y)), a = i * 2.39996; SPHERE.push([Math.cos(a) * r, Math.sin(a) * r, y]); }
+function fitOnce() {
+  const bx = geo.orb[0], by = geo.orb[1], m = Math.max(1.5, geo.hh * 0.05);
+  const c = solidAt(bx, by, 0), zc = (c.top + c.bot) / 2;
+  let br = Math.max(1, (c.top - c.bot) / 2 - m);
+  const inside = r => SPHERE.every(([dx, dy, dz]) => solidAt(bx + dx * r, by + dy * r, zc + dz * r).d < -m * 0.5);
+  for (let i = 0; i < 60 && !inside(br); i++) br *= 0.95;
+  return { br, sink: (c.top - zc) / br };
+}
+const ACTIONS = {
+  async fitIcon(b) {
+    const em = parseFloat(getComputedStyle(btn).fontSize) || 16;
+    for (let i = 0; i < 4; i++) {                        // the slot size moves the bead a little, so settle it in a few passes
+      const f = fitOnce();
+      P.beadSize = Math.max(.4, Math.min(3, (f.br / 0.7) * 2 / em));
+      P.sink = Math.max(-.8, Math.min(3, f.sink));
+      apply(); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); layout();
+    }
+    // the final sink for the bead the shader really draws (0.7 of the slot), centred in the glass's thickness
+    const c = solidAt(geo.orb[0], geo.orb[1], 0), brA = geo.orb[2] * 0.7;
+    P.sink = Math.max(-.8, Math.min(3, (c.top - (c.top + c.bot) / 2) / brA));
+    P.bead = true; save(); syncInputs();
+    if (b) { const t = b.textContent; b.textContent = 'Fitted'; setTimeout(() => { b.textContent = t; }, 1200); }
+  },
+};
+
 // ---------- the panel ----------
 const inputs = {};
 const fmt = (c, v) => c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 ? 3 : 2);   // the number you can edit
@@ -631,7 +674,11 @@ function buildPanel() {
     if (c.g) { panel.appendChild(el('h3', null, c.g)); continue; }
     const row = el('div', 'row'), id = `in-${c.k}`, lab = el('label', null, c.l); lab.htmlFor = id; row.appendChild(lab);
     let inp;
-    if (c.t === 'check') { inp = el('input'); inp.type = 'checkbox'; inp.addEventListener('change', () => set(c.k, inp.checked)); row.appendChild(inp); }
+    if (c.t === 'action') {
+      row.replaceChildren(); inp = el('button', 'act full', c.l); inp.type = 'button';
+      inp.addEventListener('click', () => ACTIONS[c.k](inp)); row.appendChild(inp);
+    }
+    else if (c.t === 'check') { inp = el('input'); inp.type = 'checkbox'; inp.addEventListener('change', () => set(c.k, inp.checked)); row.appendChild(inp); }
     else if (c.t === 'color') { inp = el('input'); inp.type = 'color'; inp.addEventListener('input', () => set(c.k, inp.value)); row.appendChild(inp); }
     else if (c.t === 'text') { inp = el('input', 'full'); inp.type = 'text'; inp.maxLength = 32; inp.spellcheck = false; inp.addEventListener('input', () => set(c.k, inp.value || ' ')); row.appendChild(el('span')); row.appendChild(inp); }
     else if (c.t === 'sounds') {
@@ -719,7 +766,7 @@ function paintRange(c, inp, v, force) {
 }
 function syncInputs() {
   for (const c of CTRL) {
-    if (c.g) continue; const inp = inputs[c.k], v = P[c.k];
+    if (c.g || c.t === 'action') continue; const inp = inputs[c.k], v = P[c.k];
     if (c.t === 'check') inp.checked = !!v;
     else if (c.t === 'color' || c.t === 'text') { if (document.activeElement !== inp) inp.value = v; }
     else if (c.t === 'seg' || c.t === 'bgs' || c.t === 'sounds') [...inp.children].forEach(b => b.dataset.v && b.setAttribute('aria-pressed', String(b.dataset.v === v)));
@@ -797,17 +844,13 @@ function paintLabel() {
     g.beginPath(); g.moveTo(-7 * k, -3 * k); g.lineTo(0, 4 * k); g.lineTo(7 * k, -3 * k); g.stroke(); g.restore();
   }
   for (const li of items) {                             // the menu items, printed on the menu's glass
-    const dot = li.querySelector('.dot'), nm = li.querySelector('.nm'), ds = li.querySelector('.ds'), kk = li.querySelector('.k');
+    const dot = li.querySelector('.dot'), nm = li.querySelector('.nm');
     const font = el => { const c = getComputedStyle(el); return `${c.fontWeight} ${c.fontSize} "Inter Tight", system-ui, sans-serif`; };
     const dr = dot.getBoundingClientRect();
     g.fillStyle = dot.style.background; g.beginPath(); g.arc(dr.left + dr.width / 2, dr.top + dr.height / 2, dr.width / 2, 0, 7); g.fill();
     g.fillStyle = P.ink; g.textBaseline = 'middle';
     const nr = nm.getBoundingClientRect(); g.font = font(nm); g.fillText(nm.textContent, nr.left, nr.top + nr.height / 2 + 0.5);
-    const sr = ds.getBoundingClientRect(); g.font = font(ds); g.globalAlpha = .55; g.fillText(ds.textContent, sr.left, sr.top + sr.height / 2 + 0.5);
-    const kr = kk.getBoundingClientRect(); g.globalAlpha = .35; g.strokeStyle = P.ink; g.lineWidth = 1;   // a keycap
-    g.beginPath(); g.roundRect(kr.left + .5, kr.top + .5, kr.width - 1, kr.height - 1, Math.min(kr.height * 0.3, 6)); g.stroke();
-    g.globalAlpha = .7; g.font = font(kk); g.textAlign = 'center'; g.fillText(kk.textContent, kr.left + kr.width / 2, kr.top + kr.height / 2 + 0.5);
-    g.textAlign = 'left'; g.globalAlpha = 1;
+
   }
   geo.rect = [x0, y0, w, h];
   labelDirty = false;
@@ -986,7 +1029,7 @@ vec3 envAt(vec3 p, vec3 d){
 // ---------- icons: puffy glyphs as distance fields (< 0 inside), in the icon's unit space ----------
 float sdSeg(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 float glyphD(float id, vec2 p){
-  if (id < 0.5) { float e = 0.62; return (pow(abs(p.x), e) + pow(abs(p.y), e) - 1.0) * 0.5; }          // the star
+  if (id < 0.5) return min(length(p - vec2(0.0, -0.42)), min(length(p - vec2(-0.42, 0.3)), length(p - vec2(0.42, 0.3)))) - 0.3;   // any agent: three dots
   if (id < 1.5) {                                                                                  // research: a lens
     float ring = abs(length(p - vec2(-0.14)) - 0.44) - 0.14;
     return min(ring, sdSeg(p, vec2(0.2), vec2(0.7)) - 0.15);
@@ -1323,8 +1366,8 @@ function frame(t) {
   gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
   // the icon: star, the chosen agent's glyph (melting from the last one), a flowing orb, or carved into the glass
   const AG = { research: [1, '#ff8a3b'], design: [2, '#3d86ff'], build: [3, '#35c27a'] }, ag = AG[P.agent];
-  const mode = { star: 0, glyph: 1, orb: 2, emboss: 3 }[P.icon] || 0;
-  const tg = mode === 0 || !ag ? 0 : ag[0];
+  const mode = { glyph: 1, orb: 2, emboss: 3 }[P.icon] || 1;
+  const tg = ag ? ag[0] : 0;
   if (tg !== s.gTo) { s.gFrom = s.gT >= 0.5 ? s.gTo : s.gFrom; s.gTo = tg; s.gT = 0; }
   s.gT = reduce ? 1 : Math.min(1, s.gT + dt * 2.6);
   if (!STILL) s.orbPh += dt * (reduce ? 0.2 : 0.55 + 2.6 * Math.max(0, s.press) + 0.6 * s.hov);
