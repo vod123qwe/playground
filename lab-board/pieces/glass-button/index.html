@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glass Button · lab</title>
+<meta name="description" content="A glass button that catches the light: the highlight follows your cursor, the rim glints in spectral colours and the star inside the lens keeps turning.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  @property --rim  { syntax: '<angle>'; initial-value: 0deg; inherits: true; }
+  @property --star { syntax: '<angle>'; initial-value: 0deg; inherits: true; }
+  :root{
+    --ink:#141414; --paper:#e9e6df;
+    --bg-a:#e4e6e9; --bg-b:#b8bcc2; --bg-c:#7e848b;
+    --ease:cubic-bezier(.2,.8,.2,1); --spring:cubic-bezier(.2,1.6,.4,1);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%; margin:0}
+  body{
+    background:linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 48%, var(--bg-c) 100%);
+    color:#fff; font-family:"Google Sans Flex", system-ui, sans-serif; overflow:hidden;
+    -webkit-font-smoothing:antialiased; touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  /* faint panel outline behind, like the window the button lives in */
+  .frame{position:fixed; left:9vw; top:24vh; right:-12vw; bottom:-30vh; border:1px solid rgba(255,255,255,.34); border-radius:72px; pointer-events:none}
+  .stage{position:fixed; inset:0; display:grid; place-items:center}
+  .anchor{position:relative; font-size:clamp(26px, 4.6vw, 46px)}
+
+  /* coloured light that the glass throws onto the background */
+  .caustic{
+    position:absolute; left:var(--cx, 45%); top:78%; width:78%; height:120%; pointer-events:none;
+    transform:translate(-50%, 0); filter:blur(28px); opacity:calc(.42 + var(--hov, 0) * .3);
+    background:
+      radial-gradient(closest-side at 42% 30%, rgba(176,255,150,.55), transparent 70%),
+      radial-gradient(closest-side at 64% 36%, rgba(255,226,120,.45), transparent 70%),
+      radial-gradient(closest-side at 30% 44%, rgba(190,160,255,.28), transparent 70%);
+    mix-blend-mode:soft-light;
+  }
+
+  /* ---------- the button ---------- */
+  .btn{
+    --mx:30%; --my:20%; --hov:0; --press:1; --px:0px; --py:0px;
+    position:relative; display:inline-flex; align-items:center; gap:.42em;
+    height:2.36em; padding:0 1em 0 .36em; border:0; border-radius:999px; cursor:pointer;
+    color:#fff; font:inherit; font-weight:500; letter-spacing:-.012em; line-height:1;
+    background:linear-gradient(180deg, rgba(255,255,255,.36), rgba(255,255,255,.13) 56%, rgba(255,255,255,.22));
+    -webkit-backdrop-filter:blur(14px) saturate(1.45); backdrop-filter:blur(14px) saturate(1.45);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,.78),
+      inset 0 -1.5px 0 rgba(255,255,255,.34),
+      inset 0 0 0 1px rgba(255,255,255,.26),
+      inset 0 .42em .7em -.42em rgba(255,255,255,.55),
+      inset 0 -.5em .7em -.46em rgba(0,0,0,.13),
+      0 .7em 1.4em -.7em rgba(38,46,56,.5),
+      0 .05em .14em rgba(0,0,0,.06);
+    text-shadow:0 1px 2px rgba(0,0,0,.16);
+    transform:translate(var(--px), var(--py)) scale(var(--press));
+    transition:transform .5s var(--spring);
+    outline:none; -webkit-tap-highlight-color:transparent;
+  }
+  .btn:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.9), 0 0 0 6px rgba(20,20,20,.35)}
+  /* light that follows the cursor across the glass */
+  .btn .light{
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:radial-gradient(4.2em 3em at var(--mx) var(--my), rgba(255,255,255,.5), rgba(255,255,255,.12) 45%, transparent 72%);
+    opacity:calc(.35 + var(--hov) * .65);
+  }
+  /* a soft streak that sweeps once when you arrive */
+  .btn .sheen{
+    position:absolute; inset:0; border-radius:inherit; overflow:hidden; pointer-events:none;
+  }
+  .btn .sheen::before{
+    content:""; position:absolute; inset:-20% -60%;
+    background:linear-gradient(105deg, transparent 42%, rgba(255,255,255,.34) 49%, rgba(255,255,255,.08) 53%, transparent 58%);
+    transform:translateX(var(--sweep, -60%));
+  }
+  /* spectral rim: thin rainbow glints travelling around the edge */
+  .btn .rim{
+    position:absolute; inset:0; border-radius:inherit; padding:1.6px; pointer-events:none;
+    background:conic-gradient(from var(--rim),
+      transparent 0deg 40deg, rgba(186,140,255,.95) 58deg, rgba(128,240,208,.95) 72deg, rgba(255,226,122,.95) 86deg, transparent 104deg 210deg,
+      rgba(255,154,213,.9) 232deg, rgba(138,215,255,.95) 246deg, rgba(215,255,138,.9) 260deg, transparent 280deg 360deg);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    opacity:calc(.55 + var(--hov) * .45);
+  }
+  .btn .label{position:relative; white-space:nowrap}
+  .btn .chev{position:relative; width:.62em; height:.62em; margin-left:.08em; transition:transform .45s var(--spring)}
+  .btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+  /* ---------- the lens with the star ---------- */
+  .orb{
+    position:relative; flex:none; width:1.72em; height:1.72em; border-radius:50%;
+    background:radial-gradient(circle at 50% 38%, #74787e 0%, #3b3e43 52%, #1d1f23 100%);
+    box-shadow:
+      inset 0 0 0 .05em rgba(255,255,255,.9),
+      inset 0 .07em .14em rgba(255,255,255,.55),
+      inset 0 -.2em .32em rgba(0,0,0,.5),
+      0 .14em .32em rgba(0,0,0,.28);
+  }
+  .orb .ring{
+    position:absolute; inset:-.02em; border-radius:50%; padding:.07em; pointer-events:none;
+    background:conic-gradient(from calc(var(--star) * -1), #ff7a7a, #ffd86b, #7dffb2, #6bb8ff, #c48bff, #ff7a7a);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    opacity:.5; mix-blend-mode:screen;
+  }
+  .orb .glow{position:absolute; inset:22%; border-radius:50%; background:radial-gradient(closest-side, rgba(255,196,120,.55), transparent); filter:blur(.12em)}
+  .orb .star{
+    position:absolute; inset:21%;
+    background:conic-gradient(from var(--star), #ff5b3a, #ffb13b, #ffe45c, #ffffff 40%, #3d86ff 58%, #6a5cff 72%, #ff5b3a);
+    -webkit-mask:var(--star-shape) center / contain no-repeat; mask:var(--star-shape) center / contain no-repeat;
+  }
+  .orb .merc{position:absolute; inset:0; width:100%; height:100%; border-radius:50%; display:block}
+  .orb .edge{position:absolute; inset:0; border-radius:50%; box-shadow:inset 0 0 0 .045em rgba(255,255,255,.88), inset 0 .06em .1em rgba(255,255,255,.4); pointer-events:none}
+  :root{ --star-shape:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 2 C53.5 33 67 46.5 98 50 C67 53.5 53.5 67 50 98 C46.5 67 33 53.5 2 50 C33 46.5 46.5 33 50 2 Z'/%3E%3C/svg%3E"); }
+
+  /* ---------- glass menu ---------- */
+  .menu{
+    position:absolute; left:0; top:calc(100% + .28em); min-width:100%; padding:.18em; margin:0; list-style:none;
+    border-radius:.62em; font-size:.56em;
+    background:linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.16));
+    -webkit-backdrop-filter:blur(16px) saturate(1.5); backdrop-filter:blur(16px) saturate(1.5);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75), inset 0 0 0 1px rgba(255,255,255,.24), 0 1.2em 2.4em -1.2em rgba(38,46,56,.5);
+    transform-origin:1.4em 0; transform:scale(.92) translateY(-.3em); opacity:0; pointer-events:none;
+    transition:transform .45s var(--spring), opacity .2s var(--ease);
+  }
+  .menu.open{transform:none; opacity:1; pointer-events:auto}
+  .menu li{
+    display:flex; align-items:center; gap:.6em; padding:.62em .8em; border-radius:.44em; cursor:pointer; outline:none;
+    background:radial-gradient(6em 3em at var(--ix, 50%) 50%, rgba(255,255,255,var(--ia, 0)), transparent 70%);
+  }
+  .menu li:focus-visible{box-shadow:inset 0 0 0 2px rgba(255,255,255,.8)}
+  .menu li .dot{width:.5em; height:.5em; border-radius:50%; flex:none; box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)}
+  .menu li .k{margin-left:auto; opacity:.55; font-size:.86em}
+
+  /* ---------- chrome ---------- */
+  .meta{position:fixed; left:clamp(16px, 3vw, 32px); right:clamp(16px, 3vw, 32px); display:flex; justify-content:space-between; font-size:13px; color:rgba(20,20,20,.72); pointer-events:none}
+  .meta a{color:inherit; pointer-events:auto}
+  .meta.top{top:18px} .meta.bottom{bottom:18px}
+  .meta b{font-weight:600; color:var(--ink)}
+  body.bare .meta{display:none}
+  @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} }
+  @media (prefers-reduced-motion:reduce){ .btn,.menu,.btn .chev{transition-duration:.01s} }
+</style>
+</head>
+<body>
+<div class="frame" aria-hidden="true"></div>
+<div class="meta top"><a href="../../">← lab</a><span><b>01</b> · glass button</span></div>
+<main class="stage">
+  <div class="anchor" id="anchor">
+    <div class="caustic" aria-hidden="true"></div>
+    <button class="btn" id="btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu">
+      <span class="light" aria-hidden="true"></span>
+      <span class="sheen" aria-hidden="true"></span>
+      <span class="orb" aria-hidden="true"><canvas class="merc" id="merc"></canvas><span class="glow"></span><span class="star"></span><span class="ring"></span><span class="edge"></span></span>
+      <span class="label">Ask agents</span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
+      <span class="rim" aria-hidden="true"></span>
+    </button>
+    <ul class="menu" id="menu" role="menu" aria-label="Agents">
+      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#ffb13b"></span>Research<span class="k">R</span></li>
+      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#6bb8ff"></span>Design<span class="k">D</span></li>
+      <li role="menuitem" tabindex="-1"><span class="dot" style="background:#7dffb2"></span>Build<span class="k">B</span></li>
+    </ul>
+  </div>
+</main>
+<div class="meta bottom"><span>move · press · open</span><span>study after a shot found on <a href="https://recent.design" target="_blank" rel="noreferrer">recent.design</a></span></div>
+
+<script>
+// Glass Button: every light on the glass is driven by a few CSS variables eased in one loop.
+const q = new URLSearchParams(location.search);
+const STILL = q.has('still');                 // frozen, pretty frame for thumbnails
+if (q.has('bare')) document.body.classList.add('bare');
+const btn = document.getElementById('btn'), anchor = document.getElementById('anchor'), menu = document.getElementById('menu');
+const items = [...menu.querySelectorAll('li')];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const s = { mx: .3, my: .2, tmx: .3, tmy: .2, hov: 0, thov: 0, px: 0, py: 0, tpx: 0, tpy: 0, rim: 200, star: 40, sweep: -60, sweeping: false };
+function onMove(x, y) {
+  const r = btn.getBoundingClientRect();
+  s.tmx = (x - r.left) / r.width; s.tmy = (y - r.top) / r.height;
+  // proximity: the glass wakes up a little before you touch it
+  const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom), d = Math.hypot(dx, dy);
+  const prox = Math.max(0, 1 - d / 140);
+  const was = s.thov; s.thov = prox;
+  if (prox > .95 && was <= .95) sweep();
+  // magnetic pull toward the cursor, never more than a few px
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  s.tpx = Math.max(-1, Math.min(1, (x - cx) / r.width)) * 6 * prox;
+  s.tpy = Math.max(-1, Math.min(1, (y - cy) / r.height)) * 4 * prox;
+}
+function sweep() { if (reduce) return; s.sweep = -60; s.sweeping = true; }
+window.addEventListener('pointermove', e => onMove(e.clientX, e.clientY), { passive: true });
+window.addEventListener('pointerleave', () => { s.thov = 0; s.tpx = s.tpy = 0; });
+btn.addEventListener('pointerdown', e => { btn.style.setProperty('--press', '.965'); onMove(e.clientX, e.clientY); });
+window.addEventListener('pointerup', () => btn.style.setProperty('--press', '1'));
+window.addEventListener('pointercancel', () => btn.style.setProperty('--press', '1'));
+
+// menu
+function setMenu(open, focusFirst) {
+  btn.setAttribute('aria-expanded', String(open)); menu.classList.toggle('open', open);
+  if (open && focusFirst) items[0].focus(); if (!open) btn.focus({ preventScroll: true });
+}
+btn.addEventListener('click', () => { setMenu(btn.getAttribute('aria-expanded') !== 'true', false); sweep(); });
+btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); setMenu(true, true); } });
+menu.addEventListener('keydown', e => {
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') setMenu(false);
+  if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(items[i]); }
+});
+items.forEach(li => {
+  li.addEventListener('pointermove', e => { const r = li.getBoundingClientRect(); li.style.setProperty('--ix', `${((e.clientX - r.left) / r.width) * 100}%`); li.style.setProperty('--ia', '.38'); });
+  li.addEventListener('pointerleave', () => li.style.setProperty('--ia', '0'));
+  li.addEventListener('click', () => choose(li));
+});
+function choose(li) { btn.querySelector('.label').textContent = `Ask ${li.textContent.replace(/[A-Z]$/, '').trim().toLowerCase()}`; setMenu(false); sweep(); }
+document.addEventListener('pointerdown', e => { if (!anchor.contains(e.target)) setMenu(false); });
+
+// ---------- liquid mercury lens (WebGL); CSS gradient stays as the fallback ----------
+const merc = (() => {
+  const cv = document.getElementById('merc'), gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: true });
+  if (!gl) return null;
+  const vs = `attribute vec2 a; varying vec2 vUv; void main(){ vUv = a * 0.5 + 0.5; gl_Position = vec4(a, 0.0, 1.0); }`;
+  const fs = `precision highp float;
+  uniform float uTime, uJiggle; uniform vec2 uLight; varying vec2 vUv;
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float noise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y); }
+  vec3 env(vec3 r){                      // a small studio: dark room, a softbox strip on top, warm and cool sides
+    vec3 c = mix(vec3(0.04, 0.045, 0.05), vec3(0.24, 0.25, 0.27), smoothstep(-0.6, 0.45, r.y));
+    c += vec3(1.0) * smoothstep(0.58, 0.68, r.y) * (1.0 - smoothstep(0.8, 0.9, r.y)) * 0.8;   // softbox, kept soft so it reads as metal, not paint
+    c += vec3(0.92, 0.96, 1.0) * pow(max(dot(r, normalize(vec3(uLight, 0.85))), 0.0), 36.0) * 1.8;
+    c += vec3(1.0, 0.72, 0.42) * smoothstep(0.45, 1.0, r.x) * 0.28;
+    c += vec3(0.45, 0.64, 1.0) * smoothstep(0.45, 1.0, -r.x) * 0.24;
+    c += vec3(0.7) * smoothstep(-0.25, -0.95, r.y) * 0.16;
+    return c;
+  }
+  void main(){
+    vec2 p = vUv * 2.0 - 1.0; float r = length(p);
+    if (r > 1.0) { gl_FragColor = vec4(0.0); return; }
+    float t = uTime * 0.35, amp = 0.32 + uJiggle * 0.9;
+    vec2 w = vec2(noise(p * 2.2 + vec2(t, -t * 0.7)), noise(p * 2.2 + vec2(-t * 0.8, t) + 7.3)) - 0.5;
+    vec3 n = normalize(vec3(p + w * amp * (1.0 - r * r * 0.6), sqrt(max(1.0 - r * r, 0.0))));
+    vec3 col = env(reflect(vec3(0.0, 0.0, -1.0), n));
+    col = mix(col * 0.86, vec3(0.95), pow(1.0 - n.z, 3.0) * 0.32);             // fresnel
+    col *= mix(0.55, 1.0, smoothstep(0.0, 0.72, r));                            // darker core so the star reads
+    col += vec3(0.22, 0.08, 0.32) * smoothstep(0.86, 0.99, r) * 0.3;            // violet refraction at the edge
+    float a = 1.0 - smoothstep(0.975, 1.0, r);
+    gl_FragColor = vec4(col * a, a);
+  }`;
+  const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  try {
+    const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+    gl.useProgram(pr);
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = { t: gl.getUniformLocation(pr, 'uTime'), j: gl.getUniformLocation(pr, 'uJiggle'), l: gl.getUniformLocation(pr, 'uLight') };
+    document.querySelector('.orb').style.background = 'transparent';
+    return {
+      jiggle: 0,
+      draw(time, lx, ly) {
+        const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+        if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; gl.viewport(0, 0, w, h); }
+        gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.uniform1f(U.t, time); gl.uniform1f(U.j, this.jiggle); gl.uniform2f(U.l, lx, ly);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+    };
+  } catch (err) { console.warn('mercury lens off:', err); return null; }
+})();
+btn.addEventListener('pointerdown', () => { if (merc) merc.jiggle = 1; });
+
+// one loop eases everything and writes the variables
+let last = performance.now();
+function frame(t) {
+  requestAnimationFrame(frame);
+  const dt = Math.min((t - last) / 1000, 1 / 20); last = t;
+  const k = 1 - Math.pow(1 - .16, dt * 60);
+  s.mx += (s.tmx - s.mx) * k; s.my += (s.tmy - s.my) * k; s.hov += (s.thov - s.hov) * k;
+  s.px += (s.tpx - s.px) * k; s.py += (s.tpy - s.py) * k;
+  if (!reduce) s.star += dt * 38;                                  // the star keeps turning
+  // the rim glint idles around the edge and leans toward the cursor when you are near
+  const toCursor = Math.atan2(s.my - .5, (s.mx - .5) * 3.2) * 180 / Math.PI + 90;
+  const idle = reduce ? 200 : (s.rim + dt * 22);
+  let d = ((toCursor - 70 - idle) % 360 + 540) % 360 - 180;       // 70°: where the first glint sits in the gradient
+  s.rim = idle + d * s.hov * k * 1.4;
+  if (s.sweeping) { s.sweep += dt * 260; if (s.sweep > 60) s.sweeping = false; }
+  const st = btn.style;
+  st.setProperty('--mx', `${(s.mx * 100).toFixed(2)}%`); st.setProperty('--my', `${(s.my * 100).toFixed(2)}%`);
+  st.setProperty('--hov', s.hov.toFixed(3)); st.setProperty('--px', `${s.px.toFixed(2)}px`); st.setProperty('--py', `${s.py.toFixed(2)}px`);
+  st.setProperty('--sweep', `${s.sweep.toFixed(1)}%`);
+  document.documentElement.style.setProperty('--rim', `${s.rim.toFixed(1)}deg`);
+  document.documentElement.style.setProperty('--star', `${s.star.toFixed(1)}deg`);
+  anchor.style.setProperty('--cx', `${(30 + s.mx * 30).toFixed(1)}%`);
+  anchor.style.setProperty('--hov', s.hov.toFixed(3));
+  if (merc) {                                      // the key light follows the cursor; a press makes the metal shiver
+    merc.jiggle *= Math.pow(0.9, dt * 60);
+    merc.draw(reduce ? 0 : t / 1000, (s.mx - 0.5) * 1.6, (0.5 - s.my) * 1.2 + 0.35);
+  }
+}
+if (STILL) {                                    // one composed frame: light top-left, glints on both edges
+  Object.assign(s, { mx: .32, my: .18, tmx: .32, tmy: .18, hov: .55, thov: .55, rim: 205, star: 34 });
+  if (merc) merc.draw(4.2, -0.3, 0.75);
+  frame(performance.now()); requestAnimationFrame = () => 0;
+} else requestAnimationFrame(frame);
+</script>
+</body>
+</html>
