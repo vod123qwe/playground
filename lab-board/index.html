@@ -42,6 +42,7 @@
   }
   .slots a:focus-visible{outline:2px solid var(--ink)}
   .slots.no-hit{pointer-events:none}
+  .slots a.empty{pointer-events:none}
   .board.fallback .slots a{background-size:cover; background-position:center; background-color:var(--ink)}
 
   /* ---------- custom cursor (pointer: fine only) ---------- */
@@ -381,29 +382,31 @@ const CFG = {
   words: { step: 44, minGap: 150, enter: 220, hold: 900, exit: 240, max: 7, spread: 34 }, // hover words: px travelled per word, ms between, timings
   theme: (new URLSearchParams(location.search).get('theme')) || 'dark',   // 'light' paper · 'dark' graphite (Material "Color" sheet mood)
   covers: (new URLSearchParams(location.search).get('covers')) || 'plain', // 'plain' = dark grey where no thumbnail yet · 'circle' / 'mixed' = colour field + shape · 'motif' = v1 sketches
-  plain: '#262626',                // the "no thumbnail yet" grey
+  plain: '#262626',
+  plainEmpty: '#1e1e1e',           // an empty slot waiting for the next experiment                // the "no thumbnail yet" grey
 };
 
 // ---------- content (placeholder data: Jarek's own experiments) ----------
 const PIECES = [
-  { slug:'grid-blob', depth:'thumbs/depth/grid-blob.png', back:'#252525', front:{ src:'thumbs/grid-blob-front.png', x:0, y:0, w:1, h:1 },      title:'Grid Blob',      what:'Banner generator: a 9×4 grid melted into a goo blob, exported as true vector.', year:'2026', kind:'tool',   code:'https://github.com/vod123qwe/playground', words:["goo", "grid", "banner", "vector"], rect:{x:90,y:100,w:330,h:460},   hue:212, motif:'blob' },
-  { slug:'typestorm', depth:'thumbs/depth/typestorm.png', image:'thumbs/ref/typestorm.webp', focus:[0.5, 0.6],      title:'TypeStorm',      what:'Typing shooter on Canvas. Words fall, you type them down before they land.', year:'2026', kind:'game',   words:["type fast", "canvas", "words fall", "arcade"], rect:{x:560,y:70,w:460,h:260},   hue:8,   motif:'rain' },
-  { slug:'wiredraft', depth:'thumbs/depth/wiredraft.png', image:'thumbs/ref/wiredraft.png', focus:[0.47, 0.5],      title:'WireDraft',      what:'Wireframe editor that loads a mockup from the URL hash and exports SVG or Figma.', year:'2026', kind:'tool', words:["wireframe", "hash url", "svg out", "boxes"], rect:{x:1160,y:140,w:270,h:480}, hue:40,  motif:'wire' },
-  { slug:'lottie-studio', depth:'thumbs/depth/lottie-studio.png', image:'thumbs/ref/lottie-studio.png', focus:[0.5, 0.0],  title:'Lottie Studio',  what:'Tiny keyframe editor with a timeline that writes Lottie JSON.', year:'2026', kind:'tool',                 words:["keyframes", "timeline", "json", "motion"], rect:{x:1570,y:60,w:440,h:230},  hue:280, motif:'wave' },
-  { slug:'win98-music',    title:'Win98 Music',    what:'A Windows 98 desktop in React that plays music. Draggable windows included.', year:'2026', kind:'toy', code:'https://github.com/vod123qwe/win98-music', words:["desktop", "1998", "windows", "player"], rect:{x:2150,y:120,w:280,h:500}, hue:190, motif:'win' },
-  { slug:'kronika', depth:'thumbs/depth/kronika.png', image:'thumbs/kronika.png',        title:'Kronika',        what:'Settlement roguelite drawn entirely in ASCII. Seasons turn, expeditions leave, fog hides the hexes.', year:'2026', kind:'game', words:["ascii", "seasons", "fog", "settlement"], rect:{x:2570,y:70,w:320,h:450}, hue:120, motif:'ascii' },
-  { slug:'parkove', depth:'thumbs/depth/parkove.png', image:'thumbs/ref/parkove.png', focus:[0.5, 0.5],        title:'Parkove',        what:'Outdoor game for Kraków parks: fog-of-war map, quests, a design system first.', year:'2026', kind:'mobile', words:["kraków", "fog of war", "quests", "outdoors"], rect:{x:100,y:680,w:480,h:250}, hue:140, motif:'fog' },
-  { slug:'emilka',         title:'Emilka',         what:'Tablet learning game for a five-year-old, with Polish text-to-speech.', year:'2026', kind:'game',        words:["for kids", "tablet", "polish tts", "play"], rect:{x:700,y:480,w:260,h:460},  hue:330, motif:'dots' },
-  { slug:'meander', depth:'thumbs/depth/meander.png', image:'thumbs/ref/meander.png', focus:[0.5, 0.5],        title:'Meander',        what:'Mobile trip generator: pick a mood and a distance, get a route.', year:'2026', kind:'mobile', code:'https://github.com/vod123qwe/meander', words:["trip", "mood", "distance", "route"], rect:{x:1080,y:760,w:300,h:300}, hue:170, motif:'path' },
-  { slug:'portfel', video:'thumbs/portfel.mp4', front:{ src:'thumbs/portfel-front.png', x:67/460, y:46/250, w:327/460, h:159/250, glass:{ radius:30 } },        title:'Portfel',        what:'Single-file budget PWA. Reads live data from a Gist and renders a mortgage dashboard.', year:'2025', kind:'personal', words:["budget", "pwa", "gist", "mortgage"], rect:{x:1520,y:420,w:460,h:250}, hue:48, motif:'bars' },
-  { slug:'type-tokens', back:'#001e42', front:{ src:'thumbs/type-tokens-front.png', x:91/270, y:210/480, w:89/270, h:61/480 },    title:'Type Tokens',    what:'Figma plugin that turns Material 3 text styles into variables you can theme.', year:'2026', kind:'plugin', words:["material 3", "variables", "type ramp", "figma"], rect:{x:2080,y:740,w:270,h:480}, hue:230, motif:'type' },
-  { slug:'contrast-audit', depth:'thumbs/depth/contrast-audit.png', image:'thumbs/ref/contrast-audit.png', focus:[0.5, 0.3], title:'Contrast Audit', what:'Figma plugin checking WCAG and APCA contrast across a whole file, with review mode.', year:'2026', kind:'plugin', words:["wcag", "apca", "contrast", "review"], rect:{x:2490,y:640,w:450,h:240}, hue:0, motif:'rings' },
-  { slug:'stickies',       title:'Stickies',       what:'Twelve sticky-note variants and a plugin that drops them where you point.', year:'2026', kind:'plugin', words:["notes", "twelve", "drop", "figma"], rect:{x:140,y:1050,w:260,h:470}, hue:52, motif:'notes' },
-  { slug:'audit-suite', depth:'thumbs/depth/audit-suite.png', image:'thumbs/ref/audit-suite.png', focus:[0.5, 0.5],    title:'Audit Suite',    what:'Design-system audit hub: components, types, contrast, one message router.', year:'2026', kind:'plugin', code:'https://github.com/vod123qwe/figma-audit-suite', words:["audit", "components", "types", "router"], rect:{x:520,y:1080,w:470,h:250}, hue:205, motif:'grid' },
-  { slug:'runebound',      title:'Runebound',      what:'Isometric action RPG proof of concept in Godot. CC0 assets only.', year:'2026', kind:'game',              words:["isometric", "arpg", "godot", "cc0"], rect:{x:1130,y:1180,w:330,h:470}, hue:265, motif:'iso' },
-  { slug:'cardrush',       title:'Cardrush',       what:'Horde survival meets a card deck. Isometric, Godot, waiting for its proof of concept.', year:'2026', kind:'game', words:["horde", "cards", "isometric", "godot"], rect:{x:1600,y:800,w:270,h:480}, hue:20, motif:'cards' },
-  { slug:'spellbeat', depth:'thumbs/depth/spellbeat.png', image:'thumbs/ref/spellbeat.webp', focus:[0.5, 0.55],      title:'Spellbeat',      what:'Deckbuilder crossed with a rhythm game. Parked, not forgotten.', year:'2025', kind:'game',                words:["rhythm", "deck", "parked", "beats"], rect:{x:2020,y:1350,w:450,h:240}, hue:300, motif:'beat' },
-  { slug:'file-audit',     title:'File Audit',     what:'The first Figma audit plugin: scans a design-system file and reports what drifted.', year:'2025', kind:'plugin', code:'https://github.com/vod123qwe/figma-file-audit', words:["drift", "scan", "design system", "v1"], rect:{x:2560,y:1010,w:280,h:500}, hue:95, motif:'scan' },
+  { slug:'glass-button', title:'Glass Button', what:'A glass button that catches the light. The highlight follows your cursor, the rim glints in spectral colours, and the liquid-mercury lens with its turning star shivers when you press.', year:'2026', kind:'interaction', live:'pieces/glass-button/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/glass-button', image:'thumbs/glass-button.jpg', depth:'thumbs/depth/glass-button.png', words:['glass', 'light', 'spectral', 'mercury'], rect:{x:560,y:70,w:460,h:260} },
+  // empty slots: the next experiments land here
+  { empty:true, rect:{x:90,y:100,w:330,h:460} },
+  { empty:true, rect:{x:1160,y:140,w:270,h:480} },
+  { empty:true, rect:{x:1570,y:60,w:440,h:230} },
+  { empty:true, rect:{x:2150,y:120,w:280,h:500} },
+  { empty:true, rect:{x:2570,y:70,w:320,h:450} },
+  { empty:true, rect:{x:100,y:680,w:480,h:250} },
+  { empty:true, rect:{x:700,y:480,w:260,h:460} },
+  { empty:true, rect:{x:1080,y:760,w:300,h:300} },
+  { empty:true, rect:{x:1520,y:420,w:460,h:250} },
+  { empty:true, rect:{x:2080,y:740,w:270,h:480} },
+  { empty:true, rect:{x:2490,y:640,w:450,h:240} },
+  { empty:true, rect:{x:140,y:1050,w:260,h:470} },
+  { empty:true, rect:{x:520,y:1080,w:470,h:250} },
+  { empty:true, rect:{x:1130,y:1180,w:330,h:470} },
+  { empty:true, rect:{x:1600,y:800,w:270,h:480} },
+  { empty:true, rect:{x:2020,y:1350,w:450,h:240} },
+  { empty:true, rect:{x:2560,y:1010,w:280,h:500} },
 ];
 const pad2 = n => String(n).padStart(2, '0');
 
@@ -518,6 +521,7 @@ function videoFor(i) {                              // created lazily on first h
   return videos.get(i);
 }
 function makeCover(p, i) {
+  if (p.empty) return plainCanvas(p, CFG.plainEmpty);
   if (imageCovers.has(i)) return imageCovers.get(i);
   if (p.front || p.back || p.video) return compositeCanvas(p, i);
   if (CFG.covers === 'plain') return plainCanvas(p, CFG.plain);
@@ -879,7 +883,7 @@ function createGL(canvas) {
 const stage = document.getElementById('stage'), board = document.getElementById('board'), slotsEl = document.getElementById('slots'), canvas = document.getElementById('gl');
 // overflow:hidden is still scrollable by focus/scrollIntoView; clip where supported and snap back anywhere else
 stage.addEventListener('scroll', () => { if (stage.scrollTop || stage.scrollLeft) { stage.scrollTop = 0; stage.scrollLeft = 0; } });
-const modeEl = document.getElementById('mode'); document.getElementById('count').textContent = `${PIECES.length} pieces`;
+const modeEl = document.getElementById('mode'); { const n = PIECES.filter(p => !p.empty).length; document.getElementById('count').textContent = `${n} ${n === 1 ? 'piece' : 'pieces'}`; }
 
 const covers = PIECES.map(makeCover);
 loadImageCovers();
@@ -894,6 +898,7 @@ let zoomT = 0, zoomV = 0, zoomVel = 0;            // target (persistent), spring
 const strength = { x: 0, y: 0 };
 let pushY = 0;                                    // one-off vertical bend impulses (card lift-off)
 const hovers = PIECES.map(() => ({ x: 0, y: 0 }));
+let centered = false;
 let entrance = reduceMotion ? 1 : 0, lastT = 0, startT = performance.now(), lastIW = 0, lastIH = 0;
 const FX = PIECES.map(() => ({ amt: 0, tx: 0, ty: 0, mu: 0.5, mv: 0.5, rip: 9, ru: 0.5, rv: 0.5, pix: 1 }));
 let focusAmt = 0;
@@ -1074,7 +1079,9 @@ function syncSlots() {
     if (a.dataset.index !== String(it.index)) {
       a.dataset.index = String(it.index);
       const p = PIECES[it.index];
-      a.href = `#/${p.slug}`; a.setAttribute('aria-label', `${p.title} — open piece`);
+      a.classList.toggle('empty', !!p.empty);
+      if (p.empty) { a.removeAttribute('href'); a.removeAttribute('aria-label'); a.setAttribute('aria-hidden', 'true'); a.tabIndex = -1; }
+      else { a.href = `#/${p.slug}`; a.setAttribute('aria-label', `${p.title} — open piece`); a.removeAttribute('aria-hidden'); a.removeAttribute('tabindex'); }
       if (!R) { a.style.backgroundImage = `url(${coverUrl(it.index)})`; const fo = p.focus || [0.5, 0.5]; a.style.backgroundPosition = `${fo[0] * 100}% ${fo[1] * 100}%`; }
     }
   });
@@ -1272,6 +1279,10 @@ function frame(t) {
   requestAnimationFrame(frame);
   const dt = lastT ? Math.min((t - lastT) / 1000, 1 / 30) : 1 / 60; lastT = t;
   if (innerWidth !== lastIW || innerHeight !== lastIH) { lastIW = innerWidth; lastIH = innerHeight; resize(); }
+  if (!centered && vw > 1 && !location.hash.slice(2)) {          // open on the first real piece, centred
+    centered = true; const f0 = PIECES.find(q => !q.empty);
+    if (f0) { cam.x = wrap(f0.rect.x + f0.rect.w / 2 - vw / 2 / T, CFG.cluster.w); cam.y = wrap(f0.rect.y + f0.rect.h / 2 - vh / 2 / T, CFG.cluster.h); }
+  }
   if (mode === 'momentum') {
     const nx = cam.x + cam.vx * dt, ny = cam.y + cam.vy * dt;
     dispX += nx - cam.x; dispY += ny - cam.y;

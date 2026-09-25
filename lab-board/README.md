@@ -48,7 +48,6 @@ Mechanika przeniesiona z sekcji Lab na juanmoraromero.com (analiza w pamięci Cl
   - `dither`: uporządkowany raster Bayera 4×4 (1 komórka = 1 px), w trybie ciemnym jasne punkty.
   - `live`: w spoczynku prawie nic, przy przeciąganiu, rozpędzie i zoomie ziarno i linie narastają, po zatrzymaniu miękko gasną (szybki atak, wolne wygaszanie; sygnał = prędkość kamery + siła zagięcia + sprężyna zoomu).
   Wartości krycia w `OVERLAYS`. Przy `prefers-reduced-motion` ziarno stoi, a pas TV jest wyłączony. Winieta w jasnym motywie jest słabsza.
-- **Backup**: `index.backup-2026-09-24.html` = stan sprzed efektów hover (zoom, szkło, warstwy, symbole wyłączone). Otwiera się tak samo jak `index.html`.
 - **Okładki, trzy warianty** (`CFG.covers`, przełącznik w stopce i parametr `?covers=`): `circle` = nasycone pole koloru z jednym miękkim kołem-superelipsą w siostrzanym tonie (duch arkusza „Color” z Material); `mixed` = to samo pole, ale figura z zestawu koło / trójkąt / X / ring / plus / romb / półkole / pigułka / ćwiartka, przydzielana deterministycznie po indeksie; `motif` = szkice proceduralne z v1 z numerem i tytułem. Palety par kolorów w `PAIRS`, zestaw figur w `SHAPES`. Warianty kształtowe nie mają tekstu na kaflu, numer i słowa pojawiają się na hover.
 - **Motyw jasny / ciemny** (`CFG.theme`, przełącznik w stopce, `?theme=dark`): tokeny kolorów na `:root`, nadpisane pod `[data-theme="dark"]` (grafit #161616, tusz jasny, słabsze ziarno, mocniejszy dim). Skrypt w `<head>` ustawia motyw z adresu przed pierwszym malowaniem.
 - **Miniatury jako warstwy**: kafel może mieć `back` (kolor), `front` (PNG z przezroczystością + pozycja jako ułamki kafla) i `video`. Gdy kafel nie jest najechany, WebGL rysuje kompozyt (tło + front). Na hover WebGL rysuje tylko tło (albo klatki wideo), a front przenosi się do DOM nad planszę, żeby słowa mogły wchodzić między warstwy. Dziś: grid-blob (telefon z ramieniem na #252525), portfel (karta „Find shelter” nad wideo lasu, las ze zdjęcia usunięty), type-tokens (logo na granacie). Kronika zostaje płaskim PNG. Eksport przez MCP `get_screenshot(contentsOnly)` jest 1:1, finalne okładki eksportować 2× z Figmy.
@@ -64,24 +63,15 @@ Mechanika przeniesiona z sekcji Lab na juanmoraromero.com (analiza w pamięci Cl
 - **Opcje**: na czas review zamiast ukrytego `options` jest widoczny pasek review (patrz wyżej). Wybór zapisuje się w adresie, więc link z parametrami otwiera tę samą konfigurację.
 - **Telefon**: przeciąganie jednym palcem przesuwa planszę, dwa palce robią pinch-zoom (z tą samą sprężyną co kółko), tap otwiera panel jako bottom sheet. Efekty hover i wideo odpalają się tylko myszą, na dotyku kafle są statyczne.
 
-## Miniatury przykładowe
+## Zawartość labu
 
-8 kafli ma referencje wizualne dostarczone przez Jarka (`thumbs/ref/`): zrzuty cudzych prac (interfejs Framera, LAM, aevion / Riotters, portfolio Maksyma Bleibtgleicha, noho, Pasticcino World Tour, dwie ilustracje). To WYŁĄCZNIE placeholdery podglądu, nie realizacje Jarka i nie mają związku z tytułami projektów na kaflach. Przed udostępnieniem strony komukolwiek albo przed portfolio trzeba je zastąpić własnymi okładkami.
+Od 2026-09-25 plansza jest wyczyszczona z placeholderów. Jest na niej jeden prawdziwy eksperyment:
 
-Obrazy mają 4:3, kafle są panoramiczne, kwadratowe albo pionowe, więc każdy dostał kafel o najbliższych proporcjach i punkt kadru `focus:[x, y]` w PIECES (shader kadruje wokół niego, panel projektu pokazuje pełny obraz):
+- **01 · Glass Button** (`pieces/glass-button/`): szklany przycisk ze światłem za kursorem, tęczowym rantem i soczewką z rtęci. Miniatura to zrzut z tej strony (`thumbs/glass-button.jpg`) z mapą głębi, więc działają na nim też tryby `depth`, `topo`, `scan`, `dof`, `light` i `relief`.
 
-| kafel | referencja | focus |
-|---|---|---|
-| typestorm | interfejs „Ask Framer” z poświatą | 0.5, 0.6 |
-| lottie-studio | LAM, wielki napis | 0.5, 0 |
-| parkove | aevion, dron | środek |
-| contrast-audit | ilustracja, dwie postacie | 0.5, 0.3 |
-| audit-suite | noho, meble | środek |
-| spellbeat | Pasticcino, wnętrze pociągu | 0.5, 0.55 |
-| meander (kwadrat) | Maksym Bleibtgleich, portfolio z rozmyciem | środek |
-| wiredraft (pion) | ilustracja z kwiatem | 0.47, 0.5 |
+Pozostałe 17 prostokątów klastra to puste, nieklikalne sloty (`{ empty:true }` w PIECES, kolor `CFG.plainEmpty`) na kolejne eksperymenty. Nowy eksperyment: folder w `pieces/<slug>/`, zrzut `?still=1&bare=1`, wpis w PIECES w miejsce pustego slotu.
 
-Pozostałe 6 kafli (win98-music, emilka, stickies, runebound, cardrush, file-audit) jest ciemnoszarych, zdjęcia ze stocka usunięte. Cztery kafle z Figmy bez zmian (telefon, Echo Peak, karta „Find shelter” z wideo lasu, logo FIA).
+Stan z 18 placeholderami, referencjami, mapami głębi i warstwami z Figmy jest w tagu gita `lab-board-placeholders-2026-09-25`.
 
 ## Pokrętła
 
