@@ -1263,14 +1263,20 @@ function frame(t) {
     // pinches off and the menu stands apart at its gap)
     const sm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
     const fx = (mr[0] + mr[2]) / 2, fy = (mr[1] + mr[3]) / 2, fw = (mr[2] - mr[0]) / 2, fh = (mr[3] - mr[1]) / 2;
-    const sw = Math.max(hw - hh, 4), sh = hh * 0.6, mix1 = (a, b) => a + (b - a) * mt;
+    // it starts in the lower half of the button (not its middle), so the blend never reaches the button's top edge
+    const sw = Math.max(hw - hh, 4), sh = hh * 0.5, sy = geo.cy + hh * 0.3, mix1 = (a, b) => a + (b - a) * mt;
     const mw = Math.max(2, mix1(sw, fw)), mh = Math.max(2, mix1(sh, fh));
-    const gap = Math.max(0, mr[1] - (geo.cy + hh)), lz = P.menuLift * hh;
-    const rest = P.liquid > 0.001 ? P.liquid * (gap * 2.2 + lz * 1.2 + hh * 0.35) + Math.min(14, Math.abs(s.menuV) * 3) * P.liquid : 0.0001;
-    const morph = (Math.max(20, gap * 2.8) + Math.min(28, Math.abs(s.menuV) * 6)) * (1 - sm(0.62, 0.97, mt));
+    const lz = P.menuLift * hh;
+    // the blend follows the gap as it is in this frame: while the menu still overlaps the button it stays tiny (a big
+    // blend there swells the whole button), then just enough to hold a neck across the opening gap (2x the gap is the
+    // least that still connects), fading at the end so the neck pinches off. Liquid adds to it at rest.
+    const my = mix1(sy, fy), sep = Math.max(0, (my - mh) - (geo.cy + hh));
+    const kMin = Math.min(16, hh * 0.35);
+    const morph = Math.max(kMin, sep * 2.15) * sm(0.0, 0.3, mt) * (1 - sm(0.62, 0.97, mt));
+    const rest = P.liquid > 0.001 ? P.liquid * (sep * 2.6 + hh * 0.3) * sm(0.0, 0.3, mt) : 0.0001;
     const blend = Math.max(rest, morph);
     gl.uniform1f(uni('uMenuZ'), lz * sm(0.3, 1.0, mt));
-    gl.uniform4f(uni('uMenu'), mix1(geo.cx, fx), mix1(geo.cy, fy), mw, mh);
+    gl.uniform4f(uni('uMenu'), mix1(geo.cx, fx), my, mw, mh);
     gl.uniform4f(uni('uMenuK'), Math.min(corner * 0.55 + 4, mw, mh), blend, Math.max(0, Math.min(1, (mt - 0.55) / 0.45)), 1);
   } else gl.uniform4f(uni('uMenuK'), 0, 1, 0, 0);
   if (s.hi) { const r = s.hi.getBoundingClientRect(); gl.uniform4f(uni('uHi'), r.left, r.top, r.right, r.bottom); }
