@@ -187,7 +187,7 @@
 <aside class="panel" id="panel" aria-label="Tune the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
-<div class="meta bottom"><span>move · press · open · orbit · tune</span><span>study after a shot found on <a href="https://recent.design" target="_blank" rel="noreferrer">recent.design</a></span></div>
+<div class="meta bottom"><span>move · press · open · zoom · orbit · tune</span><span>study after a shot found on <a href="https://recent.design" target="_blank" rel="noreferrer">recent.design</a></span></div>
 
 <script>
 // Glass Button v5: a small ray tracer in one fragment shader, with a tuning panel.
@@ -290,7 +290,7 @@ if (P.bg === 'upload') P.bg = 'grid';
 
 // ---------- interaction state ----------
 const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, jiggle: 0, seen: false, open: false,
-            yaw: 0, pitch: 0, tyaw: 0, tpitch: 0 };
+            yaw: 0, pitch: 0, tyaw: 0, tpitch: 0, zoom: 1, tzoom: 1, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
   s.seen = true;
   const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -332,7 +332,14 @@ window.addEventListener('pointerdown', e => {
 window.addEventListener('pointermove', e => {
   if (e.pointerType === 'touch' && touches.has(e.pointerId)) {
     const t = touches.get(e.pointerId);
-    if (touches.size === 2) turn((e.clientX - t.x) * 0.5, (e.clientY - t.y) * 0.5);   // each finger moves half of the centroid
+    if (touches.size === 2) {
+      const [a, b] = [...touches.values()], d0 = Math.hypot(a.x - b.x, a.y - b.y);
+      turn((e.clientX - t.x) * 0.5, (e.clientY - t.y) * 0.5);   // each finger moves half of the centroid
+      t.x = e.clientX; t.y = e.clientY;
+      const d1 = Math.hypot(a.x - b.x, a.y - b.y);             // and the spread between them pinches the zoom
+      if (d0 > 20) zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d1 / d0);
+      return;
+    }
     t.x = e.clientX; t.y = e.clientY; return;
   }
   if (e.pointerId !== orbit.id) return;
@@ -345,10 +352,32 @@ function endPointer(e) {
 }
 window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
-function resetView() { s.tyaw = 0; s.tpitch = 0; }
+function resetView() { s.tyaw = 0; s.tpitch = 0; s.tzoom = 1; s.tpanx = 0; s.tpany = 0; }
+
+// ---------- zoom: the wheel (or a trackpad pinch) zooms towards the cursor ----------
+const ZMIN = 0.5, ZMAX = 8;
+function zoomAt(x, y, k) {
+  if (!geo) return;
+  const z1 = s.tzoom, z2 = Math.max(ZMIN, Math.min(ZMAX, z1 * k));
+  if (z2 === z1) return;
+  // keep the point under the cursor where it is: (m - c) / z + pan stays the same
+  const mx = x - geo.cx, my = y - geo.cy, f = 1 / z1 - 1 / z2;
+  s.tpanx += mx * f; s.tpany += my * f; s.tzoom = z2;
+  const lim = Math.max(0, 1 - 1 / z2);                      // back at 1× the view recentres on the button
+  s.tpanx = Math.max(-W * 0.5 * lim, Math.min(W * 0.5 * lim, s.tpanx));
+  s.tpany = Math.max(-H * 0.5 * lim, Math.min(H * 0.5 * lim, s.tpany));
+}
+window.addEventListener('wheel', e => {
+  if (overUi(e)) return;                                    // the panel keeps its own scroll
+  e.preventDefault();
+  const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+  zoomAt(e.clientX, e.clientY, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0016)));
+}, { passive: false });
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, select, textarea')) return;
   if ((e.key === 'r' || e.key === 'R' || e.key === '0') && !menu.contains(document.activeElement)) resetView();
+  if ((e.key === '+' || e.key === '=') && geo) zoomAt(geo.cx, geo.cy, 1.25);
+  if ((e.key === '-' || e.key === '_') && geo) zoomAt(geo.cx, geo.cy, 0.8);
 });
 chip.addEventListener('click', () => { resetView(); btn.focus({ preventScroll: true }); });
 let hintUntil = performance.now() + 6000;
@@ -669,13 +698,15 @@ function layout() {
   geo = { cx: b.left + b.width / 2, cy: b.top + b.height / 2, hw: b.width / 2, hh: b.height / 2,
           orb: [o.left + o.width / 2, o.top + o.height / 2, o.width / 2], label: l, chev: c,
           font: getComputedStyle(btn).fontSize, rect: geo ? geo.rect : [0, 0, 1, 1] };
-  const sig = [P.text, P.weight, P.chevron, s.open, geo.font, b.left, b.top, b.width, b.height, l.left, l.width, c.left].join('|');
+  const zq = Math.min(8, Math.pow(2, Math.ceil(Math.log2(Math.max(1, s.tzoom) - 1e-6))));
+  geo.zq = zq;
+  const sig = [zq, P.text, P.weight, P.chevron, s.open, geo.font, b.left, b.top, b.width, b.height, l.left, l.width, c.left].join('|');
   if (sig !== labelSig) { labelSig = sig; labelDirty = true; }
 }
 const lab = document.createElement('canvas'), lg = lab.getContext('2d');
 function paintLabel() {
   const pad = 6, x0 = geo.cx - geo.hw - pad, y0 = geo.cy - geo.hh - pad, w = geo.hw * 2 + pad * 2, h = geo.hh * 2 + pad * 2;
-  const sc = Math.min(4, RS * 2);
+  const sc = Math.min(RS * 2 * (geo.zq || 1), 4096 / Math.max(w, 1));   // sharper print when zoomed in (capped for memory)
   lab.width = Math.max(1, Math.ceil(w * sc)); lab.height = Math.max(1, Math.ceil(h * sc));
   const g = lg; g.setTransform(sc, 0, 0, sc, -x0 * sc, -y0 * sc); g.clearRect(x0, y0, w, h);
   const L = geo.label, C = geo.chev;
@@ -720,6 +751,7 @@ uniform float uGrid, uGridA, uCamDist;
 uniform vec3 uCamR, uCamD, uCamF;
 uniform int uSamples;
 uniform float uLabelLod;
+uniform float uZoom; uniform vec2 uPan;   // zoom towards a point: screen offset / zoom + pan
 uniform int uOne;                // always 1: loop bounds the compiler cannot unroll (D3D would take minutes)
 out vec4 fragColor;
 
@@ -916,13 +948,14 @@ vec3 shade(vec3 ro, vec3 rd, out float id){
   id = 0.0;
   if (hitB && (!hitL || tb.x < tl)) { id = 2.0; return beadShade(ro + rd * tb.x, rd); }
   if (hitL) { id = 1.0; return glassShade(ro + rd * tl, rd); }
-  if (rd.z < -1e-3) { float t = -ro.z / rd.z; return pageAt((ro + rd * t).xy, t / uCamDist / uScale / max(-rd.z, 0.08)); }
+  if (rd.z < -1e-3) { float t = -ro.z / rd.z; return pageAt((ro + rd * t).xy, t / uCamDist / uScale / uZoom / max(-rd.z, 0.08)); }
   return sky(rd);
 }
 void camRay(vec2 p, out vec3 ro, out vec3 rd){
   vec3 T = vec3(uBox.xy, ZM);
   ro = T - uCamF * uCamDist;
-  rd = normalize(uCamF * uCamDist + uCamR * (p.x - uBox.x) + uCamD * (p.y - uBox.y));
+  vec2 o = (p - uBox.xy) / uZoom + uPan;
+  rd = normalize(uCamF * uCamDist + uCamR * o.x + uCamD * o.y);
 }
 void main(){
   vec2 p = vec2(gl_FragCoord.x, uRes.y * uScale - gl_FragCoord.y) / uScale;    // css px, y down
@@ -1048,10 +1081,12 @@ function frame(t) {
   s.lx += (s.tlx - s.lx) * k; s.ly += (s.tly - s.ly) * k; s.hov += (s.thov - s.hov) * k;
   s.press += (s.tpress - s.press) * (1 - Math.pow(1 - .3, dt * 60)); s.jiggle *= Math.pow(0.9, dt * 60);
   s.yaw += (s.tyaw - s.yaw) * ko; s.pitch += (s.tpitch - s.pitch) * ko;
+  const kz = 1 - Math.pow(1 - .22, dt * 60);
+  s.zoom += (s.tzoom - s.zoom) * kz; s.panx += (s.tpanx - s.panx) * kz; s.pany += (s.tpany - s.pany) * kz;
   // orbit hint first, then a reset chip while the view is turned
-  const turned = Math.abs(s.tyaw) + Math.abs(s.tpitch) > 0.03;
+  const turned = Math.abs(s.tyaw) + Math.abs(s.tpitch) > 0.03 || Math.abs(s.tzoom - 1) > 0.01;
   chip.classList.toggle('reset', turned); chip.tabIndex = turned ? 0 : -1;
-  const txt = turned ? 'reset view' : (coarse ? 'two fingers to orbit' : 'hold the wheel and drag to orbit');
+  const txt = turned ? 'reset view' : (coarse ? 'pinch to zoom · two fingers to orbit' : 'scroll to zoom · hold the wheel and drag to orbit');
   if (chip.textContent !== txt) chip.textContent = txt;
   chip.classList.toggle('show', turned || t < hintUntil);
   if (!ready) return;
@@ -1100,7 +1135,8 @@ function frame(t) {
   else { gl.uniform3f(uni('uSkyHor'), .86, .87, .9); gl.uniform3f(uni('uSkyZen'), .97, .975, .985); }
   gl.uniform3fv(uni('uCamR'), cr); gl.uniform3fv(uni('uCamD'), cd); gl.uniform3fv(uni('uCamF'), cf);
   gl.uniform1i(uni('uSamples'), coarse ? 1 : 4); gl.uniform1i(uni('uOne'), 1);
-  gl.uniform1f(uni('uLabelLod'), Math.max(0, Math.log2(lab.width / Math.max(1, geo.rect[2]) / (cv.width / W))));
+  gl.uniform1f(uni('uLabelLod'), Math.max(0, Math.log2(lab.width / Math.max(1, geo.rect[2]) / (cv.width / W) / s.zoom)));
+  gl.uniform1f(uni('uZoom'), s.zoom); gl.uniform2f(uni('uPan'), s.panx, s.pany);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
 if (STILL) Object.assign(s, { hov: .5, thov: .5, seen: true });   // frozen light and time, the loop keeps the canvas painted
