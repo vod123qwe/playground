@@ -2,7 +2,7 @@
 
 Pierwszy eksperyment labu. Szklany przycisk „Ask agents” z menu, studium po ujęciu znalezionym na recent.design, dalej rozwijane po zdjęciach fizycznych przycisków z akrylu i ujęciu „Liquid glass”.
 
-## v5 (2026-09-25): panel „Tune”, dowolna bryła, szklana kulka
+## v5 (2026-09-25): panel „Tune”, dowolna bryła, szklana kulka, tła i upload
 
 Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy `<button>` zostaje prawdziwą, dostępną kontrolką (fokus, klawiatura, menu) i silnikiem layoutu: jego rozmiar dopasowuje się do napisu (auto layout), a shader co klatkę czyta z niego geometrię.
 
@@ -16,7 +16,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 - *Bead*: pokaż / ukryj, rozmiar, zatopienie w szkle, zadymienie, wielkość gwiazdki, ruch gradientu.
 - *Content*: tekst przycisku, kolor i krycie nadruku, strzałka.
 - *Layout*: skala, wysokość, paddingi, odstęp, grubość fontu (Inter Tight 400–600).
-- *Page*: jasna / ciemna (nadruk sam przechodzi na jasny), siła siatki.
+- *Background* (na górze panelu): 11 teł do testowania załamania, rysowanych w canvasie bez zewnętrznych plików: Grid, Grid dark, Article (kolumny tekstu, jak soczewka nad gazetą), Type (wielkie litery), Stripes, Checker, Halftone, Rings, Mesh (kolorowe plamy), Night (bokeh świateł), Sunset (synthwave). Do tego **Upload**: własny obrazek albo wideo, także przeciągnięciem na stronę albo wklejeniem ze schowka. Plik zostaje w przeglądarce, nigdzie nie jest wysyłany ani zapamiętywany. Suwak *Image scale* powiększa tło, *Grid overlay* dokłada siatkę na dowolne tło. Poza ekranem tło odbija się lustrzanie, więc przy obrocie „podłoga” trwa dalej. Odbicia w szkle i kolor nadruku dopasowują się do średniej jasności tła.
 - „Reset all” i „Copy settings” (kopiuje do schowka JSON z różnicami względem domyślnych). Ustawienia zapisują się w przeglądarce (localStorage).
 
 **Kulka** jest z przezroczystego, lekko przydymionego szkła i działa jak soczewka kulista: pokazuje odwróconą i powiększoną stronę za sobą. Gwiazdka leży na płaszczyźnie przez jej środek, a jej gradient obraca się za światłem, przesuwa z kątem patrzenia jak hologram i lekko „oddycha”.
