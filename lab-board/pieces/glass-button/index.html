@@ -198,11 +198,39 @@
   @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} body:not(.bare) .chip{bottom:70px} }
   @media (prefers-reduced-motion:reduce){ .menu, .panel, .stage{transition-duration:.01s} }
 
+  /* ---------- the panel: edge to edge, minimal, roomy ---------- */
+  .panel{top:0; right:0; bottom:0; width:384px; padding:0 28px; font-size:13px;
+         background:rgba(249,249,250,.96); box-shadow:-1px 0 0 rgba(20,20,20,.08), -40px 0 80px -60px rgba(20,24,30,.45)}
+  body.tuning .tune{opacity:0; pointer-events:none}
+  .ph{position:sticky; top:0; z-index:3; display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+      margin:0 -28px; padding:30px 28px 24px; background:rgba(249,249,250,.97); border-bottom:1px solid rgba(20,20,20,.09)}
+  .ph h2{margin:0; font-size:22px; font-weight:600; letter-spacing:-.02em; line-height:1.1}
+  .ph p{margin:8px 0 0; font-size:12.5px; color:rgba(20,20,20,.5)}
+  .pc{flex:none; width:36px; height:36px; margin:-6px -8px 0 0; display:grid; place-items:center; border:0; background:transparent; color:var(--ink); cursor:pointer}
+  .pc:hover{background:rgba(20,20,20,.06)} .pc svg{width:18px; height:18px}
+  .pc:focus-visible{outline:2px solid rgba(20,20,20,.35)}
+  .grp{margin:0 -28px; padding:0 28px}
+  .gh{top:98px; width:calc(100% + 56px); margin:0 -28px; padding:0 28px; height:58px; font-size:13.5px}
+  .grp.open .gi{padding:4px 0 22px}
+  .row{padding:10px 0; gap:4px 12px}
+  .row .v{font-size:12.5px}
+  .presets{gap:8px; margin-top:0} .presets button{padding:8px 13px; font-size:12px}
+  .bgs{gap:10px}
+  .panel .bgs button{border-radius:16px !important; overflow:hidden}
+  .hint{margin-top:10px; line-height:1.45}
+  .acts{margin:0 -28px; padding:16px 28px 22px; gap:10px}
+  .acts button{padding:10px 12px; font-size:12.5px}
+  @media (min-width:761px){ body.tuning .stage{right:384px} body.tuning .chip{left:calc(50% - 192px)} }
+  @media (max-width:760px){
+    .panel{top:auto; left:0; right:0; bottom:0; width:auto; max-height:62vh; padding:0 22px; box-shadow:0 -1px 0 rgba(20,20,20,.08), 0 -30px 60px -40px rgba(20,24,30,.45)}
+    .ph{margin:0 -22px; padding:22px 22px 18px} .grp{margin:0 -22px; padding:0 22px}
+    .gh{top:86px; width:calc(100% + 44px); margin:0 -22px; padding:0 22px} .acts{margin:0 -22px; padding:14px 22px 18px}
+    body.tuning .stage{bottom:62vh}
+  }
   /* ---------- the panel: sharp, flat, minimal ---------- */
   .panel, .panel *, .tune{border-radius:0 !important}
-  .panel{background:rgba(250,250,251,.94); box-shadow:0 0 0 1px rgba(20,20,20,.09), 0 28px 60px -34px rgba(20,24,30,.4)}
   .panel::-webkit-scrollbar-thumb{border-radius:0}
-  .gh, .acts{background:rgba(250,250,251,.97)}
+  .gh, .acts{background:rgba(249,249,250,.97)}
   .gh{font-size:12.5px; font-weight:600; letter-spacing:.01em}
   .tune{box-shadow:0 0 0 1px rgba(20,20,20,.1); background:rgba(250,250,251,.8)}
   .presets button, .acts button, .row .act, .row input[type=text], .seg{box-shadow:inset 0 0 0 1px rgba(20,20,20,.12); background:transparent}
@@ -506,13 +534,11 @@ menu.addEventListener('keydown', e => {
   const li = byKey(e); if (li) { e.preventDefault(); choose(li); }
 });
 items.forEach(li => {
-  li.addEventListener('pointermove', e => { const r = li.getBoundingClientRect(); li.style.setProperty('--ix', `${((e.clientX - r.left) / r.width) * 100}%`); li.style.setProperty('--ia', '.6'); });
+  li.addEventListener('pointermove', e => { if (ready) return; const r = li.getBoundingClientRect(); li.style.setProperty('--ix', `${((e.clientX - r.left) / r.width) * 100}%`); li.style.setProperty('--ia', '.6'); });
   li.addEventListener('pointerleave', () => li.style.setProperty('--ia', '0'));
-  li.addEventListener('click', () => choose(li));
+  li.addEventListener('click', () => { if (!ready) choose(li); });   // with the glass on, clicks are picked through the camera
   // the glass lights up under the item you point at or focus
-  li.addEventListener('pointerenter', e => { s.hi = li; s.hiX = e.clientX; });
-  li.addEventListener('pointermove', e => { s.hiX = e.clientX; });
-  li.addEventListener('pointerleave', () => { if (s.hi === li) s.hi = null; });
+
   li.addEventListener('focus', () => { s.hi = li; const r = li.getBoundingClientRect(); s.hiX = r.left + r.width * 0.3; });
   li.addEventListener('blur', () => { if (s.hi === li) s.hi = null; });
 });
@@ -523,7 +549,27 @@ function choose(li) {
   setMenu(false); s.jiggle = 1;
 }
 const byKey = e => { const n = +e.key; return n >= 1 && n <= items.length ? items[n - 1] : null; };
-document.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && !anchor.contains(e.target) && e.target !== chip && !overUi(e)) { if (s.open) setMenu(false); } });
+// The menu is drawn in 3D: perspective, the lean towards the cursor and Float (Z) move it off its DOM box, so the item
+// under the cursor is found the way the shader sees it: a ray from the camera through the pointer, onto the menu's top.
+let CAM = null;
+function pickItem(x, y) {
+  if (!CAM || !s.open || !ready) return null;
+  const { r, d, f, D, T } = CAM;
+  const ox = (x - T[0]) / CAM.zoom + CAM.pan[0], oy = (y - T[1]) / CAM.zoom + CAM.pan[1];
+  let dir = [0, 1, 2].map(i => f[i] * D + r[i] * ox + d[i] * oy); const dl = Math.hypot(...dir); dir = dir.map(v => v / dl);
+  const ro = [0, 1, 2].map(i => T[i] - f[i] * D);
+  const t = (CAM.menuTop - ro[2]) / dir[2]; if (!(t > 0)) return null;
+  const px = ro[0] + dir[0] * t, py = ro[1] + dir[1] * t;
+  const gapY = parseFloat(getComputedStyle(menu).rowGap) || 0;
+  for (const li of items) { const b = li.getBoundingClientRect(); if (px >= b.left && px <= b.right && py >= b.top - gapY / 2 - 0.5 && py <= b.bottom + gapY / 2 + 0.5) return { li, x: px }; }
+  return null;
+}
+window.addEventListener('pointermove', e => { if (!ready || !s.open) return; const h = pickItem(e.clientX, e.clientY); if (h) { s.hi = h.li; s.hiX = h.x; } else if (s.hi && document.activeElement !== s.hi) s.hi = null; }, { passive: true });
+window.addEventListener('click', e => {
+  if (!ready || !s.open || e.button !== 0 || e.altKey || overUi(e) || btn.contains(e.target)) return;
+  const h = pickItem(e.clientX, e.clientY); if (h) { e.preventDefault(); e.stopPropagation(); choose(h.li); }
+}, true);
+document.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && !anchor.contains(e.target) && e.target !== chip && !overUi(e) && !pickItem(e.clientX, e.clientY)) { if (s.open) setMenu(false); } });
 
 // ---------- backgrounds under the glass: the grid (light / dark, three tints, any density), or your own image / video ----------
 const PAGES = {
@@ -736,6 +782,12 @@ function buildPanel() {
     });
     bd.appendChild(inner); sec.append(hd, bd); panel.appendChild(sec); body = inner;
   };
+  const top = el('header', 'ph');
+  const tt = el('div'); tt.append(el('h2', null, 'Tune'), el('p', null, 'Glass button · every change is live and saved'));
+  const cl = el('button', 'pc'); cl.type = 'button'; cl.setAttribute('aria-label', 'Close the panel');
+  cl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  cl.addEventListener('click', () => { setTuning(false); tuneBtn.focus(); });
+  top.append(tt, cl); panel.appendChild(top);
   group('Presets');
   const pr = el('div', 'presets');
   for (const name in PRESETS) {
@@ -1471,6 +1523,7 @@ function frame(t) {
   const tc = hex(P.tint), ab = tc.map(c => (1 - c) * P.tintK * 0.003);
   const proc = (BGS.find(b => b.id === P.bg) || {}).proc || 'light', pg = pageStops(proc), dk = bg.mode === 0 && lum(pg[1]) < 0.42;
   const [cr, cd, cf] = camBasis(s.yaw + s.lx * 0.1, s.pitch - s.ly * 0.08);   // the view leans a little towards the cursor
+  let menuTopZ = (P.lift + P.under + wall + dome) * hh;
   gl.uniform2f(uni('uRes'), W, H); gl.uniform1f(uni('uScale'), cv.width / W); gl.uniform1f(uni('uTime'), T);
   gl.uniform4f(uni('uBox'), geo.cx, geo.cy, hw, hh);
   gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
@@ -1514,6 +1567,7 @@ function frame(t) {
     const rest = P.liquid > 0.001 ? (P.liquid * (sep * 2.6 + hh * 0.3) + L2 * L2 * (sep * 2.2 + hh * 0.9)) * sm(0.0, 0.3, mt) : 0.0001;
     const blend = Math.max(rest, morph);
     gl.uniform1f(uni('uMenuZ'), lz * sm(0.3, 1.0, mt));
+    menuTopZ = (P.lift + P.under + wall + dome) * hh + lz * sm(0.3, 1.0, mt);
     gl.uniform4f(uni('uMenu'), mix1(geo.cx, fx), my, mw, mh);
     gl.uniform4f(uni('uMenuK'), Math.min(corner * 0.55 + 4, mw, mh), blend, Math.max(0, Math.min(1, (mt - 0.55) / 0.45)), 1);
   } else gl.uniform4f(uni('uMenuK'), 0, 1, 0, 0);
@@ -1531,6 +1585,7 @@ function frame(t) {
     gl.uniform4f(uni('uGlowK'), P.glowK * (dk || lum(bg.mode ? bg.avg : pg[1]) < 0.42 ? 0.55 : 0.8), hh * 1.1 * P.glowSize, (reduce || STILL ? 0.1 : T * 0.045 * P.glowSpeed), 0); }
   gl.uniform1f(uni('uGrid'), Math.max(10, Math.max(72, Math.round(Math.min(W, H) / 7)) / P.gridDensity)); gl.uniform1f(uni('uGridA'), P.grid);
   gl.uniform1f(uni('uCamDist'), Math.max(W, H) * 1.3);
+  CAM = { r: cr, d: cd, f: cf, D: Math.max(W, H) * 1.3, T: [geo.cx, geo.cy, (P.lift + P.under) * hh], zoom: s.zoom, pan: [s.panx, s.pany], menuTop: menuTopZ };
   gl.uniform1f(uni('uBgMode'), bg.mode);
   if (bg.mode === 1) {
     const sc = Math.max(W / bg.w, H / bg.h) * P.bgScale;
