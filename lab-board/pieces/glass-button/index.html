@@ -99,6 +99,7 @@
   body.tuning .panel{transform:none; visibility:visible; transition:transform .45s var(--ease)}
   .panel h3{margin:16px 0 4px; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(20,20,20,.48)}
   .row{display:grid; grid-template-columns:1fr auto; align-items:center; gap:0 8px; padding:4px 0}
+  .row[hidden]{display:none}
   .row .v{display:flex; align-items:center; gap:3px; font-variant-numeric:tabular-nums; color:rgba(20,20,20,.55); font-size:11.5px}
   .row .v .num{width:52px; padding:2px 5px; margin:0 -5px 0 0; border:0; border-radius:5px; font:inherit; font-size:inherit; color:inherit; text-align:right; background:transparent; box-shadow:none;
                user-select:text; -webkit-user-select:text; outline:none; cursor:text}
@@ -227,7 +228,7 @@ const DEF = {
   bg: 'grid', bgColor: '#39435a', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
   menuGap: .35, liquid: 0, menuLift: 0,
-  shadowStyle: 'solid', glow: 'aurora', glowK: 1, glowSize: 1, glowSpeed: 1,
+  glowOn: false, glow: 'aurora', glowK: 1, glowSize: 1, glowSpeed: 1,
 };
 const PRESETS = {
   'M&M':     { corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02, ior: 1.5, disp: .026 },
@@ -273,13 +274,13 @@ const CTRL = [
   { k: 'key', l: 'Highlight', min: 0, max: 3, s: .01 },
   { k: 'env', l: 'Reflections', min: 0, max: 2, s: .01 },
   { k: 'rim', l: 'Rim spectrum', min: 0, max: 3, s: .01 },
-  { k: 'shadow', l: 'Shadow', min: 0, max: 2, s: .01 },
   { g: 'Shadow' },
-  { k: 'shadowStyle', l: 'Style', t: 'seg', o: ['solid', 'glow'] },
-  { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'star', 'ocean', 'ember'] },
-  { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01 },
-  { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01 },
-  { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01 },
+  { k: 'shadow', l: 'Shadow strength', min: 0, max: 2, s: .01 },
+  { k: 'glowOn', l: 'Glow (a coloured backlight)', t: 'check' },
+  { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'star', 'ocean', 'ember'], dep: 'glowOn' },
+  { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, dep: 'glowOn' },
+  { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, dep: 'glowOn' },
+  { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, dep: 'glowOn' },
   { g: 'Bead' },
   { k: 'bead', l: 'Show bead', t: 'check' },
   { k: 'beadSize', l: 'Size', min: .8, max: 3, s: .01 },
@@ -313,6 +314,7 @@ function save() {
 }
 let P = STILL ? Object.assign({}, DEF) : load();
 delete P.bgTint;
+if (P.shadowStyle === 'glow') P.glowOn = true; delete P.shadowStyle;     // the old style switch became a toggle
 if (P.sound === 'custom') P.sound = 'glass';                           // a sound file is not kept between visits
 if (P.page === 'dark' && P.bg === 'grid') P.bg = 'grid-dark';          // settings saved before backgrounds existed
 delete P.page;
@@ -673,7 +675,7 @@ function buildPanel() {
       });
       row.appendChild(inp); inp._v = v; inp._pre = pr;
     }
-    inp.id = id; inputs[c.k] = inp; panel.appendChild(row);
+    inp.id = id; inputs[c.k] = inp; panel.appendChild(row); inp._row = row;
   }
   const acts = el('div', 'acts');
   const reset = el('button', null, 'Reset all'); reset.type = 'button';
@@ -704,6 +706,7 @@ function syncInputs() {
   }
   inputs.lightAng.disabled = inputs.lightEl.disabled = !!P.follow;
   inputs.bgScale.disabled = bg.mode === 0;
+  for (const c of CTRL) if (c.dep && inputs[c.k]) inputs[c.k]._row.hidden = !P[c.dep];   // options show only while their switch is on
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const pr = PRESETS[b.dataset.preset]; b.setAttribute('aria-pressed', String(Object.keys(pr).every(k => Math.abs(P[k] - pr[k]) < 1e-6)));
   }
@@ -713,7 +716,8 @@ function set(k, v) {
   if (k === 'bgColor') P.bg = 'color';                    // picking a colour switches to it
   if (k === 'bg' || k === 'bgColor') useBg(P.bg);
   if (k === 'bgColor' || k === 'gridDensity') paintSwatches(panel.querySelector('.bgs'));
-  apply(); save(); if (k === 'bg' || k === 'bgColor' || k === 'shadowStyle' || k === 'glow') syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
+  if (k === 'glowOn' && v && P.glowK < 0.05) P.glowK = DEF.glowK;      // switching the glow on should show something
+  apply(); save(); if (k === 'bg' || k === 'bgColor' || k === 'glowOn' || k === 'glow') syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   const st = anchor.style;
@@ -1272,7 +1276,7 @@ function frame(t) {
   const ic = hex(P.ink); gl.uniform4f(uni('uInk'), ic[0], ic[1], ic[2], P.inkA);
   gl.uniform3fv(uni('uPage0'), pg[0]); gl.uniform3fv(uni('uPage1'), pg[1]); gl.uniform3fv(uni('uPage2'), pg[2]);
   { const gp = bg.mode === 0 ? pg[1] : bg.avg; const lt = lum(gp) > 0.8; gl.uniform3f(uni('uGridCol'), lt ? .1 : 1, lt ? .1 : 1, lt ? .12 : 1); }
-  gl.uniform1f(uni('uShadowMode'), P.shadowStyle === 'glow' ? 1 : 0);
+  gl.uniform1f(uni('uShadowMode'), P.glowOn ? 1 : 0);
   { const gp = GLOWS[P.glow] || GLOWS.aurora; gl.uniform3fv(uni('uGlowA'), gp[0]); gl.uniform3fv(uni('uGlowB'), gp[1]); gl.uniform3fv(uni('uGlowC'), gp[2]);
     gl.uniform4f(uni('uGlowK'), P.glowK * (dk || lum(bg.mode ? bg.avg : pg[1]) < 0.42 ? 0.55 : 0.8), hh * 1.1 * P.glowSize, (reduce || STILL ? 0.1 : T * 0.045 * P.glowSpeed), 0); }
   gl.uniform1f(uni('uGrid'), Math.max(10, Math.max(72, Math.round(Math.min(W, H) / 7)) / P.gridDensity)); gl.uniform1f(uni('uGridA'), P.grid);
