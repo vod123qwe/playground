@@ -219,7 +219,7 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 
 // ---------- parameters (shape values are in units of the button's half height) ----------
 const DEF = {
-  corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02,
+  pressGrow: .08, corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02,
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
   follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
@@ -261,6 +261,7 @@ const CTRL = [
   { k: 'profile', l: 'Profile', min: 1, max: 6, s: .05 },
   { k: 'edge', l: 'Edge round', min: 0, max: .4, s: .01 },
   { k: 'lift', l: 'Lift', min: 0, max: .6, s: .01 },
+  { k: 'pressGrow', l: 'Press grow', min: 0, max: .25, s: .005 },
   { g: 'Optics' },
   { k: 'ior', l: 'Refraction (IOR)', min: 1, max: 2.4, s: .01 },
   { k: 'disp', l: 'Dispersion', min: 0, max: .15, s: .002 },
@@ -321,7 +322,7 @@ delete P.page;
 if (P.bg === 'upload') P.bg = 'grid';
 
 // ---------- interaction state ----------
-const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, jiggle: 0, seen: false, open: false,
+const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, seen: false, open: false,
             menuT: 0, menuV: 0, hi: null, hiA: 0, hiX: 0,
             yaw: 0, pitch: 0, tyaw: 0, tpitch: 0, zoom: 1, tzoom: 1, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
@@ -334,9 +335,16 @@ function onMove(x, y) {
 const overUi = e => e.target && e.target.closest && e.target.closest('.panel, .tune');
 window.addEventListener('pointermove', e => { if (!overUi(e)) onMove(e.clientX, e.clientY); }, { passive: true });
 window.addEventListener('pointerleave', () => { s.seen = false; s.thov = 0; });
-btn.addEventListener('pointerdown', e => { if (e.button !== 0 || e.altKey || touches.size > 1) return; onMove(e.clientX, e.clientY); s.tpress = 1; s.jiggle = 1; });
-window.addEventListener('pointerup', () => { s.tpress = 0; });
+// hold: the glass swells like liquid glass; let go: it springs back with a little wobble and the menu opens (on click)
+btn.addEventListener('pointerdown', e => { if (e.button !== 0 || e.altKey || touches.size > 1) return; onMove(e.clientX, e.clientY); s.tpress = 1; });
+window.addEventListener('pointerup', () => { if (s.tpress > 0) s.jiggle = 1; s.tpress = 0; });
 window.addEventListener('pointercancel', () => { s.tpress = 0; });
+btn.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { s.tpress = 1; if (e.key === 'Enter') e.preventDefault(); }   // Enter opens on release too
+});
+btn.addEventListener('keyup', e => {
+  if (e.key === 'Enter' || e.key === ' ') { if (s.tpress > 0) s.jiggle = 1; s.tpress = 0; if (e.key === 'Enter') btn.click(); }
+});
 
 // ---------- orbit: hold the wheel (or Alt) and drag, or two fingers ----------
 const LIM = 1.35, SPEED = 0.0075;
@@ -1205,7 +1213,8 @@ function frame(t) {
   const k = 1 - Math.pow(1 - .12, dt * 60), ko = 1 - Math.pow(1 - .2, dt * 60);
   if (!s.seen && !reduce && !STILL) { const w = t / 1000; s.tlx = Math.sin(w * 0.45) * 0.55 - 0.1; s.tly = Math.cos(w * 0.33) * 0.4 - 0.35; }
   s.lx += (s.tlx - s.lx) * k; s.ly += (s.tly - s.ly) * k; s.hov += (s.thov - s.hov) * k;
-  s.press += (s.tpress - s.press) * (1 - Math.pow(1 - .3, dt * 60)); s.jiggle *= Math.pow(0.9, dt * 60);
+  if (reduce) { s.press = s.tpress; s.pressV = 0; } else { s.pressV += (240 * (s.tpress - s.press) - 15 * s.pressV) * dt; s.press += s.pressV * dt; }   // springy
+  s.jiggle *= Math.pow(0.9, dt * 60);
   s.yaw += (s.tyaw - s.yaw) * ko; s.pitch += (s.tpitch - s.pitch) * ko;
   if (reduce) { s.menuT = s.open ? 1 : 0; s.menuV = 0; }
   else { const mt = s.open ? 1 : 0; s.menuV += (170 * (mt - s.menuT) - 17 * s.menuV) * dt; s.menuT += s.menuV * dt; }   // a little overshoot
@@ -1230,21 +1239,22 @@ function frame(t) {
   else { const a = P.lightAng * Math.PI / 180, e = P.lightEl * Math.PI / 180; Lx = Math.sin(a) * Math.cos(e); Ly = -Math.cos(a) * Math.cos(e); Lz = Math.sin(e); }
   const ll = Math.hypot(Lx, Ly, Lz);
   // shape in px; pressing squashes the dome and makes it shiver
-  const hh = geo.hh;
-  let dome = P.dome * (1 - s.press * 0.12) * (1 + s.jiggle * 0.05 * Math.sin(T * 22));
+  // pressing swells the whole button around its centre (glass, print, bead); the release wobbles a little
+  const g = 1 + P.pressGrow * s.press, hh = geo.hh * g, hw = geo.hw * g, gx = v => geo.cx + (v - geo.cx) * g, gy = v => geo.cy + (v - geo.cy) * g;
+  let dome = P.dome * (1 + s.jiggle * 0.05 * Math.sin(T * 22));
   const wall = Math.max(P.wall, -dome - P.under + 0.08);          // a dish needs a rim: the wall rises with the concavity
-  const corner = Math.min(P.corner * hh, geo.hw, hh);
+  const corner = Math.min(P.corner * hh, hw, hh);
   // tint → absorption per px
   const tc = hex(P.tint), ab = tc.map(c => (1 - c) * P.tintK * 0.003);
   const proc = (BGS.find(b => b.id === P.bg) || {}).proc || 'light', pg = pageStops(proc), dk = bg.mode === 0 && lum(pg[1]) < 0.42;
   const [cr, cd, cf] = camBasis(s.yaw + s.lx * 0.1, s.pitch - s.ly * 0.08);   // the view leans a little towards the cursor
   gl.uniform2f(uni('uRes'), W, H); gl.uniform1f(uni('uScale'), cv.width / W); gl.uniform1f(uni('uTime'), T);
-  gl.uniform4f(uni('uBox'), geo.cx, geo.cy, geo.hw, hh);
+  gl.uniform4f(uni('uBox'), geo.cx, geo.cy, hw, hh);
   gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
   gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
-  gl.uniform4f(uni('uBead'), geo.orb[0], geo.orb[1], P.bead ? geo.orb[2] * 0.7 : 0, P.sink);
+  gl.uniform4f(uni('uBead'), gx(geo.orb[0]), gy(geo.orb[1]), P.bead ? geo.orb[2] * 0.7 * g : 0, P.sink);
   gl.uniform4f(uni('uBead2'), P.smoke, P.starSize, reduce ? 0 : P.starMotion, 0);
-  gl.uniform4f(uni('uLabelRect'), geo.rect[0], geo.rect[1], geo.rect[2], geo.rect[3]);
+  gl.uniform4f(uni('uLabelRect'), gx(geo.rect[0]), gy(geo.rect[1]), geo.rect[2] * g, geo.rect[3] * g);
   const mr = geo.menu, mt = s.menuT;
   gl.uniform4f(uni('uMenuRect'), mr[0], mr[1], mr[2], mr[3]);
   if (mt > 0.002) {
@@ -1253,7 +1263,7 @@ function frame(t) {
     // pinches off and the menu stands apart at its gap)
     const sm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
     const fx = (mr[0] + mr[2]) / 2, fy = (mr[1] + mr[3]) / 2, fw = (mr[2] - mr[0]) / 2, fh = (mr[3] - mr[1]) / 2;
-    const sw = Math.max(geo.hw - hh, 4), sh = hh * 0.6, mix1 = (a, b) => a + (b - a) * mt;
+    const sw = Math.max(hw - hh, 4), sh = hh * 0.6, mix1 = (a, b) => a + (b - a) * mt;
     const mw = Math.max(2, mix1(sw, fw)), mh = Math.max(2, mix1(sh, fh));
     const gap = Math.max(0, mr[1] - (geo.cy + hh)), lz = P.menuLift * hh;
     const rest = P.liquid > 0.001 ? P.liquid * (gap * 2.2 + lz * 1.2 + hh * 0.35) + Math.min(14, Math.abs(s.menuV) * 3) * P.liquid : 0.0001;
