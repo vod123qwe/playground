@@ -106,7 +106,8 @@
   .panel::-webkit-scrollbar-thumb{border:3px solid transparent; border-radius:10px; background:rgba(20,20,20,.16) padding-box}
   .panel::-webkit-scrollbar-thumb:hover{background:rgba(20,20,20,.3) padding-box}
   .panel::-webkit-scrollbar-track{background:transparent}
-  .grp + .grp{border-top:1px solid rgba(20,20,20,.07)}
+  .grp{margin:0 -18px; padding:0 18px}
+  .grp + .grp{border-top:1px solid rgba(20,20,20,.1)}               /* full-width dividers between the main groups */
   .gh{
     position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; width:calc(100% + 36px); margin:0 -18px;
     height:46px; padding:0 18px; border:0; font:inherit; font-size:13px; font-weight:600; letter-spacing:-.005em; color:var(--ink); cursor:pointer;
@@ -196,6 +197,21 @@
   body:not(.bare) .chip{bottom:52px}
   @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} body:not(.bare) .chip{bottom:70px} }
   @media (prefers-reduced-motion:reduce){ .menu, .panel, .stage{transition-duration:.01s} }
+
+  /* ---------- the panel: sharp, flat, minimal ---------- */
+  .panel, .panel *, .tune{border-radius:0 !important}
+  .panel{background:rgba(250,250,251,.94); box-shadow:0 0 0 1px rgba(20,20,20,.09), 0 28px 60px -34px rgba(20,24,30,.4)}
+  .panel::-webkit-scrollbar-thumb{border-radius:0}
+  .gh, .acts{background:rgba(250,250,251,.97)}
+  .gh{font-size:12.5px; font-weight:600; letter-spacing:.01em}
+  .tune{box-shadow:0 0 0 1px rgba(20,20,20,.1); background:rgba(250,250,251,.8)}
+  .presets button, .acts button, .row .act, .row input[type=text], .seg{box-shadow:inset 0 0 0 1px rgba(20,20,20,.12); background:transparent}
+  .presets button:hover, .acts button:hover, .row .act:hover{background:rgba(20,20,20,.05)}
+  .presets button[aria-pressed=true]{background:var(--ink); color:#fff; box-shadow:none}
+  .seg{padding:0; gap:0} .seg button{padding:5px 11px} .seg button[aria-pressed=true]{box-shadow:none; background:var(--ink); color:#fff}
+  .row input[type=range]::-webkit-slider-thumb{width:12px; height:12px; margin-top:-5px; box-shadow:0 0 0 1px rgba(20,20,20,.35)}
+  .row input[type=range]::-moz-range-thumb{width:12px; height:12px; box-shadow:0 0 0 1px rgba(20,20,20,.35)}
+  .bgs button{box-shadow:inset 0 0 0 1px rgba(20,20,20,.12)} .bgs button[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
 </style>
 </head>
 <body>
@@ -251,7 +267,7 @@ const DEF = {
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
-  bg: 'grid', bgColor: '#39435a', gridDensity: 1, bgScale: 1, grid: .3,
+  bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -262,7 +278,7 @@ const SIGNATURE = {
   ior: 2.28, disp: .106, tint: '#e63d97', tintK: 0, lightEl: 8, key: 2.09, env: 1.29, rim: 2.5, shadow: 1.04,
   beadSize: 1.91, sink: .71, smoke: .08, starSize: .38, starMotion: .91, icon: 'orb', orbSpeed: .36, orbGlow: .95,
   embSize: 1.34, embDepth: 1, embFrost: .58, inkA: 1, scale: 1.4, h: 4, pl: 1, pr: 2, gap: 1.2, weight: 540,
-  bgColor: '#bdbecc', gridDensity: 2.24, bgScale: 3, grid: .36, sound: 'bubble', volume: .16,
+  bg: 'color', bgColor: '#bdbecc', gridDensity: 2.24, bgScale: 3, grid: .36, sound: 'bubble', volume: .16,
   menuGap: 1.14, liquid: .69, glowSize: 1.62, glowSpeed: 1.06,
 };
 const PRESETS = {
