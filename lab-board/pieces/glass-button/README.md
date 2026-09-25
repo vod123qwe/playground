@@ -1,6 +1,6 @@
 # 01 · Glass Button
 
-Pierwszy eksperyment labu. Szklany przycisk „Ask agents” z menu, studium po ujęciu znalezionym na recent.design, dalej rozwijane po zdjęciach fizycznych przycisków z akrylu i ujęciu „Liquid glass”.
+Pierwszy eksperyment labu. Szklany przycisk-launcher agentów („Ask an agent”) z menu, studium po ujęciu znalezionym na recent.design, dalej rozwijane po zdjęciach fizycznych przycisków z akrylu i ujęciu „Liquid glass”.
 
 ## v5 (2026-09-25): panel „Tune”, dowolna bryła, szklana kulka, tła i upload
 
@@ -13,7 +13,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 - *Shape*: rogi, kopuła (wypukła / wklęsła), ścianka, spód, profil (1 = stożek, 2 = łuk koła, więcej = płaski wierzch z ostrzejszym brzegiem), zaokrąglenie krawędzi, uniesienie nad stroną. *Press grow*: o ile przycisk rośnie przy przytrzymaniu (domyślnie 8%).
 - *Optics*: współczynnik załamania, dyspersja, zmatowienie (frost), kolor i siła zabarwienia szkła.
 - *Light*: za kursorem albo ręcznie (kąt, wysokość), siła odblasku, odbić, tęczy na rancie i cienia.
-- *Bead*: pokaż / ukryj, rozmiar, zatopienie w szkle, zadymienie, wielkość gwiazdki, ruch gradientu.
+- *Icon*: styl ikonki po lewej: **star** (gwiazdka w szklanej kulce), **glyph** (symbol wybranego agenta: lupa, stalówka, kostka, które przelewają się jedno w drugie przy zmianie), **orb** (płynąca wielobarwna plazma w kulce, w kolorze agenta, przyspiesza przy przytrzymaniu), **emboss** (symbol wyrzeźbiony w powierzchni szkła, bez kulki). Do tego pokaż / ukryj kulkę, rozmiar, zatopienie, zadymienie, wielkość symbolu, ruch gradientu.
 - *Content*: tekst przycisku, kolor i krycie nadruku, strzałka.
 - *Layout*: skala, wysokość, paddingi, odstęp, grubość fontu (Inter Tight 400–600).
 - *Background* (na górze panelu): siatka jasna, ciemna albo na dowolnym kolorze z pickera (*Background colour*), gęstość siatki i siła jej linii; linie same robią się ciemne na bardzo jasnym kolorze. Do tego **Upload** obrazka albo wideo (też przeciągnięciem albo wklejeniem), plik zostaje w przeglądarce (*Image scale* go powiększa).
@@ -26,6 +26,8 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 **Menu jest częścią szkła**: przycisk i menu to jedna bryła. Ich obrysy zlewają się w 2D (gładka suma w polu odległości), a wysokość szkła liczy się ze wspólnego kształtu, więc przy otwieraniu szkło przycisku rozciąga się w dół w menu, jak w pierwszej wersji: menu startuje jako płyta schowana w środku przycisku i wypływa na sprężynie. W trakcie ruchu kształty zawsze się zlewają; w spoczynku decyduje *Liquid* (0: szyjka pęka i menu stoi osobno w swoim odstępie). *Height (Z)* unosi część menu tej samej bryły, z płynnym przejściem przez szyjkę. Menu ma te same właściwości co przycisk (profil, grubość, załamanie, zabarwienie, światło), obraca się i przybliża razem z nim; pozycje są nadrukiem na jego powierzchni, a pozycja pod kursorem albo z fokusem świeci miękko w szkle. Prawdziwa lista w DOM zostaje pod spodem, niewidoczna, dla klawiatury i czytników ekranu.
 
 **Przytrzymanie i puszczenie**: przytrzymany przycisk pompuje się jak w Liquid Glass (szkło, nadruk i kulka rosną razem wokół środka, na sprężynie), a po puszczeniu wraca z lekkim, płynnym dobiciem i dopiero wtedy w pełni wypływa szuflada menu. Tak samo z klawiatury: Enter albo spacja otwierają przy puszczeniu.
+
+**Treść**: przycisk domyślnie „Ask an agent”, po wyborze „Research agent” itd. Pozycje menu mają drugą linię z opisem (Research: *Find sources, sum up*, Design: *Sketch flows and layouts*, Build: *Turn ideas into code*) i prawdziwe skróty 1, 2, 3 (działają, gdy przycisk ma fokus albo menu jest otwarte), nadrukowane jak klawisze. *Liquid* na maksimum zlewa przycisk i menu w jedną miękką bryłę.
 
 **Kulka** jest z przezroczystego, lekko przydymionego szkła i działa jak soczewka kulista: pokazuje odwróconą i powiększoną stronę za sobą. Gwiazdka leży na płaszczyźnie przez jej środek, a jej gradient obraca się za światłem, przesuwa z kątem patrzenia jak hologram i lekko „oddycha”.
 
