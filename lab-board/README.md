@@ -20,6 +20,15 @@ Mechanika przeniesiona z sekcji Lab na juanmoraromero.com (analiza w pamięci Cl
   - `focus`: cała plansza desaturuje się i przygasa, a najechany kafel wyostrza się z dużych pikseli w ok. pół sekundy.
   - `none`: bez efektu, sam kursor.
   Warstwa przednia kafla wychodzi do DOM tylko wtedy, gdy musi (szkło, wideo albo chipy), inaczej zostaje w GL i dostaje efekty shadera. Pokrętła w `CFG.fx`. Kursor-pierścień z tytułem działa we wszystkich trybach, kwadraty z symbolami dalej wyłączone (`CFG.hoverChips`).
+- **Układy przestrzenne** (`CFG.layout`, grupa `space` w pasku i w panelu, `?space=`). Kafle przestają leżeć na płaszczyźnie i dostają pozycję i obrót w 3D (vertex shader: pitch, yaw, roll), a pula linków DOM dostaje rzut prostokąta kafla na ekran, więc klik i hover działają dalej. Kafle rysują się od najdalszego do najbliższego, dalekie i bardzo bliskie gasną we mgle:
+  - `plane`: dotychczasowa płaska plansza.
+  - `field`: pole głębi, 34 kafle rozsiane w bryle 5200 px głębokości; scroll = lot, powolny dryf w przód, drag = rozglądanie z paralaksą; bliskie przelatują obok kamery poza ekran.
+  - `tunnel`: korytarz z kaflami na ścianach, podłodze i suficie (9 na ścianę co 760 px); scroll albo drag w pionie = lot, drag w poziomie obraca tunel wokół osi.
+  - `ring`: karuzela, trzy rzędy na walcu; drag w poziomie albo scroll kręci, drag w pionie przewija rzędy bez końca.
+  - `sphere`: kula z 54 kaflami rozłożonymi spiralą Fibonacciego; drag obraca, scroll przybliża, powolny obrót sam z siebie.
+  - `stack`: stos w głąb, kafle co 1100 px, najbliższy wylatuje poza ekran; scroll albo drag w pionie = następny, drag w poziomie lekko przesuwa.
+  Na telefonie lot to przeciągnięcie w górę, a pinch przysuwa kamerę. Szkło i wideo na karcie Portfela działają tylko na `plane`. Pokrętła w `CFG.space`.
+- **Pasek review wybiera grupę**: przycisk po lewej (`space ▾`, `hover ▾`, `overlay ▾`) ustala, co zmieniają strzałki ‹ ›. Startuje na `space`.
 - **Efekty głębi (zdjęcia 3D w stylu Facebooka)**: 10 kafli ma mapy głębi w `thumbs/depth/` (skala szarości, jasne = blisko), wygenerowane lokalnie modelem Depth Anything V2 Small (ONNX, Apache 2.0) skryptem poza repo; Echo Peak i telefon z Figmy też. Na tych kaflach działa sześć dodatkowych trybów hover:
   - `depth`: paralaksa z mapy głębi (3 kroki doprecyzowania, bliższe plany jadą z kursorem, dalsze przeciwnie) + lekkie uniesienie kafla.
   - `topo`: głębia + poziomice z mapy głębi, co czwarta grubsza, najmocniejsze przy kursorze (limonkowe na przyciemnionym obrazie).
@@ -90,6 +99,7 @@ Wszystko w obiekcie `CFG` na górze skryptu. Najciekawsze:
 | `card.openPush` | impuls zagięcia pola, gdy karta odrywa się z planszy | 0.18 |
 | `detail` | `panel` albo `card` | panel |
 | `covers` | `plain`, `circle`, `mixed` albo `motif` | plain |
+| `space` (URL) | `plane`, `field`, `tunnel`, `ring`, `sphere`, `stack` | plane |
 | `hover` | `none`, `lift`, `lens`, `focus`, `depth`, `topo`, `scan`, `dof`, `light`, `relief` | lift |
 | `overlay` | `static`, `off`, `film`, `crt`, `tv`, `dither` albo `live` | static |
 | `fx.lift`, `fx.tilt`, `fx.parallax` | uniesienie w px, przechył (z na px), dryf obrazu | 46, 0.12, 0.016 |
