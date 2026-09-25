@@ -21,7 +21,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 
 **Kulka** jest z przezroczystego, lekko przydymionego szkła i działa jak soczewka kulista: pokazuje odwróconą i powiększoną stronę za sobą. Gwiazdka leży na płaszczyźnie przez jej środek, a jej gradient obraca się za światłem, przesuwa z kątem patrzenia jak hologram i lekko „oddycha”.
 
-**Reszta** bez zmian od v4: nadruk (napis i strzałka) na górnej powierzchni, ostry i nad refrakcją; do dwóch odbić wewnętrznych przy rancie; wyjście z trzema IOR (rozszczepienie); cień z kaustyką (wypukła skupia światło, wklęsła rozprasza je w pierścień); obrót 3D środkowym przyciskiem myszy / Alt / dwoma palcami, „reset view” albo R / 0.
+**Reszta** bez zmian od v4: nadruk (napis i strzałka) na górnej powierzchni, ostry i nad refrakcją; do dwóch odbić wewnętrznych przy rancie; wyjście z trzema IOR (rozszczepienie); cień z kaustyką (wypukła skupia światło, wklęsła rozprasza je w pierścień); obrót 3D środkowym przyciskiem myszy / Alt / dwoma palcami, „reset view” albo R / 0. **Zoom**: kółko myszy (albo pinch na trackpadzie) przybliża do miejsca pod kursorem, od 0,5× do 8×; na dotyku szczypanie, na klawiaturze + i -. Przy zbliżeniu nadruk jest przerysowywany w wyższej rozdzielczości (do 4096 px), żeby został ostry.
 
 **Wydajność** (ważne na Windows, gdzie WebGL idzie przez ANGLE/D3D):
 - pętle mają długości zależne od uniformu `uOne`, bo kompilator D3D rozwijałby stałe pętle w nieskończoność (kompilacja trwała ponad minutę i kończyła się utratą kontekstu);
