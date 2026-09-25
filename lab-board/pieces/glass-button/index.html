@@ -1273,7 +1273,9 @@ function frame(t) {
     const my = mix1(sy, fy), sep = Math.max(0, (my - mh) - (geo.cy + hh));
     const kMin = Math.min(16, hh * 0.35);
     const morph = Math.max(kMin, sep * 2.15) * sm(0.0, 0.3, mt) * (1 - sm(0.62, 0.97, mt));
-    const rest = P.liquid > 0.001 ? P.liquid * (sep * 2.6 + hh * 0.3) * sm(0.0, 0.3, mt) : 0.0001;
+    // Liquid: gentle at the bottom of the slider, a much fuller melt towards the top (a thick, soft neck)
+    const L2 = P.liquid * P.liquid;
+    const rest = P.liquid > 0.001 ? (P.liquid * (sep * 2.6 + hh * 0.3) + L2 * L2 * (sep * 2.2 + hh * 0.9)) * sm(0.0, 0.3, mt) : 0.0001;
     const blend = Math.max(rest, morph);
     gl.uniform1f(uni('uMenuZ'), lz * sm(0.3, 1.0, mt));
     gl.uniform4f(uni('uMenu'), mix1(geo.cx, fx), my, mw, mh);
