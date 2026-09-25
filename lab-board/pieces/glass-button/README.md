@@ -16,11 +16,14 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 - *Bead*: pokaż / ukryj, rozmiar, zatopienie w szkle, zadymienie, wielkość gwiazdki, ruch gradientu.
 - *Content*: tekst przycisku, kolor i krycie nadruku, strzałka.
 - *Layout*: skala, wysokość, paddingi, odstęp, grubość fontu (Inter Tight 400–600).
-- *Background* (na górze panelu): siatka jasna albo ciemna, trzy odcienie tła (neutral, warm, cool), gęstość siatki i siła jej linii. Do tego **Upload**: własny obrazek albo wideo, także przeciągnięciem na stronę albo wklejeniem ze schowka; plik zostaje w przeglądarce, nigdzie nie jest wysyłany ani zapamiętywany (*Image scale* go powiększa). Odbicia w szkle i kolor nadruku dopasowują się do tła.
-- *Sound*: dźwięk kliknięcia syntezowany w przeglądarce (Web Audio, bez plików): Glass, Tick, Soft, Pop, Bubble, Key albo Off; kliknięcie w nazwę od razu go odtwarza. Opcjonalnie lżejszy dźwięk przy puszczeniu, głośność.
+- *Background* (na górze panelu): siatka jasna, ciemna albo na dowolnym kolorze z pickera (*Background colour*), gęstość siatki i siła jej linii; linie same robią się ciemne na bardzo jasnym kolorze. Do tego **Upload** obrazka albo wideo (też przeciągnięciem albo wklejeniem), plik zostaje w przeglądarce (*Image scale* go powiększa).
+- *Shadow*: styl *solid* (cień z kaustyką) albo *glow*: kolorowa poświata rozlana po stronie wokół i pod szkłem, której barwy powoli płyną wzdłuż przycisku, jak podświetlenie za telewizorem; palety Aurora, Star, Ocean, Ember, siła, rozmiar i tempo ruchu. Przez szkło widać ją załamaną.
+- *Menu*: odstęp od przycisku, *Liquid* (0 = osobne kawałki, 1 = zlewają się w jedną bryłę), wysokość w osi Z.
+- Każdą wartość liczbową można kliknąć i wpisać z klawiatury (przecinek też działa); Enter zatwierdza, Esc cofa, strzałki zmieniają o krok (z Shiftem o 10).
+- *Sound*: dźwięk kliknięcia syntezowany w przeglądarce (Web Audio, bez plików: krótkie tony z wybrzmieniem i ułamek przefiltrowanego szumu): Glass, Tick, Soft, Pop, Bubble, Key albo Off; kliknięcie w nazwę od razu go odtwarza. *Upload sound…* wgrywa własny plik audio (przy puszczeniu gra ciszej i odrobinę wyżej). Opcjonalnie lżejszy dźwięk przy puszczeniu, głośność.
 - „Reset all” i „Copy settings” (kopiuje do schowka JSON z różnicami względem domyślnych). Ustawienia zapisują się w przeglądarce (localStorage).
 
-**Menu jest częścią szkła**: po kliknięciu szkło przycisku wypływa w dół na sprężynie i formuje panel menu, połączony z przyciskiem płynnym przewężeniem (gładka suma kształtów w polu odległości). Menu ma te same właściwości co przycisk (profil, grubość, załamanie, zabarwienie, światło), obraca się i przybliża razem z nim; pozycje są nadrukiem na jego powierzchni, a pozycja pod kursorem albo z fokusem świeci miękko w szkle. Prawdziwa lista w DOM zostaje pod spodem, niewidoczna, dla klawiatury i czytników ekranu.
+**Menu jest częścią szkła**: po kliknięciu wysuwa się na sprężynie z wnętrza przycisku jako osobny kawałek szkła; przycisk i menu to dwie bryły łączone gładką sumą w 3D, więc suwak *Liquid* decyduje, czy stoją osobno, czy zlewają się mostkiem, a menu może wisieć wyżej w osi Z. Menu ma te same właściwości co przycisk (profil, grubość, załamanie, zabarwienie, światło), obraca się i przybliża razem z nim; pozycje są nadrukiem na jego powierzchni, a pozycja pod kursorem albo z fokusem świeci miękko w szkle. Prawdziwa lista w DOM zostaje pod spodem, niewidoczna, dla klawiatury i czytników ekranu.
 
 **Kulka** jest z przezroczystego, lekko przydymionego szkła i działa jak soczewka kulista: pokazuje odwróconą i powiększoną stronę za sobą. Gwiazdka leży na płaszczyźnie przez jej środek, a jej gradient obraca się za światłem, przesuwa z kątem patrzenia jak hologram i lekko „oddycha”.
 
@@ -29,7 +32,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 **Wydajność** (ważne na Windows, gdzie WebGL idzie przez ANGLE/D3D):
 - pętle mają długości zależne od uniformu `uOne`, bo kompilator D3D rozwijałby stałe pętle w nieskończoność (kompilacja trwała ponad minutę i kończyła się utratą kontekstu);
 - nadruk jest czytany przez `textureLod` (bez pochodnych w rozgałęzieniach);
-- kulka jest liczona w jednym miejscu kodu;
+- każda ciężka funkcja (pole odległości, normalna, wyjście ze szkła, cieniowanie piksela, kanały koloru) ma w kodzie jedno miejsce wywołania, bo D3D wkleja każde wywołanie osobno; to skróciło kompilację z ~36 s do ~7 s;
 - shader kompiluje się w tle (`KHR_parallel_shader_compile`), a do tego czasu widać zwykłą pigułkę z CSS;
 - 4 promienie na piksel tylko na krawędziach bryły (tam, gdzie sąsiednie piksele trafiają w co innego);
 - rozdzielczość sama spada, gdy klatki są wolne; utrata kontekstu WebGL wraca do wersji CSS.
