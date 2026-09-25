@@ -149,6 +149,7 @@
   }
   .row input[type=text]:focus{box-shadow:inset 0 0 0 1.5px rgba(20,20,20,.45)}
   .seg{display:flex; gap:2px; padding:2px; border-radius:8px; background:rgba(20,20,20,.07)}
+  .row.wide .seg{margin-top:6px} .row.wide .seg button{flex:1; padding:7px 0}
   .seg button{border:0; padding:4px 10px; border-radius:6px; font:inherit; font-size:11.5px; color:rgba(20,20,20,.65); background:transparent; cursor:pointer}
   .seg button[aria-pressed=true]{background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.14)}
   .bgs{display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:6px}
@@ -293,7 +294,7 @@ const DEF = {
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
   follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
-  text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
+  text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
@@ -320,7 +321,8 @@ const PRESETS = {
   'Prism':   { corner: .2, dome: .45, wall: .15, under: .15, profile: 1.1, edge: .01, lift: .08, ior: 2.3, disp: .12 },
   'Droplet': { corner: 1, dome: 1.25, wall: 0, under: .05, profile: 2.6, edge: .01, lift: 0, ior: 1.33, disp: .01 },
 };
-const isBead = () => P.icon === 'glyph' || P.icon === 'orb';
+const isBead = () => P.icon !== 'emboss';
+const showSym = () => P.icon === 'glyph' || P.icon === 'mercury';
 const CTRL = [
   { g: 'Shape' },
   { k: 'corner', l: 'Corner', min: 0, max: 1, s: .01 },
@@ -352,16 +354,21 @@ const CTRL = [
   { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, show: () => P.glowOn },
   { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, show: () => P.glowOn },
   { g: 'Icon' },
-  { k: 'icon', l: 'Style', t: 'seg', o: ['glyph', 'orb', 'emboss'] },
+  { k: 'icon', l: 'Style', t: 'seg', o: ['glyph', 'mercury', 'orb', 'pulse', 'emboss'] },
   { k: 'fitIcon', l: 'Fit the icon inside the glass', t: 'action', show: isBead },
   { k: 'beadSize', l: 'Bead size', min: .4, max: 3, s: .01, show: isBead },
   { k: 'beadFlat', l: 'Roundness (1 = sphere, less = M&M)', min: .2, max: 1, s: .01, show: isBead },
   { k: 'sink', l: 'Sink into glass', min: -.8, max: 3, s: .01, show: isBead },
-  { k: 'smoke', l: 'Smoke', min: 0, max: 1, s: .01, show: isBead },
-  { k: 'starSize', l: 'Symbol size', min: 0, max: 1, s: .01, show: () => P.icon === 'glyph' },
-  { k: 'starMotion', l: 'Gradient motion', min: 0, max: 2, s: .01, show: () => P.icon === 'glyph' },
+  { k: 'smoke', l: 'Smoke', min: 0, max: 1, s: .01, show: () => ['glyph', 'orb', 'pulse'].includes(P.icon) },
+  { k: 'starSize', l: 'Symbol size', min: 0, max: 1, s: .01, show: showSym },
+  { k: 'starMotion', l: 'Gradient motion', min: 0, max: 2, s: .01, show: showSym },
+  { k: 'ringK', l: 'Silver ring', min: 0, max: 2, s: .01, show: () => P.icon === 'mercury' },
+  { k: 'iris', l: 'Iridescence', min: 0, max: 2, s: .01, show: () => P.icon === 'mercury' },
   { k: 'orbSpeed', l: 'Flow speed', min: 0, max: 3, s: .01, show: () => P.icon === 'orb' },
   { k: 'orbGlow', l: 'Brightness', min: 0, max: 2, s: .01, show: () => P.icon === 'orb' },
+  { k: 'orbLight', l: 'Glow (lights the glass)', min: 0, max: 2, s: .01, show: () => P.icon === 'orb' },
+  { k: 'pulseSpeed', l: 'Pulse speed', min: 0, max: 3, s: .01, show: () => P.icon === 'pulse' },
+  { k: 'pulseLight', l: 'Light', min: 0, max: 2, s: .01, show: () => P.icon === 'pulse' },
   { k: 'embSize', l: 'Carving size', min: .4, max: 1.8, s: .01, show: () => P.icon === 'emboss' },
   { k: 'embDepth', l: 'Carving depth', min: 0, max: 1, s: .01, show: () => P.icon === 'emboss' },
   { k: 'embFrost', l: 'Frost in the carving', min: 0, max: 1, s: .01, show: () => P.icon === 'emboss' },
@@ -850,6 +857,12 @@ function buildPanel() {
       row.appendChild(hint);
       paintSwatches(inp);
     }
+    else if (c.t === 'seg' && c.o.length > 3) {           // many options: the segmented control gets its own line
+      row.classList.add('wide');
+      inp = el('div', 'seg full'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
+      for (const o of c.o) { const b = el('button', null, o); b.type = 'button'; b.dataset.v = o; b.addEventListener('click', () => { set(c.k, o); syncInputs(); }); inp.appendChild(b); }
+      row.appendChild(inp);
+    }
     else if (c.t === 'seg') {
       inp = el('div', 'seg'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
       for (const o of c.o) { const b = el('button', null, o); b.type = 'button'; b.dataset.v = o; b.addEventListener('click', () => { set(c.k, o); syncInputs(); }); inp.appendChild(b); }
@@ -1008,7 +1021,9 @@ uniform vec3 uIconTint;        // the agent's colour
 uniform vec3 uIconPos;         // where the icon sits (x, y, radius), also when there is no bead
 uniform float uOrbPh;          // the orb's flow, faster while pressed
 uniform vec4 uEmb;             // carving size, carving depth, frost, orb brightness
-uniform vec3 uBub[3];          // the menu's bullets: air bubbles in the glass (x, y, radius)
+uniform vec3 uBub[3];
+uniform vec4 uIcon2;           // orb glow, mercury ring, -, mercury iridescence
+uniform vec3 uIconLight;       // the colour of the light a glowing icon throws (0 when it does not glow)          // the menu's bullets: air bubbles in the glass (x, y, radius)
 uniform vec4 uLabelRect;       // where the print texture lies (css px)
 uniform vec4 uMenu;            // the menu slab now: centre, half size
 uniform vec4 uMenuK;           // its corner radius, the blend radius of the liquid bridge, print fade, on
@@ -1154,6 +1169,7 @@ vec3 pageAt(vec2 q, float fp){
     vec3 gc = w < 1.0 ? mix(uGlowA, uGlowB, smoothstep(0.0, 1.0, w)) : w < 2.0 ? mix(uGlowB, uGlowC, smoothstep(1.0, 2.0, w)) : mix(uGlowC, uGlowA, smoothstep(2.0, 3.0, w));
     c = 1.0 - (1.0 - c) * (1.0 - clamp(gc * glow * uGlowK.x, 0.0, 1.0));   // screen: it lights the page, never darkens it
   }
+  if (BR > 0.5) c = 1.0 - (1.0 - c) * (1.0 - clamp(uIconLight * exp(-length(q - BC.xy) / (BR * 2.4)) * 0.6, 0.0, 1.0));   // and the page
   float far = smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uBox.xy));
   return mix(c, sky(vec3(0.0, -0.3, 0.12)) * 0.93, far);
 }
@@ -1200,7 +1216,9 @@ vec3 beadShade(vec3 P, vec3 rd){
   vec3 col = to.z < -1e-3 ? pageAt(X.xy + to.xy * (-X.z / to.z), 1.5 + uOptics.z) : sky(to);
   col *= exp(-(tf / BR) * uBead2.x * vec3(2.3, 2.1, 1.8));
   col += vec3(0.10, 0.11, 0.14) * smoothstep(-0.2, 0.9, n.y) * uBead2.x;                  // light gathered at the bottom
-  if (uIcon.x > 1.5) {
+  bool orb = abs(uIcon.x - 2.0) < 0.5, merc = abs(uIcon.x - 4.0) < 0.5, pulse = abs(uIcon.x - 5.0) < 0.5;
+  if (merc) col = vec3(0.045, 0.05, 0.062) + col * 0.06;   // mercury: dark glass, hardly anything of the page comes through
+  if (orb) {
     // the orb: soft plasma drifting through the sphere, tinted by the agent
     vec3 acc = vec3(0.0);
     for (int i = 0; i < 6 * uOne; i++) {
@@ -1211,10 +1229,10 @@ vec3 beadShade(vec3 P, vec3 rd){
       c = mix(c, uIconTint, 0.22);
       acc += c * max(1.0 - dot(q, q), 0.0) * smoothstep(-0.3, 1.0, sin(v * 2.2 + ph));   // streaks, with dark glass between
     }
-    col = mix(col, acc * 0.55 * uEmb.w, 0.8) + acc * 0.08 * uEmb.w;
+    col = mix(col, acc * 0.55 * uEmb.w, 0.8) + acc * (0.08 * uEmb.w + 0.25 * uIcon2.x);   // Glow makes it a light
   }
   // the glyph lies on the plane through the centre, parallel to the page
-  else if (abs(t.z) > 1e-4 && uBead2.y > 0.01) {
+  else if (!pulse && abs(t.z) > 1e-4 && uBead2.y > 0.01) {
     float tp = -lp.z / t.z;
     if (tp > 0.0 && tp < tf) {
       vec2 sp = (lp.xy + t.xy * tp) / (BR * uBead2.y);
@@ -1239,8 +1257,20 @@ vec3 beadShade(vec3 P, vec3 rd){
       }
     }
   }
+  if (pulse) {                                             // pulse: a point of light breathing in the middle
+    float tc = clamp(-dot(lp, t), 0.0, tf); float dd = length(lp + t * tc) / BR;
+    col += vec3(1.0) * exp(-pow(dd / 0.06, 2.0)) * 0.9 * length(uIconLight) + uIconLight * (exp(-pow(dd / 0.14, 2.0)) * 1.1 + exp(-dd / 0.35) * 0.18);
+  }
+  float facing = max(dot(-rd, n), 0.0), rr = sqrt(max(1.0 - facing * facing, 0.0));
+  if (merc) {                                              // a silver ring on the edge, a dark line inside it, opal smears
+    vec3 irid = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + rr * 2.2 + atan(lp.y, lp.x) * 0.16 + uTime * 0.04));
+    col += irid * smoothstep(0.5, 0.88, rr) * (1.0 - smoothstep(0.9, 0.97, rr)) * 0.3 * uIcon2.w;
+    col *= 1.0 - 0.6 * smoothstep(0.78, 0.83, rr) * (1.0 - smoothstep(0.83, 0.87, rr));
+    float ring = smoothstep(0.86, 0.93, rr) * (1.0 - smoothstep(0.985, 1.0, rr));
+    col = mix(col, mix(vec3(0.93, 0.95, 0.98), irid, 0.25) * (0.65 + 0.45 * max(dot(n, L), 0.0)), clamp(ring * uIcon2.y, 0.0, 1.0));
+  }
   vec3 rf = reflect(rd, n);
-  float F = 0.04 + 0.96 * pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
+  float F = 0.04 + 0.96 * pow(1.0 - facing, 5.0);
   col = mix(col, envAt(P, rf), clamp(F * uLightK.y, 0.0, 1.0));
   col += vec3(1.0) * pow(max(dot(rf, L), 0.0), 60.0) * 0.95 * uLightK.x;
   return col;
@@ -1254,7 +1284,7 @@ vec3 pageThrough(vec3 q, vec3 d, float blur){
 vec3 glassShade(vec3 P, vec3 rd){
   vec3 n = nrm(P);
   float emb = 0.0;
-  if (uIcon.x > 2.5 && n.z > 0.3) {                      // emboss: the glyph is a shallow dent in the surface
+  if (abs(uIcon.x - 3.0) < 0.5 && n.z > 0.3) {           // emboss: the glyph is a shallow dent in the surface
     vec2 sp = (P.xy - uIconPos.xy) / max(uIconPos.z * 0.8 * uEmb.x, 1.0);
     if (dot(sp, sp) < 3.0) {
       vec3 hv = vec3(0.0);
@@ -1349,6 +1379,7 @@ vec3 glassShade(vec3 P, vec3 rd){
   float key = pow(spec, 260.0) * (0.35 + uOptics.w * 0.25) + pow(spec, 1400.0) * 1.1;
   col += vec3(1.0) * key * uLightK.x * (1.0 - ink * 0.5);
   col = mix(col, col * 0.85 + 0.16, emb * uEmb.z);       // a soft frost in the carving, so it reads
+  if (BR > 0.5) col += uIconLight * exp(-length(P - BC) / (BR * 1.5)) * 0.22;   // a glowing icon lights the glass around it
   return col;
 }
 
@@ -1530,7 +1561,7 @@ function frame(t) {
   gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
   // the icon: star, the chosen agent's glyph (melting from the last one), a flowing orb, or carved into the glass
   const AG = { write: [2, '#ff8a3b'], summarise: [1, '#3d86ff'], translate: [3, '#35c27a'] }, ag = AG[P.agent];
-  const mode = { glyph: 1, orb: 2, emboss: 3 }[P.icon] || 1;
+  const mode = { glyph: 1, orb: 2, emboss: 3, mercury: 4, pulse: 5 }[P.icon] || 1;
   const tg = ag ? ag[0] : 0;
   if (tg !== s.gTo) { s.gFrom = s.gT >= 0.5 ? s.gTo : s.gFrom; s.gTo = tg; s.gT = 0; }
   s.gT = reduce ? 1 : Math.min(1, s.gT + dt * 2.6);
@@ -1539,6 +1570,13 @@ function frame(t) {
   gl.uniform3fv(uni('uIconTint'), hex(ag ? ag[1] : '#8a7dff'));
   gl.uniform3f(uni('uIconPos'), gx(geo.orb[0]), gy(geo.orb[1]), geo.orb[2] * 0.7 * g);
   gl.uniform1f(uni('uOrbPh'), s.orbPh);
+  // the light a glowing icon throws: the orb's drifting colour, or the pulse breathing
+  let lc = [0, 0, 0];
+  const tint = hex(ag ? ag[1] : '#8a7dff');
+  if (mode === 2 && P.orbLight > 0) { const h = s.orbPh * 0.05; lc = [0, .33, .67].map((o, i) => ((0.5 + 0.5 * Math.cos(6.2831 * (o + h))) * 0.6 + tint[i] * 0.4) * P.orbLight * 0.6); }
+  if (mode === 5) { if (!STILL) s.pulsePh = (s.pulsePh || 0) + dt * 2.2 * P.pulseSpeed; const br = 0.55 + 0.45 * Math.sin(s.pulsePh || 0); lc = tint.map(c => (0.5 + c * 0.5) * P.pulseLight * br * 0.7); }
+  gl.uniform3fv(uni('uIconLight'), lc);
+  gl.uniform4f(uni('uIcon2'), mode === 2 ? P.orbLight : 0, P.ringK, 0, P.iris);
   gl.uniform4f(uni('uBead'), gx(geo.orb[0]), gy(geo.orb[1]), P.bead && mode !== 3 ? geo.orb[2] * 0.7 * g : 0, P.sink);
   gl.uniform4f(uni('uBead2'), P.smoke, P.starSize, reduce ? 0 : P.starMotion, P.beadFlat);
   gl.uniform4f(uni('uEmb'), P.embSize, P.embDepth, P.embFrost, P.orbGlow);
