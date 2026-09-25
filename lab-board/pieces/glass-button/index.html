@@ -1244,20 +1244,23 @@ function frame(t) {
   const mr = geo.menu, mt = s.menuT;
   gl.uniform4f(uni('uMenuRect'), mr[0], mr[1], mr[2], mr[3]);
   if (mt > 0.002) {
-    // from a slab hidden inside the button to the full menu; the bridge between them stays as a thin liquid neck
-    const fx = (mr[0] + mr[2]) / 2, fy = (mr[1] + mr[3]) / 2, fw = (mr[2] - mr[0]) / 2, fh = (mr[3] - mr[1]) / 2;
-    const sw = Math.max(geo.hw - hh, 4), sh = hh * 0.6, mix1 = (a, b) => a + (b - a) * mt;
-    const mw = Math.max(2, mix1(sw, fw)), mh = Math.max(2, mix1(sh, fh));
-    const gap = Math.max(0, mr[1] - (geo.cy + hh)), lz = P.menuLift * hh;
+    // the menu grows out of the button's lower rim (never through its middle): it starts as a thin lip tucked into the
+    // rim, the bottom edge flows down first, the top edge lets go later, and it widens from a drop to the full width
+    const sm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+    const over = Math.max(0, mt - 1);                   // the spring's little overshoot
+    const fx = (mr[0] + mr[2]) / 2, fw = (mr[2] - mr[0]) / 2;
+    const bb = geo.cy + hh, top0 = bb - hh * 0.45, bot0 = bb - hh * 0.05;
+    const fb = sm(0.0, 0.78, mt) + over, ft = sm(0.3, 1.0, mt) + over, fwd = sm(0.0, 0.7, mt);
+    const bot = bot0 + (mr[3] - bot0) * fb, top = top0 + (mr[1] - top0) * ft;
+    const mw = Math.max(2, (geo.hw - hh) * 0.55 + (fw - (geo.hw - hh) * 0.55) * fwd), mh = Math.max(2, (bot - top) / 2);
+    const gap = Math.max(0, mr[1] - bb), lz = P.menuLift * hh;
     // liquid 0: two separate pieces; 1: they melt into one, bridging the gap and the height between them
     const rest = P.liquid > 0.001 ? P.liquid * (gap * 2.2 + lz * 1.2 + hh * 0.35) + Math.min(14, Math.abs(s.menuV) * 3) * P.liquid : 0.0001;
-    // the morph: while it travels, the menu flows out of the button on a liquid neck, then pinches off like a drop
-    // (and on the way back it melts in again); at rest the Liquid slider decides
-    const sm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+    // while it travels the two always melt: a liquid neck that pinches off like a drop at the end (and melts back on close)
     const morph = (gap * 2.3 + lz * 1.2 + hh * 0.7) * sm(0.0, 0.18, mt) * (1 - sm(0.62, 0.97, mt));
     const blend = Math.max(rest, morph);
-    gl.uniform1f(uni('uMenuZ'), lz * Math.max(0, Math.min(1, mt)));
-    gl.uniform4f(uni('uMenu'), mix1(geo.cx, fx), mix1(geo.cy, fy), mw, mh);
+    gl.uniform1f(uni('uMenuZ'), lz * sm(0.3, 1.0, mt));
+    gl.uniform4f(uni('uMenu'), geo.cx + (fx - geo.cx) * fwd, (top + bot) / 2, mw, mh);
     gl.uniform4f(uni('uMenuK'), Math.min(corner * 0.55 + 4, mw, mh), blend, Math.max(0, Math.min(1, (mt - 0.55) / 0.45)), 1);
   } else gl.uniform4f(uni('uMenuK'), 0, 1, 0, 0);
   if (s.hi) { const r = s.hi.getBoundingClientRect(); gl.uniform4f(uni('uHi'), r.left, r.top, r.right, r.bottom); }
