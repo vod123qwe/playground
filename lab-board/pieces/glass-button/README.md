@@ -9,7 +9,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 **Bryła** to pole odległości (SDF) śledzone krokami (sphere tracing): obrys to prostokąt z zaokrąglonymi rogami (aż do pełnej pigułki), a na nim profil wysokości od góry i od spodu. Kopuła > 0 daje soczewkę wypukłą, kopuła < 0 wklęsłą misę; przy wklęsłości ścianka sama się podnosi, żeby zawsze był rant.
 
 **Panel „Tune”** (przycisk w prawym górnym rogu; na telefonie wysuwa się od dołu):
-- *Presets*: M&M (domyślny), Pebble, Slab, Dish (wklęsła), Droplet (woda, IOR 1,33), Crystal (IOR 2,2, mocna dyspersja).
+- *Presets*: **Signature** (pełny wygląd Jarka: gruba, lekko wklęsła płyta z miękkim brzegiem uniesiona nad stroną, IOR 2,28 z mocnym rozszczepieniem, orb, większy layout, dźwięk Bubble, płynne menu; bez treści) i kształty, które zmieniają tylko bryłę i optykę: M&M, Puck (gruby krążek), Tile (płytka z zaokrąglonymi rogami), Lens (wysoka, dwustronnie wypukła), Pebble (miękki kamyk), Dish (wklęsła), Prism (kanciasty kryształ, IOR 2,3), Droplet (woda, IOR 1,33). Po wybraniu kształtu ikonka sama dopasowuje się do nowej bryły.
 - *Shape*: rogi, kopuła (wypukła / wklęsła), ścianka, spód, profil (1 = stożek, 2 = łuk koła, więcej = płaski wierzch z ostrzejszym brzegiem), zaokrąglenie krawędzi, uniesienie nad stroną. *Press grow*: o ile przycisk rośnie przy przytrzymaniu (domyślnie 8%).
 - *Optics*: współczynnik załamania, dyspersja, zmatowienie (frost), kolor i siła zabarwienia szkła.
 - *Light*: za kursorem albo ręcznie (kąt, wysokość), siła odblasku, odbić, tęczy na rancie i cienia.
