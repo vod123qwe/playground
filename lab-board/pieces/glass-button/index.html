@@ -935,17 +935,16 @@ vec3 pageAt(vec2 q, float fp){
   float db = BR - length(q - BC.xy + L.xy / max(L.z, 0.25) * BC.z * 0.35);
   shadow = max(shadow, smoothstep(-BR * 0.5, BR * 0.6, db) * 0.18 * (0.35 + 0.65 * uBead2.x));
   caus += smoothstep(BR * 0.3, BR * 0.8, db) * 0.25 * (1.0 - uBead2.x);
-  if (uShadowMode < 0.5) c = c * (1.0 - shadow * uLightK.w) + vec3(1.0, 0.985, 0.95) * caus * 0.38 * uLightK.w;
-  else {
+  // the shadow and its caustic are always there (Shadow strength); the glow is only extra light on top
+  c = c * (1.0 - shadow * uLightK.w) + vec3(1.0, 0.985, 0.95) * caus * 0.38 * uLightK.w;
+  if (uShadowMode > 0.5) {
     // a glow spilled on the page around and under the glass, its colours drifting slowly along it (like a TV backlight)
     float e = foot(q);
     float glow = exp(-max(e, 0.0) / max(uGlowK.y, 1.0)) * (0.55 + 0.45 * smoothstep(-R * 0.8, 0.0, e));
     float u = (q.x - uBox.x) / (uBox.z * 2.0 + R) * 0.55 + (q.y - uBox.y) / (R * 6.0) * 0.25 + uGlowK.z;
     float f = fract(u), w = f * 3.0;
     vec3 gc = w < 1.0 ? mix(uGlowA, uGlowB, smoothstep(0.0, 1.0, w)) : w < 2.0 ? mix(uGlowB, uGlowC, smoothstep(1.0, 2.0, w)) : mix(uGlowC, uGlowA, smoothstep(2.0, 3.0, w));
-    vec3 light = gc * glow * uGlowK.x;
-    c = 1.0 - (1.0 - c) * (1.0 - clamp(light, 0.0, 1.0));            // screen: it lights the page, never darkens it
-    c *= 1.0 - smoothstep(-R * 0.3, R * 0.05, ds) * (1.0 - smoothstep(R * 0.05, R * 0.6, ds)) * 0.08 * uLightK.w;   // a faint contact shadow
+    c = 1.0 - (1.0 - c) * (1.0 - clamp(gc * glow * uGlowK.x, 0.0, 1.0));   // screen: it lights the page, never darkens it
   }
   float far = smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uBox.xy));
   return mix(c, sky(vec3(0.0, -0.3, 0.12)) * 0.93, far);
