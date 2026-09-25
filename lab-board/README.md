@@ -20,6 +20,16 @@ Mechanika przeniesiona z sekcji Lab na juanmoraromero.com (analiza w pamięci Cl
   - `focus`: cała plansza desaturuje się i przygasa, a najechany kafel wyostrza się z dużych pikseli w ok. pół sekundy.
   - `none`: bez efektu, sam kursor.
   Warstwa przednia kafla wychodzi do DOM tylko wtedy, gdy musi (szkło, wideo albo chipy), inaczej zostaje w GL i dostaje efekty shadera. Pokrętła w `CFG.fx`. Kursor-pierścień z tytułem działa we wszystkich trybach, kwadraty z symbolami dalej wyłączone (`CFG.hoverChips`).
+- **Efekty głębi (zdjęcia 3D w stylu Facebooka)**: 10 kafli ma mapy głębi w `thumbs/depth/` (skala szarości, jasne = blisko), wygenerowane lokalnie modelem Depth Anything V2 Small (ONNX, Apache 2.0) skryptem poza repo; Echo Peak i telefon z Figmy też. Na tych kaflach działa sześć dodatkowych trybów hover:
+  - `depth`: paralaksa z mapy głębi (3 kroki doprecyzowania, bliższe plany jadą z kursorem, dalsze przeciwnie) + lekkie uniesienie kafla.
+  - `topo`: głębia + poziomice z mapy głębi, co czwarta grubsza, najmocniejsze przy kursorze (limonkowe na przyciemnionym obrazie).
+  - `scan`: skan LIDAR, jasna linia przechodzi od bliskiego do dalekiego planu co ok. 2,4 s, nieprzeskanowana część to chmura punktów.
+  - `dof`: ostrość na głębokości pod kursorem, reszta rozmyta 9-próbkowym dyskiem.
+  - `light`: kursor jak lampka, normalne z gradientu głębi, rozproszone światło + delikatny połysk.
+  - `relief`: siatka kafla (40×40) wypychana w przód według głębi w vertex shaderze + mocniejszy przechył. Kompilowany tylko, gdy GPU obsługuje tekstury w vertex shaderze.
+  Kafle bez mapy głębi w tych trybach tylko się unoszą. Pokrętła: `CFG.fx.depth`, `depthLift`, `relief`, `reliefTilt`.
+- **Telefon**: przytrzymanie kafla (240 ms) włącza podgląd efektu hover pod palcem, palec steruje nim bez przesuwania planszy, puszczenie nie otwiera projektu. Szybki tap otwiera projekt jak dotąd. W menu `motion · gyro` przechylanie telefonu steruje efektami głębi na wszystkich widocznych kaflach (iOS pyta o zgodę na czujnik ruchu).
+- **Menu review**: pasek na dole (‹ nazwa efektu › i przycisk z suwakami) przełącza tryby hover jednym kciukiem; środek paska albo suwaki otwierają panel ze wszystkimi opcjami (hover, motion, overlay, covers, theme) i krótkim opisem wybranej opcji. Na telefonie to arkusz od dołu z dużymi przyciskami, na desktopie karta z prawej. Skróty: ← → zmienia hover, O otwiera panel, Escape zamyka. `?review=0` chowa pasek.
 - **Profile overlayu** (`CFG.overlay`, przełącznik `overlay · …` w stopce, `?overlay=`). Wszystko w DOM nad planszą i warstwami kafli, pod przyciemnieniem, panelem i kursorem, z `pointer-events: none`, więc nie rusza klikania ani szkła:
   - `static`: dotychczasowe statyczne ziarno SVG (domyślny, wygląd bez zmian).
   - `off`: czysto, bez ziarna.
@@ -42,7 +52,7 @@ Mechanika przeniesiona z sekcji Lab na juanmoraromero.com (analiza w pamięci Cl
 - Live: https://vod123qwe.github.io/playground/lab-board/ (GitHub Pages z gałęzi `main`).
 - Domyślnie: motyw ciemny, hover `lift`, overlay `live`, miniatury na wszystkich kaflach.
 - Nawigacja u góry: tylko `lab board` po lewej i `contact` po prawej.
-- **Ukryte opcje**: słowo `options` w prawym dolnym rogu (albo klawisz O) otwiera panel z przełącznikami okładek, hovera, overlayu i motywu. Wybór zapisuje się w adresie, więc link z parametrami otwiera tę samą konfigurację.
+- **Opcje**: na czas review zamiast ukrytego `options` jest widoczny pasek review (patrz wyżej). Wybór zapisuje się w adresie, więc link z parametrami otwiera tę samą konfigurację.
 - **Telefon**: przeciąganie jednym palcem przesuwa planszę, dwa palce robią pinch-zoom (z tą samą sprężyną co kółko), tap otwiera panel jako bottom sheet. Efekty hover i wideo odpalają się tylko myszą, na dotyku kafle są statyczne.
 
 ## Miniatury przykładowe
@@ -80,7 +90,7 @@ Wszystko w obiekcie `CFG` na górze skryptu. Najciekawsze:
 | `card.openPush` | impuls zagięcia pola, gdy karta odrywa się z planszy | 0.18 |
 | `detail` | `panel` albo `card` | panel |
 | `covers` | `plain`, `circle`, `mixed` albo `motif` | plain |
-| `hover` | `none`, `lift`, `lens` albo `focus` | lift |
+| `hover` | `none`, `lift`, `lens`, `focus`, `depth`, `topo`, `scan`, `dof`, `light`, `relief` | lift |
 | `overlay` | `static`, `off`, `film`, `crt`, `tv`, `dither` albo `live` | static |
 | `fx.lift`, `fx.tilt`, `fx.parallax` | uniesienie w px, przechył (z na px), dryf obrazu | 46, 0.12, 0.016 |
 | `fx.bulge`, `fx.bulgeR` | wybrzuszenie soczewki i jego promień w px | 34, 150 |

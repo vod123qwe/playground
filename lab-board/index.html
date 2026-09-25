@@ -38,7 +38,7 @@
   .slots a{
     position:absolute; top:0; left:0; width:0; height:0; display:none;
     transform-origin:top left; will-change:transform; text-decoration:none; cursor:inherit;
-    -webkit-user-drag:none; outline-offset:4px;
+    -webkit-user-drag:none; -webkit-touch-callout:none; outline-offset:4px;
   }
   .slots a:focus-visible{outline:2px solid var(--ink)}
   .slots.no-hit{pointer-events:none}
@@ -101,20 +101,45 @@
   }
   .foot > span{white-space:nowrap}
   .foot .k{opacity:.6}
-  .opt-toggle{pointer-events:auto; border:0; background:transparent; padding:6px 0 6px 12px; margin:-6px 0; cursor:pointer; font:inherit; color:inherit; opacity:.35}
-  .opt-toggle:hover,.opt-toggle[aria-expanded="true"]{opacity:1}
-  /* hidden customisation sheet: opened by "options" in the footer or the O key */
+  /* review bar: cycle hover effects with the thumb, open everything else from the sliders button */
+  .review{position:absolute; left:50%; bottom:44px; z-index:9; transform:translateX(-50%); display:flex; align-items:stretch;
+    background:var(--paper); color:var(--ink); border:1px solid var(--line); box-shadow:0 16px 40px -18px rgba(0,0,0,.6); touch-action:manipulation}
+  .review[hidden]{display:none}
+  .rv-btn{width:44px; height:44px; border:0; background:transparent; color:inherit; display:grid; place-items:center; cursor:pointer; padding:0}
+  .rv-btn svg{width:18px; height:18px}
+  .rv-btn + .rv-label, .rv-label + .rv-btn, .rv-btn + .rv-btn{border-left:1px solid var(--line)}
+  .rv-label{min-width:156px; height:44px; padding:0 14px; border:0; background:transparent; color:inherit; font:inherit; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer}
+  .rv-k,.rv-n{opacity:.5; font-size:11px; font-variant-numeric:tabular-nums}
+  .rv-name{font-weight:700; font-size:14px}
+  .rv-btn:active,.rv-label:active{background:var(--line)}
+  /* sheet: side card on desktop, bottom sheet on phones */
+  .opt-scrim{position:fixed; inset:0; z-index:9; background:transparent}
+  .opt-scrim[hidden]{display:none}
   .options{
-    position:absolute; right:var(--gutter); bottom:44px; z-index:9; width:min(360px, calc(100vw - 2 * var(--gutter)));
-    display:grid; gap:10px; padding:14px 16px; background:var(--paper); color:var(--ink); border:1px solid var(--line);
-    font-size:12px; box-shadow:0 18px 48px -20px rgba(0,0,0,.55); touch-action:auto;
+    position:absolute; right:var(--gutter); bottom:100px; z-index:10; width:min(420px, calc(100vw - 2 * var(--gutter)));
+    max-height:calc(100dvh - 170px); overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;
+    display:grid; gap:18px; padding:16px 18px 18px; background:var(--paper); color:var(--ink); border:1px solid var(--line);
+    font-size:12px; box-shadow:0 18px 48px -20px rgba(0,0,0,.6);
   }
   .options[hidden]{display:none}
-  .switch{display:flex; flex-wrap:wrap; gap:6px 12px; align-items:baseline}
-  .switch .k{width:56px; flex:none; opacity:.55}
-  .switch button{border:0; background:transparent; padding:4px 0; cursor:pointer; opacity:.6; font:inherit; color:inherit}
-  .switch button:hover{opacity:1}
-  .switch button.is-on{opacity:1; font-weight:700; text-decoration:underline; text-underline-offset:3px}
+  .opt-grab{display:none; justify-self:center; width:40px; height:4px; background:var(--line)}
+  .opt-head{display:flex; justify-content:space-between; align-items:center}
+  .opt-head strong{font-size:15px}
+  .opt-x{border:0; background:transparent; color:inherit; font:inherit; text-decoration:underline; text-underline-offset:3px; padding:10px 0 10px 16px; cursor:pointer}
+  .opt-sec h3{margin:0 0 8px; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); display:flex; justify-content:space-between; gap:12px}
+  .opt-hint{text-transform:none; letter-spacing:0; font-weight:400}
+  .switch{display:flex; flex-wrap:wrap; gap:6px}
+  .switch button{min-height:38px; padding:0 13px; border:1px solid var(--line); background:transparent; color:inherit; font:inherit; font-size:13px; cursor:pointer}
+  .switch button:hover{border-color:var(--ink)}
+  .switch button.is-on{background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600}
+  .opt-desc{margin:8px 0 0; color:var(--muted); line-height:1.45; min-height:2.9em}
+  .opt-foot{margin:0; color:var(--muted); font-size:11px}
+  @media (max-width:720px), (orientation:portrait){
+    .options{left:0; right:0; bottom:0; width:auto; max-height:74dvh; border-width:1px 0 0; padding:10px 16px calc(20px + env(safe-area-inset-bottom)); gap:16px}
+    .opt-grab{display:block}
+    .review{bottom:calc(46px + env(safe-area-inset-bottom))}
+    .switch button{min-height:40px}
+  }
   .foot .v{font-variant-numeric:tabular-nums}
 
   /* ---------- overlay profiles (DOM, above the board and the tile layers, below dim/panel/cursor) ---------- */
@@ -235,14 +260,32 @@
   </header>
   <footer class="foot">
     <span><span class="k" id="hint">drag to pan · scroll to zoom · </span><span class="v" id="count"></span></span>
-    <button class="opt-toggle" id="opt-toggle" type="button" aria-expanded="false" aria-controls="options">options</button>
   </footer>
-  <div class="options" id="options" role="dialog" aria-label="Screen options" hidden>
-    <span class="switch" id="covers-switch"><span class="k">covers</span><button data-v="plain">plain</button><button data-v="circle">circle</button><button data-v="mixed">mixed</button><button data-v="motif">motif</button></span>
-    <span class="switch" id="hover-switch"><span class="k">hover</span><button data-v="none">none</button><button data-v="lift">lift</button><button data-v="lens">lens</button><button data-v="focus">focus</button></span>
-    <span class="switch" id="overlay-switch"><span class="k">overlay</span><button data-v="static">static</button><button data-v="off">off</button><button data-v="film">film</button><button data-v="crt">crt</button><button data-v="tv">tv</button><button data-v="dither">dither</button><button data-v="live">live</button></span>
-    <span class="switch" id="theme-switch"><span class="k">theme</span><button data-v="light">light</button><button data-v="dark">dark</button></span>
-    <span class="switch"><span class="k">state</span><span id="mode">idle</span></span>
+  <nav class="review" id="review" aria-label="Review">
+    <button class="rv-btn" id="rv-prev" type="button" aria-label="Previous hover effect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="rv-label" id="rv-label" type="button" aria-haspopup="dialog" aria-controls="options" aria-expanded="false"><span class="rv-k">hover</span><span class="rv-name" id="rv-name">lift</span><span class="rv-n" id="rv-n">2/10</span></button>
+    <button class="rv-btn" id="rv-next" type="button" aria-label="Next hover effect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="rv-btn" id="rv-menu" type="button" aria-label="All options" aria-controls="options" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><path d="M16 5v4M10 15v4"/></svg></button>
+  </nav>
+  <div class="opt-scrim" id="opt-scrim" hidden></div>
+  <div class="options" id="options" role="dialog" aria-label="Review options" hidden>
+    <div class="opt-grab" aria-hidden="true"></div>
+    <div class="opt-head"><strong>Review</strong><button class="opt-x" id="opt-x" type="button">close</button></div>
+    <section class="opt-sec"><h3>hover <span class="opt-hint">myszą: najedź · telefon: przytrzymaj kafel</span></h3>
+      <div class="switch" id="hover-switch"><button data-v="none">none</button><button data-v="lift">lift</button><button data-v="lens">lens</button><button data-v="focus">focus</button><button data-v="depth">depth</button><button data-v="topo">topo</button><button data-v="scan">scan</button><button data-v="dof">dof</button><button data-v="light">light</button><button data-v="relief">relief</button></div>
+      <p class="opt-desc" id="desc-hover"></p></section>
+    <section class="opt-sec"><h3>motion <span class="opt-hint">telefon</span></h3>
+      <div class="switch" id="motion-switch"><button data-v="off">off</button><button data-v="on">gyro</button></div>
+      <p class="opt-desc" id="desc-motion"></p></section>
+    <section class="opt-sec"><h3>overlay</h3>
+      <div class="switch" id="overlay-switch"><button data-v="static">static</button><button data-v="off">off</button><button data-v="film">film</button><button data-v="crt">crt</button><button data-v="tv">tv</button><button data-v="dither">dither</button><button data-v="live">live</button></div>
+      <p class="opt-desc" id="desc-overlay"></p></section>
+    <section class="opt-sec"><h3>covers</h3>
+      <div class="switch" id="covers-switch"><button data-v="plain">plain</button><button data-v="circle">circle</button><button data-v="mixed">mixed</button><button data-v="motif">motif</button></div>
+      <p class="opt-desc" id="desc-covers"></p></section>
+    <section class="opt-sec"><h3>theme</h3>
+      <div class="switch" id="theme-switch"><button data-v="light">light</button><button data-v="dark">dark</button></div></section>
+    <p class="opt-foot">state <span id="mode">idle</span> · ← → zmienia hover · O otwiera panel</p>
   </div>
   <div class="overlay" id="overlay" aria-hidden="true">
     <div class="ov ov-grain" id="ov-grain"></div>
@@ -310,7 +353,7 @@ const CFG = {
   hover: (new URLSearchParams(location.search).get('hover')) || 'lift',
   // full-screen overlay profile: 'static' (the v1 SVG grain) · 'off' · 'film' · 'crt' · 'tv' · 'dither' · 'live' (wakes up with motion)
   overlay: (new URLSearchParams(location.search).get('overlay')) || 'live',
-  fx: { ease: 0.12, lift: 46, tilt: 0.12, innerZoom: 0.06, parallax: 0.016, frontParallax: 6, bulge: 34, bulgeR: 150, pixelStart: 26, pixelEase: 0.075 },               // the symbol squares on hover are parked; the cursor alone carries the hover
+  fx: { ease: 0.12, lift: 46, tilt: 0.12, innerZoom: 0.06, parallax: 0.016, frontParallax: 6, bulge: 34, bulgeR: 150, pixelStart: 26, pixelEase: 0.075, depth: 0.034, depthLift: 26, relief: 70, reliefTilt: 0.2, flatTilt: 0.04 },               // the symbol squares on hover are parked; the cursor alone carries the hover
   bend: 0.85,                      // × viewport height → z amplitude in px
   strengthDragGain: 12.5,          // bend gain while dragging
   strengthCoastGain: 4,            // bend gain while coasting (original: 1)
@@ -318,7 +361,7 @@ const CFG = {
   hoverGain: 15e-5, hoverMax: 0.03, hoverDecay: 0.86, hoverFloor: 3e-4,
   aberrThreshold: 0.006, aberrScale: 0.42,
   entrance: { time: 1.1, drop: 340, push: 1.8 },
-  planeSegments: 20,
+  planeSegments: 40,               // finer mesh so the relief mode reads as a surface, not facets
   cursor: { dot: 8, ring: 40, press: 14, magnet: 0.12, follow: 0.35, pulseMax: 1.2, pulseDecay: 0.9 },
   card: { openPush: 0.18 },        // vertical bend impulse when a card lifts off the field
   words: { step: 44, minGap: 150, enter: 220, hold: 900, exit: 240, max: 7, spread: 34 }, // hover words: px travelled per word, ms between, timings
@@ -329,23 +372,23 @@ const CFG = {
 
 // ---------- content (placeholder data: Jarek's own experiments) ----------
 const PIECES = [
-  { slug:'grid-blob', back:'#252525', front:{ src:'thumbs/grid-blob-front.png', x:0, y:0, w:1, h:1 },      title:'Grid Blob',      what:'Banner generator: a 9×4 grid melted into a goo blob, exported as true vector.', year:'2026', kind:'tool',   code:'https://github.com/vod123qwe/playground', words:["goo", "grid", "banner", "vector"], rect:{x:90,y:100,w:330,h:460},   hue:212, motif:'blob' },
-  { slug:'typestorm', image:'thumbs/ref/typestorm.webp', focus:[0.5, 0.6],      title:'TypeStorm',      what:'Typing shooter on Canvas. Words fall, you type them down before they land.', year:'2026', kind:'game',   words:["type fast", "canvas", "words fall", "arcade"], rect:{x:560,y:70,w:460,h:260},   hue:8,   motif:'rain' },
-  { slug:'wiredraft', image:'thumbs/ref/wiredraft.png', focus:[0.47, 0.5],      title:'WireDraft',      what:'Wireframe editor that loads a mockup from the URL hash and exports SVG or Figma.', year:'2026', kind:'tool', words:["wireframe", "hash url", "svg out", "boxes"], rect:{x:1160,y:140,w:270,h:480}, hue:40,  motif:'wire' },
-  { slug:'lottie-studio', image:'thumbs/ref/lottie-studio.png', focus:[0.5, 0.0],  title:'Lottie Studio',  what:'Tiny keyframe editor with a timeline that writes Lottie JSON.', year:'2026', kind:'tool',                 words:["keyframes", "timeline", "json", "motion"], rect:{x:1570,y:60,w:440,h:230},  hue:280, motif:'wave' },
+  { slug:'grid-blob', depth:'thumbs/depth/grid-blob.png', back:'#252525', front:{ src:'thumbs/grid-blob-front.png', x:0, y:0, w:1, h:1 },      title:'Grid Blob',      what:'Banner generator: a 9×4 grid melted into a goo blob, exported as true vector.', year:'2026', kind:'tool',   code:'https://github.com/vod123qwe/playground', words:["goo", "grid", "banner", "vector"], rect:{x:90,y:100,w:330,h:460},   hue:212, motif:'blob' },
+  { slug:'typestorm', depth:'thumbs/depth/typestorm.png', image:'thumbs/ref/typestorm.webp', focus:[0.5, 0.6],      title:'TypeStorm',      what:'Typing shooter on Canvas. Words fall, you type them down before they land.', year:'2026', kind:'game',   words:["type fast", "canvas", "words fall", "arcade"], rect:{x:560,y:70,w:460,h:260},   hue:8,   motif:'rain' },
+  { slug:'wiredraft', depth:'thumbs/depth/wiredraft.png', image:'thumbs/ref/wiredraft.png', focus:[0.47, 0.5],      title:'WireDraft',      what:'Wireframe editor that loads a mockup from the URL hash and exports SVG or Figma.', year:'2026', kind:'tool', words:["wireframe", "hash url", "svg out", "boxes"], rect:{x:1160,y:140,w:270,h:480}, hue:40,  motif:'wire' },
+  { slug:'lottie-studio', depth:'thumbs/depth/lottie-studio.png', image:'thumbs/ref/lottie-studio.png', focus:[0.5, 0.0],  title:'Lottie Studio',  what:'Tiny keyframe editor with a timeline that writes Lottie JSON.', year:'2026', kind:'tool',                 words:["keyframes", "timeline", "json", "motion"], rect:{x:1570,y:60,w:440,h:230},  hue:280, motif:'wave' },
   { slug:'win98-music',    title:'Win98 Music',    what:'A Windows 98 desktop in React that plays music. Draggable windows included.', year:'2026', kind:'toy', code:'https://github.com/vod123qwe/win98-music', words:["desktop", "1998", "windows", "player"], rect:{x:2150,y:120,w:280,h:500}, hue:190, motif:'win' },
-  { slug:'kronika', image:'thumbs/kronika.png',        title:'Kronika',        what:'Settlement roguelite drawn entirely in ASCII. Seasons turn, expeditions leave, fog hides the hexes.', year:'2026', kind:'game', words:["ascii", "seasons", "fog", "settlement"], rect:{x:2570,y:70,w:320,h:450}, hue:120, motif:'ascii' },
-  { slug:'parkove', image:'thumbs/ref/parkove.png', focus:[0.5, 0.5],        title:'Parkove',        what:'Outdoor game for Kraków parks: fog-of-war map, quests, a design system first.', year:'2026', kind:'mobile', words:["kraków", "fog of war", "quests", "outdoors"], rect:{x:100,y:680,w:480,h:250}, hue:140, motif:'fog' },
+  { slug:'kronika', depth:'thumbs/depth/kronika.png', image:'thumbs/kronika.png',        title:'Kronika',        what:'Settlement roguelite drawn entirely in ASCII. Seasons turn, expeditions leave, fog hides the hexes.', year:'2026', kind:'game', words:["ascii", "seasons", "fog", "settlement"], rect:{x:2570,y:70,w:320,h:450}, hue:120, motif:'ascii' },
+  { slug:'parkove', depth:'thumbs/depth/parkove.png', image:'thumbs/ref/parkove.png', focus:[0.5, 0.5],        title:'Parkove',        what:'Outdoor game for Kraków parks: fog-of-war map, quests, a design system first.', year:'2026', kind:'mobile', words:["kraków", "fog of war", "quests", "outdoors"], rect:{x:100,y:680,w:480,h:250}, hue:140, motif:'fog' },
   { slug:'emilka',         title:'Emilka',         what:'Tablet learning game for a five-year-old, with Polish text-to-speech.', year:'2026', kind:'game',        words:["for kids", "tablet", "polish tts", "play"], rect:{x:700,y:480,w:260,h:460},  hue:330, motif:'dots' },
-  { slug:'meander', image:'thumbs/ref/meander.png', focus:[0.5, 0.5],        title:'Meander',        what:'Mobile trip generator: pick a mood and a distance, get a route.', year:'2026', kind:'mobile', code:'https://github.com/vod123qwe/meander', words:["trip", "mood", "distance", "route"], rect:{x:1080,y:760,w:300,h:300}, hue:170, motif:'path' },
+  { slug:'meander', depth:'thumbs/depth/meander.png', image:'thumbs/ref/meander.png', focus:[0.5, 0.5],        title:'Meander',        what:'Mobile trip generator: pick a mood and a distance, get a route.', year:'2026', kind:'mobile', code:'https://github.com/vod123qwe/meander', words:["trip", "mood", "distance", "route"], rect:{x:1080,y:760,w:300,h:300}, hue:170, motif:'path' },
   { slug:'portfel', video:'thumbs/portfel.mp4', front:{ src:'thumbs/portfel-front.png', x:67/460, y:46/250, w:327/460, h:159/250, glass:{ radius:30 } },        title:'Portfel',        what:'Single-file budget PWA. Reads live data from a Gist and renders a mortgage dashboard.', year:'2025', kind:'personal', words:["budget", "pwa", "gist", "mortgage"], rect:{x:1520,y:420,w:460,h:250}, hue:48, motif:'bars' },
   { slug:'type-tokens', back:'#001e42', front:{ src:'thumbs/type-tokens-front.png', x:91/270, y:210/480, w:89/270, h:61/480 },    title:'Type Tokens',    what:'Figma plugin that turns Material 3 text styles into variables you can theme.', year:'2026', kind:'plugin', words:["material 3", "variables", "type ramp", "figma"], rect:{x:2080,y:740,w:270,h:480}, hue:230, motif:'type' },
-  { slug:'contrast-audit', image:'thumbs/ref/contrast-audit.png', focus:[0.5, 0.3], title:'Contrast Audit', what:'Figma plugin checking WCAG and APCA contrast across a whole file, with review mode.', year:'2026', kind:'plugin', words:["wcag", "apca", "contrast", "review"], rect:{x:2490,y:640,w:450,h:240}, hue:0, motif:'rings' },
+  { slug:'contrast-audit', depth:'thumbs/depth/contrast-audit.png', image:'thumbs/ref/contrast-audit.png', focus:[0.5, 0.3], title:'Contrast Audit', what:'Figma plugin checking WCAG and APCA contrast across a whole file, with review mode.', year:'2026', kind:'plugin', words:["wcag", "apca", "contrast", "review"], rect:{x:2490,y:640,w:450,h:240}, hue:0, motif:'rings' },
   { slug:'stickies',       title:'Stickies',       what:'Twelve sticky-note variants and a plugin that drops them where you point.', year:'2026', kind:'plugin', words:["notes", "twelve", "drop", "figma"], rect:{x:140,y:1050,w:260,h:470}, hue:52, motif:'notes' },
-  { slug:'audit-suite', image:'thumbs/ref/audit-suite.png', focus:[0.5, 0.5],    title:'Audit Suite',    what:'Design-system audit hub: components, types, contrast, one message router.', year:'2026', kind:'plugin', code:'https://github.com/vod123qwe/figma-audit-suite', words:["audit", "components", "types", "router"], rect:{x:520,y:1080,w:470,h:250}, hue:205, motif:'grid' },
+  { slug:'audit-suite', depth:'thumbs/depth/audit-suite.png', image:'thumbs/ref/audit-suite.png', focus:[0.5, 0.5],    title:'Audit Suite',    what:'Design-system audit hub: components, types, contrast, one message router.', year:'2026', kind:'plugin', code:'https://github.com/vod123qwe/figma-audit-suite', words:["audit", "components", "types", "router"], rect:{x:520,y:1080,w:470,h:250}, hue:205, motif:'grid' },
   { slug:'runebound',      title:'Runebound',      what:'Isometric action RPG proof of concept in Godot. CC0 assets only.', year:'2026', kind:'game',              words:["isometric", "arpg", "godot", "cc0"], rect:{x:1130,y:1180,w:330,h:470}, hue:265, motif:'iso' },
   { slug:'cardrush',       title:'Cardrush',       what:'Horde survival meets a card deck. Isometric, Godot, waiting for its proof of concept.', year:'2026', kind:'game', words:["horde", "cards", "isometric", "godot"], rect:{x:1600,y:800,w:270,h:480}, hue:20, motif:'cards' },
-  { slug:'spellbeat', image:'thumbs/ref/spellbeat.webp', focus:[0.5, 0.55],      title:'Spellbeat',      what:'Deckbuilder crossed with a rhythm game. Parked, not forgotten.', year:'2025', kind:'game',                words:["rhythm", "deck", "parked", "beats"], rect:{x:2020,y:1350,w:450,h:240}, hue:300, motif:'beat' },
+  { slug:'spellbeat', depth:'thumbs/depth/spellbeat.png', image:'thumbs/ref/spellbeat.webp', focus:[0.5, 0.55],      title:'Spellbeat',      what:'Deckbuilder crossed with a rhythm game. Parked, not forgotten.', year:'2025', kind:'game',                words:["rhythm", "deck", "parked", "beats"], rect:{x:2020,y:1350,w:450,h:240}, hue:300, motif:'beat' },
   { slug:'file-audit',     title:'File Audit',     what:'The first Figma audit plugin: scans a design-system file and reports what drifted.', year:'2025', kind:'plugin', code:'https://github.com/vod123qwe/figma-file-audit', words:["drift", "scan", "design system", "v1"], rect:{x:2560,y:1010,w:280,h:500}, hue:95, motif:'scan' },
 ];
 const pad2 = n => String(n).padStart(2, '0');
@@ -433,6 +476,11 @@ function loadImageCovers() {
       const img = new Image();
       img.onload = () => { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0); imageCovers.set(i, c); refreshCover(i); };
       img.src = p.image;
+    }
+    if (p.depth && !p._depthLoading) {
+      p._depthLoading = true; const img = new Image();
+      img.onload = () => { if (R && R.setDepth) R.setDepth(i, img); };
+      img.src = p.depth;
     }
     if (p.front && !frontImages.has(i)) {
       const img = new Image();
@@ -530,6 +578,7 @@ uniform vec2 uTilt;        // lift: z per px, the side under the cursor presses 
 uniform vec2 uMousePx;     // cursor relative to the tile centre, px, y up
 uniform float uBulge;      // lens: px toward the camera under the cursor
 uniform float uBulgeR;
+/*VTF_DECL*/
 varying vec2 vUv;
 void main () {
   vec2 local = aPos * uPieceSize;
@@ -540,9 +589,22 @@ void main () {
   p.z += uLift - (uTilt.x * local.x + uTilt.y * local.y);
   vec2 dm = local - uMousePx;
   p.z += uBulge * exp(-dot(dm, dm) / max(uBulgeR * uBulgeR, 1.0));
+/*VTF_MAIN*/
   vUv = aUv;
   gl_Position = uPV * vec4(p, 1.0);
 }`;
+const VTF_DECL = `
+uniform sampler2D uDepth;
+uniform float uHasDepth;
+uniform float uRelief;     // relief: px the nearest depth pushes toward the camera
+uniform vec2 uImageSize;
+uniform vec2 uFocus;`;
+const VTF_MAIN = `
+  if (uRelief > 0.0 && uHasDepth > 0.5) {
+    vec2 rr = vec2(min((uPieceSize.x / uPieceSize.y) / (uImageSize.x / uImageSize.y), 1.0), min((uImageSize.x / uImageSize.y) / (uPieceSize.x / uPieceSize.y), 1.0));
+    vec2 duv = vec2(aUv.x * rr.x + (1.0 - rr.x) * uFocus.x, aUv.y * rr.y + (1.0 - rr.y) * uFocus.y);
+    p.z += (texture2DLod(uDepth, duv, 0.0).r - 0.35) * uRelief;
+  }`;
 const FRAG = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -569,13 +631,21 @@ uniform vec2 uRippleUv;    // lens: where the ripple started
 uniform float uPixel;      // focus: pixel size in px (<= 1.5 = sharp)
 uniform float uDim;        // how much this (not hovered) tile recedes, 0..1
 uniform vec2 uFocus;       // which part of the image the cover crop keeps (0.5, 0.5 = centre)
+uniform sampler2D uDepth;  // grayscale depth map, 1 = near (Depth Anything V2)
+uniform float uHasDepth;
+uniform vec2 uTiltVec;     // eased viewer direction -1..1 (cursor or gyro)
+uniform float uDepthAmt;   // depth parallax strength in image uv
 varying vec2 vUv;
+float depthAt(vec2 q) { return uHasDepth > 0.5 ? texture2D(uDepth, q).r : 0.5; }
+vec2 coverUv(vec2 q, vec2 ratio) { return vec2(q.x * ratio.x + (1.0 - ratio.x) * uFocus.x, q.y * ratio.y + (1.0 - ratio.y) * uFocus.y); }
 void main () {
   if (uHasTex < 0.5) { gl_FragColor = vec4(uColor, uOpacity); return; }
   float shortSide = min(uPieceSize.x, uPieceSize.y);
   vec2 aspect = uPieceSize / shortSide;
   vec2 st = vUv, lensOff = vec2(0.0);
   float sheen = 0.0;
+  bool depthFam = uMode > 3.5;              // 4 depth · 5 topo · 6 scan · 7 dof · 8 light · 9 relief
+  if (depthFam) st = (st - 0.5) / (1.0 + uInnerZoom * uAmt) + 0.5;
   if (uMode > 0.5 && uMode < 1.5) {
     st = (st - 0.5) / (1.0 + uInnerZoom * uAmt) + 0.5 + uParallax;
     vec2 dm = (vUv - uMouseUv) * aspect;
@@ -589,7 +659,7 @@ void main () {
     float wave = sin((rr - wf) * 46.0) * exp(-abs(rr - wf) * 14.0) * exp(-uRipple * 2.4) * uAmt;
     st += (dr / max(rr, 0.0001)) / aspect * wave * 0.010;
     lensOff = (vUv - uMouseUv) * f * (1.0 - f) * 0.09;
-  } else if (uMode > 2.5 && uPixel > 1.5) {
+  } else if (uMode > 2.5 && uMode < 3.5 && uPixel > 1.5) {
     vec2 cell = uPixel / uPieceSize;
     st = (floor(st / cell) + 0.5) * cell;
   }
@@ -597,15 +667,73 @@ void main () {
   vec2 ratio = vec2(
     min((uPieceSize.x / uPieceSize.y) / (uImageSize.x / uImageSize.y), 1.0),
     min((uImageSize.x / uImageSize.y) / (uPieceSize.x / uPieceSize.y), 1.0));
-  vec2 uv = vec2(st.x * ratio.x + (1.0 - ratio.x) * uFocus.x, st.y * ratio.y + (1.0 - ratio.y) * uFocus.y);
+  vec2 uv = coverUv(st, ratio);
+  float d = 0.5;
+  if (depthFam && uHasDepth > 0.5) {
+    // Facebook-style 3D photo: near pixels travel with the viewer, far ones against it; 3 refinement steps
+    vec2 dir = uTiltVec * uDepthAmt * ratio;
+    vec2 o = vec2(0.0);
+    for (int k = 0; k < 3; k++) { d = depthAt(uv - o); o = dir * (d - 0.5); }
+    uv = clamp(uv - o, 0.0, 1.0);
+    d = depthAt(uv);
+  }
   vec2 excess = max(abs(uStrength) - vec2(uAberrThreshold), 0.0);
   vec2 off = excess * sign(uStrength) * uAberrScale + uHover / aspect + lensOff;
-  float r = texture2D(uTex, uv + off).r;
-  float g = texture2D(uTex, uv).g;
-  float b = texture2D(uTex, uv - off).b;
-  vec3 col = vec3(r, g, b) + sheen;
+  vec3 col;
+  if (uMode > 6.5 && uMode < 7.5 && uHasDepth > 0.5) {
+    // dof: sharp at the depth under the cursor, the rest melts (9-tap disc)
+    float fd = depthAt(coverUv(clamp(uMouseUv, 0.0, 1.0), ratio));
+    vec2 rad = clamp(abs(d - fd) * 2.6, 0.0, 1.0) * uAmt * 8.0 * ratio / uPieceSize;
+    vec3 acc = texture2D(uTex, uv).rgb;
+    acc += texture2D(uTex, uv + rad * vec2( 1.0,  0.0)).rgb; acc += texture2D(uTex, uv + rad * vec2(-1.0,  0.0)).rgb;
+    acc += texture2D(uTex, uv + rad * vec2( 0.0,  1.0)).rgb; acc += texture2D(uTex, uv + rad * vec2( 0.0, -1.0)).rgb;
+    acc += texture2D(uTex, uv + rad * vec2( 0.7,  0.7)).rgb; acc += texture2D(uTex, uv + rad * vec2(-0.7,  0.7)).rgb;
+    acc += texture2D(uTex, uv + rad * vec2( 0.7, -0.7)).rgb; acc += texture2D(uTex, uv + rad * vec2(-0.7, -0.7)).rgb;
+    col = acc / 9.0;
+  } else {
+    float r = texture2D(uTex, uv + off).r;
+    float g = texture2D(uTex, uv).g;
+    float b = texture2D(uTex, uv - off).b;
+    col = vec3(r, g, b);
+  }
+  col += sheen;
+  if (uMode > 4.5 && uMode < 5.5 && uHasDepth > 0.5) {
+    // topo: contour lines from the depth map, every 4th a major line, strongest around the cursor
+    float lv = d * 16.0, fr = fract(lv), dist = min(fr, 1.0 - fr);
+    float isMajor = step(mod(floor(lv + 0.5), 4.0), 0.5);
+    float w = mix(0.07, 0.13, isMajor);
+    float line = 1.0 - smoothstep(w * 0.45, w, dist);
+    vec2 dm = (vUv - uMouseUv) * aspect;
+    float near = mix(0.35, 1.0, exp(-dot(dm, dm) * 6.0));
+    col = mix(col, col * 0.62, 0.55 * uAmt);
+    col = mix(col, vec3(0.77, 1.0, 0.29), line * near * uAmt * mix(0.5, 0.95, isMajor));
+  }
+  if (uMode > 5.5 && uMode < 6.5 && uHasDepth > 0.5) {
+    // scan: a LIDAR sweep reveals the scene from near to far; not-yet-scanned depth shows as a point cloud
+    float sweep = 1.15 - fract(uRipple * 0.42) * 1.3;
+    float scanned = step(sweep, d);
+    float band = exp(-pow((d - sweep) * 26.0, 2.0));
+    vec2 gp = fract(vUv * uPieceSize / 5.0) - 0.5;
+    float dotm = 1.0 - smoothstep(0.16, 0.24, length(gp));
+    vec3 pc = mix(vec3(0.05, 0.12, 0.45), vec3(0.35, 0.95, 1.0), d);
+    col = mix(col, mix(col * 0.16 + pc * dotm * 0.6, col, scanned), uAmt);
+    col += vec3(0.4, 0.95, 1.0) * band * 0.85 * uAmt;
+  }
+  if (uMode > 7.5 && uMode < 8.5 && uHasDepth > 0.5) {
+    // light: the cursor is a lamp; normals come from the depth gradient
+    vec2 e = 1.5 / uImageSize;
+    float dx = depthAt(uv + vec2(e.x, 0.0)) - depthAt(uv - vec2(e.x, 0.0));
+    float dy = depthAt(uv + vec2(0.0, e.y)) - depthAt(uv - vec2(0.0, e.y));
+    vec3 n = normalize(vec3(-dx * 22.0, dy * 22.0, 1.0));
+    vec2 lp = (uMouseUv - vUv) * aspect;
+    vec3 L = normalize(vec3(lp.x, -lp.y, 0.45));
+    float diff = max(dot(n, L), 0.0), fall = exp(-dot(lp, lp) * 2.2);
+    float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 18.0);
+    vec3 lit = col * (0.35 + 0.95 * diff * (0.45 + 0.55 * fall)) + vec3(1.0, 0.95, 0.85) * spec * 0.25 * fall;
+    col = mix(col, lit, uAmt);
+  }
   if (uDim > 0.0) {
-    float focus = step(2.5, uMode);
+    float focus = (uMode > 2.5 && uMode < 3.5) ? 1.0 : 0.0;
     float l = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(col, vec3(l), uDim * mix(0.15, 0.9, focus));
     col *= 1.0 - uDim * mix(0.2, 0.55, focus);
@@ -621,11 +749,13 @@ function createGL(canvas) {
   const isGL2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
   const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
   const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+  const vtf = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) > 0;   // relief needs depth in the vertex shader
+  const vsrc = VERT.replace('/*VTF_DECL*/', vtf ? VTF_DECL : '').replace('/*VTF_MAIN*/', vtf ? VTF_MAIN : '');
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vsrc)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
   gl.useProgram(prog);
-  const U = {}; for (const n of ['uPV','uPiecePos','uPieceSize','uStrength','uBend','uViewport','uTex','uHasTex','uColor','uOpacity','uImageSize','uHover','uAberrThreshold','uAberrScale','uLift','uTilt','uMousePx','uBulge','uBulgeR','uMode','uAmt','uMouseUv','uParallax','uInnerZoom','uRipple','uRippleUv','uPixel','uDim','uFocus']) U[n] = gl.getUniformLocation(prog, n);
+  const U = {}; for (const n of ['uPV','uPiecePos','uPieceSize','uStrength','uBend','uViewport','uTex','uHasTex','uColor','uOpacity','uImageSize','uHover','uAberrThreshold','uAberrScale','uLift','uTilt','uMousePx','uBulge','uBulgeR','uMode','uAmt','uMouseUv','uParallax','uInnerZoom','uRipple','uRippleUv','uPixel','uDim','uFocus','uDepth','uHasDepth','uTiltVec','uDepthAmt','uRelief']) U[n] = gl.getUniformLocation(prog, n);
   const N = CFG.planeSegments, pos = [], uv = [], idx = [];
   for (let y = 0; y <= N; y++) for (let x = 0; x <= N; x++) { pos.push(x / N - 0.5, 0.5 - y / N); uv.push(x / N, y / N); }
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const a = y * (N + 1) + x, b = a + 1, c = a + N + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
@@ -634,8 +764,25 @@ function createGL(canvas) {
   const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.DEPTH_TEST); gl.clearColor(0, 0, 0, 0);
   gl.uniform1f(U.uAberrThreshold, CFG.aberrThreshold); gl.uniform1f(U.uAberrScale, CFG.aberrScale);
-  gl.uniform1i(U.uTex, 0);
+  gl.uniform1i(U.uTex, 0); gl.uniform1i(U.uDepth, 1);
   const textures = new Map();
+  const depthTex = new Map();
+  const texParams = mip => {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    if (mip && isGL2) { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); }
+    else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  };
+  const greyDepth = gl.createTexture();                 // bound when a tile has no map, keeps unit 1 valid
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, greyDepth);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 128, 255])); texParams(false);
+  gl.activeTexture(gl.TEXTURE0);
+  function setDepth(i, img) {
+    const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); texParams(true);
+    gl.activeTexture(gl.TEXTURE0); depthTex.set(i, t);
+  }
   function texFor(i, cover) {
     if (textures.has(i)) return textures.get(i);
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
@@ -667,7 +814,7 @@ function createGL(canvas) {
     return t;
   }
   function draw(instances, strength, opacity, hovers, covers, skipIndex, pick, fxFor) {
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT); gl.activeTexture(gl.TEXTURE0);
     gl.uniform2f(U.uStrength, strength.x, strength.y); gl.uniform1f(U.uOpacity, opacity);
     for (const it of instances) {
       if (it.index === skipIndex) continue;
@@ -677,6 +824,9 @@ function createGL(canvas) {
       else if (alt) { cover = alt.source; t = texFor(10000 + it.index, alt.source); }
       else t = texFor(it.index, cover);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t);
+      const dtx = alt && alt.live ? null : depthTex.get(it.index);   // a live video has no matching depth
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, dtx || greyDepth); gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1f(U.uHasDepth, dtx ? 1 : 0);
       gl.uniform1f(U.uHasTex, 1); gl.uniform2f(U.uImageSize, cover.videoWidth || cover.width, cover.videoHeight || cover.height);
       gl.uniform2f(U.uPiecePos, it.cx, it.cy); gl.uniform2f(U.uPieceSize, it.width, it.height);
       gl.uniform2f(U.uHover, hovers[it.index].x, hovers[it.index].y);
@@ -690,12 +840,13 @@ function createGL(canvas) {
         gl.uniform2f(U.uMouseUv, fx.mouseUv[0], fx.mouseUv[1]); gl.uniform2f(U.uParallax, fx.parallax[0], fx.parallax[1]);
         gl.uniform1f(U.uInnerZoom, fx.innerZoom); gl.uniform1f(U.uRipple, fx.ripple); gl.uniform2f(U.uRippleUv, fx.rippleUv[0], fx.rippleUv[1]);
         gl.uniform1f(U.uPixel, fx.pixel); gl.uniform1f(U.uDim, fx.dim);
+        gl.uniform2f(U.uTiltVec, fx.tiltVec[0], fx.tiltVec[1]); gl.uniform1f(U.uDepthAmt, fx.depthAmt); gl.uniform1f(U.uRelief, vtf ? fx.relief : 0);
       }
       gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
     }
   }
   const invalidate = () => { for (const t of textures.values()) gl.deleteTexture(t); textures.clear(); };
-  return { gl, resize, draw, invalidate, lost: () => gl.isContextLost() };
+  return { gl, resize, draw, invalidate, setDepth, vtf, lost: () => gl.isContextLost() };
 }
 
 // ---------- the field ----------
@@ -720,18 +871,29 @@ const hovers = PIECES.map(() => ({ x: 0, y: 0 }));
 let entrance = reduceMotion ? 1 : 0, lastT = 0, startT = performance.now(), lastIW = 0, lastIH = 0;
 const FX = PIECES.map(() => ({ amt: 0, tx: 0, ty: 0, mu: 0.5, mv: 0.5, rip: 9, ru: 0.5, rv: 0.5, pix: 1 }));
 let focusAmt = 0;
-const HOVER_MODES = { none: 0, lift: 1, lens: 2, focus: 3 };
+const HOVER_MODES = { none: 0, lift: 1, lens: 2, focus: 3, depth: 4, topo: 5, scan: 6, dof: 7, light: 8, relief: 9 };
+const HOVER_ORDER = Object.keys(HOVER_MODES);
+const DEPTH_FAMILY = new Set(['depth', 'topo', 'scan', 'dof', 'light', 'relief']);
+// gyro (phones): tilting the device plays the viewer for every visible tile in the depth modes
+const gyro = { on: false, x: 0, y: 0, base: null };
+function onOrient(e) {
+  if (e.beta == null || e.gamma == null) return;
+  if (!gyro.base) gyro.base = { b: e.beta, g: e.gamma };
+  gyro.base.b += (e.beta - gyro.base.b) * 0.01; gyro.base.g += (e.gamma - gyro.base.g) * 0.01;   // slow recentre as posture changes
+  gyro.x = clamp((e.gamma - gyro.base.g) / 20, -1, 1); gyro.y = clamp((e.beta - gyro.base.b) / 20, -1, 1);
+}
 function fxFrame(dt) {
   const k = 1 - Math.pow(1 - CFG.fx.ease, 60 * dt), kp = 1 - Math.pow(1 - CFG.fx.pixelEase, 60 * dt);
   const it = hoveredTile(), active = CFG.hover !== 'none' && !locked && !dragging;
+  const gy = gyro.on && DEPTH_FAMILY.has(CFG.hover) && hoverIndex < 0 && !locked && !dragging;
   FX.forEach((f, i) => {
     const on = active && i === hoverIndex;
-    f.amt += ((on ? 1 : 0) - f.amt) * k;
+    f.amt += ((on || gy ? 1 : 0) - f.amt) * k;
     let nx = 0, ny = 0;
     if (on && it && pointer) {
       f.mu = clamp((pointer.x - it.left) / it.width, 0, 1); f.mv = clamp((pointer.y - it.top) / it.height, 0, 1);
       nx = f.mu * 2 - 1; ny = f.mv * 2 - 1;
-    }
+    } else if (gy) { nx = gyro.x; ny = gyro.y; f.mu = 0.5 + gyro.x * 0.5; f.mv = 0.5 + gyro.y * 0.5; }
     f.tx += (nx - f.tx) * k; f.ty += (ny - f.ty) * k;
     f.rip += dt; f.pix += (1 - f.pix) * kp;
   });
@@ -739,18 +901,21 @@ function fxFrame(dt) {
 }
 function fxFor(it) {
   const f = FX[it.index], m = CFG.hover, a = f.amt, hovered = it.index === hoverIndex;
+  const fam = DEPTH_FAMILY.has(m), isLift = m === 'lift', isRelief = m === 'relief';
+  const tiltK = isLift ? CFG.fx.tilt : isRelief ? CFG.fx.reliefTilt : fam ? CFG.fx.flatTilt : 0;
   return {
     mode: HOVER_MODES[m] || 0, amt: a,
-    lift: m === 'lift' ? CFG.fx.lift * a : 0,
-    tilt: m === 'lift' ? [f.tx * CFG.fx.tilt * a, -f.ty * CFG.fx.tilt * a] : [0, 0],
+    lift: (isLift || isRelief ? CFG.fx.lift : fam ? CFG.fx.depthLift : 0) * a,
+    tilt: [f.tx * tiltK * a, -f.ty * tiltK * a],
+    tiltVec: [f.tx, f.ty], depthAmt: fam ? CFG.fx.depth * a : 0, relief: isRelief ? CFG.fx.relief * a : 0,
     mousePx: [(f.mu - 0.5) * it.width, (0.5 - f.mv) * it.height],
     bulge: m === 'lens' ? CFG.fx.bulge * a : 0, bulgeR: CFG.fx.bulgeR,
     mouseUv: [f.mu, f.mv],
     parallax: m === 'lift' ? [-f.tx * CFG.fx.parallax * a, -f.ty * CFG.fx.parallax * a] : [0, 0],
-    innerZoom: m === 'lift' ? CFG.fx.innerZoom : 0,
+    innerZoom: isLift || fam ? CFG.fx.innerZoom : 0,
     ripple: f.rip, rippleUv: [f.ru, f.rv],
     pixel: m === 'focus' ? f.pix : 1,
-    dim: (m === 'focus' || m === 'lift') && !hovered ? focusAmt * (1 - a) : 0,
+    dim: (m === 'focus' || isLift || fam) && !hovered ? focusAmt * (1 - a) : 0,
   };
 }
 // the tile that is lifting draws last, so it overlaps its neighbours
@@ -817,7 +982,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaintCov
 const coversSwitch = document.getElementById('covers-switch');
 function setCovers(v) {
   CFG.covers = v; repaintCovers();
-  coversSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === v));
+  coversSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === v)); setDesc('covers', v);
   const u = new URL(location.href); u.searchParams.set('covers', v); history.replaceState(null, '', u);
 }
 coversSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setCovers(b.dataset.v); });
@@ -869,20 +1034,67 @@ function overlayFrame(t, dt) {
     ov.band.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
   }
 }
-const optToggle = document.getElementById('opt-toggle'), optionsEl = document.getElementById('options');
-function setOptions(open) { optionsEl.hidden = !open; optToggle.setAttribute('aria-expanded', String(open)); }
-optToggle.addEventListener('click', () => setOptions(optionsEl.hidden));
+// ---------- review menu ----------
+var DESC = {                                  // var: the covers switch initialises earlier in the file than this block
+  hover: {
+    none: 'Bez efektu, sam kursor.',
+    lift: 'Kafel unosi się i przechyla pod kursorem, obraz lekko dryfuje, reszta planszy przygasa.',
+    lens: 'Soczewka powiększająca pod kursorem, fala od miejsca wejścia, lekkie wybrzuszenie.',
+    focus: 'Plansza szarzeje, a najechany kafel wyostrza się z dużych pikseli.',
+    depth: 'Zdjęcie 3D jak na Facebooku: mapa głębi, bliższe plany jadą mocniej niż tło. Działa na 10 kaflach z mapą głębi.',
+    topo: 'Głębia + poziomice z mapy głębi, jak mapa topograficzna, najmocniej przy kursorze.',
+    scan: 'Skan LIDAR: jasna linia odsłania scenę od bliskiego do dalekiego planu, reszta to chmura punktów.',
+    dof: 'Ostrość na głębokości pod kursorem, bliższe i dalsze plany się rozmywają.',
+    light: 'Kursor jak lampka: światło modeluje wypukłości zdjęcia wyliczone z głębi.',
+    relief: 'Kafel wypycha się w bryłę według głębi i mocniej przechyla. Najmocniejsze 3D, najwięcej artefaktów.',
+  },
+  motion: { off: 'Efekty głębi tylko pod kursorem albo palcem.', on: 'Przechylanie telefonu steruje efektami głębi na wszystkich kaflach. iOS zapyta o zgodę.' },
+  overlay: { static: 'Stałe ziarno z pierwszej wersji.', off: 'Czysto, bez ziarna.', film: 'Żywe ziarno 24 kl/s i delikatna winieta.', crt: 'Linie kineskopu, maska RGB i winieta.', tv: 'Linie i jasny pas przetaczający się w dół.', dither: 'Raster Bayera, jeden punkt na piksel.', live: 'Ziarno i linie budzą się przy ruchu i gasną w spoczynku.' },
+  covers: { plain: 'Ciemnoszare tło tam, gdzie nie ma miniatury.', circle: 'Kolorowe pole z kołem.', mixed: 'Kolorowe pole z różnymi figurami.', motif: 'Szkice proceduralne z pierwszej wersji.' },
+};
+function setDesc(group, v) { if (!DESC) return; const el = document.getElementById('desc-' + group); if (el) el.textContent = (DESC[group] && DESC[group][v]) || ''; }
+CFG.review = new URLSearchParams(location.search).get('review') !== '0';   // ?review=0 hides the bar (O still opens the sheet)
+const reviewEl = document.getElementById('review'), optionsEl = document.getElementById('options'), scrimEl = document.getElementById('opt-scrim');
+const rvLabel = document.getElementById('rv-label'), rvMenu = document.getElementById('rv-menu');
+function setOptions(open) {
+  optionsEl.hidden = !open; scrimEl.hidden = !open;
+  rvLabel.setAttribute('aria-expanded', String(open)); rvMenu.setAttribute('aria-expanded', String(open));
+}
+function stepHover(dir) { const i = HOVER_ORDER.indexOf(CFG.hover); setHover(HOVER_ORDER[(i + dir + HOVER_ORDER.length) % HOVER_ORDER.length]); }
+document.getElementById('rv-prev').addEventListener('click', () => stepHover(-1));
+document.getElementById('rv-next').addEventListener('click', () => stepHover(1));
+rvLabel.addEventListener('click', () => setOptions(optionsEl.hidden));
+rvMenu.addEventListener('click', () => setOptions(optionsEl.hidden));
+document.getElementById('opt-x').addEventListener('click', () => setOptions(false));
+scrimEl.addEventListener('pointerdown', e => { e.preventDefault(); setOptions(false); });
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, textarea')) return;
   if (e.key === 'o' || e.key === 'O') setOptions(optionsEl.hidden);
   if (e.key === 'Escape' && !optionsEl.hidden) setOptions(false);
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !locked) stepHover(e.key === 'ArrowLeft' ? -1 : 1);
 });
 optionsEl.addEventListener('pointerdown', e => e.stopPropagation());
+reviewEl.addEventListener('pointerdown', e => e.stopPropagation());
+board.addEventListener('contextmenu', e => { if (!finePointer) e.preventDefault(); });   // long press previews, it must not open the link menu
+const motionSwitch = document.getElementById('motion-switch');
+async function setMotion(on) {
+  if (on && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try { on = (await DeviceOrientationEvent.requestPermission()) === 'granted'; } catch (err) { on = false; }
+  }
+  if (on && typeof DeviceOrientationEvent === 'undefined') on = false;
+  gyro.on = on; gyro.base = null; gyro.x = gyro.y = 0;
+  window.removeEventListener('deviceorientation', onOrient); if (on) window.addEventListener('deviceorientation', onOrient);
+  motionSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === (on ? 'on' : 'off')));
+  setDesc('motion', on ? 'on' : 'off');
+}
+motionSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMotion(b.dataset.v === 'on'); });
+setMotion(false);
+setDesc('covers', CFG.covers);
 if (!finePointer) document.getElementById('hint').textContent = 'drag to pan · pinch to zoom · ';
 const overlaySwitch = document.getElementById('overlay-switch');
 function setOverlay(v) {
   CFG.overlay = OVERLAYS[v] ? v : 'static'; document.documentElement.dataset.overlay = CFG.overlay;
-  overlaySwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.overlay));
+  overlaySwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.overlay)); setDesc('overlay', CFG.overlay);
   const u = new URL(location.href); u.searchParams.set('overlay', CFG.overlay); history.replaceState(null, '', u);
 }
 overlaySwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setOverlay(b.dataset.v); });
@@ -890,7 +1102,9 @@ setOverlay(CFG.overlay);
 const hoverSwitch = document.getElementById('hover-switch');
 function setHover(v) {
   CFG.hover = HOVER_MODES[v] !== undefined ? v : 'lift';
-  hoverSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.hover));
+  hoverSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.hover)); setDesc('hover', CFG.hover);
+  document.getElementById('rv-name').textContent = CFG.hover;
+  document.getElementById('rv-n').textContent = `${HOVER_ORDER.indexOf(CFG.hover) + 1}/${HOVER_ORDER.length}`;
   const u = new URL(location.href); u.searchParams.set('hover', CFG.hover); history.replaceState(null, '', u);
 }
 hoverSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setHover(b.dataset.v); });
@@ -904,7 +1118,7 @@ function setTheme(v) {
 }
 themeSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTheme(b.dataset.v); });
 setTheme(CFG.theme);
-coversSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.covers));
+coversSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.covers)); setDesc('covers', CFG.covers);
 
 function frame(t) {
   requestAnimationFrame(frame);
@@ -938,6 +1152,7 @@ function frame(t) {
   syncSlots();
   cursorFrame(dt);
   fxFrame(dt);
+  if (reviewEl.hidden !== (locked || !CFG.review)) { reviewEl.hidden = locked || !CFG.review; if (locked) setOptions(false); }
   overlayFrame(t, dt);
   if (R && !R.lost()) R.draw(instances.slice().sort(byLift), { x: strength.x, y: -(strength.y + CFG.entrance.push * (1 - ease) * 0.1 + pushY) }, ease, hovers, covers, openIndex, pickHoverTexture, fxFor);
 }
@@ -951,6 +1166,8 @@ let pointer = null, prevHoverPointer = null;
 board.addEventListener('pointerdown', e => {
   if (!e.isPrimary || locked || pressed || e.button !== 0) return;
   pressed = true; sx = px = e.clientX; sy = py = e.clientY; moveT = performance.now();
+  suppressClick = false; clearTimeout(previewTimer);
+  if (e.pointerType !== 'mouse') previewTimer = setTimeout(() => { if (pressed && !dragging && hoverIndex >= 0) previewing = true; }, 240);
   cursorPress(true);
 });
 board.addEventListener('pointermove', e => {
@@ -966,7 +1183,8 @@ board.addEventListener('pointermove', e => {
   } else wordPrev = null;
   prevHoverPointer = { x: e.clientX, y: e.clientY };
   if (!pressed) return;
-  if (!dragging && Math.hypot(e.clientX - sx, e.clientY - sy) >= CFG.dragThreshold) {
+  if (!dragging && !previewing && Math.hypot(e.clientX - sx, e.clientY - sy) >= CFG.dragThreshold) {
+    clearTimeout(previewTimer);
     dragging = true; board.setPointerCapture(e.pointerId); slotsEl.classList.add('no-hit'); clearHover(); setMode('drag');
   }
   if (dragging) {
@@ -979,8 +1197,11 @@ board.addEventListener('pointermove', e => {
   }
   px = e.clientX; py = e.clientY;
 });
+let previewing = false, previewTimer = null, suppressClick = false;
 function endPress(e) {
   if (!e.isPrimary) return;
+  clearTimeout(previewTimer);
+  if (previewing) { previewing = false; suppressClick = true; clearHover(); }
   const speed = Math.hypot(cam.vx, cam.vy);
   if (dragging) { slotsEl.classList.remove('no-hit'); setMode(speed < CFG.stopSpeed ? 'idle' : 'momentum'); }
   if (pressed) cursorRelease(dragging ? speed : 0);
@@ -1011,7 +1232,7 @@ function endTouch(e) {
 board.addEventListener('pointerup', endTouch); board.addEventListener('pointercancel', endTouch);
 board.addEventListener('dragstart', e => e.preventDefault());
 window.addEventListener('wheel', e => {
-  if (locked) return; e.preventDefault();
+  if (locked || (e.target.closest && e.target.closest('.options'))) return; e.preventDefault();
   const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;              // lines → px
   zoomT = clamp(zoomT - d * CFG.zoom.gain, -CFG.zoom.range, CFG.zoom.range);   // the level you leave it at is where it stays
 }, { passive: false });
@@ -1050,8 +1271,9 @@ function wordsFrame() {                            // every frame from syncSlots
   const p = PIECES[hoverIndex];
   if (p.front && frontImages.has(hoverIndex) && splitFront(hoverIndex)) {
     placeLayer(fgEl, it);
-    if (CFG.hover === 'lift') {   // same lift + tilt as the GL plane: CSS perspective on .stage matches the GL camera (z = 1200)
-      const f = FX[hoverIndex], a = f.amt, tx = f.tx * CFG.fx.tilt * a, ty = -f.ty * CFG.fx.tilt * a, lift = CFG.fx.lift * a;
+    const lfx = fxFor(it);
+    if (lfx.lift > 0.01 || Math.abs(lfx.tilt[0]) + Math.abs(lfx.tilt[1]) > 1e-5) {   // same lift + tilt as the GL plane (CSS perspective = GL camera, z 1200)
+      const f = FX[hoverIndex], a = f.amt, tx = lfx.tilt[0], ty = lfx.tilt[1], lift = lfx.lift;
       fgEl.style.transform = `translate3d(${it.left}px, ${it.top}px, 0) matrix3d(1,0,${(-tx).toFixed(5)},0, 0,1,${ty.toFixed(5)},0, 0,0,1,0, 0,0,${lift.toFixed(2)},1)`;
       fgEl.style.setProperty('--px', `${(f.tx * CFG.fx.frontParallax * a).toFixed(2)}px`); fgEl.style.setProperty('--py', `${(f.ty * CFG.fx.frontParallax * a).toFixed(2)}px`);
     } else { fgEl.style.setProperty('--px', '0px'); fgEl.style.setProperty('--py', '0px'); }
@@ -1129,6 +1351,7 @@ function clearHover() { hoverSlot = hoverIndex = -1; cursorEl.classList.remove('
 // click → route (modifier clicks fall through to the browser)
 let openedHere = false, originRect = null;
 slotsEl.addEventListener('click', e => {
+  if (suppressClick) { suppressClick = false; e.preventDefault(); return; }   // the release of a press-and-hold preview
   const a = e.target.closest('a'); if (!a || a.dataset.index === undefined) return;
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
   e.preventDefault();
@@ -1144,7 +1367,7 @@ document.addEventListener('pointermove', e => {
   if (!e.isPrimary) return;
   const r = stage.getBoundingClientRect(); pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
   // native cursor wins over UI chrome and the detail surfaces
-  cursorEl.classList.toggle('hidden', !!e.target.closest('.top, .card, .panel, .foot, .options') || locked);
+  cursorEl.classList.toggle('hidden', !!e.target.closest('.top, .card, .panel, .foot, .options, .review') || locked);
 });
 document.addEventListener('pointerleave', () => { pointer = null; });
 function cursorPress(on) { cur.pressed = on; }
