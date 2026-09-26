@@ -1220,7 +1220,7 @@ function buildPanel() {
   }
   const acts = el('div', 'acts');
   const reset = el('button', null, 'Reset all'); reset.type = 'button';
-  reset.addEventListener('click', () => { P = Object.assign({}, DEF); useBg(P.bg); apply(); syncInputs(); save(); });
+  reset.addEventListener('click', () => { P = Object.assign({}, DEF, SIGNATURE); useBg(P.bg); apply(); syncInputs(); save(); showVariant(); resetView(); });   // back to preset 1 and the resting view
   const copy = el('button', null, 'Copy settings'); copy.type = 'button';
   copy.addEventListener('click', async () => {
     const d = {}; for (const k in DEF) if (P[k] !== DEF[k]) d[k] = P[k];
