@@ -264,6 +264,14 @@
   @media (min-width:761px){ body.tuning .dock{left:calc(50% - 192px)} }
   @media (max-width:760px){ body.tuning .dock{display:none} }
 
+  .cmp{position:fixed; top:0; bottom:0; left:50%; z-index:4; width:44px; margin-left:-22px; cursor:ew-resize; touch-action:none}
+  .cmp[hidden]{display:none}
+  .cmp i{position:absolute; left:50%; top:50%; width:36px; height:36px; margin:-18px 0 0 -18px; border-radius:999px; background:#fff}
+  .cmp i::before, .cmp i::after{content:""; position:absolute; top:12px; border:6px solid transparent}
+  .cmp i::before{left:3px; border-right-color:#1b1c20} .cmp i::after{right:3px; border-left-color:#1b1c20}
+  .cmp span{position:absolute; top:78px; padding:7px 12px; border-radius:999px; background:#fff; color:#1b1c20; font:600 12.5px "Inter", system-ui, sans-serif; white-space:nowrap}
+  .cmp .cb{right:34px} .cmp .ca{left:34px}
+
   /* ---------- the panel: edge to edge, minimal, roomy ---------- */
   .panel{top:0; right:0; bottom:0; width:384px; padding:0 28px; font-size:13px;
          background:#fff; box-shadow:-1px 0 0 rgba(20,20,20,.08), -40px 0 80px -60px rgba(20,24,30,.45)}
@@ -347,6 +355,7 @@
 <aside class="panel" id="panel" aria-label="Customize the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
+<div class="cmp" id="cmp" hidden><span class="cb">Before</span><span class="ca">After</span><i></i></div>
 <div class="bl"><div class="hints" role="note" aria-label="Click and hold the button. Hold the mouse wheel and drag to turn the view in 3D.">
   <span class="hint-i" title="Click and hold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 3v6.5M6.5 9.5h11"/><path d="M12 3.4a5.1 5.1 0 0 0-5.1 5.1v1h5.1z" fill="currentColor" stroke="none"/></svg></span>
   <span class="hint-i" title="Hold the wheel and drag to turn in 3D"><svg viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="10.5" y="3" width="11" height="18" rx="5.5"/><path d="M16 6.5v3"/><path d="M6 8.5a10 10 0 0 0 0 7M3.8 14.2 6 15.5l1-2.4M26 8.5a10 10 0 0 1 0 7M28.2 14.2 26 15.5l-1-2.4"/></svg></span>
@@ -382,7 +391,7 @@ const DEF = {
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
-  sound: 'glass', release: true, volume: .5,
+  sound: 'glass', release: true, volume: .5, haptic: true, jelly: 1, smooth: true, bloom: true, bloomK: .6, dither: true,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
 };
@@ -433,7 +442,7 @@ const LILAC = {
   beadSize: 1.86, sink: .54, smoke: .03, starSize: .38, starMotion: .91, icon: 'pulse', orbLight: 1.07, beadRefl: 2.93,
   pulseSpeed: 1.97, pulseLight: 1.72, orbSpeed: 1.13, orbGlow: .92, embSize: 1.34, embDepth: 1, embFrost: .58,
   inkA: 1, scale: 1.4, h: 3.82, pl: 1.19, pr: 2.43, gap: 1.12, weight: 530,
-  bgColor: '#a7a3e1', gridDensity: .99, bgFix: true, ambOn: true, sound: 'bubble', volume: .16,
+  bg: 'color', bgColor: '#a7a3e1', gridDensity: .99, grid: .3, bgScale: 1, bgFix: true, ambOn: true, sound: 'bubble', volume: .16,
   menuGap: 1.07, liquid: .63, glowOn: true, glowK: 1.17, glowSize: .6, glowSpeed: 1.06,
 };
 const DISH = {                                        // a deep navy dish, clear glass, a soft ocean glow
@@ -441,7 +450,7 @@ const DISH = {                                        // a deep navy dish, clear
   lightEl: 8, key: 1.73, env: .76, rim: 1.42, shadow: .48, beadSize: 1.67, sink: -.43, smoke: 0, starSize: .38, starMotion: .91,
   icon: 'pulse', beadFlat: .73, orbLight: 1.07, beadRefl: 2.93, pulseSpeed: .73, pulseLight: 1.23, orbSpeed: 1.13, orbGlow: .92,
   embSize: 1.34, embDepth: 1, embFrost: .58, ink: '#f2f3f5', inkA: 1, scale: 1.4, h: 3.82, pl: 1.19, pr: 2.43, gap: 1.12, weight: 530,
-  bgColor: '#07041a', gridDensity: 1.29, grid: .06, ambOn: true, amb: .11, sound: 'bubble', volume: .16,
+  bg: 'color', bgColor: '#07041a', gridDensity: 1.29, grid: .06, ambOn: true, amb: .11, sound: 'bubble', volume: .16,
   menuGap: 1.01, liquid: .76, glowOn: true, glow: 'ocean', glowK: .68, glowSize: .68, glowSpeed: .82,
 };
 const CLOUDS = Object.assign({}, LILAC, { bg: 'clouds', bgScale: 1, grid: 0, bgFix: true, ambOn: true, amb: .6 });   // the Lilac glass over the clouds video
@@ -468,6 +477,7 @@ const CTRL = [
   { k: 'edge', l: 'Edge round', min: 0, max: .4, s: .01 },
   { k: 'lift', l: 'Lift', min: 0, max: .6, s: .01 },
   { k: 'pressGrow', l: 'Press grow', min: 0, max: .25, s: .005 },
+  { k: 'jelly', l: 'Jelly (squash and wobble)', min: 0, max: 2, s: .01 },
   { g: 'Glass' },
   { k: 'ior', l: 'Refraction (IOR)', min: 1, max: 2.4, s: .01 },
   { k: 'disp', l: 'Dispersion', min: 0, max: .15, s: .002 },
@@ -539,10 +549,17 @@ const CTRL = [
   { k: 'dof', l: 'Depth of field', min: 0, max: 3, s: .01 },
   { k: 'bgFix', l: 'Fixed background (only the glass turns)', t: 'check' },
   { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01, show: () => P.bg === 'upload' || !!(BGS.find(b => b.id === P.bg) || {}).src },
+  { g: 'Quality' },
+  { k: 'smooth', l: 'Smooth when still', t: 'check', show: () => POST.ok },
+  { k: 'bloom', l: 'Bloom on highlights', t: 'check', show: () => POST.ok },
+  { k: 'bloomK', l: 'Bloom strength', min: 0, max: 2, s: .01, show: () => POST.ok && P.bloom },
+  { k: 'dither', l: 'Dither (no banding)', t: 'check', show: () => POST.ok },
+  { k: 'compare', l: 'Compare before / after', t: 'action', show: () => POST.ok },
   { g: 'Sound' },
   { k: 'sound', l: 'Click', t: 'sounds' },
   { k: 'release', l: 'Click on release too', t: 'check', show: () => P.sound !== 'none' },
   { k: 'volume', l: 'Volume', min: 0, max: 1, s: .01, show: () => P.sound !== 'none' },
+  { k: 'haptic', l: 'Vibrate on press (phones)', t: 'check', show: () => coarse },
 ];
 const KEY = 'lab.glass-button.v5';
 const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
@@ -569,7 +586,8 @@ delete P.page;
 if (P.bg === 'upload') P.bg = 'grid';
 
 // ---------- interaction state ----------
-const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, seen: false, open: false,
+const POST = { ok: false, n: 0, sig: null, w: 0, h: 0 };   // the after-scene pipeline (set up once the glass compiles)
+const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, seen: false, open: false,
             menuT: 0, menuV: 0, gFrom: 0, gTo: 0, gT: 1, orbPh: 0, hi: null, hiA: 0, hiX: 0,
             yaw: 0, pitch: 0, tyaw: 0, tpitch: 0, zoom: 1, tzoom: 1, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
@@ -579,7 +597,7 @@ function onMove(x, y) {
   const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
   s.thov = Math.max(0, 1 - Math.hypot(dx, dy) / 160);
 }
-const overUi = e => e.target && e.target.closest && e.target.closest('.panel, .tune, .dock, .bl');
+const overUi = e => e.target && e.target.closest && e.target.closest('.panel, .tune, .dock, .bl, .cmp');
 window.addEventListener('pointermove', e => { if (!overUi(e)) onMove(e.clientX, e.clientY); }, { passive: true });
 window.addEventListener('pointerleave', () => { s.seen = false; s.thov = 0; });
 // hold: the glass swells like liquid glass; let go: it springs back with a little wobble and the menu opens (on click)
@@ -948,8 +966,19 @@ function click(up, scale = 1) {
   const out = a.createGain(); out.gain.value = P.volume * scale * (up ? 0.6 : 1); out.connect(a.destination);
   snd.play(a, out, a.currentTime + 0.002, up);
 }
-btn.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && touches.size < 2) click(false); });
-window.addEventListener('pointerup', () => { if (s.tpress > 0 && P.release) click(true); }, true);
+let hapEl = null;
+function haptic(ms) {
+  if (!P.haptic || STILL || !coarse) return;
+  if ('vibrate' in navigator) { try { navigator.vibrate(ms); } catch (e) {} return; }
+  if (!hapEl) {                                         // iOS has no vibrate(); toggling a native switch gives a light tap
+    hapEl = document.createElement('label'); hapEl.setAttribute('aria-hidden', 'true');
+    hapEl.style.cssText = 'position:fixed; left:-40px; top:0; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none';
+    const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); i.tabIndex = -1; hapEl.appendChild(i); document.body.appendChild(hapEl);
+  }
+  hapEl.click();
+}
+btn.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && touches.size < 2) { click(false); haptic(14); } });
+window.addEventListener('pointerup', () => { if (s.tpress > 0) { if (P.release) click(true); haptic(8); } }, true);
 btn.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) click(false); });
 btn.addEventListener('keyup', e => { if ((e.key === 'Enter' || e.key === ' ') && P.release) click(true); });
 
@@ -978,6 +1007,11 @@ function fitOnce() {
   return { scale, flat: Math.min(1, rz / (r0 * scale)) };
 }
 const ACTIONS = {
+  compare(b) {                                          // a split screen: the old single frame on the left, this pipeline on the right
+    const on = cmpEl.hidden; cmpEl.hidden = !on; s.split = on ? W / 2 : -1;
+    b.textContent = on ? 'Stop comparing' : 'Compare before / after';
+    if (on) placeSplit();
+  },
   async fitIcon(b) {
     for (let i = 0; i < 4; i++) {                        // shrinking the slot moves the bead a little, so settle it in a few passes
       const f = fitOnce();
@@ -1008,6 +1042,15 @@ async function applyPreset(name) {
   }
 }
 // the arrows walk through the looks (the variants); the name in between says which one is on
+const cmpEl = document.getElementById('cmp');
+function placeSplit() { cmpEl.style.left = `${s.split}px`; }
+{
+  let id = null;
+  cmpEl.addEventListener('pointerdown', e => { id = e.pointerId; cmpEl.setPointerCapture(id); e.preventDefault(); });
+  cmpEl.addEventListener('pointermove', e => { if (e.pointerId !== id) return; s.split = Math.max(8, Math.min(W - 8, e.clientX)); placeSplit(); });
+  const up = e => { if (e.pointerId === id) id = null; };
+  cmpEl.addEventListener('pointerup', up); cmpEl.addEventListener('pointercancel', up);
+}
 const LOOK_NAMES = Object.keys(LOOKS);
 const lookNow = () => LOOK_NAMES.findIndex(n => Object.keys(LOOKS[n]).every(k => typeof LOOKS[n][k] === 'number' ? Math.abs(P[k] - LOOKS[n][k]) < 1e-6 : P[k] === LOOKS[n][k]));
 function showVariant() { const i = lookNow(); document.getElementById('var-name').textContent = i >= 0 ? LOOK_NAMES[i] : 'Custom'; }
@@ -1206,7 +1249,7 @@ function syncInputs() {
   }
 }
 function set(k, v) {
-  queueMicrotask(showVariant);
+  queueMicrotask(showVariant); POST.n = 0;               // any change: start the still-frame smoothing again
   if (k === 'gyro' && v) askGyro();
   P[k] = v;
   if (k === 'bgColor') P.bg = 'color';                    // picking a colour switches to it
@@ -1335,6 +1378,7 @@ uniform vec3 uGlowA, uGlowB, uGlowC;
 uniform vec4 uGlowK;           // strength, size (px), phase, -
 uniform vec3 uCamR, uCamD, uCamF;
 uniform int uSamples;
+uniform vec2 uJit;             // sub-pixel offset (device px), a new one each still frame
 uniform float uLabelLod;
 uniform float uZoom; uniform vec2 uPan;   // zoom towards a point: screen offset / zoom + pan
 uniform int uOne;                // always 1: loop bounds the compiler cannot unroll (D3D would take minutes)
@@ -1718,7 +1762,7 @@ void camRay(vec2 p, out vec3 ro, out vec3 rd){
   rd = normalize(uCamF * uCamDist + uCamR * o.x + uCamD * o.y);
 }
 void main(){
-  vec2 p = vec2(gl_FragCoord.x, uRes.y * uScale - gl_FragCoord.y) / uScale;    // css px, y down
+  vec2 p = vec2(gl_FragCoord.x + uJit.x, uRes.y * uScale - gl_FragCoord.y + uJit.y) / uScale;    // css px, y down
   L = uL; gScrOn = false; gScr = vec2(0.0);
   ZM = uShape2.z + uShape.w;
   BR = uBead.z;
@@ -1741,7 +1785,7 @@ void main(){
     vec2 o = i == 0 ? vec2(0.0) : i == 1 ? vec2(-0.375, 0.125) : i == 2 ? vec2(0.375, -0.125) : vec2(-0.125, -0.375);
     camRay(p + o / uScale, ro, rd); col += shade(ro, rd, i == 0 ? tl0 : -2.0, id);
   }
-  fragColor = vec4(col / float(ns), 1.0);
+  fragColor = vec4(max(col / float(ns), 0.0), 1.0);   // kept above 1 (HDR) for the bloom
 }`;
 let prog = null, tex = null, ready = false;
 const U = {};
@@ -1756,7 +1800,7 @@ if (gl) {
     prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
     const finish = () => {
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('glass off:', gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(prog)); prog = null; document.body.classList.add('no-gl'); return; }
-      gl.useProgram(prog); initGL(); ready = true; document.body.classList.remove('no-gl'); document.body.classList.add('gl'); resize();
+      gl.useProgram(prog); initGL(); initPost(); gl.useProgram(prog); ready = true; syncInputs(); document.body.classList.remove('no-gl'); document.body.classList.add('gl'); resize();
     };
     const poll = () => { if (gl.getProgramParameter(prog, par.COMPLETION_STATUS_KHR)) finish(); else setTimeout(poll, 30); };
     if (par && !STILL) poll(); else setTimeout(finish, 0);   // the thumbnail shot runs on virtual time: compile in one go
@@ -1783,6 +1827,98 @@ function initGL() {
     bg.dirty = true;
   }
 }
+// ---------- after the scene: still-frame smoothing, bloom, dither (half-float targets; without them the scene draws straight) ----------
+const PH = `#version 300 es
+precision highp float; out vec4 o;
+`;
+const PFS = {
+  acc: PH + `uniform sampler2D uCur, uHist; uniform float uA;
+void main(){ ivec2 q = ivec2(gl_FragCoord.xy); vec3 c = texelFetch(uCur, q, 0).rgb, h = texelFetch(uHist, q, 0).rgb;
+  if (!all(lessThan(abs(c), vec3(1e4)))) c = h;         // a stray NaN must not live on in the history
+  o = vec4(mix(h, c, uA), 1.0); }`,
+  down: PH + `uniform sampler2D uSrc; uniform vec2 uInv, uSt; uniform float uThr;
+void main(){ vec2 uv = gl_FragCoord.xy * uInv;
+  vec3 c = (texture(uSrc, uv + vec2(-uSt.x, -uSt.y)).rgb + texture(uSrc, uv + vec2(uSt.x, -uSt.y)).rgb
+          + texture(uSrc, uv + vec2(-uSt.x, uSt.y)).rgb + texture(uSrc, uv + vec2(uSt.x, uSt.y)).rgb) * 0.25;
+  if (uThr > 0.0) { float l = max(c.r, max(c.g, c.b)); c *= max(l - uThr, 0.0) / max(l, 1e-4); }   // only what is brighter than white
+  o = vec4(c, 1.0); }`,
+  blur: PH + `uniform sampler2D uSrc; uniform vec2 uInv, uDir;
+void main(){ vec2 uv = gl_FragCoord.xy * uInv;
+  vec3 c = texture(uSrc, uv).rgb * 0.2270270;
+  c += (texture(uSrc, uv + uDir * 1.3846154).rgb + texture(uSrc, uv - uDir * 1.3846154).rgb) * 0.3162162;
+  c += (texture(uSrc, uv + uDir * 3.2307692).rgb + texture(uSrc, uv - uDir * 3.2307692).rgb) * 0.0702703;
+  o = vec4(c, 1.0); }`,
+  out: PH + `uniform sampler2D uAcc, uCur, uB1, uB2; uniform vec2 uInv; uniform float uBloom, uDither, uSplit, uScale;
+float ign(vec2 q){ return fract(52.9829189 * fract(dot(q, vec2(0.06711056, 0.00583715)))); }
+void main(){ ivec2 q = ivec2(gl_FragCoord.xy); vec2 uv = gl_FragCoord.xy * uInv;
+  vec3 c;
+  if (gl_FragCoord.x / uScale < uSplit) c = clamp(texelFetch(uCur, q, 0).rgb, 0.0, 1.0);   // before: one raw frame, as it used to be
+  else {
+    c = texelFetch(uAcc, q, 0).rgb + (texture(uB1, uv).rgb * 1.2 + texture(uB2, uv).rgb * 2.0) * uBloom;
+    c = clamp(c, 0.0, 1.0);
+    if (uDither > 0.5) c += (ign(gl_FragCoord.xy) + ign(gl_FragCoord.xy + vec2(47.0, 17.0)) - 1.0) / 255.0;   // triangular noise, a hair under one step
+  }
+  if (uSplit > 0.0 && abs(gl_FragCoord.x / uScale - uSplit) < 0.75) c = vec3(1.0);
+  o = vec4(c, 1.0); }`,
+};
+function initPost() {
+  if (!gl.getExtension('EXT_color_buffer_float')) return;
+  const aLoc = gl.getAttribLocation(prog, 'a');
+  const mk = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
+  const vs = mk(gl.VERTEX_SHADER, VS);
+  for (const k in PFS) {
+    const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, PFS[k])); gl.bindAttribLocation(pr, aLoc, 'a'); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { console.warn('post off:', k, gl.getProgramInfoLog(pr)); return; }
+    const us = {}; POST[k] = { p: pr, u: n => (n in us ? us[n] : (us[n] = gl.getUniformLocation(pr, n))) };
+  }
+  POST.ok = true;
+}
+function target(w, h) {
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+  const okFb = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return okFb ? { t, f, w, h } : null;
+}
+function allocPost() {
+  if (!POST.ok) return;
+  const w = cv.width, h = cv.height; if (w === POST.w && h === POST.h) return;
+  for (const k of ['cur', 'a', 'b', 'd1', 'e1', 'd2', 'e2']) if (POST[k]) { gl.deleteTexture(POST[k].t); gl.deleteFramebuffer(POST[k].f); }
+  gl.activeTexture(gl.TEXTURE2);
+  const w1 = Math.max(1, Math.ceil(w / 4)), h1 = Math.max(1, Math.ceil(h / 4)), w2 = Math.max(1, Math.ceil(w1 / 4)), h2 = Math.max(1, Math.ceil(h1 / 4));
+  Object.assign(POST, { cur: target(w, h), a: target(w, h), b: target(w, h), d1: target(w1, h1), e1: target(w1, h1), d2: target(w2, h2), e2: target(w2, h2), w, h, n: 0 });
+  gl.activeTexture(gl.TEXTURE0);
+  if (!POST.cur || !POST.a || !POST.b || !POST.d1 || !POST.e1 || !POST.d2 || !POST.e2) POST.ok = false;   // a device that cannot render to them: draw straight
+}
+const HALTON = (i, b) => { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; };
+function postPass() {
+  const pass = (pr, dst, bind) => {
+    gl.useProgram(pr.p); gl.bindFramebuffer(gl.FRAMEBUFFER, dst ? dst.f : null); gl.viewport(0, 0, dst ? dst.w : cv.width, dst ? dst.h : cv.height);
+    let unit = 2;
+    for (const n in bind) { const v = bind[n]; if (v && v.t) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, v.t); gl.uniform1i(pr.u(n), unit++); } else if (Array.isArray(v)) gl.uniform2f(pr.u(n), v[0], v[1]); else gl.uniform1f(pr.u(n), v); }
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
+  // the history: a running average while nothing moves, the plain frame as soon as something does
+  const a = !P.smooth || POST.n <= 1 ? 1 : Math.max(1 / POST.n, 0.1);
+  pass(POST.acc, POST.b, { uCur: POST.cur, uHist: POST.a, uA: a });
+  [POST.a, POST.b] = [POST.b, POST.a];
+  if (P.bloom && P.bloomK > 0) {
+    const { d1, e1, d2, e2 } = POST;
+    pass(POST.down, d1, { uSrc: POST.a, uInv: [1 / d1.w, 1 / d1.h], uSt: [1 / POST.w, 1 / POST.h], uThr: POST.thr || 1 });
+    pass(POST.blur, e1, { uSrc: d1, uInv: [1 / e1.w, 1 / e1.h], uDir: [1 / d1.w, 0] });
+    pass(POST.blur, d1, { uSrc: e1, uInv: [1 / d1.w, 1 / d1.h], uDir: [0, 1 / e1.h] });
+    pass(POST.down, d2, { uSrc: d1, uInv: [1 / d2.w, 1 / d2.h], uSt: [1 / d1.w, 1 / d1.h], uThr: 0 });
+    pass(POST.blur, e2, { uSrc: d2, uInv: [1 / e2.w, 1 / e2.h], uDir: [1 / d2.w, 0] });
+    pass(POST.blur, d2, { uSrc: e2, uInv: [1 / d2.w, 1 / d2.h], uDir: [0, 1 / e2.h] });
+  }
+  pass(POST.out, null, { uAcc: POST.a, uCur: POST.cur, uB1: POST.d1, uB2: POST.d2, uInv: [1 / cv.width, 1 / cv.height],
+                         uBloom: P.bloom ? P.bloomK : 0, uDither: P.dither ? 1 : 0, uSplit: s.split > 0 ? s.split : -1, uScale: cv.width / W });
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bgTex); gl.activeTexture(gl.TEXTURE0);
+  gl.useProgram(prog);
+}
 let bgTex = null;
 function uploadBg() {
   const src = bg.video || bg.canvas;
@@ -1805,6 +1941,7 @@ function resize() {
   layout(); labelDirty = true;
   if (!ready) return;
   cv.width = Math.round(W * RS * quality); cv.height = Math.round(H * RS * quality); gl.viewport(0, 0, cv.width, cv.height);
+  allocPost();
 }
 function tuneQuality(dt) {
   if (STILL) return;
@@ -1839,6 +1976,7 @@ function frame(t) {
   s.lx += (s.tlx - s.lx) * k; s.ly += (s.tly - s.ly) * k; s.hov += (s.thov - s.hov) * k;
   if (reduce) { s.press = s.tpress; s.pressV = 0; } else { s.pressV += (240 * (s.tpress - s.press) - 15 * s.pressV) * dt; s.press += s.pressV * dt; }   // springy
   s.jiggle *= Math.pow(0.9, dt * 60);
+  if (reduce) { s.wob = 0; s.wobV = 0; } else { s.wobV += (-420 * s.wob - 10 * s.wobV + s.pressV * 1.5 * P.jelly) * dt; s.wob += s.wobV * dt; }
   s.yaw += (s.tyaw - s.yaw) * ko; s.pitch += (s.tpitch - s.pitch) * ko;
   if (reduce) { s.menuT = s.open ? 1 : 0; s.menuV = 0; }
   else { const mt = s.open ? 1 : 0; s.menuV += (170 * (mt - s.menuT) - 17 * s.menuV) * dt; s.menuT += s.menuV * dt; }   // a little overshoot
@@ -1854,7 +1992,7 @@ function frame(t) {
   if (!ready) return;
   tuneQuality(dt);
   layout();
-  if (labelDirty) upload();
+  if (labelDirty) { upload(); POST.n = 0; }
   if (bg.mode === 1 && (bg.dirty || (bg.video && bg.video.readyState >= 2 && !bg.video.paused))) {
     uploadBg();
     if (bg.video && t - (bg.avgT || 0) > 500) { bg.avgT = t; const a = avgOf(bg.video, bg.w, bg.h); bg.avg = bg.avg.map((v, i) => v + (a[i] - v) * 0.5); }
@@ -1867,7 +2005,7 @@ function frame(t) {
   const ll = Math.hypot(Lx, Ly, Lz);
   // shape in px; pressing squashes the dome and makes it shiver
   // pressing swells the whole button around its centre (glass, print, bead); the release wobbles a little
-  const g = 1 + P.pressGrow * s.press, hh = geo.hh * g, hw = geo.hw * g, gx = v => geo.cx + (v - geo.cx) * g, gy = v => geo.cy + (v - geo.cy) * g;
+  const g = 1 + P.pressGrow * s.press, hh = geo.hh * g * (1 - s.wob * 0.8), hw = geo.hw * g * (1 + s.wob), gx = v => geo.cx + (v - geo.cx) * g, gy = v => geo.cy + (v - geo.cy) * g;   // jelly: wider and flatter, then it rings
   let dome = P.dome * (1 + s.jiggle * 0.05 * Math.sin(T * 22));
   const wall = Math.max(P.wall, -dome - P.under + 0.08);          // a dish needs a rim: the wall rises with the concavity
   const corner = Math.min(P.corner * hh, hw, hh);
@@ -1876,6 +2014,14 @@ function frame(t) {
   const proc = (BGS.find(b => b.id === P.bg) || {}).proc || 'light', pg = pageStops(proc), dk = bg.mode === 0 && lum(pg[1]) < 0.42;
   const [cr, cd, cf] = camBasis(s.yaw + s.lx * 0.1, s.pitch - s.ly * 0.08);   // the view leans a little towards the cursor
   let menuTopZ = (P.lift + P.under + wall + dome) * hh;
+  gl.useProgram(prog);
+  {                                                     // still? the view, the light, the press and the menu all settled
+    const sig = [s.lx, s.ly, s.hov, s.press, s.wob, s.menuT, s.yaw, s.pitch, s.zoom, s.panx, s.pany, s.hiA, s.jiggle, W, H, cv.width];
+    const moved = !POST.sig || sig.some((v, i) => Math.abs(v - POST.sig[i]) > 2e-4);
+    POST.sig = sig; POST.n = moved ? 0 : POST.n + 1;
+    const j = POST.ok && P.smooth && POST.n > 0 ? [HALTON(POST.n % 16 + 1, 2) - 0.5, HALTON(POST.n % 16 + 1, 3) - 0.5] : [0, 0];
+    gl.uniform2f(uni('uJit'), j[0], j[1]);
+  }
   gl.uniform2f(uni('uRes'), W, H); gl.uniform1f(uni('uScale'), cv.width / W); gl.uniform1f(uni('uTime'), T);
   gl.uniform4f(uni('uBox'), geo.cx, geo.cy, hw, hh);
   gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
@@ -1972,7 +2118,10 @@ function frame(t) {
   gl.uniform1i(uni('uSamples'), coarse ? 1 : 4); gl.uniform1i(uni('uOne'), 1);
   gl.uniform1f(uni('uLabelLod'), Math.max(0, Math.log2(lab.width / Math.max(1, geo.rect[2]) / (cv.width / W) / s.zoom)));
   gl.uniform1f(uni('uZoom'), s.zoom); gl.uniform2f(uni('uPan'), s.panx, s.pany);
+  POST.thr = Math.min(1.2, Math.max(0.75, lum(bg.mode ? bg.avg : pg[1]) + 0.35));
+  if (POST.ok) { gl.bindFramebuffer(gl.FRAMEBUFFER, POST.cur.f); gl.viewport(0, 0, cv.width, cv.height); }
   gl.drawArrays(gl.TRIANGLES, 0, 3);
+  if (POST.ok) postPass();
 }
 if (STILL) Object.assign(s, { hov: .5, thov: .5, seen: true });   // frozen light and time, the loop keeps the canvas painted
 requestAnimationFrame(frame);
