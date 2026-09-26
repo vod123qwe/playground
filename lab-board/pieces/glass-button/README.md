@@ -27,6 +27,8 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 
 **Chrome strony**: Inter semibold; okrągły biały przycisk powrotu z samą strzałką, biały pill Tune, biały pill „reset view”, ikonki myszy w białej pigułce, bez obramowań, z miękkim cieniem; jeden konturowy styl ikon (siatka 24, kreska 1,75, zaokrąglone końce). Bez napisu „glass button”.
 
+**Przełącznik wariantów**: na dole na środku, obok „reset view”, biały pill ‹ Nazwa › przechodzi po pięciu wyglądach (Signature, Midnight, Frost, Ember, Lilac); nazwa mówi, który jest włączony (albo Custom po ręcznych zmianach). Działają też klawisze ← i →. Napis i wybrana funkcja zostają.
+
 **Podpowiedzi**: zamiast napisów dwie proste ikonki w lewym dolnym rogu: mysz z podświetlonym lewym przyciskiem (kliknij i przytrzymaj) i mysz z podświetlonym kółkiem i strzałkami (przytrzymaj kółko i przeciągnij, żeby obrócić widok w 3D); opis w dymku po najechaniu. Na dotyku zamiast nich krótka podpowiedź o gestach.
 
 **Żyroskop na telefonie**: pochylanie przesuwa światło na szkle i lekko pochyla widok, jak kursor na komputerze; neutralna pozycja powoli dopasowuje się do tego, jak trzymasz telefon, obrót ekranu w poziom jest obsłużony. iPhone wymaga zgody, a system pozwala zapytać dopiero po dotknięciu, więc po wejściu pojawia się karta „Tilt to play with the light” (Allow motion / Not now); po zgodzie przy kolejnych wejściach wystarczy pierwszy dotyk. Android nie ma okna zgody, więc działa od razu (z krótką podpowiedzią). Przełącznik *Tilt (gyroscope)* w grupie Light.
