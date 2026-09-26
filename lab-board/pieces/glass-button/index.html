@@ -236,9 +236,16 @@
   .hint-i{height:26px} .hint-i:first-child svg{width:24px; height:24px} .hint-i:last-child svg{width:32px; height:24px}
 
   .dock{position:fixed; left:50%; bottom:20px; z-index:3; display:flex; align-items:center; gap:8px; transform:translateX(-50%); transition:left .45s var(--ease)}
-  .dock .chip{position:static; left:auto; bottom:auto; transform:none; height:46px; padding:0 22px}
-  .dock .chip:not(.show){display:none}
-  .dock .chip.reset:hover{transform:translateY(-1px)}
+  .dock .tune{position:static; top:auto; right:auto}
+  .bl{position:fixed; left:16px; bottom:20px; z-index:3; display:flex; align-items:center; gap:8px}
+  .bl .hints{position:static; left:auto; bottom:auto; height:46px; box-sizing:border-box}
+  .bl .chip{position:static; left:auto; bottom:auto; transform:none; height:46px; padding:0 22px}
+  .bl .chip:not(.show){display:none}
+  .bl .chip.reset:hover{transform:translateY(-1px)}
+  body.still .bl{display:none}
+  .vars{touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; will-change:transform}
+  .vars.dragging{cursor:grabbing}
+  .vars .vn{display:inline-block}
   .vars{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; color:#1b1c20;
         font-family:"Inter", system-ui, sans-serif; font-size:13.5px; font-weight:600; box-shadow:0 8px 22px -12px rgba(20,24,30,.4)}
   .vars button{display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:999px; background:transparent; color:inherit; cursor:pointer}
@@ -252,7 +259,7 @@
   /* ---------- the panel: edge to edge, minimal, roomy ---------- */
   .panel{top:0; right:0; bottom:0; width:384px; padding:0 28px; font-size:13px;
          background:rgba(249,249,250,.96); box-shadow:-1px 0 0 rgba(20,20,20,.08), -40px 0 80px -60px rgba(20,24,30,.45)}
-  body.tuning .tune{opacity:0; pointer-events:none}
+  body.tuning .dock .tune{box-shadow:0 0 0 2px #1b1c20, 0 8px 22px -12px rgba(20,24,30,.4)}   /* on while the panel is open */
   .ph{position:sticky; top:0; z-index:3; display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
       margin:0 -28px; padding:30px 28px 24px; background:rgba(249,249,250,.97); border-bottom:1px solid rgba(20,20,20,.09)}
   .ph h2{margin:0; font-size:22px; font-weight:600; letter-spacing:-.02em; line-height:1.1}
@@ -310,27 +317,28 @@
   </div>
 </main>
 <div class="dock" id="dock">
-  <button class="chip" id="chip" type="button" tabindex="-1"></button>
   <div class="vars" role="group" aria-label="Variants">
     <button type="button" id="var-prev" aria-label="Previous variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
     <span class="vn" id="var-name" aria-live="polite"></span>
     <button type="button" id="var-next" aria-label="Next variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
   </div>
+  <button class="tune" id="tune" type="button" aria-expanded="false" aria-controls="panel">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>Customize</span>
+</button>
 </div>
 <div class="tilt" id="tilt" role="dialog" aria-labelledby="tilt-t" hidden>
   <svg class="tilt-i" viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="5" width="12" height="22" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6" transform="rotate(-14 16 16)"/><path d="M5 11a13 13 0 0 0 0 10M27 11a13 13 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
   <div class="tilt-x"><b id="tilt-t">Tilt to play with the light</b><p>Allow motion access and the glass follows your phone.</p></div>
   <div class="tilt-b"><button type="button" id="tilt-no">Not now</button><button type="button" id="tilt-yes">Allow motion</button></div>
 </div>
-<button class="tune" id="tune" type="button" aria-expanded="false" aria-controls="panel">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>Tune</span>
-</button>
-<aside class="panel" id="panel" aria-label="Tune the button"></aside>
+<aside class="panel" id="panel" aria-label="Customize the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
-<div class="hints" role="note" aria-label="Click and hold the button. Hold the mouse wheel and drag to turn the view in 3D.">
+<div class="bl"><div class="hints" role="note" aria-label="Click and hold the button. Hold the mouse wheel and drag to turn the view in 3D.">
   <span class="hint-i" title="Click and hold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 3v6.5M6.5 9.5h11"/><path d="M12 3.4a5.1 5.1 0 0 0-5.1 5.1v1h5.1z" fill="currentColor" stroke="none"/></svg></span>
   <span class="hint-i" title="Hold the wheel and drag to turn in 3D"><svg viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="10.5" y="3" width="11" height="18" rx="5.5"/><path d="M16 6.5v3"/><path d="M6 8.5a10 10 0 0 0 0 7M3.8 14.2 6 15.5l1-2.4M26 8.5a10 10 0 0 1 0 7M28.2 14.2 26 15.5l-1-2.4"/></svg></span>
+</div>
+  <button class="chip" id="chip" type="button" tabindex="-1"></button>
 </div>
 
 <script>
@@ -542,7 +550,7 @@ function onMove(x, y) {
   const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
   s.thov = Math.max(0, 1 - Math.hypot(dx, dy) / 160);
 }
-const overUi = e => e.target && e.target.closest && e.target.closest('.panel, .tune');
+const overUi = e => e.target && e.target.closest && e.target.closest('.panel, .tune, .dock, .bl');
 window.addEventListener('pointermove', e => { if (!overUi(e)) onMove(e.clientX, e.clientY); }, { passive: true });
 window.addEventListener('pointerleave', () => { s.seen = false; s.thov = 0; });
 // hold: the glass swells like liquid glass; let go: it springs back with a little wobble and the menu opens (on click)
@@ -940,9 +948,33 @@ function stepVariant(d) {
   const i = lookNow(); lookIdx = i >= 0 ? i : (lookIdx >= 0 ? lookIdx : (d > 0 ? -1 : 0));
   lookIdx = (lookIdx + d + LOOK_NAMES.length) % LOOK_NAMES.length;
   applyPreset(LOOK_NAMES[lookIdx]); click(false, .6);
+  if (!reduce && varName.animate) varName.animate([{ transform: `translateX(${d * 14}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-document.getElementById('var-prev').addEventListener('click', () => stepVariant(-1));
-document.getElementById('var-next').addEventListener('click', () => stepVariant(1));
+document.getElementById('var-prev').addEventListener('click', () => { if (!varDrag.moved) stepVariant(-1); });
+document.getElementById('var-next').addEventListener('click', () => { if (!varDrag.moved) stepVariant(1); });
+const varsEl = document.querySelector('.vars'), varName = document.getElementById('var-name');
+const varDrag = { id: null, x0: 0, dx: 0, moved: false };
+const band = dx => dx * 0.45 / (1 + Math.abs(dx) / 160);                 // rubber band: follows, then resists
+varsEl.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  varDrag.id = e.pointerId; varDrag.x0 = e.clientX; varDrag.dx = 0; varDrag.moved = false;
+  varsEl.style.transition = 'none';                      // capture only once it moves, so a plain click still reaches the arrow
+});
+varsEl.addEventListener('pointermove', e => {
+  if (e.pointerId !== varDrag.id) return;
+  varDrag.dx = e.clientX - varDrag.x0;
+  if (!varDrag.moved && Math.abs(varDrag.dx) > 6) { varDrag.moved = true; varsEl.classList.add('dragging'); try { varsEl.setPointerCapture(e.pointerId); } catch (err) {} }
+  if (varDrag.moved) varsEl.style.transform = `translateX(${band(varDrag.dx)}px) scale(${1 + Math.min(Math.abs(varDrag.dx), 200) / 4000})`;
+});
+function endVarDrag(e) {
+  if (e.pointerId !== varDrag.id) return;
+  varDrag.id = null; varsEl.classList.remove('dragging');
+  varsEl.style.transition = reduce ? 'none' : 'transform .55s cubic-bezier(.2,1.6,.4,1)'; varsEl.style.transform = '';
+  if (varDrag.moved && Math.abs(varDrag.dx) > 44) stepVariant(varDrag.dx < 0 ? 1 : -1);   // swipe left: next, right: previous
+  setTimeout(() => { varDrag.moved = false; }, 0);
+}
+varsEl.addEventListener('pointerup', endVarDrag);
+varsEl.addEventListener('pointercancel', endVarDrag);
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, select, textarea, .menu')) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); stepVariant(-1); }
@@ -968,7 +1000,7 @@ function buildPanel() {
     bd.appendChild(inner); sec.append(hd, bd); panel.appendChild(sec); body = inner;
   };
   const top = el('header', 'ph');
-  const tt = el('div'); tt.append(el('h2', null, 'Tune'), el('p', null, 'Every change is live and saved'));
+  const tt = el('div'); tt.append(el('h2', null, 'Customize'), el('p', null, 'Every change is live and saved'));
   const cl = el('button', 'pc'); cl.type = 'button'; cl.setAttribute('aria-label', 'Close the panel');
   cl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   cl.addEventListener('click', () => { setTuning(false); tuneBtn.focus(); });
