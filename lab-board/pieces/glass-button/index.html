@@ -374,20 +374,25 @@ const FROST = {
   bg: 'color', bgColor: '#bdbecc', gridDensity: 2.27, bgScale: 3, grid: .35, volume: .16,
   menuGap: .75, liquid: .63, glowSize: 1.62, glowSpeed: 1.06,
 };
-const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST };   // full looks; the rest of the presets are shapes
+// Ember: Jarek's fourth look, a flat bevelled slab of heavily frosted glass floating over a light grid, an aurora orb, an ember backlight
+const EMBER = {
+  pressGrow: .115, corner: .53, dome: 0, wall: .17, under: 0, profile: 1, edge: .09, lift: .56,
+  ior: 2.28, disp: .106, frost: 6.8, tint: '#e63d97', tintK: 0, follow: false, lightEl: 8, key: 2.09, env: 1.29, rim: 2.5, shadow: .53,
+  beadSize: 1.77, sink: .17, smoke: .74, starSize: .38, starMotion: .91, icon: 'orb', orbLight: 1.07, orbPal: 'aurora', beadRefl: 2.1,
+  pulseSpeed: 2.34, pulseLight: 1.64, orbSpeed: 1.13, orbGlow: .92, embSize: 1.24, embDepth: .55, embFrost: 0,
+  inkA: 1, scale: 1.4, h: 4, pl: 1, pr: 2, gap: 1.2, weight: 540,
+  bg: 'grid', bgColor: '#f9f2ec', gridDensity: 1.81, bgScale: 3, grid: .17, volume: .16,
+  menuGap: .77, glowOn: true, glow: 'ember', glowK: 1.11, glowSize: 1.31, glowSpeed: .79,
+};
+const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER };   // full looks; the rest of the presets are shapes
 const PRESETS = {
   'Signature': SIGNATURE,
   'Midnight': MIDNIGHT,
   'Frost': FROST,
-  'M&M':     { corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02, ior: 1.5, disp: .026 },
-  'Puck':    { corner: 1, dome: .12, wall: .45, under: .12, profile: 3.5, edge: .3, lift: .25, ior: 1.6, disp: .04 },
-  'Tile':    { corner: .4, dome: .08, wall: .35, under: .05, profile: 5, edge: .2, lift: .1, ior: 1.52, disp: .03 },
-  'Lens':    { corner: 1, dome: 1.1, wall: 0, under: .55, profile: 2.2, edge: .02, lift: .3, ior: 1.7, disp: .06 },
-  'Pebble':  { corner: 1, dome: .3, wall: .08, under: .3, profile: 1.4, edge: .2, lift: .15, ior: 1.45, disp: .02 },
-  'Dish':    { corner: 1, dome: -.5, wall: .6, under: .05, profile: 2, edge: .12, lift: 0, ior: 1.5, disp: .03 },
-  'Prism':   { corner: .2, dome: .45, wall: .15, under: .15, profile: 1.1, edge: .01, lift: .08, ior: 2.3, disp: .12 },
-  'Droplet': { corner: 1, dome: 1.25, wall: 0, under: .05, profile: 2.6, edge: .01, lift: 0, ior: 1.33, disp: .01 },
+  'Ember': EMBER,
+  'Dish':    { corner: 1, dome: -.5, wall: .6, under: .05, profile: 2, edge: .12, lift: 0, ior: 1.5, disp: .03 },   // a shape only
 };
+const SHAPE_KEYS = ['corner', 'dome', 'wall', 'under', 'profile', 'edge', 'lift', 'ior', 'disp'];
 const isBead = () => P.icon !== 'emboss';
 const showSym = () => P.icon === 'glyph' || P.icon === 'mercury';
 const CTRL = [
@@ -1045,7 +1050,7 @@ function set(k, v) {
   if (k === 'bg' || k === 'bgColor') useBg(P.bg);
   if (k === 'bgColor' || k === 'gridDensity') paintSwatches(panel.querySelector('.bgs'));
   if (k === 'glowOn' && v && P.glowK < 0.05) P.glowK = DEF.glowK;      // switching the glow on should show something
-  apply(); save(); if (['bg', 'bgColor', 'glowOn', 'glow', 'icon', 'sound', 'orbPal'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
+  apply(); save(); if (['bg', 'bgColor', 'glowOn', 'glow', 'icon', 'sound', 'orbPal'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   const st = anchor.style;
