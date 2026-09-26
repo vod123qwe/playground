@@ -379,7 +379,7 @@ const DEF = {
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6,
   sound: 'glass', release: true, volume: .5,
   menuGap: .35, liquid: 0, menuLift: 0,
-  glowOn: false, glow: 'aurora', glowK: 1, glowSize: 1, glowSpeed: 1,
+  glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
 };
 // Signature: Jarek's own look (everything but the content); the rest are shapes, laid over whatever you have
 const SIGNATURE = {
@@ -431,13 +431,13 @@ const LILAC = {
   bg: 'color', bgColor: '#a7a3e1', gridDensity: .99, bgScale: 3, grid: .11, sound: 'bubble', volume: .16,
   menuGap: 1.07, liquid: .63, glowOn: true, glowK: 1.17, glowSize: .6, glowSpeed: 1.06,
 };
-const DISH = {                                        // a dark navy dish under a star glow
-  pressGrow: .18, dome: -.5, wall: .6, under: .05, edge: .12, lift: .6, disp: .03, frost: 1.6, tint: '#e63d97', tintK: 0,
-  lightEl: 8, key: 1.73, env: .76, rim: .46, shadow: .48, beadSize: 1.86, sink: 1.77, smoke: .68, starSize: .38, starMotion: .91,
-  icon: 'pulse', beadFlat: .2, orbLight: 1.07, beadRefl: 2.93, pulseSpeed: 1.97, pulseLight: 1.72, orbSpeed: 1.13, orbGlow: .92,
+const DISH = {                                        // a deep navy dish, clear glass, a soft ocean glow
+  pressGrow: .18, dome: -.5, wall: .6, under: .13, edge: .14, lift: .59, ior: 1.92, disp: .086, frost: .9, tint: '#e63d97', tintK: 0,
+  lightEl: 8, key: 1.73, env: .76, rim: 1.42, shadow: .48, beadSize: 1.67, sink: -.43, smoke: 0, starSize: .38, starMotion: .91,
+  icon: 'pulse', beadFlat: .73, orbLight: 1.07, beadRefl: 2.93, pulseSpeed: .73, pulseLight: 1.23, orbSpeed: 1.13, orbGlow: .92,
   embSize: 1.34, embDepth: 1, embFrost: .58, ink: '#f2f3f5', inkA: 1, scale: 1.4, h: 3.82, pl: 1.19, pr: 2.43, gap: 1.12, weight: 530,
-  bgColor: '#050029', gridDensity: 1.24, grid: .07, ambOn: true, sound: 'bubble', volume: .16,
-  menuGap: 1.01, liquid: .76, glowOn: true, glow: 'star', glowK: 1.17, glowSize: .6, glowSpeed: 1.06,
+  bgColor: '#07041a', gridDensity: 1.29, grid: .06, ambOn: true, amb: .11, sound: 'bubble', volume: .16,
+  menuGap: 1.01, liquid: .76, glowOn: true, glow: 'ocean', glowK: .68, glowSize: .68, glowSpeed: .82,
 };
 const CLOUDS = Object.assign({}, LILAC, { bg: 'clouds', bgScale: 1, grid: 0, bgFix: true, ambOn: true, amb: .6 });   // the Lilac glass over the clouds video
 const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Clouds: CLOUDS, Dish: DISH };   // full looks; the rest of the presets are shapes
@@ -483,6 +483,7 @@ const CTRL = [
   { k: 'shadow', l: 'Shadow strength', min: 0, max: 2, s: .01 },
   { k: 'glowOn', l: 'Glow (a coloured backlight)', t: 'check' },
   { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'star', 'ocean', 'ember'], show: () => P.glowOn },
+  { k: 'glowBlend', l: 'Glow blend', t: 'seg', o: ['auto', 'screen', 'soft'], show: () => P.glowOn },
   { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, show: () => P.glowOn },
   { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, show: () => P.glowOn },
   { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, show: () => P.glowOn },
@@ -1429,7 +1430,12 @@ vec3 pageAt(vec2 q, float fp){
     float u = (q.x - uBox.x) / (uBox.z * 2.0 + R) * 0.55 + (q.y - uBox.y) / (R * 6.0) * 0.25 + uGlowK.z;
     float f = fract(u), w = f * 3.0;
     vec3 gc = w < 1.0 ? mix(uGlowA, uGlowB, smoothstep(0.0, 1.0, w)) : w < 2.0 ? mix(uGlowB, uGlowC, smoothstep(1.0, 2.0, w)) : mix(uGlowC, uGlowA, smoothstep(2.0, 3.0, w));
-    c = 1.0 - (1.0 - c) * (1.0 - clamp(gc * glow * uGlowK.x, 0.0, 1.0));   // screen: it lights the page, never darkens it
+    vec3 g = clamp(gc * glow * uGlowK.x, 0.0, 1.0);
+    vec3 scr = 1.0 - (1.0 - c) * (1.0 - g);                // screen: light on a dark page, never darkens it
+    vec3 B = mix(vec3(0.5), gc, clamp(glow * uGlowK.x * 1.3, 0.0, 1.0));   // soft light: tints a light page in the glow's colour, keeping its tone
+    vec3 D = mix(((16.0 * c - 12.0) * c + 4.0) * c, sqrt(c), step(0.25, c));
+    vec3 sft = mix(c - (1.0 - 2.0 * B) * c * (1.0 - c), c + (2.0 * B - 1.0) * (D - c), step(0.5, B));
+    c = mix(sft, scr, uGlowK.w);                           // w: 1 screen, 0 soft light, auto in between by how dark the page is
   }
   if (BR > 0.5) c = 1.0 - (1.0 - c) * (1.0 - clamp(uIconLight * exp(-length(q - BC.xy) / (BR * 2.4)) * 0.6, 0.0, 1.0));   // and the page
   float far = uBgFix > 0.5 ? 0.0 : smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uBox.xy));
@@ -1902,7 +1908,8 @@ function frame(t) {
   { const gp = bg.mode === 0 ? pg[1] : bg.avg; const lt = lum(gp) > 0.8; gl.uniform3f(uni('uGridCol'), lt ? .1 : 1, lt ? .1 : 1, lt ? .12 : 1); }
   gl.uniform1f(uni('uShadowMode'), P.glowOn ? 1 : 0);
   { const gp = GLOWS[P.glow] || GLOWS.aurora; gl.uniform3fv(uni('uGlowA'), gp[0]); gl.uniform3fv(uni('uGlowB'), gp[1]); gl.uniform3fv(uni('uGlowC'), gp[2]);
-    gl.uniform4f(uni('uGlowK'), P.glowK * (dk || lum(bg.mode ? bg.avg : pg[1]) < 0.42 ? 0.55 : 0.8), hh * 1.1 * P.glowSize, (reduce || STILL ? 0.1 : T * 0.045 * P.glowSpeed), 0); }
+    gl.uniform4f(uni('uGlowK'), P.glowK * (dk || lum(bg.mode ? bg.avg : pg[1]) < 0.42 ? 0.55 : 0.8), hh * 1.1 * P.glowSize, (reduce || STILL ? 0.1 : T * 0.045 * P.glowSpeed),
+      P.glowBlend === 'soft' ? 0 : P.glowBlend === 'auto' ? 1 - Math.min(1, Math.max(0, (lum(bg.mode ? bg.avg : pg[1]) - 0.3) / 0.35)) : 1); }
   gl.uniform1f(uni('uGrid'), Math.max(10, Math.max(72, Math.round(Math.min(W, H) / 7)) / P.gridDensity)); gl.uniform1f(uni('uGridA'), P.grid);
   gl.uniform1f(uni('uCamDist'), Math.max(W, H) * 1.3);
   CAM = { r: cr, d: cd, f: cf, D: Math.max(W, H) * 1.3, T: [geo.cx, geo.cy, (P.lift + P.under) * hh], zoom: s.zoom, pan: [s.panx, s.pany], menuTop: menuTopZ };
