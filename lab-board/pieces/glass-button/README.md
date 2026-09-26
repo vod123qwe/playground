@@ -71,3 +71,5 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Galaretka** (Shape → Jelly): druga sprężyna pobudzana tempem nacisku. Przy wciśnięciu przycisk robi się szerszy i bardziej płaski, po puszczeniu węższy, a potem kilka razy lekko drga (około ±4% przy 1). Nadruk się nie odkształca.
 
 **Wibracja** (Sound → Vibrate on press, tylko na dotyku): na Androidzie navigator.vibrate (14 ms przy wciśnięciu, 8 ms przy puszczeniu). iOS nie ma vibrate(), więc przełączany jest ukryty natywny przełącznik (input switch), co w iOS 18 daje lekkie stuknięcie. To nieoficjalny sposób i nie był testowany na urządzeniu.
+
+**Widok startowy**: przycisk wita lekko z dołu i od prawej (yaw 0,24, pitch -0,2), więc od razu widać grubość szkła. To jest pozycja spoczynkowa: reset view i klawisz R wracają właśnie do niej, a chip „reset view” pojawia się dopiero po obróceniu dalej. **Signature** zaktualizowany (niższa, zaokrąglona płytka, słabszy highlight, kolor tła w odbiciach, delikatna galaretka 0,22).
