@@ -347,10 +347,21 @@ const MIDNIGHT = {
   bg: 'color', bgColor: '#000000', gridDensity: 1.31, bgScale: 3, grid: .02, sound: 'pop', volume: .16,
   menuGap: 1.32, liquid: .69, menuLift: .8, glowK: .47, glowSize: .38, glowSpeed: 0,
 };
-const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT };   // full looks; the rest of the presets are shapes
+// Frost: Jarek's third look, soft frosted glass that hardly bends the light, floating high, a pulse with a strong reflection
+const FROST = {
+  pressGrow: .05, dome: .49, under: 1, profile: 2.4, edge: .4, lift: .6, ior: 1.08, disp: .078, frost: 1.6,
+  tint: '#e63d97', tintK: 0, lightEl: 8, key: 1.98, env: .76, rim: .46, shadow: 1.04,
+  beadSize: 1.9, sink: 1.92, smoke: .04, starSize: .38, starMotion: .91, icon: 'pulse', orbLight: 1.07, beadRefl: 2.93,
+  pulseSpeed: 1.97, pulseLight: 1.72, orbSpeed: 1.13, orbGlow: .92, embSize: 1.34, embDepth: 1, embFrost: .58,
+  inkA: 1, scale: 1.4, h: 3.82, pl: 1.19, pr: 2.43, gap: 1.12, weight: 530,
+  bg: 'color', bgColor: '#bdbecc', gridDensity: 2.27, bgScale: 3, grid: .35, volume: .16,
+  menuGap: .75, liquid: .63, glowSize: 1.62, glowSpeed: 1.06,
+};
+const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST };   // full looks; the rest of the presets are shapes
 const PRESETS = {
   'Signature': SIGNATURE,
   'Midnight': MIDNIGHT,
+  'Frost': FROST,
   'M&M':     { corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02, ior: 1.5, disp: .026 },
   'Puck':    { corner: 1, dome: .12, wall: .45, under: .12, profile: 3.5, edge: .3, lift: .25, ior: 1.6, disp: .04 },
   'Tile':    { corner: .4, dome: .08, wall: .35, under: .05, profile: 5, edge: .2, lift: .1, ior: 1.52, disp: .03 },
