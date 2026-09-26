@@ -235,6 +235,20 @@
   body.dark .hints{color:#1b1c20}
   .hint-i{height:26px} .hint-i:first-child svg{width:24px; height:24px} .hint-i:last-child svg{width:32px; height:24px}
 
+  .dock{position:fixed; left:50%; bottom:20px; z-index:3; display:flex; align-items:center; gap:8px; transform:translateX(-50%); transition:left .45s var(--ease)}
+  .dock .chip{position:static; left:auto; bottom:auto; transform:none; height:46px; padding:0 22px}
+  .dock .chip:not(.show){display:none}
+  .dock .chip.reset:hover{transform:translateY(-1px)}
+  .vars{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; color:#1b1c20;
+        font-family:"Inter", system-ui, sans-serif; font-size:13.5px; font-weight:600; box-shadow:0 8px 22px -12px rgba(20,24,30,.4)}
+  .vars button{display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:999px; background:transparent; color:inherit; cursor:pointer}
+  .vars button:hover{background:rgba(20,20,20,.06)} .vars button svg{width:18px; height:18px}
+  .vars button:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:1px}
+  .vars .vn{min-width:76px; padding:0 4px; text-align:center; white-space:nowrap}
+  body.still .dock{display:none}
+  @media (min-width:761px){ body.tuning .dock{left:calc(50% - 192px)} }
+  @media (max-width:760px){ body.tuning .dock{display:none} }
+
   /* ---------- the panel: edge to edge, minimal, roomy ---------- */
   .panel{top:0; right:0; bottom:0; width:384px; padding:0 28px; font-size:13px;
          background:rgba(249,249,250,.96); box-shadow:-1px 0 0 rgba(20,20,20,.08), -40px 0 80px -60px rgba(20,24,30,.45)}
@@ -295,7 +309,14 @@
     </ul>
   </div>
 </main>
-<button class="chip" id="chip" type="button" tabindex="-1"></button>
+<div class="dock" id="dock">
+  <button class="chip" id="chip" type="button" tabindex="-1"></button>
+  <div class="vars" role="group" aria-label="Variants">
+    <button type="button" id="var-prev" aria-label="Previous variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <span class="vn" id="var-name" aria-live="polite"></span>
+    <button type="button" id="var-next" aria-label="Next variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>
+</div>
 <div class="tilt" id="tilt" role="dialog" aria-labelledby="tilt-t" hidden>
   <svg class="tilt-i" viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="5" width="12" height="22" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6" transform="rotate(-14 16 16)"/><path d="M5 11a13 13 0 0 0 0 10M27 11a13 13 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
   <div class="tilt-x"><b id="tilt-t">Tilt to play with the light</b><p>Allow motion access and the glass follows your phone.</p></div>
@@ -900,6 +921,34 @@ const ACTIONS = {
 const inputs = {};
 const fmt = (c, v) => c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 ? 3 : 2);   // the number you can edit
 const pre = (c, v) => c.k === 'dome' ? (v < 0 ? 'concave' : v > 0 ? 'convex' : 'flat') : '';
+async function applyPreset(name) {
+  if (LOOKS[name]) {                                      // the whole look, keeping only the content
+    const keep = { text: P.text, agent: P.agent };
+    P = Object.assign({}, DEF, LOOKS[name], keep); useBg(P.bg);
+  } else Object.assign(P, PRESETS[name]);
+  apply(); syncInputs(); save(); showVariant();
+  if (!LOOKS[name] && P.icon !== 'emboss') {               // a new shape: keep the icon inside it
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); layout(); await ACTIONS.fitIcon(null);
+  }
+}
+// the arrows walk through the looks (the variants); the name in between says which one is on
+const LOOK_NAMES = Object.keys(LOOKS);
+const lookNow = () => LOOK_NAMES.findIndex(n => Object.keys(LOOKS[n]).every(k => typeof LOOKS[n][k] === 'number' ? Math.abs(P[k] - LOOKS[n][k]) < 1e-6 : P[k] === LOOKS[n][k]));
+function showVariant() { const i = lookNow(); document.getElementById('var-name').textContent = i >= 0 ? LOOK_NAMES[i] : 'Custom'; }
+let lookIdx = -1;
+function stepVariant(d) {
+  const i = lookNow(); lookIdx = i >= 0 ? i : (lookIdx >= 0 ? lookIdx : (d > 0 ? -1 : 0));
+  lookIdx = (lookIdx + d + LOOK_NAMES.length) % LOOK_NAMES.length;
+  applyPreset(LOOK_NAMES[lookIdx]); click(false, .6);
+}
+document.getElementById('var-prev').addEventListener('click', () => stepVariant(-1));
+document.getElementById('var-next').addEventListener('click', () => stepVariant(1));
+window.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, select, textarea, .menu')) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); stepVariant(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); stepVariant(1); }
+});
+
 function buildPanel() {
   const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
   // collapsible groups; which ones are open is remembered
@@ -928,16 +977,7 @@ function buildPanel() {
   const pr = el('div', 'presets');
   for (const name in PRESETS) {
     const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name;
-    b.addEventListener('click', async () => {
-      if (LOOKS[name]) {                                  // the whole look, keeping only the content
-        const keep = { text: P.text, agent: P.agent };
-        P = Object.assign({}, DEF, LOOKS[name], keep); useBg(P.bg);
-      } else Object.assign(P, PRESETS[name]);
-      apply(); syncInputs(); save();
-      if (!LOOKS[name] && P.icon !== 'emboss') {           // a new shape: keep the icon inside it
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); layout(); await ACTIONS.fitIcon(null);
-      }
-    });
+    b.addEventListener('click', () => applyPreset(name));
     pr.appendChild(b);
   }
   body.appendChild(pr);
@@ -1055,6 +1095,7 @@ function syncInputs() {
   }
 }
 function set(k, v) {
+  queueMicrotask(showVariant);
   if (k === 'gyro' && v) askGyro();
   P[k] = v;
   if (k === 'bgColor') P.bg = 'color';                    // picking a colour switches to it
@@ -1081,7 +1122,7 @@ function setTuning(on) {
 tuneBtn.addEventListener('click', () => setTuning(!document.body.classList.contains('tuning')));
 panel.addEventListener('keydown', e => { if (e.key === 'Escape') { setTuning(false); tuneBtn.focus(); } });
 if (!BGS.some(b => b.id === P.bg)) P.bg = 'grid';                   // the picture presets are gone: back to the grid
-useBg(P.bg); buildPanel(); apply();
+useBg(P.bg); buildPanel(); apply(); showVariant();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {   // the text backgrounds need the real font
   paintSwatches(panel.querySelector('.bgs'));
   const def = BGS.find(b => b.id === P.bg); if (def && def.draw) useBg(P.bg);
