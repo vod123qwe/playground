@@ -463,13 +463,13 @@ const LILAC = {
   bg: 'color', bgColor: '#a7a3e1', gridDensity: .99, grid: .3, bgScale: 1, ambOn: true, sound: 'bubble', volume: .16,
   menuGap: 1.07, liquid: .63, glowOn: true, glowK: 1.17, glowSize: .6, glowSpeed: 1.06,
 };
-const DISH = {                                        // a deep navy dish, clear glass, a soft ocean glow
-  pressGrow: .18, dome: -.5, wall: .6, under: .13, edge: .14, lift: .59, ior: 1.92, disp: .086, frost: .9, tint: '#e63d97', tintK: 0,
-  lightEl: 8, key: 1.73, env: .76, rim: 1.42, shadow: .48, beadSize: 1.67, sink: -.43, smoke: 0, starSize: .38, starMotion: .91,
+const DISH = {                                        // a deep navy dish, frosted glass, a soft ocean glow
+  pressGrow: .2, corner: .83, dome: -.38, wall: .6, under: 0, profile: 1.3, edge: .33, lift: .51, ior: 1.92, disp: .086, frost: 4.2, tint: '#e63d97', tintK: 0,
+  lightEl: 8, key: 1.18, env: 1.4, rim: 1.42, shadow: .67, beadSize: 1.67, sink: -.43, smoke: 0, starSize: .38, starMotion: .91,
   icon: 'pulse', beadFlat: .73, orbLight: 1.07, beadRefl: 2.93, pulseSpeed: .73, pulseLight: 1.23, orbSpeed: 1.13, orbGlow: .92,
   embSize: 1.34, embDepth: 1, embFrost: .58, ink: '#f2f3f5', inkA: 1, scale: 1.4, h: 3.82, pl: 1.19, pr: 2.43, gap: 1.12, weight: 530,
-  bg: 'color', bgColor: '#07041a', gridDensity: 1.29, grid: .06, ambOn: true, amb: .11, sound: 'bubble', volume: .16,
-  menuGap: 1.01, liquid: .76, glowOn: true, glow: 'ocean', glowK: .68, glowSize: .68, glowSpeed: .82,
+  bg: 'color', bgColor: '#07041a', gridDensity: 1.29, grid: .06, ambOn: true, amb: .66, volume: .16, bloomK: .55,
+  menuGap: 1.01, liquid: .76, glowOn: true, glow: 'ocean', glowBlend: 'auto', glowK: .68, glowSize: 1.17, glowSpeed: .82,
 };
 const CLOUDS = Object.assign({}, LILAC, { bg: 'clouds', bgScale: 1, grid: 0, ambOn: true, amb: .6 });   // the Lilac glass over the clouds video
 const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Clouds: CLOUDS, Dish: DISH };   // full looks; the rest of the presets are shapes
