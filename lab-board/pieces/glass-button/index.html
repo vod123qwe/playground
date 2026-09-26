@@ -71,6 +71,13 @@
   .gl .menu li{background:none} .gl .menu li .dot{visibility:hidden} .gl .menu li:focus-visible{box-shadow:none} .gl .menu li .k{border-color:transparent}
 
   /* ---------- orbit hint / reset ---------- */
+  /* hints: two small mouse icons instead of words (click and hold · hold the wheel and drag) */
+  .hints{position:fixed; left:clamp(16px, 3vw, 32px); bottom:18px; z-index:2; display:flex; gap:14px; color:rgba(20,20,20,.55); pointer-events:auto}
+  .hint-i{display:grid; place-items:center; height:28px}
+  .hint-i:first-child svg{width:25px; height:25px} .hint-i:last-child svg{width:37px; height:25px}
+  body.dark .hints{color:rgba(255,255,255,.55)}
+  body.still .hints{display:none}
+  @media (pointer:coarse){ .hints{display:none} }
   .chip{
     position:fixed; left:50%; bottom:18px; z-index:3; transform:translateX(-50%);
     padding:7px 13px; border:0; border-radius:999px; font:inherit; font-size:12px; line-height:1; color:rgba(20,20,20,.72);
@@ -195,8 +202,8 @@
   body.dark .meta{color:rgba(255,255,255,.62)} body.dark .meta b{color:#fff}
   body.bare .meta{display:none}
   body.still .chip, body.still .tune, body.still .panel{display:none}
-  body:not(.bare) .chip{bottom:52px}
-  @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} body:not(.bare) .chip{bottom:70px} }
+
+  @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} }
   @media (prefers-reduced-motion:reduce){ .menu, .panel, .stage{transition-duration:.01s} }
 
   /* ---------- the panel: edge to edge, minimal, roomy ---------- */
@@ -267,7 +274,10 @@
 <aside class="panel" id="panel" aria-label="Tune the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
-<div class="meta bottom"><span>move · press · open · zoom · orbit · tune</span></div>
+<div class="hints" role="note" aria-label="Click and hold the button. Hold the mouse wheel and drag to turn the view in 3D.">
+  <span class="hint-i" title="Click and hold"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.75" width="12" height="18.5" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 2.75A6 6 0 0 0 6 8.75V10.5h6z" fill="currentColor"/><path d="M12 2.75v7.75M6 10.5h12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+  <span class="hint-i" title="Hold the wheel and drag to turn in 3D"><svg viewBox="0 0 36 24" aria-hidden="true"><rect x="12" y="2.75" width="12" height="18.5" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="16.6" y="5.5" width="2.8" height="5" rx="1.4" fill="currentColor"/><path d="M7 9.5l-3 2.5 3 2.5M29 9.5l3 2.5-3 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+</div>
 
 <script>
 // Glass Button v5: a small ray tracer in one fragment shader, with a tuning panel.
@@ -1558,9 +1568,9 @@ function frame(t) {
   // orbit hint first, then a reset chip while the view is turned
   const turned = Math.abs(s.tyaw) + Math.abs(s.tpitch) > 0.03 || Math.abs(s.tzoom - 1) > 0.01;
   chip.classList.toggle('reset', turned); chip.tabIndex = turned ? 0 : -1;
-  const txt = turned ? 'reset view' : (coarse ? 'pinch to zoom · two fingers to orbit' : 'scroll to zoom · hold the wheel and drag to orbit');
+  const txt = turned ? 'reset view' : 'pinch to zoom · two fingers to orbit';   // the mouse hints are icons now
   if (chip.textContent !== txt) chip.textContent = txt;
-  chip.classList.toggle('show', turned || t < hintUntil);
+  chip.classList.toggle('show', turned || (coarse && t < hintUntil));
   if (!ready) return;
   tuneQuality(dt);
   layout();
