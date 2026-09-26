@@ -397,13 +397,13 @@ const DEF = {
 };
 // Signature: Jarek's own look (everything but the content); the rest are shapes, laid over whatever you have
 const SIGNATURE = {
-  pressGrow: .09, corner: .57, dome: .1, under: .23, profile: 6, edge: .05, lift: .23,
-  ior: 2.28, disp: .106, tint: '#e63d97', tintK: 0, lightEl: 8, key: 2.09, env: 1.29, rim: 2.5, shadow: 1.04,
+  pressGrow: .015, corner: .65, dome: .16, wall: .08, under: .31, profile: 4.5, edge: .28, lift: .57,
+  ior: 2.28, disp: .106, tint: '#e63d97', tintK: 0, lightEl: 8, key: .55, env: .88, rim: 2.5, shadow: 1.04,
   beadSize: 1.9, sink: 1.33, smoke: .83, starSize: .38, starMotion: .91, icon: 'orb', orbLight: 1.07,
   pulseSpeed: 1.97, pulseLight: 1.35, orbSpeed: 1.13, orbGlow: .92, embSize: 1.34, embDepth: 1, embFrost: .58,
   inkA: 1, scale: 1.4, h: 4, pl: 1, pr: 2, gap: 1.2, weight: 540,
-  bg: 'color', bgColor: '#bdbecc', gridDensity: 2.24, bgScale: 3, grid: .36, sound: 'bubble', volume: .16,
-  menuGap: .75, liquid: .63, glowSize: 1.62, glowSpeed: 1.06,
+  bg: 'color', bgColor: '#bdbecc', gridDensity: 2.24, bgScale: 3, grid: .36, ambOn: true, sound: 'bubble', volume: .16,
+  jelly: .22, menuGap: .75, liquid: .63, glowSize: 1.62, glowSpeed: 1.06,
 }
 // Midnight: Jarek's second look, dark (again everything but the content)
 const MIDNIGHT = {
@@ -587,9 +587,10 @@ if (P.bg === 'upload') P.bg = 'grid';
 
 // ---------- interaction state ----------
 const POST = { ok: false, n: 0, sig: null, w: 0, h: 0 };   // the after-scene pipeline (set up once the glass compiles)
+const HOME = { yaw: .24, pitch: -.2 };                 // the resting view: a little from below and from the right
 const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, seen: false, open: false,
             menuT: 0, menuV: 0, gFrom: 0, gTo: 0, gT: 1, orbPh: 0, hi: null, hiA: 0, hiX: 0,
-            yaw: 0, pitch: 0, tyaw: 0, tpitch: 0, zoom: 1, tzoom: 1, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
+            yaw: HOME.yaw, pitch: HOME.pitch, tyaw: HOME.yaw, tpitch: HOME.pitch, zoom: 1, tzoom: 1, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
   s.seen = true;
   const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -658,7 +659,7 @@ function endPointer(e) {
 }
 window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
-function resetView() { s.tyaw = 0; s.tpitch = 0; s.tzoom = 1; s.tpanx = 0; s.tpany = 0; }
+function resetView() { s.tyaw = HOME.yaw; s.tpitch = HOME.pitch; s.tzoom = 1; s.tpanx = 0; s.tpany = 0; }
 
 // ---------- zoom: the wheel (or a trackpad pinch) zooms towards the cursor ----------
 const ZMIN = 0.5, ZMAX = 8;
@@ -1984,7 +1985,7 @@ function frame(t) {
   const kz = 1 - Math.pow(1 - .22, dt * 60);
   s.zoom += (s.tzoom - s.zoom) * kz; s.panx += (s.tpanx - s.panx) * kz; s.pany += (s.tpany - s.pany) * kz;
   // orbit hint first, then a reset chip while the view is turned
-  const turned = Math.abs(s.tyaw) + Math.abs(s.tpitch) > 0.03 || Math.abs(s.tzoom - 1) > 0.01;
+  const turned = Math.abs(s.tyaw - HOME.yaw) + Math.abs(s.tpitch - HOME.pitch) > 0.03 || Math.abs(s.tzoom - 1) > 0.01;
   chip.classList.toggle('reset', turned); chip.tabIndex = turned ? 0 : -1;
   const txt = turned ? 'reset view' : (chip.dataset.msg || 'pinch to zoom · two fingers to orbit');   // the mouse hints are icons now
   if (chip.textContent !== txt) chip.textContent = txt;
