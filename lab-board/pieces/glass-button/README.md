@@ -72,10 +72,12 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 
 **Wibracja** (Sound → Vibrate on press, tylko na dotyku): na Androidzie navigator.vibrate (14 ms przy wciśnięciu, 8 ms przy puszczeniu). iOS nie ma vibrate(), więc przełączany jest ukryty natywny przełącznik (input switch), co w iOS 18 daje lekkie stuknięcie. To nieoficjalny sposób i nie był testowany na urządzeniu.
 
-**Widok startowy**: przycisk wita lekko z dołu i od prawej (yaw 0,38, pitch -0,22), więc od razu widać grubość szkła. To jest pozycja spoczynkowa: reset view i klawisz R wracają właśnie do niej, a chip „reset view” pojawia się dopiero po obróceniu dalej. **Signature** zaktualizowany (niższa, zaokrąglona płytka, słabszy highlight, kolor tła w odbiciach, delikatna galaretka 0,22).
+**Widok startowy**: przycisk wita lekko z dołu i od prawej (yaw 0,38, pitch -0,22, lekko oddalony: zoom 0,88), więc od razu widać grubość szkła. To jest pozycja spoczynkowa: reset view i klawisz R wracają właśnie do niej, a chip „reset view” pojawia się dopiero po obróceniu dalej. **Signature** zaktualizowany (niższa, zaokrąglona płytka, słabszy highlight, kolor tła w odbiciach, delikatna galaretka 0,22).
 
 **Signature v3**: szkło z Midnight (głęboka wklęsła płyta, IOR 1,73, mocny highlight, światło stałe pod 59°, pulse) nad jasną siatką. Pierwsza wizyta otwiera się na Signature, a miniatura w katalogu (tryb still) też go pokazuje, pod kątem startowym. Bloom na jasnych tłach jest osłabiony do 30%, żeby odblask nie robił mlecznej plamy.
 
 **Reset all** wraca do presetu 1 (Signature) z domyślną treścią „Ask AI” i do widoku startowego.
 
 **Klip na planszy** (`thumbs/glass-button-hover.webm`, 1280×724, VP9, ~1,6 MB, 6,9 s w pętli): po najechaniu na kafel kamera przechodzi z lewego dołu na prawy dół, trochę wyżej, i wraca. Nagrany trybem `?still=1&bare=1&rec=84`: strona ustawia kamerę klatka po klatce, czeka, aż wygładzanie się ustabilizuje, i wysyła każdą klatkę do lokalnego odbiornika (domyślnie http://localhost:8811). Klatki składa OpenCV (VP9, tam i z powrotem). Miniatura to pierwsza klatka klipu, więc start przy najechaniu jest płynny.
+
+**Wygładzanie także w ruchu** (Smooth when still działa teraz zawsze, TAA bez wektorów ruchu): przesunięcie o ułamek piksela jest w każdej klatce. Gdy coś się rusza, nowa klatka miesza się z historią (18% przy ruchu światła i kursora, 40% przy obrocie, zoomie, nacisku i menu), a historia jest najpierw przycinana do zakresu kolorów sąsiedztwa 3×3 bieżącej klatki, więc nic się nie smuży. W bezruchu to dalej prawdziwe uśrednianie klatek. Zmiana ustawień liczy się jako ruch.

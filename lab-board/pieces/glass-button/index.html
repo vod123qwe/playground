@@ -606,10 +606,10 @@ if (P.bg === 'upload') P.bg = 'grid';
 
 // ---------- interaction state ----------
 const POST = { ok: false, n: 0, sig: null, w: 0, h: 0 };   // the after-scene pipeline (set up once the glass compiles)
-const HOME = { yaw: .38, pitch: -.22 };                 // the resting view: a little from below and from the right
+const HOME = { yaw: .38, pitch: -.22, zoom: .88 };                 // the resting view: a little from below and from the right
 const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, seen: false, open: false,
             menuT: 0, menuV: 0, gFrom: 0, gTo: 0, gT: 1, orbPh: 0, hi: null, hiA: 0, hiX: 0,
-            yaw: HOME.yaw, pitch: HOME.pitch, tyaw: HOME.yaw, tpitch: HOME.pitch, zoom: 1, tzoom: 1, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
+            yaw: HOME.yaw, pitch: HOME.pitch, tyaw: HOME.yaw, tpitch: HOME.pitch, zoom: HOME.zoom, tzoom: HOME.zoom, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
   s.seen = true;
   const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -678,7 +678,7 @@ function endPointer(e) {
 }
 window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
-function resetView() { s.tyaw = HOME.yaw; s.tpitch = HOME.pitch; s.tzoom = 1; s.tpanx = 0; s.tpany = 0; }
+function resetView() { s.tyaw = HOME.yaw; s.tpitch = HOME.pitch; s.tzoom = HOME.zoom; s.tpanx = 0; s.tpany = 0; }
 
 // ---------- zoom: the wheel (or a trackpad pinch) zooms towards the cursor ----------
 const ZMIN = 0.5, ZMAX = 8;
@@ -1269,7 +1269,7 @@ function syncInputs() {
   }
 }
 function set(k, v) {
-  queueMicrotask(showVariant); POST.n = 0;               // any change: start the still-frame smoothing again
+  queueMicrotask(showVariant); POST.dirty = true;        // any change counts as movement for the smoothing
   if (k === 'gyro' && v) askGyro();
   P[k] = v;
   if (k === 'bgColor') P.bg = 'color';                    // picking a colour switches to it
@@ -1852,9 +1852,14 @@ const PH = `#version 300 es
 precision highp float; out vec4 o;
 `;
 const PFS = {
-  acc: PH + `uniform sampler2D uCur, uHist; uniform float uA;
+  acc: PH + `uniform sampler2D uCur, uHist; uniform float uA, uClamp;
 void main(){ ivec2 q = ivec2(gl_FragCoord.xy); vec3 c = texelFetch(uCur, q, 0).rgb, h = texelFetch(uHist, q, 0).rgb;
   if (!all(lessThan(abs(c), vec3(1e4)))) c = h;         // a stray NaN must not live on in the history
+  if (uClamp > 0.5) {                                    // moving: keep only what the neighbourhood agrees on, so nothing smears
+    ivec2 hi = textureSize(uCur, 0) - 1; vec3 mn = c, mx = c;
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec3 n = texelFetch(uCur, clamp(q + ivec2(x, y), ivec2(0), hi), 0).rgb; mn = min(mn, n); mx = max(mx, n); }
+    h = clamp(h, mn, mx);
+  }
   o = vec4(mix(h, c, uA), 1.0); }`,
   down: PH + `uniform sampler2D uSrc; uniform vec2 uInv, uSt; uniform float uThr;
 void main(){ vec2 uv = gl_FragCoord.xy * uInv;
@@ -1909,7 +1914,7 @@ function allocPost() {
   for (const k of ['cur', 'a', 'b', 'd1', 'e1', 'd2', 'e2']) if (POST[k]) { gl.deleteTexture(POST[k].t); gl.deleteFramebuffer(POST[k].f); }
   gl.activeTexture(gl.TEXTURE2);
   const w1 = Math.max(1, Math.ceil(w / 4)), h1 = Math.max(1, Math.ceil(h / 4)), w2 = Math.max(1, Math.ceil(w1 / 4)), h2 = Math.max(1, Math.ceil(h1 / 4));
-  Object.assign(POST, { cur: target(w, h), a: target(w, h), b: target(w, h), d1: target(w1, h1), e1: target(w1, h1), d2: target(w2, h2), e2: target(w2, h2), w, h, n: 0 });
+  Object.assign(POST, { cur: target(w, h), a: target(w, h), b: target(w, h), d1: target(w1, h1), e1: target(w1, h1), d2: target(w2, h2), e2: target(w2, h2), w, h, n: 0, fresh: true });
   gl.activeTexture(gl.TEXTURE0);
   if (!POST.cur || !POST.a || !POST.b || !POST.d1 || !POST.e1 || !POST.d2 || !POST.e2) POST.ok = false;   // a device that cannot render to them: draw straight
 }
@@ -1922,8 +1927,10 @@ function postPass() {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   };
   // the history: a running average while nothing moves, the plain frame as soon as something does
-  const a = !P.smooth || POST.n <= 1 ? 1 : Math.max(1 / POST.n, 0.1);
-  pass(POST.acc, POST.b, { uCur: POST.cur, uHist: POST.a, uA: a });
+  // fresh targets or smoothing off: the plain frame · moving: a clamped running blend · still: a true average of the jittered frames
+  const a = !P.smooth || POST.fresh ? 1 : POST.n === 0 ? (POST.big ? 0.4 : 0.18) : Math.max(1 / (POST.n + 2), 0.1);
+  pass(POST.acc, POST.b, { uCur: POST.cur, uHist: POST.a, uA: a, uClamp: POST.n === 0 ? 1 : 0 });
+  POST.fresh = false;
   [POST.a, POST.b] = [POST.b, POST.a];
   if (P.bloom && P.bloomK > 0) {
     const { d1, e1, d2, e2 } = POST;
@@ -2004,7 +2011,7 @@ function frame(t) {
   const kz = 1 - Math.pow(1 - .22, dt * 60);
   s.zoom += (s.tzoom - s.zoom) * kz; s.panx += (s.tpanx - s.panx) * kz; s.pany += (s.tpany - s.pany) * kz;
   // orbit hint first, then a reset chip while the view is turned
-  const turned = Math.abs(s.tyaw - HOME.yaw) + Math.abs(s.tpitch - HOME.pitch) > 0.03 || Math.abs(s.tzoom - 1) > 0.01;
+  const turned = Math.abs(s.tyaw - HOME.yaw) + Math.abs(s.tpitch - HOME.pitch) > 0.03 || Math.abs(s.tzoom - HOME.zoom) > 0.01;
   chip.classList.toggle('reset', turned); chip.tabIndex = turned ? 0 : -1;
   const txt = turned ? 'reset view' : (chip.dataset.msg || 'pinch to zoom · two fingers to orbit');   // the mouse hints are icons now
   if (chip.textContent !== txt) chip.textContent = txt;
@@ -2012,7 +2019,7 @@ function frame(t) {
   if (!ready) return;
   tuneQuality(dt);
   layout();
-  if (labelDirty) { upload(); POST.n = 0; }
+  if (labelDirty) { upload(); POST.dirty = true; }
   if (bg.mode === 1 && (bg.dirty || (bg.video && bg.video.readyState >= 2 && !bg.video.paused))) {
     uploadBg();
     if (bg.video && t - (bg.avgT || 0) > 500) { bg.avgT = t; const a = avgOf(bg.video, bg.w, bg.h); bg.avg = bg.avg.map((v, i) => v + (a[i] - v) * 0.5); }
@@ -2036,10 +2043,13 @@ function frame(t) {
   let menuTopZ = (P.lift + P.under + wall + dome) * hh;
   gl.useProgram(prog);
   {                                                     // still? the view, the light, the press and the menu all settled
-    const sig = [s.lx, s.ly, s.hov, s.press, s.wob, s.menuT, s.yaw, s.pitch, s.zoom, s.panx, s.pany, s.hiA, s.jiggle, W, H, cv.width];
-    const moved = !POST.sig || sig.some((v, i) => Math.abs(v - POST.sig[i]) > 2e-4);
-    POST.sig = sig; POST.n = moved ? 0 : POST.n + 1;
-    const j = POST.ok && P.smooth && POST.n > 0 ? [HALTON(POST.n % 16 + 1, 2) - 0.5, HALTON(POST.n % 16 + 1, 3) - 0.5] : [0, 0];
+    // big: the view turns, zooms or the glass changes shape · small: the light and the lean follow the cursor
+    const sig = [s.press, s.wob, s.menuT, s.yaw, s.pitch, s.zoom, s.panx, s.pany, W, H, cv.width, s.lx, s.ly, s.hov, s.hiA, s.jiggle];
+    const d = POST.sig ? sig.map((v, i) => Math.abs(v - POST.sig[i]) > 2e-4) : sig.map(() => true);
+    POST.big = d.slice(0, 11).some(Boolean);
+    POST.sig = sig; POST.n = d.some(Boolean) || POST.dirty ? 0 : POST.n + 1; POST.dirty = false;
+    POST.f = (POST.f || 0) + 1;                                     // the jitter never stops, so edges keep smoothing while you move
+    const j = POST.ok && P.smooth ? [HALTON(POST.f % 16 + 1, 2) - 0.5, HALTON(POST.f % 16 + 1, 3) - 0.5] : [0, 0];
     gl.uniform2f(uni('uJit'), j[0], j[1]);
   }
   gl.uniform2f(uni('uRes'), W, H); gl.uniform1f(uni('uScale'), cv.width / W); gl.uniform1f(uni('uTime'), T);
