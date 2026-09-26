@@ -60,3 +60,14 @@ Poprzednie wersje są w historii gita: v1 rtęć, v2 szklana kopułka w płaskie
 **Mieszanie poświaty** (Shadow & glow → „Glow blend”): *screen* (jak dotąd, rozjaśnia; najlepsze na ciemnym tle), *soft* (soft light: barwi jasne tło kolorem poświaty i zachowuje jego ton oraz siatkę, zamiast je wybielać) i *auto* (płynnie wybiera między nimi według jasności tła: ciemne = screen, jasne = soft). Domyślnie screen, więc istniejące warianty wyglądają jak wcześniej.
 
 **Tło Gradient**: piąte tło w grupie Background, a pod nim 14 okrągłych szablonów subtelnych gradientów po przekątnej (trzy przystanki). Ciemne: Dusk (ciemny fiolet w ciemny niebieski), Plum, Abyss, Aubergine, Pine, Ember, Ink, Graphite. Jasne: Lilac mist, Peach, Mint, Sky, Rose quartz, Fog. Siatka działa też na gradiencie, a nadruk sam przełącza się na jasny na ciemnych. „Background colour” pokazuje się teraz tylko przy tle Colour. **Depth of field**: ostrość jest na szkle, a tło rozmywa się proporcjonalnie do odległości od niego. Na wprost to równe, lekkie rozmycie, a po obrocie dalsze części podłogi rozmywają się mocniej. Widać to na siatce i na obrazie lub wideo; sam gładki gradient nie ma czego rozmyć.
+
+**Jakość obrazu** (grupa Quality). Scena rysuje się teraz do bufora half-float (HDR, wartości powyżej bieli zostają), a potem przechodzi przez trzy kroki:
+- *Smooth when still*: gdy nic się nie rusza (widok, światło, nacisk, menu), kolejne klatki są uśredniane z przesunięciem o ułamek piksela (sekwencja Haltona), więc rant, refrakcja i nadruk wygładzają się jak przy wielu próbkach na piksel. Każdy ruch albo zmiana ustawienia wraca do zwykłej klatki, więc nic się nie smuży.
+- *Bloom on highlights*: to, co jaśniejsze od progu, rozmywa się w dwóch skalach (1/4 i 1/16 rozdzielczości) i wraca jako miękka poświata. Próg zależy od jasności tła (ciemne tło od 0,75, jasne do 1,2), żeby jasne tła nie zachodziły mgłą. Siła: Bloom strength.
+- *Dither*: niewidoczny trójkątny szum poniżej jednego stopnia jasności usuwa pasy na gradientach (zmierzone na Dusk: bez niego 5 skoków tonu i płaskie pasy do 294 px w wierszu, z nim najdłuższy płaski odcinek 34 px).
+- *Compare before / after*: dzieli ekran przesuwaną linią. Po lewej jest pojedyncza surowa klatka jak dawniej, po prawej obecne ustawienia.
+Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcześniej, a opcji Quality nie widać.
+
+**Galaretka** (Shape → Jelly): druga sprężyna pobudzana tempem nacisku. Przy wciśnięciu przycisk robi się szerszy i bardziej płaski, po puszczeniu węższy, a potem kilka razy lekko drga (około ±4% przy 1). Nadruk się nie odkształca.
+
+**Wibracja** (Sound → Vibrate on press, tylko na dotyku): na Androidzie navigator.vibrate (14 ms przy wciśnięciu, 8 ms przy puszczeniu). iOS nie ma vibrate(), więc przełączany jest ukryty natywny przełącznik (input switch), co w iOS 18 daje lekkie stuknięcie. To nieoficjalny sposób i nie był testowany na urządzeniu.
