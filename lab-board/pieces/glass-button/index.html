@@ -294,7 +294,7 @@ const DEF = {
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
   follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
-  text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
+  text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3,
   sound: 'glass', release: true, volume: .5,
@@ -372,6 +372,7 @@ const CTRL = [
   { k: 'beadSize', l: 'Bead size', min: .4, max: 3, s: .01, show: isBead },
   { k: 'beadFlat', l: 'Roundness (1 = sphere, less = M&M)', min: .2, max: 1, s: .01, show: isBead },
   { k: 'sink', l: 'Sink into glass', min: -.8, max: 3, s: .01, show: isBead },
+  { k: 'beadRefl', l: 'Reflection', min: 0, max: 3, s: .01, show: isBead },
   { k: 'smoke', l: 'Smoke', min: 0, max: 1, s: .01, show: () => ['glyph', 'orb', 'pulse'].includes(P.icon) },
   { k: 'starSize', l: 'Symbol size', min: 0, max: 1, s: .01, show: showSym },
   { k: 'starMotion', l: 'Gradient motion', min: 0, max: 2, s: .01, show: showSym },
@@ -380,6 +381,8 @@ const CTRL = [
   { k: 'orbSpeed', l: 'Flow speed', min: 0, max: 3, s: .01, show: () => P.icon === 'orb' },
   { k: 'orbGlow', l: 'Brightness', min: 0, max: 2, s: .01, show: () => P.icon === 'orb' },
   { k: 'orbLight', l: 'Glow (lights the glass)', min: 0, max: 2, s: .01, show: () => P.icon === 'orb' },
+  { k: 'orbPal', l: 'Colours', t: 'seg', o: ['rainbow', 'aurora', 'star', 'ocean', 'ember', 'mono'], show: () => P.icon === 'orb' },
+  { k: 'orbColor', l: 'Colour', t: 'color', show: () => P.icon === 'orb' && P.orbPal === 'mono' },
   { k: 'pulseSpeed', l: 'Pulse speed', min: 0, max: 3, s: .01, show: () => P.icon === 'pulse' },
   { k: 'pulseLight', l: 'Light', min: 0, max: 2, s: .01, show: () => P.icon === 'pulse' },
   { k: 'embSize', l: 'Carving size', min: .4, max: 1.8, s: .01, show: () => P.icon === 'emboss' },
@@ -632,6 +635,11 @@ function drawBg(def, c, w, h) {
   } else def.draw(g, w, h, w / 2048);
 }
 const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+// the orb's colours: rainbow (null), one of the glow palettes, or shades of one colour
+function orbPalette() {
+  if (P.orbPal === 'mono') { const c = hex(P.orbColor); return [c.map(v => v * 0.35), c, c.map(v => v + (1 - v) * 0.6)]; }
+  return GLOWS[P.orbPal] || null;
+}
 const GLOWS = {                                        // three colours each, cycling along the button
   aurora: [hex('#ff5ecf'), hex('#7a5cff'), hex('#2fd8ff')],
   star:   [hex('#ff7a2e'), hex('#fff1e0'), hex('#2f7bff')],
@@ -944,7 +952,7 @@ function set(k, v) {
   if (k === 'bg' || k === 'bgColor') useBg(P.bg);
   if (k === 'bgColor' || k === 'gridDensity') paintSwatches(panel.querySelector('.bgs'));
   if (k === 'glowOn' && v && P.glowK < 0.05) P.glowK = DEF.glowK;      // switching the glow on should show something
-  apply(); save(); if (['bg', 'bgColor', 'glowOn', 'glow', 'icon', 'sound'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
+  apply(); save(); if (['bg', 'bgColor', 'glowOn', 'glow', 'icon', 'sound', 'orbPal'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || k in PRESETS['M&M'] || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   const st = anchor.style;
@@ -1036,7 +1044,8 @@ uniform float uOrbPh;          // the orb's flow, faster while pressed
 uniform vec4 uEmb;             // carving size, carving depth, frost, orb brightness
 uniform vec3 uBub[3];
 uniform vec4 uIcon2;           // orb glow, mercury ring, -, mercury iridescence
-uniform vec3 uIconLight;       // the colour of the light a glowing icon throws (0 when it does not glow)          // the menu's bullets: air bubbles in the glass (x, y, radius)
+uniform vec3 uIconLight;
+uniform vec3 uOrbA, uOrbB, uOrbC; uniform float uOrbPal;   // the orb's own palette (0 = rainbow)       // the colour of the light a glowing icon throws (0 when it does not glow)          // the menu's bullets: air bubbles in the glass (x, y, radius)
 uniform vec4 uLabelRect;       // where the print texture lies (css px)
 uniform vec4 uMenu;            // the menu slab now: centre, half size
 uniform vec4 uMenuK;           // its corner radius, the blend radius of the liquid bridge, print fade, on
@@ -1238,8 +1247,11 @@ vec3 beadShade(vec3 P, vec3 rd){
       vec3 q = (lp + t * (tf * (float(i) + 0.5) / 6.0)) * S / BR;
       float ph = uOrbPh;
       float v = sin(q.x * 3.1 + ph) + sin(q.y * 3.7 - ph * 1.3 + q.z * 2.0) + sin((q.x - q.y) * 2.3 + q.z * 3.0 + ph * 0.7);
-      vec3 c = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + v * 0.2 + ph * 0.05));
-      c = mix(c, uIconTint, 0.22);
+      vec3 c = mix(0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67) + v * 0.2 + ph * 0.05)), uIconTint, 0.22);
+      if (uOrbPal > 0.5) {                                 // or your palette: three colours flowing into each other
+        float w = fract(v * 0.2 + ph * 0.05) * 3.0;
+        c = w < 1.0 ? mix(uOrbA, uOrbB, smoothstep(0.0, 1.0, w)) : w < 2.0 ? mix(uOrbB, uOrbC, smoothstep(1.0, 2.0, w)) : mix(uOrbC, uOrbA, smoothstep(2.0, 3.0, w));
+      }
       acc += c * max(1.0 - dot(q, q), 0.0) * smoothstep(-0.3, 1.0, sin(v * 2.2 + ph));   // streaks, with dark glass between
     }
     col = mix(col, acc * 0.55 * uEmb.w, 0.8) + acc * (0.08 * uEmb.w + 0.25 * uIcon2.x);   // Glow makes it a light
@@ -1282,10 +1294,13 @@ vec3 beadShade(vec3 P, vec3 rd){
     float ring = smoothstep(0.86, 0.93, rr) * (1.0 - smoothstep(0.985, 1.0, rr));
     col = mix(col, mix(vec3(0.93, 0.95, 0.98), irid, 0.25) * (0.65 + 0.45 * max(dot(n, L), 0.0)), clamp(ring * uIcon2.y, 0.0, 1.0));
   }
+  // Reflection: more of the room on the whole bead (not only at the rim), plus a broad soft highlight
   vec3 rf = reflect(rd, n);
-  float F = 0.04 + 0.96 * pow(1.0 - facing, 5.0);
-  col = mix(col, envAt(P, rf), clamp(F * uLightK.y, 0.0, 1.0));
-  col += vec3(1.0) * pow(max(dot(rf, L), 0.0), 60.0) * 0.95 * uLightK.x;
+  float rk = uIcon2.z, r0 = 0.04 + 0.05 * max(rk - 1.0, 0.0);
+  float F = r0 + (1.0 - r0) * pow(1.0 - facing, 4.0 - min(rk, 2.0) * 0.5);
+  col = mix(col, envAt(P, rf), clamp(F * uLightK.y * (0.4 + 0.6 * rk), 0.0, 0.85));
+  float sp = max(dot(rf, L), 0.0);
+  col += vec3(1.0) * (pow(sp, 60.0) * 0.95 * (0.6 + 0.4 * rk) + pow(sp, 10.0) * 0.12 * max(rk - 0.5, 0.0)) * uLightK.x;
   return col;
 }
 
@@ -1586,10 +1601,19 @@ function frame(t) {
   // the light a glowing icon throws: the orb's drifting colour, or the pulse breathing
   let lc = [0, 0, 0];
   const tint = hex(ag ? ag[1] : '#8a7dff');
-  if (mode === 2 && P.orbLight > 0) { const h = s.orbPh * 0.05; lc = [0, .33, .67].map((o, i) => ((0.5 + 0.5 * Math.cos(6.2831 * (o + h))) * 0.6 + tint[i] * 0.4) * P.orbLight * 0.6); }
+  const op = orbPalette();
+  if (mode === 2 && P.orbLight > 0) {
+    const h = s.orbPh * 0.05;
+    let c;
+    if (op) { const w = ((h % 1) + 1) % 1 * 3, i = Math.floor(w), f = w - i, a = op[i % 3], b = op[(i + 1) % 3]; c = a.map((v, k) => v + (b[k] - v) * f); }
+    else c = [0, .33, .67].map((o, i) => (0.5 + 0.5 * Math.cos(6.2831 * (o + h))) * 0.6 + tint[i] * 0.4);
+    lc = c.map(v => v * P.orbLight * 0.6);
+  }
   if (mode === 5) { if (!STILL) s.pulsePh = (s.pulsePh || 0) + dt * 2.2 * P.pulseSpeed; const br = 0.55 + 0.45 * Math.sin(s.pulsePh || 0); lc = tint.map(c => (0.5 + c * 0.5) * P.pulseLight * br * 0.7); }
   gl.uniform3fv(uni('uIconLight'), lc);
-  gl.uniform4f(uni('uIcon2'), mode === 2 ? P.orbLight : 0, P.ringK, 0, P.iris);
+  gl.uniform4f(uni('uIcon2'), mode === 2 ? P.orbLight : 0, P.ringK, P.beadRefl, P.iris);
+  gl.uniform1f(uni('uOrbPal'), op ? 1 : 0);
+  if (op) { gl.uniform3fv(uni('uOrbA'), op[0]); gl.uniform3fv(uni('uOrbB'), op[1]); gl.uniform3fv(uni('uOrbC'), op[2]); }
   gl.uniform4f(uni('uBead'), gx(geo.orb[0]), gy(geo.orb[1]), P.bead && mode !== 3 ? geo.orb[2] * 0.7 * g : 0, P.sink);
   gl.uniform4f(uni('uBead2'), P.smoke, P.starSize, reduce ? 0 : P.starMotion, P.beadFlat);
   gl.uniform4f(uni('uEmb'), P.embSize, P.embDepth, P.embFrost, P.orbGlow);
