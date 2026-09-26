@@ -310,8 +310,20 @@ const SIGNATURE = {
   bg: 'color', bgColor: '#bdbecc', gridDensity: 2.24, bgScale: 3, grid: .36, sound: 'bubble', volume: .16,
   menuGap: 1.14, liquid: .69, glowSize: 1.62, glowSpeed: 1.06,
 };
+// Midnight: Jarek's second look, dark (again everything but the content)
+const MIDNIGHT = {
+  pressGrow: .09, dome: -.97, wall: .73, under: 1, profile: 5.95, edge: .4, lift: .54,
+  ior: 1.73, disp: .128, tint: '#e63d97', tintK: 0, follow: false, lightEl: 59, key: 2.66, env: 1.82, rim: 2.34, shadow: .59,
+  beadSize: 1.74, sink: 1.33, smoke: .32, starSize: .41, starMotion: 0, icon: 'pulse',
+  orbLight: 1.66, ringK: 1.84, iris: 1.72, pulseSpeed: 1.92, pulseLight: .9, orbSpeed: 1.34, orbGlow: .55,
+  embSize: 1.8, embDepth: .69, embFrost: 0, ink: '#f2f3f5', inkA: .98, scale: 1.42, h: 4.27, pl: 1, pr: 2, gap: 1.2, weight: 540,
+  bg: 'color', bgColor: '#000000', gridDensity: 1.31, bgScale: 3, grid: .02, sound: 'pop', volume: .16,
+  menuGap: 1.32, liquid: .69, menuLift: .8, glowK: .47, glowSize: .38, glowSpeed: 0,
+};
+const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT };   // full looks; the rest of the presets are shapes
 const PRESETS = {
   'Signature': SIGNATURE,
+  'Midnight': MIDNIGHT,
   'M&M':     { corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02, ior: 1.5, disp: .026 },
   'Puck':    { corner: 1, dome: .12, wall: .45, under: .12, profile: 3.5, edge: .3, lift: .25, ior: 1.6, disp: .04 },
   'Tile':    { corner: .4, dome: .08, wall: .35, under: .05, profile: 5, edge: .2, lift: .1, ior: 1.52, disp: .03 },
@@ -800,12 +812,12 @@ function buildPanel() {
   for (const name in PRESETS) {
     const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name;
     b.addEventListener('click', async () => {
-      if (name === 'Signature') {                         // the whole look, keeping only the content
+      if (LOOKS[name]) {                                  // the whole look, keeping only the content
         const keep = { text: P.text, agent: P.agent };
-        P = Object.assign({}, DEF, SIGNATURE, keep); useBg(P.bg);
+        P = Object.assign({}, DEF, LOOKS[name], keep); useBg(P.bg);
       } else Object.assign(P, PRESETS[name]);
       apply(); syncInputs(); save();
-      if (name !== 'Signature' && (P.icon === 'glyph' || P.icon === 'orb')) {   // a new shape: keep the icon inside it
+      if (!LOOKS[name] && P.icon !== 'emboss') {           // a new shape: keep the icon inside it
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); layout(); await ACTIONS.fitIcon(null);
       }
     });
