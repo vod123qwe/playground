@@ -27,6 +27,8 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 
 **Podpowiedzi**: zamiast napisów dwie proste ikonki w lewym dolnym rogu: mysz z podświetlonym lewym przyciskiem (kliknij i przytrzymaj) i mysz z podświetlonym kółkiem i strzałkami (przytrzymaj kółko i przeciągnij, żeby obrócić widok w 3D); opis w dymku po najechaniu. Na dotyku zamiast nich krótka podpowiedź o gestach.
 
+**Żyroskop na telefonie**: pochylanie przesuwa światło na szkle i lekko pochyla widok, jak kursor na komputerze; neutralna pozycja powoli dopasowuje się do tego, jak trzymasz telefon, obrót ekranu w poziom jest obsłużony. iPhone wymaga zgody, a system pozwala zapytać dopiero po dotknięciu, więc po wejściu pojawia się karta „Tilt to play with the light” (Allow motion / Not now); po zgodzie przy kolejnych wejściach wystarczy pierwszy dotyk. Android nie ma okna zgody, więc działa od razu (z krótką podpowiedzią). Przełącznik *Tilt (gyroscope)* w grupie Light.
+
 **Przytrzymanie i puszczenie**: przytrzymany przycisk pompuje się jak w Liquid Glass (szkło, nadruk i kulka rosną razem wokół środka, na sprężynie), a po puszczeniu wraca z lekkim, płynnym dobiciem i dopiero wtedy w pełni wypływa szuflada menu. Tak samo z klawiatury: Enter albo spacja otwierają przy puszczeniu.
 
 **Treść**: przycisk domyślnie „Ask AI”, po wyborze np. „Write with AI”; pozycje Write, Summarise, Translate (symbole: stalówka, skracające się linijki tekstu, globus). Pozycje menu to pęcherzyk powietrza w szkle jako punktor (ciemny obrys, jasny środek, odblask) i mocniejsza, większa nazwa, z dużymi odstępami; skróty 1, 2, 3 działają (gdy przycisk ma fokus albo menu jest otwarte), bez nadruku. *Liquid* na maksimum zlewa przycisk i menu w jedną miękką bryłę.

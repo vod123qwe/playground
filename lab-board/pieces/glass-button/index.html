@@ -78,6 +78,17 @@
   body.dark .hints{color:rgba(255,255,255,.55)}
   body.still .hints{display:none}
   @media (pointer:coarse){ .hints{display:none} }
+  /* the motion prompt on phones (iOS asks for permission only after a tap) */
+  .tilt{position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:8; display:grid; grid-template-columns:auto 1fr; gap:10px 14px; align-items:center;
+        padding:18px; color:var(--ink); background:rgba(250,250,251,.96); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+        box-shadow:0 0 0 1px rgba(20,20,20,.1), 0 24px 50px -28px rgba(20,24,30,.5); font-size:13px}
+  .tilt[hidden]{display:none}
+  .tilt-i{width:32px; height:32px}
+  .tilt-x b{font-weight:600} .tilt-x p{margin:4px 0 0; color:rgba(20,20,20,.55); line-height:1.4}
+  .tilt-b{grid-column:1 / -1; display:flex; gap:8px}
+  .tilt-b button{flex:1; padding:11px 12px; border:0; font:inherit; font-weight:500; cursor:pointer; color:var(--ink); background:transparent; box-shadow:inset 0 0 0 1px rgba(20,20,20,.14)}
+  .tilt-b #tilt-yes{background:var(--ink); color:#fff; box-shadow:none}
+  body.still .tilt{display:none}
   .chip{
     position:fixed; left:50%; bottom:18px; z-index:3; transform:translateX(-50%);
     padding:7px 13px; border:0; border-radius:999px; font:inherit; font-size:12px; line-height:1; color:rgba(20,20,20,.72);
@@ -268,6 +279,11 @@
   </div>
 </main>
 <button class="chip" id="chip" type="button" tabindex="-1"></button>
+<div class="tilt" id="tilt" role="dialog" aria-labelledby="tilt-t" hidden>
+  <svg class="tilt-i" viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="5" width="12" height="22" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6" transform="rotate(-14 16 16)"/><path d="M5 11a13 13 0 0 0 0 10M27 11a13 13 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+  <div class="tilt-x"><b id="tilt-t">Tilt to play with the light</b><p>Allow motion access and the glass follows your phone.</p></div>
+  <div class="tilt-b"><button type="button" id="tilt-no">Not now</button><button type="button" id="tilt-yes">Allow motion</button></div>
+</div>
 <button class="tune" id="tune" type="button" aria-expanded="false" aria-controls="panel">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Tune
 </button>
@@ -302,7 +318,7 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 const DEF = {
   pressGrow: .08, corner: 1, dome: .72, wall: 0, under: .26, profile: 2, edge: .03, lift: .02,
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
-  follow: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
+  follow: true, gyro: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
@@ -364,6 +380,7 @@ const CTRL = [
   { k: 'tint', l: 'Tint colour', t: 'color', show: () => P.tintK > 0 },
   { g: 'Light' },
   { k: 'follow', l: 'Follow cursor', t: 'check' },
+  { k: 'gyro', l: 'Tilt (gyroscope)', t: 'check', show: () => coarse && 'DeviceOrientationEvent' in window },
   { k: 'lightAng', l: 'Angle', min: 0, max: 360, s: 1, u: '°', show: () => !P.follow },
   { k: 'lightEl', l: 'Elevation', min: 8, max: 85, s: 1, u: '°', show: () => !P.follow },
   { k: 'key', l: 'Highlight', min: 0, max: 3, s: .01 },
@@ -550,6 +567,43 @@ window.addEventListener('keydown', e => {
 });
 chip.addEventListener('click', () => { resetView(); btn.focus({ preventScroll: true }); });
 let hintUntil = performance.now() + 6000;
+
+// ---------- tilt: on phones the gyroscope moves the light and leans the view, like the cursor does ----------
+const gyro = { on: false, x0: null, y0: null, told: false };
+const hasOrient = 'DeviceOrientationEvent' in window;
+const needsAsk = hasOrient && typeof DeviceOrientationEvent.requestPermission === 'function';   // iOS
+const GKEY = 'lab.glass-button.gyro';
+function onOrient(e) {
+  if (e.beta == null || e.gamma == null || !P.gyro) return;
+  const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  let x = e.gamma, y = e.beta;                              // portrait: left/right tilt, front/back tilt
+  if (ang === 90) { x = e.beta; y = -e.gamma; } else if (ang === -90 || ang === 270) { x = -e.beta; y = e.gamma; }
+  if (gyro.x0 === null) { gyro.x0 = x; gyro.y0 = y; }
+  gyro.x0 += (x - gyro.x0) * 0.004; gyro.y0 += (y - gyro.y0) * 0.004;   // the neutral pose slowly follows how you hold it
+  s.seen = true; s.thov = Math.max(s.thov, 0.35);
+  s.tlx = Math.max(-1, Math.min(1, (x - gyro.x0) / 25));
+  s.tly = Math.max(-1, Math.min(1, (y - gyro.y0) / 25));
+  if (!gyro.told && !needsAsk) { gyro.told = true; chip.dataset.msg = 'tilt your phone'; hintUntil = performance.now() + 3500; }
+}
+function startGyro() { if (gyro.on || !hasOrient) return; gyro.on = true; window.addEventListener('deviceorientation', onOrient); }
+async function askGyro() {
+  try {
+    if (needsAsk) { const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') { try { localStorage.setItem(GKEY, 'declined'); } catch (e) {} return false; } }
+    try { localStorage.setItem(GKEY, 'granted'); } catch (e) {}
+    startGyro(); return true;
+  } catch (e) { return false; }
+}
+{
+  const card = document.getElementById('tilt'); let stored = null;
+  try { stored = localStorage.getItem(GKEY); } catch (e) {}
+  if (coarse && hasOrient && !STILL && P.gyro) {
+    if (!needsAsk) startGyro();                              // Android: no permission to ask for
+    else if (stored === 'granted') window.addEventListener('pointerdown', () => askGyro(), { once: true });   // asked before: the first touch is enough
+    else if (stored !== 'declined') card.hidden = false;
+  }
+  document.getElementById('tilt-yes').addEventListener('click', async () => { card.hidden = true; await askGyro(); });
+  document.getElementById('tilt-no').addEventListener('click', () => { card.hidden = true; try { localStorage.setItem(GKEY, 'declined'); } catch (e) {} });
+}
 
 // ---------- menu ----------
 function setMenu(open, focusFirst) {
@@ -957,6 +1011,7 @@ function syncInputs() {
   }
 }
 function set(k, v) {
+  if (k === 'gyro' && v) askGyro();
   P[k] = v;
   if (k === 'bgColor') P.bg = 'color';                    // picking a colour switches to it
   if (k === 'bg' || k === 'bgColor') useBg(P.bg);
@@ -1568,7 +1623,7 @@ function frame(t) {
   // orbit hint first, then a reset chip while the view is turned
   const turned = Math.abs(s.tyaw) + Math.abs(s.tpitch) > 0.03 || Math.abs(s.tzoom - 1) > 0.01;
   chip.classList.toggle('reset', turned); chip.tabIndex = turned ? 0 : -1;
-  const txt = turned ? 'reset view' : 'pinch to zoom · two fingers to orbit';   // the mouse hints are icons now
+  const txt = turned ? 'reset view' : (chip.dataset.msg || 'pinch to zoom · two fingers to orbit');   // the mouse hints are icons now
   if (chip.textContent !== txt) chip.textContent = txt;
   chip.classList.toggle('show', turned || (coarse && t < hintUntil));
   if (!ready) return;
