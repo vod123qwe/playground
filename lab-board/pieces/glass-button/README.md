@@ -77,3 +77,5 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Signature v3**: szkło z Midnight (głęboka wklęsła płyta, IOR 1,73, mocny highlight, światło stałe pod 59°, pulse) nad jasną siatką. Pierwsza wizyta otwiera się na Signature, a miniatura w katalogu (tryb still) też go pokazuje, pod kątem startowym. Bloom na jasnych tłach jest osłabiony do 30%, żeby odblask nie robił mlecznej plamy.
 
 **Reset all** wraca do presetu 1 (Signature) z domyślną treścią „Ask AI” i do widoku startowego.
+
+**Klip na planszy** (`thumbs/glass-button-hover.webm`, 1280×724, VP9, ~1,6 MB, 6,9 s w pętli): po najechaniu na kafel kamera przechodzi z lewego dołu na prawy dół, trochę wyżej, i wraca. Nagrany trybem `?still=1&bare=1&rec=84`: strona ustawia kamerę klatka po klatce, czeka, aż wygładzanie się ustabilizuje, i wysyła każdą klatkę do lokalnego odbiornika (domyślnie http://localhost:8811). Klatki składa OpenCV (VP9, tam i z powrotem). Miniatura to pierwsza klatka klipu, więc start przy najechaniu jest płynny.

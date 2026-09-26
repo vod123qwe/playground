@@ -384,7 +384,7 @@
 
 // ---------- tunables ----------
 const CFG = {
-  detail: 'play',                  // 'play' = white popup (~80%) with the live experiment · 'panel' = side panel · 'card' = container transform
+  detail: 'page',                  // 'page' = straight to the live piece, full screen · 'play' = white popup (~80%) · 'panel' = side panel · 'card' = container transform
   cluster: { w: 3000, h: 2000 },   // world units; wraps like a torus
   baseWidth: 1380,                 // world → px scale = max(vw, 900) / baseWidth (1728 → 1380 = tiles ~25% larger by default)
   dragThreshold: 6,                // px before a press becomes a drag
@@ -426,7 +426,7 @@ const CFG = {
 
 // ---------- content (placeholder data: Jarek's own experiments) ----------
 const PIECES = [
-  { slug:'glass-button', title:'Glass Button', what:'An Ask AI button made of real, ray-traced glass. Hold it and it swells, let go and the menu (Write, Summarise, Translate) flows out of it; the label is printed on the surface and the icon is a glass bead with a symbol, a flowing orb or a carving. A panel tunes shape, refraction, light, glow and sound; hold the wheel to orbit.', year:'2026', kind:'interaction', live:'pieces/glass-button/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/glass-button', image:'thumbs/glass-button.jpg', depth:'thumbs/depth/glass-button.png', words:['glass', 'light', 'spectral', 'mercury'], rect:{x:560,y:70,w:460,h:260} },
+  { slug:'glass-button', title:'Glass Button', what:'An Ask AI button made of real, ray-traced glass. Hold it and it swells, let go and the menu (Write, Summarise, Translate) flows out of it; the label is printed on the surface and the icon is a glass bead with a symbol, a flowing orb or a carving. A panel tunes shape, refraction, light, glow and sound; hold the wheel to orbit.', year:'2026', kind:'interaction', live:'pieces/glass-button/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/glass-button', image:'thumbs/glass-button.jpg', depth:'thumbs/depth/glass-button.png', video:'thumbs/glass-button-hover.webm', words:['glass', 'light', 'spectral', 'mercury'], rect:{x:560,y:70,w:460,h:260} },
   // empty slots: the next experiments land here
   { empty:true, rect:{x:90,y:100,w:330,h:460} },
   { empty:true, rect:{x:1160,y:140,w:270,h:480} },
@@ -1488,14 +1488,18 @@ function wordsFrame() {                            // every frame from syncSlots
 }
 // what WebGL should draw for the hovered layered tile: the back only (front is DOM now) or the live video
 function pickHoverTexture(it) {
+  if (it.index === hoverIndex && !isLayered(it.index) && PIECES[it.index].video) {   // a flat cover with a hover clip: the clip once it runs
+    const v = videos.get(it.index);
+    return v && v.dataset.ok !== 'no' && v.readyState >= 2 && !v.paused && v.currentTime > 0.04 ? { source: v, live: true } : null;
+  }
   if (it.index !== hoverIndex || !isLayered(it.index) || !frontImages.has(it.index) || !splitFront(it.index)) return null;
   const v = videos.get(it.index);
   if (v && v.dataset.ok !== 'no' && v.readyState >= 2 && !v.paused) return { source: v, live: true };
   return { source: backCoverFor(it.index), live: false };
 }
 function hoverMedia(i) {                           // start the tile's video on hover, pause it on leave
-  videos.forEach((v, k) => { if (k !== i && !v.paused) v.pause(); });
-  if (i >= 0 && PIECES[i].video && splitFront(i)) { const v = videoFor(i); if (v && v.dataset.ok !== 'no') v.play().catch(() => {}); }
+  videos.forEach((v, k) => { if (k !== i && !v.paused) { v.pause(); if (!isLayered(k)) v.currentTime = 0; } });   // a hover clip starts from its cover again
+  if (i >= 0 && PIECES[i].video && (splitFront(i) || !isLayered(i))) { const v = videoFor(i); if (v && v.dataset.ok !== 'no') v.play().catch(() => {}); }
 }
 // sharp symbols (no rounding anywhere), drawn on a 36×36 grid, in the tint colour
 const SYMBOLS = {
@@ -1558,8 +1562,18 @@ slotsEl.addEventListener('click', e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
   e.preventDefault();
   const r = a.getBoundingClientRect(); originRect = { left: r.left, top: r.top, width: r.width, height: r.height };
-  openedHere = true; location.hash = `/${PIECES[Number(a.dataset.index)].slug}`;
+  const pc = PIECES[Number(a.dataset.index)];
+  if (CFG.detail === 'page' && pc.live) { goLive(pc); return; }
+  openedHere = true; location.hash = `/${pc.slug}`;
 });
+// full screen: the board fades out and the piece opens in its place (the piece's back button returns here)
+function goLive(p, replace) {
+  const go = () => { if (replace) location.replace(p.live); else location.href = p.live; };
+  if (reduceMotion || replace) return go();
+  stage.style.transition = 'opacity .22s ease'; stage.style.opacity = '0';
+  setTimeout(go, 200);
+}
+window.addEventListener('pageshow', e => { if (e.persisted) { stage.style.transition = 'none'; stage.style.opacity = ''; } });   // coming back from the piece
 
 // ---------- custom cursor ----------
 const cursorEl = document.getElementById('cursor'), curRing = document.getElementById('curring'), curPulse = document.getElementById('curpulse'), curLabel = document.getElementById('curlabel');
@@ -1765,6 +1779,7 @@ function route() {
   if (i < 0) { if (CFG.detail === 'card') closeCard(); else { hidePlay(); hidePanel(); } document.title = 'lab board'; return; }
   document.title = `${PIECES[i].title} · lab board`;
   if (CFG.detail === 'card') openCard(i);
+  else if (CFG.detail === 'page' && PIECES[i].live) goLive(PIECES[i], true);   // an old #/slug link goes straight to the piece
   else if (CFG.detail === 'play' && PIECES[i].live) openPlay(i);
   else openPanel(i);
 }

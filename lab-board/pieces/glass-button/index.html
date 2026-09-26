@@ -373,6 +373,24 @@
 // a puffy star whose gradient follows the light and the view angle. Hold the wheel (or Alt) and drag to orbit.
 const q = new URLSearchParams(location.search);
 const STILL = q.has('still');
+// ?still&rec=N: renders a camera move frame by frame for the board's hover clip and posts each frame to a local receiver
+const REC = STILL && q.has('rec') ? { n: Math.max(2, +q.get('rec') || 72), k: 0, wait: 0, busy: false, to: q.get('to') || 'http://localhost:8811' } : null;
+function recTick() {
+  if (REC.busy || REC.k >= REC.n) return;
+  const t = REC.k / (REC.n - 1), e = t * t * (3 - 2 * t);           // eased: it starts and lands softly
+  if (REC.wait === 0) { s.yaw = s.tyaw = -0.38 + 0.76 * e; s.pitch = s.tpitch = -0.32 + 0.12 * e; }   // bottom left → bottom right, a little higher
+  if (++REC.wait < 12) return;                                        // let the still-frame smoothing settle
+  const w = cv.width, h = cv.height, px = new Uint8Array(w * h * 4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'), im = g.createImageData(w, h);
+  for (let y = 0; y < h; y++) im.data.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);   // GL rows are bottom up
+  g.putImageData(im, 0, 0);
+  REC.busy = true; const k = REC.k;
+  c.toBlob(b => fetch(`${REC.to}/f/${k}`, { method: 'POST', body: b }).then(() => {
+    REC.k++; REC.wait = 0; REC.busy = false;
+    if (REC.k >= REC.n) fetch(`${REC.to}/done`, { method: 'POST', body: '' });
+  }), 'image/jpeg', 0.95);
+}
 if (q.has('bare')) document.body.classList.add('bare');
 if (STILL) document.body.classList.add('still');
 const btn = document.getElementById('btn'), anchor = document.getElementById('anchor'), menu = document.getElementById('menu');
@@ -2127,6 +2145,7 @@ function frame(t) {
   if (POST.ok) { gl.bindFramebuffer(gl.FRAMEBUFFER, POST.cur.f); gl.viewport(0, 0, cv.width, cv.height); }
   gl.drawArrays(gl.TRIANGLES, 0, 3);
   if (POST.ok) postPass();
+  if (REC) recTick();
 }
 if (STILL) Object.assign(s, { hov: .5, thov: .5, seen: true });   // frozen light and time, the loop keeps the canvas painted
 requestAnimationFrame(frame);
