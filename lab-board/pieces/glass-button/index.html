@@ -283,6 +283,11 @@
   .presets{gap:8px; margin-top:0} .presets button{padding:8px 13px; font-size:12px}
   .bgs{gap:10px}
   .panel .bgs button{border-radius:16px !important; overflow:hidden}
+  .grads{display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; margin-top:10px}
+  .grads button{aspect-ratio:1; padding:0; border:0; cursor:pointer; box-shadow:inset 0 0 0 1px rgba(20,20,20,.12)}
+  .panel .grads button{border-radius:999px !important}
+  .grads button[aria-pressed=true]{box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ink)}
+  .grads button:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
   .hint{margin-top:10px; line-height:1.45}
   .acts{margin:0 -28px; padding:16px 28px 22px; gap:10px}
   .acts button{padding:10px 12px; font-size:12.5px}
@@ -376,7 +381,7 @@ const DEF = {
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
-  bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6,
+  bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
   sound: 'glass', release: true, volume: .5,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -527,9 +532,11 @@ const CTRL = [
   { k: 'weight', l: 'Weight', min: 400, max: 600, s: 10 },
   { g: 'Background' },
   { k: 'bg', l: 'Background', t: 'bgs' },
-  { k: 'bgColor', l: 'Background colour', t: 'color' },
+  { k: 'grad', l: 'Gradient', t: 'grads', show: () => P.bg === 'gradient' },
+  { k: 'bgColor', l: 'Background colour', t: 'color', show: () => P.bg === 'color' },
   { k: 'gridDensity', l: 'Grid density', min: .3, max: 4, s: .01 },
   { k: 'grid', l: 'Grid lines', min: 0, max: 1, s: .01 },
+  { k: 'dof', l: 'Depth of field', min: 0, max: 3, s: .01 },
   { k: 'bgFix', l: 'Fixed background (only the glass turns)', t: 'check' },
   { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01, show: () => P.bg === 'upload' || !!(BGS.find(b => b.id === P.bg) || {}).src },
   { g: 'Sound' },
@@ -762,7 +769,24 @@ const PAGES = {
            warm:    [[.184, .165, .149], [.122, .106, .094], [.075, .063, .055]],
            cool:    [[.145, .169, .208], [.094, .110, .141], [.055, .067, .090]] },
 };
+const GRADS = {
+  dusk:     ['Dusk',        '#1d1140', '#15194a', '#0a1d4f'],   // dark violet into dark blue
+  plum:     ['Plum',        '#140a1f', '#2a1040', '#110b2c'],
+  abyss:    ['Abyss',       '#061521', '#08283d', '#0b1a3d'],
+  aubergine:['Aubergine',   '#1c0c21', '#2c1338', '#100a1e'],
+  pine:     ['Pine',        '#07150f', '#0c2621', '#0a1a26'],
+  ember:    ['Ember',       '#1c0b0d', '#301226', '#150b26'],
+  ink:      ['Ink',         '#0c1018', '#161d2c', '#0a0d15'],
+  graphite: ['Graphite',    '#111215', '#1d1f25', '#0c0d10'],
+  lilac:    ['Lilac mist',  '#ebe6f8', '#d9d3f2', '#cbd7f5'],
+  peach:    ['Peach',       '#fbeae0', '#f5d8d8', '#e8d8ef'],
+  mint:     ['Mint',        '#e4f4ee', '#d5eaef', '#dde2f5'],
+  sky:      ['Sky',         '#e7f1fb', '#d3e3f6', '#e8e5f7'],
+  rose:     ['Rose quartz', '#f7e4ea', '#ebd8ef', '#dcdcf3'],
+  fog:      ['Fog',         '#eff1f4', '#e2e5eb', '#d5d9e2'],
+};
 function pageStops(proc) {
+  if (proc === 'gradient') { const g = GRADS[P.grad] || GRADS.dusk; return [hex(g[1]), hex(g[2]), hex(g[3])]; }
   if (proc === 'color') {                               // your colour, with the same soft diagonal falloff as the greys
     const c = hex(P.bgColor);
     return [c.map(v => v + (1 - v) * 0.1), c, c.map(v => v * 0.62)];
@@ -775,6 +799,7 @@ const BGS = [
   { id: 'grid', name: 'Grid', proc: 'light' },
   { id: 'grid-dark', name: 'Grid dark', proc: 'dark' },
   { id: 'color', name: 'Colour', proc: 'color' },
+  { id: 'gradient', name: 'Gradient', proc: 'gradient' },
   { id: 'clouds', name: 'Clouds', src: 'clouds.mp4' },                // a looping video, loaded only when picked
 ];
 function stockVideo(def) {
@@ -1079,6 +1104,17 @@ function buildPanel() {
       inp.appendChild(upS);
       row.appendChild(inp);
     }
+    else if (c.t === 'grads') {
+      row.appendChild(el('span'));
+      inp = el('div', 'grads full'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', 'Gradient');
+      for (const id in GRADS) {
+        const g = GRADS[id], b = el('button'); b.type = 'button'; b.dataset.v = id; b.title = g[0]; b.setAttribute('aria-label', g[0]);
+        b.style.background = `linear-gradient(135deg, ${g[1]} 0%, ${g[2]} 50%, ${g[3]} 100%)`;
+        b.addEventListener('click', () => set('grad', id));
+        inp.appendChild(b);
+      }
+      row.appendChild(inp);
+    }
     else if (c.t === 'bgs') {
       row.replaceChildren();
       inp = el('div', 'bgs full'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', 'Background');
@@ -1161,7 +1197,7 @@ function syncInputs() {
     if (c.g || c.t === 'action') continue; const inp = inputs[c.k], v = P[c.k];
     if (c.t === 'check') inp.checked = !!v;
     else if (c.t === 'color' || c.t === 'text') { if (document.activeElement !== inp) inp.value = v; }
-    else if (c.t === 'seg' || c.t === 'bgs' || c.t === 'sounds') [...inp.children].forEach(b => b.dataset.v && b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    else if (c.t === 'seg' || c.t === 'bgs' || c.t === 'sounds' || c.t === 'grads') [...inp.children].forEach(b => b.dataset.v && b.setAttribute('aria-pressed', String(b.dataset.v === v)));
     else { inp.value = v; paintRange(c, inp, inp._v); }
   }
   for (const c of CTRL) if (c.show && inputs[c.k]) inputs[c.k]._row.hidden = !c.show();   // options show only when they do something
@@ -1174,10 +1210,11 @@ function set(k, v) {
   if (k === 'gyro' && v) askGyro();
   P[k] = v;
   if (k === 'bgColor') P.bg = 'color';                    // picking a colour switches to it
-  if (k === 'bg' || k === 'bgColor') useBg(P.bg);
-  if (k === 'bgColor' || k === 'gridDensity') paintSwatches(panel.querySelector('.bgs'));
+  if (k === 'grad') P.bg = 'gradient';
+  if (k === 'bg' || k === 'bgColor' || k === 'grad') useBg(P.bg);
+  if (k === 'bgColor' || k === 'gridDensity' || k === 'grad') paintSwatches(panel.querySelector('.bgs'));
   if (k === 'glowOn' && v && P.glowK < 0.05) P.glowK = DEF.glowK;      // switching the glow on should show something
-  apply(); save(); if (['bg', 'bgColor', 'glowOn', 'glow', 'icon', 'sound', 'orbPal'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
+  apply(); save(); if (['bg', 'bgColor', 'grad', 'glowOn', 'glow', 'icon', 'sound', 'orbPal'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   const st = anchor.style;
@@ -1285,7 +1322,8 @@ uniform vec4 uInk;             // ink colour, opacity
 uniform vec3 uPage0, uPage1, uPage2;
 uniform sampler2D uBg;         // a picture under the glass (mode 1), or the drawn page (mode 0)
 uniform float uBgMode, uBgTexel; // texels per css px, for the level of detail
-uniform float uBgFix;          // 1: the background stays put on screen while the camera turns
+uniform float uBgFix;
+uniform float uDof;            // depth of field: the page blurs with its distance from the glass          // 1: the background stays put on screen while the camera turns
 uniform float uAmb; uniform vec3 uAmbCol;   // how much of the background colours the reflections, and its colour for the drawn page
 uniform vec4 uBgXf;            // css px → uv: 1 / size, centre
 uniform vec3 uSkyHor, uSkyZen; // the room the glass reflects, tuned to the background
@@ -1396,6 +1434,10 @@ vec3 pageAt(vec2 q, float fp){
     float f = max(dot(v, uCamF), 1.0);
     q = (vec2(dot(v, uCamR), dot(v, uCamD)) * uCamDist / f - uPan) * uZoom + uBox.xy;
     fp = min(fp, 1.5);                                     // it is flat on the screen: no grazing blur toward the horizon
+  }
+  if (uDof > 0.0) {                                        // focus on the glass: the page is out of focus, more so the further it lies
+    vec3 v = vec3(q0, 0.0) - (vec3(uBox.xy, ZM) - uCamF * uCamDist);
+    fp += uDof * (6.0 + abs(dot(v, uCamF) - uCamDist) * 0.035);
   }
   vec2 f = fract((q - uBox.xy) / uGrid + 0.5), gd = min(f, 1.0 - f) * uGrid;
   float g = max(lineA(gd.x, 1.0, fp), lineA(gd.y, 1.0, fp)) * uGridA;
@@ -1915,6 +1957,7 @@ function frame(t) {
   CAM = { r: cr, d: cd, f: cf, D: Math.max(W, H) * 1.3, T: [geo.cx, geo.cy, (P.lift + P.under) * hh], zoom: s.zoom, pan: [s.panx, s.pany], menuTop: menuTopZ };
   gl.uniform1f(uni('uBgMode'), bg.mode);
   gl.uniform1f(uni('uBgFix'), P.bgFix ? 1 : 0);
+  gl.uniform1f(uni('uDof'), P.dof);
   gl.uniform1f(uni('uAmb'), P.ambOn ? P.amb : 0);
   { const c = bg.mode ? bg.avg : pageStops((BGS.find(b => b.id === P.bg) || {}).proc || 'light')[1]; gl.uniform3f(uni('uAmbCol'), c[0], c[1], c[2]); }
   if (bg.mode === 1) {
