@@ -27,7 +27,7 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 
 **Chrome strony**: Inter semibold; okrągły biały przycisk powrotu z samą strzałką, biały pill Customize, bez obramowań i bez cieni; „reset view” jako drugorzędny przycisk z samym obrysem (bez wypełnienia), ikonki myszy bez tła; jeden konturowy styl ikon (siatka 24, kreska 1,75, zaokrąglone końce). Bez napisu „glass button”.
 
-**Przełącznik wariantów**: na dole na środku biały pill ‹ Nazwa › przechodzi po pięciu wyglądach (Signature, Midnight, Frost, Ember, Lilac); nazwa mówi, który jest włączony (albo Custom po ręcznych zmianach). Można go złapać i przeciągnąć: idzie za palcem z oporem, jak naciągany, a po puszczeniu dalej niż ~44 px przełącza (w lewo następny, w prawo poprzedni) i sprężyście wraca, nazwa wjeżdża z kierunku ruchu. Działają też strzałki i klawisze ← →. Przycisk **Customize** stoi w prawym dolnym rogu. „reset view” stoi w lewym dolnym rogu obok ikonek myszy.
+**Przełącznik wariantów**: na dole na środku biały pill ‹ Nazwa › przechodzi po pięciu wyglądach (Signature, Midnight, Frost, Ember, Lilac, Clouds); nazwa mówi, który jest włączony (albo Custom po ręcznych zmianach). Można go złapać i przeciągnąć: idzie za palcem z oporem, jak naciągany, a po puszczeniu dalej niż ~44 px przełącza (w lewo następny, w prawo poprzedni) i sprężyście wraca, nazwa wjeżdża z kierunku ruchu. Działają też strzałki i klawisze ← →. Przycisk **Customize** stoi w prawym dolnym rogu. „reset view” stoi w lewym dolnym rogu obok ikonek myszy.
 
 **Podpowiedzi**: zamiast napisów dwie proste ikonki w lewym dolnym rogu: mysz z podświetlonym lewym przyciskiem (kliknij i przytrzymaj) i mysz z podświetlonym kółkiem i strzałkami (przytrzymaj kółko i przeciągnij, żeby obrócić widok w 3D); opis w dymku po najechaniu. Na dotyku zamiast nich krótka podpowiedź o gestach.
 
@@ -52,3 +52,5 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 `?still=1&bare=1`: zamrożone światło i czas, domyślne ustawienia, bez chrome'u i panelu; z tego robiona jest miniatura (`../../thumbs/glass-button.jpg`, headless Edge 920×520 @2x) i jej mapa głębi.
 
 Poprzednie wersje są w historii gita: v1 rtęć, v2 szklana kopułka w płaskiej pigułce, v3 wypukła płyta nad „nadrukiem” (napis pod szkłem wyglądał nienaturalnie), v4 analityczna kapsuła M&M z obrotem 3D.
+
+**Tło wideo „Clouds”**: zapętlone wideo chmur (`clouds.mp4`, 1280×720, ok. 24 MB) jako czwarte tło w grupie Background. Ładuje się dopiero po wybraniu, do tego czasu jest jasne tło w tonie nieba; wideo innych teł jest pauzowane. Wariant **Clouds** to szkło z Lilac nad tym wideo (bez siatki, Image scale 1). Otwarty panel ma w pełni białe tło.

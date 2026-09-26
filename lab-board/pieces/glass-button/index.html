@@ -266,10 +266,10 @@
 
   /* ---------- the panel: edge to edge, minimal, roomy ---------- */
   .panel{top:0; right:0; bottom:0; width:384px; padding:0 28px; font-size:13px;
-         background:rgba(249,249,250,.96); box-shadow:-1px 0 0 rgba(20,20,20,.08), -40px 0 80px -60px rgba(20,24,30,.45)}
+         background:#fff; box-shadow:-1px 0 0 rgba(20,20,20,.08), -40px 0 80px -60px rgba(20,24,30,.45)}
 
   .ph{position:sticky; top:0; z-index:3; display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
-      margin:0 -28px; padding:30px 28px 24px; background:rgba(249,249,250,.97); border-bottom:1px solid rgba(20,20,20,.09)}
+      margin:0 -28px; padding:30px 28px 24px; background:#fff; border-bottom:1px solid rgba(20,20,20,.09)}
   .ph h2{margin:0; font-size:22px; font-weight:600; letter-spacing:-.02em; line-height:1.1}
   .ph p{margin:8px 0 0; font-size:12.5px; color:rgba(20,20,20,.5)}
   .pc{flex:none; width:36px; height:36px; margin:-6px -8px 0 0; display:grid; place-items:center; border:0; background:transparent; color:var(--ink); cursor:pointer}
@@ -296,7 +296,7 @@
   /* ---------- the panel: sharp, flat, minimal ---------- */
   .panel, .panel *{border-radius:0 !important}
   .panel::-webkit-scrollbar-thumb{border-radius:0}
-  .gh, .acts{background:rgba(249,249,250,.97)}
+  .gh, .acts{background:#fff}
   .gh{font-size:12.5px; font-weight:600; letter-spacing:.01em}
   .presets button, .acts button, .row .act, .row input[type=text], .seg{box-shadow:inset 0 0 0 1px rgba(20,20,20,.12); background:transparent}
   .presets button:hover, .acts button:hover, .row .act:hover{background:rgba(20,20,20,.05)}
@@ -431,13 +431,15 @@ const LILAC = {
   bg: 'color', bgColor: '#a7a3e1', gridDensity: .99, bgScale: 3, grid: .11, sound: 'bubble', volume: .16,
   menuGap: 1.07, liquid: .63, glowOn: true, glowK: 1.17, glowSize: .6, glowSpeed: 1.06,
 };
-const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC };   // full looks; the rest of the presets are shapes
+const CLOUDS = Object.assign({}, LILAC, { bg: 'clouds', bgScale: 1, grid: 0 });   // the Lilac glass over the clouds video
+const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Clouds: CLOUDS };   // full looks; the rest of the presets are shapes
 const PRESETS = {
   'Signature': SIGNATURE,
   'Midnight': MIDNIGHT,
   'Frost': FROST,
   'Ember': EMBER,
   'Lilac': LILAC,
+  'Clouds': CLOUDS,
   'Dish':    { corner: 1, dome: -.5, wall: .6, under: .05, profile: 2, edge: .12, lift: 0, ior: 1.5, disp: .03 },   // a shape only
 };
 const SHAPE_KEYS = ['corner', 'dome', 'wall', 'under', 'profile', 'edge', 'lift', 'ior', 'disp'];
@@ -517,7 +519,7 @@ const CTRL = [
   { k: 'bgColor', l: 'Background colour', t: 'color' },
   { k: 'gridDensity', l: 'Grid density', min: .3, max: 4, s: .01 },
   { k: 'grid', l: 'Grid lines', min: 0, max: 1, s: .01 },
-  { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01, show: () => P.bg === 'upload' },
+  { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01, show: () => P.bg === 'upload' || !!(BGS.find(b => b.id === P.bg) || {}).src },
   { g: 'Sound' },
   { k: 'sound', l: 'Click', t: 'sounds' },
   { k: 'release', l: 'Click on release too', t: 'check', show: () => P.sound !== 'none' },
@@ -761,7 +763,15 @@ const BGS = [
   { id: 'grid', name: 'Grid', proc: 'light' },
   { id: 'grid-dark', name: 'Grid dark', proc: 'dark' },
   { id: 'color', name: 'Colour', proc: 'color' },
+  { id: 'clouds', name: 'Clouds', src: 'clouds.mp4' },                // a looping video, loaded only when picked
 ];
+function stockVideo(def) {
+  if (!def._v) {
+    const v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto'; v.src = def.src; def._v = v;
+    def._ready = new Promise(ok => v.addEventListener('loadeddata', ok, { once: true }));
+  }
+  return def._v;
+}
 const bg = { canvas: document.createElement('canvas'), video: null, w: 1, h: 1, avg: [.78, .79, .81], dirty: true, mode: 0, url: null, thumb: null,
              up: null };   // up: your file { canvas | video, w, h, avg }
 function avgOf(src, sw, sh) {
@@ -777,6 +787,10 @@ function drawBg(def, c, w, h) {
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; const st = w / (6 * (P.gridDensity || 1));
     for (let x = st / 2; x < w; x += st) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
     for (let y = st / 2; y < h; y += st) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  } else if (def.src) {                                // a frame of the video once it is here, a soft sky until then
+    const v = def._v;
+    if (v && v.readyState >= 2) { const k = Math.max(w / v.videoWidth, h / v.videoHeight); g.drawImage(v, (w - v.videoWidth * k) / 2, (h - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k); }
+    else { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#9cc3ea'); gr.addColorStop(1, '#eef4fa'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
   } else def.draw(g, w, h, w / 2048);
 }
 const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
@@ -794,12 +808,21 @@ const GLOWS = {                                        // three colours each, cy
 function useBg(id) {
   const def = BGS.find(b => b.id === id);
   if (bg.up && bg.up.video && id !== 'upload') bg.up.video.pause();
+  for (const b of BGS) if (b._v && b.id !== id) b._v.pause();
   if (id === 'upload' && bg.up) {
     const u = bg.up; bg.video = u.video || null; bg.w = u.w; bg.h = u.h; bg.avg = u.avg; bg.mode = 1; bg.dirty = true;
     if (u.video) u.video.play().catch(() => {});
     if (!u.video) { bg.canvas.width = u.w; bg.canvas.height = u.h; bg.canvas.getContext('2d').drawImage(u.canvas, 0, 0); }
   }
   else if (id === 'upload') { bg.mode = 0; bg.avg = [.78, .79, .81]; }
+  else if (def && def.src) {
+    const v = stockVideo(def);
+    if (v.readyState >= 2) { bg.video = v; bg.w = v.videoWidth; bg.h = v.videoHeight; bg.avg = avgOf(v, bg.w, bg.h); bg.mode = 1; bg.dirty = true; v.play().catch(() => {}); }
+    else {                                              // until it loads: the page in the video's light tone, then again with the video
+      bg.mode = 0; bg.avg = [.86, .9, .95];
+      def._ready.then(() => { if (P.bg === id) useBg(id); const box = panel.querySelector('.bgs'); if (box) paintSwatches(box); });
+    }
+  }
   else if (!def || def.proc) { bg.mode = 0; bg.avg = pageStops(def ? def.proc : 'light')[1]; }
   else { bg.video = null; drawBg(def, bg.canvas, 2048, 1280); bg.w = 2048; bg.h = 1280; bg.avg = avgOf(bg.canvas, 2048, 1280); bg.mode = 1; bg.dirty = true; }
   // the print stays readable: the default ink flips to light on dark backgrounds
@@ -1050,7 +1073,7 @@ function buildPanel() {
       for (const b of BGS) {
         const btn2 = el('button'); btn2.type = 'button'; btn2.dataset.v = b.id; btn2.setAttribute('aria-label', b.name); btn2.title = b.name;
         const cnv = document.createElement('canvas'); btn2.appendChild(cnv); btn2.appendChild(el('span', null, b.name)); btn2._c = cnv; btn2._d = b;
-        btn2.addEventListener('click', () => { if (!P.grid) P.grid = DEF.grid; set('bg', b.id); });
+        btn2.addEventListener('click', () => { if (b.src) P.grid = 0; else if (!P.grid) P.grid = DEF.grid; set('bg', b.id); });
         inp.appendChild(btn2);
       }
       const mine = el('button', 'mine'); mine.type = 'button'; mine.dataset.v = 'upload'; mine.hidden = true; mine.setAttribute('aria-label', 'Your file');
