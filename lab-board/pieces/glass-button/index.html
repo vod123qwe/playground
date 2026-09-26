@@ -376,7 +376,7 @@ const DEF = {
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
-  bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3,
+  bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6,
   sound: 'glass', release: true, volume: .5,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -431,7 +431,7 @@ const LILAC = {
   bg: 'color', bgColor: '#a7a3e1', gridDensity: .99, bgScale: 3, grid: .11, sound: 'bubble', volume: .16,
   menuGap: 1.07, liquid: .63, glowOn: true, glowK: 1.17, glowSize: .6, glowSpeed: 1.06,
 };
-const CLOUDS = Object.assign({}, LILAC, { bg: 'clouds', bgScale: 1, grid: 0 });   // the Lilac glass over the clouds video
+const CLOUDS = Object.assign({}, LILAC, { bg: 'clouds', bgScale: 1, grid: 0, bgFix: true, ambOn: true, amb: .6 });   // the Lilac glass over the clouds video
 const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Clouds: CLOUDS };   // full looks; the rest of the presets are shapes
 const PRESETS = {
   'Signature': SIGNATURE,
@@ -468,6 +468,8 @@ const CTRL = [
   { k: 'lightEl', l: 'Elevation', min: 8, max: 85, s: 1, u: '°', show: () => !P.follow },
   { k: 'key', l: 'Highlight', min: 0, max: 3, s: .01 },
   { k: 'env', l: 'Reflections', min: 0, max: 2, s: .01 },
+  { k: 'ambOn', l: 'Reflect the background colour', t: 'check' },
+  { k: 'amb', l: 'Background in reflections', min: 0, max: 1, s: .01, show: () => P.ambOn },
   { k: 'rim', l: 'Rim spectrum', min: 0, max: 3, s: .01 },
   { g: 'Shadow & glow' },
   { k: 'shadow', l: 'Shadow strength', min: 0, max: 2, s: .01 },
@@ -519,6 +521,7 @@ const CTRL = [
   { k: 'bgColor', l: 'Background colour', t: 'color' },
   { k: 'gridDensity', l: 'Grid density', min: .3, max: 4, s: .01 },
   { k: 'grid', l: 'Grid lines', min: 0, max: 1, s: .01 },
+  { k: 'bgFix', l: 'Fixed background (only the glass turns)', t: 'check' },
   { k: 'bgScale', l: 'Image scale', min: .3, max: 3, s: .01, show: () => P.bg === 'upload' || !!(BGS.find(b => b.id === P.bg) || {}).src },
   { g: 'Sound' },
   { k: 'sound', l: 'Click', t: 'sounds' },
@@ -1273,6 +1276,8 @@ uniform vec4 uInk;             // ink colour, opacity
 uniform vec3 uPage0, uPage1, uPage2;
 uniform sampler2D uBg;         // a picture under the glass (mode 1), or the drawn page (mode 0)
 uniform float uBgMode, uBgTexel; // texels per css px, for the level of detail
+uniform float uBgFix;          // 1: the background stays put on screen while the camera turns
+uniform float uAmb; uniform vec3 uAmbCol;   // how much of the background colours the reflections, and its colour for the drawn page
 uniform vec4 uBgXf;            // css px → uv: 1 / size, centre
 uniform vec3 uSkyHor, uSkyZen; // the room the glass reflects, tuned to the background
 uniform float uGrid, uGridA, uCamDist;
@@ -1364,12 +1369,25 @@ vec2 sphInt(vec3 ro, vec3 rd, vec3 c, float r){
 float lineA(float dist, float w, float fp){ fp = max(fp, 0.35); return clamp((w * 0.5 + fp * 0.5 - dist) / fp, 0.0, 1.0) * min(1.0, w / fp); }
 vec3 sky(vec3 d){
   vec3 c = mix(uSkyHor, uSkyZen, smoothstep(-0.05, 0.7, d.z));
+  if (uAmb > 0.0) {                                        // the room around is the background: blurred, in the direction of the ray
+    vec3 e = uAmbCol;
+    if (uBgMode > 0.5) e = textureLod(uBg, (uBox.xy + d.xy * uRes.x * 0.35 - uBgXf.zw) * uBgXf.xy + 0.5, 5.5).rgb;
+    c = mix(c, e * (0.9 + 0.25 * smoothstep(0.0, 0.8, d.z)), uAmb * (0.55 + 0.35 * smoothstep(0.7, -0.05, d.z)));
+  }
   c += vec3(1.0) * smoothstep(0.9, 0.985, dot(d, L)) * 0.7;                                     // the key softbox
   c += vec3(0.95, 0.97, 1.0) * smoothstep(0.16, 0.04, abs(d.y + 0.34)) * smoothstep(0.25, 0.55, d.z) * 0.35;   // a long strip light
   return c;
 }
+bool gScrOn; vec2 gScr;        // a screen point handed to pageAt directly (fixed background, a ray above the horizon)
 vec3 pageAt(vec2 q, float fp){
-  vec3 c;
+  vec3 c; vec2 q0 = q;
+  if (gScrOn) q = gScr;
+  else if (uBgFix > 0.5) {                                      // where this point shows on screen now: the page is painted there, not on the floor
+    vec3 T = vec3(uBox.xy, ZM), v = vec3(q, 0.0) - (T - uCamF * uCamDist);
+    float f = max(dot(v, uCamF), 1.0);
+    q = (vec2(dot(v, uCamR), dot(v, uCamD)) * uCamDist / f - uPan) * uZoom + uBox.xy;
+    fp = min(fp, 1.5);                                     // it is flat on the screen: no grazing blur toward the horizon
+  }
   vec2 f = fract((q - uBox.xy) / uGrid + 0.5), gd = min(f, 1.0 - f) * uGrid;
   float g = max(lineA(gd.x, 1.0, fp), lineA(gd.y, 1.0, fp)) * uGridA;
   if (uBgMode > 0.5) {
@@ -1383,6 +1401,7 @@ vec3 pageAt(vec2 q, float fp){
   // shadow thrown away from the light; a convex solid focuses light into a caustic, a dish spreads it into a ring
   float R = uBox.w, hmid = ZM + (uShape.y + max(uShape.z, 0.0)) * 0.5;
   vec2 so = -L.xy / max(L.z, 0.25) * hmid * 0.4, som = -L.xy / max(L.z, 0.25) * (hmid + uMenuZ) * 0.4;
+  q = q0;
   float ds = max(-footB(q - so), -footM(q - som));      // a menu floating higher throws its shadow further
   // like liquid glass only the rim throws a shadow: a soft band along the edge, the middle stays clear and bright
   float shadow = smoothstep(-R * 0.4 - uShape2.z, 0.0, ds) * (1.0 - smoothstep(R * 0.02, R * 0.55, ds)) * 0.12;
@@ -1405,7 +1424,7 @@ vec3 pageAt(vec2 q, float fp){
     c = 1.0 - (1.0 - c) * (1.0 - clamp(gc * glow * uGlowK.x, 0.0, 1.0));   // screen: it lights the page, never darkens it
   }
   if (BR > 0.5) c = 1.0 - (1.0 - c) * (1.0 - clamp(uIconLight * exp(-length(q - BC.xy) / (BR * 2.4)) * 0.6, 0.0, 1.0));   // and the page
-  float far = smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uBox.xy));
+  float far = uBgFix > 0.5 ? 0.0 : smoothstep(length(uRes) * 0.8, length(uRes) * 4.0, length(q - uBox.xy));
   return mix(c, sky(vec3(0.0, -0.3, 0.12)) * 0.93, far);
 }
 vec3 envAt(vec3 p, vec3 d){
@@ -1631,7 +1650,9 @@ vec3 shade(vec3 ro, vec3 rd, float tlPre, out float id){   // tlPre: the hit alr
   id = 0.0;
   if (hitB && (!hitL || tb.x < tl)) { id = 2.0; return beadShade(ro + rd * tb.x, rd); }
   if (hitL) { id = 1.0; return glassShade(ro + rd * tl, rd); }
-  if (rd.z < -1e-3) { float t = -ro.z / rd.z; return pageAt((ro + rd * t).xy, t / uCamDist / uScale / uZoom / max(-rd.z, 0.08)); }
+  gScrOn = uBgFix > 0.5 && rd.z >= -1e-3;                 // fixed background: what is above the horizon is still the screen's picture
+  if (gScrOn) gScr = (vec2(dot(rd, uCamR), dot(rd, uCamD)) * uCamDist / max(dot(rd, uCamF), 1e-3) - uPan) * uZoom + uBox.xy;
+  if (rd.z < -1e-3 || gScrOn) { float t = gScrOn ? uCamDist * 4.0 : -ro.z / rd.z; vec3 c = pageAt(gScrOn ? uBox.xy + vec2(1e5) : (ro + rd * t).xy, gScrOn ? 1.0 : t / uCamDist / uScale / uZoom / max(-rd.z, 0.08)); gScrOn = false; return c; }
   return sky(rd);
 }
 void camRay(vec2 p, out vec3 ro, out vec3 rd){
@@ -1642,7 +1663,7 @@ void camRay(vec2 p, out vec3 ro, out vec3 rd){
 }
 void main(){
   vec2 p = vec2(gl_FragCoord.x, uRes.y * uScale - gl_FragCoord.y) / uScale;    // css px, y down
-  L = uL;
+  L = uL; gScrOn = false; gScr = vec2(0.0);
   ZM = uShape2.z + uShape.w;
   BR = uBead.z;
   BZ = BR * clamp(uBead2.w, 0.2, 1.0);
@@ -1778,7 +1799,10 @@ function frame(t) {
   tuneQuality(dt);
   layout();
   if (labelDirty) upload();
-  if (bg.mode === 1 && (bg.dirty || (bg.video && bg.video.readyState >= 2 && !bg.video.paused))) uploadBg();
+  if (bg.mode === 1 && (bg.dirty || (bg.video && bg.video.readyState >= 2 && !bg.video.paused))) {
+    uploadBg();
+    if (bg.video && t - (bg.avgT || 0) > 500) { bg.avgT = t; const a = avgOf(bg.video, bg.w, bg.h); bg.avg = bg.avg.map((v, i) => v + (a[i] - v) * 0.5); }
+  }
   const T = reduce || STILL ? 2 : t / 1000;
   // light: from the cursor, or from the panel
   let Lx, Ly, Lz;
@@ -1875,6 +1899,9 @@ function frame(t) {
   gl.uniform1f(uni('uCamDist'), Math.max(W, H) * 1.3);
   CAM = { r: cr, d: cd, f: cf, D: Math.max(W, H) * 1.3, T: [geo.cx, geo.cy, (P.lift + P.under) * hh], zoom: s.zoom, pan: [s.panx, s.pany], menuTop: menuTopZ };
   gl.uniform1f(uni('uBgMode'), bg.mode);
+  gl.uniform1f(uni('uBgFix'), P.bgFix ? 1 : 0);
+  gl.uniform1f(uni('uAmb'), P.ambOn ? P.amb : 0);
+  { const c = bg.mode ? bg.avg : pageStops((BGS.find(b => b.id === P.bg) || {}).proc || 'light')[1]; gl.uniform3f(uni('uAmbCol'), c[0], c[1], c[2]); }
   if (bg.mode === 1) {
     const sc = Math.max(W / bg.w, H / bg.h) * P.bgScale;
     gl.uniform4f(uni('uBgXf'), 1 / (bg.w * sc), 1 / (bg.h * sc), W / 2, H / 2); gl.uniform1f(uni('uBgTexel'), 1 / sc);

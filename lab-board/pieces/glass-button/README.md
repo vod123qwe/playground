@@ -54,3 +54,5 @@ Cała scena to mały ray tracer w jednym shaderze WebGL2 (GLSL 300 es). DOM-owy 
 Poprzednie wersje są w historii gita: v1 rtęć, v2 szklana kopułka w płaskiej pigułce, v3 wypukła płyta nad „nadrukiem” (napis pod szkłem wyglądał nienaturalnie), v4 analityczna kapsuła M&M z obrotem 3D.
 
 **Tło wideo „Clouds”**: zapętlone wideo chmur (`clouds.mp4`, 1280×720, ok. 24 MB) jako czwarte tło w grupie Background. Ładuje się dopiero po wybraniu, do tego czasu jest jasne tło w tonie nieba; wideo innych teł jest pauzowane. Wariant **Clouds** to szkło z Lilac nad tym wideo (bez siatki, Image scale 1). Otwarty panel ma w pełni białe tło.
+
+**Stałe tło** (Background → „Fixed background”): tło jest przyklejone do ekranu, a obraca się i przybliża tylko szkło. Punkt podłogi, który trafia promień, jest rzutowany z powrotem na ekran, więc wideo nie rozciąga się przy obrocie; ponad horyzontem też jest obraz, a cienie zostają na podłodze. **Kolor tła w odbiciach** (Light → „Reflect the background colour” + siła): odbicia i rant biorą rozmyte kolory tła w kierunku promienia zamiast neutralnego „studia”; przy wideo średni kolor odświeża się co 0,5 s. Oba są włączone w wariancie Clouds.
