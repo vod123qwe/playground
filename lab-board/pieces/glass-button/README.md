@@ -101,3 +101,5 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Wariant Clouds usunięty** z dropdownu (warianty: Signature, Midnight, Frost, Ember, Lilac, Dish). Tło wideo Clouds zostaje do wyboru w grupie Background.
 
 **Dish v4:** płytka o zaokrąglonych rogach (corner 0,74) z wklęsłym wierzchem nad gradientem Dusk, oszronione szkło o słabym załamaniu (IOR 1,28), płynący orb, poświata Aurora z mieszaniem auto, galaretka 0,45, menu blisko przycisku i mocno zlane (liquid 0,79).
+
+**Start zawsze od Signature:** każde otwarcie strony zaczyna się od dropdownu w wariancie Signature, bez względu na to, co zostało z poprzedniej wizyty. Ustawienia komponentów są pamiętane tylko w trakcie jednej wizyty (przełączenie Dropdown / Segmented i z powrotem niczego nie gubi).

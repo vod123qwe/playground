@@ -652,8 +652,7 @@ const CTRL = [
 const KEY = 'lab.glass-button.v5';
 const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
 function load() {
-  // a first visit opens on Signature; after that, whatever you left
-  try { const raw = localStorage.getItem(KEY); return raw ? Object.assign({}, DEF, JSON.parse(raw)) : Object.assign({}, DEF, SIGNATURE); } catch (e) { return Object.assign({}, DEF, SIGNATURE); }
+  return Object.assign({}, DEF, SIGNATURE, { look: 'Signature' });   // every visit opens on Signature, the dropdown's first look
 }
 function save() {
   if (STILL) return;
@@ -1186,13 +1185,12 @@ const curLooks = () => SEGON() ? SEG_LOOKS : LOOKS;
 // each component keeps its own settings; switching stores this one's and brings back the other's (or its first look)
 const compBtns = [...document.querySelectorAll('#comps button')];
 function showComp() { compBtns.forEach(b => { const on = b.dataset.c === P.comp; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }); }
-const CKEY = c => `${KEY}.c.${c}`;
-const diffOf = o => { const d = {}; for (const k in DEF) if (o[k] !== DEF[k]) d[k] = o[k]; if (d.bg === 'upload') delete d.bg; return d; };
+const COMP_MEM = {};
 function switchComp(c) {
   if (c === P.comp) return;
-  if (!STILL) try { localStorage.setItem(CKEY(P.comp), JSON.stringify(diffOf(P))); } catch (e) {}
+  COMP_MEM[P.comp] = Object.assign({}, P);             // this visit only: the next one starts from the first looks again
   let next = null;
-  if (!STILL) try { const raw = localStorage.getItem(CKEY(c)); if (raw) next = Object.assign({}, DEF, JSON.parse(raw)); } catch (e) {}
+  if (COMP_MEM[c]) next = Object.assign({}, COMP_MEM[c]);
   if (!next) next = Object.assign({}, DEF, c === 'segmented' ? SEG_LOOKS.Light : SIGNATURE, { look: c === 'segmented' ? 'Light' : 'Signature' });
   if (next.bg === 'upload') next.bg = 'grid';
   next.comp = c; P = next;
