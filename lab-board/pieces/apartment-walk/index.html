@@ -55,6 +55,11 @@
        color:rgba(20,20,20,.66); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums}
   .pts i{width:8px; height:8px; border-radius:50%; background:#c9a15a; transition:background .3s} .pts.done i{background:#3fae6a}
   body.pt-on .pts{display:flex}
+  .clock{position:fixed; right:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:5; width:124px; height:124px; border-radius:50%; background:#fff;
+         cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; transition:right .45s var(--ease)}
+  .clock:active{cursor:grabbing} .clock:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:3px} .clock svg{display:block; width:100%; height:100%}
+  @media (min-width:761px){ body.tuning .clock{right:400px} }
+  @media (max-width:760px){ .clock{top:72px; bottom:auto; width:76px; height:76px} .clock .sub{display:none} }
   .hint kbd{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:6px; background:rgba(20,20,20,.07); font:600 11px/1 "Inter", sans-serif}
   @media (max-width:760px){ .hint{height:32px; font-size:11.5px} }
   @media (pointer:coarse){ .hint .keys{display:none} } @media (pointer:fine){ .hint .touch{display:none} }
@@ -165,6 +170,17 @@
 </div></div>
 
 <div class="hint" id="hint" aria-live="polite"></div>
+<div class="clock" id="clock" role="slider" tabindex="0" aria-label="Time of day" aria-valuemin="0" aria-valuemax="1439" title="The time of day: drag round the dial, scroll, or use the arrow keys">
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="60" cy="60" r="47" fill="none" stroke="#2f3442" stroke-width="9"/>
+    <path id="clock-day" fill="none" stroke="url(#clock-g)" stroke-width="9" stroke-linecap="round"/>
+    <defs><linearGradient id="clock-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f2a65a"/><stop offset=".5" stop-color="#f7d57a"/><stop offset="1" stop-color="#f2a65a"/></linearGradient></defs>
+    <g id="clock-ticks"></g>
+    <g id="clock-sun"><circle r="7.5" fill="#fff" stroke="#1b1c20" stroke-width="1.5"/><circle id="clock-dot" r="4.2" fill="#f5b942"/></g>
+    <text id="clock-t" x="60" y="62" text-anchor="middle" font-size="19" font-weight="650" fill="#1b1c20" style="font-variant-numeric:tabular-nums">11:30</text>
+    <text class="sub" id="clock-s" x="60" y="77" text-anchor="middle" font-size="7.6" fill="rgba(20,20,20,.55)"></text>
+  </svg>
+</div>
 <div class="qbox">
   <div class="qseg" role="group" aria-label="Light while you walk">
     <button type="button" data-q="preview" aria-pressed="true" title="The quick preview, always">Preview</button>
@@ -195,8 +211,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=4';
-import { buildLiving } from './living.js?v=8';
+import { buildKitchen } from './kitchen.js?v=5';
+import { buildLiving } from './living.js?v=10';
 import { buildHall } from './hall.js?v=1';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial } from 'three-gpu-pathtracer';
@@ -223,7 +239,7 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
-const S = { sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+const S = { sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -250,10 +266,51 @@ const sun = new THREE.DirectionalLight('#fff1dc', 2.4);
 sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02;
 Object.assign(sun.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: .5, far: 60 });
 scene.add(sun, sun.target);
-function placeSun() {                                             // the sun comes in through the long facade; the slider turns it round
-  const a = THREE.MathUtils.degToRad(S.sun), out = new THREE.Vector2(.7902, -.6128);   // the facade faces up and to the right on the drawing
-  const d = new THREE.Vector3(out.x * Math.cos(a) - out.y * Math.sin(a), 0, out.x * Math.sin(a) + out.y * Math.cos(a)).normalize();
-  sun.position.set(d.x * 18, 14, d.z * 18);
+// ---------- the sun by the clock: today's date, southern Poland (about 50 N, 20 E), Polish time (summer time from the last Sunday of
+// March to the last Sunday of October). On the drawing south is +x (to the right), north -x, east -y (up), west +y: the living room's
+// windows face south-east (about 142 degrees), the bedrooms' west ----------
+const LAT = 50, LON = 19.9, DEG = Math.PI / 180, NORTH = [-1, 0], EAST = [0, -1];
+const today = new Date();
+const lastSunday = (y, m) => { const d = new Date(Date.UTC(y, m + 1, 0)); d.setUTCDate(d.getUTCDate() - d.getUTCDay()); return d; };
+const summer = (d => { const y = d.getFullYear(); return d >= lastSunday(y, 2) && d < lastSunday(y, 9); })(today);
+const doy = Math.floor((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(today.getFullYear(), 0, 0)) / 864e5);
+function sunAt(min) {                                               // the sun at a clock time (minutes): elevation and bearing from north, radians
+  const g = 2 * Math.PI / 365 * (doy - 1 + (min / 60 - 12) / 24);
+  const eqt = 229.18 * (.000075 + .001868 * Math.cos(g) - .032077 * Math.sin(g) - .014615 * Math.cos(2 * g) - .040849 * Math.sin(2 * g));
+  const dec = .006918 - .399912 * Math.cos(g) + .070257 * Math.sin(g) - .006758 * Math.cos(2 * g) + .000907 * Math.sin(2 * g) - .002697 * Math.cos(3 * g) + .00148 * Math.sin(3 * g);
+  const ha = ((min + eqt + 4 * LON - 60 * (summer ? 2 : 1)) / 4 - 180) * DEG, la = LAT * DEG;
+  const el = Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(ha));
+  const az = Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(dec) * Math.cos(la)) + Math.PI;   // from north, clockwise
+  return { el, az };
+}
+const DAY = (() => {                                                // sunrise and sunset today (the upper limb on the horizon)
+  let rise = null, set = null, prev = sunAt(0).el;
+  for (let m = 2; m <= 1440; m += 2) { const e = sunAt(m).el; if (prev < -.833 * DEG && e >= -.833 * DEG) rise = m; if (prev >= -.833 * DEG && e < -.833 * DEG) set = m; prev = e; }
+  return { rise, set };
+})();
+function kelvin(K) {                                                // a colour temperature as a colour (Tanner Helland's fit)
+  const t = K / 100, c = v => Math.max(0, Math.min(255, v)) / 255;
+  const r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -.1332047592);
+  const g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * Math.pow(t - 60, -.0755148492);
+  const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+  return new THREE.Color().setRGB(c(r), c(g), c(b), THREE.SRGBColorSpace);
+}
+const BG_DAY = new THREE.Color('#e8e5df'), BG_NIGHT = new THREE.Color('#23262e'), SKY = new THREE.Color('#eef3ff');
+function placeSun() {                                               // the sun, the sky light in the windows and the ambient, by the clock
+  const { el, az } = sunAt(S.time), sm = THREE.MathUtils.smoothstep;
+  const h = [NORTH[0] * Math.cos(az) + EAST[0] * Math.sin(az), NORTH[1] * Math.cos(az) + EAST[1] * Math.sin(az)];
+  const up = Math.max(Math.sin(el), .05);                          // (under the horizon the light is off; the direction just stays sane)
+  sun.position.set(h[0] * Math.cos(el) * 20, up * 20, h[1] * Math.cos(el) * 20);
+  const day = sm(el / DEG, -6, 8), low = 1 - sm(el / DEG, 0, 16);   // twilight; how low the sun is (it reddens)
+  const warm = kelvin(S.warmth);
+  sun.color.copy(warm).lerp(kelvin(2300), low * .75);
+  sun.intensity = 2.4 * S.power * sm(el / DEG, -1, 6) * (.55 + .45 * sm(el / DEG, 4, 30));
+  hemi.color.copy(warm).lerp(SKY, .35); hemi.intensity = .55 * S.power * (.1 + .9 * day);
+  scene.environmentIntensity = .55 * S.power * (.12 + .88 * day);
+  for (const l of portals) { l.color.copy(SKY).lerp(warm, .45).lerp(kelvin(2600), low * .5 * day); l.intensity = S.portal * S.power * (.03 + .97 * day); }
+  scene.background.copy(BG_NIGHT).lerp(BG_DAY, .15 + .85 * day);
+  if (typeof paintClock === 'function') paintClock();
+  if (typeof ptScene === 'function') ptScene();
 }
 
 const camera = new THREE.PerspectiveCamera(40, 1, .05, 200);
@@ -304,6 +361,44 @@ function flat(outer, holes, y, m) {
 const world = new THREE.Group(); scene.add(world);
 const wallsG = new THREE.Group(), capsG = new THREE.Group(), glassG = [], labelsAt = [];
 world.add(wallsG, capsG);
+// ---------- the clock ----------
+const clockEl = document.getElementById('clock'), fmt = m => `${Math.floor(m / 60) % 24}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+const dialAt = (min, r) => { const a = (min / 1440) * Math.PI * 2 + Math.PI; return [60 + r * Math.sin(a), 60 - r * Math.cos(a)]; };   // noon at the top
+{
+  const ticks = document.getElementById('clock-ticks');
+  for (let hh = 0; hh < 24; hh++) {
+    const [x0, y0] = dialAt(hh * 60, 38), [x1, y1] = dialAt(hh * 60, hh % 6 ? 36 : 33.5);
+    ticks.insertAdjacentHTML('beforeend', `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="rgba(20,20,20,${hh % 6 ? .18 : .45})" stroke-width="${hh % 6 ? 1 : 1.4}" stroke-linecap="round"/>`);
+  }
+  if (DAY.rise !== null && DAY.set !== null) {
+    const [ax, ay] = dialAt(DAY.rise, 47), [bx, by] = dialAt(DAY.set, 47), large = DAY.set - DAY.rise > 720 ? 1 : 0;
+    document.getElementById('clock-day').setAttribute('d', `M${ax} ${ay} A47 47 0 ${large} 1 ${bx} ${by}`);
+  }
+}
+function paintClock() {
+  const [x, y] = dialAt(S.time, 47), { el } = sunAt(S.time), up = el > -.833 * DEG;
+  document.getElementById('clock-sun').setAttribute('transform', `translate(${x} ${y})`);
+  document.getElementById('clock-dot').setAttribute('fill', up ? '#f5b942' : '#8e97b5');
+  document.getElementById('clock-t').textContent = fmt(S.time);
+  document.getElementById('clock-s').textContent = up ? `sun ${Math.round(el / DEG)}°` : (DAY.rise !== null ? `sunrise ${fmt(DAY.rise)}` : 'night');
+  clockEl.setAttribute('aria-valuenow', String(S.time)); clockEl.setAttribute('aria-valuetext', `${fmt(S.time)}, ${up ? `sun ${Math.round(el / DEG)} degrees up` : 'the sun is down'}`);
+}
+function setTime(m) { S.time = ((Math.round(m / 5) * 5) % 1440 + 1440) % 1440; placeSun(); moved(); }
+{
+  let dragging = false;
+  const fromPointer = e => { const r = clockEl.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    let a = Math.atan2(dx, -dy) - Math.PI; a = ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); setTime(a / (2 * Math.PI) * 1440); };
+  clockEl.addEventListener('pointerdown', e => { dragging = true; clockEl.setPointerCapture(e.pointerId); fromPointer(e); e.preventDefault(); });
+  clockEl.addEventListener('pointermove', e => { if (dragging) fromPointer(e); });
+  const end = () => { dragging = false; }; clockEl.addEventListener('pointerup', end); clockEl.addEventListener('pointercancel', end);
+  clockEl.addEventListener('wheel', e => { e.preventDefault(); setTime(S.time + (e.deltaY > 0 ? 15 : -15)); }, { passive: false });
+  clockEl.addEventListener('keydown', e => {
+    const k = { ArrowRight: 15, ArrowUp: 15, ArrowLeft: -15, ArrowDown: -15, PageUp: 60, PageDown: -60 }[e.key];
+    if (k) { e.preventDefault(); e.stopPropagation(); setTime(S.time + k * (e.shiftKey ? 4 : 1)); }
+    if (e.key === 'Home') { e.preventDefault(); setTime(12 * 60); }
+  });
+}
+
 // ---------- the cutaway (overview): as you come in close, the walls on your side of the middle of the view come down to 20 % of their
 // height, with everything in them (frames, glass, lintels, the black tops); the cut shows dark, like the plan. Furniture stays whole.
 // A fragment above cutH on the camera's side (dot > cutO along cutD from cutT) is dropped; a wall seen from inside shows the fill.
@@ -749,8 +844,11 @@ canvas.addEventListener('pointerup', e => {                         // a click (
   const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const dr = pickLeaf(e.clientX, e.clientY);
-  if (dr) { toggleDoor(dr); grabFlash(); }
+  if (dr && dr.meshes) { dr.set(!dr.on); ptScene(); grabFlash(); }      // a lamp: on or off
+  else if (dr) { toggleDoor(dr); grabFlash(); }
 });
+// the lamps you can click: the pendants over the island (one switch) and over the table
+function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
 // ---------- the hand: over a leaf that opens, and while Space-panning the overview ----------
 const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0 };
 const sp = { held: false, id: null, x: 0, y: 0 };
@@ -758,9 +856,10 @@ let hoverLeaf = null, hoverDirty = false, grabUntil = 0;
 function pickLeaf(cx, cy) {                                         // the first thing under the pointer, if it is a leaf that opens
   const r = canvas.getBoundingClientRect(); ndc.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const leaves = doors.filter(d => d.kind !== 'fixed').map(d => d.leaf);
-  const hit = ray.intersectObjects([...wallMeshes, ...leaves], false).find(h => h.object.visible);
-  return hit && hit.object.userData.door && hit.distance < (mode === 'walk' ? 4 : 60) ? hit.object.userData.door : null;
+  const leaves = doors.filter(d => d.kind !== 'fixed').map(d => d.leaf), lamps = lampList().flatMap(l => l.meshes);
+  const hit = ray.intersectObjects([...wallMeshes, ...leaves, ...lamps], false).find(h => h.object.visible);
+  if (!hit || hit.distance > (mode === 'walk' ? 6 : 60)) return null;
+  const u = hit.object.userData; return u.door && hit.distance < (mode === 'walk' ? 4 : 60) ? u.door : u.lamp || null;
 }
 const grabFlash = () => { grabUntil = performance.now() + 320; };
 function paintHand(now) {
@@ -869,6 +968,9 @@ const MF = mfit();
 function drawMini() {
   const { s, ox, oz } = MF, g = mg, path = ps => { g.moveTo(ps[0][0] * s + ox, ps[0][1] * s + oz); for (const p of ps.slice(1)) g.lineTo(p[0] * s + ox, p[1] * s + oz); g.closePath(); };
   g.clearRect(0, 0, mini.width, mini.height);
+  { const cx = mini.width - 40, cy = 40; g.fillStyle = 'rgba(27,28,32,.07)'; g.beginPath(); g.arc(cx, cy, 28, 0, 7); g.fill();   // north is to the left on the drawing
+    g.fillStyle = '#1b1c20'; g.beginPath(); g.moveTo(cx - 22, cy); g.lineTo(cx - 4, cy - 9); g.lineTo(cx - 4, cy + 9); g.closePath(); g.fill();
+    g.font = '700 22px Inter, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('N', cx + 11, cy + 1); }
   g.fillStyle = '#ece8e1'; g.beginPath(); A.balconies.forEach(b => path(b.outer)); g.fill();
   g.fillStyle = '#f4efe7'; g.beginPath(); path(A.floor.outer); g.fill();
   const here = roomAt(P.x, P.z); if (here) { g.fillStyle = 'rgba(27,28,32,.07)'; g.beginPath(); path(here.outline); g.fill(); }
@@ -923,7 +1025,7 @@ const ctl = {};
   g.appendChild(kn);
   g = LabUI.group(panel, 'Living room', { key: 'lab.aw.group.living' });
   ctl.sofa = LabUI.seg(g, { label: 'Sofa', options: [['gala3', 'Gala 210'], ['gala', 'Gala 300 + chaise'], ['a04', 'As A.04']], value: S.sofa, onChange: v => { S.sofa = v; applySofa(); } });
-  ctl.curtains = LabUI.seg(g, { label: 'Curtains', options: [['open', 'Open'], ['sheers', 'Sheers'], ['closed', 'Closed']], value: S.curtains, onChange: v => { S.curtains = v; LIV?.setCurtains(v); lensList = null; } });
+  ctl.curtains = LabUI.seg(g, { label: 'Curtains', options: [['open', 'Open'], ['sheers', 'Sheers'], ['closed', 'Closed']], value: S.curtains, onChange: v => { S.curtains = v; curtainsNow(true); } });
   const ln = document.createElement('p'); ln.className = 'note';
   ln.textContent = 'Kave Home Gala in a fine beige chenille (drawn here, not a scan): seat 42, back 87, 105 deep. The 3-seater, 210 cm, fits where A.04 has the sofa: about 1 m to the dining chairs, its arm 60 cm off the window wall. The 4-seater with the right chaise, 300 × 193, reaches the dining chair next to it (about 3 cm), stands in front of the whole 90 cm balcony door and leaves about 45 cm to the TV console. Curtains: sheers and linen drapes on two tracks under a ceiling pelmet.';
   g.appendChild(ln);
@@ -950,9 +1052,10 @@ const ctl = {};
   dn.textContent = 'Porta Vector V, flush, white, 80 cm; Metal-Bud Rumba handles, satin nickel. The pantry and the laundry have hidden doors, flush with the wall. Windows and balcony doors: white inside, graphite outside; the opening leaves open too (the low pane in the bedroom window tilts). Click a leaf or press E to open or close it; walking into a closed door opens it.';
   g.appendChild(dn);
   g = LabUI.group(panel, 'Light', { key: 'lab.aw.group.light' });
-  ctl.sun = LabUI.slider(g, { label: 'Sun direction', min: -90, max: 90, step: 1, unit: '°', value: S.sun, def: DEF.sun, onInput: v => { S.sun = v; placeSun(); } });
-  ctl.lamps = LabUI.check(g, { label: 'Lamps on', value: S.lamps, onChange: v => { S.lamps = v; LIV?.setLamps(v); KIT?.setLamps?.(v); } });
-  ctl.portal = LabUI.slider(g, { label: 'Window light', min: 0, max: 10, step: .1, value: S.portal, def: DEF.portal, onInput: v => { S.portal = v; for (const l of portals) l.intensity = v; } });
+  ctl.warmth = LabUI.slider(g, { label: 'Light warmth', min: 2700, max: 6500, step: 100, unit: ' K', value: S.warmth, def: DEF.warmth, onInput: v => { S.warmth = v; placeSun(); } });
+  ctl.power = LabUI.slider(g, { label: 'Light strength', min: .2, max: 2, step: .05, value: S.power, def: DEF.power, onInput: v => { S.power = v; placeSun(); } });
+  ctl.lamps = LabUI.check(g, { label: 'Lamps on', value: S.lamps, onChange: v => { S.lamps = v; LIV?.setLamps(v); KIT?.setLamps?.(v); ptScene(); } });
+  ctl.portal = LabUI.slider(g, { label: 'Window light', min: 0, max: 10, step: .1, value: S.portal, def: DEF.portal, onInput: v => { S.portal = v; placeSun(); } });
   {
     ctl.bounces = LabUI.slider(g, { label: 'Light bounces', min: 2, max: 8, step: 1, value: S.bounces, def: DEF.bounces, onInput: v => { S.bounces = v; ptScene(); } });
   }
@@ -1297,8 +1400,8 @@ function frame(now) {
     controls.update();
   }
   if (archDirty) archCut();
-  { // the cutaway comes in between 7 m and 3.8 m up; in the walk (and on the way to it) the walls stand whole
-    const k = mode === 'over' ? THREE.MathUtils.smoothstep(camera.position.y, 3.8, 7) : 1;
+  { // the cutaway comes in between 13 m and 7 m up (the whole flat at a glance keeps its walls); in the walk the walls stand whole
+    const k = mode === 'over' ? THREE.MathUtils.smoothstep(camera.position.y, 7, 13) : 1;
     CUT.cutH.value = k >= .999 ? 1e3 : THREE.MathUtils.lerp(.2 * H * M, H * M + .3, k);
     const dx = camera.position.x - controls.target.x, dz = camera.position.z - controls.target.z, l = Math.hypot(dx, dz);
     CUT.cutT.value.set(controls.target.x, controls.target.z);
@@ -1328,7 +1431,7 @@ function frame(now) {
     const r = roomAt(P.x, P.z);
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
-  if (doors.some(d => d.f !== d.to)) ptScene();                     // a leaf moved: the traced scene is out of date
+  if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
   const idle = S.pt && mode === 'walk' && !tween && performance.now() - lastMove > 280;
   if (idle && ptReady()) {
@@ -1369,13 +1472,22 @@ const HALL = buildHall({ THREE, clip }); HALL.root.scale.setScalar(M); HALL.root
 livingFoot = [...HALL.foot];
 // the living room on A.04: the sofa, the tables, the TV console, the rug, lamps and a few things (plan centimetres)
 let LIV = null;
+// the curtains follow the balcony doors of the living room: the leaves' hinges along the facade, which way they run, how open they are
+let curKey = '';
+function curtainsNow(force) {
+  if (!LIV) return;
+  const F = LIV.FAC, lv = doors.filter(d => d.kind === 'turn' && /^O(17|22) /.test(d.o.name)).map(d => ({
+    h: (d.ph[0] - F.o[0]) * F.e[0] + (d.ph[1] - F.o[1]) * F.e[1], s: Math.sign(d.dir[0] * F.e[0] + d.dir[1] * F.e[1]) || 1, W: d.lw, f: Math.round(d.f * 50) / 50 }));
+  const key = S.curtains + lv.map(l => l.f).join(',');
+  if (!force && key === curKey) return; curKey = key; LIV.setCurtains(S.curtains, lv); lensList = null;
+}
 function applySofa() {                                              // the sofa chosen in the panel, its outline for walking
   if (!LIV) return; LIV.setSofa(S.sofa); livingFoot = [...HALL.foot, ...LIV.foot]; lensList = null; ptScene(); if (mode === 'walk') unstick();
 }
 const livingReady = kitchenReady.then(async () => {
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
-  LIV.setLamps(S.lamps); LIV.setCurtains(S.curtains); applySofa();
+  LIV.setLamps(S.lamps); curtainsNow(true); applySofa();
 }).catch(err => { console.warn('living', err); LIV = LIV || false; });   // (false: failed, the tracer goes on without it)
 function setAisle(v) {                                              // move the island square to the run
   S.aisle = v; if (!KIT) return;
