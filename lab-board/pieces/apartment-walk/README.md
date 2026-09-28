@@ -55,16 +55,23 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Szafka RTV** 188 × 40 × 40, podwieszana 22 cm nad podłogą, dąb z ryflowanymi frontami jak na wyspie, pod ścianą małego pokoju. **Telewizor 65"** na płaskim uchwycie na ścianie nad szafką (A.04 rysuje ok. 55"; większy na życzenie, przy ok. 2,3 m od sofy to dobry rozmiar). Na szafce aloes w białej donicy, biały dzban i ramka.
 - **Stół okrągły** Ø 100, wys. 75, dąb, ryflowana dębowa noga na okrągłej stopie; **4 krzesła** kubełkowe w bouclé na dębowych nogach, na przekątnych jak w A.04, siedzisko ok. 48.
 - **Dywan** jutowy 240 × 170 spod sofy w stronę TV; **roślina** w terakocie przy oknie obok szezlongu; **lampa wisząca** nad stołem, klosz 93 cm nad blatem.
-- **Zasłony i firanki** wzdłuż okien salonu (A.04 rysuje je zygzakiem): firanki z woalu na tylnej szynie, lniane zasłony na przedniej, obie schowane pod maskownicą przy suficie (21 cm głębokości, 12 cm w dół). Fałda falowa, każda fałda trochę inna, rozchylenie ku dołowi. Panel, Living room → Curtains: **Open** (wszystko zebrane przy kuchni, na filarze między drzwiami i na końcu), **Sheers** (firanki zaciągnięte, domyślnie), **Closed**. Uwaga: otwarte skrzydło drzwi balkonowych przechodzi przez zaciągniętą firankę.
+- **Zasłony i firanki** wzdłuż okien salonu (A.04 rysuje je zygzakiem): firanki z woalu na tylnej szynie, lniane zasłony na przedniej, obie schowane pod maskownicą przy suficie (21 cm głębokości, 12 cm w dół). Fałda falowa, każda fałda trochę inna, rozchylenie ku dołowi. Panel, Living room → Curtains: **Open** (wszystko zebrane przy kuchni, na filarze między drzwiami i na końcu), **Sheers** (firanki zaciągnięte, domyślnie), **Closed**. Zaciągnięte firanki i zasłony wiszą w panelach dzielonych przy skrzydłach drzwi balkonowych: gdy skrzydło się otwiera, jego panel zsuwa się do zawiasów i chowa w pakiecie za otwartym skrzydłem (odrobinę przed nim, żeby się nie przecinały).
 - **Lampy nad wyspą:** trzy kule z mlecznego szkła Ø 22 na czarnych przewodach, co 60 cm, 75 cm nad blatem; przesuwają się z wyspą (suwak przejścia).
-- **Lamps on** (panel, Light) zapala lampę nad stołem i lampy nad wyspą; domyślnie wyłączone (dzień).
+- **Lampy klikalne:** kliknij lampę (kursor-dłoń jak przy drzwiach), żeby ją zapalić albo zgasić: trzy kule nad wyspą mają jeden włącznik, lampa nad stołem swój. **Lamps on** (panel, Light) zapala wszystkie; domyślnie wyłączone (dzień).
 - Meble blokują chodzenie (obrysy w cm, jak kuchnia). Kto utknie (róg, mebel, który pojawił się pod nogami), może zawsze wyjść: w zaklinowaniu dozwolony jest każdy krok, który nie wchodzi głębiej; kliknięcie w minimapę albo wejście do pokoju stawia w najbliższym wolnym miejscu.
+
+## Pora dnia i światło
+
+- **Zegar** w prawym dolnym rogu (na telefonie u góry po prawej): tarcza 24 h, południe u góry, łuk dnia od wschodu do zachodu słońca na dziś. Przeciągnij słońce po tarczy, przewiń kółkiem (co 15 min) albo użyj strzałek (Shift: co godzinę, Home: 12:00). W środku godzina i wysokość słońca.
+- **Słońce liczone astronomicznie** dla dzisiejszej daty, południowej Polski (ok. 50° N, 20° E) i czasu polskiego (letni od ostatniej niedzieli marca do ostatniej niedzieli października). Strony świata z decyzji Jarka: na rysunku południe w prawo (+x), północ w lewo, wschód w górę, zachód w dół; okna salonu patrzą na południowy wschód (ok. 142°), sypialnie na zachód. Mała róża wiatrów na minimapie.
+- Nisko nad horyzontem słońce czerwienieje i słabnie; po zachodzie światło okien i otoczenia gaśnie do zmierzchu, tło ciemnieje.
+- **Light warmth** (2700–6500 K) i **Light strength** (20–200 %) w panelu (Light) zastąpiły kąt słońca: barwa i natężenie światła dziennego (słońce, niebo w oknach, otoczenie).
 
 ## Widok z góry
 
 - Obracanie: przeciągnij. Przesuwanie: **W A S D** albo strzałki (z Shift szybciej), albo **Space** i przeciągnij.
 - Przybliżanie kończy się na wysokości czubków ścian (kamera nie schodzi niżej niż 2,85 m).
-- **Ściany w dół** (jak w The Sims): od ok. 7 m w dół ściany po stronie kamery, razem z oknami, drzwiami i nadprożami, płynnie opadają do 20 % wysokości (51 cm); przekrój jest ciemny jak na rzucie, ściany za środkiem widoku stoją całe, meble zostają. Z góry, pionowo w dół, schodzą wszystkie. W trybie spaceru ściany są zawsze pełne. Obcięte ściany nie rzucają cienia.
+- **Ściany w dół** (jak w The Sims): od ok. 13 m (pełne obniżenie przy 7 m) ściany po stronie kamery, razem z oknami, drzwiami i nadprożami, płynnie opadają do 20 % wysokości (51 cm); przekrój jest ciemny jak na rzucie, ściany za środkiem widoku stoją całe, meble zostają. Z góry, pionowo w dół, schodzą wszystkie. W trybie spaceru ściany są zawsze pełne. Obcięte ściany nie rzucają cienia.
 
 ## Przedpokój
 

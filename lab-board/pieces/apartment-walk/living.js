@@ -309,12 +309,30 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     g.computeVertexNormals(); const o = new THREE.Mesh(g, m); o.castShadow = shadow; o.receiveShadow = true; return o;
   };
   const TOP = H - 13, S0 = FAC.from, S1 = FAC.len - 1;
-  function setCurtains(state) {
+  // drawn across, the fabric hangs in panels split where the balcony door leaves are; a leaf that opens pushes its panel to the hinge and
+  // tucks it behind itself (between the open leaf and the pier or the fixed pane), a little ahead of the leaf so the two never meet.
+  // leaves: [{ h: the hinge along the facade, s: +1 when the leaf runs to larger values from it, W: its width, f: how open, 0..1 }]
+  function drawn(z, fullness, per, m, opts, leaves) {
+    const ls = leaves.map(l => ({ ...l, a: l.s > 0 ? l.h : l.h - l.W, b: l.s > 0 ? l.h + l.W : l.h }));
+    const xs = [...new Set([S0, S1, ...ls.flatMap(l => [l.a, l.b])].map(v => Math.round(v * 10) / 10))].filter(v => v >= S0 && v <= S1).sort((p, q) => p - q);
+    for (let i = 0; i < xs.length - 1; i++) {
+      let a = xs[i], b = xs[i + 1]; if (b - a < 2) continue;
+      const fw = (b - a) * fullness, l = ls.find(k => Math.abs(k.a - a) < .2 && Math.abs(k.b - b) < .2);
+      let zz = z;
+      if (l && l.f > .001) {
+        const g = THREE.MathUtils.smoothstep(l.f, 0, .4);             // the fabric clears the leaf's path early
+        const [oa, ob] = l.s > 0 ? [l.h - 16, l.h - 2] : [l.h + 2, l.h + 16];
+        a = THREE.MathUtils.lerp(a, oa, g); b = THREE.MathUtils.lerp(b, ob, g); zz = z - 3 * g;
+      }
+      CUR.add(curtain(a, b, fw, zz, TOP, Math.max(2, Math.round(fw / per)), m, { ...opts, seed: (xs[i] * 7) | 0 }));
+    }
+  }
+  function setCurtains(state, leaves = []) {
     for (const c of [...CUR.children]) { CUR.remove(c); c.geometry.dispose(); }
     if (state === 'open') for (const [a, b] of [[S0, S0 + 34], [347, 431], [S1 - 32, S1]]) CUR.add(curtain(a, b, (b - a) * 7, 6, TOP, Math.round((b - a) * 7 / 20), sheerM, { scale: 10, seed: a | 0, shadow: false }));
-    else CUR.add(curtain(S0, S1, (S1 - S0) * 2, 6, TOP, Math.round((S1 - S0) * 2 / 20), sheerM, { scale: 10, seed: 3, shadow: false }));
-    const panels = state === 'closed' ? [[S0, 206], [206, 389], [389, 480], [480, S1]] : [[S0, S0 + 44], [345, 389], [389, 433], [S1 - 42, S1]];
-    for (const [a, b] of panels) { const fw = state === 'closed' ? (b - a) * 2 : 150; CUR.add(curtain(a, b, fw, 13, TOP, Math.round(fw / 24), drapeM, { seed: (a * 7) | 0 })); }
+    else drawn(6, 2, 20, sheerM, { scale: 10, shadow: false }, leaves);
+    if (state === 'closed') drawn(13, 2, 24, drapeM, {}, leaves);
+    else for (const [a, b] of [[S0, S0 + 44], [345, 389], [389, 433], [S1 - 42, S1]]) CUR.add(curtain(a, b, 150, 13, TOP, Math.round(150 / 24), drapeM, { seed: (a * 7) | 0 }));
   }
   setCurtains('sheers');
 
@@ -344,12 +362,13 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     const y = 168; g.position.y += y - (H - g.userData.h);           // the model hangs 95 cm: raised, its rod runs on into the ceiling
     const bulb = mesh(new THREE.SphereGeometry(4, 24, 16), glow, DT, 0, y + 4, 0); bulb.castShadow = false;
     const light = new THREE.PointLight('#ffd4a0', 0, 5, 2); light.position.set(0, y - 2, 0); DT.add(light);
-    lamps.push({ light, mats: [glow], power: 3 });
+    const meshes = [bulb]; g.traverse(o => { if (o.isMesh) meshes.push(o); });
+    lamps.push({ name: 'dining', on: false, meshes, set(v) { this.on = v; light.intensity = v ? 3 : 0; glow.emissiveIntensity = v ? 6 : 0; } });   // click it, or Lamps on
   }));
   await Promise.all(decor);
 
   // lamps on or off; the light is in candela per the renderer's metres, the group being in cm
-  const setLamps = on => { for (const l of lamps) { l.light.intensity = on ? l.power : 0; for (const m of l.mats) m.emissiveIntensity = on ? (m === glow ? 6 : .5) : 0; } };
+  const setLamps = on => { for (const l of lamps) l.set(on); };
   setLamps(false);
 
   // ---------- on the floor, for walking (plan cm): polygons ----------
@@ -372,5 +391,5 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     foot = [k.out.map(([x, z]) => inF(SFd, x, z)), circle(k.side, 27), ...fixed]; return foot;
   }
   setSofa('gala3');
-  return { root, get foot() { return foot; }, setLamps, setSofa, setCurtains };
+  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC };
 }
