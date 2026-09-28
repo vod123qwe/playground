@@ -195,8 +195,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=3';
-import { buildLiving } from './living.js?v=7';
+import { buildKitchen } from './kitchen.js?v=4';
+import { buildLiving } from './living.js?v=8';
 import { buildHall } from './hall.js?v=1';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial } from 'three-gpu-pathtracer';
@@ -223,7 +223,7 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
-const S = { sofa: 'gala', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+const S = { sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -259,6 +259,7 @@ function placeSun() {                                             // the sun com
 const camera = new THREE.PerspectiveCamera(40, 1, .05, 200);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = .08; controls.maxPolarAngle = 1.35; controls.minDistance = 4; controls.maxDistance = 40;
+const OV_Y = 2.55 + .3;                                             // the overview camera stays above the tops of the walls (m)
 controls.target.set(0, 0, 0);
 camera.position.set(9.5, 17.5, 15);
 
@@ -303,6 +304,36 @@ function flat(outer, holes, y, m) {
 const world = new THREE.Group(); scene.add(world);
 const wallsG = new THREE.Group(), capsG = new THREE.Group(), glassG = [], labelsAt = [];
 world.add(wallsG, capsG);
+// ---------- the cutaway (overview): as you come in close, the walls on your side of the middle of the view come down to 20 % of their
+// height, with everything in them (frames, glass, lintels, the black tops); the cut shows dark, like the plan. Furniture stays whole.
+// A fragment above cutH on the camera's side (dot > cutO along cutD from cutT) is dropped; a wall seen from inside shows the fill.
+const CUT = { cutH: { value: 1e3 }, cutT: { value: new THREE.Vector2() }, cutD: { value: new THREE.Vector2(1, 0) }, cutO: { value: 0 }, cutFill: { value: new THREE.Color('#1b1c20') } };
+function cutaway(m, fill = false) {
+  if (m.userData.cutaway) return; m.userData.cutaway = true;
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (sh, r) => {
+    if (prev) prev.call(m, sh, r);
+    Object.assign(sh.uniforms, CUT);
+    sh.vertexShader = `varying vec3 vCutW;
+${sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+  vCutW = (modelMatrix * vec4(transformed, 1.)).xyz;`)}`;
+    sh.fragmentShader = `uniform float cutH, cutO; uniform vec2 cutT, cutD; uniform vec3 cutFill; varying vec3 vCutW;
+${sh.fragmentShader.replace('void main() {', `void main() {
+  if (vCutW.y > cutH && dot(vCutW.xz - cutT, cutD) > cutO) discard;`)}`;
+    if (fill) sh.fragmentShader = sh.fragmentShader.replace(/}\s*$/, `  if (!gl_FrontFacing) gl_FragColor = vec4(cutFill, 1.);
+}`);
+  };
+  const key = m.customProgramCacheKey?.bind(m); m.customProgramCacheKey = () => (key ? key() : '') + '|cut' + (fill ? 1 : 0);
+  if (fill) m.side = THREE.DoubleSide;
+  m.needsUpdate = true;
+}
+const cutDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, clippingPlanes: null }); cutaway(cutDepth);   // the cut walls cast no shadow either
+let archDirty = true;
+function archCut() {                                                  // every material of the walls, caps, windows and doors
+  archDirty = false;
+  const roots = [wallsG, capsG, ...glazingG, ...world.children.filter(o => o.userData.arch)];
+  for (const r of roots) r.traverse(o => { if (!o.isMesh) return; for (const m of [].concat(o.material)) cutaway(m, m === mat.wall); if (r === wallsG) o.customDepthMaterial = cutDepth; });
+}
 
 // walls: thick (outer, structural) and thin (partitions), taken from the drawing
 const wallMeshes = [];
@@ -489,7 +520,7 @@ for (const o of A.openings) {
   const dir = [d.to[0] - d.hinge[0], d.to[1] - d.hinge[1]], w = Math.hypot(...dir); dir[0] /= w; dir[1] /= w;
   const th = Math.atan2(-dir[1], dir[0]), lz = [-dir[1], dir[0]], sg = Math.sign(lz[0] * d.side[0] + lz[1] * d.side[1]) || 1;   // +local z is the opening side when sg = 1
   const half = d.half, hid = d.hidden, head = o.head;
-  const frame = new THREE.Group(); frame.position.set(wx(d.hinge[0]), 0, wz(d.hinge[1])); frame.rotation.y = th; world.add(frame);
+  const frame = new THREE.Group(); frame.position.set(wx(d.hinge[0]), 0, wz(d.hinge[1])); frame.rotation.y = th; frame.userData.arch = true; world.add(frame);
   const jambW = hid ? 0 : 2.5, lw = w - 2 * jambW - (hid ? .6 : .6), lt = d.front ? 6 : 4, lh = hid ? head - 1.3 : head - 3 - 1.3;
   if (!hid) {                                                      // the frame: jambs lining the wall, a head, architraves on both faces
     box(jambW, head, 2 * half + 1, mat.jamb, jambW / 2, head / 2, 0, frame); box(jambW, head, 2 * half + 1, mat.jamb, w - jambW / 2, head / 2, 0, frame);
@@ -518,6 +549,7 @@ function rebuildGlazing() {                                         // after a c
   sashes.length = 0;
   for (const o of A.openings) if (o.glazed) buildGlazing(o);
   for (const sh of sashes) { const w = was.get(sh.o.name + '|' + sh.ph.map(Math.round).join(',')); if (w) [sh.f, sh.to] = w; doors.push(sh); }
+  archDirty = true;
 }
 
 // ---------- the paint: every wall face that looks into the flat takes the colour; the facade stays white ----------
@@ -890,10 +922,10 @@ const ctl = {};
   kn.textContent = `Concept M48 on the layout A.04. Run of 390 cm: fridge 60 · sink 60 · dishwasher 80 · induction 80 · cargo 50 · oven and microwave 60; worktop at 90 cm, uppers from 145 cm to the ceiling; island 180 × 80 with a 25 cm overhang and three counter stools (seat 65 cm). The aisle is ${AISLE0} cm as drawn (between the worktops); 100–120 cm is the usual advice.`;
   g.appendChild(kn);
   g = LabUI.group(panel, 'Living room', { key: 'lab.aw.group.living' });
-  ctl.sofa = LabUI.seg(g, { label: 'Sofa', options: [['gala', 'Gala 300 (Kave)'], ['a04', 'As A.04, 225']], value: S.sofa, onChange: v => { S.sofa = v; applySofa(); } });
+  ctl.sofa = LabUI.seg(g, { label: 'Sofa', options: [['gala3', 'Gala 210'], ['gala', 'Gala 300 + chaise'], ['a04', 'As A.04']], value: S.sofa, onChange: v => { S.sofa = v; applySofa(); } });
   ctl.curtains = LabUI.seg(g, { label: 'Curtains', options: [['open', 'Open'], ['sheers', 'Sheers'], ['closed', 'Closed']], value: S.curtains, onChange: v => { S.curtains = v; LIV?.setCurtains(v); lensList = null; } });
   const ln = document.createElement('p'); ln.className = 'note';
-  ln.textContent = 'Gala: Kave Home, 4-seater with the right chaise, 300 × 105 cm, the chaise 193 deep, seat 42, back 87, in a fine beige chenille (drawn here, not a scan). Where A.04 puts the sofa it reaches the dining chair next to it (about 3 cm), stands in front of the whole 90 cm balcony door and leaves about 45 cm to the TV console. Curtains: sheers and linen drapes on two tracks under a ceiling pelmet.';
+  ln.textContent = 'Kave Home Gala in a fine beige chenille (drawn here, not a scan): seat 42, back 87, 105 deep. The 3-seater, 210 cm, fits where A.04 has the sofa: about 1 m to the dining chairs, its arm 60 cm off the window wall. The 4-seater with the right chaise, 300 × 193, reaches the dining chair next to it (about 3 cm), stands in front of the whole 90 cm balcony door and leaves about 45 cm to the TV console. Curtains: sheers and linen drapes on two tracks under a ceiling pelmet.';
   g.appendChild(ln);
   g = LabUI.group(panel, 'Windows', { key: 'lab.aw.group.windows' });
   ctl.fix = LabUI.seg(g, { label: 'Fixed panes', options: [['frame', 'In the frame'], ['sash', 'In a fixed sash']], value: S.fix, onChange: v => { S.fix = v; rebuildGlazing(); } });
@@ -919,7 +951,7 @@ const ctl = {};
   g.appendChild(dn);
   g = LabUI.group(panel, 'Light', { key: 'lab.aw.group.light' });
   ctl.sun = LabUI.slider(g, { label: 'Sun direction', min: -90, max: 90, step: 1, unit: '°', value: S.sun, def: DEF.sun, onInput: v => { S.sun = v; placeSun(); } });
-  ctl.lamps = LabUI.check(g, { label: 'Lamps on', value: S.lamps, onChange: v => { S.lamps = v; LIV?.setLamps(v); } });
+  ctl.lamps = LabUI.check(g, { label: 'Lamps on', value: S.lamps, onChange: v => { S.lamps = v; LIV?.setLamps(v); KIT?.setLamps?.(v); } });
   ctl.portal = LabUI.slider(g, { label: 'Window light', min: 0, max: 10, step: .1, value: S.portal, def: DEF.portal, onInput: v => { S.portal = v; for (const l of portals) l.intensity = v; } });
   {
     ctl.bounces = LabUI.slider(g, { label: 'Light bounces', min: 2, max: 8, step: 1, value: S.bounces, def: DEF.bounces, onInput: v => { S.bounces = v; ptScene(); } });
@@ -1258,7 +1290,20 @@ function frame(now) {
     if (k === 1) { tween = null; if (mode === 'over') { controls.target.copy(overPose.target); controls.enabled = true; controls.update(); } }
   } else if (mode === 'walk') {
     stepWalk(dt); stepLens(dt); const e = eyePose(); camera.position.copy(e.pos); camera.quaternion.copy(e.q);
-  } else { panOver(dt); controls.update(); }
+  } else {                                                          // the overview: no lower than the tops of the walls
+    panOver(dt);
+    const up = OV_Y - controls.target.y, dist = camera.position.distanceTo(controls.target);
+    controls.minDistance = up; controls.maxPolarAngle = Math.min(1.35, Math.acos(Math.min(1, up / Math.max(dist, up))));
+    controls.update();
+  }
+  if (archDirty) archCut();
+  { // the cutaway comes in between 7 m and 3.8 m up; in the walk (and on the way to it) the walls stand whole
+    const k = mode === 'over' ? THREE.MathUtils.smoothstep(camera.position.y, 3.8, 7) : 1;
+    CUT.cutH.value = k >= .999 ? 1e3 : THREE.MathUtils.lerp(.2 * H * M, H * M + .3, k);
+    const dx = camera.position.x - controls.target.x, dz = camera.position.z - controls.target.z, l = Math.hypot(dx, dz);
+    CUT.cutT.value.set(controls.target.x, controls.target.z);
+    if (l > .4) { CUT.cutD.value.set(dx / l, dz / l); CUT.cutO.value = -.3; } else { CUT.cutO.value = -1e5; }   // straight down: every wall comes down
+  }
   for (const dr of doors) {
     if (dr.f !== dr.to) { const k = reduce ? 1 : Math.min(1, dt * 2.6); dr.f += Math.sign(dr.to - dr.f) * Math.min(Math.abs(dr.to - dr.f), k * (.35 + Math.abs(dr.to - dr.f))); if (Math.abs(dr.to - dr.f) < .002) dr.f = dr.to; }
     const ez = THREE.MathUtils.smootherstep(dr.f, 0, 1);
@@ -1316,7 +1361,7 @@ const kitchenReady = floorsReady.then(async () => {
   const K = A.kitchen; if (!K) return;
   KIT = await buildKitchen({ THREE, K, H, clip, renderer });
   const g = KIT.root; g.scale.setScalar(M); g.position.set(wx(K.a[0]), 0, wz(K.a[1])); g.rotation.y = Math.atan2(-K.d[1], K.d[0]); world.add(g);
-  kitchenFoot = KIT.foot; lensList = null; ptScene(); unstick();
+  kitchenFoot = KIT.foot; KIT.setLamps(S.lamps); lensList = null; ptScene(); unstick();
   if (S.aisle !== AISLE0) setAisle(S.aisle);
 }).catch(err => console.warn('kitchen', err));
 // the entrance: the PAX wardrobe in the tiled strip, where A.04 draws it (plan centimetres)
@@ -1336,7 +1381,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

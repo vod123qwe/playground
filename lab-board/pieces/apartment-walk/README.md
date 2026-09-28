@@ -45,7 +45,8 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 
 ## Salon (układ A.04)
 
-- **Sofa: Kave Home Gala** 4-osobowa z szezlongiem prawym (domyślnie) albo ta z A.04 (panel, Living room → Sofa).
+- **Sofa: Kave Home Gala 3-osobowa 210 × 105** (domyślnie), Gala 4-osobowa z szezlongiem albo ta z A.04 (panel, Living room → Sofa).
+  - **Gala 210:** dwa siedziska po 90, dwie poduszki oparcia; stoi tam, gdzie sofa w A.04, prawy podłokietnik 60 cm od ściany okiennej, ok. 1 m do krzeseł przy stole. Mieści się bez kolizji.
   - **Gala:** 300 × 105 cm, szezlong 105 × 193, siedzisko 42 (głębokość 70, szerokość 90), oparcie 87, podłokietniki proste 15 × 62, nóżki 6 cm schowane pod ciemnym cokołem; trzy luźne poduszki oparcia i poduszka dodatkowa w tej samej tkaninie. Wymiary z karty produktu (wersja 300 cm i 3-osobowa 210 × 105 dla głębokości). Szezlong „prawy” jak na zdjęciu produktu, patrząc od frontu: przy oknach, tam gdzie w A.04; sofa rośnie o 75 cm w stronę stołu.
   - **Szenil** (Sunel beżowy): rysowany proceduralnie, nie skan producenta: rzędy miękkiej przędzy co 1,6 mm z pogrubieniami, splot płócienny pod spodem, puch włókien, lekki melanż, aksamitny połysk (sheen). 1024 px na 12 cm, bez szwów.
   - **Co to zmienia w układzie A.04:** lewy podłokietnik dochodzi do krzesła przy stole (ok. 3 cm), szezlong stoi przed całymi drzwiami balkonowymi 90 cm (ok. 45 cm od ściany; w A.04 przed połową), do szafki RTV zostaje ok. 45 cm. Stolik boczny przesuwa się przed siedzisko, roślina stoi przy stałym skrzydle potrójnych drzwi.
@@ -55,12 +56,15 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Stół okrągły** Ø 100, wys. 75, dąb, ryflowana dębowa noga na okrągłej stopie; **4 krzesła** kubełkowe w bouclé na dębowych nogach, na przekątnych jak w A.04, siedzisko ok. 48.
 - **Dywan** jutowy 240 × 170 spod sofy w stronę TV; **roślina** w terakocie przy oknie obok szezlongu; **lampa wisząca** nad stołem, klosz 93 cm nad blatem.
 - **Zasłony i firanki** wzdłuż okien salonu (A.04 rysuje je zygzakiem): firanki z woalu na tylnej szynie, lniane zasłony na przedniej, obie schowane pod maskownicą przy suficie (21 cm głębokości, 12 cm w dół). Fałda falowa, każda fałda trochę inna, rozchylenie ku dołowi. Panel, Living room → Curtains: **Open** (wszystko zebrane przy kuchni, na filarze między drzwiami i na końcu), **Sheers** (firanki zaciągnięte, domyślnie), **Closed**. Uwaga: otwarte skrzydło drzwi balkonowych przechodzi przez zaciągniętą firankę.
-- **Lamps on** (panel, Light) zapala lampę nad stołem; domyślnie wyłączona (dzień).
+- **Lampy nad wyspą:** trzy kule z mlecznego szkła Ø 22 na czarnych przewodach, co 60 cm, 75 cm nad blatem; przesuwają się z wyspą (suwak przejścia).
+- **Lamps on** (panel, Light) zapala lampę nad stołem i lampy nad wyspą; domyślnie wyłączone (dzień).
 - Meble blokują chodzenie (obrysy w cm, jak kuchnia). Kto utknie (róg, mebel, który pojawił się pod nogami), może zawsze wyjść: w zaklinowaniu dozwolony jest każdy krok, który nie wchodzi głębiej; kliknięcie w minimapę albo wejście do pokoju stawia w najbliższym wolnym miejscu.
 
 ## Widok z góry
 
 - Obracanie: przeciągnij. Przesuwanie: **W A S D** albo strzałki (z Shift szybciej), albo **Space** i przeciągnij.
+- Przybliżanie kończy się na wysokości czubków ścian (kamera nie schodzi niżej niż 2,85 m).
+- **Ściany w dół** (jak w The Sims): od ok. 7 m w dół ściany po stronie kamery, razem z oknami, drzwiami i nadprożami, płynnie opadają do 20 % wysokości (51 cm); przekrój jest ciemny jak na rzucie, ściany za środkiem widoku stoją całe, meble zostają. Z góry, pionowo w dół, schodzą wszystkie. W trybie spaceru ściany są zawsze pełne. Obcięte ściany nie rzucają cienia.
 
 ## Przedpokój
 
