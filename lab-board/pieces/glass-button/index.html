@@ -434,7 +434,7 @@ const DEF = {
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, inkAuto: true, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
-  comp: 'dropdown', look: '', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segStyle: 'float', segPrint: 'top', segTint: '#34c759', segTintK: 0,
+  comp: 'dropdown', look: '', segSpeed: 1, segBounce: .36, segStretch: 1, segLiftK: 1, segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segStyle: 'float', segPrint: 'top', segTint: '#34c759', segTintK: 0,
   sound: 'glass', release: true, volume: .5, haptic: true, jelly: 1, smooth: true, bloom: true, bloomK: .6, dither: true,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -509,11 +509,15 @@ const SEG_BASE = { comp: 'segmented', segStyle: 'float', segPrint: 'top', corner
 const SIG_GLASS = {}; for (const k of ['corner', 'wall', 'under', 'profile', 'edge', 'lift', 'ior', 'disp']) if (k in SIGNATURE) SIG_GLASS[k] = SIGNATURE[k];
 const SEG_SUNK = Object.assign({}, SEG_BASE, { corner: 1 }, SIG_GLASS,   // Signature's glass; its dish (-0.97) a little deeper
   { segPrint: 'top', segDish: 1.1, segInset: .24, segThick: 1, segGap: .03, segDome: .45, frost: .3, key: 1.6 });
+// Jarek's setup (tuned on the dark one); Light and Glow are the same glass on a light page
+const SEG_J = { comp: 'segmented', wall: .5, under: .3, profile: 3, edge: .3, lift: .57, ior: 1.8, disp: .08, frost: 5.4, follow: false, lightAng: 311,
+  key: 2.4, env: .98, rim: 2.2, shadow: .6, scale: 1.4, h: 3.6, weight: 560, gridDensity: 1.3,
+  ambOn: true, segDish: .62, segThick: .42, segGap: 0, segInset: .24, segDome: .22, segPrint: 'under', sound: 'bubble', volume: .16 };
 const SEG_LOOKS = {
-  Light: SEG_SUNK,
-  Dark: Object.assign({}, SEG_SUNK, { bg: 'color', bgColor: '#000000', grid: .02, key: 2.4, env: 1.7, rim: 2.2 }),
+  Light: Object.assign({}, SEG_J, { bg: 'grid', bgColor: '#bdbecc', grid: .2 }),
+  Dark: Object.assign({}, SEG_J, { ink: '#f2f3f5', bg: 'color', bgColor: '#121212', grid: .02 }),
   Tube: Object.assign({}, SEG_BASE, { segStyle: 'inner', dome: 1, wall: .25, under: 1, profile: 2, edge: .4, lift: .55, ior: 1.52, disp: .1, frost: .2, rim: 1.8, env: 1.4, key: 1.6, segInset: .16 }),
-  Glow: Object.assign({}, SEG_SUNK, { glowOn: true, glow: 'iris', glowBlend: 'auto', glowK: 1.1, glowSize: 1.3, glowSpeed: .8, grid: .12 }),
+  Glow: Object.assign({}, SEG_J, { bg: 'grid', bgColor: '#bdbecc', grid: .12, glowOn: true, glow: 'iris', glowBlend: 'auto', glowK: 1.1, glowSize: 1.3, glowSpeed: .8 }),
 };
 const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Clouds: CLOUDS, Dish: DISH };   // full looks; the rest of the presets are shapes
 const PRESETS = {
@@ -552,8 +556,14 @@ const CTRL = [
   { k: 'profile', l: 'Profile', min: 1, max: 6, s: .05 },
   { k: 'edge', l: 'Edge round', min: 0, max: .4, s: .01 },
   { k: 'lift', l: 'Lift', min: 0, max: .6, s: .01 },
-  { k: 'pressGrow', l: 'Press grow', min: 0, max: .25, s: .005, show: DROP },
-  { k: 'jelly', l: 'Jelly (squash and wobble)', min: 0, max: 2, s: .01, show: DROP },
+
+  { g: 'Animation' },
+  { k: 'pressGrow', l: 'Press grow', min: 0, max: .25, s: .005 },
+  { k: 'jelly', l: 'Jelly (squash and wobble)', min: 0, max: 2, s: .01 },
+  { k: 'segSpeed', l: 'Glide speed', min: .3, max: 2.5, s: .01, show: SEGON },
+  { k: 'segBounce', l: 'Bounce', min: 0, max: 1, s: .01, show: SEGON },
+  { k: 'segStretch', l: 'Stretch while it glides', min: 0, max: 2.5, s: .01, show: SEGON },
+  { k: 'segLiftK', l: 'Lift when held', min: 0, max: 2.5, s: .01, show: SEGON },
   { g: 'Glass' },
   { k: 'ior', l: 'Refraction (IOR)', min: 1, max: 2.4, s: .01 },
   { k: 'disp', l: 'Dispersion', min: 0, max: .15, s: .002 },
@@ -1147,6 +1157,7 @@ function segSet(i, snd) {
   segEl.addEventListener('pointerdown', e => {
     if (e.button !== 0 || e.altKey || touches.size > 1) return;
     s.segDrag = { id: e.pointerId, x0: e.clientX, p0: s.segX, moved: false, lx: e.clientX, lt: performance.now(), v: 0 };
+    s.tpress = 1;                                         // the track swells and wobbles on press, like the dropdown's button
     try { segEl.setPointerCapture(e.pointerId); } catch (err) {}
   });
   segEl.addEventListener('pointermove', e => {
@@ -2223,11 +2234,11 @@ function frame(t) {
   if (reduce) { s.press = s.tpress; s.pressV = 0; } else { s.pressV += (240 * (s.tpress - s.press) - 15 * s.pressV) * dt; s.press += s.pressV * dt; }   // springy
   s.jiggle *= Math.pow(0.9, dt * 60);
   if (!s.segDrag || !s.segDrag.moved) {                // the thumb glides to its tab with a little overshoot
-    if (reduce) { s.segX = s.segT; s.segV = 0; } else { s.segV += (300 * (s.segT - s.segX) - 24 * s.segV) * dt; s.segX += s.segV * dt; }
+    if (reduce) { s.segX = s.segT; s.segV = 0; } else { const k = 300 * P.segSpeed * P.segSpeed, c = 2 * Math.sqrt(k) * (1 - 0.88 * P.segBounce); s.segV += (k * (s.segT - s.segX) - c * s.segV) * dt; s.segX += s.segV * dt; }
   }
   s.segLift += ((s.segDrag ? 1 : 0) - s.segLift) * (1 - Math.pow(1 - .2, dt * 60));
   { const ft = s.segDrag && s.segDrag.moved ? s.segX : s.segT;   // the colour follows the lens, a beat late
-    if (reduce) { s.segF = ft; s.segFV = 0; } else { s.segFV += (150 * (ft - s.segF) - 17 * s.segFV) * dt; s.segF += s.segFV * dt; } }
+    if (reduce) { s.segF = ft; s.segFV = 0; } else { const k = 150 * P.segSpeed * P.segSpeed, c = 2 * Math.sqrt(k) * (1 - 0.88 * P.segBounce); s.segFV += (k * (ft - s.segF) - c * s.segFV) * dt; s.segF += s.segFV * dt; } }
   if (reduce) { s.wob = 0; s.wobV = 0; } else { s.wobV += (-420 * s.wob - 10 * s.wobV + s.pressV * 1.5 * P.jelly) * dt; s.wob += s.wobV * dt; }
   s.yaw += (s.tyaw - s.yaw) * ko; s.pitch += (s.tpitch - s.pitch) * ko;
   if (reduce) { s.menuT = s.open ? 1 : 0; s.menuV = 0; }
@@ -2286,7 +2297,7 @@ function frame(t) {
     const inset = P.segInset * hh, hin = P.segStyle === 'inner' ? inset + hh * 0.42 : inset;
     const ihw = Math.max(hw - hin, 4), thw0 = ihw / 2, thh0 = Math.max(hh - inset, 4);
     geo.segThw = thw0 / g;
-    const st = Math.min(Math.abs(s.segV) * 0.05, 0.28), lf = s.segLift;
+    const st = Math.min(Math.abs(s.segV) * 0.05 * P.segStretch, 0.28 * Math.max(P.segStretch, 1)), lf = s.segLift * P.segLiftK;
     const thw = thw0 * (1 + st) * (1 + 0.04 * lf), thh = thh0 * (1 - st * 0.3) * (1 + 0.04 * lf);
     const tx = geo.cx - ihw + thw0 + s.segX * 2 * thw0;
     const floorZ = (P.lift + P.under + wall + dome) * hh, tz = Math.max(2, P.segThick * thh0 * 0.5);
@@ -2303,7 +2314,7 @@ function frame(t) {
     gl.uniform4f(uni('uSeg2'), zc, tz, Math.min(tz * 0.95, thh * 0.95), inner ? 0 : 1);
     gl.uniform1f(uni('uSegDome'), P.segDome);
     // the colour under the lens: a smaller pill, so a clear band of glass rings it; it stretches as it trails
-    const fs = Math.min(Math.abs(s.segFV) * 0.07, 0.35), band = 0.32;
+    const fs = Math.min(Math.abs(s.segFV) * 0.07 * P.segStretch, 0.35 * Math.max(P.segStretch, 1)), band = 0.32;
     const fhw = thw0 * (1 - band * thh0 / thw0) * (1 + fs), fhh = thh0 * (1 - band) * (1 - fs * 0.25);
     gl.uniform4f(uni('uSegFill'), geo.cx - ihw + thw0 + s.segF * 2 * thw0, geo.cy, fhw, fhh);
     if (!inner) gl.uniform4f(uni('uSegFill2'), tcol[0], tcol[1], tcol[2], P.segFill);
