@@ -197,6 +197,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=3';
 import { buildLiving } from './living.js?v=3';
+import { buildHall } from './hall.js?v=1';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -607,6 +608,21 @@ let livingFoot = [];                                               // the living
 const blockedByKitchen = (x, z) => kitchenFoot.some(ps => inPolyK(x, z, ps)) || livingFoot.some(ps => inPolyK(x, z, ps));
 const inPolyK = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
 const clear = (x, z, skip) => { if (!free(x, z) || blockedByKitchen(x, z)) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (blockedByKitchen(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } for (const dr of doors) if (!(skip && skip.has(dr)) && segDist(x, z, dr) < R + 2) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (!free(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } return true; };
+// how deep a body at (x, z) is caught in things: blocked points on two rings and the centre, the centre weighing most (0 = clear)
+const stuck = (x, z, skip) => {
+  let n = 0;
+  for (const [rr, w, m] of [[0, 4, 1], [R * .5, 2, 16], [R, 1, 16]]) for (let k = 0; k < m; k++) {
+    const a = k / m * Math.PI * 2, px = x + Math.cos(a) * rr, pz = z + Math.sin(a) * rr; if (!free(px, pz) || blockedByKitchen(px, pz)) n += w;
+  }
+  for (const dr of doors) if (!(skip && skip.has(dr)) && segDist(x, z, dr) < R + 2) n += 1;
+  return n;
+};
+const nearestClear = (x, z) => {                                   // the closest spot where the body fits, within 1.2 m
+  if (clear(x, z)) return [x, z];
+  for (let r = 4; r <= 120; r += 4) for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (clear(px, pz)) return [px, pz]; }
+  return null;
+};
+const unstick = () => { const c = nearestClear(P.x, P.z); if (c) { P.x = c[0]; P.z = c[1]; P.vx = P.vz = 0; } };
 
 // ---------- rooms ----------
 const inPoly = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
@@ -632,7 +648,7 @@ function setMode(m, at) {
   if (m === mode && !at) return;
   const from = { pos: camera.position.clone(), q: camera.quaternion.clone(), fov: camera.fov, cut: S.cutNow ?? S.cut };
   if (m === 'walk') {
-    if (at) { P.x = at[0]; P.z = at[1]; }
+    if (at) { P.x = at[0]; P.z = at[1]; unstick(); }
     if (mode === 'over') { overPose.pos.copy(camera.position); overPose.target.copy(controls.target); }
     controls.enabled = false;
   }
@@ -666,7 +682,11 @@ function stepWalk(dt) {
   if (clear(nx, nz, skip)) { P.x = nx; P.z = nz; }
   else if (clear(nx, P.z, skip)) { P.x = nx; P.vz *= .5; }
   else if (clear(P.x, nz, skip)) { P.z = nz; P.vx *= .5; }
-  else { P.vx = P.vz = 0; }
+  else {                                                            // caught in something (a corner, furniture that came under you):
+    const s0 = stuck(P.x, P.z, skip);                                // any step that does not go deeper is allowed, so you can always back out
+    const c = s0 > 0 && [[nx, nz], [nx, P.z], [P.x, nz]].find(([x, z]) => free(x, z) && stuck(x, z, skip) <= s0);
+    if (c) { P.x = c[0]; P.z = c[1]; } else P.vx = P.vz = 0;
+  }
   const tl = Math.hypot(tx, tz);                                   // walking into a closed door opens it
   if (tl > 1 || Math.hypot(P.vx, P.vz) > 1) moved();
   if (tl > 1) { const qx = P.x + tx / tl * 14, qz = P.z + tz / tl * 14, hit = doors.find(dr => (!dr.kind || dr.kind === 'turn') && dr.to < .5 && segDist(qx, qz, dr) < R + 2); if (hit) hit.to = 1; }
@@ -815,7 +835,7 @@ function drawMini() {
 mini.addEventListener('click', e => {
   const r = mini.getBoundingClientRect(), { s, ox, oz } = MF;
   const x = ((e.clientX - r.left) / r.width * mini.width - ox) / s, z = ((e.clientY - r.top) / r.height * mini.height - oz) / s;
-  if (clear(x, z)) { P.x = x; P.z = z; P.vx = P.vz = 0; }
+  const c = nearestClear(x, z); if (c) { P.x = c[0]; P.z = c[1]; P.vx = P.vz = 0; }   // on a sofa or a wall: the nearest free spot
 });
 
 // ---------- chrome ----------
@@ -1276,21 +1296,24 @@ const kitchenReady = floorsReady.then(async () => {
   const K = A.kitchen; if (!K) return;
   KIT = await buildKitchen({ THREE, K, H, clip, renderer });
   const g = KIT.root; g.scale.setScalar(M); g.position.set(wx(K.a[0]), 0, wz(K.a[1])); g.rotation.y = Math.atan2(-K.d[1], K.d[0]); world.add(g);
-  kitchenFoot = KIT.foot; lensList = null; ptScene();
+  kitchenFoot = KIT.foot; lensList = null; ptScene(); unstick();
   if (S.aisle !== AISLE0) setAisle(S.aisle);
 }).catch(err => console.warn('kitchen', err));
+// the entrance: the PAX wardrobe in the tiled strip, where A.04 draws it (plan centimetres)
+const HALL = buildHall({ THREE, clip }); HALL.root.scale.setScalar(M); HALL.root.position.set(wx(0), 0, wz(0)); world.add(HALL.root);
+livingFoot = [...HALL.foot];
 // the living room on A.04: the sofa, the tables, the TV console, the rug, lamps and a few things (plan centimetres)
 let LIV = null;
 const livingReady = kitchenReady.then(async () => {
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
-  livingFoot = LIV.foot; LIV.setLamps(S.lamps); lensList = null; ptScene();
+  livingFoot = [...HALL.foot, ...LIV.foot]; LIV.setLamps(S.lamps); lensList = null; ptScene(); unstick();   // (if you stood where the sofa now is)
 }).catch(err => { console.warn('living', err); LIV = LIV || false; });   // (false: failed, the tracer goes on without it)
 function setAisle(v) {                                              // move the island square to the run
   S.aisle = v; if (!KIT) return;
-  const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null;
+  const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

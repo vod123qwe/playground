@@ -51,7 +51,11 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Stół okrągły** Ø 100, wys. 75, dąb, ryflowana dębowa noga na okrągłej stopie; **4 krzesła** kubełkowe w bouclé na dębowych nogach, na przekątnych jak w A.04, siedzisko ok. 48.
 - **Dywan** jutowy 240 × 170 spod sofy w stronę TV; **roślina** w terakocie przy oknie obok szezlongu; **lampa wisząca** nad stołem, klosz 93 cm nad blatem.
 - **Lamps on** (panel, Light) zapala lampę nad stołem; domyślnie wyłączona (dzień).
-- Meble blokują chodzenie (obrysy w cm, jak kuchnia).
+- Meble blokują chodzenie (obrysy w cm, jak kuchnia). Kto utknie (róg, mebel, który pojawił się pod nogami), może zawsze wyjść: w zaklinowaniu dozwolony jest każdy krok, który nie wchodzi głębiej; kliknięcie w minimapę albo wejście do pokoju stawia w najbliższym wolnym miejscu.
+
+## Przedpokój
+
+- **Szafa IKEA PAX** tam, gdzie A.04 rysuje szafę z wieszakami: na pasie z płytkami wzdłuż ściany przy spiżarni, od ściany do ściany (ok. 154 cm). Korpusy 100 + 50, głębokość 58, wysokość 236,4, białe; trzy gładkie białe drzwi 49,5 × 229,4 (w stylu FORSAND), otwierane na wcisk, bez uchwytów; maskownica ok. 4 cm przy ścianie. Drzwi otwierają się w stronę korytarza, jak strefa otwierania w A.04.
 
 ## Podłogi (wg układu funkcjonalnego, arkusz A.04)
 
@@ -87,6 +91,7 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - `floors.js` · jodełka i płytki rysowane w canvasie (bezszwowe mapy: kolor, normalne, szorstkość)
 - `kitchen.js` · kuchnia (w cm, na ścianie kuchennej)
 - `living.js` · salon (w cm planu)
+- `hall.js` · szafa PAX w przedpokoju (w cm planu)
 - `assets/oak_*.jpg` · Oak Veneer 01, Poly Haven (CC0)
 - `assets/tex/teddy_*.jpg` · Curly Teddy Natural, Poly Haven (CC0)
 - `assets/tex/linen_*`, `waffle_*`, `hessian_*` · Rough Linen, Waffle Pique Cotton, Hessian 380, Poly Haven (CC0)
