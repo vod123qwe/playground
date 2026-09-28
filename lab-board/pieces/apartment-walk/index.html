@@ -196,6 +196,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=3';
+import { buildLiving } from './living.js?v=3';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -221,7 +222,7 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
-const S = { q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+const S = { lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -602,7 +603,8 @@ const grid = (() => {
 const free = (x, z) => { const i = Math.floor((x - gx0) / GR), j = Math.floor((z - gz0) / GR); return i >= 0 && j >= 0 && i < gw && j < gh && grid[j * gw + i] === 1; };
 const R = 22;                                                      // the body, a 22 cm circle
 let kitchenFoot = [];                                              // the kitchen run and the island, as plan polygons
-const blockedByKitchen = (x, z) => kitchenFoot.some(ps => inPolyK(x, z, ps));
+let livingFoot = [];                                               // the living room's furniture, as plan polygons
+const blockedByKitchen = (x, z) => kitchenFoot.some(ps => inPolyK(x, z, ps)) || livingFoot.some(ps => inPolyK(x, z, ps));
 const inPolyK = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
 const clear = (x, z, skip) => { if (!free(x, z) || blockedByKitchen(x, z)) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (blockedByKitchen(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } for (const dr of doors) if (!(skip && skip.has(dr)) && segDist(x, z, dr) < R + 2) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (!free(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } return true; };
 
@@ -877,6 +879,7 @@ const ctl = {};
   g.appendChild(dn);
   g = LabUI.group(panel, 'Light', { key: 'lab.aw.group.light' });
   ctl.sun = LabUI.slider(g, { label: 'Sun direction', min: -90, max: 90, step: 1, unit: '°', value: S.sun, def: DEF.sun, onInput: v => { S.sun = v; placeSun(); } });
+  ctl.lamps = LabUI.check(g, { label: 'Lamps on', value: S.lamps, onChange: v => { S.lamps = v; LIV?.setLamps(v); } });
   ctl.portal = LabUI.slider(g, { label: 'Window light', min: 0, max: 10, step: .1, value: S.portal, def: DEF.portal, onInput: v => { S.portal = v; for (const l of portals) l.intensity = v; } });
   {
     ctl.bounces = LabUI.slider(g, { label: 'Light bounces', min: 2, max: 8, step: 1, value: S.bounces, def: DEF.bounces, onInput: v => { S.bounces = v; ptScene(); } });
@@ -943,7 +946,7 @@ pt.renderToCanvasCallback = (target, r, quad) => {
 };
 let ptDirty = true, ptBuilding = false, ptFov = 0; const ptCam = new THREE.Matrix4();
 function ptScene() { ptDirty = true; }
-const ptReady = () => !!(A && hbMesh && KIT);                            // the floors and the kitchen first
+const ptReady = () => !!(A && hbMesh && KIT) && LIV !== null;                     // the floors, the kitchen and the living room first
 // the tracer gets its own flat copy of the scene: every mesh with a geometry of its own, already in world space, one material each
 // (a mesh with several materials is split by its groups). Handing it the live scene mixed materials up: it writes the material slot
 // onto the geometry, and geometries shared by several meshes, or groups on single-material meshes, then point at the wrong material.
@@ -1276,11 +1279,18 @@ const kitchenReady = floorsReady.then(async () => {
   kitchenFoot = KIT.foot; lensList = null; ptScene();
   if (S.aisle !== AISLE0) setAisle(S.aisle);
 }).catch(err => console.warn('kitchen', err));
+// the living room on A.04: the sofa, the tables, the TV console, the rug, lamps and a few things (plan centimetres)
+let LIV = null;
+const livingReady = kitchenReady.then(async () => {
+  LIV = await buildLiving({ THREE, H, clip, renderer });
+  const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
+  livingFoot = LIV.foot; LIV.setLamps(S.lamps); lensList = null; ptScene();
+}).catch(err => { console.warn('living', err); LIV = LIV || false; });   // (false: failed, the tracer goes on without it)
 function setAisle(v) {                                              // move the island square to the run
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null;
 }
-window.AW = { setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
