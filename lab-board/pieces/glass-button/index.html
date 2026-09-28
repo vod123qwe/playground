@@ -19,7 +19,15 @@
   }
   body.dark{background:linear-gradient(135deg, #2a2c31 0%, #1c1d21 50%, #111215 100%)}
   body.orbiting{cursor:grabbing}
-  body.space-pan, body.space-pan *{cursor:grab !important} body.space-drag, body.space-drag *{cursor:grabbing !important}
+  body.space-pan, body.space-pan *{cursor:none !important}
+  .hand{position:fixed; left:0; top:0; z-index:20; width:30px; height:30px; margin:-15px 0 0 -15px; pointer-events:none; opacity:0; will-change:transform, opacity;
+        transition:opacity .22s ease}
+  body.space-pan .hand{opacity:1}
+  .hand svg{width:100%; height:100%; overflow:visible}
+  .hand .halo{stroke:#fff; stroke-width:4.2} .hand .ink{stroke:#1b1c20; stroke-width:1.6}
+  .hand .h-open, .hand .h-grab{transition:opacity .18s ease, transform .24s cubic-bezier(.22,.61,.36,1); transform-origin:50% 60%}
+  .hand .h-grab{opacity:0; transform:scale(.9)}
+  body.space-drag .hand .h-open{opacity:0; transform:scale(1.06)} body.space-drag .hand .h-grab{opacity:1; transform:none}
   #gl{position:fixed; inset:0; width:100%; height:100%; display:block}
   .stage{position:fixed; inset:0; display:grid; place-items:center; transition:right .45s var(--ease), bottom .45s var(--ease)}
   .anchor{position:relative; font-size:calc(clamp(20px, 3.4vw, 36px) * var(--scale, 1))}
@@ -280,7 +288,14 @@
   .cbtn:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:2px}
   .cmenu{position:absolute; right:0; top:calc(100% + 8px); z-index:6; min-width:190px; margin:0; padding:6px; list-style:none; border-radius:18px; background:#fff;
          box-shadow:0 0 0 1px rgba(20,20,20,.08)}
-  .cmenu[hidden]{display:none}
+  .cmenu{opacity:0; visibility:hidden; transform:translateY(-6px) scale(.985); transform-origin:top right; pointer-events:none;
+         transition:opacity .34s cubic-bezier(.25,.1,.25,1), transform .42s cubic-bezier(.22,.61,.36,1), visibility 0s linear .42s}
+  .cmenu.open{opacity:1; visibility:visible; transform:none; pointer-events:auto;
+              transition:opacity .34s cubic-bezier(.25,.1,.25,1), transform .42s cubic-bezier(.22,.61,.36,1), visibility 0s}
+  .cmenu li{opacity:0; transform:translateY(-3px); transition:opacity .3s ease, transform .36s cubic-bezier(.22,.61,.36,1)}
+  .cmenu.open li{opacity:1; transform:none} .cmenu.open li:nth-child(2){transition-delay:.05s}
+  .cbtn svg{transition:transform .42s cubic-bezier(.22,.61,.36,1) !important}
+  @media (prefers-reduced-motion:reduce){ .cmenu, .cmenu li{transition:none} }
   .cmenu li{display:flex; align-items:center; justify-content:space-between; gap:14px; height:40px; padding:0 12px 0 14px; border-radius:12px; color:#1b1c20; cursor:pointer; outline:none}
   .cmenu li:hover, .cmenu li:focus-visible{background:rgba(20,20,20,.06)}
   .cmenu li svg{width:16px; height:16px; opacity:0} .cmenu li[aria-selected=true] svg{opacity:1}
@@ -385,7 +400,7 @@
     <button type="button" class="cbtn" id="comp-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="comp-list" aria-label="Component">
       <span class="ct"><small>Component</small><span id="comp-name">Dropdown</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     </button>
-    <ul class="cmenu" id="comp-list" role="listbox" aria-label="Component" hidden>
+    <ul class="cmenu" id="comp-list" role="listbox" aria-label="Component" aria-hidden="true">
       <li role="option" data-c="dropdown" aria-selected="true" tabindex="-1">Dropdown<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li>
       <li role="option" data-c="segmented" aria-selected="false" tabindex="-1">Segmented<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li>
     </ul>
@@ -402,6 +417,7 @@
 <aside class="panel" id="panel" aria-label="Customize the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
+<div class="hand" id="hand" aria-hidden="true"><svg viewBox="-2 -2 28 28" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="h-open"><g class="halo"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g><g class="ink"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></g><g class="h-grab"><g class="halo"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g><g class="ink"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g></g></svg></div>
 <div class="cmp" id="cmp" hidden><span class="cb">Before</span><span class="ca">After</span><i></i></div>
 <div class="bl"><div class="hints" role="note" aria-label="Click and hold the button. Hold the mouse wheel and drag to turn the view in 3D.">
   <span class="hint-i" title="Click and hold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 3v6.5M6.5 9.5h11"/><path d="M12 3.4a5.1 5.1 0 0 0-5.1 5.1v1h5.1z" fill="currentColor" stroke="none"/></svg></span>
@@ -815,6 +831,21 @@ window.addEventListener('wheel', e => {
     const z = Math.max(s.zoom, 0.01), dx = e.clientX - sp.x, dy = e.clientY - sp.y; sp.x = e.clientX; sp.y = e.clientY;
     s.tpanx = clampPan(s.tpanx - dx / z, W); s.tpany = clampPan(s.tpany - dy / z, H);   // the scene follows the hand
   }, true);
+  // the hand cursor: it follows the pointer, grabs while dragging and leans a touch into the motion
+  const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0, k: 0 };
+  window.addEventListener('pointermove', e => { hv.x = e.clientX; hv.y = e.clientY; }, { passive: true });
+  (function handLoop() {
+    requestAnimationFrame(handLoop);
+    if (!sp.held && hv.k < 0.001) return;
+    const vx = hv.x - hv.lx, vy = hv.y - hv.ly; hv.lx = hv.x; hv.ly = hv.y;
+    hv.vx += (vx - hv.vx) * 0.25; hv.vy += (vy - hv.vy) * 0.25;
+    const sp2 = Math.min(Math.hypot(hv.vx, hv.vy) / 30, 1);
+    hv.k += ((sp.held ? 1 : 0) - hv.k) * 0.2;
+    hv.r += (Math.max(-14, Math.min(14, hv.vx * 0.9)) - hv.r) * 0.2;                       // leans with the drag
+    const sq = sp.id !== null ? sp2 * 0.08 : sp2 * 0.03;                                   // and stretches a little along it
+    const ang = Math.atan2(hv.vy, hv.vx);
+    handEl.style.transform = `translate(${hv.x}px, ${hv.y}px) rotate(${hv.r}deg) rotate(${ang}rad) scale(${1 + sq}, ${1 - sq * 0.6}) rotate(${-ang}rad)`;
+  })();
   const end = e => { if (sp.id === e.pointerId) { sp.id = null; document.body.classList.remove('space-drag'); setTimeout(() => { sp.eat = false; }, 0); } };
   window.addEventListener('pointerup', end, true); window.addEventListener('pointercancel', end, true);
   window.addEventListener('click', e => { if (sp.eat) { sp.eat = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
@@ -1240,7 +1271,7 @@ function showComp() {
   compOpts.forEach(o => o.setAttribute('aria-selected', String(o.dataset.c === P.comp)));
 }
 function compOpen(on, focus) {
-  compList.hidden = !on; compBtn.setAttribute('aria-expanded', String(on));
+  compList.classList.toggle('open', on); compList.setAttribute('aria-hidden', String(!on)); compBtn.setAttribute('aria-expanded', String(on));
   if (on && focus) (compOpts.find(o => o.dataset.c === P.comp) || compOpts[0]).focus();
   if (!on && focus) compBtn.focus();
 }
@@ -1256,7 +1287,7 @@ function switchComp(c) {
   if (s.open) setMenu(false);
   useBg(P.bg); apply(); syncInputs(); save(); showVariant(); labelSig = ''; click(false, .6);
 }
-compBtn.addEventListener('click', () => compOpen(compList.hidden, false));
+compBtn.addEventListener('click', () => compOpen(!compList.classList.contains('open'), false));
 compBtn.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); compOpen(true, true); } });
 compOpts.forEach(o => o.addEventListener('click', () => { compOpen(false, false); switchComp(o.dataset.c); }));
 compList.addEventListener('keydown', e => {
@@ -1266,7 +1297,7 @@ compList.addEventListener('keydown', e => {
   else if (e.key === 'Escape') { e.preventDefault(); compOpen(false, true); }
   else if (e.key === 'Tab') compOpen(false, false);
 });
-document.addEventListener('pointerdown', e => { if (!compList.hidden && !compsEl.contains(e.target)) compOpen(false, false); });
+document.addEventListener('pointerdown', e => { if (compList.classList.contains('open') && !compsEl.contains(e.target)) compOpen(false, false); });
 const lookNow = () => { const L = curLooks(); return Object.keys(L).findIndex(n => Object.keys(L[n]).every(k => typeof L[n][k] === 'number' ? Math.abs(P[k] - L[n][k]) < 1e-6 : P[k] === L[n][k])); };
 function showVariant() { const i = lookNow(); document.getElementById('var-name').textContent = i >= 0 ? Object.keys(curLooks())[i] : 'Custom'; showComp(); }
 let lookIdx = -1;
