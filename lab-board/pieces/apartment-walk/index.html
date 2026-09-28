@@ -131,6 +131,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { herringbone, stoneTiles } from './floors.js';
 
 // ---------- the flat: walls, openings, balconies, rooms, all in centimetres (tools/extract_plan.py) ----------
 const A = await (await fetch('apartment.json')).json();
@@ -142,7 +143,7 @@ const wx = x => (x - CX) * M, wz = z => (z - CZ) * M;               // plan → 
 const px = x => x / M + CX, pz = z => z / M + CZ;                   // world → plan
 const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 
-const S = { cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+const S = { hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
 
 // ---------- renderer, scene, light ----------
@@ -302,6 +303,38 @@ for (const o of A.openings) {
 }
 // floor, ceiling, balconies, railings
 const floor = prism(A.floor.outer, A.floor.holes, -20, 0, mat.floor, false); world.add(floor);
+// ---------- the floor finishes (A.04): EGGER Herringbone EL2152 Dąb Casella naturalny, Granby / Bihara Beige tiles ----------
+const HQ = !matchMedia('(pointer:coarse)').matches;
+function surface(poly, y, material, uvOf) {                        // a flat top layer with its own UVs, in centimetres of the plan
+  const g = new THREE.ShapeGeometry(shape(poly.outer, poly.holes)); g.rotateX(-Math.PI / 2); g.translate(0, y * M, 0);
+  const pos = g.attributes.position, uv = g.attributes.uv;
+  const set = f => { for (let i = 0; i < pos.count; i++) { const [u, v] = f(px(pos.getX(i)), pz(pos.getZ(i))); uv.setXY(i, u, v); } uv.needsUpdate = true; };
+  set(uvOf); const m = new THREE.Mesh(g, material); m.receiveShadow = true; m.userData.setUV = set; return m;
+}
+const texOf = (c, srgb) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; return t; };
+// the spine of the herringbone: the rule is that the points of the arrows face the main light, so the spine runs square to the
+// living room's windows, with one row of points on the middle of the triple balcony door; or, as an option, along the facade
+// (in the pattern the points face -D of the spine direction D, so D is the way into the room)
+const HB_AXES = { window: Math.atan2(.6128, -.7902), facade: Math.atan2(.7902, .6128) };
+const HB_C = (() => { const q = A.openings.find(o => o.name.startsWith('O17')).quad; return [(q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4]; })();
+let hbMesh = null, hbP = 168;
+const hbUV = (x, z) => { const al = Math.PI / 4 - HB_AXES[S.hb], c = Math.cos(al), s = Math.sin(al), X = x - HB_C[0], Z = z - HB_C[1]; return [(X * c - Z * s) / hbP, -(X * s + Z * c) / hbP]; };
+async function buildFloors() {
+  const hb = await herringbone({ base: 'assets/', hq: HQ }); hbP = hb.period;
+  const oak = new THREE.MeshStandardMaterial({ map: texOf(hb.col, true), normalMap: texOf(hb.nor), normalScale: new THREE.Vector2(.45, .45), roughnessMap: texOf(hb.rou), roughness: 1, metalness: 0,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+  hbMesh = surface(A.floor, .02, oak, hbUV); world.add(hbMesh);
+  for (const t of A.finishes.tiles) {
+    const st = stoneTiles(t.finish, { hq: HQ });
+    const tm = new THREE.MeshStandardMaterial({ map: texOf(st.col, true), normalMap: texOf(st.nor), normalScale: new THREE.Vector2(.6, .6), roughnessMap: texOf(st.rou), roughness: 1, metalness: 0,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    for (const z of t.zones) {
+      const x0 = Math.min(...z.outer.map(p => p[0])), z0 = Math.min(...z.outer.map(p => p[1]));   // the tiles start from the zone's corner
+      world.add(surface(z, .04, tm, (x, zz) => [(x - x0) / st.period, -(zz - z0) / st.period]));
+    }
+  }
+}
+
 const ceiling = prism(A.floor.outer, A.floor.holes, H, H + 20, mat.ceiling, true); world.add(ceiling);
 const balconies = A.balconies.map(b => { const m = prism(b.outer, [], -22, -3, mat.balcony, false); world.add(m); return m; });
 const FROSTED = [false, true, true];                              // the living-room balcony is clear; the bedrooms' (and the kid's room) are milky
@@ -655,6 +688,11 @@ const ctl = {};
   ctl.thick = LabUI.check(g, { label: 'Mark thick walls', value: S.thick, onChange: v => { S.thick = v; paintWalls(); } });
   ctl.plan = LabUI.check(g, { label: 'Floor plan on the floor', value: S.plan, onChange: v => { S.plan = v; plan.visible = v; } });
   ctl.planOp = LabUI.slider(g, { label: 'Plan opacity', min: .1, max: 1, step: .05, value: S.planOp, def: DEF.planOp, onInput: v => { S.planOp = v; plan.material.opacity = v; } });
+  g = LabUI.group(panel, 'Floor', { key: 'lab.aw.group.floor' });
+  ctl.hb = LabUI.seg(g, { label: 'Herringbone', options: [['window', 'Points to the windows'], ['facade', 'Along the facade']], value: S.hb, onChange: v => { S.hb = v; if (hbMesh) hbMesh.userData.setUV(hbUV); } });
+  const fn = document.createElement('p'); fn.className = 'note';
+  fn.textContent = 'After the interior layout (A.04): EGGER Herringbone EL2152 Dąb Casella naturalny, 840 × 168 mm, 4V groove, in the kitchen, living room, corridor and the three rooms; Ceramika Gres Granby Beige 60 × 60 in the entrance, laundry and pantry; Domino Bihara Beige 60 × 60 in the bathroom. Oak from the CC0 Oak Veneer 01 scan (Poly Haven), the tiles drawn in the products’ colours.';
+  g.appendChild(fn);
   g = LabUI.group(panel, 'Walk', { key: 'lab.aw.group.walk' });
   ctl.eye = LabUI.slider(g, { label: 'Eye height', min: 110, max: 195, step: 1, unit: ' cm', value: S.eye, def: DEF.eye, onInput: v => { S.eye = v; } });
   ctl.speed = LabUI.slider(g, { label: 'Speed', min: .5, max: 3, step: .1, unit: ' m/s', value: S.speed, def: DEF.speed, onInput: v => { S.speed = v; } });
@@ -725,7 +763,8 @@ function frame(now) {
 placeSun(); paintWalls(); applyCut(S.cut); plan.visible = S.plan; renderer.toneMappingExposure = S.exposure;
 resize(); paintHint(); requestAnimationFrame(frame);
 document.body.classList.add('ready');
-window.AW = { A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+const floorsReady = new Promise(r => setTimeout(r, 60)).then(buildFloors).catch(err => console.warn('floors', err));
+window.AW = { floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
