@@ -86,6 +86,17 @@
   .facts span{color:rgba(20,20,20,.7)} .facts b{font-weight:600; font-variant-numeric:tabular-nums; text-align:right}
   .note{color:var(--muted); font-size:12px; margin:8px 0 0}
 
+  /* the photo's progress */
+  .modal{position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(232,229,223,.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+         opacity:0; visibility:hidden; transition:opacity .3s ease, visibility 0s linear .3s}
+  .modal.open{opacity:1; visibility:visible; transition:opacity .3s ease, visibility 0s}
+  .card{width:min(360px, calc(100vw - 32px)); padding:24px; border-radius:22px; background:#fff; box-shadow:0 0 0 1px var(--line)}
+  .card b{display:block; font-size:15px; font-weight:600} .card p{margin:6px 0 16px; color:var(--muted)}
+  .meter{height:6px; border-radius:6px; background:rgba(20,20,20,.08); overflow:hidden} .meter i{display:block; height:100%; width:0; background:var(--ink); transition:width .2s linear}
+  .card .row2{display:flex; justify-content:space-between; align-items:center; margin-top:14px}
+  .card .row2 span{color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums}
+  .card button{height:36px; padding:0 14px; border:0; border-radius:999px; background:rgba(20,20,20,.06); font-weight:600; cursor:pointer}
+  @media (max-width:760px){ #photo span{display:none} #photo{padding:0 13px} }
   .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; color:var(--muted); font-weight:600; transition:opacity .5s ease}
   body.ready .loading{opacity:0}
   /* the hand (the same as in the Glass Button): over something that opens, and while Space-panning */
@@ -111,6 +122,9 @@
 <div class="stick" id="stick" aria-hidden="true"><i></i></div>
 
 <div class="tr">
+  <button class="pill" id="photo" type="button" title="A still in 4K: soft shadows, contact shadows, clean edges">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg><span>Photo</span>
+  </button>
   <button class="pill tune" id="tune" type="button" aria-expanded="false" aria-controls="panel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>Customize</span>
   </button>
@@ -124,6 +138,11 @@
 
 <div class="hint" id="hint" aria-live="polite"></div>
 <div class="pts" id="pts" aria-live="polite"><i></i><span>Live preview</span></div>
+<div class="modal" id="shot" role="dialog" aria-modal="true" aria-labelledby="shot-t"><div class="card">
+  <b id="shot-t">Developing the photo</b><p>Many frames, each a hair apart, averaged: soft shadows, contact shadows, clean edges.</p>
+  <div class="meter"><i id="shot-bar"></i></div>
+  <div class="row2"><span id="shot-n">0 / 0</span><button type="button" id="shot-x">Cancel</button></div>
+</div></div>
 <aside class="panel lab-ui" id="panel" aria-label="Customize the view"></aside>
 
 <script src="../../shared/lab-ui.js"></script>
@@ -150,6 +169,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
 // ---------- the flat: walls, openings, balconies, rooms, all in centimetres (tools/extract_plan.py) ----------
 const A = await (await fetch('apartment.json')).json();
@@ -855,6 +875,66 @@ for (const ev of ['input', 'change', 'click']) panel.addEventListener(ev, () => 
 function setPts(txt, done) { const sp = ptsEl.lastElementChild; if (sp.textContent !== txt) sp.textContent = txt; ptsEl.classList.toggle('done', !!done); }
 document.body.classList.toggle('pt-on', S.pt);
 
+// ---------- the photo: a still in 4K, averaged over many frames ----------
+// each frame: the camera a sub-pixel apart (clean edges) and the sun a fraction of a degree apart (soft shadows), with ambient occlusion
+// (contact shadows where things meet); the average is tone-mapped once and saved as a PNG
+let photoing = false, photoCancel = false;
+const shotEl = document.getElementById('shot');
+document.getElementById('shot-x').addEventListener('click', () => { photoCancel = true; });
+document.getElementById('photo').addEventListener('click', () => takePhoto());
+const halton = (i, b) => { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; };
+async function takePhoto(FR = 32) {
+  if (photoing) return; photoing = true; photoCancel = false;
+  shotEl.classList.add('open');
+  const W = 3840, Hh = Math.round(W / camera.aspect), keep = { pr: renderer.getPixelRatio(), w: innerWidth, h: innerHeight, sun: sun.position.clone(), map: sun.shadow.mapSize.x };
+  await new Promise(r => setTimeout(r, 60));
+  renderer.setPixelRatio(1); renderer.setSize(W, Hh, false);
+  sun.shadow.mapSize.set(4096, 4096); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+  const rt = () => new THREE.WebGLRenderTarget(W, Hh, { type: THREE.HalfFloatType, samples: 4 });
+  const comp = new EffectComposer(renderer, rt()); comp.renderToScreen = false; comp.setSize(W, Hh);
+  comp.addPass(new RenderPass(scene, camera));
+  const ao = new GTAOPass(scene, camera, W, Hh); ao.blendIntensity = .9; ao.updateGtaoMaterial({ radius: .35, distanceExponent: 1.2, thickness: 1.2, scale: 1.1 });
+  { const ov = ao._overrideVisibility.bind(ao), rv = ao._restoreVisibility.bind(ao), hid = [];   // glass casts no contact shadow
+    ao._overrideVisibility = () => { ov(); scene.traverse(o => { if (o.isMesh && o.visible && [].concat(o.material).some(m => m.transparent)) { o.visible = false; hid.push(o); } }); };
+    ao._restoreVisibility = () => { rv(); for (const o of hid) o.visible = true; hid.length = 0; }; }
+  comp.addPass(ao);
+  const accA = new THREE.WebGLRenderTarget(W, Hh, { type: THREE.FloatType }), accB = accA.clone();
+  const blend = new THREE.ShaderMaterial({ uniforms: { tNew: { value: null }, tAcc: { value: null }, w: { value: 1 } }, depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+    fragmentShader: 'uniform sampler2D tNew, tAcc; uniform float w; varying vec2 vUv; void main(){ gl_FragColor = mix(texture2D(tAcc, vUv), texture2D(tNew, vUv), w); }' });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blend), qs = new THREE.Scene(), qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); qs.add(quad);
+  const out = new OutputPass(); out.renderToScreen = true;
+  let a = accA, b = accB, done = 0;
+  const side = new THREE.Vector3(), up = new THREE.Vector3(), dir = sun.position.clone().sub(sun.target.position).normalize();
+  side.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize(); up.crossVectors(side, dir).normalize();
+  try {
+    for (let i = 0; i < FR && !photoCancel; i++) {
+      camera.setViewOffset(W, Hh, halton(i + 1, 2) - .5, halton(i + 1, 3) - .5, W, Hh);   // a sub-pixel apart
+      const ang = halton(i + 1, 5) * Math.PI * 2, rad = Math.sqrt(halton(i + 1, 7)) * .3;  // the sun on a small disc (about 0.7 degrees)
+      sun.position.copy(keep.sun).addScaledVector(side, Math.cos(ang) * rad).addScaledVector(up, Math.sin(ang) * rad);
+      comp.render(0);
+      blend.uniforms.tNew.value = comp.readBuffer.texture; blend.uniforms.tAcc.value = a.texture; blend.uniforms.w.value = 1 / (i + 1);
+      renderer.setRenderTarget(b); renderer.render(qs, qc); renderer.setRenderTarget(null); [a, b] = [b, a];
+      done = i + 1; document.getElementById('shot-bar').style.width = `${done / FR * 100}%`; document.getElementById('shot-n').textContent = `${done} / ${FR} frames`;
+      await new Promise(r => setTimeout(r, 0));
+    }
+    if (!photoCancel && done) {
+      out.render(renderer, null, a);                                   // tone mapping and sRGB, once, onto the canvas
+      const blob = await new Promise(r => renderer.domElement.toBlob(r, 'image/png'));
+      const room = mode === 'walk' ? (roomAt(P.x, P.z)?.name || 'flat') : 'overview', d = new Date(), pad = n => String(n).padStart(2, '0');
+      const aEl = document.createElement('a'); aEl.href = URL.createObjectURL(blob);
+      aEl.download = `apartment-${room.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.png`;
+      document.body.appendChild(aEl); aEl.click(); aEl.remove(); setTimeout(() => URL.revokeObjectURL(aEl.href), 4000);
+    }
+  } finally {
+    camera.clearViewOffset(); sun.position.copy(keep.sun);
+    sun.shadow.mapSize.set(keep.map, keep.map); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    comp.dispose(); ao.dispose(); accA.dispose(); accB.dispose(); blend.dispose(); out.dispose();
+    renderer.setPixelRatio(keep.pr); resize();
+    shotEl.classList.remove('open'); photoing = false;
+  }
+}
+
 // ---------- the lens: scroll to zoom in on a detail (towards the pointer); focus falls on what is under it, with a light vignette and fringe ----------
 const Z = { level: 1, target: 1, nx: 0, ny: 0, focus: 2, focusT: 2, lastPick: 0 };
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
@@ -923,6 +1003,7 @@ addEventListener('resize', resize);
 const v = new THREE.Vector3();
 let last = performance.now();
 function frame(now) {
+  if (photoing) { requestAnimationFrame(frame); last = now; return; }
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (tween) {
     const k = Math.min(1, (now - tween.t0) / tween.dur), e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, to = tween.to();
@@ -992,7 +1073,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null;
 }
-window.AW = { pt, buildPT, get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { takePhoto, pt, buildPT, get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

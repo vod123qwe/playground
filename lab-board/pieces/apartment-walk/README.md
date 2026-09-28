@@ -35,6 +35,7 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Hokery:** miękkie okrągłe siedzisko i wygięte oparcie w tkaninie bouclé (skan CC0 *curly teddy natural*, Poly Haven), czarne stalowe nogi rozchylone na zewnątrz, podnóżek, stopki.
 - **Dekoracje (Poly Haven, CC0):** dwa gliniane wazony przy piekarniku, rzeźbiona drewniana misa z limonkami na wyspie, pachira w glinianej donicy przy drzwiach balkonowych.
 - **Światło od okien:** w każdym przeszkleniu miękkie światło powierzchniowe skierowane do środka (*Light → Window light*).
+- **Photo (4K):** przycisk w prawym górnym rogu. Liczy 32 klatki w 3840 px szerokości, każdą z kamerą przesuniętą o ułamek piksela i słońcem o ułamek stopnia, z okluzją otoczenia (GTAO, szkło pominięte), i uśrednia je: gładkie krawędzie, miękkie cienie, cienie kontaktowe, bez szumu. Zapisuje PNG z nazwą pomieszczenia i datą (ok. minuty).
 - **Path tracing** jest eksperymentalny (`?pt=1` w adresie): na całym mieszkaniu ta wersja biblioteki myli część materiałów (materiały wielokrotne, kolory wierzchołków) i wolno się doczyszcza we wnętrzu; podgląd jest wersją referencyjną.
 - **Wyspa 180 × 80** (A.04) w miejscu z A.04: szuflady od strony kuchni, ryflowany dąb od strony salonu, nawis 25 cm na kolana, 3 hokery (siedzisko 65 cm, po 60 cm na osobę). *Kitchen → Aisle to the island* przesuwa wyspę (A.04: 90 cm).
 
