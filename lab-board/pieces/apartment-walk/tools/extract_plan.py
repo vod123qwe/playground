@@ -63,12 +63,17 @@ def regularize(c):
         changed = False
         for k in range(len(lines)):
             A_, B_ = lines[k], lines[(k + 1) % len(lines)]
-            if abs(A_[0] @ B_[0]) > .9995 and abs(A_[1] * np.sign(A_[0] @ B_[0]) - B_[1]) < 1.2 and A_[0] @ B_[0] > 0:
-                L = A_[2] + B_[2]; A_[1] = (A_[1] * A_[2] + B_[1] * B_[2]) / L; A_[2] = L; lines.pop((k + 1) % len(lines)); changed = True; break
+            # one straight face drawn with a small step (a drawing artefact under 3 px = 2.5 cm, or a 1-3 degree kink): make it one line
+            # (the longer piece is the wall: the short ones are where a radiator, a label or a line of the drawing stuck to it)
+            if A_[0] @ B_[0] > .9985 and abs(A_[1] - B_[1]) < 4.5:
+                if B_[2] > A_[2]: A_[1] = B_[1]
+                A_[2] = A_[2] + B_[2]; lines.pop((k + 1) % len(lines)); changed = True; break
         if changed: continue
         for k in range(len(lines)):
             P_, C_, N_ = lines[k - 1], lines[k], lines[(k + 1) % len(lines)]
             if C_[2] < (12 if not C_[3] else 6) and abs(P_[0][0] * N_[0][1] - P_[0][1] * N_[0][0]) > .2:   # a short cut between two walls meeting at an angle: a rounded or ragged corner
+                lines.pop(k); changed = True; break
+            if C_[2] < 10 and P_[0] @ N_[0] > .9985 and abs(P_[1] - N_[1]) < 4.5:   # a nick between two pieces of the same face: drop it, the two then join
                 lines.pop(k); changed = True; break
     out = []
     for k in range(len(lines)):
@@ -80,7 +85,11 @@ def regularize(c):
         else:
             x = (P_[1] * n2[1] - C_[1] * n1[1]) / det; y = (n1[0] * C_[1] - n2[0] * P_[1]) / det
             out.append([float(x), float(y)])
-    return out
+    clean = []                                     # no zero-length edges left behind by the corners
+    for q in out:
+        if not clean or np.hypot(q[0] - clean[-1][0], q[1] - clean[-1][1]) > 1.0: clean.append(q)
+    if len(clean) > 3 and np.hypot(clean[0][0] - clean[-1][0], clean[0][1] - clean[-1][1]) <= 1.0: clean.pop()
+    return clean
 
 def reg_polys(mask, min_area=60):
     cs, hier = cv2.findContours(mask.astype(np.uint8), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
@@ -245,33 +254,58 @@ FLOORS = [{'finish': 'granby', 'name': 'Ceramika Gres Granby Beige 60x60', 'zone
           {'finish': 'bihara', 'name': 'Domino Bihara Beige 60x60', 'zones': [zone(room_mask(800, 1450))]}]
 print('tile zones', [(f['finish'], [round(cv2.contourArea(np.array(z['outer'], np.float32)) / S / S / 1e4, 2) for z in f['zones']]) for f in FLOORS])
 
-# ---------- skirting: white, in every room but the laundry, the pantry and the bathroom; none across a door, a balcony door or the open passage ----------
+# ---------- skirting: white, in every room but the laundry, the pantry and the bathroom ----------
+# it stops at a door's architrave (4.5 cm past the opening), at the reveal of a window or balcony door, at a hidden door and at the
+# open passage between the hall and the living room; at a corner it runs on by its own thickness, so two runs close the corner
 NO_SKIRT = {'Laundry', 'Pantry', 'Bathroom'}
-gapmask = np.zeros_like(walls)
-for op in openings: cv2.fillPoly(gapmask, [np.round(np.array(op['quad'])).astype(np.int32)], 1)
-cv2.line(gapmask, (621, 911), (778, 911), 1, 3)                   # hall | living room: an open passage, no wall
-gapmask = cv2.dilate(gapmask, np.ones((7, 7), np.uint8))
+SK_T = 1.6 * S
+PASSAGE = (np.array([621.0, 911.0]), np.array([778.0, 911.0]))
 SKIRT = []
+allowed = np.zeros_like(walls)                     # where skirting belongs: the rooms that have it (doors and the passage closed)
 for name, (x, y) in ROOMS:
-    if name in NO_SKIRT: continue
-    reg = room_mask(x, y).astype(np.uint8)
-    for p in reg_polys(reg):
-        for ring in [p['outer']] + p['holes']:
-            ring = np.array(ring)
-            for k in range(len(ring)):
-                a, b = ring[k], ring[(k + 1) % len(ring)]; L = float(np.hypot(*(b - a)))
-                if L < 4: continue
-                d = (b - a) / L; nrm = np.array([-d[1], d[0]])
-                mid = (a + b) / 2                                     # the side the room is on
-                inn = nrm if reg[int(np.clip(mid[1] + nrm[1] * 3, 0, reg.shape[0] - 1)), int(np.clip(mid[0] + nrm[0] * 3, 0, reg.shape[1] - 1))] else -nrm
-                run = None
-                for i in range(int(L) + 1):
-                    q = a + d * min(i, L); free_wall = not gapmask[int(round(q[1])), int(round(q[0]))]
-                    if free_wall and run is None: run = q
-                    if (not free_wall or i >= int(L)) and run is not None:
-                        end = q if free_wall else q - d
-                        if np.hypot(*(end - run)) >= 6: SKIRT.append({'a': run.tolist(), 'b': end.tolist(), 'in': inn.tolist(), 'room': name})
-                        run = None
+    if name not in NO_SKIRT: allowed |= room_mask(x, y).astype(np.uint8)
+def room_of(q):
+    for name, (x, y) in ROOMS:
+        if name not in NO_SKIRT and room_mask_cache[name][int(round(q[1])), int(round(q[0]))]: return name
+    return None
+room_mask_cache = {name: room_mask(x, y) for name, (x, y) in ROOMS if name not in NO_SKIRT}
+for wp in WALLS:
+    for ring in [wp['outer']] + wp['holes']:
+        ring = np.array(ring)
+        for k in range(len(ring)):
+            a, b = ring[k], ring[(k + 1) % len(ring)]; L = float(np.hypot(*(b - a)))
+            if L < 3: continue
+            d = (b - a) / L; nrm = np.array([-d[1], d[0]]); mid = (a + b) / 2
+            probe = mid + nrm * 3
+            out = nrm if not walls[int(np.clip(probe[1], 0, walls.shape[0] - 1)), int(np.clip(probe[0], 0, walls.shape[1] - 1))] else -nrm   # the room side of this face
+            cuts = []
+            for op in openings:
+                q = np.array(op['quad']); off = (q - a) @ nrm
+                if off.min() > 3 or off.max() < -3: continue
+                t = (q - a) @ d; ext = 0 if op['glazed'] or (op.get('door') or {}).get('hidden') else 4.5 * S
+                cuts.append((t.min() + 2 - ext, t.max() - 2 + ext))
+            ok = []                                     # sample the face every pixel: is the room in front of it one with skirting?
+            for i in range(int(L) + 1):
+                t = min(i, L); q = a + d * t + out * 4
+                inside = allowed[int(np.clip(round(q[1]), 0, allowed.shape[0] - 1)), int(np.clip(round(q[0]), 0, allowed.shape[1] - 1))]
+                ok.append(bool(inside) and not any(c0 <= t <= c1 for c0, c1 in cuts))
+            def ext_at(dA, dB):                         # at a corner sticking out into the room: on, into a mitre; inside corner: stop
+                turn = dA[0] * dB[1] - dA[1] * dB[0]; side = dA[0] * out[1] - dA[1] * out[0]
+                if turn * side > 0: return 0.0
+                beta = np.arccos(np.clip(dA @ dB, -1, 1)); return SK_T * np.tan(beta / 2)
+            pv, nx_ = ring[k - 1], ring[(k + 2) % len(ring)]
+            e0 = ext_at((a - pv) / max(np.hypot(*(a - pv)), 1e-6), d); e1 = ext_at(d, (nx_ - b) / max(np.hypot(*(nx_ - b)), 1e-6))
+            i = 0
+            while i < len(ok):
+                if not ok[i]: i += 1; continue
+                j = i
+                while j + 1 < len(ok) and ok[j + 1]: j += 1
+                t0, t1 = float(i), float(min(j, L))
+                if i == 0: t0 -= e0
+                if j >= len(ok) - 1: t1 += e1
+                if t1 - t0 >= 4:
+                    SKIRT.append({'a': (a + d * t0).tolist(), 'b': (a + d * t1).tolist(), 'in': out.tolist(), 'room': room_of(a + d * ((t0 + t1) / 2) + out * 4) or ''})
+                i = j + 1
 print('skirting', len(SKIRT), 'pieces,', round(sum(np.hypot(s['b'][0] - s['a'][0], s['b'][1] - s['a'][1]) for s in SKIRT) / S / 100, 1), 'm')
 
 BALC = [
