@@ -322,6 +322,16 @@ for wp in WALLS:
                 if t1 - t0 >= 4:
                     SKIRT.append({'a': (a + d * t0).tolist(), 'b': (a + d * t1).tolist(), 'in': out.tolist(), 'room': room_of(a + d * ((t0 + t1) / 2) + out * 4) or ''})
                 i = j + 1
+# under a window with a parapet the skirting runs on, along the face of the parapet (the wall pieces beside it reach it through their corner)
+for op in openings:
+    if op['sill'] <= 0: continue
+    q = np.array(op['quad']); m0, m1 = (q[0] + q[1]) / 2, (q[3] + q[2]) / 2
+    x, y = [int(round(v)) for v in m0 + (m0 - m1) * .6]
+    o0_out = not (0 <= y < foot.shape[0] and 0 <= x < foot.shape[1]) or not foot[y, x]
+    a, b = (q[3], q[2]) if o0_out else (q[0], q[1])                   # the room-side face of the parapet
+    inn = (m1 - m0) if o0_out else (m0 - m1); inn = inn / np.hypot(*inn)
+    d = (b - a) / np.hypot(*(b - a))
+    SKIRT.append({'a': (a - d * 2).tolist(), 'b': (b + d * 2).tolist(), 'in': inn.tolist(), 'room': room_of((a + b) / 2 + inn * 4) or ''})   # into the neighbours a little: no seam
 print('skirting', len(SKIRT), 'pieces,', round(sum(np.hypot(s['b'][0] - s['a'][0], s['b'][1] - s['a'][1]) for s in SKIRT) / S / 100, 1), 'm')
 
 BALC = [
