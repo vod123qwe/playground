@@ -92,7 +92,7 @@
   /* hints: two small mouse icons instead of words (click and hold · hold the wheel and drag) */
   .hints{position:fixed; left:clamp(16px, 3vw, 32px); bottom:18px; z-index:2; display:flex; gap:14px; color:rgba(20,20,20,.55); pointer-events:auto}
   .hint-i{display:grid; place-items:center; height:28px}
-  .hint-i:first-child svg{width:25px; height:25px} .hint-i:last-child svg{width:37px; height:25px}
+  .hint-i:first-child svg{width:25px; height:25px} .hint-i:nth-child(2) svg{width:37px; height:25px} .hint-i.space svg{width:40px; height:25px}
   body.dark .hints{color:rgba(255,255,255,.55)}
   body.still .hints{display:none}
   @media (pointer:coarse){ .hints{display:none} }
@@ -252,7 +252,7 @@
   .chip.reset{color:#1b1c20} .chip.reset:hover{background:#fff; transform:translateX(-50%) translateY(-1px)}
   .hints{bottom:20px; left:16px; gap:10px; padding:9px 16px; border-radius:999px; background:#fff; color:#1b1c20; box-shadow:none}
   body.dark .hints{color:#1b1c20}
-  .hint-i{height:26px} .hint-i:first-child svg{width:24px; height:24px} .hint-i:last-child svg{width:32px; height:24px}
+  .hint-i{height:26px} .hint-i:first-child svg{width:24px; height:24px} .hint-i:nth-child(2) svg{width:32px; height:24px} .hint-i.space svg{width:38px; height:24px}
 
   /* the variants: bottom centre · the component picker and Customize: a row in the top right */
   .dock{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:3; display:flex; align-items:center; gap:8px; transform:translateX(-50%); transition:left .45s var(--ease)}
@@ -425,9 +425,10 @@
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
 <div class="hand" id="hand" aria-hidden="true"><svg viewBox="-2 -2 28 28" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="h-open"><g class="halo"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g><g class="ink"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></g><g class="h-grab"><g class="halo"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g><g class="ink"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g></g></svg></div>
 <div class="cmp" id="cmp" hidden><span class="cb">Before</span><span class="ca">After</span><i></i></div>
-<div class="bl"><div class="hints" role="note" aria-label="Click and hold the button. Hold the mouse wheel and drag to turn the view in 3D.">
+<div class="bl"><div class="hints" role="note" aria-label="Click and hold the button. Hold the mouse wheel and drag to turn the view in 3D. Hold Space and drag to move the view.">
   <span class="hint-i" title="Click and hold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 3v6.5M6.5 9.5h11"/><path d="M12 3.4a5.1 5.1 0 0 0-5.1 5.1v1h5.1z" fill="currentColor" stroke="none"/></svg></span>
   <span class="hint-i" title="Hold the wheel and drag to turn in 3D"><svg viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="10.5" y="3" width="11" height="18" rx="5.5"/><path d="M16 6.5v3"/><path d="M6 8.5a10 10 0 0 0 0 7M3.8 14.2 6 15.5l1-2.4M26 8.5a10 10 0 0 1 0 7M28.2 14.2 26 15.5l-1-2.4"/></svg></span>
+  <span class="hint-i space" title="Hold Space and drag to move the view"><svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="9" width="20" height="8" rx="2.5"/><path d="M7.5 13h9"/><path d="M31 5v14M24 12h14M28.8 7.2 31 5l2.2 2.2M28.8 16.8 31 19l2.2-2.2M26.2 9.8 24 12l2.2 2.2M35.8 9.8 38 12l-2.2 2.2"/></svg></span>
 </div>
   <button class="chip" id="chip" type="button" tabindex="-1"></button>
 </div>
