@@ -111,3 +111,5 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Spacja + przeciąganie przesuwa widok** (jak w Figmie): kursor zmienia się w łapkę, scena idzie za ręką, a przycisk pod kursorem nie jest wtedy naciskany ani klikany. Zakres jest lekki: do 35% ekranu przy zwykłym zoomie, więcej po przybliżeniu. Reset view (i klawisz R) wraca też z przesunięcia, a chip reset view pokazuje się po przesunięciu. Dla użytkowników klawiatury spacja na zaznaczonym przycisku dalej go naciska.
 
 **Segmented:** grid lines w Light 0,4, w Dark 0,1.
+
+**Łapka przy spacji:** zamiast systemowego kursora pojawia się minimalistyczna, konturowa dłoń (ciemna kreska z białą obwódką, czytelna na jasnym i ciemnym tle). Przy przeciąganiu płynnie przechodzi w zaciśniętą, lekko przechyla się w stronę ruchu i rozciąga wzdłuż niego, a po puszczeniu spacji znika. **Lista komponentów** otwiera się spokojnie: 0,34 s przenikania i 0,42 s łagodnego zsunięcia (bez sprężyny), pozycje pojawiają się z drobnym opóźnieniem; przy ograniczonym ruchu bez animacji.
