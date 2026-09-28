@@ -434,7 +434,7 @@ const DEF = {
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, inkAuto: true, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
-  comp: 'dropdown', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segStyle: 'float', segPrint: 'top', segTint: '#34c759', segTintK: 0,
+  comp: 'dropdown', look: '', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segStyle: 'float', segPrint: 'top', segTint: '#34c759', segTintK: 0,
   sound: 'glass', release: true, volume: .5, haptic: true, jelly: 1, smooth: true, bloom: true, bloomK: .6, dither: true,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -506,7 +506,9 @@ const SEG_BASE = { comp: 'segmented', segStyle: 'float', segPrint: 'top', corner
   segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segTintK: 0, scale: 1.4, h: 3.6, weight: 560,
   ambOn: true, inkAuto: true, sound: 'bubble', volume: .16, glowOn: false };
 // the lens sits in the groove: even padding all round, its top about level with the rim, the tab seen through it
-const SEG_SUNK = Object.assign({}, SEG_BASE, { segPrint: 'under', segDish: .62, segInset: .24, segThick: .7, segGap: .03, segDome: .5, ior: 1.8, disp: .08, frost: .3, key: 1.6 });
+const SIG_GLASS = {}; for (const k of ['corner', 'wall', 'under', 'profile', 'edge', 'lift', 'ior', 'disp']) if (k in SIGNATURE) SIG_GLASS[k] = SIGNATURE[k];
+const SEG_SUNK = Object.assign({}, SEG_BASE, { corner: 1 }, SIG_GLASS,   // Signature's glass; its dish (-0.97) a little deeper
+  { segPrint: 'top', segDish: 1.1, segInset: .24, segThick: 1, segGap: .03, segDome: .45, frost: .3, key: 1.6 });
 const SEG_LOOKS = {
   Light: SEG_SUNK,
   Dark: Object.assign({}, SEG_SUNK, { bg: 'color', bgColor: '#000000', grid: .02, key: 2.4, env: 1.7, rim: 2.2 }),
@@ -1115,7 +1117,7 @@ async function applyPreset(name) {
   const look = SEGON() && SEG_LOOKS[name] ? SEG_LOOKS[name] : LOOKS[name];
   if (look) {                                             // the whole look, keeping only the content
     const keep = { text: P.text, agent: P.agent, segA: P.segA, segB: P.segB };
-    P = Object.assign({}, DEF, look, keep); useBg(P.bg);
+    P = Object.assign({}, DEF, look, keep, { look: name }); useBg(P.bg);
   } else Object.assign(P, PRESETS[name]);
   apply(); syncInputs(); save(); showVariant();
   if (!look && P.icon !== 'emboss') {                      // a new shape: keep the icon inside it
@@ -1180,7 +1182,7 @@ function switchComp(c) {
   if (!STILL) try { localStorage.setItem(CKEY(P.comp), JSON.stringify(diffOf(P))); } catch (e) {}
   let next = null;
   if (!STILL) try { const raw = localStorage.getItem(CKEY(c)); if (raw) next = Object.assign({}, DEF, JSON.parse(raw)); } catch (e) {}
-  if (!next) next = Object.assign({}, DEF, c === 'segmented' ? SEG_LOOKS.Light : SIGNATURE);
+  if (!next) next = Object.assign({}, DEF, c === 'segmented' ? SEG_LOOKS.Light : SIGNATURE, { look: c === 'segmented' ? 'Light' : 'Signature' });
   if (next.bg === 'upload') next.bg = 'grid';
   next.comp = c; P = next;
   if (s.open) setMenu(false);
@@ -1360,7 +1362,10 @@ function buildPanel() {
   }
   const acts = el('div', 'acts');
   const reset = el('button', null, 'Reset all'); reset.type = 'button';
-  reset.addEventListener('click', () => { P = Object.assign({}, DEF, SIGNATURE); useBg(P.bg); apply(); syncInputs(); save(); showVariant(); resetView(); });   // back to preset 1 and the resting view
+  reset.addEventListener('click', () => {                 // back to the variant you are on (its own settings), and the resting view
+    const L = curLooks(), i = lookNow(), nm = i >= 0 ? Object.keys(L)[i] : (P.look && L[P.look] ? P.look : Object.keys(L)[0]);
+    P = Object.assign({}, DEF, L[nm], { comp: P.comp, look: nm }); useBg(P.bg); apply(); syncInputs(); save(); showVariant(); resetView(); labelSig = '';
+  });
   const copy = el('button', null, 'Copy settings'); copy.type = 'button';
   copy.addEventListener('click', async () => {
     const d = {}; for (const k in DEF) if (P[k] !== DEF[k]) d[k] = P[k];
@@ -1936,9 +1941,10 @@ vec3 glassShade(vec3 P, vec3 rd){
     float gy = clamp((fq.y - uSegFill.y + uSegFill.w) / max(2.0 * uSegFill.w, 1.0), 0.0, 1.0);
     trans = mix(trans, uSegFill2.rgb * (1.1 - 0.22 * gy), m * uSegFill2.w);   // lit from above, a touch deeper below
   }
-  if (th && uSegPrint > 0.5 && state > 0.5 && state < 1.5 && exitNz < -0.2) {
+  if (th && uSegPrint > 0.5 && state > 0.5 && state < 1.5 && exitNz < -0.75) {
     vec2 u2 = (q.xy - uLabelRect.xy) / uLabelRect.zw;
-    if (u2.x > 0.0 && u2.y > 0.0 && u2.x < 1.0 && u2.y < 1.0) trans = mix(trans, inkOn(trans), textureLod(uLabel, u2, uLabelLod).a * uInk.a);
+    float core = 1.0 - smoothstep(-0.34 * uSeg.w, -0.12 * uSeg.w, box2(P.xy, uSeg, uSegCorner));   // through the middle only: the rim smears it
+    if (u2.x > 0.0 && u2.y > 0.0 && u2.x < 1.0 && u2.y < 1.0) trans = mix(trans, inkOn(trans), textureLod(uLabel, u2, uLabelLod).a * uInk.a * core);
   }
   trans *= exp(-path * (th ? uSegAbs : uAbs));
   vec3 col = trans * (1.0 - F) + refl * F;
