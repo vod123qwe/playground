@@ -66,6 +66,15 @@
   .lbl{transition:background .25s ease, color .25s ease, box-shadow .25s ease}
   .lbl.hl{background:var(--ink); color:#fff; box-shadow:0 0 0 4px rgba(27,28,32,.12)}
   body.hdrag, body.hdrag *{cursor:none !important}
+  .hlsvg{position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none}
+  .hlsvg polygon{fill:rgba(255,255,255,.14); stroke:rgba(27,28,32,.6); stroke-width:1.75; stroke-dasharray:7 5; stroke-linejoin:round; transition:fill .25s ease, stroke .25s ease}
+  .hlsvg polygon.strong{fill:rgba(255,255,255,.32); stroke:#1b1c20; stroke-width:2.5; stroke-dasharray:none}   /* lighter, and outlined on the carcass, not in the gaps */
+  .mpop{position:absolute; left:0; top:0; display:flex; gap:4px; padding:4px; border-radius:14px; background:#fff; box-shadow:0 0 0 1px var(--line); pointer-events:auto; white-space:nowrap;
+        opacity:0; visibility:hidden; transform:translateY(4px); transition:opacity .28s ease, transform .34s var(--ease), visibility 0s linear .34s}
+  .mpop.open{opacity:1; visibility:visible; transform:none; transition:opacity .28s ease, transform .34s var(--ease), visibility 0s}
+  .mpop button{height:32px; padding:0 12px; border:0; border-radius:10px; background:transparent; font:inherit; font-weight:600; font-size:12.5px; color:rgba(20,20,20,.7); cursor:pointer}
+  .mpop button:hover, .mpop button:focus-visible{background:var(--ink); color:#fff; outline:none}
+  .mpop small{align-self:center; padding:0 6px 0 8px; color:var(--muted); font-size:11.5px; font-weight:600}
   body.hdrag .hd:not(.on){opacity:.25 !important}
   body.nodims .lbl{display:none}
   body.busy .hd{pointer-events:none; opacity:.5}
@@ -427,8 +436,49 @@ const ARROW_X = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l-4 4 4 4M16 8l4 
 const ARROW_Y = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l4-4 4 4M8 16l4 4 4-4M12 4v16"/></svg>`;
 const PLUS = `<svg viewBox="0 0 24 24" ${ICON}><path d="M12 5v14M5 12h14"/></svg>`;
 // every handle and label has a key: it survives rebuilds and glides from where it was; new ones fade in, gone ones fade out
-let items = [], glideUntil = 0;
+let items = [], glideUntil = 0, hlBays = [];
 const pool = new Map();
+// the highlight of segments (what a merge would join), drawn over the fronts
+const SVGNS = 'http://www.w3.org/2000/svg', hlSvg = document.createElementNS(SVGNS, 'svg'); hlSvg.setAttribute('class', 'hlsvg'); overlay.appendChild(hlSvg);
+function bayQuad(i) {
+  const [a0, a1] = bayBounds(i), x0 = a0 - T / 2, x1 = a1 + T / 2, y0 = C.leg + T / 2, y1 = C.leg + C.H - T / 2, z = C.D / 2 + .5, w = innerWidth, h = innerHeight;
+  return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => { v3.set(x, y, z).project(camera); return `${((v3.x + 1) / 2 * w).toFixed(1)},${((1 - v3.y) / 2 * h).toFixed(1)}`; }).join(' ');
+}
+function drawHl() {
+  while (hlSvg.childNodes.length > hlBays.length) hlSvg.lastChild.remove();
+  while (hlSvg.childNodes.length < hlBays.length) hlSvg.appendChild(document.createElementNS(SVGNS, 'polygon'));
+  hlBays.forEach((b, k) => { const pg = hlSvg.childNodes[k]; if (b.i < C.bays.length) pg.setAttribute('points', bayQuad(b.i)); pg.classList.toggle('strong', !!b.strong); });
+}
+// hover a divider: a small offer to merge the two segments; if they differ, pick which one's kind stays (it lights up)
+const TYPE_NAME = { door: 'Door', drawers: 'Drawers', open: 'Shelves', niche: 'Niche' };
+const mpop = document.createElement('div'); mpop.className = 'mpop'; mpop.setAttribute('role', 'group'); mpop.setAttribute('aria-label', 'Merge the two segments'); overlay.appendChild(mpop);
+let mpopCut = -1, mpopShow = 0, mpopHide = 0;
+function mergeBays(i, j, keep) {                        // two neighbours become one; the kept side decides the kind
+  const a2 = C.bays[i], b2 = C.bays[j], same = a2.type === b2.type, base = keep === 'right' ? b2 : a2;
+  const n = same && a2.type === 'niche' ? clamp((a2.n || 1) + (b2.n || 1), 1, 3) : same && a2.n != null ? Math.max(a2.n, b2.n) : base.n;
+  C.bays.splice(i, 2, { ...base, ...(n != null ? { n } : {}) }); C.cuts.splice(i, 1); sel = -1; hlBays = []; changed(true);
+}
+function openMerge(i) {
+  mpopCut = i; mpop.replaceChildren();
+  const a2 = C.bays[i], b2 = C.bays[i + 1]; if (!a2 || !b2) return;
+  const btn = (txt, keep, lit) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = txt;
+    b.addEventListener('pointerenter', () => { hlBays = lit; }); b.addEventListener('focus', () => { hlBays = lit; });
+    b.addEventListener('pointerleave', () => { hlBays = [{ i }, { i: i + 1 }]; });
+    b.addEventListener('click', () => { closeMerge(true); mergeBays(i, i + 1, keep); });
+    mpop.appendChild(b);
+  };
+  if (a2.type === b2.type) btn('Merge', 'left', [{ i, strong: true }, { i: i + 1, strong: true }]);
+  else {
+    const sm = document.createElement('small'); sm.textContent = 'Merge, keep'; mpop.appendChild(sm);
+    btn(`← ${TYPE_NAME[a2.type]}`, 'left', [{ i, strong: true }, { i: i + 1 }]);
+    btn(`${TYPE_NAME[b2.type]} →`, 'right', [{ i }, { i: i + 1, strong: true }]);
+  }
+  hlBays = [{ i }, { i: i + 1 }]; mpop.classList.add('open');
+}
+function closeMerge(now) { clearTimeout(mpopShow); mpopCut = -1; mpop.classList.remove('open'); if (!dragging) hlBays = []; }
+mpop.addEventListener('pointerenter', () => { clearTimeout(mpopHide); overHandle = true; });
+mpop.addEventListener('pointerleave', () => { overHandle = false; mpopHide = setTimeout(closeMerge, 320); });
 function makeOverlay() {
   if (!dragging) glideUntil = performance.now() + 650;
   const want = new Set();
@@ -442,10 +492,12 @@ function makeOverlay() {
     const it = put(key, () => {
       const el = document.createElement('div'); el.className = `hd ${axis || 'add'}`; el.innerHTML = axis === 'x' ? ARROW_X : axis === 'y' ? ARROW_Y : PLUS;
       el.setAttribute('role', 'button'); el.tabIndex = -1; dragBind(el); el.addEventListener('click', () => el._def.onClick && el._def.onClick());
-      el.addEventListener('pointerenter', () => { overHandle = true; el._hover = true; }); el.addEventListener('pointerleave', () => { overHandle = false; el._hover = false; });
+      el.addEventListener('pointerenter', () => { overHandle = true; el._hover = true; clearTimeout(mpopHide);
+        if (el._def.cut != null && !dragging) { clearTimeout(mpopShow); mpopShow = setTimeout(() => { if (el._hover && !dragging) openMerge(el._def.cut); }, 280); } });
+      el.addEventListener('pointerleave', () => { overHandle = false; el._hover = false; clearTimeout(mpopShow); if (mpopCut >= 0) mpopHide = setTimeout(closeMerge, 320); });
       return el;
     });
-    it.pos = pos; it.el.title = title; it.el.setAttribute('aria-label', title); it.el._def = { axis, onDrag, onClick, hl };
+    it.pos = pos; it.el.removeAttribute('title'); it.el.setAttribute('aria-label', title); it.el._def = { axis, onDrag, onClick, hl, cut: key.startsWith('cut') ? +key.slice(3) : null };
   };
   const lbl = (key, pos, text, big) => {
     const it = put(key, () => { const el = document.createElement('div'); el.className = 'lbl' + (big ? ' big' : ''); return el; });
@@ -496,6 +548,8 @@ function placeOverlay() {
     if (isLbl) it.el.style.transform = `translate(${it.sx}px, ${it.sy}px) translate(-50%, -50%) scale(${it.sc})`; else it.el.style.translate = `${it.sx}px ${it.sy}px`;
     if (it.label) { const t = it.label(); if (it.el.textContent !== t) it.el.textContent = t; }   // the sizes follow the build
   }
+  if (mpopCut >= 0) { const it = pool.get('cut' + mpopCut); if (it && it.sx != null) mpop.style.translate = `${it.sx - mpop.offsetWidth / 2}px ${it.sy - mpop.offsetHeight - 22}px`; else closeMerge(true); }
+  drawHl();
   placeBar();
 }
 
@@ -510,7 +564,7 @@ function dragBind(el) {                                // the handle reads what 
     const d = el._def; if (e.button !== 0 || !d.onDrag) return; e.stopPropagation(); e.preventDefault();
     const p0 = worldAt(e); if (!p0) return;
     try { el.setPointerCapture(e.pointerId); } catch (err) {}   // a synthetic pointer cannot be captured
-    el.classList.add('on'); dragging = { el, axis: d.axis }; controls.enabled = false; document.body.classList.add('hdrag');
+    closeMerge(true); el.classList.add('on'); dragging = { el, axis: d.axis }; controls.enabled = false; document.body.classList.add('hdrag');
     const move = ev => { const p = worldAt(ev); if (!p) return; const before = JSON.stringify(C); el._def.onDrag(p0[d.axis], p[d.axis]); if (JSON.stringify(C) !== before) changed(false); };
     const up = () => { el.classList.remove('on'); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
       dragging = null; controls.enabled = true; document.body.classList.remove('hdrag'); changed(true); };
