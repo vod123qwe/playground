@@ -6,6 +6,9 @@
 // Heights: plinth 10, worktop 87-90 (3 cm), uppers 145-255 (55 cm of backsplash), tall units to the ceiling.
 
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -28,7 +31,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const blackGlass = std({ color: '#0b0c0e', roughness: .06, metalness: .2 });
   const steel = std({ color: '#c8c9ca', roughness: .32, metalness: 1 });   // brushed steel tap and appliance handles
   const legs = std({ color: '#141414', roughness: .45, metalness: .6 });
-  const fabric = std({ color: '#b9a488', roughness: .97 });          // stool seats: beige boucle
+  const [tdC, tdN, tdR] = await Promise.all([load('tex/teddy_diff.jpg', true), load('tex/teddy_nor.jpg'), load('tex/teddy_rough.jpg')]);
+  const fabric = std({ map: tdC, normalMap: tdN, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: tdR, roughness: 1, color: '#e9dccb' });   // boucle: Poly Haven "curly teddy natural" (CC0)          // stool seats: beige boucle
   // conglomerate: a warm beige with a fine speckle
   const quartz = (() => {
     const N = 1024, c = canvas(N, N), g = c.getContext('2d'), r = rng(77);
@@ -68,11 +72,18 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const root = new THREE.Group();
   // a box in cm, [x0, x1] along the run, [y0, y1] up, [z0, z1] out from the wall; UVs in real scale (grain up the fronts)
   let seed = 1;
-  function box(x0, x1, y0, y1, z0, z1, m, scale = OAK, parent = root) {
-    const w = x1 - x0, h = y1 - y0, d = z1 - z0, g = new THREE.BoxGeometry(w, h, d);
-    const uv = g.attributes.uv, r = rng(seed++), ou = r(), ov = r();
-    const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];   // the faces: +x, -x, +y, -y, +z, -z
-    for (let f = 0; f < 6; f++) for (let k = 0; k < 4; k++) { const i = f * 4 + k; uv.setXY(i, uv.getX(i) * dims[f][0] / scale + ou, uv.getY(i) * dims[f][1] / scale + ov); }
+  function planarUV(g, scale, ou = 0, ov = 0) {                     // each vertex takes the plane its normal faces: grain up the sides and fronts
+    const p = g.attributes.position, n = g.attributes.normal, uv = g.attributes.uv;
+    for (let i = 0; i < p.count; i++) {
+      const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i)), x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const [u, v] = ax >= ay && ax >= az ? [z, y] : ay >= az ? [x, z] : [x, y];
+      uv.setXY(i, u / scale + ou, v / scale + ov);
+    }
+  }
+  function box(x0, x1, y0, y1, z0, z1, m, scale = OAK, parent = root, edge = .15) {
+    const w = x1 - x0, h = y1 - y0, d = z1 - z0, rr = Math.min(edge, Math.min(w, h, d) / 2 - .01);
+    const g = rr > .02 ? new RoundedBoxGeometry(w, h, d, 2, rr) : new THREE.BoxGeometry(w, h, d);   // every edge eased 1.5 mm: it catches the light
+    const r = rng(seed++); planarUV(g, scale, r(), r());
     const mesh = new THREE.Mesh(g, m); mesh.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); mesh.castShadow = mesh.receiveShadow = true; parent.add(mesh); return mesh;
   }
   const G = .3;                                                      // the gap between two fronts
@@ -107,8 +118,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const topShape = new THREE.Shape([new THREE.Vector2(X[1] - .01, 0), new THREE.Vector2(X[5] + .01, 0), new THREE.Vector2(X[5] + .01, D + 2), new THREE.Vector2(X[1] - .01, D + 2)]);
   const SX0 = X[1] + 6, SX1 = X[2] - 6, SZ0 = 12, SZ1 = 52;         // the bowl: 48 x 40, set off the tall fridge
   topShape.holes.push(new THREE.Path([new THREE.Vector2(SX0, SZ0), new THREE.Vector2(SX0, SZ1), new THREE.Vector2(SX1, SZ1), new THREE.Vector2(SX1, SZ0)]));
-  const tg = new THREE.ExtrudeGeometry(topShape, { depth: TOP - WT, bevelEnabled: false });
-  tg.rotateX(Math.PI / 2); tg.translate(0, TOP, 0);                  // shape (x, z) at height TOP down to WT
+  const tg = new THREE.ExtrudeGeometry(topShape, { depth: TOP - WT - .4, bevelEnabled: true, bevelThickness: .2, bevelSize: .2, bevelOffset: -.2, bevelSegments: 3 });
+  tg.rotateX(Math.PI / 2); tg.translate(0, TOP - .2, 0);             // shape (x, z) from TOP down to WT, the edges eased 2 mm
   { const p = tg.attributes.position, uv = tg.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / QUARTZ_CM, p.getZ(i) / QUARTZ_CM); }
   const topM = new THREE.Mesh(tg, quartz); topM.castShadow = topM.receiveShadow = true; root.add(topM);
   // the sink: an inset bowl in the same conglomerate, 18 deep, and a drain
@@ -152,29 +163,59 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const IW = K.island.w, ID = K.island.d;                              // x along the island, z across (z = -ID/2 faces the run)
   I.position.set(K.island.along, 0, K.island.off);
   const ix0 = -IW / 2, ix1 = IW / 2, iz0 = -ID / 2, back = iz0 + 2 + 53;  // the carcass: 53 deep behind the fronts; then the overhang
-  box(ix0 + 2, ix1 - 2, 0, Y0, iz0 + 7, back, shadowGap, OAK, I);
+  box(ix0 + 2, ix1 - 2, 0, Y0, iz0 + 7, back - 1, shadowGap, OAK, I);   // the plinth only on the kitchen side
   box(ix0 + 2, ix1 - 2, Y0, WT, iz0 + 2, back, carcass, OAK, I);
   const cw = (IW - 4) / 3;
   for (let c = 0; c < 3; c++) { const a = ix0 + 2 + c * cw, b = a + cw;
     const lf = (y0, y1) => { box(a + G / 2, b - G / 2, y0 + G / 2, y1 - 3, iz0, iz0 + 1.9, oak, OAK, I); box(a + G / 2, b - G / 2, y1 - 3, y1 - G / 2, iz0 + 1.3, iz0 + 1.9, shadowGap, OAK, I); };
     lf(Y0, 50); lf(50, WT); }
   box(ix0, ix0 + 2, 0, WT, iz0, -iz0, oak, OAK, I); box(ix1 - 2, ix1, 0, WT, iz0, -iz0, oak, OAK, I);   // the oak ends, floor to top
-  { const fw = IW - 4, fh = WT, g = new THREE.BoxGeometry(fw, fh, 1.8), uv = g.attributes.uv;          // the fluted back, under the overhang
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * fw / flutes.userData.fluteW, uv.getY(i) * fh / OAK);
-    const m = new THREE.Mesh(g, flutes); m.position.set(0, fh / 2, back + .9); m.castShadow = m.receiveShadow = true; I.add(m); }
-  { const g = new THREE.BoxGeometry(IW, TOP - WT, ID), p = g.attributes.position, uv = g.attributes.uv;
-    for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + K.island.along) / QUARTZ_CM, p.getZ(i) / QUARTZ_CM);
+  { const fw = IW - 4, fh = WT, n = Math.floor(fw / 2.5), step = fw / n, parts = [];      // the fluted back, under the overhang: half-round reeds, 2.5 cm, down to the floor
+    box(ix0 + 2, ix1 - 2, 0, WT, back, back + .8, oak, OAK, I);
+    for (let k = 0; k < n; k++) { const c = new THREE.CylinderGeometry(step / 2 - .05, step / 2 - .05, fh, 14, 1, true); c.translate(ix0 + 2 + step * (k + .5), fh / 2, back + .8); parts.push(c); }
+    const g = mergeGeometries(parts); planarUV(g, OAK, .37, .11);
+    const m = new THREE.Mesh(g, oak); m.castShadow = m.receiveShadow = true; I.add(m); }
+  { const g = new RoundedBoxGeometry(IW, TOP - WT, ID, 3, .25); planarUV(g, QUARTZ_CM, .3, .6);
     const m = new THREE.Mesh(g, quartz); m.position.set(0, (TOP + WT) / 2, 0); m.castShadow = m.receiveShadow = true; I.add(m); }
-  // three counter stools (seat 65 cm, 25 cm below the top): beige boucle seat and low back, black steel legs with a footrest
+  // three counter stools (seat 66 cm, 24 cm below the top): a soft round boucle cushion, a curved back, black steel legs and a footrest
+  const cushion = (() => { const pts = [[0, 0], [17.5, 0], [19.8, .6], [20.9, 2.2], [21.2, 4], [20.8, 5.8], [19.4, 7.2], [16.5, 8], [0, 8.2]].map(([r, y]) => new THREE.Vector2(r, y));
+    const g = new THREE.LatheGeometry(pts, 64), uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 4.4, uv.getY(i) * 1.5); return g; })();   // the scan covers about 30 cm
+  const backG = (() => { const sh = new THREE.Shape(), a0 = -Math.PI / 2 - .95, a1 = -Math.PI / 2 + .95;
+    sh.absarc(0, 0, 20.5, a0, a1, false); sh.absarc(0, 0, 16.5, a1, a0, true);
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 17, bevelEnabled: true, bevelThickness: 1.6, bevelSize: 1.4, bevelSegments: 4, curveSegments: 32 });
+    g.rotateX(-Math.PI / 2); g.computeVertexNormals(); planarUV(g, 30); return g; })();
+  const legG = new THREE.CylinderGeometry(.75, .65, 58, 16), capM = std({ color: '#0a0a0a', roughness: .9 });
   for (const sx of [-60, 0, 60]) {
-    const S = new THREE.Group(); S.position.set(sx, 0, ID / 2 + 6); I.add(S);
-    const seat = new THREE.Mesh(new THREE.CylinderGeometry(21, 20, 7, 40), fabric); seat.position.y = 62; seat.castShadow = true; S.add(seat);
-    const bk = new THREE.Mesh(new THREE.BoxGeometry(34, 22, 5), fabric); bk.position.set(0, 78, 16); bk.rotation.x = -.18; bk.castShadow = true; S.add(bk);
-    for (const [lx, lz] of [[-14, -14], [14, -14], [-14, 14], [14, 14]]) {
-      const lg = new THREE.Mesh(new THREE.CylinderGeometry(.9, .9, 60, 12), legs); lg.position.set(lx * 1.08, 30, lz * 1.08); lg.rotation.set(lz * .004, 0, -lx * .004); lg.castShadow = true; S.add(lg);
+    const St = new THREE.Group(); St.position.set(sx, 0, ID / 2 + 4); I.add(St);
+    const seat = new THREE.Mesh(cushion, fabric); seat.position.y = 58; seat.castShadow = seat.receiveShadow = true; St.add(seat);
+    const bk = new THREE.Mesh(backG, fabric); bk.position.y = 67.6; bk.castShadow = true; St.add(bk);   // the back sits behind the sitter, away from the island
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 1, 32), legs); plate.position.y = 57.5; St.add(plate);
+    for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const lg = new THREE.Mesh(legG, legs); lg.position.set(lx * 12.5, 29, lz * 12.5); lg.rotation.set(-lz * .09, 0, lx * .09); lg.castShadow = true; St.add(lg);   // splayed outwards, onto the caps
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, .8, 12), capM); cap.position.set(lx * 15.1, .4, lz * 15.1); St.add(cap);
     }
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(15.5, .7, 8, 48), legs); ring.rotation.x = Math.PI / 2; ring.position.y = 24; S.add(ring);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(14.2, .6, 10, 64), legs); ring.rotation.x = Math.PI / 2; ring.position.y = 24; ring.castShadow = true; St.add(ring);
   }
+
+  // ---------- things on the tops (Poly Haven, CC0): two clay vases by the oven, a carved wooden bowl of limes on the island; a pachira by the window ----------
+  const gl = new GLTFLoader();
+  const clipIt = g => g.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; for (const m of [].concat(o.material)) { m.clippingPlanes = clip.clippingPlanes; m.clipShadows = true; } } });
+  const model = async (id, x, y, z, sc = 1, rot = 0, parent = root) => {
+    const g = (await gl.loadAsync(`${base}models/${id}/${id}.gltf`)).scene; clipIt(g);
+    g.scale.setScalar(100 * sc); g.position.set(x, y, z); g.rotation.y = rot; parent.add(g); return g;
+  };
+  const decor = [
+    model('ceramic_vase_02', 296, TOP, 22, 1, .4), model('ceramic_vase_01', 318, TOP, 16, .85, 1.2),
+    model('carved_wooden_plate', 12, TOP, -4, 1, .3, I),
+  ];
+  { const r = rng(5);
+    decor.push(gl.loadAsync(`${base}models/food_lime_01/food_lime_01.gltf`).then(({ scene: l }) => { clipIt(l);
+      for (const [px_, pz_, py_] of [[-4, -3, .9], [3, -5, .9], [5, 2, .9], [-2, 4, .9], [0, -.5, 5.6], [-5, 1, 4.8], [3.5, -1.5, 5]]) {
+        const c = l.clone(); c.scale.setScalar(100); c.position.set(12 + px_, TOP + py_, -4 + pz_); c.rotation.set(r() * 3, r() * 6, r() * 3); I.add(c); } })); }
+  { const pot = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [15, 0], [16.5, 2], [19.5, 36], [20, 38], [18.8, 38.2], [18.4, 35], [0, 35]].map(([r, y]) => new THREE.Vector2(r, y)), 48), std({ color: '#cbb59a', roughness: .85 }));
+    pot.position.set(L + 38, 0, 100); pot.castShadow = pot.receiveShadow = true; root.add(pot);   // a clay planter in front of the pier by the balcony door
+    decor.push(model('pachira_aquatica_01', L + 38, 34, 100, .74, 2.2)); }
+  await Promise.all(decor);
 
   // ---------- five black surface spots on the ceiling, over the front of the run ----------
   for (let i = 0; i < 5; i++) {
