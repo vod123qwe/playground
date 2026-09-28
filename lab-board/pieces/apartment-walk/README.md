@@ -18,6 +18,12 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Sterowanie:** kliknięcie skrzydła albo E otwiera i zamyka; wejście w zamknięte drzwi (także balkonowe) je otwiera. Nad tym, co się otwiera, kursor zmienia się w dłoń (ta sama co w Glass Button: przechyla się z ruchem, przy kliknięciu się zaciska). Panel: Doors → As left / Open / Closed.
 - **Spacja + przeciąganie** (Overview): przesuwa model po podłodze, z dłonią w miejscu kursora. Podpowiedź sterowania stoi nad przełącznikiem Overview / Walk.
 
+## Podłogi (wg układu funkcjonalnego, arkusz A.04)
+
+- **Jodełka EGGER Herringbone EL2152 Dąb Casella naturalny** (kuchnia, salon, korytarz, trzy pokoje): deska 840 × 168 × 8 mm (5 : 1), 4-stronna V-fuga, struktura Deepskin (matowa, naturalne pory). Wzór powtarza się co 168 cm (sprawdzone: bez szpar i nakładek), mapa w wysokiej jakości obejmuje 336 × 336 cm przy 1,2 px na mm. Drewno ze skanu CC0 *Oak Veneer 01* (Poly Haven), cięte deska po desce z losowym fragmentem, lekko ocieplone i uspokojone pod Casellę, każda deska w swoim odcieniu.
+- **Kierunek jodełki:** szczyty „strzałek” wskazują główne źródło światła, więc oś idzie prostopadle do okien salonu, a jeden rząd szczytów wypada na środku potrójnych drzwi balkonowych. Deski leżą wtedy pod 7° i 97° do osi rysunku. W panelu można przełączyć na oś wzdłuż elewacji.
+- **Płytki** (moduł rzeczywisty + fuga 2 mm): Ceramika Gres Granby Beige 59,7 × 59,7 (przedpokój, pralnia, spiżarnia) i Domino Bihara Beige 59,8 × 59,8 (łazienka). Wzór rysowany proceduralnie w kolorach produktów (Granby: szarobeżowy kamień z cienkimi ukośnymi żyłami, Bihara: jasny krem z miękkimi chmurami); to przybliżenie, nie skan płytki.
+
 ## Skąd są wymiary
 
 - **Ściany prosto z rysunku:** `tools/extract_plan.py` czyta rzut z meblami (`assets/plan.webp`), bierze ciemne piksele, usuwa cienkie linie (meble, skrzydła drzwi, teksty, wymiarowanie), zamienia plamy na wielokąty i przelicza na cm. Szachty narysowane jako obrysy stają się pełne.
@@ -41,6 +47,8 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - `index.html` · widok (three.js 0.186 z jsDelivr)
 - `apartment.json` · dane mieszkania w cm (generowane)
 - `tools/extract_plan.py` · rysunek → dane (`python tools/extract_plan.py`, z `--debug` zapisuje też podgląd ścian)
+- `floors.js` · jodełka i płytki rysowane w canvasie (bezszwowe mapy: kolor, normalne, szorstkość)
+- `assets/oak_*.jpg` · Oak Veneer 01, Poly Haven (CC0)
 - `assets/plan.webp` · rzut z meblami (źródło)
 
 ## Testy (28.09.2026)

@@ -230,6 +230,21 @@ for name, (x, y) in ROOMS:
     rooms.append({'name': name, 'at': [x, y], 'area': round(a, 1), 'outline': out})
     print(name, round(a, 2), 'm2')
 
+# ---------- floor finishes, after the interior layout (sheet A.04) ----------
+# laminate EGGER Herringbone EL2152 Dąb Casella naturalny: kitchen, living room, corridor, the three rooms (everywhere else)
+# tiles Ceramika Gres Granby Beige 60x60: the entrance, the laundry, the pantry; Domino Bihara Beige 60x60: the bathroom
+def zone(mask):
+    m = cv2.dilate((mask > 0).astype(np.uint8), np.ones((5, 5), np.uint8))    # tucked 2 px under the walls, so no wood shows at the edge
+    ps = reg_polys(m)
+    return max(ps, key=lambda q: cv2.contourArea(np.array(q['outer'], np.float32)))
+def room_mask(x, y):
+    ff = rooms_mask.copy(); msk = np.zeros((ff.shape[0] + 2, ff.shape[1] + 2), np.uint8); cv2.floodFill(ff, msk, (x, y), 3); return (ff == 3)
+entrance = np.zeros_like(foot); cv2.rectangle(entrance, (0, 470), (227, 898), 1, -1)   # zone A: from the front door to the wardrobe front (A.04)
+entrance = entrance & foot & (1 - walls)
+FLOORS = [{'finish': 'granby', 'name': 'Ceramika Gres Granby Beige 60x60', 'zones': [zone(entrance), zone(room_mask(530, 960)), zone(room_mask(300, 1010))]},
+          {'finish': 'bihara', 'name': 'Domino Bihara Beige 60x60', 'zones': [zone(room_mask(800, 1450))]}]
+print('tile zones', [(f['finish'], [round(cv2.contourArea(np.array(z['outer'], np.float32)) / S / S / 1e4, 2) for z in f['zones']]) for f in FLOORS])
+
 BALC = [
     {'name': 'Balcony', 'outer': [pt(P2, U, -435, -27), pt(P2, U, -435, -208), pt(P2, U, 230, -208), pt(P2, U, 230, -27)]},
     # the side of the big balcony stands on the pier, 25 cm clear of the bedroom window (on the drawing it touches the window's edge)
@@ -251,6 +266,8 @@ data = {
     'thick': [cmpoly(p) for p in polys(thick)], 'thin': [cmpoly(p) for p in polys(thin)],   # only for the cut surfaces (black / grey)
     'openings': [{**o, 'quad': [cm(q) for q in o['quad']], **({'door': {**o['door'], 'hinge': cm(o['door']['hinge']), 'to': cm(o['door']['to'])}} if 'door' in o else {})} for o in openings],
     'floor': cmpoly(foot_poly),
+    'finishes': {'base': 'EGGER Herringbone EL2152 Dąb Casella naturalny, 840 x 168 x 8 mm, 4V',
+                 'tiles': [{'finish': f['finish'], 'name': f['name'], 'zones': [cmpoly(z) for z in f['zones']]} for f in FLOORS]},
     'balconies': [{'name': b['name'], 'outer': [cm(q) for q in b['outer']]} for b in BALC],
     'rails': [[cm(q) for q in r] for r in RAIL],
     'rooms': [{**r, 'at': cm(r['at']), 'outline': [cm(q) for q in r['outline']]} for r in rooms],
