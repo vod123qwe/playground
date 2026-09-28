@@ -245,6 +245,35 @@ FLOORS = [{'finish': 'granby', 'name': 'Ceramika Gres Granby Beige 60x60', 'zone
           {'finish': 'bihara', 'name': 'Domino Bihara Beige 60x60', 'zones': [zone(room_mask(800, 1450))]}]
 print('tile zones', [(f['finish'], [round(cv2.contourArea(np.array(z['outer'], np.float32)) / S / S / 1e4, 2) for z in f['zones']]) for f in FLOORS])
 
+# ---------- skirting: white, in every room but the laundry, the pantry and the bathroom; none across a door, a balcony door or the open passage ----------
+NO_SKIRT = {'Laundry', 'Pantry', 'Bathroom'}
+gapmask = np.zeros_like(walls)
+for op in openings: cv2.fillPoly(gapmask, [np.round(np.array(op['quad'])).astype(np.int32)], 1)
+cv2.line(gapmask, (621, 911), (778, 911), 1, 3)                   # hall | living room: an open passage, no wall
+gapmask = cv2.dilate(gapmask, np.ones((7, 7), np.uint8))
+SKIRT = []
+for name, (x, y) in ROOMS:
+    if name in NO_SKIRT: continue
+    reg = room_mask(x, y).astype(np.uint8)
+    for p in reg_polys(reg):
+        for ring in [p['outer']] + p['holes']:
+            ring = np.array(ring)
+            for k in range(len(ring)):
+                a, b = ring[k], ring[(k + 1) % len(ring)]; L = float(np.hypot(*(b - a)))
+                if L < 4: continue
+                d = (b - a) / L; nrm = np.array([-d[1], d[0]])
+                mid = (a + b) / 2                                     # the side the room is on
+                inn = nrm if reg[int(np.clip(mid[1] + nrm[1] * 3, 0, reg.shape[0] - 1)), int(np.clip(mid[0] + nrm[0] * 3, 0, reg.shape[1] - 1))] else -nrm
+                run = None
+                for i in range(int(L) + 1):
+                    q = a + d * min(i, L); free_wall = not gapmask[int(round(q[1])), int(round(q[0]))]
+                    if free_wall and run is None: run = q
+                    if (not free_wall or i >= int(L)) and run is not None:
+                        end = q if free_wall else q - d
+                        if np.hypot(*(end - run)) >= 6: SKIRT.append({'a': run.tolist(), 'b': end.tolist(), 'in': inn.tolist(), 'room': name})
+                        run = None
+print('skirting', len(SKIRT), 'pieces,', round(sum(np.hypot(s['b'][0] - s['a'][0], s['b'][1] - s['a'][1]) for s in SKIRT) / S / 100, 1), 'm')
+
 BALC = [
     {'name': 'Balcony', 'outer': [pt(P2, U, -435, -27), pt(P2, U, -435, -208), pt(P2, U, 230, -208), pt(P2, U, 230, -27)]},
     # the side of the big balcony stands on the pier, 25 cm clear of the bedroom window (on the drawing it touches the window's edge)
@@ -271,6 +300,7 @@ data = {
     'balconies': [{'name': b['name'], 'outer': [cm(q) for q in b['outer']]} for b in BALC],
     'rails': [[cm(q) for q in r] for r in RAIL],
     'rooms': [{**r, 'at': cm(r['at']), 'outline': [cm(q) for q in r['outline']]} for r in rooms],
+    'skirting': [{'a': cm(k['a']), 'b': cm(k['b']), 'in': [round(k['in'][0], 4), round(k['in'][1], 4)], 'room': k['room']} for k in SKIRT],
     'start': cm([80, 600]),
 }
 json.dump(data, open(OUT, 'w'), separators=(',', ':'))

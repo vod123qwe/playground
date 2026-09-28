@@ -143,7 +143,7 @@ const wx = x => (x - CX) * M, wz = z => (z - CZ) * M;               // plan → 
 const px = x => x / M + CX, pz = z => z / M + CZ;                   // world → plan
 const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 
-const S = { hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+const S = { fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
 
 // ---------- renderer, scene, light ----------
@@ -180,7 +180,9 @@ camera.position.set(9.5, 17.5, 15);
 const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), H * M);
 const clip = { clippingPlanes: [cutPlane], clipShadows: true };
 const mat = {
-  wall: new THREE.MeshStandardMaterial({ color: '#f5f3ef', roughness: .92, ...clip }),
+  wall: new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: .92, ...clip }),   // inside faces in the paint, outside ones in the facade white (per vertex)
+  paint: new THREE.MeshStandardMaterial({ color: '#ded8cb', roughness: .92, ...clip }),                        // Flügger FL8065 Oat, matt (the hidden doors are painted with the wall)
+  skirting: new THREE.MeshStandardMaterial({ color: '#f5f5f2', roughness: .42, ...clip }),
   thick: new THREE.MeshStandardMaterial({ color: '#e6e0d7', roughness: .92, ...clip }),
   floor: new THREE.MeshStandardMaterial({ color: '#dccbb2', roughness: .78 }),
   balcony: new THREE.MeshStandardMaterial({ color: '#cfcac3', roughness: .9 }),
@@ -193,7 +195,7 @@ const mat = {
   alu: new THREE.MeshStandardMaterial({ color: '#b9bcbf', roughness: .38, metalness: .75 }),
   jamb: new THREE.MeshStandardMaterial({ color: '#f6f5f2', roughness: .55, ...clip }),
   front: new THREE.MeshStandardMaterial({ color: '#43454a', roughness: .5, metalness: .1, ...clip }),
-  nickel: new THREE.MeshStandardMaterial({ color: '#cfc9bf', roughness: .32, metalness: 1, ...clip }),
+  nickel: new THREE.MeshStandardMaterial({ color: '#dcd7ce', roughness: .36, metalness: .9, envMapIntensity: 1.6, ...clip }),   // satin nickel: warm silver, soft reflection
 };
 const glassMat = () => new THREE.MeshStandardMaterial({ color: '#d6ecef', roughness: .04, metalness: .1, transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide, ...clip });
 
@@ -231,7 +233,7 @@ const SASH = {
   'balcony door 180': [{ turn: 0 }, {}],
   'balcony door 270': [{}, {}, { turn: 1 }],
 };
-const sashes = [];
+const sashes = [], glazingG = [];
 const pip = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
 const whiteFrame = new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: .45, ...clip });
 const winHandle = new THREE.MeshStandardMaterial({ color: '#f7f7f5', roughness: .3, ...clip });
@@ -240,7 +242,7 @@ function buildGlazing(o) {
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]), e = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
   let n = [-e[1], e[0]]; const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   if (!pip(mid[0] + n[0] * 45, mid[1] + n[1] * 45, A.floor.outer)) n = [-n[0], -n[1]];   // n points into the flat
-  const G = new THREE.Group(), th = Math.atan2(-e[1], e[0]); G.position.set(wx(a[0]), 0, wz(a[1])); G.rotation.y = th; world.add(G);
+  const G = new THREE.Group(), th = Math.atan2(-e[1], e[0]); G.position.set(wx(a[0]), 0, wz(a[1])); G.rotation.y = th; world.add(G); glazingG.push(G);
   const sI = Math.sign(-e[1] * n[0] + e[0] * n[1]) || 1;           // local +z is inside when sI = 1
   // a bar in two halves: the inside one white, the outside one graphite (x, y: centre in the plane; w, h: size; depth 7 cm)
   const bar = (parent, w, h, x, y) => {
@@ -270,7 +272,8 @@ function buildGlazing(o) {
       const inner = new THREE.Group(); inner.position.set(0, 0, -sI * 3.5 * M); pivot.add(inner);   // the leaf, drawn from the pivot on the inside face
       const cx = L.tilt ? lw / 2 : hs * lw / 2;                     // its centre, in the pivot's frame
       const open = L.turn != null || L.tilt;
-      const SW = !open ? BEAD : (o.sill === 0 && !L.tilt ? SWD : SWW);
+      // a fixed pane sits in the frame on a bead (slimmer, more glass), or in a fixed sash that looks like the opening ones
+      const doorRow = o.sill === 0 && !L.tilt, SW = !open && S.fix === 'frame' ? BEAD : (doorRow ? SWD : SWW);
       const lockW = SW + (open && i < nL - 1 && joint(i) === 'pair' ? MOV : 0);   // the left leaf of a pair carries the movable mullion
       // stiles: at the hinge side and at the lock side (in the pivot frame the lock side is at hs * lw)
       const sHinge = L.tilt ? SW : SW, xl = cx - lw / 2, xr = cx + lw / 2;
@@ -359,19 +362,25 @@ A.rails.forEach((r, bi) => {
 });
 
 // ---------- doors: Porta Vector V (flush, white, two milled frames), Rumba handles; the pantry and the laundry hidden in the wall ----------
-function vectorV(dark, light, srgb) {                              // the leaf's face: two panels, each a double groove
-  const c = document.createElement('canvas'); c.width = 512; c.height = 1416; const g = c.getContext('2d');
-  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-  const W = c.width, Hh = c.height, box = (x0, y0, x1, y1) => { g.strokeRect(x0 * W, y0 * Hh, (x1 - x0) * W, (y1 - y0) * Hh); };
-  const panel = (y0, y1) => {
-    g.lineWidth = 7; g.strokeStyle = dark; box(.18, y0, .82, y1); box(.215, y0 + .0125, .785, y1 - .0125);
-    g.lineWidth = 3; g.strokeStyle = light; box(.18 + .006, y0 + .002, .82 - .006, y1 - .002);
-  };
+function vectorV() {                                               // the leaf's face (Porta Vector V): two panels, each framed by a double milled line
+  const PX = 14, LW = 73.9, LH = 203.7, W = Math.round(LW * PX), Hh = Math.round(LH * PX);   // 14 px per cm on a 73.9 x 203.7 cm leaf
+  const col = document.createElement('canvas'), nor = document.createElement('canvas'); col.width = nor.width = W; col.height = nor.height = Hh;
+  const gc = col.getContext('2d'), gn = nor.getContext('2d');
+  gc.fillStyle = '#fff'; gc.fillRect(0, 0, W, Hh); gn.fillStyle = 'rgb(128,128,255)'; gn.fillRect(0, 0, W, Hh);
+  const hw = .2 * PX, k = 92;                                        // a V groove 4 mm wide: each wall tilted about 45 degrees
+  const vline = (x, y0, y1) => { gn.fillStyle = `rgb(${128 + k},128,200)`; gn.fillRect(x - hw, y0, hw, y1 - y0); gn.fillStyle = `rgb(${128 - k},128,200)`; gn.fillRect(x, y0, hw, y1 - y0);
+    gc.fillStyle = 'rgba(80,72,60,.10)'; gc.fillRect(x - hw * .5, y0, hw, y1 - y0); };
+  const hline = (y, x0, x1) => { gn.fillStyle = `rgb(128,${128 - k},200)`; gn.fillRect(x0, y - hw, x1 - x0, hw); gn.fillStyle = `rgb(128,${128 + k},200)`; gn.fillRect(x0, y, x1 - x0, hw);
+    gc.fillStyle = 'rgba(80,72,60,.10)'; gc.fillRect(x0, y - hw * .5, x1 - x0, hw); };
+  const rect = (x0, y0, x1, y1) => { vline(x0, y0 - hw, y1 + hw); vline(x1, y0 - hw, y1 + hw); hline(y0, x0 - hw, x1 + hw); hline(y1, x0 - hw, x1 + hw); };
+  // proportions from the product photo: the frames 18 % in from the sides; the upper panel from 8.5 % to 59.5 % of the height, the lower from 66.5 % to 91.5 %
+  const panel = (f0, f1) => { const x0 = .18 * W, x1 = .82 * W, y0 = f0 * Hh, y1 = f1 * Hh, d = 2.2 * PX; rect(x0, y0, x1, y1); rect(x0 + d, y0 + d, x1 - d, y1 - d); };
   panel(.085, .595); panel(.665, .915);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; return t;
+  const tex = (c, srgb) => { const t = new THREE.CanvasTexture(c); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; };
+  return { col: tex(col, true), nor: tex(nor) };
 }
-const vTex = vectorV('#6a6a6a', '#d0d0d0'), vCol = vectorV('#cfccc6', '#ffffff', true);   // relief, and the soft shadow in the grooves
-const leafFace = new THREE.MeshStandardMaterial({ color: '#f7f6f3', map: vCol, roughness: .42, bumpMap: vTex, bumpScale: 1.4, ...clip });
+const vV = vectorV();
+const leafFace = new THREE.MeshStandardMaterial({ color: '#f7f6f3', map: vV.col, normalMap: vV.nor, normalScale: new THREE.Vector2(.9, .9), roughness: .42, ...clip });   // white UV lacquer, satin
 const leafEdge = new THREE.MeshStandardMaterial({ color: '#f2f1ee', roughness: .5, ...clip });
 const doors = [];
 const box = (w, h, d, m, x, y, z, parent) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w * M, h * M, d * M), m); b.position.set(x * M, y * M, z * M); b.castShadow = b.receiveShadow = true; parent.add(b); return b; };
@@ -398,7 +407,7 @@ for (const o of A.openings) {
     }
   }
   const pivot = new THREE.Group(); pivot.position.set((jambW + .3) * M, 0, sg * half * M); frame.add(pivot);
-  const faceM = hid ? mat.wall : d.front ? mat.front : leafFace, edgeM = hid ? mat.wall : d.front ? mat.front : leafEdge;
+  const faceM = hid ? mat.paint : d.front ? mat.front : leafFace, edgeM = hid ? mat.paint : d.front ? mat.front : leafEdge;
   const leaf = new THREE.Mesh(new THREE.BoxGeometry(lw * M, lh * M, lt * M), [edgeM, edgeM, edgeM, edgeM, faceM, faceM]);
   leaf.position.set(lw / 2 * M, (1 + lh / 2) * M, -sg * lt / 2 * M); leaf.castShadow = leaf.receiveShadow = true; pivot.add(leaf);
   handle(pivot, lw - 6.5, 0, sg); handle(pivot, lw - 6.5, -sg * lt, -sg);
@@ -408,6 +417,58 @@ for (const o of A.openings) {
   leaf.userData.door = door; doors.push(door);
 }
 for (const sh of sashes) doors.push(sh);
+function rebuildGlazing() {                                         // after a change of the fixed panes: the leaves again, their state kept
+  const was = new Map(doors.filter(d => d.kind).map(d => [d.o.name + '|' + d.ph.map(Math.round).join(','), [d.f, d.to]]));
+  for (const G of glazingG.splice(0)) { world.remove(G); G.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  for (let i = doors.length - 1; i >= 0; i--) if (doors[i].kind) doors.splice(i, 1);
+  sashes.length = 0;
+  for (const o of A.openings) if (o.glazed) buildGlazing(o);
+  for (const sh of sashes) { const w = was.get(sh.o.name + '|' + sh.ph.map(Math.round).join(',')); if (w) [sh.f, sh.to] = w; doors.push(sh); }
+}
+
+// ---------- the paint: every wall face that looks into the flat takes the colour; the facade stays white ----------
+const FACADE = new THREE.Color('#f5f3ef');
+function paintRooms() {
+  const paint = new THREE.Color(S.paint), a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), nrm = new THREE.Vector3();
+  for (const m of wallsG.children) {
+    const g = m.geometry, pos = g.attributes.position;
+    if (!g.userData.inside) {                                        // which triangles face a room (worked out once)
+      const ins = new Uint8Array(pos.count / 3);
+      for (let t = 0; t < ins.length; t++) {
+        a.fromBufferAttribute(pos, 3 * t); b.fromBufferAttribute(pos, 3 * t + 1); c.fromBufferAttribute(pos, 3 * t + 2);
+        nrm.subVectors(c, b).cross(b.clone().sub(a)).normalize().negate();
+        if (Math.abs(nrm.y) > .9) { ins[t] = 1; continue; }            // the caps
+        const x = (a.x + b.x + c.x) / 3 + nrm.x * .05, z = (a.z + b.z + c.z) / 3 + nrm.z * .05;
+        ins[t] = pip(px(x), pz(z), A.floor.outer) ? 1 : 0;
+      }
+      g.userData.inside = ins;
+      if (!g.attributes.color) g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pos.count * 3), 3));
+    }
+    const col = g.attributes.color, ins = g.userData.inside;
+    for (let t = 0; t < ins.length; t++) { const k = ins[t] ? paint : FACADE; for (let v = 0; v < 3; v++) col.setXYZ(3 * t + v, k.r, k.g, k.b); }
+    col.needsUpdate = true;
+  }
+  mat.paint.color.set(S.paint);
+}
+paintRooms();
+
+// ---------- skirting: white MDF 80 x 16 mm with an eased top edge, along the walls of every room but the laundry, the pantry and the bathroom ----------
+{
+  const SK_H = 8, SK_T = 1.6, prof = new THREE.Shape();              // the profile in (depth from the wall, height)
+  prof.moveTo(0, 0); prof.lineTo(SK_T, 0); prof.lineTo(SK_T, SK_H - .5); prof.quadraticCurveTo(SK_T, SK_H, SK_T - .5, SK_H); prof.lineTo(0, SK_H); prof.closePath();
+  for (const k of A.skirting) {
+    const dx = k.b[0] - k.a[0], dz = k.b[1] - k.a[1], L = Math.hypot(dx, dz);
+    const g = new THREE.ExtrudeGeometry(prof, { depth: L, bevelEnabled: false, curveSegments: 3 });
+    g.scale(M, M, M);                                                // x = away from the wall, y = up, z = along the wall
+    const m = new THREE.Mesh(g, mat.skirting); m.castShadow = m.receiveShadow = true;
+    // a frame: z along the run, x into the room
+    let zAx = new THREE.Vector3(dx / L, 0, dz / L), from = k.a;
+    const xAx = new THREE.Vector3(k.in[0], 0, k.in[1]).normalize(), yAx = new THREE.Vector3(0, 1, 0);
+    if (xAx.clone().cross(yAx).dot(zAx) < 0) { zAx.negate(); from = k.b; }   // keep the frame right-handed, or the faces turn inside out
+    m.matrix.makeBasis(xAx, yAx, zAx).setPosition(wx(from[0]), .0005, wz(from[1])); m.matrixAutoUpdate = false;
+    world.add(m);
+  }
+}
 const leafDir = dr => { const a = dr.f * Math.PI / 2; return [Math.cos(a) * dr.dir[0] + Math.sin(a) * dr.side[0], Math.cos(a) * dr.dir[1] + Math.sin(a) * dr.side[1]]; };
 function segDist(x, z, dr) {                                       // how far a point is from the leaf (cm, plan)
   if (dr.high) return 1e9;                                         // a pane above the transom is out of the way
@@ -688,6 +749,12 @@ const ctl = {};
   ctl.thick = LabUI.check(g, { label: 'Mark thick walls', value: S.thick, onChange: v => { S.thick = v; paintWalls(); } });
   ctl.plan = LabUI.check(g, { label: 'Floor plan on the floor', value: S.plan, onChange: v => { S.plan = v; plan.visible = v; } });
   ctl.planOp = LabUI.slider(g, { label: 'Plan opacity', min: .1, max: 1, step: .05, value: S.planOp, def: DEF.planOp, onInput: v => { S.planOp = v; plan.material.opacity = v; } });
+  g = LabUI.group(panel, 'Windows', { key: 'lab.aw.group.windows' });
+  ctl.fix = LabUI.seg(g, { label: 'Fixed panes', options: [['frame', 'In the frame'], ['sash', 'In a fixed sash']], value: S.fix, onChange: v => { S.fix = v; rebuildGlazing(); } });
+  const xn = document.createElement('p'); xn.className = 'note'; xn.textContent = 'In the frame: glass on a bead, a slimmer border and more glass than the opening leaves. In a fixed sash: every field looks the same. Both are made; the window order says which.'; g.appendChild(xn);
+  g = LabUI.group(panel, 'Walls', { key: 'lab.aw.group.walls' });
+  ctl.paint = LabUI.color(g, { label: 'Paint', value: S.paint, onInput: v => { S.paint = v; paintRooms(); } });
+  const wn = document.createElement('p'); wn.className = 'note'; wn.textContent = 'Flügger FL8065 Oat (#DED8CB), matt, on every wall inside; white skirting 80 mm everywhere but the laundry, the pantry and the bathroom.'; g.appendChild(wn);
   g = LabUI.group(panel, 'Floor', { key: 'lab.aw.group.floor' });
   ctl.hb = LabUI.seg(g, { label: 'Herringbone', options: [['window', 'Points to the windows'], ['facade', 'Along the facade']], value: S.hb, onChange: v => { S.hb = v; if (hbMesh) hbMesh.userData.setUV(hbUV); } });
   const fn = document.createElement('p'); fn.className = 'note';

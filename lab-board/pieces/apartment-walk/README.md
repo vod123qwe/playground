@@ -18,6 +18,13 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Sterowanie:** kliknięcie skrzydła albo E otwiera i zamyka; wejście w zamknięte drzwi (także balkonowe) je otwiera. Nad tym, co się otwiera, kursor zmienia się w dłoń (ta sama co w Glass Button: przechyla się z ruchem, przy kliknięciu się zaciska). Panel: Doors → As left / Open / Closed.
 - **Spacja + przeciąganie** (Overview): przesuwa model po podłodze, z dłonią w miejscu kursora. Podpowiedź sterowania stoi nad przełącznikiem Overview / Walk.
 
+## Ściany i listwy
+
+- **Farba Flügger FL8065 Oat** (#DED8CB, ciepły jęczmienny beż, mat) na wszystkich ścianach od środka, łącznie z ościeżami i ukrytymi drzwiami; elewacja zostaje biała (kolor liczony per ściana: które lico patrzy do mieszkania). W panelu: *Walls → Paint*.
+- **Listwy przypodłogowe** białe MDF 80 × 16 mm z zaokrągloną górną krawędzią, we wszystkich pomieszczeniach poza pralnią, spiżarnią i łazienką; przerwane w drzwiach, drzwiach balkonowych i w przejściu korytarz–salon (ok. 60 m, 59 odcinków).
+- **Drzwi Porta Vector V:** frezy w skali rzeczywistej (rowek V 4 mm, druga linia 2,2 cm do środka, 14 px/cm) w mapie normalnych, zamiast rozmytej mapy wypukłości.
+- **Szyby stałe** (*Windows → Fixed panes*): w ramie na listwie (smuklejsza rama, więcej szkła niż w skrzydłach otwieranych) albo w skrzydle stałym (wszystkie pola jednakowe). Oba warianty się produkuje; który jest w mieszkaniu, mówi zamówienie okien.
+
 ## Podłogi (wg układu funkcjonalnego, arkusz A.04)
 
 - **Jodełka EGGER Herringbone EL2152 Dąb Casella naturalny** (kuchnia, salon, korytarz, trzy pokoje): deska 840 × 168 × 8 mm (5 : 1), 4-stronna V-fuga, struktura Deepskin (matowa, naturalne pory). Wzór powtarza się co 168 cm (sprawdzone: bez szpar i nakładek), mapa w wysokiej jakości obejmuje 336 × 336 cm przy 1,2 px na mm. Drewno ze skanu CC0 *Oak Veneer 01* (Poly Haven), cięte deska po desce z losowym fragmentem, lekko ocieplone i uspokojone pod Casellę, każda deska w swoim odcieniu.
