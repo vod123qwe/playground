@@ -55,6 +55,16 @@
        color:rgba(20,20,20,.66); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums}
   .pts i{width:8px; height:8px; border-radius:50%; background:#c9a15a; transition:background .3s} .pts.done i{background:#3fae6a}
   body.pt-on .pts{display:flex}
+  /* photo spots: a marker where a 360 photo was taken; in a photo, a bar to go back */
+  .spot{position:absolute; left:0; top:0; display:flex; align-items:center; gap:6px; height:32px; padding:0 12px 0 9px; border:0; border-radius:999px; background:#fff; color:var(--ink);
+        font:600 12px/1 Inter, sans-serif; box-shadow:0 0 0 1px var(--line); cursor:pointer; pointer-events:auto; white-space:nowrap}
+  .spot svg{width:16px; height:16px} .spot:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:2px}
+  body:not(.walk) .spot, body.in-spot .spot{display:none}
+  .spotbar{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:6; transform:translateX(-50%); display:none; align-items:center; gap:6px; padding:5px; border-radius:999px; background:#fff; box-shadow:0 0 0 1px var(--line)}
+  body.in-spot .spotbar{display:flex} body.in-spot .dock, body.in-spot .hint, body.in-spot .qbox, body.in-spot .mini{display:none}
+  .spotbar button{height:36px; padding:0 14px; border:0; border-radius:999px; background:transparent; font-weight:600; color:rgba(20,20,20,.7); cursor:pointer}
+  .spotbar button[aria-pressed=true]{background:var(--ink); color:#fff} .spotbar .sb-back{background:rgba(20,20,20,.06); color:var(--ink)}
+  .spotbar small{padding:0 8px; color:var(--muted); font-size:11.5px}
   .clock{position:fixed; right:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:5; width:124px; height:124px; border-radius:50%; background:#fff;
          cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; transition:right .45s var(--ease)}
   .clock:active{cursor:grabbing} .clock:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:3px} .clock svg{display:block; width:100%; height:100%}
@@ -170,6 +180,7 @@
 </div></div>
 
 <div class="hint" id="hint" aria-live="polite"></div>
+<div class="spotbar" id="spotbar" role="group" aria-label="Photo spots"></div>
 <div class="clock" id="clock" role="slider" tabindex="0" aria-label="Time of day" aria-valuemin="0" aria-valuemax="1439" title="The time of day: drag round the dial, scroll, or use the arrow keys">
   <svg viewBox="0 0 120 120" aria-hidden="true">
     <circle cx="60" cy="60" r="47" fill="none" stroke="#2f3442" stroke-width="9"/>
@@ -373,6 +384,99 @@ function flat(outer, holes, y, m) {
 const world = new THREE.Group(); scene.add(world);
 const wallsG = new THREE.Group(), capsG = new THREE.Group(), glassG = [], labelsAt = [];
 world.add(wallsG, capsG);
+// ---------- photo spots: 360 photos of the rooms, taken where a photographer would stand ----------
+// Each spot: a 360 panorama rendered from the model (assets/spots/<id>/render.jpg) with a depth map and a normal map beside it, so an
+// image model can make a photo of it without moving a wall or a chair (photo.jpg, when there is one). In the walk a marker shows
+// where each is; click it and the view becomes that photo, to look round in; the bar at the bottom goes to the others or back.
+const SPOTS = [
+  { id: 'living-a', name: 'Living room', at: [330, -860], eye: 145 },          // between the table and the island: the sofa, the windows, the kitchen
+  { id: 'kitchen-a', name: 'Kitchen', at: [313.8, -1038.2], eye: 145 },        // in the aisle, between the run and the island
+];
+const SPOT = { cur: null, tex: {}, els: [] };
+const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>';
+for (const sp of SPOTS) {                                            // the files there are, the photo before the render
+  sp.file = null;
+  (async () => {
+    for (const f of ['photo.jpg', 'render.jpg']) {
+      const r = await fetch(`assets/spots/${sp.id}/${f}`, { method: 'HEAD' }).catch(() => null);
+      if (r && r.ok && r.headers.get('content-type')?.startsWith('image')) { sp.file = f; break; }
+    }
+    if (!sp.file) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'spot'; b.innerHTML = spotIcon + `<span>${sp.name}${sp.file === 'photo.jpg' ? '' : ' · render'}</span>`;
+    b.title = `A 360 ${sp.file === 'photo.jpg' ? 'photo' : 'render'} from here: look round in it`; b.addEventListener('click', () => enterSpot(sp));
+    document.getElementById('overlay').appendChild(b); SPOT.els.push({ el: b, sp, v: new THREE.Vector3(wx(sp.at[0]), sp.eye * M * .8, wz(sp.at[1])) });
+    paintSpotbar();
+  })();
+}
+function paintSpotbar() {
+  const bar = document.getElementById('spotbar'), ok = SPOTS.filter(s => s.file);
+  bar.innerHTML = ''; const back = document.createElement('button'); back.type = 'button'; back.className = 'sb-back'; back.textContent = 'Back to the walk'; back.addEventListener('click', leaveSpot); bar.appendChild(back);
+  for (const sp of ok) { const b = document.createElement('button'); b.type = 'button'; b.textContent = sp.name; b.setAttribute('aria-pressed', String(SPOT.cur === sp)); b.addEventListener('click', () => enterSpot(sp)); bar.appendChild(b); }
+  if (SPOT.cur) { const n = document.createElement('small'); n.textContent = SPOT.cur.file === 'photo.jpg' ? 'photo' : 'render · the photo is on its way'; bar.appendChild(n); }
+}
+async function enterSpot(sp) {
+  if (!sp.file) return;
+  if (!SPOT.tex[sp.id]) SPOT.tex[sp.id] = await new Promise(res => new THREE.TextureLoader().load(`assets/spots/${sp.id}/${sp.file}`, t => { t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; res(t); }));
+  if (mode !== 'walk') setMode('walk');
+  SPOT.cur = sp; P.x = sp.at[0]; P.z = sp.at[1]; P.vx = P.vz = 0; document.body.classList.add('in-spot'); paintSpotbar(); moved();
+}
+function leaveSpot() { if (!SPOT.cur) return; SPOT.cur = null; document.body.classList.remove('in-spot'); scene.backgroundRotation.set(0, Math.PI / 2, 0); paintSpotbar(); moved(); }
+addEventListener('keydown', e => { if (SPOT.cur && (e.key === 'Escape' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].includes(e.code))) leaveSpot(); });
+
+// the capture (from the console, locally): AW.captureSpot('living-a', 'http://127.0.0.1:8811/f/') renders the 360 colour (the model as it is
+// now, the made-up view outside so nothing gives the place away), the depth (white near, black at 8 m) and the world normals, each
+// through a cube of 2048 per face into a 4096 x 2048 panorama, and posts them as <url>N (colour, depth, normals)
+async function captureSpot(id, url, size = 4096) {
+  const sp = SPOTS.find(s => s.id === id); if (!sp) throw new Error('no such spot');
+  const keepView = S.view; S.view = 'generic'; leaveSpot();
+  if (mode !== 'walk') { setMode('walk'); await new Promise(r => setTimeout(r, 1500)); }
+  P.x = sp.at[0]; P.z = sp.at[1]; await new Promise(r => setTimeout(r, 400));
+  photoing = true;
+  const pos = new THREE.Vector3(wx(sp.at[0]), sp.eye * M, wz(sp.at[1]));
+  const cube = new THREE.CubeCamera(.03, 300, new THREE.WebGLCubeRenderTarget(size / 2, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter }));
+  cube.position.copy(pos); scene.add(cube);
+  const W = size, Hh = size / 2, rt = new THREE.WebGLRenderTarget(W, Hh);
+  const unwrap = new THREE.ShaderMaterial({ uniforms: { env: { value: cube.renderTarget.texture }, exposure: { value: renderer.toneMappingExposure }, tone: { value: 1 } }, depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+    fragmentShader: `varying vec2 vUv; uniform samplerCube env; uniform float exposure, tone;
+      vec3 fit(vec3 v){ vec3 a = v * (v + .0245786) - .000090537; vec3 b = v * (.983729 * v + .4329510) + .238081; return a / b; }
+      vec3 aces(vec3 c){ const mat3 I = mat3(vec3(.59719, .07600, .02840), vec3(.35458, .90834, .13383), vec3(.04823, .01566, .83777));
+        const mat3 O = mat3(vec3(1.60475, -.10208, -.00327), vec3(-.53108, 1.10813, -.07276), vec3(-.07367, -.00605, 1.07602)); return clamp(O * fit(I * (c * exposure / .6)), 0., 1.); }
+      vec3 srgb(vec3 c){ return mix(c * 12.92, 1.055 * pow(c, vec3(1. / 2.4)) - .055, step(.0031308, c)); }
+      void main(){ float phi = (vUv.x - .5) * 6.28318530718, th = (vUv.y - .5) * 3.14159265359;
+        vec3 c = textureCube(env, vec3(cos(th) * cos(phi), sin(th), cos(th) * sin(phi))).rgb;
+        gl_FragColor = vec4(tone > .5 ? srgb(aces(c)) : c, 1.); }` });
+  const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), unwrap); q.frustumCulled = false; const qs = new THREE.Scene(); qs.add(q); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
+  const grab = async (type) => {
+    renderer.setRenderTarget(rt); renderer.render(qs, qc); renderer.setRenderTarget(null);
+    const px = new Uint8Array(W * Hh * 4); renderer.readRenderTargetPixels(rt, 0, 0, W, Hh, px);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = Hh; const cx = cv.getContext('2d', { willReadFrequently: true }), img = cx.createImageData(W, Hh);
+    for (let y = 0; y < Hh; y++) img.data.set(px.subarray((Hh - 1 - y) * W * 4, (Hh - y) * W * 4), y * W * 4);
+    for (let i = 3; i < img.data.length; i += 4) img.data[i] = 255;
+    cx.putImageData(img, 0, 0); return new Promise(r => cv.toBlob(r, type, .92));
+  };
+  const hidden = [];                                                 // glass and sheers out of the depth and the normals
+  const hideClear = () => scene.traverse(o => { if (o.isMesh && o.visible && [].concat(o.material).some(m => m.transparent && m.opacity < .95)) { o.visible = false; hidden.push(o); } });
+  const out = [];
+  try {
+    scene.backgroundRotation.set(0, Math.PI / 2, 0); scene.background = VIEW.tex.generic || bgColor; ceiling.visible = true;
+    cube.update(renderer, scene); out.push(await grab('image/jpeg'));
+    const bg = scene.background; scene.background = new THREE.Color(0, 0, 0); hideClear();
+    scene.overrideMaterial = new THREE.ShaderMaterial({ uniforms: { cam: { value: pos } }, vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: 'varying vec3 vW; uniform vec3 cam; void main(){ float d = 1. - clamp((length(vW - cam) - .3) / 7.7, 0., 1.); gl_FragColor = vec4(vec3(d), 1.); }' });
+    unwrap.uniforms.tone.value = 0; cube.update(renderer, scene); out.push(await grab('image/png'));
+    scene.overrideMaterial = new THREE.ShaderMaterial({ vertexShader: 'varying vec3 vN; void main(){ vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+      fragmentShader: 'varying vec3 vN; void main(){ gl_FragColor = vec4(normalize(vN) * .5 + .5, 1.); }', side: THREE.DoubleSide });
+    cube.update(renderer, scene); out.push(await grab('image/png'));
+    scene.overrideMaterial = null; scene.background = bg;
+  } finally {
+    scene.overrideMaterial = null; for (const o of hidden) o.visible = true; scene.remove(cube); cube.renderTarget.dispose(); rt.dispose(); unwrap.dispose();
+    S.view = keepView; photoing = false;
+  }
+  if (url) for (let i = 0; i < out.length; i++) await fetch(url + (9201 + i), { method: 'POST', body: out[i] });
+  return out.map(b => b.size);
+}
+
 // ---------- the clock ----------
 const clockEl = document.getElementById('clock'), fmt = m => `${Math.floor(m / 60) % 24}:${String(Math.round(m % 60)).padStart(2, '0')}`;
 const dialAt = (min, r) => { const a = (min / 1440) * Math.PI * 2 + Math.PI; return [60 + r * Math.sin(a), 60 - r * Math.cos(a)]; };   // noon at the top
@@ -1406,7 +1510,7 @@ function frame(now) {
     const cut = tween.from.cut + (to.cut - tween.from.cut) * e; if (Math.abs(cut - (S.cutNow ?? -1)) > .5 || k === 1) applyCut(cut);
     if (k === 1) { tween = null; if (mode === 'over') { controls.target.copy(overPose.target); controls.enabled = true; controls.update(); } }
   } else if (mode === 'walk') {
-    stepWalk(dt); stepLens(dt); const e = eyePose(); camera.position.copy(e.pos); camera.quaternion.copy(e.q);
+    if (!SPOT.cur) stepWalk(dt); stepLens(dt); const e = eyePose(); if (SPOT.cur) e.pos.y = SPOT.cur.eye * M; camera.position.copy(e.pos); camera.quaternion.copy(e.q);
   } else {                                                          // the overview: no lower than the tops of the walls
     panOver(dt);
     const up = OV_Y - controls.target.y, dist = camera.position.distanceTo(controls.target);
@@ -1434,10 +1538,17 @@ function frame(now) {
   const inside = mode === 'walk' && !tween;
   const nearIn = inside || (tween && mode === 'walk' && (now - tween.t0) / tween.dur > .8);
   ceiling.visible = !!(S.ceiling && nearIn);
-  const bgNow = nearIn && VIEW.tex[S.view] ? VIEW.tex[S.view] : bgColor;   // inside: the view out of the windows; the overview: the plain page
+  const spotTex = SPOT.cur && SPOT.tex[SPOT.cur.id];
+  world.visible = !spotTex;                                            // in a photo spot the photo is all there is
+  if (spotTex) scene.backgroundRotation.set(0, 0, 0);
+  const bgNow = spotTex || (nearIn && VIEW.tex[S.view] ? VIEW.tex[S.view] : bgColor);   // inside: the view out of the windows; the overview: the plain page
   if (scene.background !== bgNow) { scene.background = bgNow; ptScene(); }
   // labels
   const w = innerWidth, h = innerHeight;
+  for (const s2 of SPOT.els) {
+    v.copy(s2.v).project(camera); const d = camera.position.distanceTo(s2.v), vis = mode === 'walk' && !SPOT.cur && v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1 && d > .6 && d < 9;
+    s2.el.style.transform = `translate(${(v.x + 1) / 2 * w}px, ${(1 - v.y) / 2 * h}px) translate(-50%, -50%)`; s2.el.style.visibility = vis ? '' : 'hidden';
+  }
   for (const l of labelsAt) {
     v.copy(l.v).project(camera);
     const vis = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
@@ -1450,7 +1561,7 @@ function frame(now) {
   }
   if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
-  const idle = S.pt && mode === 'walk' && !tween && performance.now() - lastMove > 280;
+  const idle = S.pt && mode === 'walk' && !tween && !SPOT.cur && performance.now() - lastMove > 280;
   if (idle && ptReady()) {
     if (ptDirty) { if (!ptBuilding) buildPT(); }
     else {
@@ -1510,7 +1621,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

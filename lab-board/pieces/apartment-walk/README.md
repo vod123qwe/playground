@@ -67,6 +67,12 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - Nisko nad horyzontem słońce czerwienieje i słabnie; po zachodzie światło okien i otoczenia gaśnie do zmierzchu, tło ciemnieje.
 - **Light warmth** (2700–6500 K) i **Light strength** (20–200 %) w panelu (Light) zastąpiły kąt słońca: barwa i natężenie światła dziennego (słońce, niebo w oknach, otoczenie).
 
+## Punkty zdjęciowe (tryb Photo)
+
+- W spacerze znaczniki z aparatem („Living room”, „Kitchen”) pokazują miejsca, z których jest panorama 360° wnętrza; kliknięcie zamienia widok na tę panoramę (rozglądanie przeciąganiem), pasek na dole przełącza punkty i wraca do spaceru (też Esc albo W/A/S/D).
+- Każdy punkt ma w `assets/spots/<id>/`: `render.jpg` (kolor, 4096 × 2048, z modelu, za oknem widok wymyślony), `depth.png` (głębia: biały blisko, czarny 8 m) i `normal.png` (normalne w układzie świata). Mapy głębi i normalnych są po to, żeby model obrazowy zrobił z renderu zdjęcie, nie przesuwając ściany ani krzesła; gotowe zdjęcie jako `photo.jpg` zastępuje render.
+- Nagranie: `AW.captureSpot('<id>', 'http://127.0.0.1:8811/f/')` w konsoli (kostka 2048 na ścianę, 4096 × 2048, te same kolory co spacer).
+
 ## Widok za oknami
 
 - **Panorama 360°** (równoprostokątna 2:1, 8192 × 4096) jako tło spaceru, widoczna przez wszystkie okna i z balkonów; z 4. piętra (oko 13,7 m nad terenem), obrócona zgodnie ze stronami świata, wieczorem przygasa razem z zegarem. W widoku z góry tło zostaje gładkie.
