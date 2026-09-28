@@ -245,25 +245,40 @@ function buildGlazing(o) {
   const bar = (parent, w, h, x, y) => {
     for (const [m, z] of [[whiteFrame, 1.75], [mat.frame, -1.75]]) { const k = new THREE.Mesh(new THREE.BoxGeometry(w * M, h * M, 3.5 * M), m); k.position.set(x * M, y * M, sI * z * M); k.castShadow = true; parent.add(k); }
   };
-  const F = 6, SW = 6, y0 = o.sill, y1 = o.head;
-  bar(G, len, F, len / 2, y1 - F / 2); bar(G, len, F, len / 2, y0 + F / 2); bar(G, F, y1 - y0, F / 2, (y0 + y1) / 2); bar(G, F, y1 - y0, len - F / 2, (y0 + y1) / 2);   // the fixed frame
+  // profile sizes after the REHAU SYNEGO sections (a typical PVC system, 80 mm): visible frame 5 cm (another 1.5-2 cm sits under the plaster),
+  // window sash 5.7, door sash 8.4, a fixed pane only in a 2 cm glazing bead, a fixed mullion 9.6, the movable mullion of a pair 5
+  const F = 5, SWW = 5.7, SWD = 8.4, BEAD = 2, MUL = 9.6, MOV = 5, y0 = o.sill, y1 = o.head;
+  bar(G, len, F, len / 2, y1 - F / 2); bar(G, len, F, len / 2, y0 + F / 2); bar(G, F, y1 - y0, F / 2, (y0 + y1) / 2); bar(G, F, y1 - y0, len - F / 2, (y0 + y1) / 2);   // the frame
   const spec = SASH[o.name] || Array.from({ length: o.panes || 1 }, () => ({}));
-  const rows = Array.isArray(spec) ? [{ lo: y0 + F, hi: y1 - F, leaves: spec }] : [{ lo: y0 + F, hi: spec.transom - 3, leaves: spec.below }, { lo: spec.transom + 3, hi: y1 - F, leaves: spec.above }];
-  if (!Array.isArray(spec)) bar(G, len - 2 * F, 6, len / 2, spec.transom);   // the transom
+  const rows = Array.isArray(spec) ? [{ lo: y0 + F, hi: y1 - F, leaves: spec }] : [{ lo: y0 + F, hi: spec.transom - MUL / 2, leaves: spec.below }, { lo: spec.transom + MUL / 2, hi: y1 - F, leaves: spec.above }];
+  if (!Array.isArray(spec)) bar(G, len - 2 * F, MUL, len / 2, spec.transom);   // the transom is a fixed mullion
   for (const row of rows) {
-    const nL = row.leaves.length, lw = (len - 2 * F) / nL, lh = row.hi - row.lo;
-    row.leaves.forEach((L, i) => {
-      const x0 = F + i * lw, hinge = L.turn === 1 ? x0 + lw : x0, hs = L.turn === 1 ? -1 : 1;   // hs: the leaf runs from the hinge towards +x or -x
+    const Ls = row.leaves, nL = Ls.length, lh = row.hi - row.lo;
+    // between two leaves: a pair opening from the middle meets on a movable mullion; anything else stands on a fixed one
+    const joint = i => Ls[i].turn === 0 && Ls[i + 1].turn === 1 ? 'pair' : 'post';
+    const posts = Ls.slice(0, -1).map((_, i) => joint(i)).filter(j => j === 'post').length;
+    const cw = (len - 2 * F - posts * MUL) / nL;
+    let x = F;
+    Ls.forEach((L, i) => {
+      if (i > 0 && joint(i - 1) === 'post') { bar(G, MUL, lh, x + MUL / 2, row.lo + lh / 2); x += MUL; }
+      const x0 = x; x += cw;
+      const lw = cw, hinge = L.turn === 1 ? x0 + lw : x0, hs = L.turn === 1 ? -1 : 1;   // hs: the leaf runs from the hinge towards +x or -x
       const pivot = new THREE.Group();
       if (L.tilt) pivot.position.set(x0 * M, row.lo * M, sI * 3.5 * M); else pivot.position.set(hinge * M, row.lo * M, sI * 3.5 * M);
       G.add(pivot);
-      const inner = new THREE.Group(); inner.position.set(0, 0, -sI * 3.5 * M); pivot.add(inner);   // the sash, drawn from the pivot on the inside face
-      const cx = L.tilt ? lw / 2 : hs * lw / 2;
-      bar(inner, lw, SW, cx, lh - SW / 2); bar(inner, lw, SW, cx, SW / 2); bar(inner, SW, lh, cx - lw / 2 + SW / 2, lh / 2); bar(inner, SW, lh, cx + lw / 2 - SW / 2, lh / 2);
-      const glass = new THREE.Mesh(new THREE.PlaneGeometry((lw - 2 * SW) * M, (lh - 2 * SW) * M), glassMat()); glass.position.set(cx * M, lh / 2 * M, 0); inner.add(glass); glassG.push(glass);
+      const inner = new THREE.Group(); inner.position.set(0, 0, -sI * 3.5 * M); pivot.add(inner);   // the leaf, drawn from the pivot on the inside face
+      const cx = L.tilt ? lw / 2 : hs * lw / 2;                     // its centre, in the pivot's frame
       const open = L.turn != null || L.tilt;
+      const SW = !open ? BEAD : (o.sill === 0 && !L.tilt ? SWD : SWW);
+      const lockW = SW + (open && i < nL - 1 && joint(i) === 'pair' ? MOV : 0);   // the left leaf of a pair carries the movable mullion
+      // stiles: at the hinge side and at the lock side (in the pivot frame the lock side is at hs * lw)
+      const sHinge = L.tilt ? SW : SW, xl = cx - lw / 2, xr = cx + lw / 2;
+      const leftW = L.tilt || !open ? SW : (hs === 1 ? sHinge : lockW), rightW = L.tilt || !open ? SW : (hs === 1 ? lockW : sHinge);
+      bar(inner, lw, SW, cx, lh - SW / 2); bar(inner, lw, SW, cx, SW / 2); bar(inner, leftW, lh, xl + leftW / 2, lh / 2); bar(inner, rightW, lh, xr - rightW / 2, lh / 2);
+      const gw = lw - leftW - rightW, gx = xl + leftW + gw / 2;
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(gw * M, (lh - 2 * SW) * M), glassMat()); glass.position.set(gx * M, lh / 2 * M, 0); inner.add(glass); glassG.push(glass);
       if (open) {                                                    // a white window handle on the inside: on the lock stile, or on top for the tilting pane
-        const hx = L.tilt ? lw / 2 : hs * (lw - SW / 2), hy = L.tilt ? lh - SW / 2 : Math.min(105 - row.lo, lh / 2), hg = new THREE.Group();
+        const hx = L.tilt ? lw / 2 : hs * (lw - lockW / 2), hy = L.tilt ? lh - SW / 2 : Math.min(105 - row.lo, lh / 2), hg = new THREE.Group();
         hg.position.set(hx * M, hy * M, sI * 3.7 * M); inner.add(hg);
         const rose = new THREE.Mesh(new THREE.BoxGeometry(.03, .075, .012), winHandle); rose.position.z = sI * .006; hg.add(rose);
         const lever = new THREE.Mesh(new THREE.BoxGeometry(.022, .12, .018), winHandle); lever.position.set(0, L.tilt ? .0 : -.055, sI * .03); if (L.tilt) lever.rotation.z = Math.PI / 2; hg.add(lever);
