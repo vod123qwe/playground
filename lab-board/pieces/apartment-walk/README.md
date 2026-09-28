@@ -43,6 +43,16 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Światło w spacerze** (przełącznik pod minimapą): **Preview** to zawsze szybki podgląd; **Low res** i **High res** po zatrzymaniu przechodzą w śledzenie światła w połowie albo w pełnej rozdzielczości (do 256 albo 1500 próbek; High czyści się ok. 10 minut). W ruchu wraca podgląd. Kafelki ok. 200×170 px, jeden na klatkę i tylko gdy karta skończyła poprzedni; na ekranie ten sam filtr iskier i odszumianie, coraz słabsze z liczbą próbek. Domyślnie Preview (`?pt=1` startuje w Low). Tracer dostaje własną, spłaszczoną kopię sceny: każda siatka z własną geometrią w układzie świata i jednym materiałem, ściany z farbą zamiast kolorów wierzchołków, oraz liczone styczne dla map normalnych (bez nich dąb, podłoga i bukle wychodziły czarne).
 - **Wyspa 180 × 80** (A.04) w miejscu z A.04: szuflady od strony kuchni, ryflowany dąb od strony salonu, nawis 25 cm na kolana, 3 hokery (siedzisko 65 cm, po 60 cm na osobę). *Kitchen → Aisle to the island* przesuwa wyspę (A.04: 90 cm).
 
+## Salon (układ A.04)
+
+- **Sofa narożna** 225 × 85 cm z szezlongiem 83 × 140 przy oknach, plecami do wyspy (przejście za nią ok. 86 cm), tam gdzie rysuje ją A.04. Siedzisko 44, oparcie 82, podłokietniki 60, na cofniętym cokole. Poduszki siedziska i oparcia miękkie (wypukła góra, lekko wybrzuszone boki, drobna nierówność), w lnie *rough linen* (CC0) przeliczonym na ciepły greige. Cztery poduszki dekoracyjne: len kość słoniowa i glina, jedna w piké waflowym w kolorze ochry.
+- **Stolik boczny** Ø 50, wys. 45, trawertyn (blat 3 cm na walcu), mały gliniany wazon.
+- **Szafka RTV** 188 × 40 × 40, podwieszana 22 cm nad podłogą, dąb z ryflowanymi frontami jak na wyspie, pod ścianą małego pokoju. **Telewizor 65"** na płaskim uchwycie na ścianie nad szafką (A.04 rysuje ok. 55"; większy na życzenie, przy ok. 2,3 m od sofy to dobry rozmiar). Na szafce aloes w białej donicy, biały dzban i ramka.
+- **Stół okrągły** Ø 100, wys. 75, dąb, ryflowana dębowa noga na okrągłej stopie; **4 krzesła** kubełkowe w bouclé na dębowych nogach, na przekątnych jak w A.04, siedzisko ok. 48.
+- **Dywan** jutowy 240 × 170 spod sofy w stronę TV; **roślina** w terakocie przy oknie obok szezlongu; **lampa wisząca** nad stołem, klosz 93 cm nad blatem.
+- **Lamps on** (panel, Light) zapala lampę nad stołem; domyślnie wyłączona (dzień).
+- Meble blokują chodzenie (obrysy w cm, jak kuchnia).
+
 ## Podłogi (wg układu funkcjonalnego, arkusz A.04)
 
 - **Jodełka EGGER Herringbone EL2152 Dąb Casella naturalny** (kuchnia, salon, korytarz, trzy pokoje): deska 840 × 168 × 8 mm (5 : 1), 4-stronna V-fuga, struktura Deepskin (matowa, naturalne pory). Wzór powtarza się co 168 cm (sprawdzone: bez szpar i nakładek), mapa w wysokiej jakości obejmuje 336 × 336 cm przy 1,2 px na mm. Drewno ze skanu CC0 *Oak Veneer 01* (Poly Haven), cięte deska po desce z losowym fragmentem, lekko ocieplone i uspokojone pod Casellę, każda deska w swoim odcieniu.
@@ -76,9 +86,11 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - `tools/extract_plan.py` · rysunek → dane (`python tools/extract_plan.py`, z `--debug` zapisuje też podgląd ścian)
 - `floors.js` · jodełka i płytki rysowane w canvasie (bezszwowe mapy: kolor, normalne, szorstkość)
 - `kitchen.js` · kuchnia (w cm, na ścianie kuchennej)
+- `living.js` · salon (w cm planu)
 - `assets/oak_*.jpg` · Oak Veneer 01, Poly Haven (CC0)
 - `assets/tex/teddy_*.jpg` · Curly Teddy Natural, Poly Haven (CC0)
-- `assets/models/` · ceramic_vase_01, ceramic_vase_02, carved_wooden_plate, food_lime_01, pachira_aquatica_01, Poly Haven (CC0), glTF 1K
+- `assets/tex/linen_*`, `waffle_*`, `hessian_*` · Rough Linen, Waffle Pique Cotton, Hessian 380, Poly Haven (CC0)
+- `assets/models/` · ceramic_vase_01, ceramic_vase_02, ceramic_vase_04, carved_wooden_plate, food_lime_01, pachira_aquatica_01, potted_plant_02, potted_plant_04, standing_picture_frame_02, modern_ceiling_lamp_01, Poly Haven (CC0), glTF 1K
 - `assets/lebombo_1k.hdr` · Lebombo, Poly Haven (CC0), tylko dla path tracingu
 - `assets/plan.webp` · rzut z meblami (źródło)
 
