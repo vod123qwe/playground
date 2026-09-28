@@ -19,6 +19,7 @@
   }
   body.dark{background:linear-gradient(135deg, #2a2c31 0%, #1c1d21 50%, #111215 100%)}
   body.orbiting{cursor:grabbing}
+  body.space-pan, body.space-pan *{cursor:grab !important} body.space-drag, body.space-drag *{cursor:grabbing !important}
   #gl{position:fixed; inset:0; width:100%; height:100%; display:block}
   .stage{position:fixed; inset:0; display:grid; place-items:center; transition:right .45s var(--ease), bottom .45s var(--ease)}
   .anchor{position:relative; font-size:calc(clamp(20px, 3.4vw, 36px) * var(--scale, 1))}
@@ -772,7 +773,8 @@ window.addEventListener('pointercancel', endPointer);
 function resetView() { s.tyaw = HOME.yaw; s.tpitch = HOME.pitch; s.tzoom = HOME.zoom; s.tpanx = 0; s.tpany = 0; }
 
 // ---------- zoom: the wheel (or a trackpad pinch) zooms towards the cursor ----------
-const ZMIN = 0.5, ZMAX = 8;
+const ZMIN = 0.5, ZMAX = 8, PANLIM = 0.35;                // a little room to move the view even at 1x
+const clampPan = (v, dim) => { const lim = Math.max(PANLIM, 1 - 1 / Math.max(s.tzoom, 1e-3)); return Math.max(-dim * 0.5 * lim, Math.min(dim * 0.5 * lim, v)); };
 function zoomAt(x, y, k) {
   if (!geo) return;
   const z1 = s.tzoom, z2 = Math.max(ZMIN, Math.min(ZMAX, z1 * k));
@@ -780,9 +782,7 @@ function zoomAt(x, y, k) {
   // keep the point under the cursor where it is: (m - c) / z + pan stays the same
   const mx = x - geo.cx, my = y - geo.cy, f = 1 / z1 - 1 / z2;
   s.tpanx += mx * f; s.tpany += my * f; s.tzoom = z2;
-  const lim = Math.max(0, 1 - 1 / z2);                      // back at 1× the view recentres on the button
-  s.tpanx = Math.max(-W * 0.5 * lim, Math.min(W * 0.5 * lim, s.tpanx));
-  s.tpany = Math.max(-H * 0.5 * lim, Math.min(H * 0.5 * lim, s.tpany));
+  s.tpanx = clampPan(s.tpanx, W); s.tpany = clampPan(s.tpany, H);
 }
 window.addEventListener('wheel', e => {
   if (overUi(e)) return;                                    // the panel keeps its own scroll
@@ -790,6 +790,35 @@ window.addEventListener('wheel', e => {
   const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
   zoomAt(e.clientX, e.clientY, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0016)));
 }, { passive: false });
+// ---------- hold Space and drag: move the view around, like a design tool ----------
+{
+  const sp = { held: false, id: null, x: 0, y: 0, kb: false, eat: false };
+  const typing = el => el && el.closest && el.closest('input, textarea, select, [contenteditable]');
+  const stop = () => { sp.held = false; sp.id = null; document.body.classList.remove('space-pan', 'space-drag'); };
+  window.addEventListener('pointerdown', () => { sp.kb = false; }, true);
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Tab') sp.kb = true;
+    if (e.code !== 'Space' || typing(e.target)) return;
+    if (sp.kb && e.target.closest && e.target.closest('button, li, [role=option], [role=radio]')) return;   // keyboard users: Space still presses the control
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (!sp.held) { sp.held = true; document.body.classList.add('space-pan'); }
+  }, true);
+  window.addEventListener('keyup', e => { if (e.code === 'Space' && sp.held) { e.preventDefault(); e.stopImmediatePropagation(); stop(); } }, true);
+  window.addEventListener('blur', stop);
+  window.addEventListener('pointerdown', e => {
+    if (!sp.held || e.button !== 0 || overUi(e)) return;
+    e.preventDefault(); e.stopImmediatePropagation();       // the glass underneath is not pressed while panning
+    sp.id = e.pointerId; sp.x = e.clientX; sp.y = e.clientY; sp.eat = true; document.body.classList.add('space-drag');
+  }, true);
+  window.addEventListener('pointermove', e => {
+    if (sp.id !== e.pointerId) return;
+    const z = Math.max(s.zoom, 0.01), dx = e.clientX - sp.x, dy = e.clientY - sp.y; sp.x = e.clientX; sp.y = e.clientY;
+    s.tpanx = clampPan(s.tpanx - dx / z, W); s.tpany = clampPan(s.tpany - dy / z, H);   // the scene follows the hand
+  }, true);
+  const end = e => { if (sp.id === e.pointerId) { sp.id = null; document.body.classList.remove('space-drag'); setTimeout(() => { sp.eat = false; }, 0); } };
+  window.addEventListener('pointerup', end, true); window.addEventListener('pointercancel', end, true);
+  window.addEventListener('click', e => { if (sp.eat) { sp.eat = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+}
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, select, textarea')) return;
   if ((e.key === 'r' || e.key === 'R' || e.key === '0') && !menu.contains(document.activeElement)) resetView();
@@ -2281,7 +2310,7 @@ function frame(t) {
   const kz = 1 - Math.pow(1 - .22, dt * 60);
   s.zoom += (s.tzoom - s.zoom) * kz; s.panx += (s.tpanx - s.panx) * kz; s.pany += (s.tpany - s.pany) * kz;
   // orbit hint first, then a reset chip while the view is turned
-  const turned = Math.abs(s.tyaw - HOME.yaw) + Math.abs(s.tpitch - HOME.pitch) > 0.03 || Math.abs(s.tzoom - HOME.zoom) > 0.01;
+  const turned = Math.abs(s.tyaw - HOME.yaw) + Math.abs(s.tpitch - HOME.pitch) > 0.03 || Math.abs(s.tzoom - HOME.zoom) > 0.01 || Math.abs(s.tpanx) + Math.abs(s.tpany) > 2;
   chip.classList.toggle('reset', turned); chip.tabIndex = turned ? 0 : -1;
   const txt = turned ? 'reset view' : (chip.dataset.msg || 'pinch to zoom · two fingers to orbit');   // the mouse hints are icons now
   if (chip.textContent !== txt) chip.textContent = txt;
