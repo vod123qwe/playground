@@ -10,7 +10,7 @@ IMG = os.path.join(HERE, '..', 'assets', 'plan.webp')
 OUT = os.path.join(HERE, '..', 'apartment.json')
 S = 1.209                      # px per cm: bedroom 375 x 372 cm, bathroom 166 cm all give 1.208-1.210
 H = 255                        # clear height Hn/Hb = 2.55 m (architect's plan)
-DOOR = 205                     # the head of an inner door opening
+DOOR = 208                     # the head of an inner door opening: leaf 203.7 cm + the frame (Porta Vector, bezprzylgowe 80)
 OX, OY = 132, 1639             # the origin: the outer bottom-left corner of the flat
 
 im = cv2.imread(IMG, 0)
@@ -54,10 +54,31 @@ def gaps(p0, u, half, lo, hi):
             s = None
     return out
 
+def wall_band(p0, u, t0, t1, half):
+    """the real faces of the wall on both sides of an opening, so a lintel or a sill sits flush with them"""
+    u = np.array(u) / np.hypot(*u); nrm = np.array([-u[1], u[0]])
+    ys, xs = np.nonzero(walls)
+    d = np.column_stack([xs - p0[0], ys - p0[1]]).astype(float)
+    t, o = d @ u, d @ nrm
+    lo, hi = [], []
+    for tt in list(range(int(t0) - 14, int(t0))) + list(range(int(t1) + 1, int(t1) + 15)):   # slice by slice, so a wall meeting at a corner does not count
+        m = (np.abs(o) < half + 16) & (np.abs(t - tt) < .5)
+        if m.sum() > 3: lo.append(o[m].min()); hi.append(o[m].max())
+    if len(lo) < 6: return -half, half
+    return float(np.median(lo)) - .5, float(np.median(hi)) + .5
+
 openings = []
-def add(kind, p0, u, t0, t1, half, sill, head, name):
-    openings.append({'kind': kind, 'name': name, 'quad': gap_quad(p0, u, t0, t1, -half, half), 'sill': sill, 'head': head, 'glazed': kind == 'window' or 'balcony' in name,
-                     'width': round((t1 - t0) / S)})
+def add(kind, p0, u, t0, t1, half, sill, head, name, door=None):
+    o0, o1 = wall_band(p0, u, t0, t1, half)
+    op = {'kind': kind, 'name': name, 'quad': gap_quad(p0, u, t0 - 2, t1 + 2, o0, o1), 'sill': sill, 'head': head, 'glazed': kind == 'window' or 'balcony' in name,
+          'width': round((t1 - t0) / S), 'panes': 3 if (t1 - t0) / S >= 250 else 2 if (t1 - t0) / S > 150 else 1}
+    if door:                                       # the leaf: its hinge, the way it closes, the side it opens to (from the arcs on the drawing)
+        hinge_end, side, hidden = door
+        uu = np.array(u) / np.hypot(*u); nrm = np.array([-uu[1], uu[0]])
+        a, b = (t0, t1) if hinge_end == 0 else (t1, t0)
+        op['door'] = {'hinge': pt(p0, u, a, (o0 + o1) / 2), 'to': pt(p0, u, b, (o0 + o1) / 2), 'side': (nrm * side).tolist(),
+                      'half': (o1 - o0) / 2 / S, 'hidden': hidden, 'front': 'front' in name}
+    openings.append(op)
 
 # the long facade: five openings between the piers (widths as in the architect's plan)
 fac = gaps(P2, U, 20, -470, 1200)
@@ -70,14 +91,17 @@ for t0, t1 in gaps(P10, V, 18, -300, -10): add('window', P10, V, t0, t1, 20, 0, 
 # the bottom wall, bedroom 1
 for t0, t1 in gaps((0, 1613), (1, 0), 25, 150, 600): add('window', (0, 1613), (1, 0), t0, t1, 26, 0, 242, 'balcony door 270')
 # the front door, on the left
-for t0, t1 in gaps((18, 0), (0, 1), 13, 480, 690): add('door', (18, 0), (0, 1), t0, t1, 14, 0, 210, 'front door 90')
+for t0, t1 in gaps((18, 0), (0, 1), 13, 480, 690): add('door', (18, 0), (0, 1), t0, t1, 14, 0, 210, 'front door 90', (1, -1, False))
 # inner doors
-inner = [((0, 911), (1, 0), 13, 160, 600, 'closet'), ((614, 0), (0, 1), 6, 930, 1330, 'wc / bedroom 1'),
-         ((0, 1338), (1, 0), 6, 625, 950, 'bathroom'), ((781, 0), (0, 1), 6, 930, 1180, 'bedroom 3'),
-         ((858, 0), (0, 1), 5, 1202, 1330, 'bedroom 2')]
-for p0, u, half, lo, hi, nm in inner:
-    g = gaps(p0, u, half, lo, hi); print(nm, g)
-    for t0, t1 in g: add('door', p0, u, t0, t1, half + 2, 0, DOOR, 'door ' + nm)
+# (hinge at the start 0 / the end 1 of the gap, opens to +1 / -1 of the line's normal, hidden in the wall)
+inner = [((0, 911), (1, 0), 13, 160, 600, ['pantry'], [(0, -1, True)]),
+         ((614, 0), (0, 1), 6, 930, 1330, ['laundry', 'bedroom 1'], [(0, -1, True), (0, 1, False)]),
+         ((0, 1338), (1, 0), 6, 625, 950, ['bathroom'], [(0, -1, False)]),
+         ((781, 0), (0, 1), 6, 930, 1180, ['bedroom 3'], [(0, -1, False)]),
+         ((858, 0), (0, 1), 5, 1202, 1330, ['bedroom 2'], [(0, -1, False)])]
+for p0, u, half, lo, hi, names, specs in inner:
+    g = gaps(p0, u, half, lo, hi); print(names, g)
+    for (t0, t1), nm, sp in zip(g, names, specs): add('door', p0, u, t0, t1, half + 2, 0, DOOR, 'door ' + nm, sp)
 
 # thick walls (outer and structural) vs partitions, by the local thickness
 dt = cv2.distanceTransform(walls, cv2.DIST_L2, 5)
@@ -114,7 +138,7 @@ foot_poly = max(polys(foot, 1.5), key=lambda p: cv2.contourArea(np.array(p['oute
 rooms_mask = closed.copy()
 cv2.line(rooms_mask, (621, 911), (778, 911), 1, 2)
 ROOMS = [('Living + kitchen', (520, 560)), ('Bedroom', (380, 1380)), ('Bedroom', (1200, 1420)), ('Bedroom', (1000, 1050)),
-         ('Bathroom', (800, 1450)), ('WC', (530, 960)), ('Walk-in closet', (300, 1010)), ('Hall', (700, 1100))]
+         ('Bathroom', (800, 1450)), ('Laundry', (530, 960)), ('Pantry', (300, 1010)), ('Hall', (700, 1100))]
 rooms = []
 for name, (x, y) in ROOMS:
     ff = rooms_mask.copy(); msk = np.zeros((ff.shape[0] + 2, ff.shape[1] + 2), np.uint8)
@@ -142,7 +166,7 @@ data = {
     'source': 'plan.webp, 1 cm = %.3f px, origin at the outer bottom-left corner; x to the right, z down the drawing' % S,
     'height': H, 'px': S, 'origin': [OX, OY],
     'thick': [cmpoly(p) for p in polys(thick)], 'thin': [cmpoly(p) for p in polys(thin)],
-    'openings': [{**o, 'quad': [cm(q) for q in o['quad']]} for o in openings],
+    'openings': [{**o, 'quad': [cm(q) for q in o['quad']], **({'door': {**o['door'], 'hinge': cm(o['door']['hinge']), 'to': cm(o['door']['to'])}} if 'door' in o else {})} for o in openings],
     'floor': cmpoly(foot_poly),
     'balconies': [{'name': b['name'], 'outer': [cm(q) for q in b['outer']]} for b in BALC],
     'rails': [[cm(q) for q in r] for r in RAIL],
