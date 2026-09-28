@@ -26,6 +26,13 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Drzwi Porta Vector V:** frezy w skali rzeczywistej (rowek V 4 mm, druga linia 2,2 cm do środka, 14 px/cm) w mapie normalnych, zamiast rozmytej mapy wypukłości.
 - **Szyby stałe** (*Windows → Fixed panes*): w ramie na listwie (smuklejsza rama, więcej szkła niż w skrzydłach otwieranych) albo w skrzydle stałym (wszystkie pola jednakowe). Oba warianty się produkuje; który jest w mieszkaniu, mówi zamówienie okien.
 
+## Kuchnia (koncept M48 na układzie A.04)
+
+- **Ciąg 390 cm** wzdłuż ściany kuchennej (w danych 391,2 cm, od szachtu do filaru przy drzwiach balkonowych): lodówka w zabudowie 60 · zlew 60 · zmywarka 80 · płyta indukcyjna 80 · cargo 50 · piekarnik + mikrofala w słupku 60.
+- **Wysokości:** cokół 10 cm (cofnięty 5 cm), blat 87–90 cm (3 cm), szafki górne od 145 cm do sufitu (55 cm płytek nad blatem), słupki do sufitu (2,55 m zamiast 2,60 z konceptu).
+- **Materiały:** fronty dolne i słupki dąb naturalny (skan CC0 Oak Veneer 01, słoje pionowo, uchwyt frezowany w górnej krawędzi), fronty górne beż / kaszmir mat, listwa dębowa pod górnymi + LED (światło powierzchniowe), blat i zlew wpuszczany z beżowego konglomeratu, płytki z połyskiem strukturalne 7,5 × 30 pionowo, bateria stal szczotkowana, AGD czarne szkło, 5 czarnych spotów na suficie.
+- **Wyspa 180 × 80** (A.04) w miejscu z A.04: szuflady od strony kuchni, ryflowany dąb od strony salonu, nawis 25 cm na kolana, 3 hokery (siedzisko 65 cm, po 60 cm na osobę). *Kitchen → Aisle to the island* przesuwa wyspę (A.04: 90 cm).
+
 ## Podłogi (wg układu funkcjonalnego, arkusz A.04)
 
 - **Jodełka EGGER Herringbone EL2152 Dąb Casella naturalny** (kuchnia, salon, korytarz, trzy pokoje): deska 840 × 168 × 8 mm (5 : 1), 4-stronna V-fuga, struktura Deepskin (matowa, naturalne pory). Wzór powtarza się co 168 cm (sprawdzone: bez szpar i nakładek), mapa w wysokiej jakości obejmuje 336 × 336 cm przy 1,2 px na mm. Drewno ze skanu CC0 *Oak Veneer 01* (Poly Haven), cięte deska po desce z losowym fragmentem, lekko ocieplone i uspokojone pod Casellę, każda deska w swoim odcieniu.

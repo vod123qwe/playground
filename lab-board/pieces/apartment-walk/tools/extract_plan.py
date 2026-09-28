@@ -334,6 +334,22 @@ for op in openings:
     SKIRT.append({'a': (a - d * 2).tolist(), 'b': (b + d * 2).tolist(), 'in': inn.tolist(), 'room': room_of((a + b) / 2 + inn * 4) or ''})   # into the neighbours a little: no seam
 print('skirting', len(SKIRT), 'pieces,', round(sum(np.hypot(s['b'][0] - s['a'][0], s['b'][1] - s['a'][1]) for s in SKIRT) / S / 100, 1), 'm')
 
+# ---------- the kitchen (concept M48 on the layout A.04): the run along the kitchen wall, the island 180 x 80 where A.04 puts it ----------
+def kitchen_wall():
+    best = None
+    for p in WALLS:
+        ring = np.array(p['outer'])
+        for k in range(len(ring)):
+            a, b = ring[k], ring[(k + 1) % len(ring)]; d = b - a; L = np.hypot(*d)
+            if abs(L / S - 390) < 12 and abs(np.degrees(np.arctan2(d[1], d[0])) + 37.8) < 1.5 and (best is None or L > best[2]): best = (a, b, L)
+    return best
+ka, kb, kl = kitchen_wall()
+kd = (kb - ka) / kl; kn = np.array([.6128, .7902])                  # along the run, and into the room
+A04 = lambda ox, oy: np.array([OX + (ox - 316) / 1.181 * S, OY + (oy - 1610) / 1.181 * S])   # sheet A.04 (150 dpi, 1:50) -> plan px
+isl = [A04(635, 490), A04(804, 362), A04(861, 436), A04(692.5, 565)]  # the island's corners on A.04
+ic = np.mean(isl, axis=0)
+print('kitchen run', round(kl / S, 1), 'cm; island centre', [round(v, 1) for v in (ic - [OX, OY]) / S], 'off the wall', round(float((ic - ka) @ kn) / S, 1), 'cm, along', round(float((ic - ka) @ kd) / S, 1))
+
 BALC = [
     {'name': 'Balcony', 'outer': [pt(P2, U, -435, -27), pt(P2, U, -435, -208), pt(P2, U, 230, -208), pt(P2, U, 230, -27)]},
     # the side of the big balcony stands on the pier, 25 cm clear of the bedroom window (on the drawing it touches the window's edge)
@@ -364,6 +380,8 @@ data = {
     'rooms': [{**r, 'at': cm(r['at']), 'outline': [cm(q) for q in r['outline']]} for r in rooms],
     'skirting': [{'a': cm(k['a']), 'b': cm(k['b']), 'in': [round(k['in'][0], 4), round(k['in'][1], 4)], 'room': k['room']} for k in SKIRT],
     'start': cm([80, 600]),
+    'kitchen': {'a': cm(ka.tolist()), 'd': kd.round(5).tolist(), 'n': kn.tolist(), 'len': round(kl / S, 1),
+                'island': {'c': cm(ic.tolist()), 'off': round(float((ic - ka) @ kn) / S, 1), 'along': round(float((ic - ka) @ kd) / S, 1), 'w': 180, 'd': 80}},
 }
 json.dump(data, open(OUT, 'w'), separators=(',', ':'))
 print('openings', [(o['name'], o['width']) for o in openings])
