@@ -217,6 +217,18 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     decor.push(model('pachira_aquatica_01', L + 38, 34, 100, .74, 2.2)); }
   await Promise.all(decor);
 
+  // ---------- three pendants over the island: opal glass globes 22 cm across on black cords, 75 cm over the top, 60 cm apart ----------
+  const opal = std({ color: '#f3f0ea', roughness: .22, emissive: '#ffe2b8', emissiveIntensity: 0 });
+  const islandLight = new THREE.PointLight('#ffd9a8', 0, 5, 2); islandLight.position.set(0, TOP + 70, 0); I.add(islandLight);
+  for (const px of [-60, 0, 60]) {
+    const R = 11, cy = TOP + 75 + R;
+    const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), opal); globe.position.set(px, cy, 0); globe.castShadow = true; I.add(globe);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 3.2, 3, 32), legs); cap.position.set(px, cy + R - .6, 0); I.add(cap);
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, CEIL - (cy + R + 1), 8), legs); cord.position.set(px, (CEIL + cy + R + 1) / 2, 0); I.add(cord);
+    const rose = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 1.5, 32), legs); rose.position.set(px, CEIL - .75, 0); I.add(rose);
+  }
+  const setLamps = on => { opal.emissiveIntensity = on ? 2.2 : 0; islandLight.intensity = on ? 3 : 0; };
+
   // ---------- five black surface spots on the ceiling, over the front of the run ----------
   for (let i = 0; i < 5; i++) {
     const x = 50 + i * (L - 100) / 4, sp = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 11, 32), legs); sp.position.set(x, CEIL - 5.5, 95); root.add(sp);
@@ -229,5 +241,5 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const isl = (u, v) => P(K.island.along + u, K.island.off + v);
   const islandFoot = off => { const q = (u, v) => P(K.island.along + u, off + v); return [q(ix0, iz0), q(ix1, iz0), q(ix1, back + 2), q(ix0, back + 2)]; };
   foot.push(islandFoot(K.island.off));
-  return { root, foot, island: I, islandFoot, frontOfRun: D + 2 };
+  return { root, foot, island: I, islandFoot, frontOfRun: D + 2, setLamps };
 }

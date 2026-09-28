@@ -194,29 +194,37 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     pl(SA, 45, 45, 14, ivory, L - AW - 26, SEAT + 23, B + 30, -.3, -.14, .07);
   }
 
-  // ---------- Kave Home Gala, 4-seater, right chaise: 300 x 105, the chaise 105 x 193; seat 42 (70 deep, 90 wide), back 87, arms 15 x 62;
-  // a slim dark plinth on 6 cm feet, rounded soft forms, three loose back cushions and the extra cushion, all in the chenille ----------
-  // (right chaise as seen from the front: at the window end, where A.04 has it; the sofa grows 75 cm towards the table)
-  const SG = new THREE.Group(); SF.add(SG);
-  {
-    const X0 = -75, X1 = 225, D = 105, CX = 120, CD = 193, AW = 15, B = 14, P0 = 6, BASE = 24, SEAT = 42, F = chenille;
-    const add = (g, x, y, z) => mesh(g, F, SG, x, y, z), o = { scale: CHEN };
-    mesh(new RoundedBoxGeometry(X1 - X0 - 8, P0, D - 8, 2, .5), recess, SG, (X0 + X1) / 2, P0 / 2, D / 2);
-    mesh(new RoundedBoxGeometry(X1 - CX - 8, P0, CD - D, 2, .5), recess, SG, (CX + X1) / 2, P0 / 2, D + (CD - D) / 2 - 4);
+  // ---------- Kave Home Gala, in the chenille: seat 42 (70 deep, 90 wide per seat), back 87, arms 15 x 62, 105 deep; a slim dark plinth on
+  // 6 cm feet, rounded soft forms, loose back cushions and the extra cushion. Two here: the 3-seater, 210 x 105 (two 90 cm seats), where
+  // A.04 has the sofa, its right arm 60 cm off the window wall; and the 4-seater with the right chaise (105 x 193), 300 wide, the chaise at
+  // the window end as A.04 has it (right as seen from the front), growing 75 cm towards the table ----------
+  function gala(X0, X1, chaise) {
+    const G = new THREE.Group(); SF.add(G);
+    const D = 105, CX = X1 - 105, CD = 193, AW = 15, B = 14, P0 = 6, BASE = 24, SEAT = 42, F = chenille;
+    const add = (g, x, y, z) => mesh(g, F, G, x, y, z), o = { scale: CHEN };
+    mesh(new RoundedBoxGeometry(X1 - X0 - 8, P0, D - 8, 2, .5), recess, G, (X0 + X1) / 2, P0 / 2, D / 2);
     add(soft(X1 - X0, BASE - P0, D, 3, { ...o, bulge: .5, seed: 52 }), (X0 + X1) / 2, (BASE + P0) / 2, D / 2);
-    add(soft(X1 - CX, BASE - P0, CD - D + 3, 3, { ...o, bulge: .5, seed: 53 }), (CX + X1) / 2, (BASE + P0) / 2, D - 1.5 + (CD - D + 3) / 2);
     add(soft(X1 - X0, 56 - BASE, B, 5, { ...o, bulge: .6, seed: 54 }), (X0 + X1) / 2, (BASE + 56) / 2, B / 2);                // the low back frame
     add(soft(AW, 62 - P0, D, 7, { ...o, crown: .5, bulge: .8, seed: 55 }), X0 + AW / 2, (62 + P0) / 2, D / 2);                 // straight arms, rounded over
-    add(soft(AW, 62 - P0, CD, 7, { ...o, crown: .5, bulge: .8, seed: 56 }), X1 - AW / 2, (62 + P0) / 2, CD / 2);
+    add(soft(AW, 62 - P0, chaise ? CD : D, 7, { ...o, crown: .5, bulge: .8, seed: 56 }), X1 - AW / 2, (62 + P0) / 2, (chaise ? CD : D) / 2);
     const seat = (x0, x1, z1, sd) => add(soft(x1 - x0 - .6, SEAT - BASE, z1 - B, 8, { ...o, crown: 2, bulge: 1.6, noise: .4, seed: sd }), (x0 + x1) / 2, (BASE + SEAT) / 2, (B + z1) / 2);
-    seat(X0 + AW, X0 + AW + 90, D + 1, 57); seat(X0 + AW + 90, CX, D + 1, 58); seat(CX, X1 - AW, CD + 1, 59);
     const back = (x0, x1, sd) => { const m = add(soft(x1 - x0 - 1, 46, 24, 10, { ...o, crown: 1.2, bulge: 3, noise: .35, seed: sd }), (x0 + x1) / 2, SEAT + 22, B + 12); m.rotation.x = -.12; };
-    back(X0 + AW, X0 + AW + 90, 60); back(X0 + AW + 90, CX, 61); back(CX, X1 - AW, 62);
-    pl(SG, 50, 50, 15, F, X0 + AW + 18, SEAT + 25, 44, -.3, .28, .05, CHEN);   // Gala's extra cushion
-    pl(SG, 45, 45, 14, clay, X0 + AW + 52, SEAT + 23, 46, -.3, -.05, -.07);
-    pl(SG, 50, 34, 13, waffle, 78, SEAT + 19, 47, -.28, .03, .03);
-    pl(SG, 45, 45, 14, ivory, X1 - AW - 24, SEAT + 23, 45, -.3, -.2, .06);
+    if (chaise) {
+      mesh(new RoundedBoxGeometry(X1 - CX - 8, P0, CD - D, 2, .5), recess, G, (CX + X1) / 2, P0 / 2, D + (CD - D) / 2 - 4);
+      add(soft(X1 - CX, BASE - P0, CD - D + 3, 3, { ...o, bulge: .5, seed: 53 }), (CX + X1) / 2, (BASE + P0) / 2, D - 1.5 + (CD - D + 3) / 2);
+      seat(X0 + AW, X0 + AW + 90, D + 1, 57); seat(X0 + AW + 90, CX, D + 1, 58); seat(CX, X1 - AW, CD + 1, 59);
+      back(X0 + AW, X0 + AW + 90, 60); back(X0 + AW + 90, CX, 61); back(CX, X1 - AW, 62);
+    } else {
+      seat(X0 + AW, X0 + AW + 90, D + 1, 57); seat(X0 + AW + 90, X1 - AW, D + 1, 58);
+      back(X0 + AW, X0 + AW + 90, 60); back(X0 + AW + 90, X1 - AW, 61);
+    }
+    pl(G, 50, 50, 15, F, X0 + AW + 18, SEAT + 25, 44, -.3, .28, .05, CHEN);   // Gala's extra cushion
+    pl(G, 45, 45, 14, clay, X0 + AW + 52, SEAT + 23, 46, -.3, -.05, -.07);
+    pl(G, 50, 34, 13, waffle, chaise ? 78 : (X0 + X1) / 2 + 20, SEAT + 19, 47, -.28, .03, .03);
+    pl(G, 45, 45, 14, ivory, X1 - AW - 24, SEAT + 23, 45, -.3, -.2, .06);
+    return G;
   }
+  const SG = gala(-75, 225, true), SG3 = gala(0, 210, false);
 
   // ---------- the side table: travertine, round, 50 across, 45 high: a 3 cm top on a drum ----------
   const ST = new THREE.Group(); ST.position.set(LIVING.side[0], 0, LIVING.side[1]); root.add(ST);
@@ -351,6 +359,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   const SOFA = {                                                     // the outline, where the side table and the rug go
     a04: { out: [[0, 0], [225, 0], [225, 140], [143, 140], [143, 85], [0, 85]], side: LIVING.side, rug: [120, 152] },
     gala: { out: [[-75, 0], [225, 0], [225, 193], [120, 193], [120, 105], [-75, 105]], side: inF(SFd, 70, 150), rug: [75, 160] },
+    gala3: { out: [[0, 0], [210, 0], [210, 105], [0, 105]], side: inF(SFd, 105, 152), rug: [105, 165] },
   };
   const fixed = [
     [[0, 0], [LIVING.console.len, 0], [LIVING.console.len, 40], [0, 40]].map(([x, z]) => inF(TVd, x, z)),
@@ -358,10 +367,10 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   ];
   let foot = [];
   function setSofa(kind) {
-    const k = SOFA[kind] || SOFA.gala; SA.visible = k === SOFA.a04; SG.visible = k === SOFA.gala;
+    const k = SOFA[kind] || SOFA.gala3; SA.visible = k === SOFA.a04; SG.visible = k === SOFA.gala; SG3.visible = k === SOFA.gala3;
     ST.position.set(k.side[0], 0, k.side[1]); rug.position.set(k.rug[0], .6, k.rug[1]);
     foot = [k.out.map(([x, z]) => inF(SFd, x, z)), circle(k.side, 27), ...fixed]; return foot;
   }
-  setSofa('gala');
+  setSofa('gala3');
   return { root, get foot() { return foot; }, setLamps, setSofa, setCurtains };
 }
