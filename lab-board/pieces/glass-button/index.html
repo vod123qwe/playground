@@ -419,7 +419,7 @@ const DEF = {
   ior: 1.5, disp: .026, frost: 0, tint: '#d4dee2', tintK: 1,
   follow: true, gyro: true, lightAng: 320, lightEl: 35, key: 1, env: 1, rim: 1, shadow: 1,
   bead: true, beadSize: 2.12, sink: .9, smoke: .22, starSize: .6, starMotion: 1,
-  text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
+  text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, inkAuto: true, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
   comp: 'dropdown', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 1, segTint: '#34c759', segTintK: 0,
@@ -579,7 +579,8 @@ const CTRL = [
   { k: 'menuLift', l: 'Float (Z)', min: 0, max: 2, s: .01 },
   { g: 'Label' },
   { k: 'text', l: 'Text', t: 'text' },
-  { k: 'ink', l: 'Ink', t: 'color' },
+  { k: 'inkAuto', l: 'Ink follows the background', t: 'check' },
+  { k: 'ink', l: 'Ink', t: 'color', show: () => !P.inkAuto },
   { k: 'inkA', l: 'Ink opacity', min: 0, max: 1, s: .01 },
   { k: 'chevron', l: 'Chevron', t: 'check' },
   { g: 'Layout' },
@@ -1477,6 +1478,7 @@ uniform vec4 uLightK;          // highlight, reflections, rim spectrum, shadow
 uniform vec4 uOptics;          // ior, dispersion, frost (px), hover
 uniform vec3 uAbs;             // absorption per px
 uniform vec4 uInk;             // ink colour, opacity
+uniform float uInkAuto;        // 1: the ink takes the hue of what lies behind it, with its lightness turned over
 uniform vec3 uPage0, uPage1, uPage2;
 uniform sampler2D uBg;         // a picture under the glass (mode 1), or the drawn page (mode 0)
 uniform float uBgMode, uBgTexel; // texels per css px, for the level of detail
@@ -1871,7 +1873,12 @@ vec3 glassShade(vec3 P, vec3 rd){
       ink = dc.a * uInk.a * (inMenu ? uMenuK.z : 1.0); inkCol = dc.rgb;
     }
   }
-  if (th) inkCol = mix(inkCol, vec3(1.0), 0.92);       // the tab under the thumb reads white on green
+  if (uInkAuto > 0.5) {                                  // tone on tone: a deep shade of the backdrop on light, a pale one on dark
+    float lb = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    vec3 hue = col / max(max(col.r, max(col.g, col.b)), 1e-3);
+    vec3 dark = hue * 0.16 + vec3(0.03), light = mix(hue, vec3(1.0), 0.86);
+    inkCol = mix(light, dark, smoothstep(0.36, 0.52, lb));
+  } else if (th) inkCol = mix(inkCol, vec3(1.0), 0.92);   // the tab under the thumb reads white on green
   col = mix(col, inkCol * (0.75 + 0.35 * max(dot(n, L), 0.0)), ink);
   float spec = max(dot(rf, L), 0.0);
   float key = pow(spec, 260.0) * (0.35 + uOptics.w * 0.25) + pow(spec, 1400.0) * 1.1;
@@ -2267,7 +2274,7 @@ function frame(t) {
   gl.uniform4f(uni('uLightK'), P.key, P.env, P.rim, P.shadow);
   gl.uniform4f(uni('uOptics'), P.ior, P.disp, P.frost, s.hov);
   gl.uniform3f(uni('uAbs'), ab[0], ab[1], ab[2]);
-  const ic = hex(P.ink); gl.uniform4f(uni('uInk'), ic[0], ic[1], ic[2], P.inkA);
+  const ic = hex(P.ink); gl.uniform4f(uni('uInk'), ic[0], ic[1], ic[2], P.inkA); gl.uniform1f(uni('uInkAuto'), P.inkAuto ? 1 : 0);
   gl.uniform3fv(uni('uPage0'), pg[0]); gl.uniform3fv(uni('uPage1'), pg[1]); gl.uniform3fv(uni('uPage2'), pg[2]);
   { const gp = bg.mode === 0 ? pg[1] : bg.avg; const lt = lum(gp) > 0.8; gl.uniform3f(uni('uGridCol'), lt ? .1 : 1, lt ? .1 : 1, lt ? .12 : 1); }
   gl.uniform1f(uni('uShadowMode'), P.glowOn ? 1 : 0);
