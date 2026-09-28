@@ -175,6 +175,11 @@ const mat = {
   cap: new THREE.MeshBasicMaterial({ color: '#1b1c20' }),
   capThin: new THREE.MeshBasicMaterial({ color: '#1b1c20' }),
   rail: new THREE.MeshStandardMaterial({ color: '#dfeef0', roughness: .05, transparent: true, opacity: .28, depthWrite: false, side: THREE.DoubleSide }),
+  frosted: new THREE.MeshStandardMaterial({ color: '#f3f5f5', roughness: .85, transparent: true, opacity: .8, depthWrite: false, side: THREE.DoubleSide }),
+  alu: new THREE.MeshStandardMaterial({ color: '#b9bcbf', roughness: .38, metalness: .75 }),
+  jamb: new THREE.MeshStandardMaterial({ color: '#f6f5f2', roughness: .55, ...clip }),
+  front: new THREE.MeshStandardMaterial({ color: '#43454a', roughness: .5, metalness: .1, ...clip }),
+  nickel: new THREE.MeshStandardMaterial({ color: '#cfc9bf', roughness: .32, metalness: 1, ...clip }),
 };
 const glassMat = () => new THREE.MeshStandardMaterial({ color: '#d6ecef', roughness: .04, metalness: .1, transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide, ...clip });
 
@@ -202,31 +207,154 @@ const wallMeshes = [];
 for (const p of A.thick) { const m = prism(p.outer, p.holes, 0, H, mat.thick); wallsG.add(m); wallMeshes.push(m); }
 for (const p of A.thin) { const m = prism(p.outer, p.holes, 0, H, mat.wall); wallsG.add(m); wallMeshes.push(m); }
 // openings: a sill below, a lintel above; glass and a slim frame in the facade ones
+// ---------- windows and balcony doors: white inside, graphite outside; the leaves that open, open ----------
+// per opening, left to right along the wall: turn = a side-hung leaf (hinge at its start 0 / end 1), tilt = hinged at the bottom, the top tips in
+const SASH = {
+  'O17 balcony door + window 270': [{}, { turn: 0 }, { turn: 1 }],   // three leaves: the left one fixed, the middle and the right open inwards, wide
+  'O22 balcony door 90': [{ turn: 0 }],
+  'O25 window 180, sill 30': { transom: 94, below: [{ tilt: true }], above: [{}, {}] },   // a low horizontal pane that tilts, two fixed above
+  'O21 balcony door 90': [{ turn: 0 }],
+  'balcony door 113': [{ turn: 1 }],
+  'balcony door 180': [{ turn: 0 }, {}],
+  'balcony door 270': [{}, {}, { turn: 1 }],
+};
+const sashes = [];
+const pip = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
+const whiteFrame = new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: .45, ...clip });
+const winHandle = new THREE.MeshStandardMaterial({ color: '#f7f7f5', roughness: .3, ...clip });
+function buildGlazing(o) {
+  const [q0, q1, q2, q3] = o.quad, a = [(q0[0] + q3[0]) / 2, (q0[1] + q3[1]) / 2], b = [(q1[0] + q2[0]) / 2, (q1[1] + q2[1]) / 2];
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]), e = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+  let n = [-e[1], e[0]]; const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  if (!pip(mid[0] + n[0] * 45, mid[1] + n[1] * 45, A.floor.outer)) n = [-n[0], -n[1]];   // n points into the flat
+  const G = new THREE.Group(), th = Math.atan2(-e[1], e[0]); G.position.set(wx(a[0]), 0, wz(a[1])); G.rotation.y = th; world.add(G);
+  const sI = Math.sign(-e[1] * n[0] + e[0] * n[1]) || 1;           // local +z is inside when sI = 1
+  // a bar in two halves: the inside one white, the outside one graphite (x, y: centre in the plane; w, h: size; depth 7 cm)
+  const bar = (parent, w, h, x, y) => {
+    for (const [m, z] of [[whiteFrame, 1.75], [mat.frame, -1.75]]) { const k = new THREE.Mesh(new THREE.BoxGeometry(w * M, h * M, 3.5 * M), m); k.position.set(x * M, y * M, sI * z * M); k.castShadow = true; parent.add(k); }
+  };
+  const F = 6, SW = 6, y0 = o.sill, y1 = o.head;
+  bar(G, len, F, len / 2, y1 - F / 2); bar(G, len, F, len / 2, y0 + F / 2); bar(G, F, y1 - y0, F / 2, (y0 + y1) / 2); bar(G, F, y1 - y0, len - F / 2, (y0 + y1) / 2);   // the fixed frame
+  const spec = SASH[o.name] || Array.from({ length: o.panes || 1 }, () => ({}));
+  const rows = Array.isArray(spec) ? [{ lo: y0 + F, hi: y1 - F, leaves: spec }] : [{ lo: y0 + F, hi: spec.transom - 3, leaves: spec.below }, { lo: spec.transom + 3, hi: y1 - F, leaves: spec.above }];
+  if (!Array.isArray(spec)) bar(G, len - 2 * F, 6, len / 2, spec.transom);   // the transom
+  for (const row of rows) {
+    const nL = row.leaves.length, lw = (len - 2 * F) / nL, lh = row.hi - row.lo;
+    row.leaves.forEach((L, i) => {
+      const x0 = F + i * lw, hinge = L.turn === 1 ? x0 + lw : x0, hs = L.turn === 1 ? -1 : 1;   // hs: the leaf runs from the hinge towards +x or -x
+      const pivot = new THREE.Group();
+      if (L.tilt) pivot.position.set(x0 * M, row.lo * M, sI * 3.5 * M); else pivot.position.set(hinge * M, row.lo * M, sI * 3.5 * M);
+      G.add(pivot);
+      const inner = new THREE.Group(); inner.position.set(0, 0, -sI * 3.5 * M); pivot.add(inner);   // the sash, drawn from the pivot on the inside face
+      const cx = L.tilt ? lw / 2 : hs * lw / 2;
+      bar(inner, lw, SW, cx, lh - SW / 2); bar(inner, lw, SW, cx, SW / 2); bar(inner, SW, lh, cx - lw / 2 + SW / 2, lh / 2); bar(inner, SW, lh, cx + lw / 2 - SW / 2, lh / 2);
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry((lw - 2 * SW) * M, (lh - 2 * SW) * M), glassMat()); glass.position.set(cx * M, lh / 2 * M, 0); inner.add(glass); glassG.push(glass);
+      const open = L.turn != null || L.tilt;
+      if (open) {                                                    // a white window handle on the inside: on the lock stile, or on top for the tilting pane
+        const hx = L.tilt ? lw / 2 : hs * (lw - SW / 2), hy = L.tilt ? lh - SW / 2 : Math.min(105 - row.lo, lh / 2), hg = new THREE.Group();
+        hg.position.set(hx * M, hy * M, sI * 3.7 * M); inner.add(hg);
+        const rose = new THREE.Mesh(new THREE.BoxGeometry(.03, .075, .012), winHandle); rose.position.z = sI * .006; hg.add(rose);
+        const lever = new THREE.Mesh(new THREE.BoxGeometry(.022, .12, .018), winHandle); lever.position.set(0, L.tilt ? .0 : -.055, sI * .03); if (L.tilt) lever.rotation.z = Math.PI / 2; hg.add(lever);
+      }
+      // for collisions (plan cm): the leaf as a segment from its hinge; fixed ones never move
+      const ph = L.tilt ? [a[0] + e[0] * x0, a[1] + e[1] * x0] : [a[0] + e[0] * hinge, a[1] + e[1] * hinge];
+      const dir = L.tilt ? e : [e[0] * hs, e[1] * hs];
+      const leafMesh = glass;
+      const sash = { o, pivot, leaf: leafMesh, ph, dir, side: n, lw, f: 0, to: 0, kind: L.tilt ? 'tilt' : L.turn != null ? 'turn' : 'fixed', sI, hs, high: row.lo > 60 };
+      leafMesh.userData.door = sash; sashes.push(sash);
+    });
+  }
+}
 const caps = [];                                                   // the cut surfaces, drawn black like the plan
 for (const p of A.thick) caps.push({ poly: p, lo: 0, hi: H, m: mat.cap });
 for (const p of A.thin) caps.push({ poly: p, lo: 0, hi: H, m: mat.capThin });
 for (const o of A.openings) {
   if (o.sill > 0) { wallsG.add(prism(o.quad, [], 0, o.sill, mat.thick)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: 0, hi: o.sill, m: mat.cap }); }
   if (o.head < H) { wallsG.add(prism(o.quad, [], o.head, H, o.glazed ? mat.thick : mat.wall)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: o.head, hi: H, m: o.glazed ? mat.cap : mat.capThin }); }
-  if (!o.glazed) continue;
-  const [q0, q1, q2, q3] = o.quad, a = [(q0[0] + q3[0]) / 2, (q0[1] + q3[1]) / 2], b = [(q1[0] + q2[0]) / 2, (q1[1] + q2[1]) / 2];
-  const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = -Math.atan2(b[1] - a[1], b[0] - a[0]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], h = o.head - o.sill;
-  const pane = new THREE.Mesh(new THREE.PlaneGeometry(len * M, h * M), glassMat());
-  pane.position.set(wx(mid[0]), (o.sill + h / 2) * M, wz(mid[1])); pane.rotation.y = ang; world.add(pane); glassG.push(pane);
-  const fr = new THREE.Group(); fr.position.copy(pane.position); fr.rotation.y = ang; world.add(fr);
-  const bar = (w, hh, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * M, hh * M, 6 * M), mat.frame); m.position.set(x * M, y * M, 0); m.castShadow = true; fr.add(m); };
-  bar(len, 6, 0, h / 2 - 3); bar(len, 6, 0, -h / 2 + 3); bar(6, h, -len / 2 + 3, 0); bar(6, h, len / 2 - 3, 0);
-  if (len > 150) bar(5, h, 0, 0);                                  // a mullion in the wide ones
+  if (o.glazed) buildGlazing(o);
 }
 // floor, ceiling, balconies, railings
 const floor = prism(A.floor.outer, A.floor.holes, -20, 0, mat.floor, false); world.add(floor);
 const ceiling = prism(A.floor.outer, A.floor.holes, H, H + 20, mat.ceiling, true); world.add(ceiling);
 const balconies = A.balconies.map(b => { const m = prism(b.outer, [], -22, -3, mat.balcony, false); world.add(m); return m; });
-for (const r of A.rails) for (let i = 0; i < r.length - 1; i++) {
-  const a = r[i], b = r[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = -Math.atan2(b[1] - a[1], b[0] - a[0]);
-  const g = new THREE.Mesh(new THREE.PlaneGeometry(len * M, 1.05), mat.rail); g.position.set(wx((a[0] + b[0]) / 2), .5, wz((a[1] + b[1]) / 2)); g.rotation.y = ang; world.add(g);
-  const t = new THREE.Mesh(new THREE.BoxGeometry(len * M + .04, .04, .05), mat.frame); t.position.set(g.position.x, 1.07, g.position.z); t.rotation.y = ang; t.castShadow = true; world.add(t);
+const FROSTED = [false, true, true];                              // the living-room balcony is clear; the bedrooms' (and the kid's room) are milky
+const postGeo = new THREE.BoxGeometry(.04, 1.08, .04);
+A.rails.forEach((r, bi) => {
+  const glass = FROSTED[bi] ? mat.frosted : mat.rail;
+  for (let i = 0; i < r.length - 1; i++) {
+    const a = r[i], b = r[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = -Math.atan2(b[1] - a[1], b[0] - a[0]);
+    const n = Math.max(1, Math.round(len / 115)), seg = len / n;      // panels about 115 cm wide
+    for (let k = 0; k <= n; k++) {                                   // a post at every joint (the corners share one)
+      if (k === 0 && i > 0) continue;
+      const f = k / n, post = new THREE.Mesh(postGeo, mat.alu);
+      post.position.set(wx(a[0] + (b[0] - a[0]) * f), .54, wz(a[1] + (b[1] - a[1]) * f)); post.rotation.y = ang; post.castShadow = true; world.add(post);
+    }
+    for (let k = 0; k < n; k++) {
+      const f = (k + .5) / n, g = new THREE.Mesh(new THREE.PlaneGeometry((seg - 5) * M, .96), glass);
+      g.position.set(wx(a[0] + (b[0] - a[0]) * f), .55, wz(a[1] + (b[1] - a[1]) * f)); g.rotation.y = ang; world.add(g);
+    }
+    const t = new THREE.Mesh(new THREE.BoxGeometry(len * M + .04, .035, .05), mat.alu);
+    t.position.set(wx((a[0] + b[0]) / 2), 1.095, wz((a[1] + b[1]) / 2)); t.rotation.y = ang; t.castShadow = true; world.add(t);
+  }
+});
+
+// ---------- doors: Porta Vector V (flush, white, two milled frames), Rumba handles; the pantry and the laundry hidden in the wall ----------
+function vectorV(dark, light, srgb) {                              // the leaf's face: two panels, each a double groove
+  const c = document.createElement('canvas'); c.width = 512; c.height = 1416; const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  const W = c.width, Hh = c.height, box = (x0, y0, x1, y1) => { g.strokeRect(x0 * W, y0 * Hh, (x1 - x0) * W, (y1 - y0) * Hh); };
+  const panel = (y0, y1) => {
+    g.lineWidth = 7; g.strokeStyle = dark; box(.18, y0, .82, y1); box(.215, y0 + .0125, .785, y1 - .0125);
+    g.lineWidth = 3; g.strokeStyle = light; box(.18 + .006, y0 + .002, .82 - .006, y1 - .002);
+  };
+  panel(.085, .595); panel(.665, .915);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; return t;
 }
+const vTex = vectorV('#6a6a6a', '#d0d0d0'), vCol = vectorV('#cfccc6', '#ffffff', true);   // relief, and the soft shadow in the grooves
+const leafFace = new THREE.MeshStandardMaterial({ color: '#f7f6f3', map: vCol, roughness: .42, bumpMap: vTex, bumpScale: 1.4, ...clip });
+const leafEdge = new THREE.MeshStandardMaterial({ color: '#f2f1ee', roughness: .5, ...clip });
+const doors = [];
+const box = (w, h, d, m, x, y, z, parent) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w * M, h * M, d * M), m); b.position.set(x * M, y * M, z * M); b.castShadow = b.receiveShadow = true; parent.add(b); return b; };
+function handle(parent, x, zFace, out) {                           // Rumba: square rose 50 mm, square neck, flat straight lever towards the hinge
+  const g = new THREE.Group(); g.position.set(x * M, 105 * M, zFace * M); parent.add(g);
+  box(5, 5, .9, mat.nickel, 0, 0, out * .45, g);
+  box(1.9, 1.9, 4.6, mat.nickel, 0, 0, out * 3.2, g);
+  box(12.8, 1.9, 1.1, mat.nickel, -5.5, 0, out * 5.0, g);
+}
+for (const o of A.openings) {
+  const d = o.door; if (!d) continue;
+  const dir = [d.to[0] - d.hinge[0], d.to[1] - d.hinge[1]], w = Math.hypot(...dir); dir[0] /= w; dir[1] /= w;
+  const th = Math.atan2(-dir[1], dir[0]), lz = [-dir[1], dir[0]], sg = Math.sign(lz[0] * d.side[0] + lz[1] * d.side[1]) || 1;   // +local z is the opening side when sg = 1
+  const half = d.half, hid = d.hidden, head = o.head;
+  const frame = new THREE.Group(); frame.position.set(wx(d.hinge[0]), 0, wz(d.hinge[1])); frame.rotation.y = th; world.add(frame);
+  const jambW = hid ? 0 : 2.5, lw = w - 2 * jambW - (hid ? .6 : .6), lt = d.front ? 6 : 4, lh = hid ? head - 1.3 : head - 3 - 1.3;
+  if (!hid) {                                                      // the frame: jambs lining the wall, a head, architraves on both faces
+    box(jambW, head, 2 * half + 1, mat.jamb, jambW / 2, head / 2, 0, frame); box(jambW, head, 2 * half + 1, mat.jamb, w - jambW / 2, head / 2, 0, frame);
+    box(w, 3, 2 * half + 1, mat.jamb, w / 2, head - 1.5, 0, frame);
+    for (const zs of [1, -1]) {
+      const z = zs * (half + .6);
+      box(7, head + 4.5, 1.2, mat.jamb, jambW - 3.5, (head + 4.5) / 2, z, frame); box(7, head + 4.5, 1.2, mat.jamb, w - jambW + 3.5, (head + 4.5) / 2, z, frame);
+      box(w + 9, 7, 1.2, mat.jamb, w / 2, head + 1, z, frame);
+    }
+  }
+  const pivot = new THREE.Group(); pivot.position.set((jambW + .3) * M, 0, sg * half * M); frame.add(pivot);
+  const faceM = hid ? mat.wall : d.front ? mat.front : leafFace, edgeM = hid ? mat.wall : d.front ? mat.front : leafEdge;
+  const leaf = new THREE.Mesh(new THREE.BoxGeometry(lw * M, lh * M, lt * M), [edgeM, edgeM, edgeM, edgeM, faceM, faceM]);
+  leaf.position.set(lw / 2 * M, (1 + lh / 2) * M, -sg * lt / 2 * M); leaf.castShadow = leaf.receiveShadow = true; pivot.add(leaf);
+  handle(pivot, lw - 6.5, 0, sg); handle(pivot, lw - 6.5, -sg * lt, -sg);
+  // in plan coordinates, for collisions: the hinge on the opening face, the closed and the open direction
+  const ph = [d.hinge[0] + dir[0] * (jambW + .3) + d.side[0] * half, d.hinge[1] + dir[1] * (jambW + .3) + d.side[1] * half];
+  const door = { o, pivot, leaf, sg, ph, dir, side: d.side, lw, hidden: hid, front: d.front, f: hid || d.front ? 0 : 1, to: hid || d.front ? 0 : 1 };
+  leaf.userData.door = door; doors.push(door);
+}
+for (const sh of sashes) doors.push(sh);
+const leafDir = dr => { const a = dr.f * Math.PI / 2; return [Math.cos(a) * dr.dir[0] + Math.sin(a) * dr.side[0], Math.cos(a) * dr.dir[1] + Math.sin(a) * dr.side[1]]; };
+function segDist(x, z, dr) {                                       // how far a point is from the leaf (cm, plan)
+  if (dr.high) return 1e9;                                         // a pane above the transom is out of the way
+  const v = dr.kind === 'tilt' ? dr.dir : leafDir(dr), ax = dr.ph[0], az = dr.ph[1], t = THREE.MathUtils.clamp((x - ax) * v[0] + (z - az) * v[1], 0, dr.lw);
+  return Math.hypot(x - ax - v[0] * t, z - az - v[1] * t);
+}
+const toggleDoor = dr => { if (dr.kind !== 'fixed') dr.to = dr.to > .5 ? 0 : 1; };
 // a soft ground for the shadow, far enough below to read as the storey height
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.ShadowMaterial({ opacity: .12 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.23; ground.receiveShadow = true; scene.add(ground);
 // the drawing on the floor, to check the model against it
@@ -250,7 +378,7 @@ const grid = (() => {
   const c = document.createElement('canvas'); c.width = gw; c.height = gh; const g = c.getContext('2d');
   const path = ps => { g.moveTo((ps[0][0] - gx0) / GR, (ps[0][1] - gz0) / GR); for (const p of ps.slice(1)) g.lineTo((p[0] - gx0) / GR, (p[1] - gz0) / GR); g.closePath(); };
   g.fillStyle = '#000'; g.fillRect(0, 0, gw, gh);
-  g.fillStyle = '#fff'; g.beginPath(); path(A.floor.outer); A.balconies.forEach(b => path(b.outer)); g.fill('nonzero');
+  g.fillStyle = '#fff'; for (const ps of [A.floor.outer, ...A.balconies.map(b => b.outer)]) { g.beginPath(); path(ps); g.fill(); }   // one by one: where they overlap, the windings must not cancel
   g.fillStyle = '#000'; for (const p of [...A.thick, ...A.thin]) { g.beginPath(); path(p.outer); p.holes.forEach(path); g.fill('evenodd'); }
   for (const o of A.openings) if (o.sill > 40) { g.beginPath(); path(o.quad); g.fill(); }
   g.strokeStyle = '#000'; g.lineWidth = 6 / GR; for (const r of A.rails) { g.beginPath(); r.forEach((p, i) => g[i ? 'lineTo' : 'moveTo']((p[0] - gx0) / GR, (p[1] - gz0) / GR)); g.stroke(); }
@@ -260,7 +388,7 @@ const grid = (() => {
 })();
 const free = (x, z) => { const i = Math.floor((x - gx0) / GR), j = Math.floor((z - gz0) / GR); return i >= 0 && j >= 0 && i < gw && j < gh && grid[j * gw + i] === 1; };
 const R = 22;                                                      // the body, a 22 cm circle
-const clear = (x, z) => { if (!free(x, z)) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (!free(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } return true; };
+const clear = (x, z, skip) => { if (!free(x, z)) return false; for (const dr of doors) if (!(skip && skip.has(dr)) && segDist(x, z, dr) < R + 2) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (!free(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } return true; };
 
 // ---------- rooms ----------
 const inPoly = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
@@ -274,7 +402,7 @@ const roomAt = (x, z) => ROOMS.find(r => inPoly(x, z, r.outline));
 
 // ---------- walking ----------
 const P = { x: A.start[0], z: A.start[1], yaw: 0, pitch: -.04, vx: 0, vz: 0 };   // yaw 0 = looking along +x on the drawing, into the flat
-const keys = new Set();
+const keys = new Set(), ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let mode = 'over', tween = null;
 const overPose = { pos: camera.position.clone(), target: controls.target.clone() };
 const eyePose = () => {
@@ -314,19 +442,41 @@ function stepWalk(dt) {
   const tx = (cy * f - sy * s) * sp, tz = (sy * f + cy * s) * sp, k = 1 - Math.exp(-dt * 10);
   P.vx += (tx - P.vx) * k; P.vz += (tz - P.vz) * k;
   const nx = P.x + P.vx * dt, nz = P.z + P.vz * dt;                 // slide along walls: try both axes, then each
-  if (clear(nx, nz)) { P.x = nx; P.z = nz; }
-  else if (clear(nx, P.z)) { P.x = nx; P.vz *= .5; }
-  else if (clear(P.x, nz)) { P.z = nz; P.vx *= .5; }
+  const skip = new Set(doors.filter(dr => segDist(P.x, P.z, dr) < R + 2));   // a leaf that swung into you does not hold you
+  if (clear(nx, nz, skip)) { P.x = nx; P.z = nz; }
+  else if (clear(nx, P.z, skip)) { P.x = nx; P.vz *= .5; }
+  else if (clear(P.x, nz, skip)) { P.z = nz; P.vx *= .5; }
   else { P.vx = P.vz = 0; }
+  const tl = Math.hypot(tx, tz);                                   // walking into a closed door opens it
+  if (tl > 1) { const qx = P.x + tx / tl * 14, qz = P.z + tz / tl * 14, hit = doors.find(dr => (!dr.kind || dr.kind === 'turn') && dr.to < .5 && segDist(qx, qz, dr) < R + 2); if (hit) hit.to = 1; }
 }
 addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, textarea, [contenteditable]')) return;
   if (e.code === 'KeyM') { setMode(mode === 'walk' ? 'over' : 'walk'); return; }
   if (mode !== 'walk') return;
+  if (e.code === 'KeyE') { const dr = nearestDoor(); if (dr) toggleDoor(dr); return; }
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); e.preventDefault(); }
 });
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
+function nearestDoor() {                                           // the closest leaf within 1.8 m, roughly ahead
+  const fx = Math.cos(P.yaw), fz = Math.sin(P.yaw); let best = null, bd = 1e9;
+  for (const dr of doors) {
+    if (dr.kind === 'fixed') continue;
+    const v = leafDir(dr), cx = dr.ph[0] + v[0] * dr.lw / 2, cz = dr.ph[1] + v[1] * dr.lw / 2, dx = cx - P.x, dz = cz - P.z, dist = Math.hypot(dx, dz);
+    if (dist < 180 && (dx * fx + dz * fz) / dist > .2 && dist < bd) { bd = dist; best = dr; }
+  }
+  return best;
+}
+let down = null;
+canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', e => {                         // a click (not a drag) on a leaf opens or closes it
+  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
+  const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(doors.filter(d => d.kind !== 'fixed').map(d => d.leaf), false)[0];
+  if (hit && hit.distance < (mode === 'walk' ? 4 : 60)) toggleDoor(hit.object.userData.door);
+});
 // looking: drag on the canvas (mouse or finger)
 let look = null;
 canvas.addEventListener('pointerdown', e => {
@@ -353,7 +503,6 @@ stickEl.addEventListener('pointerdown', e => {
   mv(e); stickEl.addEventListener('pointermove', mv); stickEl.addEventListener('pointerup', up); stickEl.addEventListener('pointercancel', up);
 });
 // overview: double-click (or double-tap) the floor to step in there
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function floorHit(e) {
   const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
@@ -404,7 +553,7 @@ mOver.addEventListener('click', () => setMode('over')); mWalk.addEventListener('
 const hint = document.getElementById('hint');
 function paintHint() {
   hint.innerHTML = mode === 'walk'
-    ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run</span><span class="touch">Stick to walk · drag to look</span>`
+    ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door</span><span class="touch">Stick to walk · drag to look</span>`
     : `<span class="keys">Drag to orbit · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
 }
 const here = document.getElementById('here'), hereN = document.getElementById('here-n'), hereA = document.getElementById('here-a');
@@ -430,6 +579,12 @@ const ctl = {};
   ctl.speed = LabUI.slider(g, { label: 'Speed', min: .5, max: 3, step: .1, unit: ' m/s', value: S.speed, def: DEF.speed, onInput: v => { S.speed = v; } });
   ctl.fov = LabUI.slider(g, { label: 'Field of view', min: 50, max: 100, step: 1, unit: '°', value: S.fov, def: DEF.fov, onInput: v => { S.fov = v; if (mode === 'walk' && !tween) { camera.fov = v; camera.updateProjectionMatrix(); } } });
   ctl.ceiling = LabUI.check(g, { label: 'Ceiling', value: S.ceiling, onChange: v => { S.ceiling = v; } });
+  g = LabUI.group(panel, 'Doors', { key: 'lab.aw.group.doors' });
+  ctl.doors = LabUI.seg(g, { label: 'All doors', options: [['built', 'As left'], ['open', 'Open'], ['closed', 'Closed']], value: 'built',
+    onChange: v => { for (const dr of doors) if (dr.kind !== 'fixed') dr.to = v === 'open' ? 1 : v === 'closed' ? 0 : (dr.hidden || dr.front || dr.kind ? 0 : 1); } });
+  const dn = document.createElement('p'); dn.className = 'note';
+  dn.textContent = 'Porta Vector V, flush, white, 80 cm; Metal-Bud Rumba handles, satin nickel. The pantry and the laundry have hidden doors, flush with the wall. Windows and balcony doors: white inside, graphite outside; the opening leaves open too (the low pane in the bedroom window tilts). Click a leaf or press E to open or close it; walking into a closed door opens it.';
+  g.appendChild(dn);
   g = LabUI.group(panel, 'Light', { key: 'lab.aw.group.light' });
   ctl.sun = LabUI.slider(g, { label: 'Sun direction', min: -90, max: 90, step: 1, unit: '°', value: S.sun, def: DEF.sun, onInput: v => { S.sun = v; placeSun(); } });
   ctl.exposure = LabUI.slider(g, { label: 'Exposure', min: .5, max: 1.8, step: .05, value: S.exposure, def: DEF.exposure, onInput: v => { S.exposure = v; renderer.toneMappingExposure = v; } });
@@ -458,14 +613,16 @@ function frame(now) {
   } else if (mode === 'walk') {
     stepWalk(dt); const e = eyePose(); camera.position.copy(e.pos); camera.quaternion.copy(e.q);
   } else controls.update();
-  // the ceiling only from inside; glass steps aside when you come close (the balcony doors are open)
+  for (const dr of doors) {
+    if (dr.f !== dr.to) { const k = reduce ? 1 : Math.min(1, dt * 2.6); dr.f += Math.sign(dr.to - dr.f) * Math.min(Math.abs(dr.to - dr.f), k * (.35 + Math.abs(dr.to - dr.f))); if (Math.abs(dr.to - dr.f) < .002) dr.f = dr.to; }
+    const ez = THREE.MathUtils.smootherstep(dr.f, 0, 1);
+    if (dr.kind === 'tilt') dr.pivot.rotation.x = dr.sI * ez * .17;        // tips in about 10°
+    else if (dr.kind === 'turn') dr.pivot.rotation.y = -dr.sI * dr.hs * ez * Math.PI / 2;   // wide open, square to the wall
+    else if (!dr.kind) dr.pivot.rotation.y = -dr.sg * ez * Math.PI / 2 * .98;
+  }
+  // the ceiling only from inside
   const inside = mode === 'walk' && !tween;
   ceiling.visible = !!(S.ceiling && (inside || (tween && mode === 'walk' && (now - tween.t0) / tween.dur > .8)));
-  for (const p of glassG) {
-    const d = Math.hypot(p.position.x - camera.position.x, p.position.z - camera.position.z);
-    p.material.opacity = .22 * (mode === 'walk' ? THREE.MathUtils.smoothstep(d, .5, 1.4) : 1);
-    p.visible = p.material.opacity > .01;
-  }
   // labels
   const w = innerWidth, h = innerHeight;
   for (const l of labelsAt) {
@@ -485,7 +642,7 @@ function frame(now) {
 placeSun(); paintWalls(); applyCut(S.cut); plan.visible = S.plan; renderer.toneMappingExposure = S.exposure;
 resize(); paintHint(); requestAnimationFrame(frame);
 document.body.classList.add('ready');
-window.AW = { A, P, S, camera, controls, renderer, scene, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { A, P, S, wx, wz, step: stepWalk, keys, free, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
