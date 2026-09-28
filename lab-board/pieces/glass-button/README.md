@@ -103,3 +103,5 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Dish v4:** płytka o zaokrąglonych rogach (corner 0,74) z wklęsłym wierzchem nad gradientem Dusk, oszronione szkło o słabym załamaniu (IOR 1,28), płynący orb, poświata Aurora z mieszaniem auto, galaretka 0,45, menu blisko przycisku i mocno zlane (liquid 0,79).
 
 **Start zawsze od Signature:** każde otwarcie strony zaczyna się od dropdownu w wariancie Signature, bez względu na to, co zostało z poprzedniej wizyty. Ustawienia komponentów są pamiętane tylko w trakcie jednej wizyty (przełączenie Dropdown / Segmented i z powrotem niczego nie gubi).
+
+**Wybór komponentu jako dropdown + nowy układ.** Komponent wybiera się z białego pilla z nazwą i strzałką; lista (listbox z zaznaczeniem, strzałki, Enter, Esc, klik poza zamyka). Desktop: przycisk powrotu, pod nim komponent, pod nim warianty, wszystko po lewej u góry; Customize w prawym górnym rogu; ikonki myszy i reset view zostają w lewym dolnym. Telefon i wąskie okna (≤760 px): komponent i warianty w jednym rzędzie na dole na środku, lista otwiera się w górę, reset view nad nimi, a ikonki myszy znikają na urządzeniach dotykowych.

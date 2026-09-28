@@ -245,8 +245,16 @@
   body.dark .hints{color:#1b1c20}
   .hint-i{height:26px} .hint-i:first-child svg{width:24px; height:24px} .hint-i:last-child svg{width:32px; height:24px}
 
-  .dock{position:fixed; left:50%; bottom:20px; z-index:3; display:flex; align-items:center; gap:8px; transform:translateX(-50%); transition:left .45s var(--ease)}
-  .tune{top:auto; right:16px; bottom:20px; z-index:4}
+  .dock{position:fixed; left:16px; top:78px; z-index:3; display:flex; flex-direction:column; align-items:flex-start; gap:8px}
+  .tune{top:16px; right:16px; bottom:auto; z-index:4}
+  /* phones and narrow windows: one row at the bottom, the list opens upwards; reset view sits above; no mouse hints on touch */
+  @media (max-width:760px){
+    .dock{left:50%; top:auto; bottom:calc(16px + env(safe-area-inset-bottom)); flex-direction:row; align-items:center; transform:translateX(-50%)}
+    .dock .cmenu{top:auto; bottom:calc(100% + 8px)}
+    .cbtn{padding:0 12px 0 16px} .vars .vn{min-width:64px}
+    .bl{bottom:calc(74px + env(safe-area-inset-bottom))}
+  }
+  @media (hover:none){ .bl .hints{display:none} }
   body.tuning .tune{opacity:0; pointer-events:none}                                   /* the panel has its own close */
   .bl{position:fixed; left:16px; bottom:20px; z-index:3; display:flex; align-items:center; gap:8px}
   .bl .hints{position:static; left:auto; bottom:auto; height:46px; box-sizing:border-box}
@@ -261,13 +269,16 @@
   body.dark .bl .chip{color:#fff; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
   body.dark .bl .chip.reset:hover{background:rgba(255,255,255,.08)}
   body.still .bl{display:none}
-  .comps{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; color:#1b1c20;
-         font-family:"Inter", system-ui, sans-serif; font-size:13.5px; font-weight:600}
-  .comps button{height:36px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:rgba(20,20,20,.5); font:inherit; cursor:pointer}
-  .comps button:hover{color:#1b1c20}
-  .comps button[aria-checked=true]{background:rgba(20,20,20,.07); color:#1b1c20}
-  .comps button:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:1px}
-  @media (max-width:560px){ .comps button{padding:0 10px; font-size:12.5px} }
+  .comps{position:relative; font-family:"Inter", system-ui, sans-serif; font-size:13.5px; font-weight:600}
+  .cbtn{display:flex; align-items:center; gap:8px; height:46px; padding:0 14px 0 20px; border:0; border-radius:999px; background:#fff; color:#1b1c20; font:inherit; cursor:pointer}
+  .cbtn svg{width:16px; height:16px; transition:transform .2s var(--ease)} .cbtn[aria-expanded=true] svg{transform:rotate(180deg)}
+  .cbtn:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:2px}
+  .cmenu{position:absolute; left:0; top:calc(100% + 8px); z-index:6; min-width:190px; margin:0; padding:6px; list-style:none; border-radius:18px; background:#fff;
+         box-shadow:0 0 0 1px rgba(20,20,20,.08)}
+  .cmenu[hidden]{display:none}
+  .cmenu li{display:flex; align-items:center; justify-content:space-between; gap:14px; height:40px; padding:0 12px 0 14px; border-radius:12px; color:#1b1c20; cursor:pointer; outline:none}
+  .cmenu li:hover, .cmenu li:focus-visible{background:rgba(20,20,20,.06)}
+  .cmenu li svg{width:16px; height:16px; opacity:0} .cmenu li[aria-selected=true] svg{opacity:1}
   .vars{touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; will-change:transform}
   .vars.dragging{cursor:grabbing}
   .vars .vn{display:inline-block}
@@ -278,7 +289,6 @@
   .vars button:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:1px}
   .vars .vn{min-width:76px; padding:0 4px; text-align:center; white-space:nowrap}
   body.still .dock{display:none}
-  @media (min-width:761px){ body.tuning .dock{left:calc(50% - 192px)} }
   @media (max-width:760px){ body.tuning .dock{display:none} }
 
   .cmp{position:fixed; top:0; bottom:0; left:50%; z-index:4; width:44px; margin-left:-22px; cursor:ew-resize; touch-action:none}
@@ -359,9 +369,14 @@
   </div>
 </main>
 <div class="dock" id="dock">
-  <div class="comps" id="comps" role="radiogroup" aria-label="Component">
-    <button type="button" role="radio" data-c="dropdown" aria-checked="true">Dropdown</button>
-    <button type="button" role="radio" data-c="segmented" aria-checked="false" tabindex="-1">Segmented</button>
+  <div class="comps" id="comps">
+    <button type="button" class="cbtn" id="comp-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="comp-list" aria-label="Component">
+      <span id="comp-name">Dropdown</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <ul class="cmenu" id="comp-list" role="listbox" aria-label="Component" hidden>
+      <li role="option" data-c="dropdown" aria-selected="true" tabindex="-1">Dropdown<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li>
+      <li role="option" data-c="segmented" aria-selected="false" tabindex="-1">Segmented<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li>
+    </ul>
   </div>
   <div class="vars" role="group" aria-label="Variants">
     <button type="button" id="var-prev" aria-label="Previous variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -1183,8 +1198,17 @@ function segSet(i, snd) {
 }
 const curLooks = () => SEGON() ? SEG_LOOKS : LOOKS;
 // each component keeps its own settings; switching stores this one's and brings back the other's (or its first look)
-const compBtns = [...document.querySelectorAll('#comps button')];
-function showComp() { compBtns.forEach(b => { const on = b.dataset.c === P.comp; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }); }
+const compsEl = document.getElementById('comps'), compBtn = document.getElementById('comp-btn'), compList = document.getElementById('comp-list'), compOpts = [...compList.querySelectorAll('li')];
+const COMP_NAMES = { dropdown: 'Dropdown', segmented: 'Segmented' };
+function showComp() {
+  document.getElementById('comp-name').textContent = COMP_NAMES[P.comp] || P.comp;
+  compOpts.forEach(o => o.setAttribute('aria-selected', String(o.dataset.c === P.comp)));
+}
+function compOpen(on, focus) {
+  compList.hidden = !on; compBtn.setAttribute('aria-expanded', String(on));
+  if (on && focus) (compOpts.find(o => o.dataset.c === P.comp) || compOpts[0]).focus();
+  if (!on && focus) compBtn.focus();
+}
 const COMP_MEM = {};
 function switchComp(c) {
   if (c === P.comp) return;
@@ -1197,11 +1221,17 @@ function switchComp(c) {
   if (s.open) setMenu(false);
   useBg(P.bg); apply(); syncInputs(); save(); showVariant(); labelSig = ''; click(false, .6);
 }
-compBtns.forEach(b => b.addEventListener('click', () => switchComp(b.dataset.c)));
-document.getElementById('comps').addEventListener('keydown', e => {
-  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-  e.preventDefault(); e.stopPropagation(); const c = e.key === 'ArrowLeft' ? 'dropdown' : 'segmented'; switchComp(c); compBtns.find(b => b.dataset.c === c).focus();
+compBtn.addEventListener('click', () => compOpen(compList.hidden, false));
+compBtn.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); compOpen(true, true); } });
+compOpts.forEach(o => o.addEventListener('click', () => { compOpen(false, false); switchComp(o.dataset.c); }));
+compList.addEventListener('keydown', e => {
+  const i = compOpts.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); compOpts[(i + (e.key === 'ArrowDown' ? 1 : compOpts.length - 1)) % compOpts.length].focus(); }
+  else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (i >= 0) { compOpen(false, true); switchComp(compOpts[i].dataset.c); } }
+  else if (e.key === 'Escape') { e.preventDefault(); compOpen(false, true); }
+  else if (e.key === 'Tab') compOpen(false, false);
 });
+document.addEventListener('pointerdown', e => { if (!compList.hidden && !compsEl.contains(e.target)) compOpen(false, false); });
 const lookNow = () => { const L = curLooks(); return Object.keys(L).findIndex(n => Object.keys(L[n]).every(k => typeof L[n][k] === 'number' ? Math.abs(P[k] - L[n][k]) < 1e-6 : P[k] === L[n][k])); };
 function showVariant() { const i = lookNow(); document.getElementById('var-name').textContent = i >= 0 ? Object.keys(curLooks())[i] : 'Custom'; showComp(); }
 let lookIdx = -1;
