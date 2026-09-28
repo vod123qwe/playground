@@ -132,6 +132,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 // ---------- the flat: walls, openings, balconies, rooms, all in centimetres (tools/extract_plan.py) ----------
 const A = await (await fetch('apartment.json')).json();
@@ -539,7 +544,7 @@ function setMode(m, at) {
     if (mode === 'over') { overPose.pos.copy(camera.position); overPose.target.copy(controls.target); }
     controls.enabled = false;
   }
-  mode = m; document.body.classList.toggle('walk', m === 'walk'); paintModes(); paintHint();
+  mode = m; Z.level = Z.target = 1; document.body.classList.toggle('walk', m === 'walk'); paintModes(); paintHint();
   const to = () => {
     if (m === 'walk') { const e = eyePose(); return { pos: e.pos, q: e.q, fov: S.fov, cut: H }; }
     const c = new THREE.PerspectiveCamera(); c.position.copy(overPose.pos); c.lookAt(overPose.target);
@@ -728,7 +733,7 @@ mOver.addEventListener('click', () => setMode('over')); mWalk.addEventListener('
 const hint = document.getElementById('hint');
 function paintHint() {
   hint.innerHTML = mode === 'walk'
-    ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door</span><span class="touch">Stick to walk · drag to look</span>`
+    ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door · scroll to look closer</span><span class="touch">Stick to walk · drag to look · pinch to look closer</span>`
     : `<span class="keys">Drag to orbit · <kbd>Space</kbd> + drag to move · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
 }
 const here = document.getElementById('here'), hereN = document.getElementById('here-n'), hereA = document.getElementById('here-a');
@@ -782,8 +787,69 @@ function paintWalls() { mat.capThin.color.set('#6d6f76'); buildCaps(); }
 function applyCut(v) { S.cutNow = v; cutPlane.constant = Math.min(v, H + 1) * M + .0005; buildCaps(); }
 
 // ---------- frame ----------
+// ---------- the lens: scroll to zoom in on a detail (towards the pointer); focus falls on what is under it, with a light vignette and fringe ----------
+const Z = { level: 1, target: 1, nx: 0, ny: 0, focus: 2, focusT: 2, lastPick: 0 };
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+composer.addPass(new RenderPass(scene, camera));
+const bokeh = new BokehPass(scene, camera, { focus: 2, aperture: 0, maxblur: .008 }); composer.addPass(bokeh);
+const lens = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, amount: { value: 0 }, aspect: { value: 1 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float amount, aspect; varying vec2 vUv;
+    void main(){
+      vec2 c = vUv - .5, d = c * vec2(aspect, 1.); float r2 = dot(d, d);
+      vec2 o = c * r2 * .045 * amount;                                          // a fringe that grows towards the edges
+      vec3 col = vec3(texture2D(tDiffuse, vUv + o).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - o).b);
+      col *= mix(1., smoothstep(1.25, .25, length(d)), .55 * amount);            // a soft vignette
+      gl_FragColor = vec4(col, 1.);
+    }`,
+});
+composer.addPass(lens); composer.addPass(new OutputPass());
+const lensOn = () => mode === 'walk' && !tween && (Z.level > 1.02 || Z.target > 1.02);
+canvas.addEventListener('wheel', e => {
+  if (mode !== 'walk' || tween) return;
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect(); Z.nx = (e.clientX - r.left) / r.width * 2 - 1; Z.ny = -((e.clientY - r.top) / r.height * 2 - 1);
+  if (Z.target <= 1.001) lensList = null;                            // the scene may have changed since the last look
+  Z.target = THREE.MathUtils.clamp(Z.target * Math.exp(-e.deltaY * (e.deltaMode ? .05 : .0016)), 1, 6);
+}, { passive: false });
+// two fingers: pinch to zoom
+const pins = new Map(); let pinch = null;
+canvas.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; pins.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pins.size === 2) { const [a, b] = [...pins.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: Z.target }; look = null; } });
+canvas.addEventListener('pointermove', e => { if (!pins.has(e.pointerId)) return; pins.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && pins.size === 2 && mode === 'walk') { const [a, b] = [...pins.values()], r = canvas.getBoundingClientRect();
+    Z.nx = ((a[0] + b[0]) / 2 - r.left) / r.width * 2 - 1; Z.ny = -(((a[1] + b[1]) / 2 - r.top) / r.height * 2 - 1);
+    Z.target = THREE.MathUtils.clamp(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, 1, 6); } });
+const unpin = e => { pins.delete(e.pointerId); if (pins.size < 2) pinch = null; };
+canvas.addEventListener('pointerup', unpin); canvas.addEventListener('pointercancel', unpin);
+const lensTargets = () => { const out = []; world.traverse(o => { if (o.isMesh && o.visible && !(o.material && o.material.transparent)) out.push(o); }); return out; };
+let lensList = null;
+function stepLens(dt) {
+  const prev = Z.level, k = reduce ? 1 : 1 - Math.exp(-dt * 9);
+  Z.level += (Z.target - Z.level) * k; if (Math.abs(Z.target - Z.level) < .001) Z.level = Z.target;
+  if (Z.level !== prev) {                                            // keep the point under the pointer where it is: turn the view towards it
+    const tH0 = Math.tan(THREE.MathUtils.degToRad(S.fov / prev) / 2), tH1 = Math.tan(THREE.MathUtils.degToRad(S.fov / Z.level) / 2);
+    P.yaw += Math.atan(Z.nx * tH0 * camera.aspect) - Math.atan(Z.nx * tH1 * camera.aspect);
+    P.pitch = THREE.MathUtils.clamp(P.pitch + Math.atan(Z.ny * tH0) - Math.atan(Z.ny * tH1), -1.2, 1.2);
+  }
+  camera.fov = S.fov / Z.level; camera.updateProjectionMatrix();
+  const t = THREE.MathUtils.clamp((Z.level - 1) / 2.5, 0, 1);
+  if (t > 0) {
+    const now = performance.now();
+    if (now - Z.lastPick > 90) {                                     // what is under the pointer: the focus goes there
+      Z.lastPick = now; if (!lensList) lensList = lensTargets();
+      ndc.set(Z.nx, Z.ny); ray.setFromCamera(ndc, camera); const h = ray.intersectObjects(lensList, false)[0]; if (h) Z.focusT = h.distance;
+    }
+    Z.focus += (Z.focusT - Z.focus) * (reduce ? 1 : 1 - Math.exp(-dt * 7));
+  }
+  bokeh.uniforms.focus.value = Z.focus; bokeh.uniforms.aperture.value = .0035 * t * t * Z.level; bokeh.uniforms.maxblur.value = .006 + .006 * t;
+  lens.uniforms.amount.value = t; lens.uniforms.aspect.value = camera.aspect;
+}
+
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); paintModes();
+  composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
 }
 addEventListener('resize', resize);
 const v = new THREE.Vector3();
@@ -797,7 +863,7 @@ function frame(now) {
     const cut = tween.from.cut + (to.cut - tween.from.cut) * e; if (Math.abs(cut - (S.cutNow ?? -1)) > .5 || k === 1) applyCut(cut);
     if (k === 1) { tween = null; if (mode === 'over') { controls.target.copy(overPose.target); controls.enabled = true; controls.update(); } }
   } else if (mode === 'walk') {
-    stepWalk(dt); const e = eyePose(); camera.position.copy(e.pos); camera.quaternion.copy(e.q);
+    stepWalk(dt); stepLens(dt); const e = eyePose(); camera.position.copy(e.pos); camera.quaternion.copy(e.q);
   } else controls.update();
   for (const dr of doors) {
     if (dr.f !== dr.to) { const k = reduce ? 1 : Math.min(1, dt * 2.6); dr.f += Math.sign(dr.to - dr.f) * Math.min(Math.abs(dr.to - dr.f), k * (.35 + Math.abs(dr.to - dr.f))); if (Math.abs(dr.to - dr.f) < .002) dr.f = dr.to; }
@@ -823,7 +889,7 @@ function frame(now) {
     const r = roomAt(P.x, P.z);
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
-  renderer.render(scene, camera);
+  if (lensOn()) composer.render(dt); else renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 
@@ -831,7 +897,7 @@ placeSun(); paintWalls(); applyCut(S.cut); plan.visible = S.plan; renderer.toneM
 resize(); paintHint(); requestAnimationFrame(frame);
 document.body.classList.add('ready');
 const floorsReady = new Promise(r => setTimeout(r, 60)).then(buildFloors).catch(err => console.warn('floors', err));
-window.AW = { floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

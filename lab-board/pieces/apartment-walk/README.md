@@ -5,6 +5,7 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 ## Co można robić
 
 - **Overview:** orbita nad bryłą (przeciąganie, kółko), nazwy pomieszczeń z metrażem. *Cut the walls at* przycina ściany na dowolnej wysokości (40–255 cm), a przekrój jest czarny jak na rzucie. Podwójne kliknięcie (na telefonie podwójne stuknięcie) w podłogę wchodzi w tryb spaceru w tym miejscu.
+- **Przybliżenie (Walk):** kółko myszy (na telefonie dwa palce) przybliża do 6× w stronę kursora; ostrość łapie to, co jest pod kursorem (głębia ostrości), a przy przybliżeniu dochodzi lekka winieta i aberracja chromatyczna. Po to, żeby obejrzeć detal: słoje i fugę deski, frezy drzwi, ramę okna.
 - **Walk:** kamera na wysokości oczu (165 cm). WASD albo strzałki, przeciąganie myszą rozgląda się, Shift przyspiesza, M przełącza tryb. Na telefonie gałka po lewej i przeciąganie palcem. Ściany, balustrady, szyby i zamknięte skrzydła zatrzymują (ciało to okrąg 22 cm); wejście w zamknięte drzwi je otwiera. Na górze widać nazwę pomieszczenia, w rogu minimapę (kliknięcie w nią przenosi w to miejsce).
 - **Customize:** przycięcie ścian, nazwy pomieszczeń, wyróżnienie grubych ścian, rzut na podłodze (do porównania z modelem) i jego krycie, wysokość oczu, prędkość, pole widzenia, sufit, kierunek słońca, ekspozycja.
 
@@ -21,7 +22,7 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 ## Ściany i listwy
 
 - **Farba Flügger FL8065 Oat** (#DED8CB, ciepły jęczmienny beż, mat) na wszystkich ścianach od środka, łącznie z ościeżami i ukrytymi drzwiami; elewacja zostaje biała (kolor liczony per ściana: które lico patrzy do mieszkania). W panelu: *Walls → Paint*.
-- **Listwy przypodłogowe** białe MDF 80 × 16 mm z zaokrągloną górną krawędzią, we wszystkich pomieszczeniach poza pralnią, spiżarnią i łazienką; przerwane w drzwiach, drzwiach balkonowych i w przejściu korytarz–salon (ok. 60 m, 59 odcinków).
+- **Listwy przypodłogowe** białe MDF 80 × 16 mm z zaokrągloną górną krawędzią, we wszystkich pomieszczeniach poza pralnią, spiżarnią i łazienką (ok. 61 m). Liczone z lic ścian (dokładnie przy ścianie): kończą się na opasce drzwi (4,5 cm za otworem), na krawędzi ościeża okna i drzwi balkonowych, przy ukrytych drzwiach i w przejściu korytarz–salon; na narożniku wystającym do pokoju przedłużone w ucios (grubość × tan połowy kąta), w narożniku wewnętrznym dochodzą do rogu.
 - **Drzwi Porta Vector V:** frezy w skali rzeczywistej (rowek V 4 mm, druga linia 2,2 cm do środka, 14 px/cm) w mapie normalnych, zamiast rozmytej mapy wypukłości.
 - **Szyby stałe** (*Windows → Fixed panes*): w ramie na listwie (smuklejsza rama, więcej szkła niż w skrzydłach otwieranych) albo w skrzydle stałym (wszystkie pola jednakowe). Oba warianty się produkuje; który jest w mieszkaniu, mówi zamówienie okien.
 
@@ -34,7 +35,8 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 ## Skąd są wymiary
 
 - **Ściany prosto z rysunku:** `tools/extract_plan.py` czyta rzut z meblami (`assets/plan.webp`), bierze ciemne piksele, usuwa cienkie linie (meble, skrzydła drzwi, teksty, wymiarowanie), zamienia plamy na wielokąty i przelicza na cm. Szachty narysowane jako obrysy stają się pełne.
-- **Wyprostowane obrysy:** każda krawędź ściany jest przyciągana do jednego z czterech kierunków budynku (osie rysunku, elewacja 52,2°, ściana kuchni −37,8°), położenie liczone ze wszystkich pikseli krawędzi, narożniki ostre (bez schodków pikseli i zaokrągleń). Jeden obrys na cały mur, więc lica biegną bez szwów; nadproża, podokienniki, podłoga i strop dociągnięte do tych samych płaszczyzn.
+- **Wyprostowane obrysy** (bez „żłobień”): kawałki jednego lica różniące się o mniej niż 3,7 cm i ząbki do 8 cm łączą się w jedną linię, a jej położenie bierze się z najdłuższego kawałka (krótkie to przyklejone do ściany grzejniki, napisy i linie rysunku).
+- **Prostowanie, zasada:** każda krawędź ściany jest przyciągana do jednego z czterech kierunków budynku (osie rysunku, elewacja 52,2°, ściana kuchni −37,8°), położenie liczone ze wszystkich pikseli krawędzi, narożniki ostre (bez schodków pikseli i zaokrągleń). Jeden obrys na cały mur, więc lica biegną bez szwów; nadproża, podokienniki, podłoga i strop dociągnięte do tych samych płaszczyzn.
 - **Skala 1 cm = 1,209 px**, sprawdzona trzema wymiarami z rzutu: sypialnia 375 × 372 cm i łazienka 166 cm (wszystkie dają 1,208–1,210). Metraż sypialni z modelu: 13,9 m² (375 × 372 = 13,95).
 - **Otwory zmierzone wzdłuż ścian** i porównane z rzutem architekta: w elewacji 268, 88, 178, 88 i 112 cm (w rzucie O17 270, O22 90, O25 180, O21 90). Drzwi wewnętrzne 78–79 cm (skrzydło 80), wejściowe 87 cm.
 - **Wysokości:** w świetle 2,55 m (Hn/Hb z rzutu), drzwi balkonowe i okna od podłogi 242 cm, okno O25 w sypialni od 30 do 235 cm (HP 30), otwór drzwi wewnętrznych 208 cm (skrzydło 203,7 + ościeżnica), wejściowe 210 cm.
