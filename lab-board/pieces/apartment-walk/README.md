@@ -67,6 +67,15 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - Nisko nad horyzontem słońce czerwienieje i słabnie; po zachodzie światło okien i otoczenia gaśnie do zmierzchu, tło ciemnieje.
 - **Light warmth** (2700–6500 K) i **Light strength** (20–200 %) w panelu (Light) zastąpiły kąt słońca: barwa i natężenie światła dziennego (słońce, niebo w oknach, otoczenie).
 
+## Widok za oknami
+
+- **Panorama 360°** (równoprostokątna 2:1, 8192 × 4096) jako tło spaceru, widoczna przez wszystkie okna i z balkonów; z 4. piętra (oko 13,7 m nad terenem), obrócona zgodnie ze stronami świata, wieczorem przygasa razem z zegarem. W widoku z góry tło zostaje gładkie.
+- **Dwie wersje** (panel, Living room → View outside, tylko gdy jest prawdziwa):
+  - **Made up** (`assets/view.jpg`, publiczna): wymyślony krajobraz w duchu okolicy: łąka i tory przed blokiem, osiedle domów w ogrodach, pola z miedzami, zalesione wzgórza na południu. Nie odwzorowuje prawdziwego miejsca.
+  - **Real** (`assets/private/view-real.jpg`, **tylko lokalnie**, folder w .gitignore): z prawdziwej rzeźby terenu (Mapzen Terrarium, AWS open data) i OpenStreetMap (© współtwórcy OpenStreetMap, ODbL) wokół mieszkania. Nie trafia na Pages, bo zdradzałby położenie mieszkania.
+- **Jak zrobić:** `python tools/fetch_view.py <lat> <lon>` pobiera dane do `assets/private/view-data` (tylko metry lokalne, bez współrzędnych), potem `tools/view.html?mode=real` (albo `mode=generic`) buduje scenę 3D (teren, zabudowa z dachami dwuspadowymi i oknami, drzewa, drogi, tory, niebo z chmurami, mgiełka) i renderuje ją do kostki, a potem do JPEG.
+- Z wysokości 4. piętra wzgórza na południu są naprawdę niskie (ok. 2° nad horyzontem, 4 km); zdjęcie z drona pokazuje je wyżej, bo jest robione z góry i z dłuższą ogniskową.
+
 ## Widok z góry
 
 - Obracanie: przeciągnij. Przesuwanie: **W A S D** albo strzałki (z Shift szybciej), albo **Space** i przeciągnij.

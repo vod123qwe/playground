@@ -239,7 +239,7 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
-const S = { sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
+const S = { view: 'generic', sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -295,7 +295,19 @@ function kelvin(K) {                                                // a colour 
   const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
   return new THREE.Color().setRGB(c(r), c(g), c(b), THREE.SRGBColorSpace);
 }
-const BG_DAY = new THREE.Color('#e8e5df'), BG_NIGHT = new THREE.Color('#23262e'), SKY = new THREE.Color('#eef3ff');
+const BG_DAY = new THREE.Color('#e8e5df'), BG_NIGHT = new THREE.Color('#23262e'), SKY = new THREE.Color('#eef3ff'), bgColor = scene.background;
+// ---------- the view out of the windows: a 360 degree panorama behind the walk (tools/view.html). assets/view.jpg is made up, in the
+// manner of the area; a real one, built from the flat's location, stays local (assets/private, git-ignored) and is used when present.
+// The panoramas are drawn with x east and z south; here south is +x and west +z: a quarter turn ----------
+const VIEW = { tex: {}, real: false };
+{
+  const load = f => new Promise(res => new THREE.TextureLoader().load(f, t => { t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; res(t); }, undefined, () => res(null)));
+  scene.backgroundRotation.set(0, Math.PI / 2, 0);
+  load('assets/view.jpg').then(t => { VIEW.tex.generic = t; });
+  fetch('assets/private/view-real.jpg', { method: 'HEAD' }).then(r => r.ok && r.headers.get('content-type')?.startsWith('image') ? load('assets/private/view-real.jpg') : null).then(t => {
+    if (!t) return; VIEW.tex.real = t; VIEW.real = true; if (!VIEW.userSet) S.view = 'real'; if (ctl.view) { ctl.view.row.hidden = false; ctl.view.set(S.view); }
+  }).catch(() => {});
+}
 function placeSun() {                                               // the sun, the sky light in the windows and the ambient, by the clock
   const { el, az } = sunAt(S.time), sm = THREE.MathUtils.smoothstep;
   const h = [NORTH[0] * Math.cos(az) + EAST[0] * Math.sin(az), NORTH[1] * Math.cos(az) + EAST[1] * Math.sin(az)];
@@ -308,7 +320,7 @@ function placeSun() {                                               // the sun, 
   hemi.color.copy(warm).lerp(SKY, .35); hemi.intensity = .55 * S.power * (.1 + .9 * day);
   scene.environmentIntensity = .55 * S.power * (.12 + .88 * day);
   for (const l of portals) { l.color.copy(SKY).lerp(warm, .45).lerp(kelvin(2600), low * .5 * day); l.intensity = S.portal * S.power * (.03 + .97 * day); }
-  scene.background.copy(BG_NIGHT).lerp(BG_DAY, .15 + .85 * day);
+  bgColor.copy(BG_NIGHT).lerp(BG_DAY, .15 + .85 * day); scene.backgroundIntensity = .06 + .94 * day;
   if (typeof paintClock === 'function') paintClock();
   if (typeof ptScene === 'function') ptScene();
 }
@@ -1029,6 +1041,8 @@ const ctl = {};
   const ln = document.createElement('p'); ln.className = 'note';
   ln.textContent = 'Kave Home Gala in a fine beige chenille (drawn here, not a scan): seat 42, back 87, 105 deep. The 3-seater, 210 cm, fits where A.04 has the sofa: about 1 m to the dining chairs, its arm 60 cm off the window wall. The 4-seater with the right chaise, 300 × 193, reaches the dining chair next to it (about 3 cm), stands in front of the whole 90 cm balcony door and leaves about 45 cm to the TV console. Curtains: sheers and linen drapes on two tracks under a ceiling pelmet.';
   g.appendChild(ln);
+  ctl.view = LabUI.seg(g, { label: 'View outside', options: [['real', 'Real (local)'], ['generic', 'Made up']], value: S.view, onChange: v => { S.view = v; VIEW.userSet = true; } });
+  ctl.view.row.hidden = !VIEW.real;                                    // only where the real view is on this computer
   g = LabUI.group(panel, 'Windows', { key: 'lab.aw.group.windows' });
   ctl.fix = LabUI.seg(g, { label: 'Fixed panes', options: [['frame', 'In the frame'], ['sash', 'In a fixed sash']], value: S.fix, onChange: v => { S.fix = v; rebuildGlazing(); } });
   const xn = document.createElement('p'); xn.className = 'note'; xn.textContent = 'In the frame: glass on a bead, a slimmer border and more glass than the opening leaves. In a fixed sash: every field looks the same. Both are made; the window order says which.'; g.appendChild(xn);
@@ -1418,7 +1432,10 @@ function frame(now) {
   paintHand(now);
   // the ceiling only from inside
   const inside = mode === 'walk' && !tween;
-  ceiling.visible = !!(S.ceiling && (inside || (tween && mode === 'walk' && (now - tween.t0) / tween.dur > .8)));
+  const nearIn = inside || (tween && mode === 'walk' && (now - tween.t0) / tween.dur > .8);
+  ceiling.visible = !!(S.ceiling && nearIn);
+  const bgNow = nearIn && VIEW.tex[S.view] ? VIEW.tex[S.view] : bgColor;   // inside: the view out of the windows; the overview: the plain page
+  if (scene.background !== bgNow) { scene.background = bgNow; ptScene(); }
   // labels
   const w = innerWidth, h = innerHeight;
   for (const l of labelsAt) {

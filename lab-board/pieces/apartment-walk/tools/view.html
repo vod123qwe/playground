@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>View builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #16181d; color: #d7d9de; font: 13px/1.5 system-ui, sans-serif; }
+  #log { position: fixed; left: 12px; top: 10px; z-index: 2; white-space: pre-wrap; max-width: 60ch; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<!-- The panorama out of the flat's windows (see view.js). ?mode=generic (default) or ?mode=real (needs assets/private/view-data,
+     from tools/fetch_view.py), &size=8192, &eye=13.7 (metres over the ground), &post=<url> to send the JPEG there instead of saving -->
+<div id="log"></div>
+<script type="module" src="view.js"></script>
+</body>
+</html>
