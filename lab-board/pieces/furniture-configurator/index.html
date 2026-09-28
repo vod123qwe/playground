@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Furniture Configurator · lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#1b1c20; --muted:rgba(20,20,20,.5); --line:rgba(20,20,20,.1); --ease:cubic-bezier(.22,.61,.36,1); }
+  *{box-sizing:border-box}
+  html, body{margin:0; height:100%; overflow:hidden; background:#e8e5df; color:var(--ink); font:500 13.5px/1.4 "Inter", system-ui, sans-serif; -webkit-font-smoothing:antialiased}
+  #gl{position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none}
+  button{font:inherit; color:inherit}
+
+  /* chrome: white pills, no borders, no shadows (same family as the glass button) */
+  .pill{display:flex; align-items:center; gap:9px; height:46px; padding:0 20px 0 16px; border:0; border-radius:999px; background:#fff; color:var(--ink); font-weight:600; cursor:pointer}
+  .pill svg{width:19px; height:19px}
+  .pill:focus-visible, .icon:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:2px}
+  .icon{display:grid; place-items:center; width:46px; height:46px; border:0; border-radius:999px; background:#fff; color:var(--ink); cursor:pointer}
+  .icon svg{width:20px; height:20px}
+  .back{position:fixed; top:16px; left:16px; z-index:5; text-decoration:none}
+  .tr{position:fixed; top:16px; right:16px; z-index:5; display:flex; gap:8px; transition:right .45s var(--ease)}
+  body.tuning .tr .tune{display:none}
+  @media (min-width:761px){ body.tuning .tr{right:400px} }
+
+  /* export menu: a quiet fade, no spring */
+  .exp{position:relative}
+  .xmenu{position:absolute; right:0; top:calc(100% + 8px); min-width:250px; margin:0; padding:6px; list-style:none; border-radius:18px; background:#fff; box-shadow:0 0 0 1px var(--line);
+         opacity:0; visibility:hidden; transform:translateY(-6px) scale(.985); transform-origin:top right; pointer-events:none;
+         transition:opacity .34s cubic-bezier(.25,.1,.25,1), transform .42s var(--ease), visibility 0s linear .42s}
+  .xmenu.open{opacity:1; visibility:visible; transform:none; pointer-events:auto; transition:opacity .34s cubic-bezier(.25,.1,.25,1), transform .42s var(--ease), visibility 0s}
+  .xmenu button{display:grid; grid-template-columns:22px 1fr; gap:2px 10px; width:100%; padding:10px 12px; border:0; border-radius:12px; background:transparent; text-align:left; cursor:pointer}
+  .xmenu button:hover, .xmenu button:focus-visible{background:rgba(20,20,20,.06); outline:none}
+  .xmenu svg{grid-row:span 2; width:20px; height:20px; margin-top:1px}
+  .xmenu b{font-weight:600} .xmenu small{color:var(--muted); font-size:12px}
+
+  /* variants at the bottom centre */
+  .dock{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:4; transform:translateX(-50%); transition:left .45s var(--ease)}
+  @media (min-width:761px){ body.tuning .dock{left:calc(50% - 192px)} }
+  .vars{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; font-weight:600}
+  .vars button{display:grid; place-items:center; width:36px; height:36px; border:0; border-radius:999px; background:transparent; cursor:pointer}
+  .vars button:hover{background:rgba(20,20,20,.06)} .vars svg{width:18px; height:18px}
+  .vars .vn{min-width:120px; text-align:center; white-space:nowrap}
+
+  /* status of the render, bottom left */
+  .status{position:fixed; left:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:4; display:flex; align-items:center; gap:8px; height:46px; padding:0 16px;
+          border-radius:999px; box-shadow:inset 0 0 0 1.5px rgba(20,20,20,.18); color:rgba(20,20,20,.7); font-size:12.5px; font-weight:600}
+  .status i{width:8px; height:8px; border-radius:50%; background:#c9a15a; transition:background .3s}
+  .status.done i{background:#3fae6a}
+  @media (max-width:760px){ .status{bottom:calc(76px + env(safe-area-inset-bottom))} }
+
+  /* handles and dimensions over the canvas */
+  .overlay{position:fixed; inset:0; z-index:3; pointer-events:none}
+  .hd{position:absolute; left:0; top:0; width:28px; height:28px; margin:-14px 0 0 -14px; display:grid; place-items:center; border-radius:50%; background:#fff;
+      box-shadow:0 0 0 1px rgba(20,20,20,.14); pointer-events:auto; touch-action:none; transition:transform .25s var(--ease), background .2s}
+  .hd svg{width:16px; height:16px; stroke:var(--ink)}
+  .hd.x{cursor:ew-resize} .hd.y{cursor:ns-resize} .hd.add{cursor:pointer}
+  .hd:hover, .hd.on{transform:scale(1.15)} .hd.on{background:var(--ink)} .hd.on svg{stroke:#fff}
+  .lbl{position:absolute; left:0; top:0; transform:translate(-50%, -50%); padding:3px 8px; border-radius:999px; background:rgba(255,255,255,.86); color:var(--ink);
+       font-size:11.5px; font-weight:600; white-space:nowrap; pointer-events:none; font-variant-numeric:tabular-nums}
+  .lbl.big{font-size:12.5px; padding:4px 10px}
+  body.nodims .lbl{display:none}
+  body.busy .hd{pointer-events:none; opacity:.5}
+  .hd, .lbl{transition:transform .25s var(--ease), background .2s, opacity .6s ease}
+  body.calm .hd, body.calm .lbl{opacity:0; pointer-events:none}
+
+  /* the bay toolbar: what this segment is */
+  .bar{position:fixed; left:0; top:0; z-index:4; display:flex; align-items:center; gap:4px; padding:5px; border-radius:18px; background:#fff; box-shadow:0 0 0 1px var(--line);
+       transform:translate(-50%, -100%); opacity:0; visibility:hidden; transition:opacity .3s ease, visibility 0s linear .3s; white-space:nowrap}
+  .bar.open{opacity:1; visibility:visible; transition:opacity .3s ease, visibility 0s}
+  .bar button{height:36px; padding:0 12px; border:0; border-radius:12px; background:transparent; font-weight:600; cursor:pointer; color:rgba(20,20,20,.6)}
+  .bar button:hover{background:rgba(20,20,20,.05); color:var(--ink)}
+  .bar button[aria-pressed=true]{background:var(--ink); color:#fff}
+  .bar .sep{width:1px; height:22px; background:var(--line); margin:0 4px}
+  .bar .step{display:flex; align-items:center; gap:2px}
+  .bar .step button{width:32px; padding:0} .bar .step span{min-width:18px; text-align:center; font-weight:600}
+  .bar .del{color:#b3462f}
+
+  /* the panel: edge to edge, sharp, roomy */
+  .panel{position:fixed; top:0; right:0; bottom:0; z-index:6; width:384px; overflow:auto; padding:0 28px 28px; background:#fff; box-shadow:-1px 0 0 var(--line);
+         transform:translateX(100%); visibility:hidden; transition:transform .45s var(--ease), visibility 0s linear .45s; overscroll-behavior:contain}
+  body.tuning .panel{transform:none; visibility:visible; transition:transform .45s var(--ease)}
+  @media (max-width:760px){ .panel{top:auto; left:0; width:auto; height:62vh; transform:translateY(100%)} }
+  .ph{position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:flex-start; margin:0 -28px; padding:28px 28px 20px; background:#fff; border-bottom:1px solid var(--line)}
+  .ph h2{margin:0; font-size:20px; font-weight:600} .ph p{margin:4px 0 0; color:var(--muted); font-size:12.5px}
+  .ph button{width:32px; height:32px; border:0; background:transparent; cursor:pointer; display:grid; place-items:center} .ph svg{width:20px; height:20px}
+  .grp{border-bottom:1px solid var(--line); margin:0 -28px; padding:18px 28px}
+  .grp h3{margin:0 0 12px; font-size:13px; font-weight:600}
+  .row{display:grid; grid-template-columns:1fr auto; align-items:center; gap:6px 12px; margin:12px 0}
+  .row label{color:rgba(20,20,20,.75)} .row .v{font-variant-numeric:tabular-nums; color:var(--muted); font-size:12.5px}
+  .row input[type=range]{grid-column:1 / -1; width:100%; accent-color:var(--ink); margin:0}
+  .row input[type=checkbox]{width:18px; height:18px; accent-color:var(--ink); margin:0}
+  .seg{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px}
+  .seg button{padding:7px 12px; border:0; background:rgba(20,20,20,.05); cursor:pointer; font-weight:600; color:rgba(20,20,20,.7)}
+  .seg button[aria-pressed=true]{background:var(--ink); color:#fff}
+  .note{color:var(--muted); font-size:12px; margin:8px 0 0}
+
+  /* export progress */
+  .modal{position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(232,229,223,.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+         opacity:0; visibility:hidden; transition:opacity .3s ease, visibility 0s linear .3s}
+  .modal.open{opacity:1; visibility:visible; transition:opacity .3s ease, visibility 0s}
+  .card{width:min(360px, calc(100vw - 32px)); padding:24px; border-radius:22px; background:#fff; box-shadow:0 0 0 1px var(--line)}
+  .card b{display:block; font-size:15px; font-weight:600} .card p{margin:6px 0 16px; color:var(--muted)}
+  .meter{height:6px; border-radius:6px; background:rgba(20,20,20,.08); overflow:hidden} .meter i{display:block; height:100%; width:0; background:var(--ink); transition:width .2s linear}
+  .card .row2{display:flex; justify-content:space-between; align-items:center; margin-top:14px}
+  .card .row2 span{color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums}
+  .card button{height:36px; padding:0 14px; border:0; border-radius:999px; background:rgba(20,20,20,.06); font-weight:600; cursor:pointer}
+  .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; color:var(--muted); font-weight:600; transition:opacity .5s ease}
+  body.ready .loading{opacity:0}
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+  "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+  "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.15/build/index.module.js",
+  "three-gpu-pathtracer": "https://cdn.jsdelivr.net/npm/three-gpu-pathtracer@0.0.25/build/index.module.js"
+} }
+</script>
+</head>
+<body>
+<canvas id="gl" aria-label="The sideboard in 3D"></canvas>
+<div class="loading" id="loading">Loading the workshop…</div>
+<div class="overlay" id="overlay"></div>
+
+<a class="icon back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+
+<div class="tr">
+  <div class="exp">
+    <button class="pill" id="exp-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="exp-menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg><span>Export</span>
+    </button>
+    <ul class="xmenu" id="exp-menu" role="menu" aria-hidden="true">
+      <li><button type="button" role="menuitem" id="x-render"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5.5-5.5L7 19"/></svg><b>Render · 4K</b><small>Path traced PNG, 3840 × 2160</small></button></li>
+      <li><button type="button" role="menuitem" id="x-plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7M9 9h2"/></svg><b>Plan for the joiner</b><small>Drawings, cut list, hardware · print or PDF</small></button></li>
+      <li><button type="button" role="menuitem" id="x-csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/></svg><b>Cut list · CSV</b><small>For a spreadsheet or a panel saw</small></button></li>
+    </ul>
+  </div>
+  <button class="pill tune" id="tune" type="button" aria-expanded="false" aria-controls="panel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>Customize</span>
+  </button>
+</div>
+
+<div class="dock"><div class="vars" role="group" aria-label="Variants">
+  <button type="button" id="v-prev" aria-label="Previous variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="v-name" aria-live="polite"></span>
+  <button type="button" id="v-next" aria-label="Next variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+
+<div class="status" id="status" aria-live="polite"><i></i><span>Live preview</span></div>
+<div class="bar" id="bar" role="toolbar" aria-label="This segment"></div>
+<aside class="panel" id="panel" aria-label="Customize the furniture"></aside>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-t"><div class="card">
+  <b id="m-t">Rendering</b><p id="m-p">Tracing light through the scene.</p>
+  <div class="meter"><i id="m-bar"></i></div>
+  <div class="row2"><span id="m-n">0 / 0</span><button type="button" id="m-x">Cancel</button></div>
+</div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { WebGLPathTracer } from 'three-gpu-pathtracer';
+
+const Q = new URLSearchParams(location.search), STILL = Q.has('still');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const snap = (v, st = 5) => Math.round(v / st) * st;
+
+// ---------- the furniture, in cm: an outline (width, cuts between segments) and what each segment holds ----------
+const T = 1.8, BACK = 0.8, GAP = 0.3, LIP = 1.4;      // board, back panel, gap around fronts, height of the top rail
+const LOOKS = {
+  'Sideboard 200': { W: 200, H: 50, D: 40, leg: 18, cuts: [50, 100], bays: [{ type: 'door' }, { type: 'door' }, { type: 'niche', n: 2, split: .55 }] },
+  'Media 160': { W: 160, H: 45, D: 42, leg: 20, cuts: [55, 105], bays: [{ type: 'drawers', n: 2 }, { type: 'open', n: 1 }, { type: 'drawers', n: 2 }] },
+  'Wide 260': { W: 260, H: 55, D: 45, leg: 16, cuts: [65, 130, 195], bays: [{ type: 'door' }, { type: 'drawers', n: 3 }, { type: 'drawers', n: 3 }, { type: 'door' }] },
+};
+const STYLE_DEF = { legs: 'frame', handles: 'bar', lip: true, tone: 1, gloss: .14, wall: true, grid: .5, exposure: 1, dims: true, pt: true, bounces: 5, peek: true };
+let C = structuredClone(LOOKS['Sideboard 200']);      // the build
+let S = { ...STYLE_DEF };                              // the look and the scene
+let lookName = 'Sideboard 200';
+const bayDefaults = t => t === 'drawers' ? { type: t, n: 2 } : t === 'open' ? { type: t, n: 1 } : t === 'niche' ? { type: t, n: 1, split: .5 } : { type: t };
+
+// ---------- renderer, camera, light ----------
+const canvas = $('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e8e5df');
+const camera = new THREE.PerspectiveCamera(30, 1, 5, 6000);
+const HOME = { pos: new THREE.Vector3(-70, 120, 360), target: new THREE.Vector3(0, 36, 0) };
+camera.position.copy(HOME.pos);
+const controls = new OrbitControls(camera, canvas);
+controls.target.copy(HOME.target); controls.enableDamping = true; controls.dampingFactor = .08;
+controls.minDistance = 110; controls.maxDistance = 1200; controls.maxPolarAngle = Math.PI * .485; controls.minPolarAngle = .12; controls.enablePan = false;
+controls.update();
+
+const sun = new THREE.DirectionalLight('#ffe6c4', 2.6);            // a warm window light from the front left, low enough to throw a shadow on the wall
+sun.position.set(-260, 230, 300); sun.castShadow = true;
+Object.assign(sun.shadow.camera, { left: -260, right: 260, top: 220, bottom: -120, near: 10, far: 1200 });
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 5; sun.shadow.bias = -0.0005; sun.shadow.normalBias = .8;
+scene.add(sun);
+new HDRLoader().load('assets/lebombo_1k.hdr', t => { t.mapping = THREE.EquirectangularReflectionMapping; scene.environment = t; scene.environmentIntensity = .55; ptScene(); });
+
+// ---------- materials: photo oak (Poly Haven, CC0), black powder-coated steel, a pale floor and wall ----------
+const tl = new THREE.TextureLoader(), ANISO = renderer.capabilities.getMaxAnisotropy();
+const tex = (u, srgb) => { const t = tl.load(u, () => ptScene()); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+const oak = new THREE.MeshPhysicalMaterial({ map: tex('assets/oak_diff.jpg', true), normalMap: tex('assets/oak_nor.jpg'), roughnessMap: tex('assets/oak_rough.jpg'),
+  normalScale: new THREE.Vector2(.35, .35), roughness: 1, clearcoat: .14, clearcoatRoughness: .5 });
+const steel = new THREE.MeshPhysicalMaterial({ color: '#151515', metalness: .55, roughness: .42, clearcoat: .25, clearcoatRoughness: .4 });
+function gridTexture(a) {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  g.fillStyle = '#e9e6e0'; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = `rgba(70,62,52,${.18 * a})`; g.lineWidth = 2; g.beginPath(); g.moveTo(0, 1); g.lineTo(512, 1); g.moveTo(1, 0); g.lineTo(1, 512); g.stroke();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 60); t.anisotropy = ANISO; return t;
+}
+const floorMat = new THREE.MeshStandardMaterial({ map: gridTexture(S.grid), roughness: .88 });
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), floorMat);   // one tile = 50 cm
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(3000, 900), new THREE.MeshStandardMaterial({ color: '#efebe4', roughness: .95 }));
+wall.position.set(0, 450, -60); wall.receiveShadow = true; scene.add(wall);
+const skirt = new THREE.Mesh(new THREE.BoxGeometry(3000, 9, 1.6), new THREE.MeshStandardMaterial({ color: '#f4f1ea', roughness: .6 }));
+skirt.position.set(0, 4.5, -59); skirt.castShadow = skirt.receiveShadow = true; scene.add(skirt);
+
+// a box of oak whose grain runs along one axis, in true scale (the veneer photo covers 183 cm), offset per part
+const TILE = 140;                                       // the veneer photo covers 183 cm; a little finer reads closer to real oak fronts
+const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return ((h >>> 0) % 10007) / 10007; };
+function woodBox(w, h, d, grain, key) {
+  const g = new THREE.BoxGeometry(w, h, d), p = g.attributes.position, n = g.attributes.normal, uv = g.attributes.uv;
+  const size = { x: w, y: h, z: d }, ox = hash(key + 'u') * TILE, oy = hash(key + 'v') * TILE;
+  for (let i = 0; i < p.count; i++) {
+    const v = { x: p.getX(i) + w / 2, y: p.getY(i) + h / 2, z: p.getZ(i) + d / 2 };
+    const ax = Math.abs(n.getX(i)) > .5 ? ['y', 'z'] : Math.abs(n.getY(i)) > .5 ? ['x', 'z'] : ['x', 'y'];
+    const along = ax.includes(grain) ? grain : (size[ax[0]] >= size[ax[1]] ? ax[0] : ax[1]), across = ax[0] === along ? ax[1] : ax[0];
+    uv.setXY(i, (v[across] + ox) / TILE, (v[along] + oy) / TILE);
+  }
+  return g;
+}
+
+// ---------- build the sideboard from C ----------
+const root = new THREE.Group(); scene.add(root);
+let parts = [], bayParts = [], pickables = [];
+const open = [];                                       // per segment: 0 closed … 1 peeking open
+function part(list, w, h, d, x, y, z, grain, key, mat = oak, parent = root, meta = {}) {
+  const m = new THREE.Mesh(mat === oak ? woodBox(w, h, d, grain, key) : new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; m.userData = { w, h, d, key, grain, ...meta };
+  parent.add(m); if (list) list.push(m); pickables.push(m); return m;
+}
+function bayBounds(i) {                               // inner x range of segment i (cm, centred on 0)
+  const n = C.bays.length;
+  const a = i === 0 ? T : C.cuts[i - 1] + T / 2, b = i === n - 1 ? C.W - T : C.cuts[i] - T / 2;
+  return [a - C.W / 2, b - C.W / 2];
+}
+function handle(parent, x, y, z, vertical) {
+  if (S.handles !== 'bar') return;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(vertical ? 1 : 11, vertical ? 11 : 1, .7), steel);
+  m.position.set(x, y, z); m.castShadow = true; parent.add(m);
+}
+function build() {
+  for (const m of [...root.children]) { root.remove(m); m.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  parts = []; bayParts = []; pickables = [];
+  const { W, H, D, leg } = C, y0 = leg, zF = D / 2;
+  // carcass
+  part(parts, W, T, D, 0, y0 + H - T / 2, 0, 'x', 'top', oak, root, { role: 'Top', qty: 1 });
+  part(parts, W, T, D, 0, y0 + T / 2, 0, 'x', 'bottom', oak, root, { role: 'Bottom', qty: 1 });
+  for (const sx of [-1, 1]) part(parts, T, H - 2 * T, D, sx * (W / 2 - T / 2), y0 + H / 2, 0, 'y', 'side' + sx, oak, root, { role: 'Side', qty: 1 });
+  part(parts, W - 2 * T, H - 2 * T, BACK, 0, y0 + H / 2, -D / 2 + BACK / 2 + .6, 'x', 'back', oak, root, { role: 'Back', qty: 1, material: 'HDF 8 mm, oak foil' });
+  C.cuts.forEach((c, i) => part(parts, T, H - 2 * T, D - 1.4, -W / 2 + c, y0 + H / 2, .7, 'y', 'div' + i, oak, root, { role: 'Divider', qty: 1 }));
+  if (S.lip) {                                         // a low rail on the back and the sides of the top, like the photo
+    part(parts, W, LIP, T, 0, y0 + H + LIP / 2, -D / 2 + T / 2, 'x', 'lipb', oak, root, { role: 'Top rail, back', qty: 1 });
+    for (const sx of [-1, 1]) part(parts, T, LIP, D - T, sx * (W / 2 - T / 2), y0 + H + LIP / 2, T / 2, 'z', 'lip' + sx, oak, root, { role: 'Top rail, side', qty: 1 });
+  }
+  // segments
+  const ib = y0 + T, ih = H - 2 * T;
+  C.bays.forEach((b, i) => {
+    const [x0, x1] = bayBounds(i), bw = x1 - x0, cx = (x0 + x1) / 2, bp = { doors: [], drawers: [] }; bayParts.push(bp);
+    if (open[i] === undefined) open[i] = 0;
+    const meta = { bay: i };
+    const shelf = (y, key) => part(parts, bw, T, D - 3, cx, y, .3, 'x', key, oak, root, { ...meta, role: 'Shelf', qty: 1 });
+    const drawer = (dx0, dx1, dy0, dy1, key) => {       // a front on a box that slides out
+      const g = new THREE.Group(); root.add(g); bp.drawers.push(g);
+      const fw = dx1 - dx0 - 2 * GAP, fh = dy1 - dy0 - 2 * GAP, fx = (dx0 + dx1) / 2, fy = (dy0 + dy1) / 2;
+      part(parts, fw, fh, T, fx, fy, zF - T / 2, 'x', key, oak, g, { ...meta, role: 'Drawer front', qty: 1 });
+      handle(g, fx, dy1 - GAP - 2.2, zF + .35);
+      const bd = D - 6, bh = Math.max(6, fh - 5), bxw = dx1 - dx0 - 2.6, zc = zF - T - bd / 2;   // 13 mm slides each side
+      part(parts, bxw, 1.2, bd, fx, dy0 + 2.2, zc, 'x', key + 'b', oak, g, { ...meta, role: 'Drawer bottom', qty: 1, t: 1.2 });
+      for (const sx of [-1, 1]) part(parts, 1.2, bh, bd, fx + sx * (bxw / 2 - .6), dy0 + 2.2 + bh / 2, zc, 'z', key + 's' + sx, oak, g, { ...meta, role: 'Drawer side', qty: 1, t: 1.2 });
+      part(parts, bxw - 2.4, bh, 1.2, fx, dy0 + 2.2 + bh / 2, zc - bd / 2 + .6, 'x', key + 'k', oak, g, { ...meta, role: 'Drawer back', qty: 1, t: 1.2 });
+    };
+    if (b.type === 'door') {
+      const hingeLeft = cx < 0, g = new THREE.Group(); g.position.set(hingeLeft ? x0 + GAP : x1 - GAP, 0, zF); root.add(g);
+      bp.doors.push({ g, dir: hingeLeft ? -1 : 1 });
+      const fw = bw - 2 * GAP, fh = ih - 2 * GAP;
+      part(parts, fw, fh, T, (hingeLeft ? 1 : -1) * fw / 2, ib + ih / 2, -T / 2, 'x', 'door' + i, oak, g, { ...meta, role: 'Door', qty: 1 });
+      handle(g, (hingeLeft ? 1 : -1) * fw / 2, ib + ih - GAP - 2.2, .35);
+      shelf(ib + ih / 2, 'sh' + i);
+    } else if (b.type === 'drawers') {
+      const n = clamp(b.n || 1, 1, 4), h = ih / n;
+      for (let k = 0; k < n; k++) drawer(x0, x1, ib + ih - (k + 1) * h, ib + ih - k * h, `dr${i}_${k}`);
+    } else if (b.type === 'open') {
+      const n = clamp(b.n || 0, 0, 3);
+      for (let k = 1; k <= n; k++) shelf(ib + ih * k / (n + 1), `sh${i}_${k}`);
+    } else if (b.type === 'niche') {                   // an open niche over one row of drawers
+      const hd = ih * clamp(b.split || .5, .25, .75), n = clamp(b.n || 1, 1, 3), cw = bw / n;
+      shelf(ib + hd + T / 2, 'sh' + i);
+      for (let k = 0; k < n; k++) drawer(x0 + k * cw, x0 + (k + 1) * cw, ib, ib + hd, `nd${i}_${k}`);
+    }
+  });
+  // legs
+  if (S.legs === 'frame') {
+    const inset = 7, xs = [-W / 2 + inset, W / 2 - inset]; if (W > 150) xs.splice(1, 0, snapToCut(0));
+    for (const zs of [-1, 1]) part(null, W - 2 * inset + 2.2, 2.4, 2.2, 0, leg - 1.2, zs * (D / 2 - 5), 'x', 'rail' + zs, steel);
+    for (const x of xs) {
+      for (const zs of [-1, 1]) part(null, 2.2, leg - 2.4, 2.2, x, (leg - 2.4) / 2, zs * (D / 2 - 5), 'y', 'leg', steel);
+      part(null, 2.2, 2.4, D - 12, x, leg - 1.2, 0, 'z', 'cross', steel);
+    }
+  } else if (S.legs === 'plinth') {
+    part(parts, W - 4, leg, D - 6, 0, leg / 2, -1, 'x', 'plinth', oak, root, { role: 'Plinth', qty: 1 });
+  }
+  wall.position.z = -D / 2 - 3; wall.visible = skirt.visible = S.wall; skirt.position.z = wall.position.z + .8;
+  animateFronts(true);
+  ptScene();
+}
+function snapToCut(x) {                                // the middle leg sits under the divider nearest the centre
+  let best = 0, d = 1e9; for (const c of C.cuts) { const cx = c - C.W / 2; if (Math.abs(cx - x) < d) { d = Math.abs(cx - x); best = cx; } }
+  return C.cuts.length ? best : 0;
+}
+
+// the selected segment peeks open: doors swing 35°, drawers slide out 18 cm
+let sel = -1;
+function animateFronts(snapNow) {
+  let moving = false;
+  bayParts.forEach((bp, i) => {
+    const t = S.peek && i === sel ? 1 : 0;
+    const v = snapNow || reduce ? t : open[i] + (t - open[i]) * .14;
+    if (Math.abs(v - t) > 1e-3) moving = true;
+    open[i] = Math.abs(v - t) < 1e-3 ? t : v;
+    for (const d of bp.doors) d.g.rotation.y = d.dir * open[i] * .61;
+    for (const d of bp.drawers) d.position.z = open[i] * 18;
+  });
+  return moving;
+}
+
+// ---------- path tracing when nothing moves; the live preview while you edit ----------
+const pt = new WebGLPathTracer(renderer);
+Object.assign(pt, { minSamples: 3, fadeDuration: 450, renderDelay: 150, dynamicLowRes: false, bounces: S.bounces, filterGlossyFactor: .6 });
+let ptDirty = true, lastEdit = performance.now(), dragging = null, exporting = false;
+function ptScene() { ptDirty = true; lastEdit = performance.now(); }
+controls.addEventListener('change', () => { lastEdit = performance.now(); if (!ptDirty) pt.updateCamera(); });
+const statusEl = $('status');
+function setStatus(txt, done) { const sp = statusEl.querySelector('span'); if (sp.textContent !== txt) sp.textContent = txt; statusEl.classList.toggle('done', !!done); }
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  camera.fov = w < 760 ? 42 : 30;
+  // the open panel covers the right: the view slides over so the furniture stays in the free part
+  if (document.body.classList.contains('tuning') && w > 760) camera.setViewOffset(w, h, 192, 0, w, h); else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+  if (typeof fitDistance === 'function' && C) fitTo = fitDistance();
+  ptScene();
+}
+addEventListener('resize', resize);
+
+let lastPointer = performance.now();
+addEventListener('pointermove', () => { lastPointer = performance.now(); }, { passive: true });
+addEventListener('pointerdown', () => { lastPointer = performance.now(); }, { passive: true });
+function frame() {
+  requestAnimationFrame(frame);
+  document.body.classList.toggle('calm', performance.now() - lastPointer > 2600 && !dragging && sel < 0 && !document.body.classList.contains('tuning'));
+  if (exporting) return;
+  if (fitTo) {                                          // glide to a distance that shows it all
+    const dir = camera.position.clone().sub(controls.target), d = dir.length(), nd = d + (fitTo - d) * .12;
+    camera.position.copy(controls.target).add(dir.setLength(nd)); controls.target.y += ((C.leg + C.H) * .55 - controls.target.y) * .12;
+    if (Math.abs(fitTo - nd) < .5) fitTo = 0; lastEdit = performance.now(); pt.updateCamera();
+  }
+  controls.update();
+  const moving = animateFronts(false);
+  if (moving) lastEdit = performance.now();
+  const idle = performance.now() - lastEdit > 220 && !dragging && !moving;
+  if (S.pt && idle) {
+    if (ptDirty) { pt.bounces = S.bounces; pt.setScene(scene, camera); ptDirty = false; }
+    pt.renderSample();
+    setStatus(pt.samples < 1 ? 'Path tracing…' : `Path traced · ${Math.floor(pt.samples)} samples`, pt.samples > 64);
+  } else {
+    if (S.pt && !ptDirty && !idle) ptDirty = true;       // the scene will be handed to the tracer again when it settles
+    renderer.render(scene, camera);
+    setStatus(S.pt ? 'Live preview' : 'Live preview · path tracing off', false);
+  }
+  placeOverlay();
+}
+
+// ---------- handles and dimensions, drawn over the canvas ----------
+const overlay = $('overlay'), v3 = new THREE.Vector3();
+const ICON = 'fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
+const ARROW_X = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M4 12h16"/></svg>`;
+const ARROW_Y = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l4-4 4 4M8 16l4 4 4-4M12 4v16"/></svg>`;
+const PLUS = `<svg viewBox="0 0 24 24" ${ICON}><path d="M12 5v14M5 12h14"/></svg>`;
+let items = [];
+function makeOverlay() {
+  overlay.replaceChildren(); items = [];
+  const { W, H, leg, D } = C, zF = D / 2 + 1, top = leg + H;
+  const hd = (kind, axis, pos, title, onDrag, onClick) => {
+    const el = document.createElement('div'); el.className = `hd ${axis || kind}`; el.innerHTML = axis === 'x' ? ARROW_X : axis === 'y' ? ARROW_Y : PLUS;
+    el.title = title; el.setAttribute('role', 'button'); el.setAttribute('aria-label', title); overlay.appendChild(el);
+    items.push({ el, pos }); if (onDrag) dragBind(el, axis, onDrag); if (onClick) el.addEventListener('click', onClick);
+  };
+  const lbl = (pos, text, big) => { const el = document.createElement('div'); el.className = 'lbl' + (big ? ' big' : ''); el.textContent = typeof text === 'function' ? text() : text; overlay.appendChild(el); items.push({ el, pos, label: typeof text === 'function' ? text : null }); };
+  // the total width: the right side
+  hd('w', 'x', () => v3.set(C.W / 2, leg + H / 2, zF), 'Width', (x0, x) => { C.W = clamp(snap(x + C.W / 2), (C.cuts.at(-1) || 0) + 30, 300); });
+  // the height: the top edge
+  hd('h', 'y', () => v3.set(C.W / 2 - 12, leg + H + (S.lip ? LIP : 0), zF), 'Height', (y0, y) => { C.H = clamp(snap(y - C.leg), 35, 90); });
+  // the dividers
+  C.cuts.forEach((c, i) => hd('c', 'x', () => v3.set(-C.W / 2 + C.cuts[i], leg + H, zF), 'Move this divider', (x0, x) => {
+    const lo = (i ? C.cuts[i - 1] : 0) + 30, hi = (i < C.cuts.length - 1 ? C.cuts[i + 1] : C.W) - 30;
+    C.cuts[i] = clamp(snap(x + C.W / 2), lo, hi);
+  }));
+  // the niche shelf height
+  C.bays.forEach((b, i) => { if (b.type === 'niche') hd('s', 'y', () => { const [a, e] = bayBounds(i); return v3.set((a + e) / 2, leg + T + (H - 2 * T) * b.split + T / 2, zF); }, 'Move the shelf', (y0, y) => {
+    b.split = clamp(Math.round(((y - leg - T) / (C.H - 2 * T)) * 20) / 20, .25, .75);
+  }); });
+  // add a segment on the right
+  if (C.W + 40 <= 300) hd('add', null, () => v3.set(C.W / 2 + 16, leg + H / 2, zF), 'Add a segment', null, () => { C.cuts.push(C.W); C.W += 40; C.bays.push(bayDefaults('door')); changed(true); });
+  // dimensions
+  C.bays.forEach((b, i) => lbl(() => { const [a, e] = bayBounds(i); return v3.set((a + e) / 2, leg + H + 7, zF - 8); }, () => { const [a, e] = bayBounds(i); return `${Math.round(e - a)}`; }));
+  lbl(() => v3.set(0, 3, zF + 14), () => `${C.W} cm`, true);
+  lbl(() => v3.set(-C.W / 2 - 16, (leg + H) / 2 + 4, zF - 4), () => `${C.leg + C.H + (S.lip ? LIP : 0)} cm`, true);   // the height, on the left (the + sits on the right)
+}
+function placeOverlay() {
+  const w = innerWidth, h = innerHeight;
+  for (const it of items) {
+    const p = it.pos(); p.project(camera);
+    const x = (p.x + 1) / 2 * w, y = (1 - p.y) / 2 * h;
+    it.el.style.transform = it.el.classList.contains('lbl') ? `translate(${x}px, ${y}px) translate(-50%, -50%)` : `translate(${x}px, ${y}px)`;
+    if (it.label) { const t = it.label(); if (it.el.textContent !== t) it.el.textContent = t; }   // the sizes follow the build
+  }
+  placeBar();
+}
+
+// dragging a handle: the pointer ray meets the front plane; the value snaps to 5 cm
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(), hit = new THREE.Vector3();
+function worldAt(e) {
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  plane.set(new THREE.Vector3(0, 0, 1), -(C.D / 2)); return ray.ray.intersectPlane(plane, hit) ? hit.clone() : null;
+}
+function dragBind(el, axis, onDrag) {
+  el.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return; e.stopPropagation(); e.preventDefault();
+    const p0 = worldAt(e); if (!p0) return;
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}   // a synthetic pointer cannot be captured
+    el.classList.add('on'); dragging = { el, axis }; controls.enabled = false;
+    const move = ev => { const p = worldAt(ev); if (!p) return; const before = JSON.stringify(C); onDrag(p0[axis], p[axis]); if (JSON.stringify(C) !== before) changed(false); };
+    const up = () => { el.classList.remove('on'); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      dragging = null; controls.enabled = true; changed(true); };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  });
+}
+let lastSig = '', fitTo = 0;
+function fitDistance() {
+  const free = document.body.classList.contains('tuning') && innerWidth > 760 ? (innerWidth - 384) / innerHeight : camera.aspect;   // the part the panel leaves
+  const vf = THREE.MathUtils.degToRad(camera.fov), hf = 2 * Math.atan(Math.tan(vf / 2) * free);
+  const needW = (C.W * .5 + 30) / Math.tan(hf / 2), needH = ((C.leg + C.H) * .5 + 40) / Math.tan(vf / 2);
+  return clamp(Math.max(needW, needH) + C.D / 2, controls.minDistance, controls.maxDistance);
+}
+let lastSize = '';
+function changed(rebuildOverlay) {
+  lookName = Object.keys(LOOKS).find(n => JSON.stringify(LOOKS[n]) === JSON.stringify(C)) || 'Custom'; $('v-name').textContent = lookName;
+  const sig = JSON.stringify(C) + JSON.stringify(S);
+  if (sig !== lastSig) { lastSig = sig; build(); }
+  const size = `${C.W}|${C.H}|${C.leg}`; if (size !== lastSize) { if (lastSize) fitTo = fitDistance(); lastSize = size; }
+  if (rebuildOverlay || items.length === 0) makeOverlay();
+  syncPanel(); renderBar();
+}
+
+// ---------- pick a segment: click its front ----------
+let downAt = null;
+canvas.addEventListener('pointerdown', e => { downAt = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', e => {
+  if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) return;
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const h = ray.intersectObjects(pickables, false).find(x => x.object.userData.bay !== undefined);
+  sel = h ? (sel === h.object.userData.bay ? -1 : h.object.userData.bay) : -1;
+  renderBar(); lastEdit = performance.now();
+});
+canvas.addEventListener('pointermove', e => {
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  canvas.style.cursor = ray.intersectObjects(pickables, false).some(x => x.object.userData.bay !== undefined) ? 'pointer' : '';
+});
+
+// ---------- the segment toolbar ----------
+const barEl = $('bar');
+const TYPES = [['door', 'Door'], ['drawers', 'Drawers'], ['open', 'Shelves'], ['niche', 'Niche + drawer']];
+function renderBar() {
+  if (sel < 0 || sel >= C.bays.length) { barEl.classList.remove('open'); return; }
+  const b = C.bays[sel];
+  barEl.replaceChildren();
+  for (const [t, l] of TYPES) {
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = l; btn.setAttribute('aria-pressed', String(b.type === t));
+    btn.addEventListener('click', () => { if (b.type !== t) { C.bays[sel] = bayDefaults(t); changed(true); } });
+    barEl.appendChild(btn);
+  }
+  if (b.type !== 'door') {
+    const [lo, hi, name] = b.type === 'drawers' ? [1, 4, 'drawers'] : b.type === 'open' ? [0, 3, 'shelves'] : [1, 3, 'drawers'];
+    const sep = document.createElement('span'); sep.className = 'sep'; barEl.appendChild(sep);
+    const st = document.createElement('div'); st.className = 'step'; st.setAttribute('aria-label', name);
+    const mk = (txt, d, lab) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = txt; x.setAttribute('aria-label', lab); x.addEventListener('click', () => { b.n = clamp((b.n ?? lo) + d, lo, hi); changed(true); }); return x; };
+    const val = document.createElement('span'); val.textContent = b.n ?? lo;
+    st.append(mk('−', -1, 'Fewer ' + name), val, mk('+', 1, 'More ' + name)); barEl.appendChild(st);
+  }
+  const sep2 = document.createElement('span'); sep2.className = 'sep'; barEl.appendChild(sep2);
+  const [a, e] = bayBounds(sel);
+  if (e - a >= 60) { const sp = document.createElement('button'); sp.type = 'button'; sp.textContent = 'Split'; sp.title = 'Split this segment in two';
+    sp.addEventListener('click', () => { const mid = snap((a + e) / 2 + C.W / 2); C.cuts.splice(sel, 0, mid); C.bays.splice(sel + 1, 0, bayDefaults(C.bays[sel].type)); changed(true); });
+    barEl.appendChild(sp); }
+  if (C.bays.length > 1) { const del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = 'Remove';
+    del.addEventListener('click', () => { const i = sel; if (i === C.bays.length - 1) C.W = Math.max(100, C.cuts.pop()); else C.cuts.splice(i, 1); C.bays.splice(i, 1); sel = -1; changed(true); });
+    barEl.appendChild(del); }
+  barEl.classList.add('open');
+}
+function placeBar() {
+  if (!barEl.classList.contains('open')) return;
+  const [a, e] = bayBounds(sel); v3.set((a + e) / 2, C.leg + C.H + 16, C.D / 2).project(camera);
+  const x = clamp((v3.x + 1) / 2 * innerWidth, barEl.offsetWidth / 2 + 12, innerWidth - barEl.offsetWidth / 2 - 12), y = Math.max((1 - v3.y) / 2 * innerHeight, barEl.offsetHeight + 76);
+  barEl.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+}
+
+// ---------- the panel ----------
+const panel = $('panel');
+const CTRL = [
+  { g: 'Size' },
+  { k: 'W', on: 'C', l: 'Width', min: 100, max: 300, s: 5, u: 'cm' },
+  { k: 'H', on: 'C', l: 'Height of the body', min: 35, max: 90, s: 5, u: 'cm' },
+  { k: 'D', on: 'C', l: 'Depth', min: 30, max: 60, s: 5, u: 'cm' },
+  { k: 'leg', on: 'C', l: 'Legs / plinth height', min: 0, max: 30, s: 1, u: 'cm' },
+  { g: 'Style' },
+  { k: 'legs', l: 'Base', t: 'seg', o: [['frame', 'Steel frame'], ['plinth', 'Plinth'], ['none', 'Wall hung']] },
+  { k: 'handles', l: 'Handles', t: 'seg', o: [['bar', 'Black bar'], ['none', 'Push to open']] },
+  { k: 'lip', l: 'Rail on the top', t: 'check' },
+  { k: 'tone', l: 'Oak tone', min: .7, max: 1.25, s: .01 },
+  { k: 'gloss', l: 'Lacquer', min: 0, max: 1, s: .01 },
+  { k: 'peek', l: 'Selected segment peeks open', t: 'check' },
+  { g: 'Scene' },
+  { k: 'wall', l: 'Wall', t: 'check' },
+  { k: 'grid', l: 'Grid on the floor', min: 0, max: 1, s: .01 },
+  { k: 'exposure', l: 'Exposure', min: .5, max: 1.8, s: .01 },
+  { k: 'dims', l: 'Dimensions', t: 'check' },
+  { k: 'pt', l: 'Path tracing when still', t: 'check' },
+  { k: 'bounces', l: 'Light bounces', min: 2, max: 10, s: 1 },
+];
+const inputs = {};
+function buildPanel() {
+  panel.innerHTML = `<div class="ph"><div><h2>Customize</h2><p>Drag the white handles on the furniture; click a front to change it</p></div><button type="button" id="p-x" aria-label="Close the panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  let grp = null;
+  for (const c of CTRL) {
+    if (c.g) { grp = document.createElement('section'); grp.className = 'grp'; grp.innerHTML = `<h3>${c.g}</h3>`; panel.appendChild(grp); continue; }
+    const row = document.createElement('div'); row.className = 'row'; const id = 'in-' + c.k;
+    const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = c.l; row.appendChild(lab);
+    const obj = () => (c.on === 'C' ? C : S);
+    let inp;
+    if (c.t === 'check') { inp = document.createElement('input'); inp.type = 'checkbox'; inp.id = id; inp.addEventListener('change', () => { obj()[c.k] = inp.checked; styleChanged(); }); row.appendChild(inp); }
+    else if (c.t === 'seg') {
+      row.appendChild(document.createElement('span')); inp = document.createElement('div'); inp.className = 'seg'; inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
+      for (const [v, l] of c.o) { const b = document.createElement('button'); b.type = 'button'; b.textContent = l; b.dataset.v = v; b.addEventListener('click', () => { obj()[c.k] = v; styleChanged(); }); inp.appendChild(b); }
+      row.appendChild(inp);
+    } else {
+      const v = document.createElement('span'); v.className = 'v'; row.appendChild(v);
+      inp = document.createElement('input'); inp.type = 'range'; inp.id = id; inp.min = c.min; inp.max = c.max; inp.step = c.s; inp._v = v; inp._u = c.u || '';
+      inp.addEventListener('input', () => {
+        const val = +inp.value;
+        if (c.k === 'W') setWidth(val); else obj()[c.k] = val;
+        c.on === 'C' ? changed(c.k === 'W') : styleChanged();
+      });
+      inp.addEventListener('change', () => { if (c.on === 'C') changed(true); });
+      row.appendChild(inp);
+    }
+    inputs[c.k] = inp; grp.appendChild(row);
+  }
+  $('p-x').addEventListener('click', () => setTuning(false));
+}
+function setWidth(w) {                                  // the dividers scale with the width, each on the 5 cm grid
+  const k = w / C.W; C.cuts = C.cuts.map(c => snap(c * k)); C.W = w;
+  for (let i = 0; i < C.cuts.length; i++) C.cuts[i] = clamp(C.cuts[i], (i ? C.cuts[i - 1] : 0) + 30, w - 30 * (C.cuts.length - i));
+}
+function syncPanel() {
+  for (const c of CTRL) {
+    if (c.g) continue; const inp = inputs[c.k], v = (c.on === 'C' ? C : S)[c.k];
+    if (c.t === 'check') inp.checked = !!v;
+    else if (c.t === 'seg') [...inp.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    else { if (document.activeElement !== inp) inp.value = v; inp._v.textContent = `${+(+v).toFixed(c.s < 1 ? 2 : 0)}${inp._u ? ' ' + inp._u : ''}`; }
+  }
+}
+function styleChanged() {
+  oak.color.setScalar(S.tone); oak.clearcoat = S.gloss; oak.clearcoatRoughness = .55 - S.gloss * .35;
+  renderer.toneMappingExposure = S.exposure;
+  floorMat.map.dispose(); floorMat.map = gridTexture(S.grid); floorMat.needsUpdate = true;
+  document.body.classList.toggle('nodims', !S.dims);
+  changed(true);
+}
+function setTuning(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); if (on) syncPanel(); resize(); }
+$('tune').addEventListener('click', () => setTuning(!document.body.classList.contains('tuning')));
+addEventListener('keydown', e => { if (e.key === 'Escape') { setTuning(false); xOpen(false); sel = -1; renderBar(); } });
+
+// ---------- variants ----------
+function applyLook(name) { C = structuredClone(LOOKS[name]); sel = -1; open.length = 0; changed(true); }
+function stepLook(d) { const names = Object.keys(LOOKS), i = names.indexOf(lookName); applyLook(names[(i < 0 ? 0 : i + d + names.length) % names.length]); }
+$('v-prev').addEventListener('click', () => stepLook(-1));
+$('v-next').addEventListener('click', () => stepLook(1));
+
+// ---------- export ----------
+const xBtn = $('exp-btn'), xMenu = $('exp-menu');
+function xOpen(on) { xMenu.classList.toggle('open', on); xMenu.setAttribute('aria-hidden', String(!on)); xBtn.setAttribute('aria-expanded', String(on)); }
+xBtn.addEventListener('click', () => xOpen(!xMenu.classList.contains('open')));
+document.addEventListener('pointerdown', e => { if (xMenu.classList.contains('open') && !e.target.closest('.exp')) xOpen(false); });
+const saveBlob = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+const stamp = () => `${C.W}x${Math.round(C.leg + C.H + (S.lip ? LIP : 0))}x${C.D}`;
+
+// a path traced still at 4K: the canvas is resized for the export, traced to N samples, saved, then put back
+let cancelExport = false;
+async function exportRender(w = 3840, h = 2160, samples = 300) {
+  xOpen(false); const modal = $('modal'); modal.classList.add('open'); cancelExport = false;
+  $('m-t').textContent = 'Rendering · 4K'; $('m-p').textContent = 'Tracing light through the scene. Keep this tab in front.';
+  exporting = true; document.body.classList.add('busy'); sel = -1; renderBar(); animateFronts(true);
+  const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  const keep = { minSamples: pt.minSamples, fadeDuration: pt.fadeDuration, renderDelay: pt.renderDelay };
+  Object.assign(pt, { minSamples: 0, fadeDuration: 0, renderDelay: 0 }); pt.bounces = Math.max(S.bounces, 6);
+  const dims = S.dims; overlay.style.visibility = 'hidden';
+  pt.setScene(scene, camera);
+  let ok = false;
+  try {
+    while (pt.samples < samples && !cancelExport) {
+      pt.renderSample();
+      const k = Math.min(1, pt.samples / samples); $('m-bar').style.width = `${k * 100}%`; $('m-n').textContent = `${Math.floor(pt.samples)} / ${samples} samples`;
+      await new Promise(r => requestAnimationFrame(r));
+    }
+    if (!cancelExport) { const blob = await new Promise(r => renderer.domElement.toBlob(r, 'image/png')); saveBlob(blob, `sideboard-${stamp()}-4k.png`); ok = true; }
+  } finally {
+    Object.assign(pt, keep); overlay.style.visibility = '';
+    renderer.setPixelRatio(pr); exporting = false; document.body.classList.remove('busy'); modal.classList.remove('open'); resize();
+  }
+  return ok;
+}
+$('x-render').addEventListener('click', () => exportRender());
+$('m-x').addEventListener('click', () => { cancelExport = true; });
+
+// the joiner's plan: every panel with its size, the hardware, and dimensioned drawings
+function cutList() {
+  const rows = [], add = (name, a, b, t, qty, mat, edge) => {
+    const [L, Wd] = a >= b ? [a, b] : [b, a];
+    const key = [name, L.toFixed(1), Wd.toFixed(1), t, mat].join('|'); const r = rows.find(x => x.key === key);
+    if (r) r.qty += qty; else rows.push({ key, name, L, W: Wd, t, qty, mat, edge });
+  };
+  const OAK = 'Oak veneered board 18 mm', THIN = 'Birch plywood 12 mm';
+  root.traverse(o => {
+    const u = o.userData; if (!o.isMesh || !u.role || o.material !== oak) return;
+    const dims = [u.w, u.h, u.d].sort((a, b) => b - a), t = u.t || (u.role === 'Back' ? BACK : T);
+    const mat = u.material || (u.t ? THIN : OAK);
+    const edge = /Door|Drawer front/.test(u.role) ? 'all 4 edges' : /Top|Bottom|Side|Divider|Shelf/.test(u.role) ? 'front edge' : /rail/.test(u.role) ? 'top + ends' : '—';
+    add(u.role, dims[0], dims[1], t, 1, mat, edge);
+  });
+  rows.sort((a, b) => b.t - a.t || (a.mat < b.mat ? -1 : a.mat > b.mat ? 1 : 0) || b.L - a.L);   // the 18 mm boards first, longest first
+  const doors = C.bays.filter(b => b.type === 'door').length, drawers = C.bays.reduce((n, b) => n + (b.type === 'drawers' ? (b.n || 1) : b.type === 'niche' ? (b.n || 1) : 0), 0);
+  const slide = Math.floor((C.D - 6) / 5) * 5;
+  const hw = [
+    ['Concealed hinges, 110°, soft close', doors * (C.H > 90 ? 3 : 2)],
+    [`Drawer slides, full extension, ${slide * 10} mm, soft close (pairs)`, drawers],
+    ['Handles, black steel bar 110 mm', S.handles === 'bar' ? doors + drawers : 0],
+    ['Push-to-open latches', S.handles === 'none' ? doors + drawers : 0],
+    ['Shelf supports, 5 mm', C.bays.reduce((n, b) => n + (b.type === 'open' ? (b.n || 0) * 4 : 0), 0)],
+    ...(S.legs === 'frame' ? [[`Steel frame, black powder coat, ${C.W - 14} × ${C.D - 10} × ${C.leg} cm, square tube 22 mm`, 1]] : []),
+    ...(S.legs === 'none' ? [['Wall rail / cabinet hangers (pairs)', 1]] : []),
+  ].filter(x => x[1] > 0);
+  return { rows, hw };
+}
+function planSvg() {                                   // front view with dimension lines, and a side section
+  const { W, H, D, leg } = C, top = leg + H + (S.lip ? LIP : 0), pad = 60, sc = 3.4;
+  const X = x => pad + (x + W / 2) * sc, Y = y => pad + (top - y) * sc;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W * sc + pad * 2 + D * sc + 80} ${top * sc + pad * 2 + 30}" font-family="Inter, system-ui, sans-serif" font-size="15">`;
+  s += `<defs><marker id="a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 2L10 5L0 8z" fill="#1b1c20"/></marker></defs>`;
+  const rect = (x0, y0, x1, y1, fill = 'none', w = 1.2) => `<rect x="${Math.min(X(x0), X(x1))}" y="${Math.min(Y(y0), Y(y1))}" width="${Math.abs(X(x1) - X(x0))}" height="${Math.abs(Y(y1) - Y(y0))}" fill="${fill}" stroke="#1b1c20" stroke-width="${w}"/>`;
+  const dim = (x0, y0, x1, y1, txt, off) => {
+    const hor = y0 === y1, ax0 = hor ? X(x0) : X(x0) + off, ay0 = hor ? Y(y0) + off : Y(y0), ax1 = hor ? X(x1) : X(x1) + off, ay1 = hor ? Y(y1) + off : Y(y1);
+    const tx = (ax0 + ax1) / 2 + (hor ? 0 : 6), ty = (ay0 + ay1) / 2 + (hor ? -6 : 4);
+    return `<line x1="${ax0}" y1="${ay0}" x2="${ax1}" y2="${ay1}" stroke="#1b1c20" stroke-width=".8" marker-start="url(#a)" marker-end="url(#a)"/><text x="${tx}" y="${ty}" text-anchor="${hor ? 'middle' : 'start'}">${txt}</text>`;
+  };
+  // carcass
+  s += rect(-W / 2, leg, W / 2, leg + H, '#f6f1e8');
+  if (S.lip) s += rect(-W / 2, leg + H, W / 2, top);
+  C.cuts.forEach(c => { s += rect(-W / 2 + c - T / 2, leg + T, -W / 2 + c + T / 2, leg + H - T, '#e7dccb', .8); });
+  const ib = leg + T, ih = H - 2 * T;
+  C.bays.forEach((b, i) => {
+    const [x0, x1] = bayBounds(i);
+    const fr = (a, c, d, e) => { s += rect(a + GAP, c + GAP, d - GAP, e - GAP, '#fbf8f2', .9); if (S.handles === 'bar') s += `<rect x="${(X(a) + X(d)) / 2 - 5.5 * sc / 2}" y="${Y(e) + 2.2 * sc}" width="${11 * sc / 2}" height="${sc * .6}" fill="#1b1c20"/>`; };
+    if (b.type === 'door') fr(x0, ib, x1, ib + ih);
+    if (b.type === 'drawers') { const n = b.n || 1, hh = ih / n; for (let k = 0; k < n; k++) fr(x0, ib + k * hh, x1, ib + (k + 1) * hh); }
+    if (b.type === 'open') { const n = b.n || 0; for (let k = 1; k <= n; k++) s += rect(x0, ib + ih * k / (n + 1) - T / 2, x1, ib + ih * k / (n + 1) + T / 2, '#e7dccb', .8); }
+    if (b.type === 'niche') { const hd = ih * b.split, n = b.n || 1, cw = (x1 - x0) / n; s += rect(x0, ib + hd, x1, ib + hd + T, '#e7dccb', .8); for (let k = 0; k < n; k++) fr(x0 + k * cw, ib, x0 + (k + 1) * cw, ib + hd); }
+    s += dim(x0, top, x1, top, `${Math.round(x1 - x0)}`, -18);
+  });
+  if (S.legs === 'frame') { for (const x of [-W / 2 + 7, W / 2 - 7]) s += rect(x - 1.1, 0, x + 1.1, leg, '#1b1c20', .6); s += rect(-W / 2 + 7, leg - 2.4, W / 2 - 7, leg, '#1b1c20', .6); }
+  if (S.legs === 'plinth') s += rect(-W / 2 + 2, 0, W / 2 - 2, leg, '#e7dccb');
+  s += `<line x1="${X(-W / 2) - 20}" y1="${Y(0)}" x2="${X(W / 2) + 20}" y2="${Y(0)}" stroke="#1b1c20" stroke-width=".6" stroke-dasharray="4 3"/>`;
+  s += dim(-W / 2, 0, W / 2, 0, `${W} cm`, 26);
+  s += dim(W / 2, 0, W / 2, top, `${top.toFixed(1).replace('.0', '')} cm`, 22);
+  s += dim(-W / 2, leg, -W / 2, leg + H, `${H}`, -30);
+  // side section
+  const ox = W / 2 + 40, Xs = z => X(ox) + (z + D / 2) * sc;
+  s += `<rect x="${Xs(-D / 2)}" y="${Y(leg + H)}" width="${D * sc}" height="${H * sc}" fill="#f6f1e8" stroke="#1b1c20" stroke-width="1.2"/>`;
+  s += `<line x1="${Xs(-D / 2)}" y1="${Y(0) + 26}" x2="${Xs(D / 2)}" y2="${Y(0) + 26}" stroke="#1b1c20" stroke-width=".8" marker-start="url(#a)" marker-end="url(#a)"/><text x="${(Xs(-D / 2) + Xs(D / 2)) / 2}" y="${Y(0) + 20}" text-anchor="middle">${D} cm</text>`;
+  s += `<text x="${X(-W / 2)}" y="${pad - 34}" font-size="12" font-weight="600">Front view</text><text x="${Xs(-D / 2)}" y="${pad - 34}" font-size="12" font-weight="600">Side</text>`;
+  return s + '</svg>';
+}
+function exportPlan() {
+  xOpen(false);
+  const { rows, hw } = cutList(), date = new Date().toLocaleDateString('en-GB');
+  const img = renderer.domElement.toDataURL('image/jpeg', .9);
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Sideboard ${stamp()} · plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>@page{size:A4 landscape; margin:14mm} body{font:500 11.5px/1.45 Inter, system-ui, sans-serif; color:#1b1c20; margin:24px}
+h1{font-size:20px; margin:0} .sub{color:#777; margin:2px 0 18px} .draw{margin:8px 0 22px; padding:10px 0 4px; border-top:1px solid #e5e2dc; border-bottom:1px solid #e5e2dc} .grid{display:grid; grid-template-columns:1.1fr 1fr; gap:24px; align-items:start; page-break-inside:avoid}
+img{width:100%; border-radius:10px} svg{width:100%; height:auto} table{width:100%; border-collapse:collapse; margin:8px 0 20px} th, td{text-align:left; padding:6px 8px; border-bottom:1px solid #e5e2dc}
+th{font-weight:600; background:#f6f4f0} td.n{text-align:right; font-variant-numeric:tabular-nums} h2{font-size:13px; margin:22px 0 4px} .spec td:first-child{color:#777; width:45%}
+.print{position:fixed; right:24px; top:24px; padding:10px 16px; border:0; border-radius:999px; background:#1b1c20; color:#fff; font:inherit; font-weight:600; cursor:pointer} @media print{.print{display:none}}</style></head><body>
+<button class="print" onclick="print()">Print / Save as PDF</button>
+<h1>Sideboard ${C.W} × ${C.leg + C.H + (S.lip ? LIP : 0)} × ${C.D} cm</h1><div class="sub">Plan for the joiner · ${date} · all sizes in cm, boards 18 mm unless noted</div>
+<div class="draw">${planSvg()}</div>
+<div class="grid"><div><img src="${img}" alt="The sideboard"></div><div><table class="spec">
+<tr><td>Outside (W × H × D)</td><td>${C.W} × ${C.leg + C.H + (S.lip ? LIP : 0)} × ${C.D}</td></tr><tr><td>Body height</td><td>${C.H}</td></tr>
+<tr><td>Base</td><td>${{ frame: 'Steel frame, black, ' + C.leg + ' cm', plinth: 'Oak plinth, ' + C.leg + ' cm', none: 'Wall hung, ' + C.leg + ' cm above the floor' }[S.legs]}</td></tr>
+<tr><td>Segments</td><td>${C.bays.map((b, i) => { const [a, e] = bayBounds(i); return `${Math.round(e - a)} ${({ door: 'door', drawers: (b.n || 1) + ' drawers', open: (b.n || 0) + ' shelves', niche: 'niche + ' + (b.n || 1) + ' drawer' + ((b.n || 1) > 1 ? 's' : '') })[b.type]}`; }).join(' · ')}</td></tr>
+<tr><td>Finish</td><td>Oak veneer, matt lacquer${S.gloss > .4 ? ' (satin)' : ''}; top rail ${S.lip ? 'yes' : 'no'}</td></tr></table></div></div>
+<h2>Cut list</h2><table><tr><th>Part</th><th class="n">Qty</th><th class="n">Length</th><th class="n">Width</th><th class="n">Thickness</th><th>Material</th><th>Edge banding</th></tr>
+${rows.map(r => `<tr><td>${r.name}</td><td class="n">${r.qty}</td><td class="n">${r.L.toFixed(1)}</td><td class="n">${r.W.toFixed(1)}</td><td class="n">${(r.t * 10).toFixed(0)} mm</td><td>${r.mat}</td><td>${r.edge}</td></tr>`).join('')}</table>
+<h2>Hardware</h2><table><tr><th>Item</th><th class="n">Qty</th></tr>${hw.map(([n, q]) => `<tr><td>${n}</td><td class="n">${q}</td></tr>`).join('')}</table>
+<p class="sub">Generated by the lab's furniture configurator. Check every size on site before cutting; fronts are drawn with a 3 mm gap all round.</p></body></html>`;
+  const win = window.open('', '_blank');
+  if (win) { win.document.open(); win.document.write(html); win.document.close(); }
+  else saveBlob(new Blob([html], { type: 'text/html' }), `sideboard-${stamp()}-plan.html`);
+}
+$('x-plan').addEventListener('click', exportPlan);
+$('x-csv').addEventListener('click', () => {
+  xOpen(false); const { rows, hw } = cutList();
+  const esc = v => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = ['Part,Qty,Length (cm),Width (cm),Thickness (mm),Material,Edge banding', ...rows.map(r => [r.name, r.qty, r.L.toFixed(1), r.W.toFixed(1), (r.t * 10).toFixed(0), r.mat, r.edge].map(esc).join(',')),
+    '', 'Hardware,Qty', ...hw.map(([n, q]) => [n, q].map(esc).join(','))].join('\n');
+  saveBlob(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), `sideboard-${stamp()}-cutlist.csv`);
+});
+
+// ---------- start ----------
+buildPanel(); resize(); styleChanged(); changed(true);
+document.body.classList.add('ready');
+if (STILL) { S.dims = false; document.body.classList.add('nodims'); }
+requestAnimationFrame(frame);
+window.FC = { C: () => C, S: () => S, pt, exportRender, cutList, planSvg, select: i => { sel = i; renderBar(); }, changed };
+</script>
+</body>
+</html>
