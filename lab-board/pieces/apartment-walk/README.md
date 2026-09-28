@@ -35,8 +35,11 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Hokery:** miękkie okrągłe siedzisko i wygięte oparcie w tkaninie bouclé (skan CC0 *curly teddy natural*, Poly Haven), czarne stalowe nogi rozchylone na zewnątrz, podnóżek, stopki.
 - **Dekoracje (Poly Haven, CC0):** dwa gliniane wazony przy piekarniku, rzeźbiona drewniana misa z limonkami na wyspie, pachira w glinianej donicy przy drzwiach balkonowych.
 - **Światło od okien:** w każdym przeszkleniu miękkie światło powierzchniowe skierowane do środka (*Light → Window light*).
-- **Photo (4K):** przycisk w prawym górnym rogu. Liczy 32 klatki w 3840 px szerokości, każdą z kamerą przesuniętą o ułamek piksela i słońcem o ułamek stopnia, z okluzją otoczenia (GTAO, szkło pominięte), i uśrednia je: gładkie krawędzie, miękkie cienie, cienie kontaktowe, bez szumu. Zapisuje PNG z nazwą pomieszczenia i datą (ok. minuty).
-- **Path tracing** jest eksperymentalny (`?pt=1` w adresie): na całym mieszkaniu ta wersja biblioteki myli część materiałów (materiały wielokrotne, kolory wierzchołków) i wolno się doczyszcza we wnętrzu; podgląd jest wersją referencyjną.
+- **Photo** (prawy górny róg) ma dwie opcje:
+  - **Quick · 4K:** 32 klatki w 3840 px, każda z kamerą przesuniętą o ułamek piksela i słońcem o ułamek stopnia, z okluzją otoczenia (GTAO, szkło pominięte), uśrednione: gładkie krawędzie, miękkie cienie, cienie kontaktowe. Około minuty.
+  - **Traced light · 1920 px:** path tracing do 48 próbek (3 odbicia), czyli światło odbite od ścian, dębu i mebli. Liczone w 100 małych kafelkach, a każdy kafelek czeka, aż karta go skończy: długie rysowanie potrafi zresetować kartę (watchdog Windows, ok. 2 s), a Chrome po kilku resetach blokuje WebGL dla całej domeny. Potem filtr iskier (piksel jaśniejszy od wszystkich 8 sąsiadów bierze ich średnią), odszumianie z zachowaniem krawędzi, mapowanie tonów i PNG. Około 7 minut; „Save now” zapisuje wcześniej. Pusty wynik nigdy się nie zapisuje.
+  - Oba zapisują PNG z nazwą pomieszczenia i datą.
+- **Path tracing na żywo** (panel, „Path tracing when you stop”, albo `?pt=1`) jest domyślnie wyłączony z tego samego powodu co kafelki w zdjęciu. Tracer dostaje własną, spłaszczoną kopię sceny: każda siatka z własną geometrią w układzie świata i jednym materiałem, ściany z farbą zamiast kolorów wierzchołków, oraz liczone styczne dla map normalnych (bez nich dąb, podłoga i bukle wychodziły czarne).
 - **Wyspa 180 × 80** (A.04) w miejscu z A.04: szuflady od strony kuchni, ryflowany dąb od strony salonu, nawis 25 cm na kolana, 3 hokery (siedzisko 65 cm, po 60 cm na osobę). *Kitchen → Aisle to the island* przesuwa wyspę (A.04: 90 cm).
 
 ## Podłogi (wg układu funkcjonalnego, arkusz A.04)
