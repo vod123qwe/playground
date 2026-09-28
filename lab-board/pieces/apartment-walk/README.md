@@ -30,6 +30,7 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 
 - **Jodełka EGGER Herringbone EL2152 Dąb Casella naturalny** (kuchnia, salon, korytarz, trzy pokoje): deska 840 × 168 × 8 mm (5 : 1), 4-stronna V-fuga, struktura Deepskin (matowa, naturalne pory). Wzór powtarza się co 168 cm (sprawdzone: bez szpar i nakładek), mapa w wysokiej jakości obejmuje 336 × 336 cm przy 1,2 px na mm. Drewno ze skanu CC0 *Oak Veneer 01* (Poly Haven), cięte deska po desce z losowym fragmentem, lekko ocieplone i uspokojone pod Casellę, każda deska w swoim odcieniu.
 - **Kierunek jodełki:** szczyty „strzałek” wskazują główne źródło światła, więc oś idzie prostopadle do okien salonu, a jeden rząd szczytów wypada na środku potrójnych drzwi balkonowych. Deski leżą wtedy pod 7° i 97° do osi rysunku. W panelu można przełączyć na oś wzdłuż elewacji.
+- **Granica podłogi:** podłoga pokoi kończy się pod ramą drzwi balkonowych i okien (na linii szyby) oraz pod drzwiami wejściowymi; zewnętrzna połowa otworu to kamienny próg, 3 cm nad płytą balkonu.
 - **Płytki** (moduł rzeczywisty + fuga 2 mm): Ceramika Gres Granby Beige 59,7 × 59,7 (przedpokój, pralnia, spiżarnia) i Domino Bihara Beige 59,8 × 59,8 (łazienka). Wzór rysowany proceduralnie w kolorach produktów (Granby: szarobeżowy kamień z cienkimi ukośnymi żyłami, Bihara: jasny krem z miękkimi chmurami); to przybliżenie, nie skan płytki.
 
 ## Skąd są wymiary
