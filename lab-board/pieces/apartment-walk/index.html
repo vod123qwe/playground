@@ -132,6 +132,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js';
+import { buildKitchen } from './kitchen.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -148,8 +149,9 @@ const wx = x => (x - CX) * M, wz = z => (z - CZ) * M;               // plan → 
 const px = x => x / M + CX, pz = z => z / M + CZ;                   // world → plan
 const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 
-const S = { fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+const S = { aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
+const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
 // ---------- renderer, scene, light ----------
 const canvas = document.getElementById('gl');
@@ -517,7 +519,10 @@ const grid = (() => {
 })();
 const free = (x, z) => { const i = Math.floor((x - gx0) / GR), j = Math.floor((z - gz0) / GR); return i >= 0 && j >= 0 && i < gw && j < gh && grid[j * gw + i] === 1; };
 const R = 22;                                                      // the body, a 22 cm circle
-const clear = (x, z, skip) => { if (!free(x, z)) return false; for (const dr of doors) if (!(skip && skip.has(dr)) && segDist(x, z, dr) < R + 2) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (!free(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } return true; };
+let kitchenFoot = [];                                              // the kitchen run and the island, as plan polygons
+const blockedByKitchen = (x, z) => kitchenFoot.some(ps => inPolyK(x, z, ps));
+const inPolyK = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
+const clear = (x, z, skip) => { if (!free(x, z) || blockedByKitchen(x, z)) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (blockedByKitchen(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } for (const dr of doors) if (!(skip && skip.has(dr)) && segDist(x, z, dr) < R + 2) return false; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; if (!free(x + Math.cos(a) * R, z + Math.sin(a) * R)) return false; } return true; };
 
 // ---------- rooms ----------
 const inPoly = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
@@ -757,6 +762,12 @@ const ctl = {};
   ctl.thick = LabUI.check(g, { label: 'Mark thick walls', value: S.thick, onChange: v => { S.thick = v; paintWalls(); } });
   ctl.plan = LabUI.check(g, { label: 'Floor plan on the floor', value: S.plan, onChange: v => { S.plan = v; plan.visible = v; } });
   ctl.planOp = LabUI.slider(g, { label: 'Plan opacity', min: .1, max: 1, step: .05, value: S.planOp, def: DEF.planOp, onInput: v => { S.planOp = v; plan.material.opacity = v; } });
+  g = LabUI.group(panel, 'Kitchen', { key: 'lab.aw.group.kitchen' });
+  S.aisle = AISLE0;
+  ctl.aisle = LabUI.slider(g, { label: 'Aisle to the island', min: 85, max: 125, step: 1, unit: ' cm', value: AISLE0, def: AISLE0, onInput: v => setAisle(v) });
+  const kn = document.createElement('p'); kn.className = 'note';
+  kn.textContent = `Concept M48 on the layout A.04. Run of 390 cm: fridge 60 · sink 60 · dishwasher 80 · induction 80 · cargo 50 · oven and microwave 60; worktop at 90 cm, uppers from 145 cm to the ceiling; island 180 × 80 with a 25 cm overhang and three counter stools (seat 65 cm). The aisle is ${AISLE0} cm as drawn (between the worktops); 100–120 cm is the usual advice.`;
+  g.appendChild(kn);
   g = LabUI.group(panel, 'Windows', { key: 'lab.aw.group.windows' });
   ctl.fix = LabUI.seg(g, { label: 'Fixed panes', options: [['frame', 'In the frame'], ['sash', 'In a fixed sash']], value: S.fix, onChange: v => { S.fix = v; rebuildGlazing(); } });
   const xn = document.createElement('p'); xn.className = 'note'; xn.textContent = 'In the frame: glass on a bead, a slimmer border and more glass than the opening leaves. In a fixed sash: every field looks the same. Both are made; the window order says which.'; g.appendChild(xn);
@@ -900,7 +911,20 @@ placeSun(); paintWalls(); applyCut(S.cut); plan.visible = S.plan; renderer.toneM
 resize(); paintHint(); requestAnimationFrame(frame);
 document.body.classList.add('ready');
 const floorsReady = new Promise(r => setTimeout(r, 60)).then(buildFloors).catch(err => console.warn('floors', err));
-window.AW = { Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+// the kitchen (concept M48 on the layout A.04), in centimetres, set on the kitchen wall
+let KIT = null;
+const kitchenReady = floorsReady.then(async () => {
+  const K = A.kitchen; if (!K) return;
+  KIT = await buildKitchen({ THREE, K, H, clip, renderer });
+  const g = KIT.root; g.scale.setScalar(M); g.position.set(wx(K.a[0]), 0, wz(K.a[1])); g.rotation.y = Math.atan2(-K.d[1], K.d[0]); world.add(g);
+  kitchenFoot = KIT.foot; lensList = null;
+  if (S.aisle !== AISLE0) setAisle(S.aisle);
+}).catch(err => console.warn('kitchen', err));
+function setAisle(v) {                                              // move the island square to the run
+  S.aisle = v; if (!KIT) return;
+  const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null;
+}
+window.AW = { get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
