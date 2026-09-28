@@ -32,6 +32,15 @@
     outline:none; -webkit-tap-highlight-color:transparent;
   }
   .btn:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.95), 0 0 0 6px rgba(20,20,20,.3)}
+  /* the segmented control: two equal tabs; invisible with WebGL (the track and the green thumb are ray traced) */
+  .segc{position:relative; display:inline-grid; grid-template-columns:1fr 1fr; height:var(--h, 3.1em); padding:0 var(--si, .25em); border-radius:var(--rad, 999px);
+        font-weight:var(--fw, 500); letter-spacing:-.01em; line-height:1; touch-action:none; cursor:pointer; user-select:none; -webkit-user-select:none}
+  .segc[hidden], body.seg-on .btn, body.seg-on .menu{display:none}
+  .segc button{display:grid; place-items:center; padding:0 1.05em; border:0; border-radius:999px; background:transparent; font:inherit; color:transparent;
+               cursor:inherit; outline:none; white-space:nowrap; -webkit-tap-highlight-color:transparent}
+  .segc button:focus-visible{box-shadow:0 0 0 3px rgba(255,255,255,.95), 0 0 0 6px rgba(20,20,20,.3)}
+  .no-gl .segc{background:rgba(255,255,255,.4); box-shadow:inset 0 1px 0 #fff, 0 .6em 1.2em -.6em rgba(0,0,0,.35)}
+  .no-gl .segc button{color:var(--ink)} .no-gl .segc button[aria-checked=true]{color:#fff; background:#34c759}
   .btn .orb{flex:none; width:var(--orb, 2.12em); height:var(--orb, 2.12em); border-radius:50%}
   .btn .label{white-space:nowrap}
   .btn .chev{width:.66em; height:.66em; margin-left:.02em; stroke:transparent; flex:none}
@@ -330,6 +339,10 @@
       <span class="label" id="label">Ask agents</span>
       <svg class="chev" id="chev" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
     </button>
+    <div class="segc" id="seg" role="radiogroup" aria-label="Mode" hidden>
+      <button type="button" role="radio" aria-checked="true" data-i="0"><span>Design</span></button>
+      <button type="button" role="radio" aria-checked="false" data-i="1" tabindex="-1"><span>Prototype</span></button>
+    </div>
     <ul class="menu" id="menu" role="menu" aria-label="Ask AI to">
       <li role="menuitem" tabindex="-1" data-agent="write" aria-keyshortcuts="1"><span class="dot"></span><span class="nm">Write</span></li>
       <li role="menuitem" tabindex="-1" data-agent="summarise" aria-keyshortcuts="2"><span class="dot"></span><span class="nm">Summarise</span></li>
@@ -409,6 +422,7 @@ const DEF = {
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
+  comp: 'dropdown', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .34, segGap: .02, segInset: .13, segTint: '#34c759', segTintK: 1,
   sound: 'glass', release: true, volume: .5, haptic: true, jelly: 1, smooth: true, bloom: true, bloomK: .6, dither: true,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -487,7 +501,20 @@ const PRESETS = {
 const SHAPE_KEYS = ['corner', 'dome', 'wall', 'under', 'profile', 'edge', 'lift', 'ior', 'disp'];
 const isBead = () => P.icon !== 'emboss';
 const showSym = () => P.icon === 'glyph' || P.icon === 'mercury';
+const SEGON = () => P.comp === 'segmented';
 const CTRL = [
+  { g: 'Component' },
+  { k: 'comp', l: 'Component', t: 'seg', o: ['dropdown', 'segmented'] },
+  { k: 'segA', l: 'Left tab', t: 'text', show: SEGON },
+  { k: 'segB', l: 'Right tab', t: 'text', show: SEGON },
+  { k: 'segDish', l: 'Track depth', min: 0, max: 1.2, s: .01, show: SEGON },
+  { k: 'segThick', l: 'Thumb thickness', min: .2, max: 1, s: .01, show: SEGON },
+  { k: 'segGap', l: 'Thumb float', min: 0, max: .5, s: .01, show: SEGON },
+  { k: 'segInset', l: 'Thumb inset', min: .04, max: .35, s: .01, show: SEGON },
+  { k: 'segTint', l: 'Thumb colour', t: 'color', show: SEGON },
+  { k: 'segTintK', l: 'Thumb tint', min: 0, max: 3, s: .01, show: SEGON },
+  { g: 'Presets' },
+  { t: 'presets' },
   { g: 'Shape' },
   { k: 'corner', l: 'Corner', min: 0, max: 1, s: .01 },
   { k: 'dome', l: 'Dome', min: -1, max: 1.3, s: .01 },
@@ -609,7 +636,7 @@ if (P.bg === 'upload') P.bg = 'grid';
 // ---------- interaction state ----------
 const POST = { ok: false, n: 0, sig: null, w: 0, h: 0 };   // the after-scene pipeline (set up once the glass compiles)
 const HOME = { yaw: .38, pitch: -.22, zoom: .88 };                 // the resting view: a little from below and from the right
-const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, seen: false, open: false,
+const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, segX: 0, segV: 0, segT: 0, segLift: 0, segDrag: null, seen: false, open: false,
             menuT: 0, menuV: 0, gFrom: 0, gTo: 0, gT: 1, orbPh: 0, hi: null, hiA: 0, hiX: 0,
             yaw: HOME.yaw, pitch: HOME.pitch, tyaw: HOME.yaw, tpitch: HOME.pitch, zoom: HOME.zoom, tzoom: HOME.zoom, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
@@ -1055,7 +1082,7 @@ const fmt = (c, v) => c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 
 const pre = (c, v) => c.k === 'dome' ? (v < 0 ? 'concave' : v > 0 ? 'convex' : 'flat') : '';
 async function applyPreset(name) {
   if (LOOKS[name]) {                                      // the whole look, keeping only the content
-    const keep = { text: P.text, agent: P.agent };
+    const keep = { text: P.text, agent: P.agent, comp: P.comp, segA: P.segA, segB: P.segB };   // the look, not the component or its words
     P = Object.assign({}, DEF, LOOKS[name], keep); useBg(P.bg);
   } else Object.assign(P, PRESETS[name]);
   apply(); syncInputs(); save(); showVariant();
@@ -1072,6 +1099,43 @@ function placeSplit() { cmpEl.style.left = `${s.split}px`; }
   cmpEl.addEventListener('pointermove', e => { if (e.pointerId !== id) return; s.split = Math.max(8, Math.min(W - 8, e.clientX)); placeSplit(); });
   const up = e => { if (e.pointerId === id) id = null; };
   cmpEl.addEventListener('pointerup', up); cmpEl.addEventListener('pointercancel', up);
+}
+// ---------- the segmented control: click a tab, or grab the thumb and drag it (it stretches, then settles) ----------
+const segEl = document.getElementById('seg'), segBtns = [...segEl.querySelectorAll('button')];
+function segSet(i, snd) {
+  i = i ? 1 : 0;
+  if (snd && s.segT !== i) { click(false, 0.8); haptic(10); }
+  s.segT = i;
+  segBtns.forEach((b, k) => { b.setAttribute('aria-checked', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
+}
+{
+  const rubber = x => x < 0 ? -(-x) * 0.35 / (1 + -x * 2) : x > 1 ? 1 + (x - 1) * 0.35 / (1 + (x - 1) * 2) : x;
+  segEl.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.altKey || touches.size > 1) return;
+    s.segDrag = { id: e.pointerId, x0: e.clientX, p0: s.segX, moved: false, lx: e.clientX, lt: performance.now(), v: 0 };
+    try { segEl.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  segEl.addEventListener('pointermove', e => {
+    const d = s.segDrag; if (!d || e.pointerId !== d.id) return;
+    const dx = e.clientX - d.x0; if (!d.moved && Math.abs(dx) > 4) d.moved = true;
+    if (!d.moved) return;
+    const span = Math.max(1, (geo && geo.segThw ? geo.segThw : 60) * 2), now = performance.now();
+    const x = rubber(d.p0 + dx / span);
+    d.v = (x - s.segX) / Math.max((now - d.lt) / 1000, 1 / 240); d.lt = now;
+    s.segX = x; s.segV = d.v;
+  });
+  const up = e => {
+    const d = s.segDrag; if (!d || e.pointerId !== d.id) return;
+    s.segDrag = null;
+    if (d.moved) segSet(Math.round(Math.max(0, Math.min(1, s.segX + d.v * 0.08))), true);   // a flick carries it over
+    else { const b = e.target.closest && e.target.closest('button'); segSet(b ? +b.dataset.i : (e.clientX > geo.cx ? 1 : 0), true); }
+  };
+  segEl.addEventListener('pointerup', up); segEl.addEventListener('pointercancel', up);
+  segEl.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'Home') { e.preventDefault(); segSet(0, true); segBtns[0].focus(); }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'End') { e.preventDefault(); segSet(1, true); segBtns[1].focus(); }
+    if (e.key === ' ' || e.key === 'Enter') { const b = e.target.closest('button'); if (b) { e.preventDefault(); segSet(+b.dataset.i, true); } }
+  });
 }
 const LOOK_NAMES = Object.keys(LOOKS);
 const lookNow = () => LOOK_NAMES.findIndex(n => Object.keys(LOOKS[n]).every(k => typeof LOOKS[n][k] === 'number' ? Math.abs(P[k] - LOOKS[n][k]) < 1e-6 : P[k] === LOOKS[n][k]));
@@ -1109,7 +1173,7 @@ function endVarDrag(e) {
 varsEl.addEventListener('pointerup', endVarDrag);
 varsEl.addEventListener('pointercancel', endVarDrag);
 window.addEventListener('keydown', e => {
-  if (e.target.closest && e.target.closest('input, select, textarea, .menu')) return;
+  if (e.target.closest && e.target.closest('input, select, textarea, .menu, .segc')) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); stepVariant(-1); }
   if (e.key === 'ArrowRight') { e.preventDefault(); stepVariant(1); }
 });
@@ -1117,7 +1181,7 @@ window.addEventListener('keydown', e => {
 function buildPanel() {
   const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
   // collapsible groups; which ones are open is remembered
-  let open = { Presets: true, Shape: true };
+  let open = { Component: true, Presets: true, Shape: true };
   try { open = Object.assign(open, JSON.parse(localStorage.getItem(KEY + '.panel') || '{}')); } catch (e) {}
   let body = null;
   const group = name => {
@@ -1138,16 +1202,17 @@ function buildPanel() {
   cl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   cl.addEventListener('click', () => { setTuning(false); tuneBtn.focus(); });
   top.append(tt, cl); panel.appendChild(top);
-  group('Presets');
-  const pr = el('div', 'presets');
-  for (const name in PRESETS) {
-    const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name;
-    b.addEventListener('click', () => applyPreset(name));
-    pr.appendChild(b);
-  }
-  body.appendChild(pr);
   for (const c of CTRL) {
     if (c.g) { group(c.g); continue; }
+    if (c.t === 'presets') {
+      const pr = el('div', 'presets');
+      for (const name in PRESETS) {
+        const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name;
+        b.addEventListener('click', () => applyPreset(name));
+        pr.appendChild(b);
+      }
+      body.appendChild(pr); continue;
+    }
     const row = el('div', 'row'), id = `in-${c.k}`, lab = el('label', null, c.l); lab.htmlFor = id; row.appendChild(lab);
     let inp;
     if (c.t === 'action') {
@@ -1259,7 +1324,7 @@ function paintRange(c, inp, v, force) {
 }
 function syncInputs() {
   for (const c of CTRL) {
-    if (c.g || c.t === 'action') continue; const inp = inputs[c.k], v = P[c.k];
+    if (c.g || c.t === 'action' || c.t === 'presets') continue; const inp = inputs[c.k], v = P[c.k];
     if (c.t === 'check') inp.checked = !!v;
     else if (c.t === 'color' || c.t === 'text') { if (document.activeElement !== inp) inp.value = v; }
     else if (c.t === 'seg' || c.t === 'bgs' || c.t === 'sounds' || c.t === 'grads') [...inp.children].forEach(b => b.dataset.v && b.setAttribute('aria-pressed', String(b.dataset.v === v)));
@@ -1279,7 +1344,7 @@ function set(k, v) {
   if (k === 'bg' || k === 'bgColor' || k === 'grad') useBg(P.bg);
   if (k === 'bgColor' || k === 'gridDensity' || k === 'grad') paintSwatches(panel.querySelector('.bgs'));
   if (k === 'glowOn' && v && P.glowK < 0.05) P.glowK = DEF.glowK;      // switching the glow on should show something
-  apply(); save(); if (['bg', 'bgColor', 'grad', 'glowOn', 'glow', 'icon', 'sound', 'orbPal'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
+  apply(); save(); if (['bg', 'bgColor', 'grad', 'glowOn', 'glow', 'icon', 'sound', 'orbPal', 'comp'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   const st = anchor.style;
@@ -1291,6 +1356,12 @@ function apply() {
   btn.classList.toggle('no-bead', !P.bead); btn.classList.toggle('no-chev', !P.chevron);
   menu.style.top = `calc(100% + ${P.menuGap * 2}em)`;   // the menu's em is half the button's
   if (labelEl.textContent !== P.text) labelEl.textContent = P.text;
+  const seg = SEGON(), ss = segEl.style;
+  document.body.classList.toggle('seg-on', seg); segEl.hidden = !seg;
+  ss.setProperty('--h', `${P.h}em`); ss.setProperty('--fw', P.weight); ss.setProperty('--rad', `${P.corner * P.h * 0.5}em`);
+  if (segBtns[0].firstChild.textContent !== P.segA) segBtns[0].firstChild.textContent = P.segA;
+  if (segBtns[1].firstChild.textContent !== P.segB) segBtns[1].firstChild.textContent = P.segB;
+  if (seg && s.open) setMenu(false);
 }
 function setTuning(on) {
   document.body.classList.toggle('tuning', on); tuneBtn.setAttribute('aria-expanded', String(on));
@@ -1309,6 +1380,17 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {   
 let W = 1, H = 1, RS = 1, geo = null, labelDirty = true, labelSig = '';
 function layout() {
   W = innerWidth; H = innerHeight; RS = Math.min(Math.max(devicePixelRatio || 1, 1.25), 2);
+  if (SEGON()) {                                        // the track is the control's box; the two labels are printed on it
+    const b = segEl.getBoundingClientRect(), sp = segBtns.map(x => x.firstChild.getBoundingClientRect ? x.firstChild.getBoundingClientRect() : x.getBoundingClientRect());
+    const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+    geo = { cx, cy, hw: b.width / 2, hh: b.height / 2, orb: [cx, cy, 0], label: sp[0], chev: sp[1], seg: sp,
+            font: getComputedStyle(segEl).fontSize, rect: geo ? geo.rect : [0, 0, 1, 1], segThw: geo ? geo.segThw : 0 };
+    geo.menu = [-9e4, -9e4, -9e4, -9e4]; geo.bub = null;   // no menu: nothing on the track fades with it
+    const zq = Math.min(8, Math.pow(2, Math.ceil(Math.log2(Math.max(1, s.tzoom) - 1e-6)))); geo.zq = zq;
+    const sig = ['seg', zq, P.ink, P.segA, P.segB, P.weight, geo.font, b.left, b.top, b.width, b.height, sp[0].left, sp[1].left].join('|');
+    if (sig !== labelSig) { labelSig = sig; labelDirty = true; }
+    return;
+  }
   const b = btn.getBoundingClientRect(), o = orbEl.getBoundingClientRect(), l = labelEl.getBoundingClientRect(), c = chevEl.getBoundingClientRect();
   geo = { cx: b.left + b.width / 2, cy: b.top + b.height / 2, hw: b.width / 2, hh: b.height / 2,
           orb: [o.left + o.width / 2, o.top + o.height / 2, o.width / 2], label: l, chev: c,
@@ -1323,6 +1405,15 @@ function layout() {
 }
 const lab = document.createElement('canvas'), lg = lab.getContext('2d');
 function paintLabel() {
+  if (SEGON()) {                                        // both tab names on the track; the one under the thumb reads through its glass
+    const pad = 6, x0 = geo.cx - geo.hw - pad, y0 = geo.cy - geo.hh - pad, w = geo.hw * 2 + pad * 2, h = geo.hh * 2 + pad * 2;
+    const sc = Math.min(RS * 2 * (geo.zq || 1), 4096 / Math.max(w, 1));
+    lab.width = Math.max(1, Math.ceil(w * sc)); lab.height = Math.max(1, Math.ceil(h * sc));
+    const g = lg; g.setTransform(sc, 0, 0, sc, -x0 * sc, -y0 * sc); g.clearRect(x0, y0, w, h);
+    g.fillStyle = P.ink; g.font = `${P.weight} ${geo.font} "Inter Tight", system-ui, sans-serif`; g.textBaseline = 'middle';
+    [P.segA, P.segB].forEach((t, i) => { const r = geo.seg[i]; g.fillText(t, r.left, r.top + r.height / 2 + 1); });
+    geo.rect = [x0, y0, w, h]; labelDirty = false; return;
+  }
   // one print for the button and the menu under it
   const pad = 6, mr = geo.menu;
   const x0 = Math.min(geo.cx - geo.hw, mr[0]) - pad, y0 = Math.min(geo.cy - geo.hh, mr[1]) - pad;
@@ -1395,6 +1486,8 @@ uniform vec3 uSkyHor, uSkyZen; // the room the glass reflects, tuned to the back
 uniform float uGrid, uGridA, uCamDist;
 uniform vec3 uGridCol;
 uniform float uMenuZ;          // how high the menu floats (px)
+uniform vec4 uSeg, uSeg2;      // the segmented thumb: centre, half size · centre height, half thickness, rim rounding, on
+uniform float uSegCorner; uniform vec3 uSegAbs;   // its corner radius, its absorption (green glass)
 uniform float uShadowMode;     // 0 a shadow with a caustic, 1 a coloured glow like a TV backlight
 uniform vec3 uGlowA, uGlowB, uGlowC;
 uniform vec4 uGlowK;           // strength, size (px), phase, -
@@ -1431,6 +1524,12 @@ float solid(float e, float z){
   float dT = (z - top) / sqrt(1.0 + st * st), dB = (bot - z) / sqrt(1.0 + sb * sb);
   return smax(e, smax(dT, dB, uShape2.y), uShape2.y);
 }
+// the segmented thumb: a rounded slab (a stadium outline, a rounded rim), a separate piece of glass
+float thumbD(vec3 p){
+  float e = box2(p.xy, uSeg, uSegCorner);
+  vec2 w = vec2(e + uSeg2.z, abs(p.z - uSeg2.x) - uSeg2.y + uSeg2.z);
+  return min(max(w.x, w.y), 0.0) + length(max(w, 0.0)) - uSeg2.z;
+}
 // the button and, when open, the menu are one body (like the first version): as the menu grows out, the glass
 // of the button stretches into it; Height (Z) lifts the menu's part of that body, ramping up across the neck
 float map(vec3 p){
@@ -1440,7 +1539,8 @@ float map(vec3 p){
     e = smin2(eb, em, uMenuK.y);
     if (uMenuZ > 0.01) { float sr = max(uMenuK.y * 0.5, 6.0); z -= uMenuZ * smoothstep(-sr, sr, eb - em); }
   }
-  return solid(e, z);
+  float d = solid(e, z);
+  return uSeg2.w > 0.5 ? min(d, thumbD(p)) : d;
 }
 vec3 nrm(vec3 p){
   vec3 n = vec3(0.0);
@@ -1520,6 +1620,7 @@ vec3 pageAt(vec2 q, float fp){
   vec2 so = -L.xy / max(L.z, 0.25) * hmid * 0.4, som = -L.xy / max(L.z, 0.25) * (hmid + uMenuZ) * 0.4;
   q = q0;
   float ds = max(-footB(q - so), -footM(q - som));      // a menu floating higher throws its shadow further
+  if (uSeg2.w > 0.5) ds = max(ds, -box2(q - so * 1.3, uSeg, uSegCorner));   // the thumb's own shadow, a little further out
   // like liquid glass only the rim throws a shadow: a soft band along the edge, the middle stays clear and bright
   float shadow = smoothstep(-R * 0.4 - uShape2.z, 0.0, ds) * (1.0 - smoothstep(R * 0.02, R * 0.55, ds)) * 0.12;
   float conv = clamp(uShape.z / R / 0.72, 0.0, 1.4), dish = clamp(-uShape.z / R, 0.0, 1.0);
@@ -1665,6 +1766,7 @@ vec3 pageThrough(vec3 q, vec3 d, float blur){
 }
 vec3 glassShade(vec3 P, vec3 rd){
   vec3 n = nrm(P);
+  bool th = uSeg2.w > 0.5 && thumbD(P) < 0.8;          // on the green thumb
   float emb = 0.0;
   if (abs(uIcon.x - 3.0) < 0.5 && n.z > 0.3) {           // emboss: the glyph is a shallow dent in the surface
     vec2 sp = (P.xy - uIconPos.xy) / max(uIconPos.z * 0.8 * uEmb.x, 1.0);
@@ -1732,7 +1834,7 @@ vec3 glassShade(vec3 P, vec3 rd){
   }
   else trans = sky(t) * 0.85;
   if (bubRim + bubEdge > 0.0) trans = mix(trans * 1.05, sky(bubRef) * 1.05, bubRim) * (1.0 - bubEdge) + vec3(bubSpec);
-  trans *= exp(-path * uAbs);
+  trans *= exp(-path * (th ? uSegAbs : uAbs));
   vec3 col = trans * (1.0 - F) + refl * F;
   // spectral sparks on the rim, where it faces the light
   float rim = 1.0 - smoothstep(0.08, 0.5, abs(n.z));
@@ -1756,6 +1858,7 @@ vec3 glassShade(vec3 P, vec3 rd){
       ink = dc.a * uInk.a * (inMenu ? uMenuK.z : 1.0); inkCol = dc.rgb;
     }
   }
+  if (th) inkCol = mix(inkCol, vec3(1.0), 0.92);       // the tab under the thumb reads white on green
   col = mix(col, inkCol * (0.75 + 0.35 * max(dot(n, L), 0.0)), ink);
   float spec = max(dot(rf, L), 0.0);
   float key = pow(spec, 260.0) * (0.35 + uOptics.w * 0.25) + pow(spec, 1400.0) * 1.1;
@@ -1795,6 +1898,7 @@ void main(){
   if (uMenuK.w > 0.5) { lo2 = min(lo2, uMenu.xy - uMenu.zw) - uMenuK.y * 0.35; hi2 = max(hi2, uMenu.xy + uMenu.zw) + uMenuK.y * 0.35; }
   LO = vec3(lo2 - 2.0, min(uShape2.z, BR > 0.5 ? BC.z - BZ : 1e5) - 2.0);
   HI = vec3(hi2 + 2.0, max(topMax + (uMenuK.w > 0.5 ? max(uMenuZ, 0.0) + uMenuK.y * 0.25 : 0.0), BR > 0.5 ? BC.z + BZ : 0.0) + 2.0);
+  if (uSeg2.w > 0.5) HI.z = max(HI.z, uSeg2.x + uSeg2.y + 2.0);   // the thumb may stand above the track's rim
   vec3 ro, rd; camRay(p, ro, rd);
   // what does this pixel hit? a cheap test first, so the silhouettes (where neighbours differ) get 4 rays
   vec2 tb0 = sphInt(ro, rd, BC, BR);
@@ -2005,6 +2109,10 @@ function frame(t) {
   s.lx += (s.tlx - s.lx) * k; s.ly += (s.tly - s.ly) * k; s.hov += (s.thov - s.hov) * k;
   if (reduce) { s.press = s.tpress; s.pressV = 0; } else { s.pressV += (240 * (s.tpress - s.press) - 15 * s.pressV) * dt; s.press += s.pressV * dt; }   // springy
   s.jiggle *= Math.pow(0.9, dt * 60);
+  if (!s.segDrag || !s.segDrag.moved) {                // the thumb glides to its tab with a little overshoot
+    if (reduce) { s.segX = s.segT; s.segV = 0; } else { s.segV += (300 * (s.segT - s.segX) - 24 * s.segV) * dt; s.segX += s.segV * dt; }
+  }
+  s.segLift += ((s.segDrag ? 1 : 0) - s.segLift) * (1 - Math.pow(1 - .2, dt * 60));
   if (reduce) { s.wob = 0; s.wobV = 0; } else { s.wobV += (-420 * s.wob - 10 * s.wobV + s.pressV * 1.5 * P.jelly) * dt; s.wob += s.wobV * dt; }
   s.yaw += (s.tyaw - s.yaw) * ko; s.pitch += (s.tpitch - s.pitch) * ko;
   if (reduce) { s.menuT = s.open ? 1 : 0; s.menuV = 0; }
@@ -2035,7 +2143,8 @@ function frame(t) {
   // shape in px; pressing squashes the dome and makes it shiver
   // pressing swells the whole button around its centre (glass, print, bead); the release wobbles a little
   const g = 1 + P.pressGrow * s.press, hh = geo.hh * g * (1 - s.wob * 0.8), hw = geo.hw * g * (1 + s.wob), gx = v => geo.cx + (v - geo.cx) * g, gy = v => geo.cy + (v - geo.cy) * g;   // jelly: wider and flatter, then it rings
-  let dome = P.dome * (1 + s.jiggle * 0.05 * Math.sin(T * 22));
+  const seg = SEGON();
+  let dome = seg ? -P.segDish : P.dome * (1 + s.jiggle * 0.05 * Math.sin(T * 22));   // the track is always a dish
   const wall = Math.max(P.wall, -dome - P.under + 0.08);          // a dish needs a rim: the wall rises with the concavity
   const corner = Math.min(P.corner * hh, hw, hh);
   // tint → absorption per px
@@ -2046,9 +2155,9 @@ function frame(t) {
   gl.useProgram(prog);
   {                                                     // still? the view, the light, the press and the menu all settled
     // big: the view turns, zooms or the glass changes shape · small: the light and the lean follow the cursor
-    const sig = [s.press, s.wob, s.menuT, s.yaw, s.pitch, s.zoom, s.panx, s.pany, W, H, cv.width, s.lx, s.ly, s.hov, s.hiA, s.jiggle];
+    const sig = [s.press, s.wob, s.menuT, s.yaw, s.pitch, s.zoom, s.panx, s.pany, W, H, cv.width, s.segX, s.segLift, s.lx, s.ly, s.hov, s.hiA, s.jiggle];
     const d = POST.sig ? sig.map((v, i) => Math.abs(v - POST.sig[i]) > 2e-4) : sig.map(() => true);
-    POST.big = d.slice(0, 11).some(Boolean);
+    POST.big = d.slice(0, 13).some(Boolean);
     POST.sig = sig; POST.n = d.some(Boolean) || POST.dirty ? 0 : POST.n + 1; POST.dirty = false;
     POST.f = (POST.f || 0) + 1;                                     // the jitter never stops, so edges keep smoothing while you move
     const j = POST.ok && P.smooth ? [HALTON(POST.f % 16 + 1, 2) - 0.5, HALTON(POST.f % 16 + 1, 3) - 0.5] : [0, 0];
@@ -2058,6 +2167,20 @@ function frame(t) {
   gl.uniform4f(uni('uBox'), geo.cx, geo.cy, hw, hh);
   gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
   gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
+  if (seg) {                                            // the green thumb: a pill of its own glass, floating just above the dish floor
+    const inset = P.segInset * hh, ihw = Math.max(hw - inset, 4), thw0 = ihw / 2, thh0 = Math.max(hh - inset, 4);
+    geo.segThw = thw0 / g;
+    const st = Math.min(Math.abs(s.segV) * 0.05, 0.28), lf = s.segLift;
+    const thw = thw0 * (1 + st) * (1 + 0.04 * lf), thh = thh0 * (1 - st * 0.3) * (1 + 0.04 * lf);
+    const tx = geo.cx - ihw + thw0 + s.segX * 2 * thw0;
+    const floorZ = (P.lift + P.under + wall + dome) * hh, tz = Math.max(2, P.segThick * thh0 * 0.5);
+    const zc = floorZ + P.segGap * hh + tz + lf * 0.22 * hh;
+    const tcol = hex(P.segTint);
+    gl.uniform4f(uni('uSeg'), tx, geo.cy, thw, thh);
+    gl.uniform4f(uni('uSeg2'), zc, tz, Math.min(tz * 0.95, thh * 0.95), 1);
+    gl.uniform1f(uni('uSegCorner'), Math.min(thh, Math.max(corner - inset, 2)));
+    gl.uniform3f(uni('uSegAbs'), (1 - tcol[0]) * P.segTintK * 0.013, (1 - tcol[1]) * P.segTintK * 0.013, (1 - tcol[2]) * P.segTintK * 0.013);
+  } else gl.uniform4f(uni('uSeg2'), 0, 0, 0, 0);
   // the icon: star, the chosen agent's glyph (melting from the last one), a flowing orb, or carved into the glass
   const AG = { write: [2, '#ff8a3b'], summarise: [1, '#3d86ff'], translate: [3, '#35c27a'] }, ag = AG[P.agent];
   const mode = { glyph: 1, orb: 2, emboss: 3, mercury: 4, pulse: 5 }[P.icon] || 1;
@@ -2065,7 +2188,7 @@ function frame(t) {
   if (tg !== s.gTo) { s.gFrom = s.gT >= 0.5 ? s.gTo : s.gFrom; s.gTo = tg; s.gT = 0; }
   s.gT = reduce ? 1 : Math.min(1, s.gT + dt * 2.6);
   if (!STILL) s.orbPh += dt * (reduce ? 0.2 : (0.55 + 2.6 * Math.max(0, s.press) + 0.6 * s.hov) * P.orbSpeed);
-  gl.uniform4f(uni('uIcon'), mode, s.gFrom, s.gTo, s.gT);
+  gl.uniform4f(uni('uIcon'), seg ? 1 : mode, s.gFrom, s.gTo, s.gT);
   gl.uniform3fv(uni('uIconTint'), hex(ag ? ag[1] : '#8a7dff'));
   gl.uniform3f(uni('uIconPos'), gx(geo.orb[0]), gy(geo.orb[1]), geo.orb[2] * 0.7 * g);
   gl.uniform1f(uni('uOrbPh'), s.orbPh);
@@ -2081,11 +2204,11 @@ function frame(t) {
     lc = c.map(v => v * P.orbLight * 0.6);
   }
   if (mode === 5) { if (!STILL) s.pulsePh = (s.pulsePh || 0) + dt * 2.2 * P.pulseSpeed; const br = 0.55 + 0.45 * Math.sin(s.pulsePh || 0); lc = tint.map(c => (0.5 + c * 0.5) * P.pulseLight * br * 0.7); }
-  gl.uniform3fv(uni('uIconLight'), lc);
+  gl.uniform3fv(uni('uIconLight'), seg ? [0, 0, 0] : lc);
   gl.uniform4f(uni('uIcon2'), mode === 2 ? P.orbLight : 0, P.ringK, P.beadRefl, P.iris);
   gl.uniform1f(uni('uOrbPal'), op ? 1 : 0);
   if (op) { gl.uniform3fv(uni('uOrbA'), op[0]); gl.uniform3fv(uni('uOrbB'), op[1]); gl.uniform3fv(uni('uOrbC'), op[2]); }
-  gl.uniform4f(uni('uBead'), gx(geo.orb[0]), gy(geo.orb[1]), P.bead && mode !== 3 ? geo.orb[2] * 0.7 * g : 0, P.sink);
+  gl.uniform4f(uni('uBead'), gx(geo.orb[0]), gy(geo.orb[1]), P.bead && mode !== 3 && !seg ? geo.orb[2] * 0.7 * g : 0, P.sink);
   gl.uniform4f(uni('uBead2'), P.smoke, P.starSize, reduce ? 0 : P.starMotion, P.beadFlat);
   gl.uniform4f(uni('uEmb'), P.embSize, P.embDepth, P.embFrost, P.orbGlow);
   if (geo.bub) gl.uniform3fv(uni('uBub[0]'), geo.bub);
