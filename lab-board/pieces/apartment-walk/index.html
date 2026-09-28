@@ -204,8 +204,7 @@ world.add(wallsG, capsG);
 
 // walls: thick (outer, structural) and thin (partitions), taken from the drawing
 const wallMeshes = [];
-for (const p of A.thick) { const m = prism(p.outer, p.holes, 0, H, mat.thick); wallsG.add(m); wallMeshes.push(m); }
-for (const p of A.thin) { const m = prism(p.outer, p.holes, 0, H, mat.wall); wallsG.add(m); wallMeshes.push(m); }
+for (const p of A.walls) { const m = prism(p.outer, p.holes, 0, H, mat.wall); wallsG.add(m); wallMeshes.push(m); }   // one outline per wall: the faces run through, no seams
 // openings: a sill below, a lintel above; glass and a slim frame in the facade ones
 // ---------- windows and balcony doors: white inside, graphite outside; the leaves that open, open ----------
 // per opening, left to right along the wall: turn = a side-hung leaf (hinge at its start 0 / end 1), tilt = hinged at the bottom, the top tips in
@@ -266,11 +265,11 @@ function buildGlazing(o) {
   }
 }
 const caps = [];                                                   // the cut surfaces, drawn black like the plan
-for (const p of A.thick) caps.push({ poly: p, lo: 0, hi: H, m: mat.cap });
-for (const p of A.thin) caps.push({ poly: p, lo: 0, hi: H, m: mat.capThin });
+for (const p of A.walls) caps.push({ poly: p, lo: 0, hi: H, m: mat.cap });
+for (const p of A.thin) caps.push({ poly: p, lo: 0, hi: H, m: mat.capThin, dy: .1, thinOnly: true });   // the partitions in grey, over the black
 for (const o of A.openings) {
-  if (o.sill > 0) { wallsG.add(prism(o.quad, [], 0, o.sill, mat.thick)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: 0, hi: o.sill, m: mat.cap }); }
-  if (o.head < H) { wallsG.add(prism(o.quad, [], o.head, H, o.glazed ? mat.thick : mat.wall)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: o.head, hi: H, m: o.glazed ? mat.cap : mat.capThin }); }
+  if (o.sill > 0) { wallsG.add(prism(o.quad, [], 0, o.sill, mat.wall)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: 0, hi: o.sill, m: mat.cap }); }
+  if (o.head < H) { wallsG.add(prism(o.quad, [], o.head, H, mat.wall)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: o.head, hi: H, m: o.glazed ? mat.cap : mat.capThin }); }
   if (o.glazed) buildGlazing(o);
 }
 // floor, ceiling, balconies, railings
@@ -367,7 +366,7 @@ let capMeshes = [];
 function buildCaps() {                                             // black cut faces at the cut height, like the plan
   for (const m of capMeshes) { capsG.remove(m); m.geometry.dispose(); }
   const y = Math.min(S.cut, H) + .15;
-  capMeshes = caps.filter(c => c.lo < y && c.hi >= y - .2).map(c => flat(c.poly.outer, c.poly.holes, y, c.m));
+  capMeshes = caps.filter(c => c.lo < y && c.hi >= y - .2 && (!c.thinOnly || S.thick)).map(c => flat(c.poly.outer, c.poly.holes, y + (c.dy || 0), c.m));
   capMeshes.forEach(m => capsG.add(m));
 }
 
@@ -379,7 +378,7 @@ const grid = (() => {
   const path = ps => { g.moveTo((ps[0][0] - gx0) / GR, (ps[0][1] - gz0) / GR); for (const p of ps.slice(1)) g.lineTo((p[0] - gx0) / GR, (p[1] - gz0) / GR); g.closePath(); };
   g.fillStyle = '#000'; g.fillRect(0, 0, gw, gh);
   g.fillStyle = '#fff'; for (const ps of [A.floor.outer, ...A.balconies.map(b => b.outer)]) { g.beginPath(); path(ps); g.fill(); }   // one by one: where they overlap, the windings must not cancel
-  g.fillStyle = '#000'; for (const p of [...A.thick, ...A.thin]) { g.beginPath(); path(p.outer); p.holes.forEach(path); g.fill('evenodd'); }
+  g.fillStyle = '#000'; for (const p of A.walls) { g.beginPath(); path(p.outer); p.holes.forEach(path); g.fill('evenodd'); }
   for (const o of A.openings) if (o.sill > 40) { g.beginPath(); path(o.quad); g.fill(); }
   g.strokeStyle = '#000'; g.lineWidth = 6 / GR; for (const r of A.rails) { g.beginPath(); r.forEach((p, i) => g[i ? 'lineTo' : 'moveTo']((p[0] - gx0) / GR, (p[1] - gz0) / GR)); g.stroke(); }
   const d = g.getImageData(0, 0, gw, gh).data, out = new Uint8Array(gw * gh);
@@ -531,7 +530,7 @@ function drawMini() {
   g.fillStyle = '#ece8e1'; g.beginPath(); A.balconies.forEach(b => path(b.outer)); g.fill();
   g.fillStyle = '#f4efe7'; g.beginPath(); path(A.floor.outer); g.fill();
   const here = roomAt(P.x, P.z); if (here) { g.fillStyle = 'rgba(27,28,32,.07)'; g.beginPath(); path(here.outline); g.fill(); }
-  g.fillStyle = '#1b1c20'; for (const p of [...A.thick, ...A.thin]) { g.beginPath(); path(p.outer); p.holes.forEach(path); g.fill('evenodd'); }
+  g.fillStyle = '#1b1c20'; for (const p of A.walls) { g.beginPath(); path(p.outer); p.holes.forEach(path); g.fill('evenodd'); }
   const x = P.x * s + ox, z = P.z * s + oz, half = THREE.MathUtils.degToRad(S.fov) * .55;
   const grd = g.createRadialGradient(x, z, 0, x, z, 56); grd.addColorStop(0, 'rgba(47,111,235,.35)'); grd.addColorStop(1, 'rgba(47,111,235,0)');
   g.fillStyle = grd; g.beginPath(); g.moveTo(x, z); g.arc(x, z, 56, P.yaw - half, P.yaw + half); g.closePath(); g.fill();
@@ -592,7 +591,7 @@ const ctl = {};
   note.textContent = 'Walls, piers and openings are traced from the furnished plan (1 cm = 1.209 px) and checked against the architect’s sizes: 270, 90, 180 and 90 cm in the facade. Heights: 2.55 m clear, doors 205 cm, balcony doors 242 cm.';
   panel.appendChild(note);
 }
-function paintWalls() { mat.thick.color.set(S.thick ? '#e6e0d7' : '#f5f3ef'); mat.capThin.color.set(S.thick ? '#6d6f76' : '#1b1c20'); }
+function paintWalls() { mat.capThin.color.set('#6d6f76'); buildCaps(); }
 function applyCut(v) { S.cutNow = v; cutPlane.constant = Math.min(v, H + 1) * M + .0005; buildCaps(); }
 
 // ---------- frame ----------

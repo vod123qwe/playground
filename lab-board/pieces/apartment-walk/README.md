@@ -5,7 +5,7 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 ## Co można robić
 
 - **Overview:** orbita nad bryłą (przeciąganie, kółko), nazwy pomieszczeń z metrażem. *Cut the walls at* przycina ściany na dowolnej wysokości (40–255 cm), a przekrój jest czarny jak na rzucie. Podwójne kliknięcie (na telefonie podwójne stuknięcie) w podłogę wchodzi w tryb spaceru w tym miejscu.
-- **Walk:** kamera na wysokości oczu (165 cm). WASD albo strzałki, przeciąganie myszą rozgląda się, Shift przyspiesza, M przełącza tryb. Na telefonie gałka po lewej i przeciąganie palcem. Ściany i balustrady zatrzymują (ciało to okrąg 22 cm), a drzwi i drzwi balkonowe są otwarte. Szyba, do której podchodzisz, znika, jakby drzwi się otwierały. Na górze widać nazwę pomieszczenia, w rogu minimapę (kliknięcie w nią przenosi w to miejsce).
+- **Walk:** kamera na wysokości oczu (165 cm). WASD albo strzałki, przeciąganie myszą rozgląda się, Shift przyspiesza, M przełącza tryb. Na telefonie gałka po lewej i przeciąganie palcem. Ściany, balustrady, szyby i zamknięte skrzydła zatrzymują (ciało to okrąg 22 cm); wejście w zamknięte drzwi je otwiera. Na górze widać nazwę pomieszczenia, w rogu minimapę (kliknięcie w nią przenosi w to miejsce).
 - **Customize:** przycięcie ścian, nazwy pomieszczeń, wyróżnienie grubych ścian, rzut na podłodze (do porównania z modelem) i jego krycie, wysokość oczu, prędkość, pole widzenia, sufit, kierunek słońca, ekspozycja.
 
 ## Stolarka i balkony (decyzje Jarka, 28.09.2026)
@@ -13,12 +13,13 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Drzwi wewnętrzne:** Porta Vector Premium model V, bezprzylgowe 80, białe, pełne (dwa frezowane panele, każdy z podwójną linią), ościeżnica z opaskami. Klamki Metal-Bud Rumba z kwadratowym szyldem, nikiel satyna velvet. Kierunek otwierania i strona zawiasów z łuków na rzucie.
 - **Ukryte drzwi** w pralni (dawna druga toaleta) i spiżarni (dawna garderoba): skrzydło w kolorze ściany, w jej płaszczyźnie, z cienką szczeliną. Klamka Rumba jak w pozostałych (założenie).
 - **Okna i drzwi balkonowe:** od środka białe ramy i białe klamki, od zewnątrz grafit. Salon (270): trzy skrzydła, lewe stałe, środkowe i prawe otwierane do środka na oścież. Sypialnia 1 (270): trzy skrzydła, prawe otwierane. Pozostałe drzwi balkonowe: jedno skrzydło otwierane (w 180 drugie stałe). Okno w sypialni (O25): poprzeczka na 94 cm, pod nią pozioma szyba uchylna od góry, nad nią dwie stałe.
-- **Balustrady:** szklane panele ok. 115 cm między aluminiowymi słupkami, pochwyt. Balkon salonu przezroczysty, balkony sypialni i pokoju dziecka mleczne.
+- **Balustrady:** szklane panele ok. 115 cm między aluminiowymi słupkami, pochwyt. Balkon salonu przezroczysty, balkony sypialni i pokoju dziecka mleczne. Boki balkonów sypialni stoją na filarach 25 cm od krawędzi okna (na rzucie dotykają okna, a balustrada na nie nachodziła).
 - **Sterowanie:** kliknięcie skrzydła albo E otwiera i zamyka; wejście w zamknięte drzwi (także balkonowe) je otwiera. Panel: Doors → As left / Open / Closed.
 
 ## Skąd są wymiary
 
 - **Ściany prosto z rysunku:** `tools/extract_plan.py` czyta rzut z meblami (`assets/plan.webp`), bierze ciemne piksele, usuwa cienkie linie (meble, skrzydła drzwi, teksty, wymiarowanie), zamienia plamy na wielokąty i przelicza na cm. Szachty narysowane jako obrysy stają się pełne.
+- **Wyprostowane obrysy:** każda krawędź ściany jest przyciągana do jednego z czterech kierunków budynku (osie rysunku, elewacja 52,2°, ściana kuchni −37,8°), położenie liczone ze wszystkich pikseli krawędzi, narożniki ostre (bez schodków pikseli i zaokrągleń). Jeden obrys na cały mur, więc lica biegną bez szwów; nadproża, podokienniki, podłoga i strop dociągnięte do tych samych płaszczyzn.
 - **Skala 1 cm = 1,209 px**, sprawdzona trzema wymiarami z rzutu: sypialnia 375 × 372 cm i łazienka 166 cm (wszystkie dają 1,208–1,210). Metraż sypialni z modelu: 13,9 m² (375 × 372 = 13,95).
 - **Otwory zmierzone wzdłuż ścian** i porównane z rzutem architekta: w elewacji 268, 88, 178, 88 i 112 cm (w rzucie O17 270, O22 90, O25 180, O21 90). Drzwi wewnętrzne 78–79 cm (skrzydło 80), wejściowe 87 cm.
 - **Wysokości:** w świetle 2,55 m (Hn/Hb z rzutu), drzwi balkonowe i okna od podłogi 242 cm, okno O25 w sypialni od 30 do 235 cm (HP 30), otwór drzwi wewnętrznych 208 cm (skrzydło 203,7 + ościeżnica), wejściowe 210 cm.
