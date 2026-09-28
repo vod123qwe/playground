@@ -311,6 +311,9 @@ for (const o of A.openings) {
 }
 // floor, ceiling, balconies, railings
 const floor = prism(A.floor.outer, A.floor.holes, -20, 0, mat.floor, false); world.add(floor);
+// the outer half of each balcony door (and the front door): a stone threshold, a step above the balcony
+mat.sill = new THREE.MeshStandardMaterial({ color: '#c9c5bd', roughness: .7, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+for (const k of A.sills || []) { const m = flat(k.outer, [], .03, mat.sill); m.receiveShadow = true; world.add(m); }
 // ---------- the floor finishes (A.04): EGGER Herringbone EL2152 Dąb Casella naturalny, Granby / Bihara Beige tiles ----------
 const HQ = !matchMedia('(pointer:coarse)').matches;
 function surface(poly, y, material, uvOf) {                        // a flat top layer with its own UVs, in centimetres of the plan
@@ -331,7 +334,7 @@ async function buildFloors() {
   const hb = await herringbone({ base: 'assets/', hq: HQ }); hbP = hb.period;
   const oak = new THREE.MeshStandardMaterial({ map: texOf(hb.col, true), normalMap: texOf(hb.nor), normalScale: new THREE.Vector2(.45, .45), roughnessMap: texOf(hb.rou), roughness: 1, metalness: 0,
     polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-  hbMesh = surface(A.floor, .02, oak, hbUV); world.add(hbMesh);
+  hbMesh = surface(A.floorIn || A.floor, .02, oak, hbUV); world.add(hbMesh);   // the rooms' floor ends on the glass line of the balcony doors
   for (const t of A.finishes.tiles) {
     const st = stoneTiles(t.finish, { hq: HQ });
     const tm = new THREE.MeshStandardMaterial({ map: texOf(st.col, true), normalMap: texOf(st.nor), normalScale: new THREE.Vector2(.6, .6), roughnessMap: texOf(st.rou), roughness: 1, metalness: 0,

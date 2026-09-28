@@ -224,6 +224,21 @@ cv2.floodFill(ff, msk, (5, 5), 2)
 foot = (ff != 2).astype(np.uint8)
 foot_poly = max(reg_polys(foot), key=lambda p: cv2.contourArea(np.array(p['outer'], np.float32)))   # straightened too, so the slabs meet the wall faces
 
+# the floor of the rooms stops under the frame of every balcony door and window (on the line of the glass) and under the front door;
+# the outer half of such an opening is a threshold, not the floor of the room
+SILLS = []
+inner_floor = foot.copy()
+for op in openings:
+    if not (op['glazed'] or 'front' in op['name']): continue
+    q = np.array(op['quad']); m0, m1 = (q[0] + q[1]) / 2, (q[3] + q[2]) / 2
+    def outside(pnt): x, y = int(round(pnt[0])), int(round(pnt[1])); return not (0 <= y < foot.shape[0] and 0 <= x < foot.shape[1]) or not foot[y, x]
+    o0_out = outside(m0 + (m0 - m1) * .6)                              # which face of the wall looks out
+    mid_a, mid_b = (q[0] + q[3]) / 2, (q[1] + q[2]) / 2
+    outer = [q[0].tolist(), q[1].tolist(), mid_b.tolist(), mid_a.tolist()] if o0_out else [q[3].tolist(), q[2].tolist(), mid_b.tolist(), mid_a.tolist()]
+    SILLS.append({'name': op['name'], 'outer': outer, 'holes': []})
+    cv2.fillPoly(inner_floor, [np.round(np.array(outer)).astype(np.int32)], 0)
+floor_in = max(reg_polys(inner_floor), key=lambda p: cv2.contourArea(np.array(p['outer'], np.float32)))
+
 # rooms: flood from a seed with all doors closed; the hall and the living room split along the passage
 rooms_mask = closed.copy()
 cv2.line(rooms_mask, (621, 911), (778, 911), 1, 2)
@@ -244,6 +259,7 @@ for name, (x, y) in ROOMS:
 # tiles Ceramika Gres Granby Beige 60x60: the entrance, the laundry, the pantry; Domino Bihara Beige 60x60: the bathroom
 def zone(mask):
     m = cv2.dilate((mask > 0).astype(np.uint8), np.ones((5, 5), np.uint8))    # tucked 2 px under the walls, so no wood shows at the edge
+    for k in SILLS: cv2.fillPoly(m, [np.round(np.array(k['outer'])).astype(np.int32)], 0)   # and not out over a threshold
     ps = reg_polys(m)
     return max(ps, key=lambda q: cv2.contourArea(np.array(q['outer'], np.float32)))
 def room_mask(x, y):
@@ -329,6 +345,8 @@ data = {
     'thick': [cmpoly(p) for p in polys(thick)], 'thin': [cmpoly(p) for p in polys(thin)],   # only for the cut surfaces (black / grey)
     'openings': [{**o, 'quad': [cm(q) for q in o['quad']], **({'door': {**o['door'], 'hinge': cm(o['door']['hinge']), 'to': cm(o['door']['to'])}} if 'door' in o else {})} for o in openings],
     'floor': cmpoly(foot_poly),
+    'floorIn': cmpoly(floor_in),                                   # the rooms' floor: stops on the glass line of the balcony doors and at the front door
+    'sills': [{'name': k['name'], 'outer': [cm(q) for q in k['outer']], 'holes': []} for k in SILLS],
     'finishes': {'base': 'EGGER Herringbone EL2152 Dąb Casella naturalny, 840 x 168 x 8 mm, 4V',
                  'tiles': [{'finish': f['finish'], 'name': f['name'], 'zones': [cmpoly(z) for z in f['zones']]} for f in FLOORS]},
     'balconies': [{'name': b['name'], 'outer': [cm(q) for q in b['outer']]} for b in BALC],
