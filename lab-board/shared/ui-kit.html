@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab UI · controls</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lab-ui.css">
+<style>
+  body{margin:0; min-height:100vh; background:#e8e5df; font:500 13px/1.5 "Inter", system-ui, sans-serif; color:#1b1c20}
+  header{padding:32px 40px 8px} h1{margin:0; font-size:22px; font-weight:600} header p{margin:6px 0 0; color:rgba(20,20,20,.55); max-width:720px}
+  .stage{display:flex; flex-wrap:wrap; gap:28px; padding:24px 40px 48px; align-items:flex-start}
+  .panel{width:384px; padding:0 28px 16px}
+  .panel h2{margin:0; padding:26px 0 4px; font-size:18px; font-weight:600} .panel .sub{margin:0 0 8px; color:var(--ui-muted); font-size:12.5px}
+  .spec{flex:1; min-width:300px; max-width:520px; padding:26px 28px; background:#fff}
+  .spec h2{margin:0 0 12px; font-size:15px} .spec dl{display:grid; grid-template-columns:150px 1fr; gap:8px 16px; margin:0} .spec dt{color:rgba(20,20,20,.55)} .spec dd{margin:0}
+  .spec h3{margin:22px 0 8px; font-size:13px}
+  .spec ul{margin:0; padding-left:18px} .spec li{margin:4px 0}
+  .out{margin-top:14px; font-size:12px; color:rgba(20,20,20,.55)}
+</style>
+</head>
+<body>
+<header><h1>Lab UI · customise controls</h1><p>One style for sliders, value fields and settings in every lab piece. Try it: drag a slider, click a number and type, drag a label to scrub, double-click a slider to go back to its default (the small notch).</p></header>
+<div class="stage">
+  <aside class="panel lab-ui" id="light"><h2>Customize</h2><p class="sub">Light panel</p></aside>
+  <aside class="panel lab-ui dark" id="dark"><h2>Customize</h2><p class="sub">Dark panel</p></aside>
+  <section class="spec">
+    <h2>Anatomy and sizes</h2>
+    <dl>
+      <dt>Row</dt><dd>label left (13 px, 78% ink), value right (tabular figures, 50% ink), control under both; 34 px minimum, 6 px between rows</dd>
+      <dt>Track</dt><dd>4 px, round ends, filled part in ink, the rest 12%</dd>
+      <dt>Thumb</dt><dd>18 px white circle, 1 px ring; hover adds a 5 px halo, press grows it 12%</dd>
+      <dt>Hit area</dt><dd>the whole 24 px tall track (WCAG 2.2 · 2.5.8 target size)</dd>
+      <dt>Default</dt><dd>a 2 × 10 px notch on the track, hidden when the value sits on it</dd>
+      <dt>Value field</dt><dd>looks like text; hover shows a field, focus a 1.5 px ring; the unit stays outside</dd>
+      <dt>Choices</dt><dd>sharp chips, 32 px, the chosen one filled in ink</dd>
+      <dt>Check</dt><dd>18 px square, fills in ink with a white tick</dd>
+      <dt>Groups</dt><dd>semibold title that folds (0.4 s ease-out, no spring), full-width dividers</dd>
+    </dl>
+    <h3>Behaviour</h3>
+    <ul>
+      <li>Keyboard on the slider: ← → step, Page Up/Down × 10, Home / End (native range)</li>
+      <li>Number: click and type; Enter applies, Esc cancels, ↑ ↓ step, Shift × 10</li>
+      <li>Drag the label to scrub the whole range in about 240 px; hold Alt for fine steps</li>
+      <li>Double-click the slider or its label: back to the default</li>
+      <li>Screen readers hear the value with its unit (aria-valuetext)</li>
+      <li>Light and dark from the same tokens; reduced motion turns the animations off</li>
+    </ul>
+    <p class="out" id="out">Last change: none</p>
+  </section>
+</div>
+<script src="lab-ui.js"></script>
+<script>
+  const out = document.getElementById('out'), log = (k, v) => { out.textContent = `Last change: ${k} = ${v}`; };
+  for (const id of ['light', 'dark']) {
+    const p = document.getElementById(id);
+    const size = LabUI.group(p, 'Size');
+    LabUI.slider(size, { label: 'Width', min: 100, max: 300, step: 5, unit: 'cm', value: 200, def: 200, onInput: v => log('Width', v) });
+    LabUI.slider(size, { label: 'Depth', min: 30, max: 60, step: 5, unit: 'cm', value: 40, def: 40, onInput: v => log('Depth', v) });
+    const look = LabUI.group(p, 'Look');
+    LabUI.seg(look, { label: 'Base', options: [['frame', 'Steel frame'], ['plinth', 'Plinth'], ['none', 'Wall hung']], value: 'frame', onChange: v => log('Base', v) });
+    LabUI.check(look, { label: 'Rail on the top', value: true, onChange: v => log('Rail', v) });
+    LabUI.slider(look, { label: 'Refraction (IOR)', min: 1, max: 2.4, step: .01, value: 1.52, def: 1.5, onInput: v => log('IOR', v) });
+    LabUI.slider(look, { label: 'Rotation', min: 0, max: 360, step: 1, unit: '°', value: 311, def: 320, onInput: v => log('Rotation', v) });
+    LabUI.color(look, { label: 'Tint', value: '#e63d97', onInput: v => log('Tint', v) });
+    const scene = LabUI.group(p, 'Scene', { open: false });
+    LabUI.slider(scene, { label: 'Exposure', min: .5, max: 1.8, step: .01, value: 1, def: 1, onInput: v => log('Exposure', v) });
+  }
+</script>
+</body>
+</html>

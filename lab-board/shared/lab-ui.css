@@ -1,0 +1,113 @@
+/* Lab UI · one style for the customise panels of every lab piece
+   Sliders, value fields, segmented choices, checks, colour wells and collapsible groups.
+   Put class="lab-ui" (or "lab-ui dark") on the panel. Built by lab-ui.js, plain CSS otherwise. */
+
+.lab-ui{
+  --ui-ink:#1b1c20; --ui-text:rgba(20,20,20,.78); --ui-muted:rgba(20,20,20,.5); --ui-line:rgba(20,20,20,.1);
+  --ui-bg:#fff; --ui-field:rgba(20,20,20,.05); --ui-field-hi:rgba(20,20,20,.09);
+  --ui-track:rgba(20,20,20,.12); --ui-fill:#1b1c20; --ui-thumb:#fff; --ui-ring:rgba(20,20,20,.26); --ui-focus:rgba(20,20,20,.38); --ui-halo:rgba(20,20,20,.1);
+  --ui-on:#1b1c20; --ui-on-text:#fff;
+  --ui-ease:cubic-bezier(.22,.61,.36,1);
+  color:var(--ui-ink); background:var(--ui-bg); font:500 13px/1.4 "Inter", system-ui, sans-serif; -webkit-font-smoothing:antialiased;
+}
+.lab-ui.dark{
+  --ui-ink:#f2f2f0; --ui-text:rgba(255,255,255,.78); --ui-muted:rgba(255,255,255,.5); --ui-line:rgba(255,255,255,.1);
+  --ui-bg:#17181b; --ui-field:rgba(255,255,255,.06); --ui-field-hi:rgba(255,255,255,.11);
+  --ui-track:rgba(255,255,255,.16); --ui-fill:#f2f2f0; --ui-thumb:#fff; --ui-ring:rgba(0,0,0,.5); --ui-focus:rgba(255,255,255,.5); --ui-halo:rgba(255,255,255,.14);
+  --ui-on:#f2f2f0; --ui-on-text:#17181b;
+}
+.lab-ui *, .lab-ui *::before, .lab-ui *::after{box-sizing:border-box}
+
+/* ---------- groups: a title that folds, full-width dividers ---------- */
+.ui-grp{margin:0 calc(-1 * var(--ui-pad, 0px)); padding:0 var(--ui-pad, 0px); border-top:1px solid var(--ui-line)}   /* --ui-pad: the panel's side padding, so dividers run edge to edge */
+.ui-grp:first-of-type{border-top:0}
+.ui-gh{display:flex; align-items:center; justify-content:space-between; width:100%; padding:18px 0 14px; border:0; background:transparent; color:var(--ui-ink);
+       font:inherit; font-weight:600; font-size:13.5px; cursor:pointer; text-align:left}
+.ui-gh svg{width:16px; height:16px; color:var(--ui-muted); transition:transform .35s var(--ui-ease)}
+.ui-grp.closed .ui-gh svg{transform:rotate(-90deg)}
+.ui-gb{display:grid; grid-template-rows:1fr; transition:grid-template-rows .4s var(--ui-ease)}
+.ui-grp.closed .ui-gb{grid-template-rows:0fr}
+.ui-gi{overflow:hidden; padding-bottom:14px} .ui-grp.closed .ui-gi{padding-bottom:0}
+
+/* ---------- a row: the label on the left, the value on the right, the control underneath ---------- */
+.ui-row{display:grid; grid-template-columns:1fr auto; align-items:center; column-gap:12px; min-height:34px; padding:4px 0}
+.ui-row + .ui-row{margin-top:6px}
+.ui-label{color:var(--ui-text); user-select:none; -webkit-user-select:none}
+.ui-row.scrub .ui-label{cursor:ew-resize}                          /* drag the label to scrub the value */
+.ui-row.scrubbing .ui-label{color:var(--ui-ink)}
+.ui-hint{grid-column:1 / -1; margin:2px 0 0; color:var(--ui-muted); font-size:12px}
+
+/* the value: a quiet number you can click and type into */
+.ui-value{display:inline-flex; align-items:baseline; gap:3px; color:var(--ui-muted); font-variant-numeric:tabular-nums}
+.ui-num{width:4.4em; margin-right:-6px; padding:3px 6px; border:0; border-radius:6px; background:transparent; color:inherit; font:inherit; text-align:right;
+        font-variant-numeric:tabular-nums; transition:background .2s, box-shadow .2s}
+.ui-num:hover{background:var(--ui-field)}
+.ui-num:focus{outline:none; margin-right:0; background:var(--ui-bg); color:var(--ui-ink); box-shadow:inset 0 0 0 1.5px var(--ui-focus)}
+.ui-unit{font-size:12px}
+
+/* ---------- the slider: 4 px track, a filled part, an 18 px thumb in a 24 px tall hit area ---------- */
+.ui-slider{grid-column:1 / -1; position:relative; height:24px; margin-top:4px}
+.ui-slider input{-webkit-appearance:none; appearance:none; display:block; width:100%; height:24px; margin:0; background:transparent; cursor:pointer; touch-action:none}
+.ui-slider input::-webkit-slider-runnable-track{height:4px; border-radius:4px; background:linear-gradient(to right, var(--ui-fill) var(--p, 50%), var(--ui-track) var(--p, 50%))}
+.ui-slider input::-moz-range-track{height:4px; border-radius:4px; background:var(--ui-track)}
+.ui-slider input::-moz-range-progress{height:4px; border-radius:4px; background:var(--ui-fill)}
+.ui-slider input::-webkit-slider-thumb{-webkit-appearance:none; width:18px; height:18px; margin-top:-7px; border-radius:50%; background:var(--ui-thumb);
+  box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 0 var(--ui-halo), 0 1px 3px rgba(0,0,0,.16);
+  transition:transform .42s cubic-bezier(.22,1.2,.36,1), box-shadow .42s var(--ui-ease)}
+.ui-slider input::-moz-range-thumb{width:18px; height:18px; border:0; border-radius:50%; background:var(--ui-thumb); box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 0 var(--ui-halo), 0 1px 3px rgba(0,0,0,.16);
+  transition:transform .42s cubic-bezier(.22,1.2,.36,1), box-shadow .42s var(--ui-ease)}
+.ui-slider input:hover::-webkit-slider-thumb{box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 5px var(--ui-halo), 0 1px 3px rgba(0,0,0,.16)}
+.ui-slider input:hover::-moz-range-thumb{box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 5px var(--ui-halo), 0 1px 3px rgba(0,0,0,.16)}
+/* press: the thumb swells a touch and a soft halo opens around it; on release both settle back gently */
+.ui-slider input:active::-webkit-slider-thumb{transform:scale(1.18); box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 9px var(--ui-halo), 0 2px 6px rgba(0,0,0,.18);
+  transition:transform .2s cubic-bezier(.3,1.5,.5,1), box-shadow .2s var(--ui-ease)}
+.ui-slider input:active::-moz-range-thumb{transform:scale(1.18); box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 9px var(--ui-halo), 0 2px 6px rgba(0,0,0,.18);
+  transition:transform .2s cubic-bezier(.3,1.5,.5,1), box-shadow .2s var(--ui-ease)}
+.ui-slider input:focus{outline:none}
+.ui-slider input:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 4px var(--ui-bg), 0 0 0 6px var(--ui-focus)}
+.ui-slider input:focus-visible::-moz-range-thumb{box-shadow:0 0 0 1px var(--ui-ring), 0 0 0 4px var(--ui-bg), 0 0 0 6px var(--ui-focus)}
+/* the default: a small notch on the track; double-click the slider (or its label) to go back to it */
+.ui-def{position:absolute; top:50%; left:calc(9px + (100% - 18px) * var(--d)); width:2px; height:10px; margin:-5px 0 0 -1px; border-radius:1px;
+        background:var(--ui-muted); opacity:.55; pointer-events:none}
+.ui-row.at-def .ui-def{opacity:0}
+.ui-row.disabled{opacity:.4; pointer-events:none}
+
+/* ---------- segmented choice: sharp chips, the chosen one filled ---------- */
+.ui-seg{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+.ui-seg button{min-height:32px; padding:0 12px; border:0; border-radius:0; background:var(--ui-field); color:var(--ui-text); font:inherit; font-weight:600; font-size:12.5px; cursor:pointer;
+               transition:background .2s, color .2s}
+.ui-seg button:hover{background:var(--ui-field-hi); color:var(--ui-ink)}
+.ui-seg button:active{transform:scale(.97); transition:transform .12s ease}
+.ui-seg button{transition:background .2s, color .2s, transform .3s var(--ui-ease)}
+.ui-seg button[aria-pressed=true]{background:var(--ui-on); color:var(--ui-on-text)}
+.ui-seg button:focus-visible{outline:2px solid var(--ui-focus); outline-offset:2px}
+
+/* ---------- check: an 18 px square that fills ---------- */
+.ui-check{-webkit-appearance:none; appearance:none; width:18px; height:18px; margin:0; border-radius:0; background:transparent; box-shadow:inset 0 0 0 1.5px var(--ui-ring); cursor:pointer;
+          display:grid; place-items:center; transition:background .2s, box-shadow .2s}
+.ui-check::after{content:""; width:10px; height:6px; margin-top:-2px; border-left:2px solid var(--ui-on-text); border-bottom:2px solid var(--ui-on-text); transform:rotate(-45deg) scale(.6); opacity:0;
+                 transition:transform .2s var(--ui-ease), opacity .2s}
+.ui-check:checked{background:var(--ui-on); box-shadow:none} .ui-check:checked::after{opacity:1; transform:rotate(-45deg) scale(1)}
+.ui-check:focus-visible{outline:2px solid var(--ui-focus); outline-offset:2px}
+
+/* ---------- colour well: a swatch with its hex ---------- */
+.ui-color{display:inline-flex; align-items:center; gap:8px; color:var(--ui-muted); font-variant-numeric:tabular-nums; font-size:12.5px}
+.ui-color input{-webkit-appearance:none; appearance:none; width:26px; height:26px; padding:0; border:0; background:none; cursor:pointer}
+.ui-color input::-webkit-color-swatch-wrapper{padding:0} .ui-color input::-webkit-color-swatch{border:0; box-shadow:inset 0 0 0 1px var(--ui-line)}
+.ui-color input::-moz-color-swatch{border:0}
+
+/* ---------- touch: 44 px targets (Apple HIG, Material 48 dp), a bigger thumb ---------- */
+@media (pointer:coarse){
+  .ui-row{min-height:44px}
+  .ui-slider{height:44px; margin-top:0}
+  .ui-slider input{height:44px}
+  .ui-slider input::-webkit-slider-thumb{width:26px; height:26px; margin-top:-11px}
+  .ui-slider input::-moz-range-thumb{width:26px; height:26px}
+  .ui-def{left:calc(13px + (100% - 26px) * var(--d))}
+  .ui-num{min-height:36px; width:4.8em; font-size:14px}
+  .ui-seg button{min-height:40px; padding:0 14px}
+  .ui-check{width:24px; height:24px}
+  .ui-gh{padding:20px 0 16px}
+  .ui-row.scrub .ui-label{cursor:default}
+}
+@media (prefers-reduced-motion:reduce){ .lab-ui *{transition:none !important} }
