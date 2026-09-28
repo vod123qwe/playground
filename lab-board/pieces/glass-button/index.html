@@ -505,11 +505,13 @@ const SEG_BASE = { comp: 'segmented', segStyle: 'float', segPrint: 'top', corner
   ior: 1.5, disp: .06, frost: .6, key: 1.4, env: 1.2, rim: 1.4, shadow: .6, bg: 'grid', bgColor: '#bdbecc', grid: .2, gridDensity: 1.3,
   segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segTintK: 0, scale: 1.4, h: 3.6, weight: 560,
   ambOn: true, inkAuto: true, sound: 'bubble', volume: .16, glowOn: false };
+// the lens sits in the groove: even padding all round, its top about level with the rim, the tab seen through it
+const SEG_SUNK = Object.assign({}, SEG_BASE, { segPrint: 'under', segDish: .62, segInset: .24, segThick: .7, segGap: .03, segDome: .5, ior: 1.8, disp: .08, frost: .3, key: 1.6 });
 const SEG_LOOKS = {
-  Light: Object.assign({}, SEG_BASE),
-  Dark: Object.assign({}, SEG_BASE, { bg: 'color', bgColor: '#000000', grid: .02, ior: 1.7, key: 2.4, env: 1.7, rim: 2.2 }),
-  Lens: Object.assign({}, SEG_BASE, { segPrint: 'under', segDish: .95, segThick: .42, segGap: 0, segDome: .95, segInset: .1, ior: 1.95, disp: .09, frost: .3, key: 1.6 }),
+  Light: SEG_SUNK,
+  Dark: Object.assign({}, SEG_SUNK, { bg: 'color', bgColor: '#000000', grid: .02, key: 2.4, env: 1.7, rim: 2.2 }),
   Tube: Object.assign({}, SEG_BASE, { segStyle: 'inner', dome: 1, wall: .25, under: 1, profile: 2, edge: .4, lift: .55, ior: 1.52, disp: .1, frost: .2, rim: 1.8, env: 1.4, key: 1.6, segInset: .16 }),
+  Glow: Object.assign({}, SEG_SUNK, { glowOn: true, glow: 'iris', glowBlend: 'auto', glowK: 1.1, glowSize: 1.3, glowSpeed: .8, grid: .12 }),
 };
 const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Clouds: CLOUDS, Dish: DISH };   // full looks; the rest of the presets are shapes
 const PRESETS = {
@@ -569,7 +571,7 @@ const CTRL = [
   { g: 'Shadow & glow' },
   { k: 'shadow', l: 'Shadow strength', min: 0, max: 2, s: .01 },
   { k: 'glowOn', l: 'Glow (a coloured backlight)', t: 'check' },
-  { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'star', 'ocean', 'ember'], show: () => P.glowOn },
+  { k: 'glow', l: 'Glow colours', t: 'seg', o: ['aurora', 'iris', 'star', 'ocean', 'ember'], show: () => P.glowOn },
   { k: 'glowBlend', l: 'Glow blend', t: 'seg', o: ['auto', 'screen', 'soft'], show: () => P.glowOn },
   { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, show: () => P.glowOn },
   { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, show: () => P.glowOn },
@@ -933,6 +935,7 @@ function orbPalette() {
 }
 const GLOWS = {                                        // three colours each, cycling along the button
   aurora: [hex('#ff5ecf'), hex('#7a5cff'), hex('#2fd8ff')],
+  iris:   [hex('#6c5cff'), hex('#3f7bff'), hex('#a06cff')],   // blue into violet
   star:   [hex('#ff7a2e'), hex('#fff1e0'), hex('#2f7bff')],
   ocean:  [hex('#2fd8ff'), hex('#3dffb5'), hex('#3f6bff')],
   ember:  [hex('#ff3b3b'), hex('#ffb13b'), hex('#ff4fa0')],
@@ -2274,7 +2277,8 @@ function frame(t) {
   gl.uniform4f(uni('uShape'), corner, wall * hh, dome * hh, P.under * hh);
   gl.uniform4f(uni('uShape2'), P.profile, Math.max(P.edge * hh, 0.01), P.lift * hh, 0);
   if (seg) {                                            // the green thumb: a pill of its own glass, floating just above the dish floor
-    const inset = P.segInset * hh, ihw = Math.max(hw - inset, 4), thw0 = ihw / 2, thh0 = Math.max(hh - inset, 4);
+    const inset = P.segInset * hh, hin = P.segStyle === 'inner' ? inset + hh * 0.42 : inset;
+    const ihw = Math.max(hw - hin, 4), thw0 = ihw / 2, thh0 = Math.max(hh - inset, 4);
     geo.segThw = thw0 / g;
     const st = Math.min(Math.abs(s.segV) * 0.05, 0.28), lf = s.segLift;
     const thw = thw0 * (1 + st) * (1 + 0.04 * lf), thh = thh0 * (1 - st * 0.3) * (1 + 0.04 * lf);
