@@ -134,7 +134,8 @@
   .panel::-webkit-scrollbar-thumb:hover{background:rgba(20,20,20,.3) padding-box}
   .panel::-webkit-scrollbar-track{background:transparent}
   .grp{margin:0 -18px; padding:0 18px}
-  .grp + .grp{border-top:1px solid rgba(20,20,20,.1)}               /* full-width dividers between the main groups */
+  .grp + .grp{border-top:1px solid rgba(20,20,20,.1)}
+  .grp[hidden], .presets button[hidden]{display:none !important}               /* full-width dividers between the main groups */
   .gh{
     position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; width:calc(100% + 36px); margin:0 -18px;
     height:46px; padding:0 18px; border:0; font:inherit; font-size:13px; font-weight:600; letter-spacing:-.005em; color:var(--ink); cursor:pointer;
@@ -260,6 +261,13 @@
   body.dark .bl .chip{color:#fff; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
   body.dark .bl .chip.reset:hover{background:rgba(255,255,255,.08)}
   body.still .bl{display:none}
+  .comps{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; color:#1b1c20;
+         font-family:"Inter", system-ui, sans-serif; font-size:13.5px; font-weight:600}
+  .comps button{height:36px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:rgba(20,20,20,.5); font:inherit; cursor:pointer}
+  .comps button:hover{color:#1b1c20}
+  .comps button[aria-checked=true]{background:rgba(20,20,20,.07); color:#1b1c20}
+  .comps button:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:1px}
+  @media (max-width:560px){ .comps button{padding:0 10px; font-size:12.5px} }
   .vars{touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; will-change:transform}
   .vars.dragging{cursor:grabbing}
   .vars .vn{display:inline-block}
@@ -351,6 +359,10 @@
   </div>
 </main>
 <div class="dock" id="dock">
+  <div class="comps" id="comps" role="radiogroup" aria-label="Component">
+    <button type="button" role="radio" data-c="dropdown" aria-checked="true">Dropdown</button>
+    <button type="button" role="radio" data-c="segmented" aria-checked="false" tabindex="-1">Segmented</button>
+  </div>
   <div class="vars" role="group" aria-label="Variants">
     <button type="button" id="var-prev" aria-label="Previous variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
     <span class="vn" id="var-name" aria-live="polite"></span>
@@ -422,7 +434,7 @@ const DEF = {
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, inkAuto: true, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
-  comp: 'dropdown', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 1, segTint: '#34c759', segTintK: 0,
+  comp: 'dropdown', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segStyle: 'float', segPrint: 'top', segTint: '#34c759', segTintK: 0,
   sound: 'glass', release: true, volume: .5, haptic: true, jelly: 1, smooth: true, bloom: true, bloomK: .6, dither: true,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -488,6 +500,17 @@ const DISH = {                                        // a deep navy dish, frost
   menuGap: 1.01, liquid: .76, glowOn: true, glow: 'ocean', glowBlend: 'auto', glowK: .68, glowSize: 1.17, glowSpeed: .82,
 };
 const CLOUDS = Object.assign({}, LILAC, { bg: 'clouds', bgScale: 1, grid: 0, ambOn: true, amb: .6 });   // the Lilac glass over the clouds video
+// the segmented control's own looks: light, dark, a magnifying lens sunk in the dish, and a glass tube with an air pocket inside
+const SEG_BASE = { comp: 'segmented', segStyle: 'float', segPrint: 'top', corner: 1, wall: .5, under: .3, profile: 3, edge: .3, lift: .5,
+  ior: 1.5, disp: .06, frost: .6, key: 1.4, env: 1.2, rim: 1.4, shadow: .6, bg: 'grid', bgColor: '#bdbecc', grid: .2, gridDensity: 1.3,
+  segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 0, segTintK: 0, scale: 1.4, h: 3.6, weight: 560,
+  ambOn: true, inkAuto: true, sound: 'bubble', volume: .16, glowOn: false };
+const SEG_LOOKS = {
+  Light: Object.assign({}, SEG_BASE),
+  Dark: Object.assign({}, SEG_BASE, { bg: 'color', bgColor: '#000000', grid: .02, ior: 1.7, key: 2.4, env: 1.7, rim: 2.2 }),
+  Lens: Object.assign({}, SEG_BASE, { segPrint: 'under', segDish: .95, segThick: .42, segGap: 0, segDome: .95, segInset: .1, ior: 1.95, disp: .09, frost: .3, key: 1.6 }),
+  Tube: Object.assign({}, SEG_BASE, { segStyle: 'inner', dome: 1, wall: .25, under: 1, profile: 2, edge: .4, lift: .55, ior: 1.52, disp: .1, frost: .2, rim: 1.8, env: 1.4, key: 1.6, segInset: .16 }),
+};
 const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Clouds: CLOUDS, Dish: DISH };   // full looks; the rest of the presets are shapes
 const PRESETS = {
   'Signature': SIGNATURE,
@@ -501,32 +524,32 @@ const PRESETS = {
 const SHAPE_KEYS = ['corner', 'dome', 'wall', 'under', 'profile', 'edge', 'lift', 'ior', 'disp'];
 const isBead = () => P.icon !== 'emboss';
 const showSym = () => P.icon === 'glyph' || P.icon === 'mercury';
-const SEGON = () => P.comp === 'segmented';
+const SEGON = () => P.comp === 'segmented', DROP = () => !SEGON();
+const SEGF = () => SEGON() && P.segStyle !== 'inner';        // the floating lens (not the tube)
 const CTRL = [
-  { g: 'Component' },
-  { k: 'comp', l: 'Component', t: 'seg', o: ['dropdown', 'segmented'] },
-  { k: 'segA', l: 'Left tab', t: 'text', show: SEGON },
-  { k: 'segB', l: 'Right tab', t: 'text', show: SEGON },
-  { k: 'segDish', l: 'Track depth', min: 0, max: 1.2, s: .01, show: SEGON },
-  { k: 'segThick', l: 'Thumb thickness', min: .2, max: 1, s: .01, show: SEGON },
-  { k: 'segGap', l: 'Thumb float', min: 0, max: .5, s: .01, show: SEGON },
-  { k: 'segInset', l: 'Thumb inset', min: .04, max: .35, s: .01, show: SEGON },
-  { k: 'segDome', l: 'Lens dome', min: 0, max: 1, s: .01, show: SEGON },
-  { k: 'segTint', l: 'Colour', t: 'color', show: SEGON },
-  { k: 'segFill', l: 'Colour fill under the lens', min: 0, max: 1, s: .01, show: SEGON },
-  { k: 'segTintK', l: 'Tint in the glass', min: 0, max: 3, s: .01, show: SEGON },
   { g: 'Presets' },
   { t: 'presets' },
+  { g: 'Segmented', show: SEGON },
+  { k: 'segStyle', l: 'Selection', t: 'seg', o: ['float', 'inner'] },
+  { k: 'segPrint', l: 'Active label', t: 'seg', o: ['top', 'under'], show: SEGF },
+  { k: 'segDish', l: 'Track depth', min: 0, max: 1.2, s: .01, show: SEGF },
+  { k: 'segThick', l: 'Lens thickness', min: .2, max: 1, s: .01, show: SEGF },
+  { k: 'segGap', l: 'Lens float', min: 0, max: .5, s: .01, show: SEGF },
+  { k: 'segDome', l: 'Lens dome', min: 0, max: 1, s: .01, show: SEGF },
+  { k: 'segInset', l: 'Inset', min: .04, max: .35, s: .01 },
+  { k: 'segFill', l: 'Colour fill', min: 0, max: 1, s: .01 },
+  { k: 'segTint', l: 'Colour', t: 'color', show: () => P.segFill > 0 || P.segTintK > 0 },
+  { k: 'segTintK', l: 'Tint in the glass', min: 0, max: 3, s: .01, show: SEGF },
   { g: 'Shape' },
   { k: 'corner', l: 'Corner', min: 0, max: 1, s: .01 },
-  { k: 'dome', l: 'Dome', min: -1, max: 1.3, s: .01 },
+  { k: 'dome', l: 'Dome', min: -1, max: 1.3, s: .01, show: () => !SEGF() },
   { k: 'wall', l: 'Wall', min: 0, max: 1, s: .01 },
   { k: 'under', l: 'Underside', min: 0, max: 1, s: .01 },
   { k: 'profile', l: 'Profile', min: 1, max: 6, s: .05 },
   { k: 'edge', l: 'Edge round', min: 0, max: .4, s: .01 },
   { k: 'lift', l: 'Lift', min: 0, max: .6, s: .01 },
-  { k: 'pressGrow', l: 'Press grow', min: 0, max: .25, s: .005 },
-  { k: 'jelly', l: 'Jelly (squash and wobble)', min: 0, max: 2, s: .01 },
+  { k: 'pressGrow', l: 'Press grow', min: 0, max: .25, s: .005, show: DROP },
+  { k: 'jelly', l: 'Jelly (squash and wobble)', min: 0, max: 2, s: .01, show: DROP },
   { g: 'Glass' },
   { k: 'ior', l: 'Refraction (IOR)', min: 1, max: 2.4, s: .01 },
   { k: 'disp', l: 'Dispersion', min: 0, max: .15, s: .002 },
@@ -551,7 +574,7 @@ const CTRL = [
   { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, show: () => P.glowOn },
   { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, show: () => P.glowOn },
   { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, show: () => P.glowOn },
-  { g: 'Icon' },
+  { g: 'Icon', show: DROP },
   { k: 'icon', l: 'Style', t: 'seg', o: ['glyph', 'mercury', 'orb', 'pulse', 'emboss'] },
   { k: 'fitIcon', l: 'Fit the icon inside the glass', t: 'action', show: isBead },
   { k: 'beadSize', l: 'Bead size', min: .4, max: 3, s: .01, show: isBead },
@@ -573,22 +596,24 @@ const CTRL = [
   { k: 'embSize', l: 'Carving size', min: .4, max: 1.8, s: .01, show: () => P.icon === 'emboss' },
   { k: 'embDepth', l: 'Carving depth', min: 0, max: 1, s: .01, show: () => P.icon === 'emboss' },
   { k: 'embFrost', l: 'Frost in the carving', min: 0, max: 1, s: .01, show: () => P.icon === 'emboss' },
-  { g: 'Menu' },
+  { g: 'Menu', show: DROP },
   { k: 'menuGap', l: 'Gap to the button', min: 0, max: 1.5, s: .01, u: 'em' },
   { k: 'liquid', l: 'Liquid (melts together)', min: 0, max: 1, s: .01 },
   { k: 'menuLift', l: 'Float (Z)', min: 0, max: 2, s: .01 },
   { g: 'Label' },
-  { k: 'text', l: 'Text', t: 'text' },
+  { k: 'text', l: 'Text', t: 'text', show: DROP },
+  { k: 'segA', l: 'Left tab', t: 'text', show: SEGON },
+  { k: 'segB', l: 'Right tab', t: 'text', show: SEGON },
   { k: 'inkAuto', l: 'Ink follows the background', t: 'check' },
   { k: 'ink', l: 'Ink', t: 'color', show: () => !P.inkAuto },
   { k: 'inkA', l: 'Ink opacity', min: 0, max: 1, s: .01 },
-  { k: 'chevron', l: 'Chevron', t: 'check' },
+  { k: 'chevron', l: 'Chevron', t: 'check', show: DROP },
   { g: 'Layout' },
   { k: 'scale', l: 'Scale', min: .5, max: 2.2, s: .01 },
   { k: 'h', l: 'Height', min: 1.6, max: 5, s: .01, u: 'em' },
-  { k: 'pl', l: 'Padding left', min: 0, max: 2.5, s: .01, u: 'em' },
-  { k: 'pr', l: 'Padding right', min: 0, max: 3, s: .01, u: 'em' },
-  { k: 'gap', l: 'Gap', min: 0, max: 1.6, s: .01, u: 'em' },
+  { k: 'pl', l: 'Padding left', min: 0, max: 2.5, s: .01, u: 'em', show: DROP },
+  { k: 'pr', l: 'Padding right', min: 0, max: 3, s: .01, u: 'em', show: DROP },
+  { k: 'gap', l: 'Gap', min: 0, max: 1.6, s: .01, u: 'em', show: DROP },
   { k: 'weight', l: 'Weight', min: 400, max: 600, s: 10 },
   { g: 'Background' },
   { k: 'bg', l: 'Background', t: 'bgs' },
@@ -1084,12 +1109,13 @@ const inputs = {};
 const fmt = (c, v) => c.s >= 1 ? String(Math.round(v)) : (+v).toFixed(c.s < .01 ? 3 : 2);   // the number you can edit
 const pre = (c, v) => c.k === 'dome' ? (v < 0 ? 'concave' : v > 0 ? 'convex' : 'flat') : '';
 async function applyPreset(name) {
-  if (LOOKS[name]) {                                      // the whole look, keeping only the content
-    const keep = { text: P.text, agent: P.agent, comp: P.comp, segA: P.segA, segB: P.segB };   // the look, not the component or its words
-    P = Object.assign({}, DEF, LOOKS[name], keep); useBg(P.bg);
+  const look = SEGON() && SEG_LOOKS[name] ? SEG_LOOKS[name] : LOOKS[name];
+  if (look) {                                             // the whole look, keeping only the content
+    const keep = { text: P.text, agent: P.agent, segA: P.segA, segB: P.segB };
+    P = Object.assign({}, DEF, look, keep); useBg(P.bg);
   } else Object.assign(P, PRESETS[name]);
   apply(); syncInputs(); save(); showVariant();
-  if (!LOOKS[name] && P.icon !== 'emboss') {               // a new shape: keep the icon inside it
+  if (!look && P.icon !== 'emboss') {                      // a new shape: keep the icon inside it
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); layout(); await ACTIONS.fitIcon(null);
   }
 }
@@ -1140,14 +1166,36 @@ function segSet(i, snd) {
     if (e.key === ' ' || e.key === 'Enter') { const b = e.target.closest('button'); if (b) { e.preventDefault(); segSet(+b.dataset.i, true); } }
   });
 }
-const LOOK_NAMES = Object.keys(LOOKS);
-const lookNow = () => LOOK_NAMES.findIndex(n => Object.keys(LOOKS[n]).every(k => typeof LOOKS[n][k] === 'number' ? Math.abs(P[k] - LOOKS[n][k]) < 1e-6 : P[k] === LOOKS[n][k]));
-function showVariant() { const i = lookNow(); document.getElementById('var-name').textContent = i >= 0 ? LOOK_NAMES[i] : 'Custom'; }
+const curLooks = () => SEGON() ? SEG_LOOKS : LOOKS;
+// each component keeps its own settings; switching stores this one's and brings back the other's (or its first look)
+const compBtns = [...document.querySelectorAll('#comps button')];
+function showComp() { compBtns.forEach(b => { const on = b.dataset.c === P.comp; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }); }
+const CKEY = c => `${KEY}.c.${c}`;
+const diffOf = o => { const d = {}; for (const k in DEF) if (o[k] !== DEF[k]) d[k] = o[k]; if (d.bg === 'upload') delete d.bg; return d; };
+function switchComp(c) {
+  if (c === P.comp) return;
+  if (!STILL) try { localStorage.setItem(CKEY(P.comp), JSON.stringify(diffOf(P))); } catch (e) {}
+  let next = null;
+  if (!STILL) try { const raw = localStorage.getItem(CKEY(c)); if (raw) next = Object.assign({}, DEF, JSON.parse(raw)); } catch (e) {}
+  if (!next) next = Object.assign({}, DEF, c === 'segmented' ? SEG_LOOKS.Light : SIGNATURE);
+  if (next.bg === 'upload') next.bg = 'grid';
+  next.comp = c; P = next;
+  if (s.open) setMenu(false);
+  useBg(P.bg); apply(); syncInputs(); save(); showVariant(); labelSig = ''; click(false, .6);
+}
+compBtns.forEach(b => b.addEventListener('click', () => switchComp(b.dataset.c)));
+document.getElementById('comps').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault(); e.stopPropagation(); const c = e.key === 'ArrowLeft' ? 'dropdown' : 'segmented'; switchComp(c); compBtns.find(b => b.dataset.c === c).focus();
+});
+const lookNow = () => { const L = curLooks(); return Object.keys(L).findIndex(n => Object.keys(L[n]).every(k => typeof L[n][k] === 'number' ? Math.abs(P[k] - L[n][k]) < 1e-6 : P[k] === L[n][k])); };
+function showVariant() { const i = lookNow(); document.getElementById('var-name').textContent = i >= 0 ? Object.keys(curLooks())[i] : 'Custom'; showComp(); }
 let lookIdx = -1;
 function stepVariant(d) {
-  const i = lookNow(); lookIdx = i >= 0 ? i : (lookIdx >= 0 ? lookIdx : (d > 0 ? -1 : 0));
-  lookIdx = (lookIdx + d + LOOK_NAMES.length) % LOOK_NAMES.length;
-  applyPreset(LOOK_NAMES[lookIdx]); click(false, .6);
+  const names = Object.keys(curLooks());
+  const i = lookNow(); lookIdx = i >= 0 ? i : (lookIdx >= 0 ? lookIdx % names.length : (d > 0 ? -1 : 0));
+  lookIdx = (lookIdx + d + names.length) % names.length;
+  applyPreset(names[lookIdx]); click(false, .6);
   if (!reduce && varName.animate) varName.animate([{ transform: `translateX(${d * 14}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
 document.getElementById('var-prev').addEventListener('click', () => { if (!varDrag.moved) stepVariant(-1); });
@@ -1176,15 +1224,16 @@ function endVarDrag(e) {
 varsEl.addEventListener('pointerup', endVarDrag);
 varsEl.addEventListener('pointercancel', endVarDrag);
 window.addEventListener('keydown', e => {
-  if (e.target.closest && e.target.closest('input, select, textarea, .menu, .segc')) return;
+  if (e.target.closest && e.target.closest('input, select, textarea, .menu, .segc, .comps')) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); stepVariant(-1); }
   if (e.key === 'ArrowRight') { e.preventDefault(); stepVariant(1); }
 });
 
+const GROUP_SHOWS = [];
 function buildPanel() {
   const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
   // collapsible groups; which ones are open is remembered
-  let open = { Component: true, Presets: true, Shape: true };
+  let open = { Presets: true, Segmented: true, Shape: true };
   try { open = Object.assign(open, JSON.parse(localStorage.getItem(KEY + '.panel') || '{}')); } catch (e) {}
   let body = null;
   const group = name => {
@@ -1206,11 +1255,11 @@ function buildPanel() {
   cl.addEventListener('click', () => { setTuning(false); tuneBtn.focus(); });
   top.append(tt, cl); panel.appendChild(top);
   for (const c of CTRL) {
-    if (c.g) { group(c.g); continue; }
-    if (c.t === 'presets') {
+    if (c.g) { group(c.g); if (c.show) GROUP_SHOWS.push([panel.lastElementChild, c.show]); continue; }
+    if (c.t === 'presets') {                              // both components' looks; only the current one's show
       const pr = el('div', 'presets');
-      for (const name in PRESETS) {
-        const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name;
+      for (const [comp, set] of [['dropdown', PRESETS], ['segmented', SEG_LOOKS]]) for (const name in set) {
+        const b = el('button', null, name); b.type = 'button'; b.dataset.preset = name; b.dataset.comp = comp;
         b.addEventListener('click', () => applyPreset(name));
         pr.appendChild(b);
       }
@@ -1334,8 +1383,10 @@ function syncInputs() {
     else { inp.value = v; paintRange(c, inp, inp._v); }
   }
   for (const c of CTRL) if (c.show && inputs[c.k]) inputs[c.k]._row.hidden = !c.show();   // options show only when they do something
+  for (const [sec, f] of GROUP_SHOWS) sec.hidden = !f();
   for (const b of panel.querySelectorAll('[data-preset]')) {
-    const pr = PRESETS[b.dataset.preset]; b.setAttribute('aria-pressed', String(Object.keys(pr).every(k => typeof pr[k] === 'number' ? Math.abs(P[k] - pr[k]) < 1e-6 : P[k] === pr[k])));
+    b.hidden = b.dataset.comp !== (SEGON() ? 'segmented' : 'dropdown');
+    const pr = (b.dataset.comp === 'segmented' ? SEG_LOOKS : PRESETS)[b.dataset.preset]; b.setAttribute('aria-pressed', String(Object.keys(pr).every(k => typeof pr[k] === 'number' ? Math.abs(P[k] - pr[k]) < 1e-6 : P[k] === pr[k])));
   }
 }
 function set(k, v) {
@@ -1350,6 +1401,7 @@ function set(k, v) {
   apply(); save(); if (['bg', 'bgColor', 'grad', 'glowOn', 'glow', 'icon', 'sound', 'orbPal', 'comp'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
+  POST.dirty = true;                                    // a new look: the smoothing starts over, nothing of the old one lingers
   const st = anchor.style;
   st.setProperty('--scale', P.scale);
   const bs = btn.style;
@@ -1494,6 +1546,8 @@ uniform vec4 uSeg, uSeg2;      // the segmented thumb: centre, half size · cent
 uniform float uSegCorner; uniform vec3 uSegAbs;   // its corner radius, its absorption (green glass)
 uniform float uSegDome;        // how much the lens bulges on top
 uniform vec4 uSegFill, uSegFill2;   // the colour under the lens: centre, half size · colour, strength
+uniform vec4 uSegIn, uSegIn2;  // the tube's air pocket: centre x, y, half length, radius · height, on
+uniform float uSegPrint;       // 1: the active label is seen through the lens (magnified), not printed on it
 uniform float uShadowMode;     // 0 a shadow with a caustic, 1 a coloured glow like a TV backlight
 uniform vec3 uGlowA, uGlowB, uGlowC;
 uniform vec4 uGlowK;           // strength, size (px), phase, -
@@ -1529,6 +1583,24 @@ float solid(float e, float z){
   float bot = ZM - uShape.w * pr.x, sb = min(abs(uShape.w * sl), 16.0);
   float dT = (z - top) / sqrt(1.0 + st * st), dB = (bot - z) / sqrt(1.0 + sb * sb);
   return smax(e, smax(dT, dB, uShape2.y), uShape2.y);
+}
+// a ray against a capsule (segment pa-pb, radius r): the first hit, or -1
+float capInt(vec3 ro, vec3 rd, vec3 pa, vec3 pb, float r){
+  vec3 ba = pb - pa, oa = ro - pa;
+  float baba = dot(ba, ba), bard = dot(ba, rd), baoa = dot(ba, oa), rdoa = dot(rd, oa), oaoa = dot(oa, oa);
+  float a = baba - bard * bard, b = baba * rdoa - baoa * bard, c = baba * oaoa - baoa * baoa - r * r * baba, h = b * b - a * c;
+  if (h >= 0.0 && abs(a) > 1e-6) {
+    float t = (-b - sqrt(h)) / a, y = baoa + t * bard;
+    if (y > 0.0 && y < baba) return t;
+    vec3 oc = y <= 0.0 ? oa : ro - pb; b = dot(rd, oc); c = dot(oc, oc) - r * r; h = b * b - c;
+    if (h > 0.0) return -b - sqrt(h);
+  }
+  return -1.0;
+}
+vec3 inkOn(vec3 c){                       // the print's colour over a backdrop c
+  if (uInkAuto < 0.5) return uInk.rgb;
+  float lb = dot(c, vec3(0.2126, 0.7152, 0.0722)); vec3 hue = c / max(max(c.r, max(c.g, c.b)), 1e-3);
+  return mix(mix(hue, vec3(1.0), 0.86), hue * 0.16 + vec3(0.03), smoothstep(0.36, 0.52, lb));
 }
 // the segmented thumb: a rounded slab (a stadium outline, a rounded rim), a separate piece of glass
 float thumbD(vec3 p){                    // a lens: flat underneath, the top bulges towards the middle
@@ -1793,7 +1865,7 @@ vec3 glassShade(vec3 P, vec3 rd){
   vec3 q = P - n * 0.25, trans = vec3(0.0), tg = t, tr = t, tb = t;
   float path = 0.0, state = 0.0, exitNz = 0.0;   // 0 still inside, 1 out, 2 the ray ends on the bead · the exit face's normal
   vec3 bp = vec3(0.0), bd = vec3(0.0);
-  float bubRim = 0.0, bubEdge = 0.0, bubSpec = 0.0; vec3 bubRef = vec3(0.0, 0.0, 1.0);
+  float bubRim = 0.0, bubEdge = 0.0, bubSpec = 0.0, capHit = 0.0; vec3 bubRef = vec3(0.0, 0.0, 1.0);
   for (int b = 0; b < 2 * uOne; b++) {
     float tf = exitT(q, t);
     // air bubbles in the menu's glass: the ray passes through, but their rim turns into a silvery mirror
@@ -1815,6 +1887,17 @@ vec3 glassShade(vec3 P, vec3 rd){
             bubRef = reflect(t, nb); bubSpec = pow(max(dot(bubRef, L), 0.0), 60.0) * 1.3 + smoothstep(0.75, 1.0, cv) * 0.08;
           }
         }
+      }
+    }
+    if (uSegIn2.y > 0.5 && bubRim == 0.0 && bubEdge == 0.0) {   // the tube's air pocket: a silvery outline, a bright core
+      vec3 pa = vec3(uSegIn.x - uSegIn.z, uSegIn.y, uSegIn2.x), pb = vec3(uSegIn.x + uSegIn.z, uSegIn.y, uSegIn2.x);
+      float tc = capInt(q, t, pa, pb, uSegIn.w);
+      if (tc > 0.0 && tc < tf) {
+        vec3 hp = q + t * tc, ba = pb - pa; float hq = clamp(dot(hp - pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
+        vec3 nb = normalize(hp - (pa + ba * hq)); float cv = abs(dot(t, nb));
+        bubRim = pow(1.0 - cv, 2.2) * 0.6; bubEdge = smoothstep(0.3, 0.02, cv) * 0.5 + 0.001;
+        bubRef = reflect(t, nb); bubSpec = pow(max(dot(bubRef, L), 0.0), 60.0) * 1.4 + smoothstep(0.75, 1.0, cv) * 0.06;
+        capHit = 1.0;
       }
     }
     vec2 bi = sphInt(q, t, BC, BR);
@@ -1840,6 +1923,7 @@ vec3 glassShade(vec3 P, vec3 rd){
     }
   }
   else trans = sky(t) * 0.85;
+  if (capHit > 0.5 && uSegFill2.w > 0.0) trans = mix(trans, uSegFill2.rgb, 0.55 * uSegFill2.w);   // a coloured pocket, when asked
   if (bubRim + bubEdge > 0.0) trans = mix(trans * 1.05, sky(bubRef) * 1.05, bubRim) * (1.0 - bubEdge) + vec3(bubSpec);
   // glass in glass: a colour fill under the clear lens, seen where a ray leaves the lens through its flat bottom,
   // and on the track's floor where the fill trails outside the lens
@@ -1848,6 +1932,10 @@ vec3 glassShade(vec3 P, vec3 rd){
     float m = 1.0 - smoothstep(-1.2, 1.2, box2(fq, uSegFill, min(uSegFill.w, uSegFill.z)));
     float gy = clamp((fq.y - uSegFill.y + uSegFill.w) / max(2.0 * uSegFill.w, 1.0), 0.0, 1.0);
     trans = mix(trans, uSegFill2.rgb * (1.1 - 0.22 * gy), m * uSegFill2.w);   // lit from above, a touch deeper below
+  }
+  if (th && uSegPrint > 0.5 && state > 0.5 && state < 1.5 && exitNz < -0.2) {
+    vec2 u2 = (q.xy - uLabelRect.xy) / uLabelRect.zw;
+    if (u2.x > 0.0 && u2.y > 0.0 && u2.x < 1.0 && u2.y < 1.0) trans = mix(trans, inkOn(trans), textureLod(uLabel, u2, uLabelLod).a * uInk.a);
   }
   trans *= exp(-path * (th ? uSegAbs : uAbs));
   vec3 col = trans * (1.0 - F) + refl * F;
@@ -1858,7 +1946,7 @@ vec3 glassShade(vec3 P, vec3 rd){
   col = mix(col, rainbow * 1.05, clamp(rim * facing * (0.2 + 0.25 * uOptics.w) * uLightK.z, 0.0, 1.0));
   // the print: ink on the top surface, above everything the glass does
   float ink = 0.0; vec3 inkCol = uInk.rgb;
-  if (n.z > 0.3) {                                        // any upward face: the dome, the slab top or the dish
+  if (n.z > 0.3 && !(th && uSegPrint > 0.5)) {           // any upward face: the dome, the slab top or the dish (not a lens that shows it from below)
     // the menu item under the pointer glows softly in the glass, brighter right under the pointer
     if (uHiK.x > 0.005) {
       vec2 hc = (uHi.xy + uHi.zw) * 0.5, hs = (uHi.zw - uHi.xy) * 0.5;
@@ -1873,12 +1961,8 @@ vec3 glassShade(vec3 P, vec3 rd){
       ink = dc.a * uInk.a * (inMenu ? uMenuK.z : 1.0); inkCol = dc.rgb;
     }
   }
-  if (uInkAuto > 0.5) {                                  // tone on tone: a deep shade of the backdrop on light, a pale one on dark
-    float lb = dot(col, vec3(0.2126, 0.7152, 0.0722));
-    vec3 hue = col / max(max(col.r, max(col.g, col.b)), 1e-3);
-    vec3 dark = hue * 0.16 + vec3(0.03), light = mix(hue, vec3(1.0), 0.86);
-    inkCol = mix(light, dark, smoothstep(0.36, 0.52, lb));
-  } else if (th) inkCol = mix(inkCol, vec3(1.0), 0.92);   // the tab under the thumb reads white on green
+  if (uInkAuto > 0.5) inkCol = inkOn(col);              // tone on tone: a deep shade of the backdrop on light, a pale one on dark
+  else if (th) inkCol = mix(inkCol, vec3(1.0), 0.92);   // the tab under the thumb reads white on green
   col = mix(col, inkCol * (0.75 + 0.35 * max(dot(n, L), 0.0)), ink);
   float spec = max(dot(rf, L), 0.0);
   float key = pow(spec, 260.0) * (0.35 + uOptics.w * 0.25) + pow(spec, 1400.0) * 1.1;
@@ -2166,8 +2250,8 @@ function frame(t) {
   // pressing swells the whole button around its centre (glass, print, bead); the release wobbles a little
   const g = 1 + P.pressGrow * s.press, hh = geo.hh * g * (1 - s.wob * 0.8), hw = geo.hw * g * (1 + s.wob), gx = v => geo.cx + (v - geo.cx) * g, gy = v => geo.cy + (v - geo.cy) * g;   // jelly: wider and flatter, then it rings
   const seg = SEGON();
-  let dome = seg ? -P.segDish : P.dome * (1 + s.jiggle * 0.05 * Math.sin(T * 22));   // the track is always a dish
-  const wall = Math.max(P.wall, -dome - P.under + 0.08);          // a dish needs a rim: the wall rises with the concavity
+  let dome = seg && P.segStyle !== 'inner' ? -P.segDish : P.dome * (1 + s.jiggle * 0.05 * Math.sin(T * 22));   // the lens's track is a dish
+  const wall = Math.max(P.wall, -dome - P.under + (seg ? Math.max(0.08, P.edge * 1.15) : 0.08));   // a dish needs a rim; the track's floor stays thicker than its edge rounding, or the rounding eats it
   const corner = Math.min(P.corner * hh, hw, hh);
   // tint → absorption per px
   const tc = hex(P.tint), ab = tc.map(c => (1 - c) * P.tintK * 0.003);
@@ -2197,18 +2281,25 @@ function frame(t) {
     const tx = geo.cx - ihw + thw0 + s.segX * 2 * thw0;
     const floorZ = (P.lift + P.under + wall + dome) * hh, tz = Math.max(2, P.segThick * thh0 * 0.5);
     const zc = floorZ + P.segGap * hh + tz + lf * 0.22 * hh;
-    const tcol = hex(P.segTint);
+    const tcol = hex(P.segTint), inner = P.segStyle === 'inner';
+    gl.uniform1f(uni('uSegPrint'), P.segPrint === 'under' && !inner ? 1 : 0);
+    if (inner) {                                         // the tube: an air pocket, a capsule inside the glass, marks the tab
+      const top = (P.lift + P.under + wall + dome) * hh, bot = P.lift * hh, r = Math.max(3, Math.min(thh0, (top - bot) / 2) * 0.58);
+      gl.uniform4f(uni('uSegIn'), tx, geo.cy, Math.max(0, thw - r), r);
+      gl.uniform4f(uni('uSegIn2'), (top + bot) / 2, 1, 0, 0);
+      gl.uniform4f(uni('uSegFill2'), tcol[0], tcol[1], tcol[2], P.segFill);
+    } else gl.uniform4f(uni('uSegIn2'), 0, 0, 0, 0);
     gl.uniform4f(uni('uSeg'), tx, geo.cy, thw, thh);
-    gl.uniform4f(uni('uSeg2'), zc, tz, Math.min(tz * 0.95, thh * 0.95), 1);
+    gl.uniform4f(uni('uSeg2'), zc, tz, Math.min(tz * 0.95, thh * 0.95), inner ? 0 : 1);
     gl.uniform1f(uni('uSegDome'), P.segDome);
     // the colour under the lens: a smaller pill, so a clear band of glass rings it; it stretches as it trails
     const fs = Math.min(Math.abs(s.segFV) * 0.07, 0.35), band = 0.32;
     const fhw = thw0 * (1 - band * thh0 / thw0) * (1 + fs), fhh = thh0 * (1 - band) * (1 - fs * 0.25);
     gl.uniform4f(uni('uSegFill'), geo.cx - ihw + thw0 + s.segF * 2 * thw0, geo.cy, fhw, fhh);
-    gl.uniform4f(uni('uSegFill2'), tcol[0], tcol[1], tcol[2], P.segFill);
+    if (!inner) gl.uniform4f(uni('uSegFill2'), tcol[0], tcol[1], tcol[2], P.segFill);
     gl.uniform1f(uni('uSegCorner'), Math.min(thh, Math.max(corner - inset, 2)));
     gl.uniform3f(uni('uSegAbs'), (1 - tcol[0]) * P.segTintK * 0.013, (1 - tcol[1]) * P.segTintK * 0.013, (1 - tcol[2]) * P.segTintK * 0.013);
-  } else { gl.uniform4f(uni('uSeg2'), 0, 0, 0, 0); gl.uniform4f(uni('uSegFill2'), 0, 0, 0, 0); }
+  } else { gl.uniform4f(uni('uSeg2'), 0, 0, 0, 0); gl.uniform4f(uni('uSegFill2'), 0, 0, 0, 0); gl.uniform4f(uni('uSegIn2'), 0, 0, 0, 0); gl.uniform1f(uni('uSegPrint'), 0); }
   // the icon: star, the chosen agent's glyph (melting from the last one), a flowing orb, or carved into the glass
   const AG = { write: [2, '#ff8a3b'], summarise: [1, '#3d86ff'], translate: [3, '#35c27a'] }, ag = AG[P.agent];
   const mode = { glyph: 1, orb: 2, emboss: 3, mercury: 4, pulse: 5 }[P.icon] || 1;
