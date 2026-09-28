@@ -29,7 +29,17 @@
   .hand .h-grab{opacity:0; transform:scale(.9)}
   body.space-drag .hand .h-open{opacity:0; transform:scale(1.06)} body.space-drag .hand .h-grab{opacity:1; transform:none}
   #gl{position:fixed; inset:0; width:100%; height:100%; display:block}
-  .stage{position:fixed; inset:0; display:grid; place-items:center; transition:right .45s var(--ease), bottom .45s var(--ease)}
+  .stage{position:fixed; inset:0; display:grid; place-items:center; transition:right .45s var(--ease), bottom .45s var(--ease), opacity .6s ease}
+  /* while the glass compiles: a quiet loader instead of the flat fallback pill */
+  body.booting .stage, body.booting .segc{opacity:0 !important; pointer-events:none}
+  .boot{position:fixed; inset:0; z-index:2; display:grid; place-items:center; pointer-events:none; opacity:0; transition:opacity .5s ease}
+  body.booting .boot{opacity:1}
+  .boot > div{display:grid; justify-items:center; gap:14px}
+  .boot .ring{width:30px; height:30px; border-radius:50%; border:2px solid rgba(20,20,20,.1); border-top-color:rgba(20,20,20,.5); animation:boot-spin .9s linear infinite}
+  .boot p{margin:0; font:600 12.5px/1 "Inter", system-ui, sans-serif; color:rgba(20,20,20,.5)}
+  body.dark .boot .ring{border-color:rgba(255,255,255,.12); border-top-color:rgba(255,255,255,.6)} body.dark .boot p{color:rgba(255,255,255,.6)}
+  @keyframes boot-spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .boot .ring{animation-duration:2.4s} }
   .anchor{position:relative; font-size:calc(clamp(20px, 3.4vw, 36px) * var(--scale, 1))}
 
   /* The DOM button is the real, accessible control and the layout engine: its size hugs the label (auto layout),
@@ -373,8 +383,9 @@
   .panel .ui-slider input::-webkit-slider-thumb{border-radius:50% !important} .panel .ui-slider input::-moz-range-thumb{border-radius:50% !important}   /* the panel is sharp, the slider stays round; one browser prefix per rule, or it is dropped */</style>
 <script src="../../shared/lab-ui.js"></script>
 </head>
-<body>
+<body class="booting">
 <canvas id="gl" aria-hidden="true"></canvas>
+<div class="boot" role="status" aria-live="polite"><div><div class="ring" aria-hidden="true"></div><p>Polishing the glass…</p></div></div>
 <div class="meta top"><a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a></div>
 <main class="stage" id="stage">
   <div class="anchor" id="anchor">
@@ -2126,7 +2137,9 @@ void main(){
 let prog = null, tex = null, ready = false;
 const U = {};
 const uni = n => (n in U ? U[n] : (U[n] = gl.getUniformLocation(prog, n)));
-document.body.classList.add('no-gl');                // the CSS pill shows until the glass is compiled
+document.body.classList.add('no-gl');                // the CSS pill is only the fallback: while the glass compiles, a loader stands in
+function endBoot() { document.body.classList.remove('booting'); const b = document.querySelector('.boot'); if (b) b.setAttribute('aria-busy', 'false'); }
+if (!gl) endBoot();
 if (gl) {
   try {
     // compile in the background where the browser can (the shader is big), so the page never freezes
@@ -2135,13 +2148,14 @@ if (gl) {
     const vs = mk(gl.VERTEX_SHADER, VS), fs = mk(gl.FRAGMENT_SHADER, FS);
     prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
     const finish = () => {
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('glass off:', gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(prog)); prog = null; document.body.classList.add('no-gl'); return; }
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.warn('glass off:', gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(prog)); prog = null; document.body.classList.add('no-gl'); endBoot(); return; }
       gl.useProgram(prog); initGL(); initPost(); gl.useProgram(prog); ready = true; syncInputs(); document.body.classList.remove('no-gl'); document.body.classList.add('gl'); resize();
+      requestAnimationFrame(() => requestAnimationFrame(endBoot));   // the loader goes once the first glass frame is on screen
     };
     const poll = () => { if (gl.getProgramParameter(prog, par.COMPLETION_STATUS_KHR)) finish(); else setTimeout(poll, 30); };
     if (par && !STILL) poll(); else setTimeout(finish, 0);   // the thumbnail shot runs on virtual time: compile in one go
     cv.addEventListener('webglcontextlost', e => { e.preventDefault(); ready = false; document.body.classList.add('no-gl'); document.body.classList.remove('gl'); });
-  } catch (err) { console.warn('glass off:', err); prog = null; }
+  } catch (err) { console.warn('glass off:', err); prog = null; endBoot(); }
 }
 function initGL() {
   {
