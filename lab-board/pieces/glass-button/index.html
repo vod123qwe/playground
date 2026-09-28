@@ -509,12 +509,12 @@ const SIG_GLASS = {}; for (const k of ['corner', 'wall', 'under', 'profile', 'ed
 const SEG_SUNK = Object.assign({}, SEG_BASE, { corner: 1 }, SIG_GLASS,   // Signature's glass; its dish (-0.97) a little deeper
   { segPrint: 'top', segDish: 1.1, segInset: .24, segThick: 1, segGap: .03, segDome: .45, frost: .3, key: 1.6 });
 // Jarek's setup (tuned on the dark one); Light and Glow are the same glass on a light page
-const SEG_J = { comp: 'segmented', pressGrow: 0, wall: .5, under: .3, profile: 3, edge: .3, lift: .31, ior: 1.8, disp: .076, frost: 6.5,
-  follow: false, lightAng: 311, key: 1.66, env: .09, rim: 1.5, shadow: .38, inkA: 1, scale: 1.4, h: 3.84, gridDensity: 1.3,
-  segSpeed: .92, segBounce: .04, segStretch: .29, segLiftK: 1.76, segDish: .62, segThick: .34, segGap: .08, segInset: .25, segDome: .38,
+const SEG_J = { comp: 'segmented', pressGrow: .01, corner: .79, wall: .46, profile: 2.45, edge: .1, lift: .37, ior: 1.98, disp: .036, frost: .7, tintK: 0,
+  lightAng: 311, key: 2.74, env: 1.59, rim: .23, shadow: .31, inkA: 1, scale: 1.4, h: 3.37, weight: 470, gridDensity: 2.89, grid: .25, dof: .47,
+  segSpeed: .98, segBounce: .04, segStretch: .31, segLiftK: 1.68, segDish: .17, segThick: .29, segGap: .16, segInset: .24, segDome: 0,
   sound: 'pop', volume: .21, jelly: 0, bloomK: .16 };
 const SEG_LOOKS = {
-  Light: Object.assign({}, SEG_J, { bg: 'grid', bgColor: '#bdbecc', grid: .2 }),
+  Light: Object.assign({}, SEG_J, { bg: 'grid' }),
   Dark: Object.assign({}, SEG_J, { ink: '#f2f3f5', bg: 'color', bgColor: '#121212', grid: .05 }),
   Tube: Object.assign({}, SEG_BASE, { segStyle: 'inner', dome: 1, wall: .25, under: 1, profile: 2, edge: .4, lift: .55, ior: 1.52, disp: .1, frost: .2, rim: 1.8, env: 1.4, key: 1.6, segInset: .16 }),
   Glow: Object.assign({}, SEG_J, { bg: 'grid', bgColor: '#bdbecc', grid: .12, glowOn: true, glow: 'iris', glowBlend: 'auto', glowK: 1.1, glowSize: 1.3, glowSpeed: .8 }),
