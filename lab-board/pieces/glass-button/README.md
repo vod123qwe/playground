@@ -99,3 +99,5 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Segmented v3:** Light, Dark i Glow to jeden zestaw Jarka (dostrojony na ciemnym: mocno oszronione szkło 5,4, IOR 1,8, światło stałe pod 311°, płytsza misa 0,62, cieńsza soczewka 0,42 z kopułą 0,22, zakładka widziana przez soczewkę); różnią się tylko tłem (jasna siatka / #121212 / jasna siatka z poświatą Iris). **Grupa Animation** (oba komponenty): Press grow i Jelly działają teraz też na segmented (naciśnięcie powiększa tor i wprawia go w drgania), a dla segmented dochodzą Glide speed (szybkość przejazdu), Bounce (przestrzelenie sprężyny), Stretch while it glides (rozciąganie w ruchu) i Lift when held (uniesienie przytrzymanej soczewki).
 
 **Wariant Clouds usunięty** z dropdownu (warianty: Signature, Midnight, Frost, Ember, Lilac, Dish). Tło wideo Clouds zostaje do wyboru w grupie Background.
+
+**Dish v4:** płytka o zaokrąglonych rogach (corner 0,74) z wklęsłym wierzchem nad gradientem Dusk, oszronione szkło o słabym załamaniu (IOR 1,28), płynący orb, poświata Aurora z mieszaniem auto, galaretka 0,45, menu blisko przycisku i mocno zlane (liquid 0,79).
