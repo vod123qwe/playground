@@ -37,10 +37,13 @@
   .modes i{position:absolute; top:5px; left:5px; height:36px; border-radius:999px; background:var(--ink); transition:transform .45s var(--ease), width .45s var(--ease)}
 
   /* the hint, bottom left */
-  .hint{position:fixed; left:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:4; display:flex; align-items:center; gap:10px; height:46px; padding:0 16px;
-        border-radius:999px; box-shadow:inset 0 0 0 1.5px rgba(20,20,20,.18); color:rgba(20,20,20,.7); font-size:12.5px; font-weight:600; white-space:nowrap}
-  .hint kbd{display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 5px; border-radius:6px; background:rgba(20,20,20,.07); font:600 11px/1 "Inter", sans-serif}
-  @media (max-width:760px){ .hint{bottom:calc(76px + env(safe-area-inset-bottom)); height:38px; font-size:12px} }
+  /* the hint sits centred above the view switch, so the two never meet (it follows the dock when the panel opens) */
+  .hint{position:fixed; left:50%; bottom:calc(78px + env(safe-area-inset-bottom)); z-index:4; transform:translateX(-50%); display:flex; align-items:center; gap:10px; height:34px; padding:0 14px;
+        max-width:calc(100vw - 32px); border-radius:999px; background:rgba(232,229,223,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+        color:rgba(20,20,20,.62); font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:left .45s var(--ease)}
+  @media (min-width:761px){ body.tuning .hint{left:calc(50% - 192px); max-width:calc(100vw - 416px)} }
+  .hint kbd{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:6px; background:rgba(20,20,20,.07); font:600 11px/1 "Inter", sans-serif}
+  @media (max-width:760px){ .hint{height:32px; font-size:11.5px} }
   @media (pointer:coarse){ .hint .keys{display:none} } @media (pointer:fine){ .hint .touch{display:none} }
 
   /* room names over the model (overview) and the room you are in (walk) */
@@ -80,12 +83,22 @@
 
   .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; color:var(--muted); font-weight:600; transition:opacity .5s ease}
   body.ready .loading{opacity:0}
+  /* the hand (the same as in the Glass Button): over something that opens, and while Space-panning */
+  body.hand-on #gl{cursor:none !important}
+  .hand{position:fixed; left:0; top:0; z-index:20; width:30px; height:30px; margin:-15px 0 0 -15px; pointer-events:none; opacity:0; will-change:transform, opacity; transition:opacity .22s ease}
+  body.hand-on .hand{opacity:1}
+  .hand svg{width:100%; height:100%; overflow:visible}
+  .hand .halo{stroke:#fff; stroke-width:4.2} .hand .ink{stroke:#1b1c20; stroke-width:1.6}
+  .hand .h-open, .hand .h-grab{transition:opacity .18s ease, transform .24s cubic-bezier(.22,.61,.36,1); transform-origin:50% 60%}
+  .hand .h-grab{opacity:0; transform:scale(.9)}
+  body.hand-grab .hand .h-open{opacity:0; transform:scale(1.06)} body.hand-grab .hand .h-grab{opacity:1; transform:none}
   @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
 </style>
 <body>
 <canvas id="gl" tabindex="0" aria-label="The apartment in 3D"></canvas>
 <div class="loading" id="loading">Laying the floors…</div>
 <div class="overlay" id="overlay"></div>
+<div class="hand" id="hand" aria-hidden="true"><svg viewBox="-2 -2 28 28" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="h-open"><g class="halo"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g><g class="ink"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></g><g class="h-grab"><g class="halo"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g><g class="ink"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g></g></svg></div>
 
 <a class="icon back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
 <div class="here" id="here" aria-live="polite"><span id="here-n"></span><small id="here-a"></small></div>
@@ -473,9 +486,63 @@ canvas.addEventListener('pointerup', e => {                         // a click (
   if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
   const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(doors.filter(d => d.kind !== 'fixed').map(d => d.leaf), false)[0];
-  if (hit && hit.distance < (mode === 'walk' ? 4 : 60)) toggleDoor(hit.object.userData.door);
+  const dr = pickLeaf(e.clientX, e.clientY);
+  if (dr) { toggleDoor(dr); grabFlash(); }
 });
+// ---------- the hand: over a leaf that opens, and while Space-panning the overview ----------
+const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0 };
+const sp = { held: false, id: null, x: 0, y: 0 };
+let hoverLeaf = null, hoverDirty = false, grabUntil = 0;
+function pickLeaf(cx, cy) {                                         // the first thing under the pointer, if it is a leaf that opens
+  const r = canvas.getBoundingClientRect(); ndc.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const leaves = doors.filter(d => d.kind !== 'fixed').map(d => d.leaf);
+  const hit = ray.intersectObjects([...wallMeshes, ...leaves], false).find(h => h.object.visible);
+  return hit && hit.object.userData.door && hit.distance < (mode === 'walk' ? 4 : 60) ? hit.object.userData.door : null;
+}
+const grabFlash = () => { grabUntil = performance.now() + 320; };
+function paintHand(now) {
+  const on = sp.held || (!!hoverLeaf && !look && !tween);
+  document.body.classList.toggle('hand-on', on);
+  document.body.classList.toggle('hand-grab', sp.id !== null || now < grabUntil);
+  if (!on && hv.r === 0) return;
+  const vx = hv.x - hv.lx, vy = hv.y - hv.ly; hv.lx = hv.x; hv.ly = hv.y;
+  hv.vx += (vx - hv.vx) * .25; hv.vy += (vy - hv.vy) * .25;
+  const s2 = Math.min(Math.hypot(hv.vx, hv.vy) / 30, 1), sq = sp.id !== null ? s2 * .08 : s2 * .03, ang = Math.atan2(hv.vy, hv.vx);
+  hv.r += (Math.max(-14, Math.min(14, hv.vx * .9)) - hv.r) * .2; if (Math.abs(hv.r) < .01) hv.r = 0;   // it leans with the motion
+  handEl.style.transform = `translate(${hv.x}px, ${hv.y}px) rotate(${hv.r}deg) rotate(${ang}rad) scale(${1 + sq}, ${1 - sq * .6}) rotate(${-ang}rad)`;
+}
+addEventListener('pointermove', e => { hv.x = e.clientX; hv.y = e.clientY; if (e.pointerType === 'mouse' && e.target === canvas) hoverDirty = true; }, { passive: true });
+canvas.addEventListener('pointerleave', () => { hoverLeaf = null; });
+// hold Space and drag (overview): the model slides along the floor under the hand
+{
+  const typing = el => el && el.closest && el.closest('input, textarea, select, [contenteditable]');
+  const stop = () => { sp.held = false; sp.id = null; };
+  addEventListener('keydown', e => {
+    if (e.code !== 'Space' || mode !== 'over' || typing(e.target) || (e.target.closest && e.target.closest('button'))) return;
+    e.preventDefault(); e.stopImmediatePropagation(); sp.held = true;
+  }, true);
+  addEventListener('keyup', e => { if (e.code === 'Space' && sp.held) { e.preventDefault(); stop(); } }, true);
+  addEventListener('blur', stop);
+  addEventListener('pointerdown', e => {
+    if (!sp.held || e.button !== 0 || e.target !== canvas) return;
+    e.preventDefault(); e.stopImmediatePropagation();                 // the orbit does not turn while panning
+    sp.id = e.pointerId; sp.x = e.clientX; sp.y = e.clientY;
+  }, true);
+  const right = new THREE.Vector3(), fwd = new THREE.Vector3(), dirV = new THREE.Vector3();
+  addEventListener('pointermove', e => {
+    if (sp.id !== e.pointerId) return;
+    const dx = e.clientX - sp.x, dy = e.clientY - sp.y; sp.x = e.clientX; sp.y = e.clientY;
+    const dist = camera.position.distanceTo(controls.target), k = 2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / innerHeight;
+    camera.getWorldDirection(dirV); const el = Math.max(.35, Math.asin(Math.min(1, -dirV.y)));
+    right.setFromMatrixColumn(camera.matrixWorld, 0); right.y = 0; right.normalize(); fwd.crossVectors(camera.up, right).normalize();
+    const m = right.multiplyScalar(-dx * k).add(fwd.multiplyScalar(dy * k / Math.sin(el)));
+    const t = controls.target.clone().add(m); t.x = THREE.MathUtils.clamp(t.x, -12, 12); t.z = THREE.MathUtils.clamp(t.z, -12, 12);
+    m.subVectors(t, controls.target); controls.target.add(m); camera.position.add(m);
+  }, true);
+  const end = e => { if (sp.id === e.pointerId) sp.id = null; };
+  addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
+}
 // looking: drag on the canvas (mouse or finger)
 let look = null;
 canvas.addEventListener('pointerdown', e => {
@@ -553,7 +620,7 @@ const hint = document.getElementById('hint');
 function paintHint() {
   hint.innerHTML = mode === 'walk'
     ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door</span><span class="touch">Stick to walk · drag to look</span>`
-    : `<span class="keys">Drag to orbit · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
+    : `<span class="keys">Drag to orbit · <kbd>Space</kbd> + drag to move · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
 }
 const here = document.getElementById('here'), hereN = document.getElementById('here-n'), hereA = document.getElementById('here-a');
 let lastRoom = null;
@@ -619,6 +686,8 @@ function frame(now) {
     else if (dr.kind === 'turn') dr.pivot.rotation.y = -dr.sI * dr.hs * ez * Math.PI / 2;   // wide open, square to the wall
     else if (!dr.kind) dr.pivot.rotation.y = -dr.sg * ez * Math.PI / 2 * .98;
   }
+  if (hoverDirty && !look && sp.id === null) { hoverDirty = false; hoverLeaf = pickLeaf(hv.x, hv.y); }
+  paintHand(now);
   // the ceiling only from inside
   const inside = mode === 'walk' && !tween;
   ceiling.visible = !!(S.ceiling && (inside || (tween && mode === 'walk' && (now - tween.t0) / tween.dur > .8)));
@@ -641,7 +710,7 @@ function frame(now) {
 placeSun(); paintWalls(); applyCut(S.cut); plan.visible = S.plan; renderer.toneMappingExposure = S.exposure;
 resize(); paintHint(); requestAnimationFrame(frame);
 document.body.classList.add('ready');
-window.AW = { A, P, S, wx, wz, step: stepWalk, keys, free, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
