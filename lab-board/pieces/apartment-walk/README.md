@@ -14,7 +14,8 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Ukryte drzwi** w pralni (dawna druga toaleta) i spiżarni (dawna garderoba): skrzydło w kolorze ściany, w jej płaszczyźnie, z cienką szczeliną. Klamka Rumba jak w pozostałych (założenie).
 - **Okna i drzwi balkonowe:** od środka białe ramy i białe klamki, od zewnątrz grafit. Salon (270): trzy skrzydła, lewe stałe, środkowe i prawe otwierane do środka na oścież. Sypialnia 1 (270): trzy skrzydła, prawe otwierane. Pozostałe drzwi balkonowe: jedno skrzydło otwierane (w 180 drugie stałe). Okno w sypialni (O25): poprzeczka na 94 cm, pod nią pozioma szyba uchylna od góry, nad nią dwie stałe.
 - **Balustrady:** szklane panele ok. 115 cm między aluminiowymi słupkami, pochwyt. Balkon salonu przezroczysty, balkony sypialni i pokoju dziecka mleczne. Boki balkonów sypialni stoją na filarach 25 cm od krawędzi okna (na rzucie dotykają okna, a balustrada na nie nachodziła).
-- **Sterowanie:** kliknięcie skrzydła albo E otwiera i zamyka; wejście w zamknięte drzwi (także balkonowe) je otwiera. Panel: Doors → As left / Open / Closed.
+- **Sterowanie:** kliknięcie skrzydła albo E otwiera i zamyka; wejście w zamknięte drzwi (także balkonowe) je otwiera. Nad tym, co się otwiera, kursor zmienia się w dłoń (ta sama co w Glass Button: przechyla się z ruchem, przy kliknięciu się zaciska). Panel: Doors → As left / Open / Closed.
+- **Spacja + przeciąganie** (Overview): przesuwa model po podłodze, z dłonią w miejscu kursora. Podpowiedź sterowania stoi nad przełącznikiem Overview / Walk.
 
 ## Skąd są wymiary
 
