@@ -422,7 +422,7 @@ const DEF = {
   text: 'Ask AI', agent: '', icon: 'glyph', beadFlat: 1, orbLight: .6, orbPal: 'rainbow', orbColor: '#7a5cff', beadRefl: 1, ringK: 1, iris: 1, pulseSpeed: 1, pulseLight: 1, orbSpeed: 1, orbGlow: 1, embSize: 1, embDepth: .5, embFrost: .7, ink: '#1b1c20', inkA: .94, chevron: true,
   scale: 1, h: 3.1, pl: .5, pr: 1.2, gap: .62, weight: 500,
   bg: 'color', bgColor: '#bdbecc', gridDensity: 1, bgScale: 1, grid: .3, bgFix: false, ambOn: false, amb: .6, grad: 'dusk', dof: 0,
-  comp: 'dropdown', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .34, segGap: .02, segInset: .13, segTint: '#34c759', segTintK: 1,
+  comp: 'dropdown', segA: 'Design', segB: 'Prototype', segDish: .55, segThick: .5, segGap: .02, segInset: .13, segDome: .35, segFill: 1, segTint: '#34c759', segTintK: 0,
   sound: 'glass', release: true, volume: .5, haptic: true, jelly: 1, smooth: true, bloom: true, bloomK: .6, dither: true,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
@@ -511,8 +511,10 @@ const CTRL = [
   { k: 'segThick', l: 'Thumb thickness', min: .2, max: 1, s: .01, show: SEGON },
   { k: 'segGap', l: 'Thumb float', min: 0, max: .5, s: .01, show: SEGON },
   { k: 'segInset', l: 'Thumb inset', min: .04, max: .35, s: .01, show: SEGON },
-  { k: 'segTint', l: 'Thumb colour', t: 'color', show: SEGON },
-  { k: 'segTintK', l: 'Thumb tint', min: 0, max: 3, s: .01, show: SEGON },
+  { k: 'segDome', l: 'Lens dome', min: 0, max: 1, s: .01, show: SEGON },
+  { k: 'segTint', l: 'Colour', t: 'color', show: SEGON },
+  { k: 'segFill', l: 'Colour fill under the lens', min: 0, max: 1, s: .01, show: SEGON },
+  { k: 'segTintK', l: 'Tint in the glass', min: 0, max: 3, s: .01, show: SEGON },
   { g: 'Presets' },
   { t: 'presets' },
   { g: 'Shape' },
@@ -636,7 +638,7 @@ if (P.bg === 'upload') P.bg = 'grid';
 // ---------- interaction state ----------
 const POST = { ok: false, n: 0, sig: null, w: 0, h: 0 };   // the after-scene pipeline (set up once the glass compiles)
 const HOME = { yaw: .38, pitch: -.22, zoom: .88 };                 // the resting view: a little from below and from the right
-const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, segX: 0, segV: 0, segT: 0, segLift: 0, segDrag: null, seen: false, open: false,
+const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, segX: 0, segV: 0, segT: 0, segLift: 0, segDrag: null, segF: 0, segFV: 0, seen: false, open: false,
             menuT: 0, menuV: 0, gFrom: 0, gTo: 0, gT: 1, orbPh: 0, hi: null, hiA: 0, hiX: 0,
             yaw: HOME.yaw, pitch: HOME.pitch, tyaw: HOME.yaw, tpitch: HOME.pitch, zoom: HOME.zoom, tzoom: HOME.zoom, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
@@ -1488,6 +1490,8 @@ uniform vec3 uGridCol;
 uniform float uMenuZ;          // how high the menu floats (px)
 uniform vec4 uSeg, uSeg2;      // the segmented thumb: centre, half size · centre height, half thickness, rim rounding, on
 uniform float uSegCorner; uniform vec3 uSegAbs;   // its corner radius, its absorption (green glass)
+uniform float uSegDome;        // how much the lens bulges on top
+uniform vec4 uSegFill, uSegFill2;   // the colour under the lens: centre, half size · colour, strength
 uniform float uShadowMode;     // 0 a shadow with a caustic, 1 a coloured glow like a TV backlight
 uniform vec3 uGlowA, uGlowB, uGlowC;
 uniform vec4 uGlowK;           // strength, size (px), phase, -
@@ -1525,10 +1529,11 @@ float solid(float e, float z){
   return smax(e, smax(dT, dB, uShape2.y), uShape2.y);
 }
 // the segmented thumb: a rounded slab (a stadium outline, a rounded rim), a separate piece of glass
-float thumbD(vec3 p){
+float thumbD(vec3 p){                    // a lens: flat underneath, the top bulges towards the middle
   float e = box2(p.xy, uSeg, uSegCorner);
-  vec2 w = vec2(e + uSeg2.z, abs(p.z - uSeg2.x) - uSeg2.y + uSeg2.z);
-  return min(max(w.x, w.y), 0.0) + length(max(w, 0.0)) - uSeg2.z;
+  float x = clamp(-e / max(uSeg.w, 1.0), 0.0, 1.0), b = uSegDome * uSeg2.y * (1.0 - (1.0 - x) * (1.0 - x));
+  vec2 w = vec2(e + uSeg2.z, abs(p.z - uSeg2.x - b * 0.5) - uSeg2.y - b * 0.5 + uSeg2.z);
+  return (min(max(w.x, w.y), 0.0) + length(max(w, 0.0)) - uSeg2.z) * 0.8;   // 0.8: the bulge steepens the field
 }
 // the button and, when open, the menu are one body (like the first version): as the menu grows out, the glass
 // of the button stretches into it; Height (Z) lifts the menu's part of that body, ramping up across the neck
@@ -1784,7 +1789,7 @@ vec3 glassShade(vec3 P, vec3 rd){
   float blur = 0.6 + (1.0 - abs(n.z)) * 2.4 + uOptics.z;
   vec3 t = refract(rd, n, 1.0 / ior); if (dot(t, t) == 0.0) t = rd;
   vec3 q = P - n * 0.25, trans = vec3(0.0), tg = t, tr = t, tb = t;
-  float path = 0.0, state = 0.0;            // 0 still inside, 1 out, 2 the ray ends on the bead
+  float path = 0.0, state = 0.0, exitNz = 0.0;   // 0 still inside, 1 out, 2 the ray ends on the bead · the exit face's normal
   vec3 bp = vec3(0.0), bd = vec3(0.0);
   float bubRim = 0.0, bubEdge = 0.0, bubSpec = 0.0; vec3 bubRef = vec3(0.0, 0.0, 1.0);
   for (int b = 0; b < 2 * uOne; b++) {
@@ -1813,7 +1818,7 @@ vec3 glassShade(vec3 P, vec3 rd){
     vec2 bi = sphInt(q, t, BC, BR);
     if (bi.x < bi.y && bi.x > 0.0 && bi.x < tf) { bp = q + t * bi.x; bd = t; path += bi.x; state = 2.0; break; }
     q += t * tf; path += tf;
-    vec3 no = nrm(q); tg = refract(t, -no, ior);
+    vec3 no = nrm(q); tg = refract(t, -no, ior); exitNz = no.z;
     if (dot(tg, tg) > 0.0) {
       tr = refract(t, -no, ior - dsp); tb = refract(t, -no, ior + dsp);
       if (dot(tr, tr) == 0.0) tr = tg; if (dot(tb, tb) == 0.0) tb = tg;
@@ -1834,6 +1839,14 @@ vec3 glassShade(vec3 P, vec3 rd){
   }
   else trans = sky(t) * 0.85;
   if (bubRim + bubEdge > 0.0) trans = mix(trans * 1.05, sky(bubRef) * 1.05, bubRim) * (1.0 - bubEdge) + vec3(bubSpec);
+  // glass in glass: a colour fill under the clear lens, seen where a ray leaves the lens through its flat bottom,
+  // and on the track's floor where the fill trails outside the lens
+  if (uSegFill2.w > 0.0 && (th ? (state > 0.5 && state < 1.5 && exitNz < -0.2) : n.z > 0.3)) {
+    vec2 fq = th ? q.xy : P.xy;
+    float m = 1.0 - smoothstep(-1.2, 1.2, box2(fq, uSegFill, min(uSegFill.w, uSegFill.z)));
+    float gy = clamp((fq.y - uSegFill.y + uSegFill.w) / max(2.0 * uSegFill.w, 1.0), 0.0, 1.0);
+    trans = mix(trans, uSegFill2.rgb * (1.1 - 0.22 * gy), m * uSegFill2.w);   // lit from above, a touch deeper below
+  }
   trans *= exp(-path * (th ? uSegAbs : uAbs));
   vec3 col = trans * (1.0 - F) + refl * F;
   // spectral sparks on the rim, where it faces the light
@@ -1898,7 +1911,7 @@ void main(){
   if (uMenuK.w > 0.5) { lo2 = min(lo2, uMenu.xy - uMenu.zw) - uMenuK.y * 0.35; hi2 = max(hi2, uMenu.xy + uMenu.zw) + uMenuK.y * 0.35; }
   LO = vec3(lo2 - 2.0, min(uShape2.z, BR > 0.5 ? BC.z - BZ : 1e5) - 2.0);
   HI = vec3(hi2 + 2.0, max(topMax + (uMenuK.w > 0.5 ? max(uMenuZ, 0.0) + uMenuK.y * 0.25 : 0.0), BR > 0.5 ? BC.z + BZ : 0.0) + 2.0);
-  if (uSeg2.w > 0.5) HI.z = max(HI.z, uSeg2.x + uSeg2.y + 2.0);   // the thumb may stand above the track's rim
+  if (uSeg2.w > 0.5) HI.z = max(HI.z, uSeg2.x + uSeg2.y * (1.0 + uSegDome) + 2.0);   // the thumb may stand above the track's rim
   vec3 ro, rd; camRay(p, ro, rd);
   // what does this pixel hit? a cheap test first, so the silhouettes (where neighbours differ) get 4 rays
   vec2 tb0 = sphInt(ro, rd, BC, BR);
@@ -2113,6 +2126,8 @@ function frame(t) {
     if (reduce) { s.segX = s.segT; s.segV = 0; } else { s.segV += (300 * (s.segT - s.segX) - 24 * s.segV) * dt; s.segX += s.segV * dt; }
   }
   s.segLift += ((s.segDrag ? 1 : 0) - s.segLift) * (1 - Math.pow(1 - .2, dt * 60));
+  { const ft = s.segDrag && s.segDrag.moved ? s.segX : s.segT;   // the colour follows the lens, a beat late
+    if (reduce) { s.segF = ft; s.segFV = 0; } else { s.segFV += (150 * (ft - s.segF) - 17 * s.segFV) * dt; s.segF += s.segFV * dt; } }
   if (reduce) { s.wob = 0; s.wobV = 0; } else { s.wobV += (-420 * s.wob - 10 * s.wobV + s.pressV * 1.5 * P.jelly) * dt; s.wob += s.wobV * dt; }
   s.yaw += (s.tyaw - s.yaw) * ko; s.pitch += (s.tpitch - s.pitch) * ko;
   if (reduce) { s.menuT = s.open ? 1 : 0; s.menuV = 0; }
@@ -2155,9 +2170,9 @@ function frame(t) {
   gl.useProgram(prog);
   {                                                     // still? the view, the light, the press and the menu all settled
     // big: the view turns, zooms or the glass changes shape · small: the light and the lean follow the cursor
-    const sig = [s.press, s.wob, s.menuT, s.yaw, s.pitch, s.zoom, s.panx, s.pany, W, H, cv.width, s.segX, s.segLift, s.lx, s.ly, s.hov, s.hiA, s.jiggle];
+    const sig = [s.press, s.wob, s.menuT, s.yaw, s.pitch, s.zoom, s.panx, s.pany, W, H, cv.width, s.segX, s.segLift, s.segF, s.lx, s.ly, s.hov, s.hiA, s.jiggle];
     const d = POST.sig ? sig.map((v, i) => Math.abs(v - POST.sig[i]) > 2e-4) : sig.map(() => true);
-    POST.big = d.slice(0, 13).some(Boolean);
+    POST.big = d.slice(0, 14).some(Boolean);
     POST.sig = sig; POST.n = d.some(Boolean) || POST.dirty ? 0 : POST.n + 1; POST.dirty = false;
     POST.f = (POST.f || 0) + 1;                                     // the jitter never stops, so edges keep smoothing while you move
     const j = POST.ok && P.smooth ? [HALTON(POST.f % 16 + 1, 2) - 0.5, HALTON(POST.f % 16 + 1, 3) - 0.5] : [0, 0];
@@ -2178,9 +2193,15 @@ function frame(t) {
     const tcol = hex(P.segTint);
     gl.uniform4f(uni('uSeg'), tx, geo.cy, thw, thh);
     gl.uniform4f(uni('uSeg2'), zc, tz, Math.min(tz * 0.95, thh * 0.95), 1);
+    gl.uniform1f(uni('uSegDome'), P.segDome);
+    // the colour under the lens: a smaller pill, so a clear band of glass rings it; it stretches as it trails
+    const fs = Math.min(Math.abs(s.segFV) * 0.07, 0.35), band = 0.32;
+    const fhw = thw0 * (1 - band * thh0 / thw0) * (1 + fs), fhh = thh0 * (1 - band) * (1 - fs * 0.25);
+    gl.uniform4f(uni('uSegFill'), geo.cx - ihw + thw0 + s.segF * 2 * thw0, geo.cy, fhw, fhh);
+    gl.uniform4f(uni('uSegFill2'), tcol[0], tcol[1], tcol[2], P.segFill);
     gl.uniform1f(uni('uSegCorner'), Math.min(thh, Math.max(corner - inset, 2)));
     gl.uniform3f(uni('uSegAbs'), (1 - tcol[0]) * P.segTintK * 0.013, (1 - tcol[1]) * P.segTintK * 0.013, (1 - tcol[2]) * P.segTintK * 0.013);
-  } else gl.uniform4f(uni('uSeg2'), 0, 0, 0, 0);
+  } else { gl.uniform4f(uni('uSeg2'), 0, 0, 0, 0); gl.uniform4f(uni('uSegFill2'), 0, 0, 0, 0); }
   // the icon: star, the chosen agent's glyph (melting from the last one), a flowing orb, or carved into the glass
   const AG = { write: [2, '#ff8a3b'], summarise: [1, '#3d86ff'], translate: [3, '#35c27a'] }, ag = AG[P.agent];
   const mode = { glyph: 1, orb: 2, emboss: 3, mercury: 4, pulse: 5 }[P.icon] || 1;
