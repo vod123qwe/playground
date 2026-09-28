@@ -15,7 +15,7 @@ OX, OY = 132, 1639             # the origin: the outer bottom-left corner of the
 
 im = cv2.imread(IMG, 0)
 dark = (im < 110).astype(np.uint8)
-walls = cv2.morphologyEx(dark, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+walls = cv2.morphologyEx(dark, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))   # (the rounded corners it leaves are squared again in regularize)
 n, lab, st, _ = cv2.connectedComponentsWithStats(walls, 8)
 for i in range(1, n):
     if st[i, 4] < 150: walls[lab == i] = 0          # specks of text
@@ -30,6 +30,75 @@ NRM = np.array([-U[1], U[0]])
 P2 = np.array([932.2, 490.7])    # the centre of the pier between the two living-room openings
 V = np.array([0.7902, -0.6128])
 P10 = np.array([1678.0, 1437.1])
+
+# the building has four directions: the drawing's axes and the two of the long facade (52.2 deg) and the kitchen wall (-37.8 deg)
+DIRS = [0.0, 90.0, float(np.degrees(np.arctan2(0.7902, 0.6128))), float(np.degrees(np.arctan2(-0.6128, 0.7902))) % 180]
+def regularize(c):
+    """a contour as straight edges along the building's directions, with sharp corners (no pixel steps, no rounded corners)"""
+    c = c[:, 0, :].astype(float)
+    ap = cv2.approxPolyDP(c.astype(np.int32), 1.5, True)[:, 0, :].astype(float)
+    if len(ap) < 3: return ap.tolist()
+    idx, j = [], 0
+    for q in ap:                                   # where each vertex sits on the contour
+        k = np.where((c[:, 0] == q[0]) & (c[:, 1] == q[1]))[0]
+        idx.append(int(k[0]) if len(k) else j); j = idx[-1]
+    lines = []
+    n = len(ap)
+    for k in range(n):
+        a, b = ap[k], ap[(k + 1) % n]; d = b - a; L = float(np.hypot(*d))
+        i0, i1 = idx[k], idx[(k + 1) % n]
+        seg = c[i0:i1 + 1] if i1 >= i0 else np.vstack([c[i0:], c[:i1 + 1]])
+        ang = float(np.degrees(np.arctan2(d[1], d[0]))) % 180
+        best = min(DIRS, key=lambda D: min(abs(ang - D), 180 - abs(ang - D)))
+        snapped = min(abs(ang - best), 180 - abs(ang - best)) < 10 and L >= 3
+        if snapped:
+            u = np.array([np.cos(np.radians(best)), np.sin(np.radians(best))])
+            if u @ d < 0: u = -u
+        else: u = d / max(L, 1e-6)
+        nr = np.array([-u[1], u[0]])
+        off = float(np.mean(seg @ nr)) if snapped else float(a @ nr)
+        lines.append([u, off, L, snapped, a])
+    changed = True
+    while changed and len(lines) > 3:              # join neighbours that are the same line; drop tiny corner cuts
+        changed = False
+        for k in range(len(lines)):
+            A_, B_ = lines[k], lines[(k + 1) % len(lines)]
+            if abs(A_[0] @ B_[0]) > .9995 and abs(A_[1] * np.sign(A_[0] @ B_[0]) - B_[1]) < 1.2 and A_[0] @ B_[0] > 0:
+                L = A_[2] + B_[2]; A_[1] = (A_[1] * A_[2] + B_[1] * B_[2]) / L; A_[2] = L; lines.pop((k + 1) % len(lines)); changed = True; break
+        if changed: continue
+        for k in range(len(lines)):
+            P_, C_, N_ = lines[k - 1], lines[k], lines[(k + 1) % len(lines)]
+            if C_[2] < (12 if not C_[3] else 6) and abs(P_[0][0] * N_[0][1] - P_[0][1] * N_[0][0]) > .2:   # a short cut between two walls meeting at an angle: a rounded or ragged corner
+                lines.pop(k); changed = True; break
+    out = []
+    for k in range(len(lines)):
+        P_, C_ = lines[k - 1], lines[k]
+        n1, n2 = np.array([-P_[0][1], P_[0][0]]), np.array([-C_[0][1], C_[0][0]])
+        det = n1[0] * n2[1] - n1[1] * n2[0]
+        if abs(det) < 1e-3:                        # a step between two parallel lines: a square connector
+            q = C_[4]; out.append((q - n1 * (q @ n1 - P_[1])).tolist()); out.append((q - n2 * (q @ n2 - C_[1])).tolist())
+        else:
+            x = (P_[1] * n2[1] - C_[1] * n1[1]) / det; y = (n1[0] * C_[1] - n2[0] * P_[1]) / det
+            out.append([float(x), float(y)])
+    return out
+
+def reg_polys(mask, min_area=60):
+    cs, hier = cv2.findContours(mask.astype(np.uint8), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+    out = []
+    for i, c in enumerate(cs):
+        if hier[0][i][3] != -1 or cv2.contourArea(c) < min_area: continue
+        holes, j = [], hier[0][i][2]
+        while j != -1:
+            if cv2.contourArea(cs[j]) >= min_area: holes.append(regularize(cs[j]))
+            j = hier[0][j][0]
+        out.append({'outer': regularize(c), 'holes': holes})
+    return out
+WALLS = reg_polys(walls)
+EDGES = []                                         # every straight wall face, for flush lintels and sills
+for p in WALLS:
+    for ring in [p['outer']] + p['holes']:
+        for k in range(len(ring)):
+            EDGES.append((np.array(ring[k]), np.array(ring[(k + 1) % len(ring)])))
 
 def pt(p0, u, t, o):
     nrm = np.array([-u[1], u[0]])
@@ -55,7 +124,19 @@ def gaps(p0, u, half, lo, hi):
     return out
 
 def wall_band(p0, u, t0, t1, half):
-    """the real faces of the wall on both sides of an opening, so a lintel or a sill sits flush with them"""
+    """the faces of the wall on both sides of an opening (from the straightened outlines), so a lintel or a sill is flush with them"""
+    uu = np.array(u) / np.hypot(*u); nr = np.array([-uu[1], uu[0]]); p0a = np.array(p0, float)
+    neg, pos = [], []
+    for a, b in EDGES:
+        d = b - a; L = np.hypot(*d)
+        if L < 3 or abs((d / L) @ nr) > .02: continue          # only faces along the wall
+        ta, tb = sorted([(a - p0a) @ uu, (b - p0a) @ uu]); o = (a - p0a) @ nr
+        if abs(o) > half + 16: continue
+        if (ta < t0 + 1 and tb > t0 - 20) or (ta < t1 + 20 and tb > t1 - 1): (neg if o < 0 else pos).append(o)
+    if neg and pos: return float(np.median(neg)), float(np.median(pos))
+    return wall_band_px(p0, u, t0, t1, half)
+
+def wall_band_px(p0, u, t0, t1, half):
     u = np.array(u) / np.hypot(*u); nrm = np.array([-u[1], u[0]])
     ys, xs = np.nonzero(walls)
     d = np.column_stack([xs - p0[0], ys - p0[1]]).astype(float)
@@ -132,7 +213,7 @@ for op in openings: cv2.fillPoly(closed, [np.array(op['quad'], np.int32)], 1)
 ff = closed.copy(); msk = np.zeros((ff.shape[0] + 2, ff.shape[1] + 2), np.uint8)
 cv2.floodFill(ff, msk, (5, 5), 2)
 foot = (ff != 2).astype(np.uint8)
-foot_poly = max(polys(foot, 1.5), key=lambda p: cv2.contourArea(np.array(p['outer'], np.int32)))
+foot_poly = max(reg_polys(foot), key=lambda p: cv2.contourArea(np.array(p['outer'], np.float32)))   # straightened too, so the slabs meet the wall faces
 
 # rooms: flood from a seed with all doors closed; the hall and the living room split along the passage
 rooms_mask = closed.copy()
@@ -151,8 +232,9 @@ for name, (x, y) in ROOMS:
 
 BALC = [
     {'name': 'Balcony', 'outer': [pt(P2, U, -435, -27), pt(P2, U, -435, -208), pt(P2, U, 230, -208), pt(P2, U, 230, -27)]},
-    {'name': 'Balcony', 'outer': [pt(P2, U, 655, -27), pt(P2, U, 655, -208), [1968, 1452], [1505, 1820], [930, 1820], [930, 1639], [1440, 1639], [1690, 1445]]},
-    {'name': 'Balcony', 'outer': [[207, 1639], [207, 1820], [651, 1820], [651, 1639]]},
+    # the side of the big balcony stands on the pier, 25 cm clear of the bedroom window (on the drawing it touches the window's edge)
+    {'name': 'Balcony', 'outer': [pt(P2, U, 694, -27), pt(P2, U, 694, -208), [1968, 1452], [1505, 1820], [930, 1820], [930, 1639], [1440, 1639], [1690, 1445]]},
+    {'name': 'Balcony', 'outer': [[181, 1639], [181, 1820], [651, 1820], [651, 1639]]},   # the left side on the corner pier, 25 cm clear of the window
 ]
 # the railing: the free edges of each balcony (not the ones against the building)
 RAIL = [[BALC[0]['outer'][0], BALC[0]['outer'][1], BALC[0]['outer'][2], BALC[0]['outer'][3]],
@@ -165,7 +247,8 @@ def cmpoly(p): return {'outer': [cm(q) for q in p['outer']], 'holes': [[cm(q) fo
 data = {
     'source': 'plan.webp, 1 cm = %.3f px, origin at the outer bottom-left corner; x to the right, z down the drawing' % S,
     'height': H, 'px': S, 'origin': [OX, OY],
-    'thick': [cmpoly(p) for p in polys(thick)], 'thin': [cmpoly(p) for p in polys(thin)],
+    'walls': [cmpoly(p) for p in WALLS],                     # the geometry: one straightened outline per wall, so the faces run through
+    'thick': [cmpoly(p) for p in polys(thick)], 'thin': [cmpoly(p) for p in polys(thin)],   # only for the cut surfaces (black / grey)
     'openings': [{**o, 'quad': [cm(q) for q in o['quad']], **({'door': {**o['door'], 'hinge': cm(o['door']['hinge']), 'to': cm(o['door']['to'])}} if 'door' in o else {})} for o in openings],
     'floor': cmpoly(foot_poly),
     'balconies': [{'name': b['name'], 'outer': [cm(q) for q in b['outer']]} for b in BALC],
@@ -175,6 +258,10 @@ data = {
 }
 json.dump(data, open(OUT, 'w'), separators=(',', ':'))
 print('openings', [(o['name'], o['width']) for o in openings])
-print('thick', len(data['thick']), 'thin', len(data['thin']), 'bytes', os.path.getsize(OUT))
+print('walls', len(data['walls']), sum(len(p['outer']) for p in data['walls']), 'vertices; thick', len(data['thick']), 'thin', len(data['thin']), 'bytes', os.path.getsize(OUT))
 import sys
-if '--debug' in sys.argv: cv2.imwrite(os.path.join(HERE, 'debug_walls.png'), 255 - (thick * 255 + thin * 120).astype(np.uint8))
+if '--debug' in sys.argv:
+    dbg = cv2.cvtColor(255 - (thick * 200 + thin * 90).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+    for p in WALLS:
+        for ring in [p['outer']] + p['holes']: cv2.polylines(dbg, [np.round(np.array(ring) * 4).astype(np.int32)], True, (0, 0, 255), 1, cv2.LINE_AA, 2)
+    cv2.imwrite(os.path.join(HERE, 'debug_walls.png'), dbg)
