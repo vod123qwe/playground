@@ -196,7 +196,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=3';
-import { buildLiving } from './living.js?v=3';
+import { buildLiving } from './living.js?v=7';
 import { buildHall } from './hall.js?v=1';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial } from 'three-gpu-pathtracer';
@@ -223,7 +223,7 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
-const S = { lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+const S = { sofa: 'gala', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -694,6 +694,7 @@ function stepWalk(dt) {
 addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, textarea, [contenteditable]')) return;
   if (e.code === 'KeyM') { setMode(mode === 'walk' ? 'over' : 'walk'); return; }
+  if (mode === 'over' && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); if (!e.code.startsWith('Shift')) e.preventDefault(); return; }
   if (mode !== 'walk') return;
   if (e.code === 'KeyE') { const dr = nearestDoor(); if (dr) toggleDoor(dr); return; }
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); e.preventDefault(); }
@@ -772,6 +773,19 @@ canvas.addEventListener('pointerleave', () => { hoverLeaf = null; });
   const end = e => { if (sp.id === e.pointerId) sp.id = null; };
   addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
 }
+// WASD (or the arrows) in the overview: the model slides along the floor, as with Space and a drag; faster the further out you are
+const ovR = new THREE.Vector3(), ovF = new THREE.Vector3(), ovM = new THREE.Vector3();
+function panOver(dt) {
+  let f = 0, s = 0;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) f += 1; if (keys.has('KeyS') || keys.has('ArrowDown')) f -= 1;
+  if (keys.has('KeyD') || keys.has('ArrowRight')) s += 1; if (keys.has('KeyA') || keys.has('ArrowLeft')) s -= 1;
+  if (!f && !s) return;
+  const n = Math.hypot(f, s), sp = camera.position.distanceTo(controls.target) * .6 * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 2 : 1) * dt;
+  ovR.setFromMatrixColumn(camera.matrixWorld, 0); ovR.y = 0; ovR.normalize(); ovF.crossVectors(camera.up, ovR).normalize();
+  ovM.copy(ovR).multiplyScalar(s / n * sp).addScaledVector(ovF, f / n * sp);
+  const t = controls.target.clone().add(ovM); t.x = THREE.MathUtils.clamp(t.x, -12, 12); t.z = THREE.MathUtils.clamp(t.z, -12, 12);
+  ovM.subVectors(t, controls.target); controls.target.add(ovM); camera.position.add(ovM); moved();
+}
 // looking: drag on the canvas (mouse or finger)
 let look = null;
 canvas.addEventListener('pointerdown', e => {
@@ -849,7 +863,7 @@ const hint = document.getElementById('hint');
 function paintHint() {
   hint.innerHTML = mode === 'walk'
     ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door · scroll to look closer</span><span class="touch">Stick to walk · drag to look · pinch to look closer</span>`
-    : `<span class="keys">Drag to orbit · <kbd>Space</kbd> + drag to move · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
+    : `<span class="keys">Drag to orbit · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Space</kbd> + drag to move · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
 }
 const here = document.getElementById('here'), hereN = document.getElementById('here-n'), hereA = document.getElementById('here-a');
 let lastRoom = null;
@@ -875,6 +889,12 @@ const ctl = {};
   const kn = document.createElement('p'); kn.className = 'note';
   kn.textContent = `Concept M48 on the layout A.04. Run of 390 cm: fridge 60 · sink 60 · dishwasher 80 · induction 80 · cargo 50 · oven and microwave 60; worktop at 90 cm, uppers from 145 cm to the ceiling; island 180 × 80 with a 25 cm overhang and three counter stools (seat 65 cm). The aisle is ${AISLE0} cm as drawn (between the worktops); 100–120 cm is the usual advice.`;
   g.appendChild(kn);
+  g = LabUI.group(panel, 'Living room', { key: 'lab.aw.group.living' });
+  ctl.sofa = LabUI.seg(g, { label: 'Sofa', options: [['gala', 'Gala 300 (Kave)'], ['a04', 'As A.04, 225']], value: S.sofa, onChange: v => { S.sofa = v; applySofa(); } });
+  ctl.curtains = LabUI.seg(g, { label: 'Curtains', options: [['open', 'Open'], ['sheers', 'Sheers'], ['closed', 'Closed']], value: S.curtains, onChange: v => { S.curtains = v; LIV?.setCurtains(v); lensList = null; } });
+  const ln = document.createElement('p'); ln.className = 'note';
+  ln.textContent = 'Gala: Kave Home, 4-seater with the right chaise, 300 × 105 cm, the chaise 193 deep, seat 42, back 87, in a fine beige chenille (drawn here, not a scan). Where A.04 puts the sofa it reaches the dining chair next to it (about 3 cm), stands in front of the whole 90 cm balcony door and leaves about 45 cm to the TV console. Curtains: sheers and linen drapes on two tracks under a ceiling pelmet.';
+  g.appendChild(ln);
   g = LabUI.group(panel, 'Windows', { key: 'lab.aw.group.windows' });
   ctl.fix = LabUI.seg(g, { label: 'Fixed panes', options: [['frame', 'In the frame'], ['sash', 'In a fixed sash']], value: S.fix, onChange: v => { S.fix = v; rebuildGlazing(); } });
   const xn = document.createElement('p'); xn.className = 'note'; xn.textContent = 'In the frame: glass on a bead, a slimmer border and more glass than the opening leaves. In a fixed sash: every field looks the same. Both are made; the window order says which.'; g.appendChild(xn);
@@ -1238,7 +1258,7 @@ function frame(now) {
     if (k === 1) { tween = null; if (mode === 'over') { controls.target.copy(overPose.target); controls.enabled = true; controls.update(); } }
   } else if (mode === 'walk') {
     stepWalk(dt); stepLens(dt); const e = eyePose(); camera.position.copy(e.pos); camera.quaternion.copy(e.q);
-  } else controls.update();
+  } else { panOver(dt); controls.update(); }
   for (const dr of doors) {
     if (dr.f !== dr.to) { const k = reduce ? 1 : Math.min(1, dt * 2.6); dr.f += Math.sign(dr.to - dr.f) * Math.min(Math.abs(dr.to - dr.f), k * (.35 + Math.abs(dr.to - dr.f))); if (Math.abs(dr.to - dr.f) < .002) dr.f = dr.to; }
     const ez = THREE.MathUtils.smootherstep(dr.f, 0, 1);
@@ -1304,10 +1324,13 @@ const HALL = buildHall({ THREE, clip }); HALL.root.scale.setScalar(M); HALL.root
 livingFoot = [...HALL.foot];
 // the living room on A.04: the sofa, the tables, the TV console, the rug, lamps and a few things (plan centimetres)
 let LIV = null;
+function applySofa() {                                              // the sofa chosen in the panel, its outline for walking
+  if (!LIV) return; LIV.setSofa(S.sofa); livingFoot = [...HALL.foot, ...LIV.foot]; lensList = null; ptScene(); if (mode === 'walk') unstick();
+}
 const livingReady = kitchenReady.then(async () => {
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
-  livingFoot = [...HALL.foot, ...LIV.foot]; LIV.setLamps(S.lamps); lensList = null; ptScene(); unstick();   // (if you stood where the sofa now is)
+  LIV.setLamps(S.lamps); LIV.setCurtains(S.curtains); applySofa();
 }).catch(err => { console.warn('living', err); LIV = LIV || false; });   // (false: failed, the tracer goes on without it)
 function setAisle(v) {                                              // move the island square to the run
   S.aisle = v; if (!KIT) return;
