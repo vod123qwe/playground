@@ -185,7 +185,7 @@ const LOOKS = {
   'Media 160': { W: 160, H: 45, D: 42, leg: 20, cuts: [55, 105], bays: [{ type: 'drawers', n: 2 }, { type: 'open', n: 1 }, { type: 'drawers', n: 2 }] },
   'Wide 260': { W: 260, H: 55, D: 45, leg: 16, cuts: [65, 130, 195], bays: [{ type: 'door' }, { type: 'drawers', n: 3 }, { type: 'drawers', n: 3 }, { type: 'door' }] },
 };
-const STYLE_DEF = { legs: 'frame', handles: 'bar', lip: true, tone: 1, gloss: .14, wall: true, grid: .5, exposure: 1, dims: true, pt: true, bounces: 5, peek: true };
+const STYLE_DEF = { legs: 'frame', handles: 'bar', lip: true, wood: 'natural', tone: 1, gloss: .14, wall: true, grid: .5, exposure: 1, dims: true, pt: true, bounces: 5, peek: true };
 let C = structuredClone(LOOKS['Sideboard 200']);      // the build
 let S = { ...STYLE_DEF };                              // the look and the scene
 let lookName = 'Sideboard 200';
@@ -217,7 +217,24 @@ new HDRLoader().load('assets/lebombo_1k.hdr', t => { t.mapping = THREE.Equirecta
 
 // ---------- materials: photo oak (Poly Haven, CC0), black powder-coated steel, a pale floor and wall ----------
 const tl = new THREE.TextureLoader(), ANISO = renderer.capabilities.getMaxAnisotropy();
-const tex = (u, srgb) => { const t = tl.load(u, () => ptScene()); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+// the finishes of one oak veneer: a colour multiplied over the photo (brighter for white oak, deeper for smoked)
+const WOODS = {
+  natural: { name: 'Natural oak', tint: [1, 1, 1] },
+  white: { name: 'White oak', tint: [1.18, 1.14, 1.08] },
+  honey: { name: 'Honey oak', tint: [1.05, .88, .66] },
+  smoked: { name: 'Smoked oak', tint: [.62, .52, .43] },
+  dark: { name: 'Dark oak', tint: [.36, .29, .24] },
+};
+function paintWood(c, tint) {                            // a round sample: the real veneer, in that finish
+  const img = oak && oak.map && oak.map.image, g = c.getContext('2d');
+  if (!img || !img.width) { g.fillStyle = `rgb(${tint.map(t => Math.min(255, 150 * t)).join(',')})`; g.fillRect(0, 0, c.width, c.height); return; }
+  g.drawImage(img, img.width * .3, img.height * .3, img.width * .12, img.height * .12, 0, 0, c.width, c.height);
+  const mul = tint.map(t => Math.min(255, Math.round(255 * Math.min(t, 1)))), add = tint.map(t => Math.round(255 * Math.max(0, t - 1) * 1.4));
+  g.globalCompositeOperation = 'multiply'; g.fillStyle = `rgb(${mul.join(',')})`; g.fillRect(0, 0, c.width, c.height);
+  if (add.some(v => v > 0)) { g.globalCompositeOperation = 'screen'; g.fillStyle = `rgb(${add.join(',')})`; g.fillRect(0, 0, c.width, c.height); }
+  g.globalCompositeOperation = 'source-over';
+}
+const tex = (u, srgb) => { const t = tl.load(u, () => { ptScene(); if (u.includes('diff') && ctl.wood) ctl.wood.repaint(); }); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
 const oak = new THREE.MeshPhysicalMaterial({ map: tex('assets/oak_diff.jpg', true), normalMap: tex('assets/oak_nor.jpg'), roughnessMap: tex('assets/oak_rough.jpg'),
   normalScale: new THREE.Vector2(.35, .35), roughness: 1, clearcoat: .14, clearcoatRoughness: .5 });
 const steel = new THREE.MeshPhysicalMaterial({ color: '#151515', metalness: .55, roughness: .42, clearcoat: .25, clearcoatRoughness: .4 });
@@ -375,12 +392,12 @@ function resize() {
 }
 addEventListener('resize', resize);
 
-let lastPointer = performance.now();
+let lastPointer = performance.now(), overHandle = false;
 addEventListener('pointermove', () => { lastPointer = performance.now(); }, { passive: true });
 addEventListener('pointerdown', () => { lastPointer = performance.now(); }, { passive: true });
 function frame() {
   requestAnimationFrame(frame);
-  document.body.classList.toggle('calm', performance.now() - lastPointer > 2600 && !dragging && sel < 0 && !document.body.classList.contains('tuning'));
+  document.body.classList.toggle('calm', performance.now() - lastPointer > 3200 && !dragging && sel < 0 && !overHandle && !document.body.classList.contains('tuning'));
   if (exporting) return;
   if (fitTo) {                                          // glide to a distance that shows it all
     const dir = camera.position.clone().sub(controls.target), d = dir.length(), nd = d + (fitTo - d) * .12;
@@ -423,7 +440,9 @@ function makeOverlay() {
   const hd = (key, axis, pos, title, onDrag, onClick, hl = []) => {
     const it = put(key, () => {
       const el = document.createElement('div'); el.className = `hd ${axis || 'add'}`; el.innerHTML = axis === 'x' ? ARROW_X : axis === 'y' ? ARROW_Y : PLUS;
-      el.setAttribute('role', 'button'); el.tabIndex = -1; dragBind(el); el.addEventListener('click', () => el._def.onClick && el._def.onClick()); return el;
+      el.setAttribute('role', 'button'); el.tabIndex = -1; dragBind(el); el.addEventListener('click', () => el._def.onClick && el._def.onClick());
+      el.addEventListener('pointerenter', () => { overHandle = true; el._hover = true; }); el.addEventListener('pointerleave', () => { overHandle = false; el._hover = false; });
+      return el;
     });
     it.pos = pos; it.el.title = title; it.el.setAttribute('aria-label', title); it.el._def = { axis, onDrag, onClick, hl };
   };
@@ -464,7 +483,7 @@ function placeOverlay() {
     if (!it.pos) continue;
     const p = it.pos(); p.project(camera);
     const x = (p.x + 1) / 2 * w, y = (1 - p.y) / 2 * h;
-    const k = reduce || it.sx === null ? 1 : dragging ? .45 : .16;           // glide to the new place; follow closely while dragging
+    const k = reduce || it.sx === null ? 1 : it.el._hover && !dragging ? 0 : dragging ? .45 : .16;   // glide to the new place; a hovered button waits under the pointer
     it.sx = it.sx === null ? x : it.sx + (x - it.sx) * k; it.sy = it.sy === null ? y : it.sy + (y - it.sy) * k;
     const lit = !!(hl && hl.has(it.key)), isLbl = it.el.classList.contains('lbl');
     it.sc += ((lit ? 1.22 : 1) - it.sc) * (reduce ? 1 : .2);
@@ -576,7 +595,8 @@ const CTRL = [
   { k: 'legs', l: 'Base', t: 'seg', o: [['frame', 'Steel frame'], ['plinth', 'Plinth'], ['none', 'Wall hung']] },
   { k: 'handles', l: 'Handles', t: 'seg', o: [['bar', 'Black bar'], ['none', 'Push to open']] },
   { k: 'lip', l: 'Rail on the top', t: 'check' },
-  { k: 'tone', l: 'Oak tone', min: .7, max: 1.25, s: .01 },
+  { k: 'wood', l: 'Wood', t: 'wood' },
+  { k: 'tone', l: 'Brightness', min: .7, max: 1.25, s: .01 },
   { k: 'gloss', l: 'Lacquer', min: 0, max: 1, s: .01 },
   { k: 'peek', l: 'Selected segment peeks open', t: 'check' },
   { g: 'Scene' },
@@ -594,7 +614,9 @@ function buildPanel() {
   for (const c of CTRL) {
     if (c.g) { g = LabUI.group(panel, c.g, { key: 'lab.fc.group.' + c.g }); continue; }
     const obj = () => (c.on === 'C' ? C : S), def = (c.on === 'C' ? LOOKS['Sideboard 200'] : STYLE_DEF)[c.k];
-    if (c.t === 'check') ctl[c.k] = LabUI.check(g, { label: c.l, value: obj()[c.k], onChange: v => { obj()[c.k] = v; styleChanged(); } });
+    if (c.t === 'wood') ctl[c.k] = LabUI.swatches(g, { label: c.l, value: S.wood, options: Object.entries(WOODS).map(([v, w]) => ({ v, name: w.name, paint: cv => paintWood(cv, w.tint) })),
+      onChange: v => { S.wood = v; styleChanged(); } });
+    else if (c.t === 'check') ctl[c.k] = LabUI.check(g, { label: c.l, value: obj()[c.k], onChange: v => { obj()[c.k] = v; styleChanged(); } });
     else if (c.t === 'seg') ctl[c.k] = LabUI.seg(g, { label: c.l, options: c.o, value: obj()[c.k], onChange: v => { obj()[c.k] = v; styleChanged(); } });
     else ctl[c.k] = LabUI.slider(g, { label: c.l, min: c.min, max: c.max, step: c.s, unit: c.u || '', value: obj()[c.k], def,
       onInput: v => { if (c.k === 'W') setWidth(v); else obj()[c.k] = v; c.on === 'C' ? changed(c.k === 'W') : styleChanged(); },
@@ -611,7 +633,7 @@ function syncPanel() {
   for (const c of CTRL) if (!c.g && ctl[c.k]) { ctl[c.k].set((c.on === 'C' ? C : S)[c.k]); if (ctl[c.k].setDef) ctl[c.k].setDef((c.on === 'C' ? base : STYLE_DEF)[c.k]); }
 }
 function styleChanged() {
-  oak.color.setScalar(S.tone); oak.clearcoat = S.gloss; oak.clearcoatRoughness = .55 - S.gloss * .35;
+  { const t = (WOODS[S.wood] || WOODS.natural).tint; oak.color.setRGB(t[0] * S.tone, t[1] * S.tone, t[2] * S.tone); } oak.clearcoat = S.gloss; oak.clearcoatRoughness = .55 - S.gloss * .35;
   renderer.toneMappingExposure = S.exposure;
   floorMat.map.dispose(); floorMat.map = gridTexture(S.grid); floorMat.needsUpdate = true;
   document.body.classList.toggle('nodims', !S.dims);
@@ -768,7 +790,7 @@ th{font-weight:600; background:#f6f4f0} td.n{text-align:right; font-variant-nume
 <tr><td>Outside (W × H × D)</td><td>${C.W} × ${C.leg + C.H + (S.lip ? LIP : 0)} × ${C.D}</td></tr><tr><td>Body height</td><td>${C.H}</td></tr>
 <tr><td>Base</td><td>${{ frame: 'Steel frame, black, ' + C.leg + ' cm', plinth: 'Oak plinth, ' + C.leg + ' cm', none: 'Wall hung, ' + C.leg + ' cm above the floor' }[S.legs]}</td></tr>
 <tr><td>Segments</td><td>${C.bays.map((b, i) => { const [a, e] = bayBounds(i); return `${Math.round(e - a)} ${({ door: 'door', drawers: (b.n || 1) + ' drawers', open: (b.n || 0) + ' shelves', niche: 'niche + ' + (b.n || 1) + ' drawer' + ((b.n || 1) > 1 ? 's' : '') })[b.type]}`; }).join(' · ')}</td></tr>
-<tr><td>Finish</td><td>Oak veneer, matt lacquer${S.gloss > .4 ? ' (satin)' : ''}; top rail ${S.lip ? 'yes' : 'no'}</td></tr></table></div></div>
+<tr><td>Finish</td><td>${(WOODS[S.wood] || WOODS.natural).name} veneer, matt lacquer${S.gloss > .4 ? ' (satin)' : ''}; top rail ${S.lip ? 'yes' : 'no'}</td></tr></table></div></div>
 <h2>Cut list</h2><table><tr><th>Part</th><th class="n">Qty</th><th class="n">Length</th><th class="n">Width</th><th class="n">Thickness</th><th>Material</th><th>Edge banding</th></tr>
 ${rows.map(r => `<tr><td>${r.name}</td><td class="n">${r.qty}</td><td class="n">${r.L.toFixed(1)}</td><td class="n">${r.W.toFixed(1)}</td><td class="n">${(r.t * 10).toFixed(0)} mm</td><td>${r.mat}</td><td>${r.edge}</td></tr>`).join('')}</table>
 <h2>Hardware</h2><table><tr><th>Item</th><th class="n">Qty</th></tr>${hw.map(([n, q]) => `<tr><td>${n}</td><td class="n">${q}</td></tr>`).join('')}</table>

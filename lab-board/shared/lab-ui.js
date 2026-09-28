@@ -113,6 +113,29 @@
     return { row, set: v => { inp.value = v; hex.textContent = v; }, get: () => inp.value };
   }
 
+  // swatches: round material samples; each option paints its own canvas (or gives a CSS background)
+  function swatches(parent, o) {
+    const row = el('div', 'ui-row'), lab = el('span', 'ui-label', o.label), name = el('span', 'ui-value'), box = el('div', 'ui-swatches');
+    box.setAttribute('role', 'radiogroup'); box.setAttribute('aria-label', o.label);
+    let cur = o.value;
+    const paint = () => { [...box.children].forEach(b => { const on = b.dataset.v === String(cur); b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
+      const opt = o.options.find(x => String(x.v) === String(cur)); name.textContent = opt ? opt.name : ''; };
+    for (const opt of o.options) {
+      const b = el('button', 'ui-sw'); b.type = 'button'; b.dataset.v = opt.v; b.title = opt.name; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', opt.name);
+      if (opt.css) b.style.background = opt.css;
+      const c = el('canvas'); c.width = c.height = 96; b.appendChild(c); b._c = c; b._opt = opt;
+      b.addEventListener('click', () => { if (cur === opt.v) return; cur = opt.v; paint(); o.onChange && o.onChange(opt.v); });
+      b.addEventListener('keydown', e => {
+        const i = o.options.indexOf(opt), d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!d) return; e.preventDefault(); const n = o.options[(i + d + o.options.length) % o.options.length]; box.querySelector(`[data-v="${n.v}"]`).focus(); box.querySelector(`[data-v="${n.v}"]`).click();
+      });
+      box.appendChild(b);
+    }
+    const repaint = () => { for (const b of box.children) if (b._opt.paint) b._opt.paint(b._c); };
+    row.append(lab, name, box); parent.appendChild(row); paint(); repaint();
+    return { row, set: v => { cur = v; paint(); }, get: () => cur, repaint };
+  }
+
   const show = (ctl, on) => { ctl.row.hidden = !on; };
-  window.LabUI = { group, slider, seg, check, color, show };
+  window.LabUI = { group, slider, seg, check, color, swatches, show };
 })();

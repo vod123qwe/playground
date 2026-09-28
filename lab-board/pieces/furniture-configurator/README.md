@@ -37,3 +37,5 @@ Więcej fornirów (orzech, biały dąb), dekoracje w scenie (wazon, książki), 
 - **Uchwyty i wymiary płyną:** mają stałe klucze, więc przy zmianie wariantu czy rozmiaru przejeżdżają z poprzedniego miejsca (nowe się pojawiają, zbędne wygasają), zamiast skakać.
 - **Podczas przeciągania** kursor znika, chwytany uchwyt robi się ciemny, pozostałe przygasają, a wymiary, które zmieniasz (np. oba sąsiednie segmenty przy przegrodzie, szerokość całości przy boku, wysokość przy górnej krawędzi, wysokość niszy przy półce), ciemnieją i lekko rosną.
 - **Warianty można przesuwać** jak w Glass Button: pill idzie za palcem z oporem, po > 44 px przełącza i sprężyście wraca, nazwa wjeżdża z kierunku ruchu.
+- **Próbki drewna** (Style → Wood): pięć okrągłych próbek wyciętych z prawdziwego forniru, każda w swoim wykończeniu: Natural, White, Honey, Smoked i Dark oak (kolor mnożony na zdjęciu dębu; Brightness to dalej dostrajanie jasności). Nazwa wykończenia trafia do planu dla stolarza.
+- **„+” już nie ucieka:** nad uchwytem nic nie przygasa, a przycisk dodawania stoi pod kursorem, dopóki go nie odsuniesz, więc można klikać kilka razy pod rząd.
