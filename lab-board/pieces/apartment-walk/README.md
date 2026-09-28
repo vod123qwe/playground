@@ -31,6 +31,11 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Ciąg 390 cm** wzdłuż ściany kuchennej (w danych 391,2 cm, od szachtu do filaru przy drzwiach balkonowych): lodówka w zabudowie 60 · zlew 60 · zmywarka 80 · płyta indukcyjna 80 · cargo 50 · piekarnik + mikrofala w słupku 60.
 - **Wysokości:** cokół 10 cm (cofnięty 5 cm), blat 87–90 cm (3 cm), szafki górne od 145 cm do sufitu (55 cm płytek nad blatem), słupki do sufitu (2,55 m zamiast 2,60 z konceptu).
 - **Materiały:** fronty dolne i słupki dąb naturalny (skan CC0 Oak Veneer 01, słoje pionowo, uchwyt frezowany w górnej krawędzi), fronty górne beż / kaszmir mat, listwa dębowa pod górnymi + LED (światło powierzchniowe), blat i zlew wpuszczany z beżowego konglomeratu, płytki z połyskiem strukturalne 7,5 × 30 pionowo, bateria stal szczotkowana, AGD czarne szkło, 5 czarnych spotów na suficie.
+- **Detal:** wszystkie fronty, panele i korpusy z krawędzią zaokrągloną 1,5 mm (łapią światło), blat z fazką 2 mm, ryflowanie wyspy z prawdziwych półokrągłych listewek 2,5 cm, fronty ze szczelinami 3 mm i frezem uchwytowym.
+- **Hokery:** miękkie okrągłe siedzisko i wygięte oparcie w tkaninie bouclé (skan CC0 *curly teddy natural*, Poly Haven), czarne stalowe nogi rozchylone na zewnątrz, podnóżek, stopki.
+- **Dekoracje (Poly Haven, CC0):** dwa gliniane wazony przy piekarniku, rzeźbiona drewniana misa z limonkami na wyspie, pachira w glinianej donicy przy drzwiach balkonowych.
+- **Światło od okien:** w każdym przeszkleniu miękkie światło powierzchniowe skierowane do środka (*Light → Window light*).
+- **Path tracing** jest eksperymentalny (`?pt=1` w adresie): na całym mieszkaniu ta wersja biblioteki myli część materiałów (materiały wielokrotne, kolory wierzchołków) i wolno się doczyszcza we wnętrzu; podgląd jest wersją referencyjną.
 - **Wyspa 180 × 80** (A.04) w miejscu z A.04: szuflady od strony kuchni, ryflowany dąb od strony salonu, nawis 25 cm na kolana, 3 hokery (siedzisko 65 cm, po 60 cm na osobę). *Kitchen → Aisle to the island* przesuwa wyspę (A.04: 90 cm).
 
 ## Podłogi (wg układu funkcjonalnego, arkusz A.04)
@@ -65,7 +70,11 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - `apartment.json` · dane mieszkania w cm (generowane)
 - `tools/extract_plan.py` · rysunek → dane (`python tools/extract_plan.py`, z `--debug` zapisuje też podgląd ścian)
 - `floors.js` · jodełka i płytki rysowane w canvasie (bezszwowe mapy: kolor, normalne, szorstkość)
+- `kitchen.js` · kuchnia (w cm, na ścianie kuchennej)
 - `assets/oak_*.jpg` · Oak Veneer 01, Poly Haven (CC0)
+- `assets/tex/teddy_*.jpg` · Curly Teddy Natural, Poly Haven (CC0)
+- `assets/models/` · ceramic_vase_01, ceramic_vase_02, carved_wooden_plate, food_lime_01, pachira_aquatica_01, Poly Haven (CC0), glTF 1K
+- `assets/lebombo_1k.hdr` · Lebombo, Poly Haven (CC0), tylko dla path tracingu
 - `assets/plan.webp` · rzut z meblami (źródło)
 
 ## Testy (28.09.2026)

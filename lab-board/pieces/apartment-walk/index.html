@@ -42,6 +42,11 @@
         max-width:calc(100vw - 32px); border-radius:999px; background:rgba(232,229,223,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
         color:rgba(20,20,20,.62); font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:left .45s var(--ease)}
   @media (min-width:761px){ body.tuning .hint{left:calc(50% - 192px); max-width:calc(100vw - 416px)} }
+  .pts{position:fixed; left:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:4; display:none; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:999px;
+       background:rgba(232,229,223,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:rgba(20,20,20,.66); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums}
+  .pts i{width:8px; height:8px; border-radius:50%; background:#c9a15a; transition:background .3s} .pts.done i{background:#3fae6a}
+  body.walk.pt-on .pts{display:flex}
+  @media (max-width:760px){ .pts{bottom:calc(128px + env(safe-area-inset-bottom)); left:auto; right:160px} }
   .hint kbd{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:6px; background:rgba(20,20,20,.07); font:600 11px/1 "Inter", sans-serif}
   @media (max-width:760px){ .hint{height:32px; font-size:11.5px} }
   @media (pointer:coarse){ .hint .keys{display:none} } @media (pointer:fine){ .hint .touch{display:none} }
@@ -118,21 +123,28 @@
 </div></div>
 
 <div class="hint" id="hint" aria-live="polite"></div>
+<div class="pts" id="pts" aria-live="polite"><i></i><span>Live preview</span></div>
 <aside class="panel lab-ui" id="panel" aria-label="Customize the view"></aside>
 
 <script src="../../shared/lab-ui.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+  "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+  "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.15/build/index.module.js",
+  "three-gpu-pathtracer": "https://cdn.jsdelivr.net/npm/three-gpu-pathtracer@0.0.25/build/index.module.js"
 } }
 </script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { herringbone, stoneTiles } from './floors.js';
-import { buildKitchen } from './kitchen.js';
+import { herringbone, stoneTiles } from './floors.js?v=3';
+import { buildKitchen } from './kitchen.js?v=3';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { WebGLPathTracer } from 'three-gpu-pathtracer';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -149,7 +161,10 @@ const wx = x => (x - CX) * M, wz = z => (z - CZ) * M;               // plan → 
 const px = x => x / M + CX, pz = z => z / M + CZ;                   // world → plan
 const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % ps.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 
-const S = { aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+// path tracing is experimental here (?pt=1): on the whole flat this version of the tracer mixes up some materials (the multi-material and
+// vertex-coloured meshes) and converges slowly indoors; the preview is the reference
+const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
+const S = { portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -166,7 +181,13 @@ scene.background = new THREE.Color('#e8e5df');
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture;
 scene.environmentIntensity = .55;
-const hemi = new THREE.HemisphereLight('#fffaf2', '#cbbfae', .6); scene.add(hemi);
+if (new URLSearchParams(location.search).get('pt') === '1')    // the tracer needs an equirectangular sky: Lebombo, Poly Haven (CC0); the preview keeps the studio light
+  new HDRLoader().load('assets/lebombo_1k.hdr', t => { t.mapping = THREE.EquirectangularReflectionMapping; scene.environment = t; ptScene(); });
+const hemi = new THREE.HemisphereLight('#fffaf2', '#cbbfae', .55); scene.add(hemi);
+RectAreaLightUniformsLib.init();
+// window portals: a soft sky-coloured area light in every glazed opening, facing in. Indoors the traced light mostly comes through the windows;
+// with a light there the tracer finds it at once (far less noise), and the preview gets the same soft window light
+const portals = [];
 const sun = new THREE.DirectionalLight('#fff1dc', 2.4);
 sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02;
 Object.assign(sun.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: .5, far: 60 });
@@ -251,6 +272,11 @@ function buildGlazing(o) {
   if (!pip(mid[0] + n[0] * 45, mid[1] + n[1] * 45, A.floor.outer)) n = [-n[0], -n[1]];   // n points into the flat
   const G = new THREE.Group(), th = Math.atan2(-e[1], e[0]); G.position.set(wx(a[0]), 0, wz(a[1])); G.rotation.y = th; world.add(G); glazingG.push(G);
   const sI = Math.sign(-e[1] * n[0] + e[0] * n[1]) || 1;           // local +z is inside when sI = 1
+  if (!portals.some(l => l.userData.o === o)) {                     // once per opening (the leaves may be rebuilt, the portal stays)
+    const hgt = o.head - o.sill, lg = new THREE.RectAreaLight('#eef3ff', S.portal, len * M, hgt * M), c = [mid[0] + n[0] * 4, mid[1] + n[1] * 4];
+    lg.position.set(wx(c[0]), (o.sill + hgt / 2) * M, wz(c[1])); lg.lookAt(wx(c[0] + n[0] * 100), (o.sill + hgt / 2) * M, wz(c[1] + n[1] * 100));
+    lg.userData.o = o; scene.add(lg); portals.push(lg);
+  }
   // a bar in two halves: the inside one white, the outside one graphite (x, y: centre in the plane; w, h: size; depth 7 cm)
   const bar = (parent, w, h, x, y) => {
     for (const [m, z] of [[whiteFrame, 1.75], [mat.frame, -1.75]]) { const k = new THREE.Mesh(new THREE.BoxGeometry(w * M, h * M, 3.5 * M), m); k.position.set(x * M, y * M, sI * z * M); k.castShadow = true; parent.add(k); }
@@ -561,6 +587,8 @@ function setMode(m, at) {
   tween = { t0: performance.now(), dur: reduce ? 1 : 1200, from, to };
   if (m === 'walk') canvas.focus();
 }
+let lastMove = performance.now();                                    // anything that changes the picture resets the tracer
+const moved = () => { lastMove = performance.now(); };
 function stepWalk(dt) {
   let f = 0, s = 0;
   if (keys.has('KeyW') || keys.has('ArrowUp')) f += 1;
@@ -582,6 +610,7 @@ function stepWalk(dt) {
   else if (clear(P.x, nz, skip)) { P.z = nz; P.vx *= .5; }
   else { P.vx = P.vz = 0; }
   const tl = Math.hypot(tx, tz);                                   // walking into a closed door opens it
+  if (tl > 1 || Math.hypot(P.vx, P.vz) > 1) moved();
   if (tl > 1) { const qx = P.x + tx / tl * 14, qz = P.z + tz / tl * 14, hit = doors.find(dr => (!dr.kind || dr.kind === 'turn') && dr.to < .5 && segDist(qx, qz, dr) < R + 2); if (hit) hit.to = 1; }
 }
 addEventListener('keydown', e => {
@@ -792,6 +821,11 @@ const ctl = {};
   g.appendChild(dn);
   g = LabUI.group(panel, 'Light', { key: 'lab.aw.group.light' });
   ctl.sun = LabUI.slider(g, { label: 'Sun direction', min: -90, max: 90, step: 1, unit: '°', value: S.sun, def: DEF.sun, onInput: v => { S.sun = v; placeSun(); } });
+  ctl.portal = LabUI.slider(g, { label: 'Window light', min: 0, max: 10, step: .1, value: S.portal, def: DEF.portal, onInput: v => { S.portal = v; for (const l of portals) l.intensity = v; } });
+  if (PT_ON) {
+    ctl.pt = LabUI.check(g, { label: 'Path tracing when you stop', value: S.pt, onChange: v => { S.pt = v; document.body.classList.toggle('pt-on', v); ptScene(); } });
+    ctl.bounces = LabUI.slider(g, { label: 'Light bounces', min: 2, max: 8, step: 1, value: S.bounces, def: DEF.bounces, onInput: v => { S.bounces = v; ptScene(); } });
+  }
   ctl.exposure = LabUI.slider(g, { label: 'Exposure', min: .5, max: 1.8, step: .05, value: S.exposure, def: DEF.exposure, onInput: v => { S.exposure = v; renderer.toneMappingExposure = v; } });
   const note = document.createElement('p'); note.className = 'note';
   note.textContent = 'Walls, piers and openings are traced from the furnished plan (1 cm = 1.209 px) and checked against the architect’s sizes: 270, 90, 180 and 90 cm in the facade. Heights: 2.55 m clear, doors 205 cm, balcony doors 242 cm.';
@@ -801,6 +835,26 @@ function paintWalls() { mat.capThin.color.set('#6d6f76'); buildCaps(); }
 function applyCut(v) { S.cutNow = v; cutPlane.constant = Math.min(v, H + 1) * M + .0005; buildCaps(); }
 
 // ---------- frame ----------
+// ---------- path tracing (three-gpu-pathtracer): when you stand still in the walk, the picture settles into traced light ----------
+const pt = new WebGLPathTracer(renderer);
+Object.assign(pt, { minSamples: 2, fadeDuration: 500, renderDelay: 120, dynamicLowRes: true, lowResScale: .35, bounces: S.bounces, filterGlossyFactor: .5, renderScale: .5 });
+// indoors the traced light is only what comes in through the windows (no fill light as in the preview): lift it to the preview's level
+const PT_EXPOSURE = 2.4;
+let ptDirty = true, ptBuilding = false, ptFov = 0; const ptCam = new THREE.Matrix4();
+function ptScene() { ptDirty = true; }
+const ptReady = () => !!(A && hbMesh && KIT);                            // the floors and the kitchen first
+async function buildPT() {
+  ptBuilding = true; pt.bounces = S.bounces;
+  await new Promise(r => setTimeout(r, 30));                      // let the 'preparing' label show first: the build blocks for a moment
+  try { pt.setScene(scene, camera); ptCam.copy(camera.matrixWorld); ptFov = camera.fov; ptDirty = false; }
+  catch (err) { console.warn('path tracer off:', err); S.pt = false; document.body.classList.remove('pt-on'); }
+  ptBuilding = false;
+}
+const ptsEl = document.getElementById('pts');
+for (const ev of ['input', 'change', 'click']) panel.addEventListener(ev, () => ptScene());   // anything tuned in the panel: trace it again
+function setPts(txt, done) { const sp = ptsEl.lastElementChild; if (sp.textContent !== txt) sp.textContent = txt; ptsEl.classList.toggle('done', !!done); }
+document.body.classList.toggle('pt-on', S.pt);
+
 // ---------- the lens: scroll to zoom in on a detail (towards the pointer); focus falls on what is under it, with a light vignette and fringe ----------
 const Z = { level: 1, target: 1, nx: 0, ny: 0, focus: 2, focusT: 2, lastPick: 0 };
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
@@ -903,7 +957,21 @@ function frame(now) {
     const r = roomAt(P.x, P.z);
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
-  if (lensOn()) composer.render(dt); else renderer.render(scene, camera);
+  if (doors.some(d => d.f !== d.to)) ptScene();                     // a leaf moved: the traced scene is out of date
+  if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
+  const idle = S.pt && mode === 'walk' && !tween && performance.now() - lastMove > 280;
+  if (idle && ptReady()) {
+    if (ptDirty) { if (!ptBuilding) buildPT(); }
+    else {
+      if (!ptCam.equals(camera.matrixWorld) || ptFov !== camera.fov) { pt.updateCamera(); ptCam.copy(camera.matrixWorld); ptFov = camera.fov; }
+      renderer.toneMappingExposure = S.exposure * PT_EXPOSURE; pt.renderSample(); setPts(pt.samples < 1 ? 'Path tracing…' : `Path traced · ${Math.floor(pt.samples)} samples`, pt.samples > 48);
+    }
+  }
+  if (!(idle && ptReady() && !ptDirty)) {
+    renderer.toneMappingExposure = S.exposure;
+    if (lensOn()) composer.render(dt); else renderer.render(scene, camera);
+    setPts(ptBuilding ? 'Preparing the light…' : 'Live preview', false);
+  }
   requestAnimationFrame(frame);
 }
 
@@ -917,14 +985,14 @@ const kitchenReady = floorsReady.then(async () => {
   const K = A.kitchen; if (!K) return;
   KIT = await buildKitchen({ THREE, K, H, clip, renderer });
   const g = KIT.root; g.scale.setScalar(M); g.position.set(wx(K.a[0]), 0, wz(K.a[1])); g.rotation.y = Math.atan2(-K.d[1], K.d[0]); world.add(g);
-  kitchenFoot = KIT.foot; lensList = null;
+  kitchenFoot = KIT.foot; lensList = null; ptScene();
   if (S.aisle !== AISLE0) setAisle(S.aisle);
 }).catch(err => console.warn('kitchen', err));
 function setAisle(v) {                                              // move the island square to the run
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null;
 }
-window.AW = { get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { pt, buildPT, get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
