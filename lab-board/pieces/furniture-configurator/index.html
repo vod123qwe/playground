@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css">
 <style>
   :root{ --ink:#1b1c20; --muted:rgba(20,20,20,.5); --line:rgba(20,20,20,.1); --ease:cubic-bezier(.22,.61,.36,1); }
   *{box-sizing:border-box}
@@ -42,7 +43,8 @@
   .vars{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; font-weight:600}
   .vars button{display:grid; place-items:center; width:36px; height:36px; border:0; border-radius:999px; background:transparent; cursor:pointer}
   .vars button:hover{background:rgba(20,20,20,.06)} .vars svg{width:18px; height:18px}
-  .vars .vn{min-width:120px; text-align:center; white-space:nowrap}
+  .vars .vn{display:inline-block; min-width:120px; text-align:center; white-space:nowrap}
+  .vars{touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; will-change:transform} .vars.dragging{cursor:grabbing}
 
   /* status of the render, bottom left */
   .status{position:fixed; left:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:4; display:flex; align-items:center; gap:8px; height:46px; padding:0 16px;
@@ -57,14 +59,18 @@
       box-shadow:0 0 0 1px rgba(20,20,20,.14); pointer-events:auto; touch-action:none; transition:transform .25s var(--ease), background .2s}
   .hd svg{width:16px; height:16px; stroke:var(--ink)}
   .hd.x{cursor:ew-resize} .hd.y{cursor:ns-resize} .hd.add{cursor:pointer}
-  .hd:hover, .hd.on{transform:scale(1.15)} .hd.on{background:var(--ink)} .hd.on svg{stroke:#fff}
+  .hd:hover, .hd.on{scale:1.15}                          /* scale, not transform: the position lives in the inline transform */ .hd.on{background:var(--ink)} .hd.on svg{stroke:#fff}
   .lbl{position:absolute; left:0; top:0; transform:translate(-50%, -50%); padding:3px 8px; border-radius:999px; background:rgba(255,255,255,.86); color:var(--ink);
        font-size:11.5px; font-weight:600; white-space:nowrap; pointer-events:none; font-variant-numeric:tabular-nums}
   .lbl.big{font-size:12.5px; padding:4px 10px}
+  .lbl{transition:background .25s ease, color .25s ease, box-shadow .25s ease}
+  .lbl.hl{background:var(--ink); color:#fff; box-shadow:0 0 0 4px rgba(27,28,32,.12)}
+  body.hdrag, body.hdrag *{cursor:none !important}
+  body.hdrag .hd:not(.on){opacity:.25 !important}
   body.nodims .lbl{display:none}
   body.busy .hd{pointer-events:none; opacity:.5}
-  .hd, .lbl{transition:transform .25s var(--ease), background .2s, opacity .6s ease}
-  body.calm .hd, body.calm .lbl{opacity:0; pointer-events:none}
+  .hd{transition:background .2s, scale .25s var(--ease)}
+  .overlay{transition:opacity .6s ease} body.calm .overlay{opacity:0} body.calm .hd{pointer-events:none}
 
   /* the bay toolbar: what this segment is */
   .bar{position:fixed; left:0; top:0; z-index:4; display:flex; align-items:center; gap:4px; padding:5px; border-radius:18px; background:#fff; box-shadow:0 0 0 1px var(--line);
@@ -79,7 +85,7 @@
   .bar .del{color:#b3462f}
 
   /* the panel: edge to edge, sharp, roomy */
-  .panel{position:fixed; top:0; right:0; bottom:0; z-index:6; width:384px; overflow:auto; padding:0 28px 28px; background:#fff; box-shadow:-1px 0 0 var(--line);
+  .panel{--ui-pad:28px; position:fixed; top:0; right:0; bottom:0; z-index:6; width:384px; overflow:auto; padding:0 28px 28px; background:#fff; box-shadow:-1px 0 0 var(--line);
          transform:translateX(100%); visibility:hidden; transition:transform .45s var(--ease), visibility 0s linear .45s; overscroll-behavior:contain}
   body.tuning .panel{transform:none; visibility:visible; transition:transform .45s var(--ease)}
   @media (max-width:760px){ .panel{top:auto; left:0; width:auto; height:62vh; transform:translateY(100%)} }
@@ -111,6 +117,7 @@
   body.ready .loading{opacity:0}
   @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
 </style>
+<script src="../../shared/lab-ui.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
@@ -152,7 +159,7 @@
 
 <div class="status" id="status" aria-live="polite"><i></i><span>Live preview</span></div>
 <div class="bar" id="bar" role="toolbar" aria-label="This segment"></div>
-<aside class="panel" id="panel" aria-label="Customize the furniture"></aside>
+<aside class="panel lab-ui" id="panel" aria-label="Customize the furniture"></aside>
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-t"><div class="card">
   <b id="m-t">Rendering</b><p id="m-p">Tracing light through the scene.</p>
   <div class="meter"><i id="m-bar"></i></div>
@@ -402,42 +409,69 @@ const ICON = 'fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linej
 const ARROW_X = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M4 12h16"/></svg>`;
 const ARROW_Y = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l4-4 4 4M8 16l4 4 4-4M12 4v16"/></svg>`;
 const PLUS = `<svg viewBox="0 0 24 24" ${ICON}><path d="M12 5v14M5 12h14"/></svg>`;
+// every handle and label has a key: it survives rebuilds and glides from where it was; new ones fade in, gone ones fade out
 let items = [];
+const pool = new Map();
 function makeOverlay() {
-  overlay.replaceChildren(); items = [];
-  const { W, H, leg, D } = C, zF = D / 2 + 1, top = leg + H;
-  const hd = (kind, axis, pos, title, onDrag, onClick) => {
-    const el = document.createElement('div'); el.className = `hd ${axis || kind}`; el.innerHTML = axis === 'x' ? ARROW_X : axis === 'y' ? ARROW_Y : PLUS;
-    el.title = title; el.setAttribute('role', 'button'); el.setAttribute('aria-label', title); overlay.appendChild(el);
-    items.push({ el, pos }); if (onDrag) dragBind(el, axis, onDrag); if (onClick) el.addEventListener('click', onClick);
+  const want = new Set();
+  const put = (key, make) => {
+    want.add(key);
+    let it = pool.get(key);
+    if (!it) { it = { key, el: make(), sx: null, sy: null, sc: 1, op: 0 }; pool.set(key, it); overlay.appendChild(it.el); }
+    it.dead = false; return it;
   };
-  const lbl = (pos, text, big) => { const el = document.createElement('div'); el.className = 'lbl' + (big ? ' big' : ''); el.textContent = typeof text === 'function' ? text() : text; overlay.appendChild(el); items.push({ el, pos, label: typeof text === 'function' ? text : null }); };
+  const hd = (key, axis, pos, title, onDrag, onClick, hl = []) => {
+    const it = put(key, () => {
+      const el = document.createElement('div'); el.className = `hd ${axis || 'add'}`; el.innerHTML = axis === 'x' ? ARROW_X : axis === 'y' ? ARROW_Y : PLUS;
+      el.setAttribute('role', 'button'); el.tabIndex = -1; dragBind(el); el.addEventListener('click', () => el._def.onClick && el._def.onClick()); return el;
+    });
+    it.pos = pos; it.el.title = title; it.el.setAttribute('aria-label', title); it.el._def = { axis, onDrag, onClick, hl };
+  };
+  const lbl = (key, pos, text, big) => {
+    const it = put(key, () => { const el = document.createElement('div'); el.className = 'lbl' + (big ? ' big' : ''); return el; });
+    it.pos = pos; it.label = text; it.el.textContent = text();
+  };
+  const bayKey = i => 'bay' + i;
   // the total width: the right side
-  hd('w', 'x', () => v3.set(C.W / 2, leg + H / 2, zF), 'Width', (x0, x) => { C.W = clamp(snap(x + C.W / 2), (C.cuts.at(-1) || 0) + 30, 300); });
+  hd('w', 'x', () => v3.set(C.W / 2, C.leg + C.H / 2, C.D / 2 + 1), 'Width', (x0, x) => { C.W = clamp(snap(x + C.W / 2), (C.cuts.at(-1) || 0) + 30, 300); }, null, ['W', bayKey(C.bays.length - 1)]);
   // the height: the top edge
-  hd('h', 'y', () => v3.set(C.W / 2 - 12, leg + H + (S.lip ? LIP : 0), zF), 'Height', (y0, y) => { C.H = clamp(snap(y - C.leg), 35, 90); });
+  hd('h', 'y', () => v3.set(C.W / 2 - 12, C.leg + C.H + (S.lip ? LIP : 0), C.D / 2 + 1), 'Height', (y0, y) => { C.H = clamp(snap(y - C.leg), 35, 90); }, null, ['Ht']);
   // the dividers
-  C.cuts.forEach((c, i) => hd('c', 'x', () => v3.set(-C.W / 2 + C.cuts[i], leg + H, zF), 'Move this divider', (x0, x) => {
+  C.cuts.forEach((c, i) => hd('cut' + i, 'x', () => v3.set(-C.W / 2 + C.cuts[i], C.leg + C.H, C.D / 2 + 1), 'Move this divider', (x0, x) => {
     const lo = (i ? C.cuts[i - 1] : 0) + 30, hi = (i < C.cuts.length - 1 ? C.cuts[i + 1] : C.W) - 30;
     C.cuts[i] = clamp(snap(x + C.W / 2), lo, hi);
-  }));
+  }, null, [bayKey(i), bayKey(i + 1)]));
   // the niche shelf height
-  C.bays.forEach((b, i) => { if (b.type === 'niche') hd('s', 'y', () => { const [a, e] = bayBounds(i); return v3.set((a + e) / 2, leg + T + (H - 2 * T) * b.split + T / 2, zF); }, 'Move the shelf', (y0, y) => {
-    b.split = clamp(Math.round(((y - leg - T) / (C.H - 2 * T)) * 20) / 20, .25, .75);
-  }); });
+  C.bays.forEach((b, i) => { if (b.type === 'niche') hd('shelf' + i, 'y', () => { const [a, e] = bayBounds(i); return v3.set((a + e) / 2, C.leg + T + (C.H - 2 * T) * b.split + T / 2, C.D / 2 + 1); }, 'Move the shelf', (y0, y) => {
+    b.split = clamp(Math.round(((y - C.leg - T) / (C.H - 2 * T)) * 20) / 20, .25, .75);
+  }, null, ['niche' + i]); });
   // add a segment on the right
-  if (C.W + 40 <= 300) hd('add', null, () => v3.set(C.W / 2 + 16, leg + H / 2, zF), 'Add a segment', null, () => { C.cuts.push(C.W); C.W += 40; C.bays.push(bayDefaults('door')); changed(true); });
+  if (C.W + 40 <= 300) hd('add', null, () => v3.set(C.W / 2 + 16, C.leg + C.H / 2, C.D / 2 + 1), 'Add a segment', null, () => { C.cuts.push(C.W); C.W += 40; C.bays.push(bayDefaults('door')); changed(true); });
   // dimensions
-  C.bays.forEach((b, i) => lbl(() => { const [a, e] = bayBounds(i); return v3.set((a + e) / 2, leg + H + 7, zF - 8); }, () => { const [a, e] = bayBounds(i); return `${Math.round(e - a)}`; }));
-  lbl(() => v3.set(0, 3, zF + 14), () => `${C.W} cm`, true);
-  lbl(() => v3.set(-C.W / 2 - 16, (leg + H) / 2 + 4, zF - 4), () => `${C.leg + C.H + (S.lip ? LIP : 0)} cm`, true);   // the height, on the left (the + sits on the right)
+  C.bays.forEach((b, i) => {
+    lbl(bayKey(i), () => { const [a, e] = bayBounds(i); return v3.set((a + e) / 2, C.leg + C.H + 7, C.D / 2 - 7); }, () => { const [a, e] = bayBounds(i); return `${Math.round(e - a)}`; });
+    if (b.type === 'niche') lbl('niche' + i, () => { const [a, e] = bayBounds(i); return v3.set((a + e) / 2 + 12, C.leg + T + (C.H - 2 * T) * (b.split + 1) / 2 + T / 2, C.D / 2 + 1); },
+      () => `${Math.round((C.H - 2 * T) * (1 - b.split) - T)} cm`);
+  });
+  lbl('W', () => v3.set(0, 3, C.D / 2 + 15), () => `${C.W} cm`, true);
+  lbl('Ht', () => v3.set(-C.W / 2 - 16, (C.leg + C.H) / 2 + 4, C.D / 2 - 3), () => `${C.leg + C.H + (S.lip ? LIP : 0)} cm`, true);   // on the left (the + sits on the right)
+  for (const [k, it] of pool) if (!want.has(k) && !it.dead) { it.dead = true; setTimeout(() => { if (it.dead) { it.el.remove(); pool.delete(k); items = [...pool.values()]; } }, 450); }
+  items = [...pool.values()];
 }
 function placeOverlay() {
-  const w = innerWidth, h = innerHeight;
+  const w = innerWidth, h = innerHeight, hl = dragging ? new Set(dragging.el._def.hl) : null;
   for (const it of items) {
+    if (!it.pos) continue;
     const p = it.pos(); p.project(camera);
     const x = (p.x + 1) / 2 * w, y = (1 - p.y) / 2 * h;
-    it.el.style.transform = it.el.classList.contains('lbl') ? `translate(${x}px, ${y}px) translate(-50%, -50%)` : `translate(${x}px, ${y}px)`;
+    const k = reduce || it.sx === null ? 1 : dragging ? .45 : .16;           // glide to the new place; follow closely while dragging
+    it.sx = it.sx === null ? x : it.sx + (x - it.sx) * k; it.sy = it.sy === null ? y : it.sy + (y - it.sy) * k;
+    const lit = !!(hl && hl.has(it.key)), isLbl = it.el.classList.contains('lbl');
+    it.sc += ((lit ? 1.22 : 1) - it.sc) * (reduce ? 1 : .2);
+    it.op += ((it.dead ? 0 : 1) - it.op) * (reduce ? 1 : .18);
+    it.el.classList.toggle('hl', lit);
+    it.el.style.opacity = it.op.toFixed(3);
+    it.el.style.transform = isLbl ? `translate(${it.sx}px, ${it.sy}px) translate(-50%, -50%) scale(${it.sc})` : `translate(${it.sx}px, ${it.sy}px)`;
     if (it.label) { const t = it.label(); if (it.el.textContent !== t) it.el.textContent = t; }   // the sizes follow the build
   }
   placeBar();
@@ -449,15 +483,15 @@ function worldAt(e) {
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
   plane.set(new THREE.Vector3(0, 0, 1), -(C.D / 2)); return ray.ray.intersectPlane(plane, hit) ? hit.clone() : null;
 }
-function dragBind(el, axis, onDrag) {
+function dragBind(el) {                                // the handle reads what it drives at the moment you grab it
   el.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return; e.stopPropagation(); e.preventDefault();
+    const d = el._def; if (e.button !== 0 || !d.onDrag) return; e.stopPropagation(); e.preventDefault();
     const p0 = worldAt(e); if (!p0) return;
     try { el.setPointerCapture(e.pointerId); } catch (err) {}   // a synthetic pointer cannot be captured
-    el.classList.add('on'); dragging = { el, axis }; controls.enabled = false;
-    const move = ev => { const p = worldAt(ev); if (!p) return; const before = JSON.stringify(C); onDrag(p0[axis], p[axis]); if (JSON.stringify(C) !== before) changed(false); };
+    el.classList.add('on'); dragging = { el, axis: d.axis }; controls.enabled = false; document.body.classList.add('hdrag');
+    const move = ev => { const p = worldAt(ev); if (!p) return; const before = JSON.stringify(C); el._def.onDrag(p0[d.axis], p[d.axis]); if (JSON.stringify(C) !== before) changed(false); };
     const up = () => { el.classList.remove('on'); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
-      dragging = null; controls.enabled = true; changed(true); };
+      dragging = null; controls.enabled = true; document.body.classList.remove('hdrag'); changed(true); };
     el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   });
 }
@@ -553,33 +587,18 @@ const CTRL = [
   { k: 'pt', l: 'Path tracing when still', t: 'check' },
   { k: 'bounces', l: 'Light bounces', min: 2, max: 10, s: 1 },
 ];
-const inputs = {};
+const ctl = {};                                        // the controls, built with the lab's shared UI (shared/lab-ui.*)
 function buildPanel() {
   panel.innerHTML = `<div class="ph"><div><h2>Customize</h2><p>Drag the white handles on the furniture; click a front to change it</p></div><button type="button" id="p-x" aria-label="Close the panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
-  let grp = null;
+  let g = null;
   for (const c of CTRL) {
-    if (c.g) { grp = document.createElement('section'); grp.className = 'grp'; grp.innerHTML = `<h3>${c.g}</h3>`; panel.appendChild(grp); continue; }
-    const row = document.createElement('div'); row.className = 'row'; const id = 'in-' + c.k;
-    const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = c.l; row.appendChild(lab);
-    const obj = () => (c.on === 'C' ? C : S);
-    let inp;
-    if (c.t === 'check') { inp = document.createElement('input'); inp.type = 'checkbox'; inp.id = id; inp.addEventListener('change', () => { obj()[c.k] = inp.checked; styleChanged(); }); row.appendChild(inp); }
-    else if (c.t === 'seg') {
-      row.appendChild(document.createElement('span')); inp = document.createElement('div'); inp.className = 'seg'; inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
-      for (const [v, l] of c.o) { const b = document.createElement('button'); b.type = 'button'; b.textContent = l; b.dataset.v = v; b.addEventListener('click', () => { obj()[c.k] = v; styleChanged(); }); inp.appendChild(b); }
-      row.appendChild(inp);
-    } else {
-      const v = document.createElement('span'); v.className = 'v'; row.appendChild(v);
-      inp = document.createElement('input'); inp.type = 'range'; inp.id = id; inp.min = c.min; inp.max = c.max; inp.step = c.s; inp._v = v; inp._u = c.u || '';
-      inp.addEventListener('input', () => {
-        const val = +inp.value;
-        if (c.k === 'W') setWidth(val); else obj()[c.k] = val;
-        c.on === 'C' ? changed(c.k === 'W') : styleChanged();
-      });
-      inp.addEventListener('change', () => { if (c.on === 'C') changed(true); });
-      row.appendChild(inp);
-    }
-    inputs[c.k] = inp; grp.appendChild(row);
+    if (c.g) { g = LabUI.group(panel, c.g, { key: 'lab.fc.group.' + c.g }); continue; }
+    const obj = () => (c.on === 'C' ? C : S), def = (c.on === 'C' ? LOOKS['Sideboard 200'] : STYLE_DEF)[c.k];
+    if (c.t === 'check') ctl[c.k] = LabUI.check(g, { label: c.l, value: obj()[c.k], onChange: v => { obj()[c.k] = v; styleChanged(); } });
+    else if (c.t === 'seg') ctl[c.k] = LabUI.seg(g, { label: c.l, options: c.o, value: obj()[c.k], onChange: v => { obj()[c.k] = v; styleChanged(); } });
+    else ctl[c.k] = LabUI.slider(g, { label: c.l, min: c.min, max: c.max, step: c.s, unit: c.u || '', value: obj()[c.k], def,
+      onInput: v => { if (c.k === 'W') setWidth(v); else obj()[c.k] = v; c.on === 'C' ? changed(c.k === 'W') : styleChanged(); },
+      onChange: () => { if (c.on === 'C') changed(true); } });
   }
   $('p-x').addEventListener('click', () => setTuning(false));
 }
@@ -588,12 +607,8 @@ function setWidth(w) {                                  // the dividers scale wi
   for (let i = 0; i < C.cuts.length; i++) C.cuts[i] = clamp(C.cuts[i], (i ? C.cuts[i - 1] : 0) + 30, w - 30 * (C.cuts.length - i));
 }
 function syncPanel() {
-  for (const c of CTRL) {
-    if (c.g) continue; const inp = inputs[c.k], v = (c.on === 'C' ? C : S)[c.k];
-    if (c.t === 'check') inp.checked = !!v;
-    else if (c.t === 'seg') [...inp.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
-    else { if (document.activeElement !== inp) inp.value = v; inp._v.textContent = `${+(+v).toFixed(c.s < 1 ? 2 : 0)}${inp._u ? ' ' + inp._u : ''}`; }
-  }
+  const base = LOOKS[lookName] || LOOKS[lastLook] || LOOKS['Sideboard 200'];   // the notch and the double-click default
+  for (const c of CTRL) if (!c.g && ctl[c.k]) { ctl[c.k].set((c.on === 'C' ? C : S)[c.k]); if (ctl[c.k].setDef) ctl[c.k].setDef((c.on === 'C' ? base : STYLE_DEF)[c.k]); }
 }
 function styleChanged() {
   oak.color.setScalar(S.tone); oak.clearcoat = S.gloss; oak.clearcoatRoughness = .55 - S.gloss * .35;
@@ -607,10 +622,30 @@ $('tune').addEventListener('click', () => setTuning(!document.body.classList.con
 addEventListener('keydown', e => { if (e.key === 'Escape') { setTuning(false); xOpen(false); sel = -1; renderBar(); } });
 
 // ---------- variants ----------
-function applyLook(name) { C = structuredClone(LOOKS[name]); sel = -1; open.length = 0; changed(true); }
-function stepLook(d) { const names = Object.keys(LOOKS), i = names.indexOf(lookName); applyLook(names[(i < 0 ? 0 : i + d + names.length) % names.length]); }
-$('v-prev').addEventListener('click', () => stepLook(-1));
-$('v-next').addEventListener('click', () => stepLook(1));
+let lastLook = 'Sideboard 200';
+function applyLook(name) { lastLook = name; C = structuredClone(LOOKS[name]); sel = -1; open.length = 0; changed(true); }
+function stepLook(d) {
+  const names = Object.keys(LOOKS), i = names.indexOf(lookName); applyLook(names[(i < 0 ? 0 : i + d + names.length) % names.length]);
+  const vn = $('v-name'); if (!reduce && vn.animate) vn.animate([{ transform: `translateX(${d * 14}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
+}
+// the variants pill: tap the arrows, or grab it and swipe; it follows with resistance, then springs back (like the glass button's)
+const varsEl = document.querySelector('.vars'), vDrag = { id: null, x0: 0, dx: 0, moved: false };
+const band = dx => dx * 0.45 / (1 + Math.abs(dx) / 160);
+varsEl.addEventListener('pointerdown', e => { if (e.button !== 0) return; vDrag.id = e.pointerId; vDrag.x0 = e.clientX; vDrag.dx = 0; vDrag.moved = false; varsEl.style.transition = 'none'; });
+varsEl.addEventListener('pointermove', e => {
+  if (e.pointerId !== vDrag.id) return; vDrag.dx = e.clientX - vDrag.x0;
+  if (!vDrag.moved && Math.abs(vDrag.dx) > 6) { vDrag.moved = true; varsEl.classList.add('dragging'); try { varsEl.setPointerCapture(e.pointerId); } catch (err) {} }
+  if (vDrag.moved) varsEl.style.transform = `translateX(${band(vDrag.dx)}px) scale(${1 + Math.min(Math.abs(vDrag.dx), 200) / 4000})`;
+});
+const vEnd = e => {
+  if (e.pointerId !== vDrag.id) return; vDrag.id = null; varsEl.classList.remove('dragging');
+  varsEl.style.transition = reduce ? 'none' : 'transform .55s cubic-bezier(.2,1.6,.4,1)'; varsEl.style.transform = '';
+  if (vDrag.moved && Math.abs(vDrag.dx) > 44) stepLook(vDrag.dx < 0 ? 1 : -1);          // swipe left: next, right: previous
+  setTimeout(() => { vDrag.moved = false; }, 0);
+};
+varsEl.addEventListener('pointerup', vEnd); varsEl.addEventListener('pointercancel', vEnd);
+$('v-prev').addEventListener('click', () => { if (!vDrag.moved) stepLook(-1); });
+$('v-next').addEventListener('click', () => { if (!vDrag.moved) stepLook(1); });
 
 // ---------- export ----------
 const xBtn = $('exp-btn'), xMenu = $('exp-menu');

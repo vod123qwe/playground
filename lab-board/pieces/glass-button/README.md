@@ -113,3 +113,5 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Segmented:** grid lines w Light 0,4, w Dark 0,1.
 
 **Łapka przy spacji:** zamiast systemowego kursora pojawia się minimalistyczna, konturowa dłoń (ciemna kreska z białą obwódką, czytelna na jasnym i ciemnym tle). Przy przeciąganiu płynnie przechodzi w zaciśniętą, lekko przechyla się w stronę ruchu i rozciąga wzdłuż niego, a po puszczeniu spacji znika. **Lista komponentów** otwiera się spokojnie: 0,34 s przenikania i 0,42 s łagodnego zsunięcia (bez sprężyny), pozycje pojawiają się z drobnym opóźnieniem; przy ograniczonym ruchu bez animacji.
+
+**Panel na wspólnym stylu Lab UI** (`../../shared/lab-ui.*`): wszystkie 67 suwaków buduje LabUI (tor 4 px, kulka 18 px, na dotyku 44 px; liczba do wpisania; przeciąganie etykiety; podwójne kliknięcie i znacznik = wartość z bieżącego wariantu), checkboxy i kafelki mają wspólne klasy. Grupy, nagłówek i przyciski na dole bez zmian.

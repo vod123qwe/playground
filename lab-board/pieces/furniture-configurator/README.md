@@ -30,3 +30,10 @@ Przeciąganie uchwytów (szerokość 200 → 225, przegroda 50 → 40, wysokoś�
 ## Pomysły na dalej
 
 Więcej fornirów (orzech, biały dąb), dekoracje w scenie (wazon, książki), głębia ostrości w renderze, przełączanie ujęć kamery, drewniana podłoga i dywan, eksport rysunku do DXF.
+
+## Zmiany (28.09.2026, wieczór)
+
+- **Panel na wspólnym stylu Lab UI** (`../../shared/`): suwaki z edytowalną liczbą, przeciąganiem etykiety, znacznikiem i podwójnym kliknięciem do wartości domyślnej bieżącego wariantu, zwijane grupy.
+- **Uchwyty i wymiary płyną:** mają stałe klucze, więc przy zmianie wariantu czy rozmiaru przejeżdżają z poprzedniego miejsca (nowe się pojawiają, zbędne wygasają), zamiast skakać.
+- **Podczas przeciągania** kursor znika, chwytany uchwyt robi się ciemny, pozostałe przygasają, a wymiary, które zmieniasz (np. oba sąsiednie segmenty przy przegrodzie, szerokość całości przy boku, wysokość przy górnej krawędzi, wysokość niszy przy półce), ciemnieją i lekko rosną.
+- **Warianty można przesuwać** jak w Glass Button: pill idzie za palcem z oporem, po > 44 px przełącza i sprężyście wraca, nazwa wjeżdża z kierunku ruchu.

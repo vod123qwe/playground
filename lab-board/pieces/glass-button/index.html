@@ -366,6 +366,12 @@
   .row input[type=range]::-moz-range-thumb{width:12px; height:12px; box-shadow:0 0 0 1px rgba(20,20,20,.35)}
   .bgs button{box-shadow:inset 0 0 0 1px rgba(20,20,20,.12)} .bgs button[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
 </style>
+<link rel="stylesheet" href="../../shared/lab-ui.css">
+<style>.panel.lab-ui{--ui-pad:28px} .ui-value .pre{margin-right:6px; color:var(--ui-muted); font-size:12px} .ui-value .pre:empty{display:none} .panel .gh{font-weight:600}
+  .panel .ui-slider input::-webkit-slider-runnable-track{border-radius:4px !important}
+  .panel .ui-slider input::-moz-range-track{border-radius:4px !important} .panel .ui-slider input::-moz-range-progress{border-radius:4px !important}
+  .panel .ui-slider input::-webkit-slider-thumb{border-radius:50% !important} .panel .ui-slider input::-moz-range-thumb{border-radius:50% !important}   /* the panel is sharp, the slider stays round; one browser prefix per rule, or it is dropped */</style>
+<script src="../../shared/lab-ui.js"></script>
 </head>
 <body>
 <canvas id="gl" aria-hidden="true"></canvas>
@@ -414,7 +420,7 @@
   <div class="tilt-x"><b id="tilt-t">Tilt to play with the light</b><p>Allow motion access and the glass follows your phone.</p></div>
   <div class="tilt-b"><button type="button" id="tilt-no">Not now</button><button type="button" id="tilt-yes">Allow motion</button></div>
 </div>
-<aside class="panel" id="panel" aria-label="Customize the button"></aside>
+<aside class="panel lab-ui" id="panel" aria-label="Customize the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
 <div class="hand" id="hand" aria-hidden="true"><svg viewBox="-2 -2 28 28" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="h-open"><g class="halo"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g><g class="ink"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></g><g class="h-grab"><g class="halo"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g><g class="ink"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g></g></svg></div>
@@ -1381,7 +1387,7 @@ function buildPanel() {
       row.replaceChildren(); inp = el('button', 'act full', c.l); inp.type = 'button';
       inp.addEventListener('click', () => ACTIONS[c.k](inp)); row.appendChild(inp);
     }
-    else if (c.t === 'check') { inp = el('input'); inp.type = 'checkbox'; inp.addEventListener('change', () => set(c.k, inp.checked)); row.appendChild(inp); }
+    else if (c.t === 'check') { inp = el('input', 'ui-check'); inp.type = 'checkbox'; inp.addEventListener('change', () => set(c.k, inp.checked)); row.appendChild(inp); }
     else if (c.t === 'color') { inp = el('input'); inp.type = 'color'; inp.addEventListener('input', () => set(c.k, inp.value)); row.appendChild(inp); }
     else if (c.t === 'text') { inp = el('input', 'full'); inp.type = 'text'; inp.maxLength = 32; inp.spellcheck = false; inp.addEventListener('input', () => set(c.k, inp.value || ' ')); row.appendChild(el('span')); row.appendChild(inp); }
     else if (c.t === 'sounds') {
@@ -1436,34 +1442,17 @@ function buildPanel() {
       row.appendChild(inp);
     }
     else if (c.t === 'seg') {
-      inp = el('div', 'seg'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
+      inp = el('div', 'seg ui-seg'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
       for (const o of c.o) { const b = el('button', null, o); b.type = 'button'; b.dataset.v = o; b.addEventListener('click', () => { set(c.k, o); syncInputs(); }); inp.appendChild(b); }
       row.appendChild(inp);
     } else {
-      // the value is a field too: click it and type a number (Enter or leaving it applies, Esc cancels, arrows step)
-      const vw = el('span', 'v'), pr = el('span', 'pre'), v = el('input', 'num'), un = el('span', 'unit', c.u || '');
-      v.type = 'text'; v.inputMode = 'decimal'; v.spellcheck = false; v.setAttribute('aria-label', `${c.l} value`);
-      vw.append(pr, v, un); row.appendChild(vw);
-      inp = el('input', 'full'); inp.type = 'range'; inp.min = c.min; inp.max = c.max; inp.step = c.s;
-      inp.addEventListener('input', () => { set(c.k, +inp.value); paintRange(c, inp, v); });
-      const commit = () => {
-        const n = parseFloat(v.value.replace(',', '.'));
-        if (Number.isFinite(n)) { const x = Math.max(c.min, Math.min(c.max, n)); inp.value = x; set(c.k, +inp.value); }
-        paintRange(c, inp, v, true);
-      };
-      v.addEventListener('focus', () => v.select());
-      v.addEventListener('change', commit);
-      v.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { commit(); v.blur(); }
-        else if (e.key === 'Escape') { e.stopPropagation(); paintRange(c, inp, v, true); v.blur(); }
-        else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-          e.preventDefault(); const st = (+c.s) * (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
-          inp.value = Math.max(c.min, Math.min(c.max, +inp.value + st)); set(c.k, +inp.value); paintRange(c, inp, v, true); v.select();
-        }
-      });
-      row.appendChild(inp); inp._v = v; inp._pre = pr;
+      const ctl = LabUI.slider(body, { label: c.l, min: c.min, max: c.max, step: c.s, unit: c.u || '', value: P[c.k], def: DEF[c.k],
+        format: v => fmt(c, v), onInput: v => { set(c.k, v); if (inp._pre) inp._pre.textContent = pre(c, v); } });
+      inp = ctl.input; inp._ctl = ctl; inp._row = ctl.row;
+      const pr = el('span', 'pre'); ctl.row.querySelector('.ui-value').prepend(pr); inp._pre = pr; pr.textContent = pre(c, P[c.k]);
     }
-    inp.id = id; inputs[c.k] = inp; body.appendChild(row); inp._row = row;
+    if (!inp._ctl) { inp.id = id; body.appendChild(row); inp._row = row; }
+    inputs[c.k] = inp;
   }
   const acts = el('div', 'acts');
   const reset = el('button', null, 'Reset all'); reset.type = 'button';
@@ -1487,12 +1476,14 @@ function paintRange(c, inp, v, force) {
   if (v && (force || document.activeElement !== v)) v.value = fmt(c, +inp.value);
   if (inp._pre) inp._pre.textContent = pre(c, +inp.value);
 }
+const lookDef = k => { const L = typeof curLooks === 'function' ? curLooks() : null, lk = L && P.look && L[P.look]; return lk && k in lk ? lk[k] : DEF[k]; };   // the notch and the double-click default
 function syncInputs() {
   for (const c of CTRL) {
     if (c.g || c.t === 'action' || c.t === 'presets') continue; const inp = inputs[c.k], v = P[c.k];
     if (c.t === 'check') inp.checked = !!v;
     else if (c.t === 'color' || c.t === 'text') { if (document.activeElement !== inp) inp.value = v; }
     else if (c.t === 'seg' || c.t === 'bgs' || c.t === 'sounds' || c.t === 'grads') [...inp.children].forEach(b => b.dataset.v && b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    else if (inp._ctl) { inp._ctl.set(v); inp._ctl.setDef(lookDef(c.k)); if (inp._pre) inp._pre.textContent = pre(c, v); }
     else { inp.value = v; paintRange(c, inp, inp._v); }
   }
   for (const c of CTRL) if (c.show && inputs[c.k]) inputs[c.k]._row.hidden = !c.show();   // options show only when they do something
