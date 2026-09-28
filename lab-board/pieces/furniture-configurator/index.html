@@ -427,9 +427,10 @@ const ARROW_X = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l-4 4 4 4M16 8l4 
 const ARROW_Y = `<svg viewBox="0 0 24 24" ${ICON}><path d="M8 8l4-4 4 4M8 16l4 4 4-4M12 4v16"/></svg>`;
 const PLUS = `<svg viewBox="0 0 24 24" ${ICON}><path d="M12 5v14M5 12h14"/></svg>`;
 // every handle and label has a key: it survives rebuilds and glides from where it was; new ones fade in, gone ones fade out
-let items = [];
+let items = [], glideUntil = 0;
 const pool = new Map();
 function makeOverlay() {
+  if (!dragging) glideUntil = performance.now() + 650;
   const want = new Set();
   const put = (key, make) => {
     want.add(key);
@@ -483,7 +484,8 @@ function placeOverlay() {
     if (!it.pos) continue;
     const p = it.pos(); p.project(camera);
     const x = (p.x + 1) / 2 * w, y = (1 - p.y) / 2 * h;
-    const k = reduce || it.sx === null ? 1 : it.el._hover && !dragging ? 0 : dragging ? .45 : .16;   // glide to the new place; a hovered button waits under the pointer
+    // glide only after the build changed (a variant, a new segment); otherwise stick to the model, so nothing lags the camera
+    const k = reduce || it.sx === null || dragging ? 1 : it.key === 'add' && it.el._hover ? 0 : performance.now() < glideUntil ? .18 : 1;
     it.sx = it.sx === null ? x : it.sx + (x - it.sx) * k; it.sy = it.sy === null ? y : it.sy + (y - it.sy) * k;
     const lit = !!(hl && hl.has(it.key)), isLbl = it.el.classList.contains('lbl');
     it.sc += ((lit ? 1.22 : 1) - it.sc) * (reduce ? 1 : .2);
@@ -569,8 +571,18 @@ function renderBar() {
   const sep2 = document.createElement('span'); sep2.className = 'sep'; barEl.appendChild(sep2);
   const [a, e] = bayBounds(sel);
   if (e - a >= 60) { const sp = document.createElement('button'); sp.type = 'button'; sp.textContent = 'Split'; sp.title = 'Split this segment in two';
-    sp.addEventListener('click', () => { const mid = snap((a + e) / 2 + C.W / 2); C.cuts.splice(sel, 0, mid); C.bays.splice(sel + 1, 0, bayDefaults(C.bays[sel].type)); changed(true); });
+    sp.addEventListener('click', () => {                 // a niche with two drawers splits into two niches with one each
+      const mid = snap((a + e) / 2 + C.W / 2), b0 = C.bays[sel];
+      const halves = b0.type === 'niche' && (b0.n || 1) > 1 ? [Math.ceil(b0.n / 2), Math.floor(b0.n / 2)] : null;
+      C.cuts.splice(sel, 0, mid); C.bays.splice(sel, 1, halves ? { ...b0, n: halves[0] } : { ...b0 }, halves ? { ...b0, n: halves[1] } : { ...b0 }); changed(true); });
     barEl.appendChild(sp); }
+  const merge = (i, j) => {                              // two neighbours become one segment; like the photo, two niches make one wide niche over their drawers
+    const a2 = C.bays[i], b2 = C.bays[j], same = a2.type === b2.type;
+    const n = same && a2.type === 'niche' ? clamp((a2.n || 1) + (b2.n || 1), 1, 3) : same && a2.n != null ? Math.max(a2.n, b2.n) : a2.n;
+    C.bays.splice(i, 2, { ...a2, ...(n != null ? { n } : {}) }); C.cuts.splice(i, 1); sel = i; changed(true);
+  };
+  if (sel > 0) { const m = document.createElement('button'); m.type = 'button'; m.textContent = '← Merge'; m.title = 'Merge with the segment on the left'; m.addEventListener('click', () => merge(sel - 1, sel)); barEl.appendChild(m); }
+  if (sel < C.bays.length - 1) { const m = document.createElement('button'); m.type = 'button'; m.textContent = 'Merge →'; m.title = 'Merge with the segment on the right'; m.addEventListener('click', () => merge(sel, sel + 1)); barEl.appendChild(m); }
   if (C.bays.length > 1) { const del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = 'Remove';
     del.addEventListener('click', () => { const i = sel; if (i === C.bays.length - 1) C.W = Math.max(100, C.cuts.pop()); else C.cuts.splice(i, 1); C.bays.splice(i, 1); sel = -1; changed(true); });
     barEl.appendChild(del); }
@@ -813,7 +825,7 @@ buildPanel(); resize(); styleChanged(); changed(true);
 document.body.classList.add('ready');
 if (STILL) { S.dims = false; document.body.classList.add('nodims'); }
 requestAnimationFrame(frame);
-window.FC = { C: () => C, S: () => S, pt, exportRender, cutList, planSvg, select: i => { sel = i; renderBar(); }, changed };
+window.FC = { C: () => C, S: () => S, pt, camera, controls, items: () => items, fit: () => fitTo, exportRender, cutList, planSvg, select: i => { sel = i; renderBar(); }, changed };
 </script>
 </body>
 </html>
