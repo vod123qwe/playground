@@ -42,11 +42,19 @@
         max-width:calc(100vw - 32px); border-radius:999px; background:rgba(232,229,223,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
         color:rgba(20,20,20,.62); font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:left .45s var(--ease)}
   @media (min-width:761px){ body.tuning .hint{left:calc(50% - 192px); max-width:calc(100vw - 416px)} }
-  .pts{position:fixed; left:16px; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:4; display:none; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:999px;
-       background:rgba(232,229,223,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:rgba(20,20,20,.66); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums}
+  /* the light while you walk: preview, or traced at low or high resolution when you stop (under the minimap) */
+  .qbox{position:fixed; top:264px; left:16px; z-index:4; display:none; flex-direction:column; align-items:flex-start; gap:8px}
+  body.walk .qbox{display:flex}
+  @media (pointer:coarse){ body.walk .qbox{display:none} }
+  .qseg{display:flex; padding:4px; border-radius:999px; background:#fff}
+  .qseg button{height:30px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:rgba(20,20,20,.62); font-size:12.5px; font-weight:600; cursor:pointer;
+               transition:background .3s ease, color .3s ease}
+  .qseg button[aria-pressed=true]{background:var(--ink); color:#fff}
+  .qseg button:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:2px}
+  .pts{display:none; align-items:center; gap:8px; height:30px; padding:0 12px; border-radius:999px; background:rgba(232,229,223,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+       color:rgba(20,20,20,.66); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums}
   .pts i{width:8px; height:8px; border-radius:50%; background:#c9a15a; transition:background .3s} .pts.done i{background:#3fae6a}
-  body.walk.pt-on .pts{display:flex}
-  @media (max-width:760px){ .pts{bottom:calc(128px + env(safe-area-inset-bottom)); left:auto; right:160px} }
+  body.pt-on .pts{display:flex}
   .hint kbd{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:6px; background:rgba(20,20,20,.07); font:600 11px/1 "Inter", sans-serif}
   @media (max-width:760px){ .hint{height:32px; font-size:11.5px} }
   @media (pointer:coarse){ .hint .keys{display:none} } @media (pointer:fine){ .hint .touch{display:none} }
@@ -105,6 +113,8 @@
   .xmenu button{display:grid; gap:2px; width:100%; padding:10px 12px; border:0; border-radius:12px; background:transparent; text-align:left; cursor:pointer}
   .xmenu button:hover, .xmenu button:focus-visible{background:rgba(20,20,20,.06); outline:none}
   .xmenu b{font-weight:600} .xmenu small{color:var(--muted); font-size:12px}
+  .xmenu button:disabled{opacity:.45; cursor:default} .xmenu button:disabled:hover{background:transparent}
+  .xmenu .sep{height:1px; margin:4px 8px; background:var(--line)}
   .card .bt{display:flex; gap:6px}
   .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; color:var(--muted); font-weight:600; transition:opacity .5s ease}
   body.ready .loading{opacity:0}
@@ -137,7 +147,10 @@
     </button>
     <ul class="xmenu" id="photo-menu" role="menu" aria-hidden="true">
       <li><button type="button" role="menuitem" id="ph-quick"><b>Quick · 4K</b><small>Soft shadows, contact shadows, clean edges · about a minute</small></button></li>
-      <li><button type="button" role="menuitem" id="ph-traced"><b>Traced light · 1920 px</b><small>Light bouncing off the walls and the wood, denoised · several minutes</small></button></li>
+      <li><button type="button" role="menuitem" id="ph-fast"><b>Traced light · fast</b><small>1920 px, 64 samples: light bouncing off the walls and the wood · a minute or two</small></button></li>
+      <li><button type="button" role="menuitem" id="ph-fine"><b>Traced light · fine</b><small>1920 px, 384 samples: cleaner, fewer grains · about ten minutes</small></button></li>
+      <li class="sep" role="separator"></li>
+      <li><button type="button" role="menuitem" id="ph-live"><b>Save what you see</b><small id="ph-live-s">The live trace as it is now</small></button></li>
     </ul>
   </div>
   <button class="pill tune" id="tune" type="button" aria-expanded="false" aria-controls="panel">
@@ -152,7 +165,14 @@
 </div></div>
 
 <div class="hint" id="hint" aria-live="polite"></div>
-<div class="pts" id="pts" aria-live="polite"><i></i><span>Live preview</span></div>
+<div class="qbox">
+  <div class="qseg" role="group" aria-label="Light while you walk">
+    <button type="button" data-q="preview" aria-pressed="true" title="The quick preview, always">Preview</button>
+    <button type="button" data-q="low" aria-pressed="false" title="When you stop: traced light at half resolution, clean in a minute or two">Low res</button>
+    <button type="button" data-q="high" aria-pressed="false" title="When you stop: traced light at full resolution, it keeps refining for about ten minutes">High res</button>
+  </div>
+  <div class="pts" id="pts" aria-live="polite"><i></i><span>Live preview</span></div>
+</div>
 <div class="modal" id="shot" role="dialog" aria-modal="true" aria-labelledby="shot-t"><div class="card">
   <b id="shot-t">Developing the photo</b><p>Many frames, each a hair apart, averaged: soft shadows, contact shadows, clean edges.</p>
   <div class="meter"><i id="shot-bar"></i></div>
@@ -200,7 +220,8 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // path tracing when you stand still: opt-in (the panel, or ?pt=1). On a weaker graphics card a long trace can reset the card, and the
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
-const S = { portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
+let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
+const S = { q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -858,7 +879,6 @@ const ctl = {};
   ctl.sun = LabUI.slider(g, { label: 'Sun direction', min: -90, max: 90, step: 1, unit: '°', value: S.sun, def: DEF.sun, onInput: v => { S.sun = v; placeSun(); } });
   ctl.portal = LabUI.slider(g, { label: 'Window light', min: 0, max: 10, step: .1, value: S.portal, def: DEF.portal, onInput: v => { S.portal = v; for (const l of portals) l.intensity = v; } });
   {
-    ctl.pt = LabUI.check(g, { label: 'Path tracing when you stop', value: S.pt, onChange: v => { S.pt = v; document.body.classList.toggle('pt-on', v); ptScene(); } });
     ctl.bounces = LabUI.slider(g, { label: 'Light bounces', min: 2, max: 8, step: 1, value: S.bounces, def: DEF.bounces, onInput: v => { S.bounces = v; ptScene(); } });
   }
   ctl.exposure = LabUI.slider(g, { label: 'Exposure', min: .5, max: 1.8, step: .05, value: S.exposure, def: DEF.exposure, onInput: v => { S.exposure = v; renderer.toneMappingExposure = v; } });
@@ -872,9 +892,55 @@ function applyCut(v) { S.cutNow = v; cutPlane.constant = Math.min(v, H + 1) * M 
 // ---------- frame ----------
 // ---------- path tracing (three-gpu-pathtracer): when you stand still in the walk, the picture settles into traced light ----------
 const pt = new WebGLPathTracer(renderer);
-Object.assign(pt, { minSamples: 2, fadeDuration: 500, renderDelay: 120, dynamicLowRes: true, lowResScale: .35, bounces: S.bounces, filterGlossyFactor: .5, renderScale: .5 });
+Object.assign(pt, { minSamples: 2, fadeDuration: 500, renderDelay: 120, dynamicLowRes: true, lowResScale: .35, bounces: S.bounces, filterGlossyFactor: 1, renderScale: .5 });
 // indoors the traced light is only what comes in through the windows (no fill light as in the preview): lift it to the preview's level
 const PT_EXPOSURE = 2.4;
+// the light while you walk: Preview (the raster, always) or, when you stop, traced light at half (Low) or full (High) resolution. It runs in
+// small tiles, one per frame, each only once the card has finished the last: a long draw resets the card, and the browser then blocks WebGL
+const QUAL = { preview: null, low: { scale: .5, cap: 256, clean: 96 }, high: { scale: 1, cap: 1500, clean: 400 } };
+function setQ(q) {
+  S.q = q; S.pt = q !== 'preview'; document.body.classList.toggle('pt-on', S.pt);
+  for (const b of document.querySelectorAll('.qseg button')) b.setAttribute('aria-pressed', String(b.dataset.q === q));
+  if (S.pt) { pt.renderScale = QUAL[q].scale; pt.reset(); }
+  ptShown = false;
+}
+for (const b of document.querySelectorAll('.qseg button')) b.addEventListener('click', () => setQ(b.dataset.q));
+function ptGpuFree() {
+  if (!ptFence) return true;
+  const gl = renderer.getContext();
+  if (!gl.isContextLost() && gl.clientWaitSync(ptFence, 0, 0) === gl.TIMEOUT_EXPIRED) return false;
+  gl.deleteSync(ptFence); ptFence = null; return true;
+}
+function ptFenceSet() { const gl = renderer.getContext(); ptFence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); gl.flush(); }
+const ptBuf = new THREE.Vector2();
+function ptTiles() {                                                   // about 200 x 170 px per draw; the rough first pass under 60 000 px
+  renderer.getDrawingBufferSize(ptBuf); const w = ptBuf.x * pt.renderScale, h = ptBuf.y * pt.renderScale;
+  pt.tiles.set(Math.max(1, Math.ceil(w / 200)), Math.max(1, Math.ceil(h / 170))); pt.lowResScale = Math.min(.35, Math.sqrt(6e4 / (w * h)));
+}
+// fireflies: a lone pixel brighter than all eight of its neighbours takes their average (the LED strip on the glossy tiles makes them)
+const flyMaterial = (map, W, Hh) => new THREE.ShaderMaterial({ uniforms: { map: { value: map }, px: { value: new THREE.Vector2(1 / W, 1 / Hh) } }, depthTest: false, depthWrite: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+  fragmentShader: `uniform sampler2D map; uniform vec2 px; varying vec2 vUv;
+    float L(vec3 c){ return dot(c, vec3(.2126, .7152, .0722)); }
+    void main(){ vec3 c = texture2D(map, vUv).rgb, s = vec3(0.); float mx = 0.;
+      for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) { if (x == 0 && y == 0) continue; vec3 n = texture2D(map, vUv + vec2(float(x), float(y)) * px).rgb; s += n; mx = max(mx, L(n)); }
+      vec3 m = s / 8.; if (L(c) > max(mx * 1.2, L(m) * 2. + .03)) c = m;
+      gl_FragColor = vec4(c, 1.); }` });
+// on screen the trace goes through the same: fireflies out, then denoised, less and less as it cleans up
+const ptDen = new DenoiseMaterial({ sigma: 4, threshold: .1, kSigma: 1 }); ptDen.transparent = true; ptDen.premultipliedAlpha = renderer.getContextAttributes().premultipliedAlpha;
+const ptFly = flyMaterial(null, 1, 1), ptFlyRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+pt.renderToCanvasCallback = (target, r, quad) => {
+  const ac = r.autoClear, m = quad.material; r.autoClear = false;
+  if (pt.samples >= 2) {
+    const w = target.width, h = target.height;
+    if (ptFlyRT.width !== w || ptFlyRT.height !== h) ptFlyRT.setSize(w, h);
+    ptFly.uniforms.map.value = target.texture; ptFly.uniforms.px.value.set(1 / w, 1 / h);
+    const rt = r.getRenderTarget(); quad.material = ptFly; r.setRenderTarget(ptFlyRT); quad.render(r); r.setRenderTarget(rt);
+    ptDen.map = ptFlyRT.texture; ptDen.sigma = pt.samples < 32 ? 4 : pt.samples < 160 ? 3 : 2; ptDen.opacity = m.opacity; ptDen.blending = m.blending;
+    quad.material = ptDen; quad.render(r); quad.material = m;
+  } else quad.render(r);
+  r.autoClear = ac;
+};
 let ptDirty = true, ptBuilding = false, ptFov = 0; const ptCam = new THREE.Matrix4();
 function ptScene() { ptDirty = true; }
 const ptReady = () => !!(A && hbMesh && KIT);                            // the floors and the kitchen first
@@ -915,13 +981,14 @@ async function buildPT() {
   ptBuilding = true; pt.bounces = S.bounces;
   await new Promise(r => setTimeout(r, 30));                      // let the 'preparing' label show first: the build blocks for a moment
   try { const ts = tracerScene(); pt.setScene(ts, camera); ptCam.copy(camera.matrixWorld); ptFov = camera.fov; ptDirty = false; }
-  catch (err) { console.warn('path tracer off:', err); S.pt = false; document.body.classList.remove('pt-on'); }
+  catch (err) { console.warn('path tracer off:', err); setQ('preview'); }
+  ptShown = false;
   ptBuilding = false;
 }
 const ptsEl = document.getElementById('pts');
 for (const ev of ['input', 'change', 'click']) panel.addEventListener(ev, () => ptScene());   // anything tuned in the panel: trace it again
 function setPts(txt, done) { const sp = ptsEl.lastElementChild; if (sp.textContent !== txt) sp.textContent = txt; ptsEl.classList.toggle('done', !!done); }
-document.body.classList.toggle('pt-on', S.pt);
+setQ(S.q);
 
 // ---------- the photo: a still in 4K, averaged over many frames ----------
 // each frame: the camera a sub-pixel apart (clean edges) and the sun a fraction of a degree apart (soft shadows), with ambient occlusion
@@ -935,7 +1002,14 @@ document.getElementById('shot-x').addEventListener('click', () => { photoCancel 
   addEventListener('click', e => { if (!e.target.closest('.pm')) show(false); });
   addEventListener('keydown', e => { if (e.key === 'Escape') show(false); });
   document.getElementById('ph-quick').addEventListener('click', () => { show(false); takePhoto(); });
-  document.getElementById('ph-traced').addEventListener('click', () => { show(false); takeTracedPhoto(); }); }
+  document.getElementById('ph-fast').addEventListener('click', () => { show(false); takeTracedPhoto(64); });
+  document.getElementById('ph-fine').addEventListener('click', () => { show(false); takeTracedPhoto(384); });
+  const live = document.getElementById('ph-live'), liveS = document.getElementById('ph-live-s');
+  btn.addEventListener('click', () => {                               // what the live trace has to offer right now
+    const ok = mode === 'walk' && S.pt && !ptDirty && pt.samples >= 1; live.disabled = !ok;
+    liveS.textContent = ok ? `The live trace as it is now · ${Math.floor(pt.samples)} samples, ${pt.target.width} px` : 'Choose Low or High res in the walk and stand still';
+  });
+  live.addEventListener('click', () => { show(false); saveLiveTrace(); }); }
 let photoSaveNow = false;
 document.getElementById('shot-save').addEventListener('click', () => { photoSaveNow = true; });
 function savePNG(blob) {
@@ -944,17 +1018,49 @@ function savePNG(blob) {
   aEl.download = `apartment-${room.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.png`;
   document.body.appendChild(aEl); aEl.click(); aEl.remove(); setTimeout(() => URL.revokeObjectURL(aEl.href), 4000);
 }
-// the photo with traced light: the tracer at 1920 px until 48 samples (or 'save now'), then an edge-aware denoise, tone mapping, a PNG
+// the tracer's result to a PNG: fireflies out, an edge-aware denoise, tone mapping and sRGB, read back through a canvas kept in memory
+async function developTrace(W, Hh) {
+  // first the fireflies: a lone pixel brighter than all eight of its neighbours takes their average (the LED strip on the glossy tiles makes them)
+  const fly = flyMaterial(pt.target.texture, W, Hh);
+  const clean = new THREE.WebGLRenderTarget(W, Hh, { type: THREE.FloatType }), tmp = clean.clone();
+  const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fly), qs = new THREE.Scene(), qc = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1); q.frustumCulled = false; qs.add(q);   // (a near plane at 0 would clip the quad)
+  renderer.setRenderTarget(clean); renderer.render(qs, qc);
+  const den = new DenoiseMaterial({ map: clean.texture, sigma: 5, threshold: .12, kSigma: 1 }); q.material = den;   // then the edge-aware denoise
+  renderer.setRenderTarget(tmp); renderer.render(qs, qc); renderer.setRenderTarget(null);
+  // tone mapping and sRGB into an 8-bit target, read back and saved from a 2D canvas (the tracer leaves the WebGL canvas in no state to read)
+  const ldr = new THREE.WebGLRenderTarget(W, Hh), out = new OutputPass(); out.renderToScreen = false; renderer.setScissorTest(false);
+  const ex = renderer.toneMappingExposure; renderer.toneMappingExposure = S.exposure * PT_EXPOSURE; out.render(renderer, ldr, tmp); renderer.toneMappingExposure = ex;
+  const px = new Uint8Array(W * Hh * 4); renderer.readRenderTargetPixels(ldr, 0, 0, W, Hh, px);
+  let lit = 0; for (let i = 0; i < px.length; i += 4 * 97) lit += px[i] + px[i + 1] + px[i + 2];
+  if (!lit) throw new Error('the trace came back empty');          // never save a blank file
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
+  const cx = cv.getContext('2d', { willReadFrequently: true }), img = cx.createImageData(W, Hh);   // a canvas kept in memory, off the graphics card
+  for (let y = 0; y < Hh; y++) img.data.set(px.subarray((Hh - 1 - y) * W * 4, (Hh - y) * W * 4), y * W * 4);   // WebGL rows run bottom-up
+  for (let i = 3; i < img.data.length; i += 4) img.data[i] = 255;
+  cx.putImageData(img, 0, 0);
+  if (!cx.getImageData(W >> 1, Hh >> 1, 1, 1).data[3]) throw new Error('the canvas came back empty');
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  den.dispose(); fly.dispose(); clean.dispose(); tmp.dispose(); ldr.dispose(); out.dispose();
+  return blob;
+}
+// the live trace as it stands (Low or High res, standing still), once the card has finished its last tile
+async function saveLiveTrace() {
+  if (photoing || !S.pt || ptDirty || pt.samples < 1) return; photoing = true;
+  try { await new Promise(r => { const w = () => ptGpuFree() ? r() : setTimeout(w, 4); w(); }); savePNG(await developTrace(pt.target.width, pt.target.height)); }
+  catch (err) { console.warn('live photo:', err); }
+  finally { photoing = false; ptShown = false; }
+}
+// the photo with traced light: the tracer at 1920 px until N samples (or 'save now'), then developed as above
 async function takeTracedPhoto(N = 48) {
   if (photoing) return; photoing = true; photoCancel = false; photoSaveNow = false;
   document.getElementById('shot-t').textContent = 'Tracing the light'; document.getElementById('shot-save').hidden = false;
   shotEl.classList.add('open');
-  const W = 1920, Hh = Math.round(W / camera.aspect), keep = { pr: renderer.getPixelRatio(), rs: pt.renderScale, tiles: pt.tiles.clone(), dyn: pt.dynamicLowRes, fade: pt.fadeDuration, delay: pt.renderDelay, min: pt.minSamples, b: pt.bounces, gf: pt.filterGlossyFactor };
+  const W = 1920, Hh = Math.round(W / camera.aspect), keep = { pr: renderer.getPixelRatio(), rs: pt.renderScale, tiles: pt.tiles.clone(), dyn: pt.dynamicLowRes, fade: pt.fadeDuration, delay: pt.renderDelay, min: pt.minSamples, b: pt.bounces, gf: pt.filterGlossyFactor, ls: pt.lowResScale };
   const bar = document.getElementById('shot-bar'), cnt = document.getElementById('shot-n');
   try {
     await loadSky(); await new Promise(r => setTimeout(r, 60));
     renderer.setPixelRatio(1); renderer.setSize(W, Hh, false); camera.updateProjectionMatrix();
-    Object.assign(pt, { renderScale: 1, dynamicLowRes: false, fadeDuration: 0, renderDelay: 0, minSamples: 0, bounces: 3, filterGlossyFactor: 1 }); pt.tiles.set(10, 10);   // small tiles, one per draw: a long draw trips the GPU watchdog (Windows resets the card after about 2 s)
+    Object.assign(pt, { renderScale: 1, dynamicLowRes: false, fadeDuration: 0, renderDelay: 0, minSamples: 0, bounces: 3, filterGlossyFactor: 1, pausePathTracing: false, renderToCanvas: false }); pt.tiles.set(10, 10);   // small tiles, one per draw: a long draw trips the GPU watchdog (Windows resets the card after about 2 s)
     pt.setScene(tracerScene(), camera); pt.updateCamera(); ptDirty = true;
     const t0 = performance.now();
     const gl = renderer.getContext();
@@ -969,44 +1075,14 @@ async function takeTracedPhoto(N = 48) {
       const k = pt.samples / N, el = (performance.now() - t0) / 1000, left = k > .02 ? el / k - el : 0;
       bar.style.width = `${k * 100}%`; cnt.textContent = `${Math.floor(pt.samples)} / ${N} samples${left ? ` · about ${Math.max(1, Math.round(left / 60))} min left` : ''}`;
     }
-    if (!photoCancel && pt.samples >= 1) {
-      // denoise the accumulated light (edge-aware), then tone-map it once onto the canvas
-      // first the fireflies: a lone pixel brighter than all eight of its neighbours takes their average (the LED strip on the glossy tiles makes them)
-      const fly = new THREE.ShaderMaterial({ uniforms: { map: { value: pt.target.texture }, px: { value: new THREE.Vector2(1 / W, 1 / Hh) } }, depthTest: false, depthWrite: false,
-        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
-        fragmentShader: `uniform sampler2D map; uniform vec2 px; varying vec2 vUv;
-          float L(vec3 c){ return dot(c, vec3(.2126, .7152, .0722)); }
-          void main(){ vec3 c = texture2D(map, vUv).rgb, s = vec3(0.); float mx = 0.;
-            for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) { if (x == 0 && y == 0) continue; vec3 n = texture2D(map, vUv + vec2(float(x), float(y)) * px).rgb; s += n; mx = max(mx, L(n)); }
-            vec3 m = s / 8.; if (L(c) > max(mx * 1.2, L(m) * 2. + .03)) c = m;
-            gl_FragColor = vec4(c, 1.); }` });
-      const clean = new THREE.WebGLRenderTarget(W, Hh, { type: THREE.FloatType }), tmp = clean.clone();
-      const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fly), qs = new THREE.Scene(), qc = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1); q.frustumCulled = false; qs.add(q);   // (a near plane at 0 would clip the quad)
-      renderer.setRenderTarget(clean); renderer.render(qs, qc);
-      const den = new DenoiseMaterial({ map: clean.texture, sigma: 5, threshold: .12, kSigma: 1 }); q.material = den;   // then the edge-aware denoise
-      renderer.setRenderTarget(tmp); renderer.render(qs, qc); renderer.setRenderTarget(null);
-      // tone mapping and sRGB into an 8-bit target, read back and saved from a 2D canvas (the tracer leaves the WebGL canvas in no state to read)
-      const ldr = new THREE.WebGLRenderTarget(W, Hh), out = new OutputPass(); out.renderToScreen = false; renderer.setScissorTest(false);
-      const ex = renderer.toneMappingExposure; renderer.toneMappingExposure = S.exposure * PT_EXPOSURE; out.render(renderer, ldr, tmp); renderer.toneMappingExposure = ex;
-      const px = new Uint8Array(W * Hh * 4); renderer.readRenderTargetPixels(ldr, 0, 0, W, Hh, px);
-      let lit = 0; for (let i = 0; i < px.length; i += 4 * 97) lit += px[i] + px[i + 1] + px[i + 2];
-      if (!lit) throw new Error('the trace came back empty');          // never save a blank file
-      const cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
-      const cx = cv.getContext('2d', { willReadFrequently: true }), img = cx.createImageData(W, Hh);   // a canvas kept in memory, off the graphics card
-      for (let y = 0; y < Hh; y++) img.data.set(px.subarray((Hh - 1 - y) * W * 4, (Hh - y) * W * 4), y * W * 4);   // WebGL rows run bottom-up
-      for (let i = 3; i < img.data.length; i += 4) img.data[i] = 255;
-      cx.putImageData(img, 0, 0);
-      if (!cx.getImageData(W >> 1, Hh >> 1, 1, 1).data[3]) throw new Error('the canvas came back empty');
-      savePNG(await new Promise(r => cv.toBlob(r, 'image/png')));
-      den.dispose(); fly.dispose(); clean.dispose(); tmp.dispose(); ldr.dispose(); out.dispose();
-    }
+    if (!photoCancel && pt.samples >= 1) savePNG(await developTrace(W, Hh));
   } catch (err) {
     console.warn('traced photo:', err);
     document.getElementById('shot-t').textContent = 'The photo did not develop'; cnt.textContent = 'Nothing saved. Try again, or use the quick photo';
     document.getElementById('shot-save').hidden = true; await new Promise(r => setTimeout(r, 3200));
   }
   finally {
-    Object.assign(pt, { renderScale: keep.rs, dynamicLowRes: keep.dyn, fadeDuration: keep.fade, renderDelay: keep.delay, minSamples: keep.min, bounces: keep.b, filterGlossyFactor: keep.gf }); pt.tiles.copy(keep.tiles);
+    Object.assign(pt, { renderScale: keep.rs, dynamicLowRes: keep.dyn, fadeDuration: keep.fade, renderDelay: keep.delay, minSamples: keep.min, bounces: keep.b, filterGlossyFactor: keep.gf, lowResScale: keep.ls, renderToCanvas: true }); pt.tiles.copy(keep.tiles);
     renderer.setPixelRatio(keep.pr); resize(); ptDirty = true;
     document.getElementById('shot-t').textContent = 'Developing the photo'; document.getElementById('shot-save').hidden = true;
     shotEl.classList.remove('open'); photoing = false;
@@ -1122,7 +1198,7 @@ function stepLens(dt) {
 }
 
 function resize() {
-  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); paintModes();
+  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); ptShown = false; camera.aspect = w / h; camera.updateProjectionMatrix(); paintModes();
   composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
 }
 addEventListener('resize', resize);
@@ -1170,12 +1246,17 @@ function frame(now) {
   if (idle && ptReady()) {
     if (ptDirty) { if (!ptBuilding) buildPT(); }
     else {
-      if (!ptCam.equals(camera.matrixWorld) || ptFov !== camera.fov) { pt.updateCamera(); ptCam.copy(camera.matrixWorld); ptFov = camera.fov; }
-      renderer.toneMappingExposure = S.exposure * PT_EXPOSURE; pt.renderSample(); setPts(pt.samples < 1 ? 'Path tracing…' : `Path traced · ${Math.floor(pt.samples)} samples`, pt.samples > 48);
+      if (!ptCam.equals(camera.matrixWorld) || ptFov !== camera.fov) { pt.updateCamera(); ptCam.copy(camera.matrixWorld); ptFov = camera.fov; ptShown = false; }
+      const Q = QUAL[S.q], done = pt.samples >= Q.cap;
+      if ((!done || !ptShown) && ptGpuFree()) {                        // one tile per frame, once the card is free; when done, just keep it on screen
+        pt.pausePathTracing = done; ptTiles(); renderer.toneMappingExposure = S.exposure * PT_EXPOSURE; pt.renderSample(); ptFenceSet(); ptShown = true;
+      }
+      const n = Math.floor(pt.samples);
+      setPts(n < 1 ? 'Tracing the light…' : done ? `Traced · ${n} samples · done` : `Traced · ${n} samples`, n >= Q.clean);
     }
   }
   if (!(idle && ptReady() && !ptDirty)) {
-    renderer.toneMappingExposure = S.exposure;
+    renderer.toneMappingExposure = S.exposure; ptShown = false;
     if (lensOn()) composer.render(dt); else renderer.render(scene, camera);
     setPts(ptBuilding ? 'Preparing the light…' : 'Live preview', false);
   }
@@ -1199,7 +1280,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null;
 }
-window.AW = { THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
