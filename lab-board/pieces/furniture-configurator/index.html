@@ -492,7 +492,8 @@ function placeOverlay() {
     it.op += ((it.dead ? 0 : 1) - it.op) * (reduce ? 1 : .18);
     it.el.classList.toggle('hl', lit);
     it.el.style.opacity = it.op.toFixed(3);
-    it.el.style.transform = isLbl ? `translate(${it.sx}px, ${it.sy}px) translate(-50%, -50%) scale(${it.sc})` : `translate(${it.sx}px, ${it.sy}px)`;
+    // handles: the position goes in `translate`, applied before the hover `scale`, so they grow in place (in `transform` the scale multiplied the position)
+    if (isLbl) it.el.style.transform = `translate(${it.sx}px, ${it.sy}px) translate(-50%, -50%) scale(${it.sc})`; else it.el.style.translate = `${it.sx}px ${it.sy}px`;
     if (it.label) { const t = it.label(); if (it.el.textContent !== t) it.el.textContent = t; }   // the sizes follow the build
   }
   placeBar();
