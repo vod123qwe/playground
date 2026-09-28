@@ -682,7 +682,8 @@ const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0,
             yaw: HOME.yaw, pitch: HOME.pitch, tyaw: HOME.yaw, tpitch: HOME.pitch, zoom: HOME.zoom, tzoom: HOME.zoom, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
   s.seen = true;
-  const r = btn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const r = (P.comp === 'segmented' ? document.getElementById('seg') : btn).getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;   // the control on show (a hidden one measures 0)
+  if (!r.width || !r.height) return;
   s.tlx = Math.max(-1, Math.min(1, (x - cx) / (r.width * 0.9))); s.tly = Math.max(-1, Math.min(1, (y - cy) / (r.height * 2.2)));
   const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
   s.thov = Math.max(0, 1 - Math.hypot(dx, dy) / 160);
