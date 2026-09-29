@@ -43,6 +43,7 @@ export async function startGhosts({ THREE, scene, wx, wz, pose, onChange = () =>
     const flat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .75, depthWrite: false, side: THREE.DoubleSide });
     for (const geo of ringG) { const r = new THREE.Mesh(geo, flat); r.position.y = .012; r.name = 'ring'; g.add(r); }
     const tag = label(n, col); tag.position.y = 1.9; g.add(tag);
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(.033, .033, .168, 16), new THREE.MeshBasicMaterial({ color: '#f2c14e' })); can.position.set(.24, 1.02, .1); can.name = 'can'; can.visible = false; g.add(can);   // a can in its hand
     g.traverse(o => { o.userData.noTrace = true; o.raycast = () => {}; }); G.add(g);
     const P = { id, n, hue, g, tag, x: 0, z: 0, yaw: 0, eye: 165, mode: 'walk', to: null, seen: performance.now(), fresh: true };
     peers.set(id, P); onChange(); return P;
@@ -52,12 +53,12 @@ export async function startGhosts({ THREE, scene, wx, wz, pose, onChange = () =>
   act.onMessage = (d, from) => { const id = typeof from === 'string' ? from : from?.peerId; if (!id) return;
     if (!d || typeof d.x !== 'number' || typeof d.z !== 'number') return;
     let P = peers.get(id); if (!P) { if (peers.size >= max) return; P = make(id); }
-    P.to = { x: d.x, z: d.z, yaw: +d.y || 0, eye: THREE.MathUtils.clamp(+d.e || 165, 60, 200), mode: d.m === 'over' ? 'over' : 'walk' }; P.seen = performance.now();
+    P.to = { x: d.x, z: d.z, yaw: +d.y || 0, eye: THREE.MathUtils.clamp(+d.e || 165, 60, 200), mode: d.m === 'over' ? 'over' : 'walk', can: !!d.b }; P.seen = performance.now();
     if (P.fresh) { Object.assign(P, P.to); P.fresh = false; }
   };
   on('onPeerLeave', drop);
   let lastKey = '', lastSent = 0;
-  const pack = () => { const p = pose(); return { x: Math.round(p.x), z: Math.round(p.z), y: +p.yaw.toFixed(2), e: Math.round(p.eye), m: p.mode }; };
+  const pack = () => { const p = pose(); return { x: Math.round(p.x), z: Math.round(p.z), y: +p.yaw.toFixed(2), e: Math.round(p.eye), m: p.mode, b: p.can ? 1 : 0 }; };
   on('onPeerJoin', id => send(pack(), id));                           // a newcomer hears where you are at once
   const tick = setInterval(() => {
     const d = pack(), k = JSON.stringify(d), now = performance.now();
@@ -75,9 +76,9 @@ export async function startGhosts({ THREE, scene, wx, wz, pose, onChange = () =>
       const before = P.x + P.z + P.yaw;
       P.x += (P.to.x - P.x) * k; P.z += (P.to.z - P.z) * k; P.yaw += dy * k; P.eye += (P.to.eye - P.eye) * k;
       if (Math.abs(P.x + P.z + P.yaw - before) > .05) moved = true;
-      const s = P.eye / 165, hover = Math.sin(clock.t * 1.7 + P.hue * 9) * .025;
-      P.g.visible = true; P.g.position.set(wx(P.x), hover, wz(P.z)); P.g.scale.setScalar(s);
-      for (const o of P.g.children) if (o.name === 'ring') { o.rotation.y = -P.yaw; o.position.y = (.012 - hover) / s; }
+      const drop = Math.max(0, (165 - P.eye) / 100), s = Math.min(1.1, P.eye / 165 + drop / 1.65), hover = Math.sin(clock.t * 1.7 + P.hue * 9) * .025;   // seated: the figure sinks (its legs under the floor)
+      P.g.visible = true; P.g.position.set(wx(P.x), hover - drop, wz(P.z)); P.g.scale.setScalar(s);
+      for (const o of P.g.children) { if (o.name === 'ring') { o.rotation.y = -P.yaw; o.position.y = (.012 - hover + drop) / s; } if (o.name === 'can') o.visible = !!P.to.can; }
     }
     return moved;
   }

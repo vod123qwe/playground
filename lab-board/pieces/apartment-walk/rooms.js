@@ -12,8 +12,8 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
 import { buildBath } from './bath.js?v=11';
-import { buildBalconies } from './balcony.js?v=2';
-import { buildKidroom } from './kidroom.js?v=3';
+import { buildBalconies } from './balcony.js?v=3';
+import { buildKidroom } from './kidroom.js?v=4';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -351,6 +351,7 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   // 6 cm off it (172 x 60: A.04 draws it 120, but it runs on to the window wall), the chair pulled out before it; a sofa bed on the wall to the bedroom, to the corner by the radiator, that pulls
   // out 80 cm into a bed; a PAX (100 + 50) right of the door; a Beni Ourain style rug before the sofa ----------
   const movers = [];                                                  // things in motion (the sofa bed): run by step()
+  const seats = [];                                                   // places to sit: anchors (+z the way the sitter faces) and the meshes that take the click
   const cover = ['#8a6f5a', '#c9b79c', '#5f6b62', '#e2d7c5', '#9a8c7a', '#3f4a52', '#b8a48a', '#d9cdb8', '#7a4e3c'].map(color => std({ name: 'book', color, roughness: .8 }));
   // a photo in a frame, standing on a shelf and leaning back a little, or hung on the wall: an oak or black frame, a white mat, the picture (drawn)
   const matM = std({ name: 'print', color: '#f3f0ea', roughness: .9 }), blackFrame = std({ name: 'plasticBlack', color: '#1f1e1d', roughness: .5 });
@@ -509,7 +510,8 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
       const bk = c(-23.5, 23.5, 56, 108, -29, -24.5, knit, { r: 3.5, scale: LINEN, soft: .45, seed: 23 }); bk.rotation.x = -.14;
       const shl = c(-23, 23, 57, 107, -30.6, -28.6, plastic, { r: 1.5 }); shl.rotation.x = -.14;
       for (const x of [-26.5, 26.5]) { c(x - 1.2, x + 1.2, 43, 64, -6, -2, plastic, { r: .8 }); c(x - 3, x + 3, 64, 66.5, -14, 10, plastic, { r: 1.1 }); }
-      const [cx, cz] = toW(C.position.x, C.position.z); foot.push(Array.from({ length: 12 }, (_, i) => [cx + Math.cos(i / 12 * Math.PI * 2) * 32, cz + Math.sin(i / 12 * Math.PI * 2) * 32])); }
+      const [cx, cz] = toW(C.position.x, C.position.z); foot.push(Array.from({ length: 12 }, (_, i) => [cx + Math.cos(i / 12 * Math.PI * 2) * 32, cz + Math.sin(i / 12 * Math.PI * 2) * 32]));
+      const an = new THREE.Object3D(); an.position.set(0, 50, 0); C.add(an); seats.push({ name: 'office chair', anchors: [an], get meshes() { const m = []; C.traverse(o => { if (o.isMesh) m.push(o); }); return m; } }); }
     // over the desk, two plain floating oak shelves, 2.4 thick, 22 deep: the upper one from the window end, the lower one to the door
     // end: books, vases, a framed photo. The ivy on a little shelf of its own by the window, on the desk's right as the sitter sees it
     const Y1 = 146, Y2 = 184, sh1 = [96, 176], sh2 = [48, 136], q = rng(55);
@@ -593,12 +595,13 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     bookRow(root, q, L2[1] - 3, L2[2] + 2.4, WZ, 6, -1);
   }
 
-  buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, rng, mergeGeometries, linen, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR }, balconies });   // the balconies, to sit out on
+  seats.push(...buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, rng, mergeGeometries, linen, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR }, balconies }).seats);   // the balconies, to sit out on
   const kid = buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTex, rng, mergeGeometries, pax, hallMats, H });   // H, the child's room
+  seats.push(...kid.seats);
   const bath = buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, H, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR } });   // G, the bathroom
 
   const setLamps = on => lamps.forEach(l => l.set(on));
   // lying on it: the head on the pillows, the eyes 80 cm up, looking down the bed at the TV; where you stand up beside it
   const bed = { x0: BX0, x1: BX1, headZ: WZ - 50, standZ: WZ - 125, eye: 80, yaw: -Math.PI / 2, pitch: .19, meshes: bedParts };
-  return { root, foot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: [...run.doors, ...paxE.doors, ...kid.paxDoors], openers: bath.openers, bed, setClosed, closure, trackOf, inside };
+  return { root, foot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: [...run.doors, ...paxE.doors, ...kid.paxDoors], seats, openers: bath.openers, bed, setClosed, closure, trackOf, inside };
 }

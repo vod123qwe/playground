@@ -169,7 +169,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   const frame = (o, u) => { const g = new THREE.Group(); g.position.set(o[0], 0, o[1]); g.rotation.y = Math.atan2(-u[1], u[0]); root.add(g); return g; };
 
   // ---------- the sofa: 225 x 85, the chaise 83 x 140 at the window end; seat 44, back 82, arms 60, on a recessed plinth ----------
-  const SF = frame(LIVING.sofa.o, LIVING.sofa.u);
+  const SF = frame(LIVING.sofa.o, LIVING.sofa.u), seats = [];        // (seats: anchors at the places to sit, their +z the way the sitter faces)
   const SA = new THREE.Group(); SF.add(SA);                         // the A.04 one
   const pl = (P, w, h, t, m, x, y, z, rx, ry, rz, sc) => { const o = mesh(pillow(w, h, t, sc), m, P, x, y, z); o.rotation.set(rx, ry, rz); };
   {
@@ -278,6 +278,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     for (let k = 0; k < 4; k++) {
       const a = Math.PI / 4 + k * Math.PI / 2, C = new THREE.Group(); C.position.set(Math.cos(a) * 55, 0, Math.sin(a) * 55); C.rotation.y = -a - Math.PI / 2; DT.add(C);
       // local: +z towards the table, the back at -z
+      { const an = new THREE.Object3D(); an.position.set(0, 49, 0); C.add(an); seats.push({ name: 'chair', anchors: [an], get meshes() { const m = []; C.traverse(o => { if (o.isMesh) m.push(o); }); return m; } }); }
       mesh(seatG, boucle, C, 0, 44.5, 0);                            // the seat at 48-49, 27 under the table top
       const bk = mesh(backG, boucle, C, 0, 46, 3); bk.rotation.y = Math.PI;   // the band round the back, its ends at the sides
       mesh(new RoundedBoxGeometry(40, 2.5, 38, 2, .6), oak, C, 0, 39.25, 0);   // the oak seat frame under the cushion
@@ -285,8 +286,12 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     }
   }
 
+  // the sofa's three places, facing the TV (+z of its frame); any part of it takes the click, and you sit at the place nearest to it
+  { const an = [45, 105, 165].map(x => { const o = new THREE.Object3D(); o.position.set(x, 43, 56); SF.add(o); return o; });
+    seats.push({ name: 'sofa', anchors: an, get meshes() { const m = []; SF.traverse(o => { if (o.isMesh && o !== rugMesh() && o.visible !== false) m.push(o); }); return m; } }); }
   // ---------- the rug: jute, 240 x 170, from under the sofa's front towards the TV ----------
   const rug = (() => { const g = soft(240, 1.2, 170, .6, { seed: 40, scale: JUTE, seg: 6 }); const m = mesh(g, jute, SF, 120, .6, 152); m.castShadow = false; return m; })();
+  function rugMesh() { return rug; }
 
   // ---------- curtains along the facade (A.04 draws them): sheers on the back track, linen drapes on the front one, both hidden under a
   // pelmet 21 cm deep and 12 cm down from the ceiling. Wave folds; open = everything stacked at the kitchen end, on the pier between the
@@ -415,5 +420,5 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   }
   setSofa('gala3');
   const drapeMeshes = () => [];                                     // (the drapes: rooms.js)
-  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes };
+  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes, seats };
 }

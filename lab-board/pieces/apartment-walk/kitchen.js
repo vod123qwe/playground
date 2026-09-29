@@ -177,6 +177,17 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   box(X[0] + 3.8, X[1] - 3.8, 81, 82.5, 2.8, D - 3.2, liner);          // the freezer's lid
   for (const y of [112, 132, 152, 170]) box(X[0] + 4, X[1] - 4, y, y + .5, 3, D - 6, clear, OAK, root, .1);
   box(X[0] + 4, X[1] - 4, 84, 104, 4, D - 5, clear, OAK, root, .8);    // the crisper
+  // six cans of beer on the second shelf, at its front (a 0.5 l can, 16.8 high: the shelves are 20 apart); a click takes one
+  const cans = [];
+  { const canG = new THREE.LatheGeometry([[0, 0], [2.6, 0], [3.2, .5], [3.3, 1.6], [3.3, 15.2], [2.9, 16.2], [2.6, 16.8], [0, 16.8]].map(([r, y]) => new THREE.Vector2(r, y)), 32);
+    { const P = canG.attributes.position, uv = canG.attributes.uv; for (let i = 0; i < P.count; i++) uv.setY(i, P.getY(i) / 16.8); }   // the label by height, round the side
+    const label = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d');
+      g.fillStyle = '#f2c14e'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#e07a3a'; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(20 + i * 44, 170, 30, 0, 7); g.fill(); }
+      g.fillStyle = '#2b2a29'; g.font = '800 38px Inter, sans-serif'; g.textAlign = 'center'; g.fillText('PIWO', 128, 96); g.font = '600 18px Inter, sans-serif'; g.fillText('jasne \u00b7 0,5 l', 128, 124);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+    const canM = std({ name: 'can', map: label, roughness: .3, metalness: .6 });
+    for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(canG, canM); m.position.set(X[0] + 12 + i * 7.6, 132.5, D - 14 - (i % 2) * 7); m.rotation.y = i * .9;
+      m.castShadow = m.receiveShadow = true; m.userData.can = true; root.add(m); cans.push(m); } }
   box(X[0] + 12, X[1] - 12, 186.5, 187.2, 12, 40, std({ name: 'fridgeLight', color: '#ffffff', emissive: '#fff6ea', emissiveIntensity: .8, roughness: .3 }));
   for (let i = 0; i < 9; i++) box(X[0] + 8, X[1] - 8, 1.6 + i * .8, 2 + i * .8, D - 5.3, D - 4.9, legs, OAK, root, 0);
   { const fz = tallFront(X[0], X[1], Y0, 82, D - 2, true), fr = tallFront(X[0], X[1], 82, 190, D - 2, true);
@@ -187,7 +198,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   // the sink: a pull-out below the bowl with two bins
   { const box0 = box(X[1], X[2], Y0, 64, 0, D - 2, carcass);          // (the bowl and its trap above)
     const f = lowerFront(X[1], X[2], Y0, WT, D - 2), db = drawerBox(X[1] + 1, X[2] - 1, Y0 + 3, 62, 6, D - 2.2);
-    for (const [a, b] of [[X[1] + 3, X[1] + 29], [X[1] + 31, X[2] - 3]]) db.push(box(a, b, Y0 + 4.2, 52, 9, D - 6, std({ name: 'bin', color: '#8b8d90', roughness: .6 }), OAK, root, 1.2));
+    for (const [a, b] of [[X[1] + 3, X[1] + 29], [X[1] + 31, X[2] - 3]]) { const bn = box(a, b, Y0 + 4.2, 52, 9, D - 6, std({ name: 'bin', color: '#8b8d90', roughness: .6 }), OAK, root, 1.2); bn.userData.bin = true; db.push(bn); }
     slide([...f, ...db], 46); void box0; }
   // the dishwasher: the oak panel tips down; the tub and two racks inside
   shell(X[2], X[3], Y0, WT - 3, 0, D - 2, [], tub);
@@ -313,6 +324,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     sh.absarc(0, 0, 19, b0, b1, false); sh.absarc(0, 0, 17.2, b1, b0, true);
     const g = new THREE.ExtrudeGeometry(sh, { depth: 5.5, bevelEnabled: true, bevelThickness: .5, bevelSize: .5, bevelSegments: 3, curveSegments: 48 });
     g.rotateX(-Math.PI / 2); g.computeVertexNormals(); planarUV(g, OAK, .5, .1); return g; })();   // shape -y becomes +z: the arc behind the sitter
+  const seats = [];                                                  // (to sit on: an anchor at the seat, its +z the way the sitter faces)
   for (const sx of [-60, 0, 60]) {
     const St = new THREE.Group(); St.position.set(sx, 0, ID / 2 + 6); I.add(St);
     const SEAT = 65, seat = new THREE.Mesh(seatG, oak); seat.position.y = SEAT - 2.5; seat.castShadow = seat.receiveShadow = true; St.add(seat);
@@ -323,6 +335,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     for (const [i, j] of [[0, 1], [1, 3], [3, 2], [2, 0]]) St.add(rod(at(i, 24), at(j, 24), .9, .9));
     for (const s2 of [-1, 1]) St.add(rod(new THREE.Vector3(s2 * 12.4, SEAT - .2, 12.4), new THREE.Vector3(s2 * 13.1, SEAT + 12.5, 13.1), 1.1, .95));
     const bk = new THREE.Mesh(backRail, oak); bk.position.y = SEAT + 12; bk.castShadow = true; St.add(bk);
+    const an = new THREE.Object3D(); an.position.set(0, SEAT, 0); an.rotation.y = Math.PI; St.add(an);   // facing the island
+    seats.push({ name: 'stool', anchors: [an], get meshes() { const m = []; St.traverse(o => { if (o.isMesh) m.push(o); }); return m; } });
   }
 
   // ---------- things on the tops (Poly Haven, CC0): two clay vases by the oven, a carved wooden bowl of limes on the island ----------
@@ -379,5 +393,5 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const isl = (u, v) => P(K.island.along + u, K.island.off + v);
   const islandFoot = off => { const q = (u, v) => P(K.island.along + u, off + v); return [q(ix0, iz0), q(ix1, iz0), q(ix1, back + 2), q(ix0, back + 2)]; };
   foot.push(islandFoot(K.island.off));
-  return { root, foot, island: I, islandFoot, frontOfRun: D + 2, setLamps, lamps: [islandLamps, counterLED], counterLED, openers };
+  return { root, foot, island: I, islandFoot, frontOfRun: D + 2, setLamps, lamps: [islandLamps, counterLED], counterLED, openers, seats, cans };
 }

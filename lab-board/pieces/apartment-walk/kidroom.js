@@ -10,7 +10,7 @@
 //    towards the door, kept clear of the ceiling lamp.
 
 export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTex, rng, mergeGeometries, pax, hallMats, H }) {
-  const q = rng(4401), paxDoors = [];
+  const q = rng(4401), paxDoors = [], seats = [];
   const put = (g, m, x, y, z, parent = root) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
   const pink = std({ name: 'paintPink', color: '#e6c6bf', roughness: .92 }), mould = std({ name: 'paintPink', color: '#ebcfc9', roughness: .85 });
   const white = std({ name: 'carcass', color: '#f3f1ed', roughness: .55 }), blush = linen('#e2b3ad'), cream = linen('#f1e9df');
@@ -91,6 +91,7 @@ export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTe
     const bc = box(-18, 18, 50, 80, -17.8, -15, pinkF, { r: 3, scale: 45, soft: .4, seed: 72, parent: C }); bc.rotation.x = -.1;  // and cushion
     box(-2, 2, 42, 52, -21, -17, wP, { r: .6, parent: C });
     const [cx, cz] = toW(C.position.x, C.position.z); foot.push(Array.from({ length: 10 }, (_, i) => [cx + Math.cos(i / 10 * 6.283) * 27, cz + Math.sin(i / 10 * 6.283) * 27]));
+    { const an = new THREE.Object3D(); an.position.set(0, 45, 0); C.add(an); seats.push({ name: 'desk chair', anchors: [an], get meshes() { const m = []; C.traverse(o => { if (o.isMesh) m.push(o); }); return m; } }); }
   }
 
   // ---------- the toy cabinet: small, white, two doors with round pink knobs, on the south wall between the door and the radiator;
@@ -138,6 +139,7 @@ export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTe
     hole.colorSpace = THREE.NoColorSpace;
     const podM = std({ name: 'podFabric', color: '#efe5dc', roughness: .95, side: THREE.DoubleSide, alphaMap: hole, alphaTest: .5, normalMap: null });
     const pod = new THREE.Mesh(g, podM); pod.position.set(SX, 0, SZ); pod.rotation.y = -.922; pod.castShadow = pod.receiveShadow = true; root.add(pod);   // the way in (at -z) turned to the door
+    { const an = new THREE.Object3D(); an.position.set(0, top - 116, 6); an.rotation.y = Math.PI; pod.add(an); seats.push({ name: 'swing', anchors: [an], meshes: [pod] }); }   // sitting in it, looking out of the way in
     { const c = new THREE.SphereGeometry(1, 32, 16), p = c.attributes.position; for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) * 34, p.getY(i) * 7 + (top - 122), p.getZ(i) * 34); c.computeVertexNormals(); put(c, blush, SX, 0, SZ); }
     const ring = put(new THREE.TorusGeometry(5, 1.4, 12, 32), oak, SX, top + 3, SZ); ring.rotation.x = Math.PI / 2;
     const rope = std({ name: 'rope', color: '#e6dccb', roughness: 1 });
@@ -145,5 +147,5 @@ export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTe
     put(new THREE.CylinderGeometry(3, 3, 1.5, 24), std({ name: 'steel', color: '#d6d7d8', roughness: .2, metalness: 1 }), SX, H - .8, SZ);
     foot.push(Array.from({ length: 12 }, (_, i) => [SX + Math.cos(i / 12 * 6.283) * 44, SZ + Math.sin(i / 12 * 6.283) * 44])); }
 
-  return { paxDoors };
+  return { paxDoors, seats };
 }

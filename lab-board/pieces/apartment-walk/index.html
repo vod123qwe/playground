@@ -246,11 +246,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=14';
-import { buildLiving } from './living.js?v=32';
+import { buildKitchen } from './kitchen.js?v=16';
+import { buildLiving } from './living.js?v=33';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=42';
-import { startGhosts } from './ghosts.js?v=2';
+import { buildRooms } from './rooms.js?v=43';
+import { startGhosts } from './ghosts.js?v=3';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -1151,9 +1151,30 @@ function lieDown() {
 }
 function getUp() {
   if (!LIE || LIE.dir < 0) return;
-  const B = FURN.bed, x = LIE.side < 0 ? B.x0 - 36 : B.x1 + 36;
-  LIE.dir = -1; LIE.to = { x: P.x, z: P.z, yaw: P.yaw, pitch: P.pitch }; LIE.from = { x, z: B.standZ, yaw: LIE.side < 0 ? Math.PI : 0, pitch: 0 };
+  let x, z, yaw;
+  if (LIE.seat) { x = LIE.stand.x; z = LIE.stand.z; yaw = P.yaw; }            // from a seat: back where you stood, still looking where you looked
+  else { const B = FURN.bed; x = LIE.side < 0 ? B.x0 - 36 : B.x1 + 36; z = B.standZ; yaw = LIE.side < 0 ? Math.PI : 0; }
+  LIE.dir = -1; LIE.to = { x: P.x, z: P.z, yaw: P.yaw, pitch: P.pitch }; LIE.from = { x, z, yaw, pitch: 0 };
 }
+// sitting down: a click on a seat (the sofa, a dining chair, a stool, a desk chair, the swing, the balcony's chairs and daybed) sits you
+// at its place nearest the click, your eyes 72 cm over the seat, facing as it faces; your head turns to either side and up and down; a
+// step key, Escape or another click on it gets you up where you stood. Modules give their seats as anchors (+z: the way the sitter faces)
+let lastHitPoint = null;
+const _sw = new THREE.Vector3(), _sd = new THREE.Vector3();
+function sitDown(seat) {
+  if (LIE || mode !== 'walk' || SPOT.cur) return;
+  let best = null, bd = 1e9;
+  for (const an of seat.anchors) { an.getWorldPosition(_sw); const d = lastHitPoint ? _sw.distanceToSquared(lastHitPoint) : 0; if (d < bd) { bd = d; best = an; } }
+  if (!best) return;
+  best.getWorldPosition(_sw); best.getWorldDirection(_sd);
+  const x = _sw.x / M + CX, z = _sw.z / M + CZ, y = _sw.y / M, yaw = Math.atan2(_sd.z, _sd.x);
+  if (Math.hypot(P.x - x, P.z - z) > 260) return;                    // walk up to it first
+  LIE = { e: 0, dir: 1, seat, eye: y + 72, yaw0: yaw, side: 0, stand: { x: P.x, z: P.z }, from: { x: P.x, z: P.z, yaw: P.yaw, pitch: P.pitch }, to: { x: x - Math.cos(yaw) * 6, z: z - Math.sin(yaw) * 6, yaw, pitch: -.1 } };
+  P.vx = P.vz = 0; keys.clear(); paintHint();
+}
+const seatSwitches = new Map();                                       // one switch per seat, made the first time it is listed
+function seatSwitch(st) { let w = seatSwitches.get(st); if (!w) { w = { name: st.name, seat: st, t: 0, get on() { return !!LIE && LIE.dir > 0 && LIE.seat === st; }, get meshes() { return st.meshes; },
+  set(v) { const now = performance.now(); if (now - this.t < 900) return; this.t = now; v ? sitDown(st) : getUp(); } }; seatSwitches.set(st, w); } return w; }
 function stepLie(dt) {
   if (!LIE) return;
   LIE.e = THREE.MathUtils.clamp(LIE.e + LIE.dir * dt / (reduce ? .01 : 1.25), 0, 1);
@@ -1162,7 +1183,7 @@ function stepLie(dt) {
   if (LIE.dir < 0 && LIE.e <= 0) { LIE = null; unstick(); paintHint(); }
   moved();
 }
-const bedSwitch = { name: 'bed', t: 0, get on() { return !!LIE && LIE.dir > 0; }, get meshes() { return FURN?.bed?.meshes || []; },
+const bedSwitch = { name: 'bed', t: 0, get on() { return !!LIE && LIE.dir > 0 && !LIE.seat; }, get meshes() { return FURN?.bed?.meshes || []; },
   set(v) { const now = performance.now(); if (now - this.t < 900) return; this.t = now; v ? lieDown() : getUp(); } };   // (one click, one change)
 function setMode(m, at) {
   if (m === mode && !at) return;
@@ -1217,6 +1238,7 @@ addEventListener('keydown', e => {
   if (mode === 'over' && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); if (!e.code.startsWith('Shift')) e.preventDefault(); return; }
   if (mode !== 'walk') return;
   if (LIE && (e.code === 'Escape' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].includes(e.code))) { getUp(); e.preventDefault(); return; }
+  if (e.code === 'KeyF' && HAND.can) { sip(); return; }
   if (e.code === 'KeyE') { const dr = nearestDoor(); if (dr) toggleDoor(dr); return; }
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); e.preventDefault(); }
 });
@@ -1231,19 +1253,56 @@ function nearestDoor() {                                           // the closes
   }
   return best;
 }
+// ---------- a can of beer: a click on one (in the fridge, or wherever one was put down) takes it in your hand; F, or a click on it in your
+// hand, is a sip (five to a can); a click on a level top within reach (a counter, the island, a table, a shelf in the fridge, a desk)
+// puts it down there, upright; a click on a bin under the sink throws it away. What you hold hangs off the camera ----------
+scene.add(camera);
+const HAND = { can: null, sips: 0, t: 0 }, handPos = new THREE.Vector3(.24, -.31, -.66), mouthPos = new THREE.Vector3(.02, -.075, -.2), CANY = Math.PI - .45;   // (its label towards you)
+function takeCan(m) {
+  if (HAND.can) return; m.removeFromParent(); camera.add(m); m.scale.setScalar(M); m.position.copy(handPos); m.rotation.set(0, CANY, .05);
+  m.userData.noTrace = true; HAND.can = m; HAND.sips = m.userData.sips || 0; HAND.t = 0; paintHint(); moved(); ptScene();
+}
+function putCan(point) {
+  const m = HAND.can; if (!m) return; m.removeFromParent(); scene.add(m); m.scale.setScalar(M); m.position.copy(point); m.rotation.set(0, Math.random() * 6.28, 0);
+  m.userData.noTrace = false; m.userData.sips = HAND.sips; HAND.can = null; paintHint(); moved(); ptScene();
+}
+function binCan() { const m = HAND.can; if (!m) return; m.removeFromParent(); HAND.can = null; paintHint(); moved(); }
+function sip() { if (HAND.can && HAND.t === 0 && HAND.sips < 5) HAND.t = 1e-4; }
+function stepHand(dt) {                                               // a sip: up to the mouth, tipped, a moment, back down
+  const m = HAND.can; if (!m || HAND.t === 0) return;
+  HAND.t = Math.min(1, HAND.t + dt / (reduce ? .3 : 1.7)); const t = HAND.t, k = t < .3 ? THREE.MathUtils.smootherstep(t, 0, .3) : t < .68 ? 1 : 1 - THREE.MathUtils.smootherstep(t, .68, 1);
+  m.position.lerpVectors(handPos, mouthPos, k); m.rotation.set(1.25 * k, CANY - .3 * k, .05 * (1 - k));
+  if (t >= 1) { HAND.t = 0; HAND.sips++; paintHint(); }
+  moved();
+}
+const _cn = new THREE.Vector3();
+function beerClick() {                                                // (the ray already set); true when the click was the can's
+  const hits = ray.intersectObjects(scene.children, true).filter(h => h.object.visible && !h.object.userData.noRay && h.object.material && !(h.object.material.transparent && h.object.material.opacity < .6 && !h.object.userData.can));
+  const h = hits[0]; if (!h) return false;
+  if (HAND.can) {
+    if (h.object === HAND.can) { sip(); return true; }
+    if (h.distance > 3.2) return false;
+    if (h.object.userData.bin) { binCan(); return true; }
+    if (h.face) { _cn.copy(h.face.normal).transformDirection(h.object.matrixWorld); if (_cn.y > .85) { putCan(h.point); return true; } }
+    return false;
+  }
+  if (h.object.userData.can && h.distance < 3.2) { takeCan(h.object); return true; }
+  return false;
+}
 let down = null;
 canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
 canvas.addEventListener('pointerup', e => {                         // a click (not a drag) on a leaf opens or closes it
   if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
   const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
+  if (mode === 'walk' && beerClick()) { grabFlash(); return; }
   const dr = pickLeaf(e.clientX, e.clientY);
-  if (dr && dr.meshes) { dr.set(!dr.on); lendShadows(true); ptScene(); grabFlash(); }      // a lamp: on or off
+  if (dr && dr.meshes) { dr.set(!dr.on); lendShadows(true); ptScene(); grabFlash(); }      // a lamp, a seat: on or off
   else if (dr) { toggleDoor(dr); grabFlash(); }
 });
 // the lamps you can click: the pendants over the island (one switch) and over the table
 // the living room's drapes as a switch: drawn across (closed) or gathered with the sheers across; the sheers let a click through
-function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
+function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : []), ...[...(KIT?.seats || []), ...(LIV?.seats || []), ...(FURN?.seats || [])].map(seatSwitch)]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
 // ---------- the hand: over a leaf that opens, and while Space-panning the overview ----------
 const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0 };
 const sp = { held: false, id: null, x: 0, y: 0 };
@@ -1254,6 +1313,7 @@ function pickLeaf(cx, cy) {                                         // the first
   const leaves = [...doors.filter(d => d.kind !== 'fixed').map(d => d.leaf), ...OPEN.flatMap(o => o.parts)], lamps = lampList().flatMap(l => l.meshes);
   const hit = ray.intersectObjects([...wallMeshes, ...leaves, ...lamps], false).find(h => h.object.visible);
   if (!hit || hit.distance > (mode === 'walk' ? 6 : 60)) return null;
+  lastHitPoint = hit.point.clone();
   const u = hit.object.userData; return u.door && hit.distance < (mode === 'walk' ? 4 : 60) ? u.door : u.lamp || null;
 }
 const grabFlash = () => { grabUntil = performance.now() + 320; };
@@ -1323,9 +1383,9 @@ canvas.addEventListener('pointermove', e => {
   if (!look || e.pointerId !== look.id) return;
   const k = e.pointerType === 'touch' ? .006 : .0038;
   P.yaw += (e.clientX - look.x) * k; P.pitch = THREE.MathUtils.clamp(P.pitch - (e.clientY - look.y) * k, -1.2, 1.2);
-  if (LIE && LIE.dir > 0 && LIE.e >= 1) {                             // lying: the head turns about 105 degrees either way, looks up to the ceiling
-    const d = Math.atan2(Math.sin(P.yaw - LIE.yaw0), Math.cos(P.yaw - LIE.yaw0)); P.yaw = LIE.yaw0 + THREE.MathUtils.clamp(d, -1.85, 1.85);
-    P.pitch = THREE.MathUtils.clamp(P.pitch, -.8, 1.5);
+  if (LIE && LIE.dir > 0 && LIE.e >= 1) {                             // lying: the head turns about 105 degrees either way, looks up to the ceiling; seated, a
+    const d = Math.atan2(Math.sin(P.yaw - LIE.yaw0), Math.cos(P.yaw - LIE.yaw0)); P.yaw = LIE.yaw0 + THREE.MathUtils.clamp(d, LIE.seat ? -1.95 : -1.85, LIE.seat ? 1.95 : 1.85);   // little more round,
+    P.pitch = THREE.MathUtils.clamp(P.pitch, LIE.seat ? -1.1 : -.8, LIE.seat ? 1 : 1.5);                                                                               // less up
   }
   look.x = e.clientX; look.y = e.clientY;
 });
@@ -1390,7 +1450,7 @@ const liveEl = document.getElementById('live'), liveN = document.getElementById(
 const paintLive = () => { const n = GH ? GH.count : 0; liveEl.classList.toggle('on', n > 0); liveN.textContent = n === 1 ? '1 other person here' : `${n} other people here`; };
 async function startLive() {
   if (GH || ghStarting || !S.live) return; ghStarting = true;
-  try { GH = await startGhosts({ THREE, scene, wx, wz, pose: () => ({ x: P.x, z: P.z, yaw: P.yaw, eye: S.eye, mode }), onChange: paintLive }); } finally { ghStarting = false; }
+  try { GH = await startGhosts({ THREE, scene, wx, wz, pose: () => ({ x: P.x, z: P.z, yaw: P.yaw, eye: LIE ? THREE.MathUtils.lerp(S.eye, LIE.eye, THREE.MathUtils.smootherstep(LIE.e, 0, 1)) : S.eye, mode, can: !!HAND.can }), onChange: paintLive }); } finally { ghStarting = false; }
   if (GH && !S.live) stopLive(); paintLive();
 }
 function stopLive() { if (GH) { GH.stop(); GH = null; } paintLive(); }
@@ -1409,8 +1469,10 @@ function paintModes() {
 mOver.addEventListener('click', () => setMode('over')); mWalk.addEventListener('click', () => setMode('walk'));
 const hint = document.getElementById('hint');
 function paintHint() {
+  const beer = HAND.can ? (HAND.sips < 5 ? ` · <kbd>F</kbd> or tap the can: a sip (${5 - HAND.sips} left)` : ' · the can is empty') + ' · tap a top to put it down, the bin under the sink to throw it away' : '';
+  const seated = LIE && LIE.seat ? ' · <kbd>Esc</kbd> or a step key: stand up' : '';
   hint.innerHTML = mode === 'walk'
-    ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door · scroll to look closer</span><span class="touch">Stick to walk · drag to look · pinch to look closer</span>`
+    ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door${seated}${beer || ' · scroll to look closer'}</span><span class="touch">Stick to walk · drag to look${beer}</span>`
     : `<span class="keys">Drag to orbit · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Space</kbd> + drag to move · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
 }
 const here = document.getElementById('here'), hereN = document.getElementById('here-n'), hereA = document.getElementById('here-a');
@@ -1812,7 +1874,7 @@ function frame(now) {
     const cut = tween.from.cut + (to.cut - tween.from.cut) * e; if (Math.abs(cut - (S.cutNow ?? -1)) > .5 || k === 1) applyCut(cut);
     if (k === 1) { tween = null; if (mode === 'over') { controls.target.copy(overPose.target); controls.enabled = true; controls.update(); } }
   } else if (mode === 'walk') {
-    if (!SPOT.cur && !LIE) stepWalk(dt); stepLie(dt); stepBob(dt); stepLens(dt); const e = eyePose(); if (SPOT.cur) e.pos.y = SPOT.cur.eye * M; camera.position.copy(e.pos); camera.quaternion.copy(e.q);
+    if (!SPOT.cur && !LIE) stepWalk(dt); stepLie(dt); stepBob(dt); stepHand(dt); stepLens(dt); const e = eyePose(); if (SPOT.cur) e.pos.y = SPOT.cur.eye * M; camera.position.copy(e.pos); camera.quaternion.copy(e.q);
   } else {                                                          // the overview: no lower than the tops of the walls
     panOver(dt);
     const up = OV_Y - controls.target.y, dist = camera.position.distanceTo(controls.target);
@@ -1949,7 +2011,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { PANO, get FURN() { return FURN; }, lieDown, getUp, get LIE() { return LIE; }, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; } };
+window.AW = { PANO, get FURN() { return FURN; }, lieDown, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; }, HAND, takeCan, putCan, sip, binCan, sitDown, getUp, get LIE() { return LIE; } };
 </script>
 </body>
 </html>
