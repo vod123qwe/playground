@@ -239,7 +239,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=6';
+import { buildKitchen } from './kitchen.js?v=7';
 import { buildLiving } from './living.js?v=11';
 import { buildHall } from './hall.js?v=2';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
@@ -414,8 +414,9 @@ const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 for (const sp of SPOTS) {                                            // the files there are, the photo before the render
   sp.file = null;
   (async () => {
-    const big = renderer.capabilities.maxTextureSize >= 8192;       // the Blender 360 in 8K where the card takes it, in 4K elsewhere
-    for (const f of ['photo.jpg', big ? 'blender.jpg' : 'blender-4k.jpg', 'traced.jpg', 'render.jpg']) {
+    const man = await fetch(`assets/spots/${sp.id}/pano.json`).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (man && man.times?.length) { sp.pano = man; sp.file = 'pano'; }   // the tiled Blender 360, at the clock times it was rendered at
+    for (const f of sp.file ? [] : ['photo.jpg', 'traced.jpg', 'render.jpg']) {
       const r = await fetch(`assets/spots/${sp.id}/${f}`, { method: 'HEAD' }).catch(() => null);
       if (r && r.ok && r.headers.get('content-type')?.startsWith('image')) { sp.file = f; break; }
     }
@@ -430,16 +431,94 @@ function paintSpotbar() {
   const bar = document.getElementById('spotbar'), ok = SPOTS.filter(s => s.file);
   bar.innerHTML = ''; const back = document.createElement('button'); back.type = 'button'; back.className = 'sb-back'; back.textContent = 'Back to the walk'; back.addEventListener('click', leaveSpot); bar.appendChild(back);
   for (const sp of ok) { const b = document.createElement('button'); b.type = 'button'; b.textContent = sp.name; b.setAttribute('aria-pressed', String(SPOT.cur === sp)); b.addEventListener('click', () => enterSpot(sp)); bar.appendChild(b); }
-  if (SPOT.cur) { const n = document.createElement('small'); n.textContent = { 'photo.jpg': 'photo', 'blender.jpg': 'Blender · Cycles', 'blender-4k.jpg': 'Blender · Cycles', 'traced.jpg': 'traced light' }[SPOT.cur.file] || 'render · the photo is on its way'; bar.appendChild(n); }
+  if (SPOT.cur) { const n = document.createElement('small'); n.textContent = SPOT.cur.pano ? `Blender · Cycles · ${fmt(panoTime(SPOT.cur))}` : { 'photo.jpg': 'photo', 'traced.jpg': 'traced light' }[SPOT.cur.file] || 'render · the photo is on its way'; bar.appendChild(n); }
 }
 async function enterSpot(sp) {
   if (!sp.file) return;
-  if (!SPOT.tex[sp.id]) SPOT.tex[sp.id] = await new Promise(res => new THREE.TextureLoader().load(`assets/spots/${sp.id}/${sp.file}`, t => { t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; res(t); }));
+  if (sp.pano) { SPOT.tex[sp.id] = 'pano'; panoOpen(sp); }
+  else if (!SPOT.tex[sp.id]) SPOT.tex[sp.id] = await new Promise(res => new THREE.TextureLoader().load(`assets/spots/${sp.id}/${sp.file}`, t => { t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; res(t); }));
   if (mode !== 'walk') setMode('walk');
   SPOT.cur = sp; P.x = sp.at[0]; P.z = sp.at[1]; P.vx = P.vz = 0; document.body.classList.add('in-spot'); paintSpotbar(); moved();
 }
-function leaveSpot() { if (!SPOT.cur) return; SPOT.cur = null; document.body.classList.remove('in-spot'); scene.backgroundRotation.set(0, Math.PI / 2, 0); paintSpotbar(); moved(); }
+function leaveSpot() { if (!SPOT.cur) return; SPOT.cur = null; panoClose(); document.body.classList.remove('in-spot'); scene.backgroundRotation.set(0, Math.PI / 2, 0); paintSpotbar(); moved(); }
 addEventListener('keydown', e => { if (SPOT.cur && (e.key === 'Escape' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].includes(e.code))) leaveSpot(); });
+
+// ---------- the tiled 360 (tools/blender: render.py --cube, tile.py): a cube round the eye, each face in 8 x 8 tiles of 512 px (4096 a
+// face, a 16K panorama); every tile shows the sharpest level it has so far. The whole cube comes in at 512 and 1024 a face at once, then
+// the tiles in view at the level the screen needs (2048 a face at rest, 4096 when zoomed in), so zooming in sharpens what you look at.
+// The clock picks the rendered time nearest to it (11:30, the golden hour, the evening with the lamps on) ----------
+const PANO = { group: new THREE.Group(), tiles: [], sp: null, key: '', tex: new Map(), queue: [], busy: 0, R: 10 };
+PANO.group.visible = false; PANO.group.renderOrder = -10; scene.add(PANO.group);
+const FACE_AX = { px: [[1, 0, 0], [0, 1, 0]], nx: [[-1, 0, 0], [0, 1, 0]], pz: [[0, 0, 1], [0, 1, 0]], nz: [[0, 0, -1], [0, 1, 0]], py: [[0, 1, 0], [0, 0, 1]], ny: [[0, -1, 0], [0, 0, -1]] };
+const panoTime = sp => { const d = t => Math.min(Math.abs(t - S.time), 1440 - Math.abs(t - S.time)); return sp.pano.times.reduce((a, b) => d(b) < d(a) ? b : a); };
+function panoBuild(man) {                                           // the cube's tiles (once): planes facing in, at the finest grid
+  if (PANO.tiles.length) return;
+  const N = 2 ** (man.levels - 1), R = PANO.R, sz = 2 * R / N, g = new THREE.PlaneGeometry(sz * 1.0015, sz * 1.0015), m4 = new THREE.Matrix4();
+  for (const f of man.faces) {
+    const F = new THREE.Vector3(...FACE_AX[f][0]), U = new THREE.Vector3(...FACE_AX[f][1]), Rt = F.clone().cross(U), back = F.clone().negate();
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      const mat = new THREE.MeshBasicMaterial({ color: '#000', depthTest: false, depthWrite: false, toneMapped: false, fog: false });
+      const t = new THREE.Mesh(g, mat); t.renderOrder = -10; t.frustumCulled = false;
+      m4.makeBasis(Rt, U, back); t.quaternion.setFromRotationMatrix(m4);
+      t.position.copy(F).multiplyScalar(R).addScaledVector(Rt, ((c + .5) / N - .5) * 2 * R).addScaledVector(U, (.5 - (r + .5) / N) * 2 * R);
+      t.userData = { f, r, c, lv: -1, dir: t.position.clone().normalize() }; PANO.group.add(t); PANO.tiles.push(t);
+    }
+  }
+}
+function panoLoad(key, f, L, r, c, prio) {                          // one tile file, once; a queue of six at a time, the lowest levels first
+  const id = `${key}/${f}/${L}/${r}_${c}`;
+  if (PANO.tex.has(id)) return PANO.tex.get(id);
+  const e = { tex: null, prio }; PANO.tex.set(id, e);
+  PANO.queue.push({ id, e, url: `assets/spots/${key}/${f}/${L}/${r}_${c}.jpg` }); panoPump(); return e;
+}
+function panoPump() {
+  PANO.queue.sort((a, b) => a.e.prio - b.e.prio);
+  while (PANO.busy < 6 && PANO.queue.length) {
+    const j = PANO.queue.shift(); if (!PANO.tex.has(j.id)) continue; PANO.busy++;
+    new THREE.TextureLoader().load(j.url, t => { t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.anisotropy = 4;
+      if (PANO.tex.get(j.id) === j.e) { j.e.tex = t; moved(); } else t.dispose(); PANO.busy--; panoPump(); }, undefined, () => { PANO.busy--; panoPump(); });
+  }
+}
+function panoOpen(sp) { PANO.sp = sp; panoBuild(sp.pano); panoKey(); }
+function panoKey() {                                                 // the time: a new set; its first levels at once, then the view's
+  const sp = PANO.sp; if (!sp) return;
+  const key = `${sp.id}/t${panoTime(sp)}`; if (key === PANO.key) return;
+  const old = PANO.key; PANO.key = key;
+  for (const f of sp.pano.faces) { panoLoad(key, f, 0, 0, 0, 0); for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) panoLoad(key, f, 1, r, c, 1); }
+  PANO.old = old;                                                    // the old set stays up until the new one has its first level
+}
+function panoClose() {
+  PANO.sp = null; PANO.group.visible = false; PANO.key = ''; PANO.queue.length = 0;
+  for (const [id, e] of PANO.tex) { if (e.tex) e.tex.dispose(); } PANO.tex.clear();
+  for (const t of PANO.tiles) { t.material.map = null; t.material.color.set('#000'); t.material.needsUpdate = true; t.userData.lv = -1; t.userData.key = ''; }
+}
+const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _fwd = new THREE.Vector3();
+function panoUpdate() {                                              // each frame in a tiled spot: follow the eye, pick and show the levels
+  const sp = PANO.sp; if (!sp) return; const man = sp.pano, maxL = man.levels - 1, N = 2 ** maxL;
+  PANO.group.position.copy(camera.position); PANO.group.updateMatrixWorld(true);
+  panoKey();
+  const ready = man.faces.every(f => PANO.tex.get(`${PANO.key}/${f}/0/0_0`)?.tex);
+  const key = ready || !PANO.old ? PANO.key : PANO.old;
+  if (ready && PANO.old) { const o = PANO.old; PANO.old = ''; for (const [id, e] of PANO.tex) if (id.startsWith(o + '/')) { if (e.tex) e.tex.dispose(); PANO.tex.delete(id); } }
+  // the level the screen asks for: its pixels per degree against a level's (512 * 2^L over 90 degrees)
+  const ppd = innerHeight * renderer.getPixelRatio() / camera.fov, need = THREE.MathUtils.clamp(Math.ceil(Math.log2(ppd * 90 / man.tile) - .15), 1, maxL);
+  _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _fr.setFromProjectionMatrix(_pm);
+  const sph = new THREE.Sphere(), half = PANO.R / N * 1.5;
+  for (const t of PANO.tiles) {
+    const u = t.userData; sph.center.copy(t.position).add(PANO.group.position); sph.radius = half;
+    const vis = _fr.intersectsSphere(sph);
+    if (vis) for (let L = 2; L <= need; L++) { const s2 = maxL - L; panoLoad(key, u.f, L, u.r >> s2, u.c >> s2, L * 10 - (vis ? 5 : 0)); }
+    let best = -1, e = null;                                         // the sharpest loaded level for this tile
+    for (let L = maxL; L >= 0; L--) { const s2 = maxL - L, x = PANO.tex.get(`${key}/${u.f}/${L}/${u.r >> s2}_${u.c >> s2}`); if (x?.tex) { best = L; e = x; break; } }
+    if (best === u.lv && u.key === key) continue;
+    u.lv = best; u.key = key; const m = t.material;
+    if (!e) { m.map = null; m.color.set('#000'); m.needsUpdate = true; continue; }
+    const s2 = maxL - best, n = 2 ** s2, tx = e.tex.clone(); tx.repeat.set(1 / n, 1 / n); tx.offset.set((u.c % n) / n, 1 - ((u.r % n) + 1) / n); tx.needsUpdate = true;
+    if (m.map) m.map.dispose(); m.map = tx; m.color.set('#fff'); m.needsUpdate = true;
+  }
+  PANO.group.visible = true;
+}
+function panoTimeChanged() { if (PANO.sp) { panoKey(); paintSpotbar(); moved(); } }
 
 // the capture (from the console, locally): AW.captureSpot('living-a', 'http://127.0.0.1:8811/f/') renders the 360 colour (the model as it is
 // now, the made-up view outside so nothing gives the place away), the depth (white near, black at 8 m) and the world normals, each
@@ -552,6 +631,7 @@ async function traceSpot(id, { size = 4096, samples = 640, duty = .55, every = 6
 // the scene for Blender (locally, from the console): AW.exportScene('http://127.0.0.1:8812/save/apartment.glb'). The tracer's flat copy as
 // it stands (the clock, the curtains, the lamps), one glTF binary, each mesh named after its material; the sun, the paint and the photo
 // spots go along in the scene's extras. tools/blender/ takes it from there: the real materials, the sky and the 8K 360s.
+const PANO_TIMES = [690, 1065, 1140];                              // 11:30, 17:45 (the golden hour), 19:00 (after sunset, the lamps on)
 async function exportScene(post = null) {
   if (mode !== 'walk') { setMode('walk'); await workerSleep(1500); }
   await loadSky();
@@ -561,7 +641,9 @@ async function exportScene(post = null) {
   const ts = tracerScene(), { el, az } = sunAt(S.time), d = sun.position.clone().sub(sun.target.position).normalize();
   ts.traverse(o => { if (o.isRectAreaLight) o.visible = false; });   // the window portals were only for the tracer
   ts.userData = { sun: { dir: d.toArray(), color: '#' + sun.color.getHexString(), intensity: sun.intensity, el, az }, time: S.time, paint: S.paint,
-    exposure: S.exposure * PT_EXPOSURE, viewRotY: Math.PI / 2, spots: SPOTS.map(s => ({ id: s.id, name: s.name, eye: [wx(s.at[0]), s.eye * M, wz(s.at[1])] })) };
+    exposure: S.exposure * PT_EXPOSURE, viewRotY: Math.PI / 2, spots: SPOTS.map(s => ({ id: s.id, name: s.name, eye: [wx(s.at[0]), s.eye * M, wz(s.at[1])] })),
+    suns: Object.fromEntries(PANO_TIMES.map(t => { const { el, az } = sunAt(t), h = [NORTH[0] * Math.cos(az) + EAST[0] * Math.sin(az), NORTH[1] * Math.cos(az) + EAST[1] * Math.sin(az)];
+      return [t, { dir: [h[0] * Math.cos(el), Math.sin(el), h[1] * Math.cos(el)], el, az }]; })) };   // the clock times the 360s are rendered at
   const glb = await new GLTFExporter().parseAsync(ts, { binary: true, onlyVisible: true, maxTextureSize: 4096 });
   if (post) await fetch(post, { method: 'POST', body: glb });
   return { bytes: glb.byteLength, meshes: ts.children.filter(o => o.isMesh).length };
@@ -589,7 +671,7 @@ function paintClock() {
   document.getElementById('clock-s').textContent = up ? `sun ${Math.round(el / DEG)}°` : (DAY.rise !== null ? `sunrise ${fmt(DAY.rise)}` : 'night');
   clockEl.setAttribute('aria-valuenow', String(S.time)); clockEl.setAttribute('aria-valuetext', `${fmt(S.time)}, ${up ? `sun ${Math.round(el / DEG)} degrees up` : 'the sun is down'}`);
 }
-function setTime(m) { S.time = ((Math.round(m / 5) * 5) % 1440 + 1440) % 1440; placeSun(); moved(); }
+function setTime(m) { S.time = ((Math.round(m / 5) * 5) % 1440 + 1440) % 1440; placeSun(); moved(); if (typeof panoTimeChanged === 'function') panoTimeChanged(); }
 {
   let dragging = false;
   const fromPointer = e => { const r = clockEl.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
@@ -1631,7 +1713,8 @@ function frame(now) {
   const spotTex = SPOT.cur && SPOT.tex[SPOT.cur.id];
   world.visible = !spotTex;                                            // in a photo spot the photo is all there is
   if (spotTex) scene.backgroundRotation.set(0, 0, 0);
-  const bgNow = spotTex || (nearIn && VIEW.tex[S.view] ? VIEW.tex[S.view] : bgColor);   // inside: the view out of the windows; the overview: the plain page
+  if (spotTex === 'pano') panoUpdate(); else PANO.group.visible = false;
+  const bgNow = spotTex === 'pano' ? bgColor : spotTex || (nearIn && VIEW.tex[S.view] ? VIEW.tex[S.view] : bgColor);   // inside: the view out of the windows; the overview: the plain page
   if (scene.background !== bgNow) { scene.background = bgNow; ptScene(); }
   // labels
   const w = innerWidth, h = innerHeight;
@@ -1722,7 +1805,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { PANO, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

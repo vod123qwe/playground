@@ -33,15 +33,24 @@ def glow(m, color, strength):
 def base(name):                                                 # 'glass.004' -> 'glass'
     return name.split('.')[0]
 
-def upgrade(X):
+def lamp(m, color, strength):                                  # a lampshade that glows: the finish kept, emission on top
+    p = principled(m)
+    if p: p.inputs['Emission Color'].default_value = color; p.inputs['Emission Strength'].default_value = strength
+
+def upgrade(X, lamps=False):
     print('FINISHES', sorted(finishes()))
+    warm = (1, .78, .52, 1)                                      # 2700 K
+    for m in bpy.data.materials:
+        b = base(m.name)
+        if b == 'opal': lamp(m, warm, 9 if lamps else 0)             # the three globes over the island
+        elif b == 'glow': lamp(m, warm, 7 if lamps else 0)           # the pendant over the dining table
     for m in bpy.data.materials:
         b = base(m.name)
         if b == 'glass': thin_glass(m)
         elif b == 'rail': thin_glass(m, (.9, .96, .96, 1))
         elif b == 'sheerM': sheer(m)
-        elif b == 'led': glow(m, (1, .86, .68, 1), 25)
-        elif b == 'downlight': glow(m, (1, .93, .82, 1), .3)
+        elif b == 'led': glow(m, (1, .86, .68, 1), 25 if lamps else 12)
+        elif b == 'downlight': glow(m, (1, .84, .64, 1), 160 if lamps else .3)
         elif b == 'frosted':
             p = principled(m)
             if p: p.inputs['Alpha'].default_value = .85; p.inputs['Roughness'].default_value = .6
@@ -51,10 +60,10 @@ def upgrade(X):
 import os
 TEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tex')
 FINISH = {    # material name: (scan, tile size in m, tint (or None: the scan's own colour), normal strength, roughness scale, sheen)
-    'oak':       ('white_oak_veneer', 1.2, None, .6, 1.0, 0),       # natural oak fronts, tall units, the console, the island's flutes
-    'boucle':    ('wool_boucle', .35, (.91, .86, .79), 1.0, 1.0, .6),  # the dining chairs
-    'fabric':    ('wool_boucle', .35, (.91, .86, .79), 1.0, 1.0, .6),  # the island stools
-    'chenille':  ('velour_velvet', .5, (.79, .73, .65), .8, 1.0, 1.0),  # the sofa: a warm light beige chenille
+    'oak':       ('white_oak_veneer', 1.0, (.80, .66, .50), .6, 1.0, 0, 1.4),   # natural oak fronts etc.: by the viewer's UVs (1 = 140 cm, grain up the fronts)
+    'boucle':    ('wool_boucle', .35, 'flat', 1.0, 1.0, .6),       # the dining chairs: the scan's loops and sheen, our colour (the scan is checked)
+    'fabric':    ('wool_boucle', .35, 'flat', 1.0, 1.0, .6),
+    'chenille':  ('velour_velvet', .5, (.88, .78, .65), .8, 1.0, .55),  # the sofa: a warm light beige chenille
     'linen':     ('rough_linen', .45, None, .8, 1.0, .3),               # cushions
     'drapeM':    ('rough_linen', .6, (.80, .73, .64), 1.0, 1.0, .4),     # the drapes
     'jute':      ('hessian_230', .6, (.91, .86, .78), 1.2, 1.0, 0),     # the rug
@@ -68,18 +77,19 @@ def scan_file(i, kind):
     return next((os.path.join(d, f) for f in os.listdir(d) if kind in f.lower()), None)
 
 def finish(m, spec):
-    sid, tile, tint, nstr, rsc, sheen = spec
+    sid, tile, tint, nstr, rsc, sheen = spec[:6]; uv = spec[6] if len(spec) > 6 else 0
     p = principled(m)
     if not p or not has_scan(sid): return False
     nt = m.node_tree; N, L = nt.nodes, nt.links
-    tc = N.new('ShaderNodeTexCoord'); mp = N.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (1 / tile,) * 3
-    L.new(tc.outputs['Object'], mp.inputs[0])
+    tc = N.new('ShaderNodeTexCoord'); mp = N.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = ((uv or 1) / tile,) * 3
+    L.new(tc.outputs['UV' if uv else 'Object'], mp.inputs[0])
     def img(kind, colour):
         f = scan_file(sid, kind)
         if not f: return None
-        t = N.new('ShaderNodeTexImage'); t.image = bpy.data.images.load(f, check_existing=True); t.projection = 'BOX'; t.projection_blend = .25
+        t = N.new('ShaderNodeTexImage'); t.image = bpy.data.images.load(f, check_existing=True)
+        if not uv: t.projection = 'BOX'; t.projection_blend = .25
         t.image.colorspace_settings.name = 'sRGB' if colour else 'Non-Color'; L.new(mp.outputs[0], t.inputs[0]); return t
-    col = img('diff', True)
+    col = img('diff', True) if tint != 'flat' else None
     if col and tint != 'keep':
         for l in list(p.inputs['Base Color'].links): nt.links.remove(l)
         if tint:
@@ -112,7 +122,12 @@ def finishes():
         b, p = base(m.name), principled(m)
         if not p: continue
         if b == 'cashmere': p.inputs['Roughness'].default_value = .5                                     # matt lacquer, a soft sheen
-        elif b == 'quartz': p.inputs['Coat Weight'].default_value = .35; p.inputs['Coat Roughness'].default_value = .18   # honed conglomerate
+        elif b == 'tajmahal':                                                                             # polished quartzite: the 4K map, a clear coat
+            p.inputs['Coat Weight'].default_value = .6; p.inputs['Coat Roughness'].default_value = .06
+            hi = os.path.join(os.path.dirname(TEX), '..', '..', 'assets', 'tex', 'tajmahal_4k.jpg')
+            for l in m.node_tree.links:
+                if l.to_socket == p.inputs['Base Color'] and l.from_node.type == 'TEX_IMAGE' and os.path.exists(hi):
+                    l.from_node.image = bpy.data.images.load(hi, check_existing=True); l.from_node.interpolation = 'Cubic'
         elif b in ('tiles',): p.inputs['Coat Weight'].default_value = 1; p.inputs['Coat Roughness'].default_value = .04     # the glaze
         elif b == 'travertine': p.inputs['Coat Weight'].default_value = .2; p.inputs['Coat Roughness'].default_value = .3
         elif b == 'floorOak': p.inputs['Coat Weight'].default_value = .15; p.inputs['Coat Roughness'].default_value = .35  # the lacquered laminate
