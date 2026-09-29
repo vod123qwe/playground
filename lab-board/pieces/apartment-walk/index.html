@@ -249,7 +249,7 @@ import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=14';
 import { buildLiving } from './living.js?v=32';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=39';
+import { buildRooms } from './rooms.js?v=40';
 import { startGhosts } from './ghosts.js?v=2';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
@@ -420,6 +420,7 @@ const SPOTS = [
   { id: 'kitchen-a', name: 'Kitchen', at: [313.8, -1038.2], eye: 145 },        // in the aisle, between the run and the island
   { id: 'bedroom-a', name: 'Bedroom', at: [785, -325], eye: 145 },              // in the corner by the door: the bed, the PAX, the windows, the TV
   { id: 'study-a', name: 'Study', at: [660, -520], eye: 145 },
+  { id: 'kid-a', name: "Child's room", at: [330, -300], eye: 140 },              // inside the door: the bed under the moulding, the swing, the desk, the PAX
   { id: 'bath-a', name: 'Bathroom', at: [535, -150], eye: 150 },                // where the architect's tour stands: the vanity, the bath, the WC; rendered at dusk, its lamps on                 // by the door: the desk and its screens, the sofa bed, the window
 ];
 const SPOT = { cur: null, tex: {}, els: [] };

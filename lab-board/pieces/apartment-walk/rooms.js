@@ -12,7 +12,8 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
 import { buildBath } from './bath.js?v=11';
-import { buildBalconies } from './balcony.js?v=1';
+import { buildBalconies } from './balcony.js?v=2';
+import { buildKidroom } from './kidroom.js?v=1';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -593,10 +594,11 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   }
 
   buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, rng, mergeGeometries, linen, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR }, balconies });   // the balconies, to sit out on
+  const kid = buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTex, rng, mergeGeometries, pax, hallMats, H });   // H, the child's room
   const bath = buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, H, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR } });   // G, the bathroom
 
   const setLamps = on => lamps.forEach(l => l.set(on));
   // lying on it: the head on the pillows, the eyes 80 cm up, looking down the bed at the TV; where you stand up beside it
   const bed = { x0: BX0, x1: BX1, headZ: WZ - 50, standZ: WZ - 125, eye: 80, yaw: -Math.PI / 2, pitch: .19, meshes: bedParts };
-  return { root, foot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: [...run.doors, ...paxE.doors], openers: bath.openers, bed, setClosed, closure, trackOf, inside };
+  return { root, foot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: [...run.doors, ...paxE.doors, ...kid.paxDoors], openers: bath.openers, bed, setClosed, closure, trackOf, inside };
 }
