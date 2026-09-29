@@ -1,6 +1,6 @@
 // The three rooms on A.04 beyond the living room, in plan centimetres (x, and the plan's y as z):
 //  F, the bedroom (16.7 m2): an IKEA PAX along the bathroom wall (two 100 frames, four white doors, a filler to the corner), a 180 x 200
-//    bed after the Kave Home Odina (rounded ecru boucle, ash legs) with its head on the wall opposite the door, a warm rug under its foot, two floating oak bedside tables with ceramic lamps, a 55" TV on the wall facing
+//    bed after the Kave Home Odina (rounded ecru boucle, ash legs), a knit blanket over its foot, with its head on the wall opposite the door, two floating oak bedside tables with ceramic lamps, a 55" TV on the wall facing
 //    the bed (on its straight part, as close to the bed's axis as the corner allows), sheers and linen drapes along the windows;
 //  E, the study (11.3 m2), as the third revision of A.04 has it: a 120 oak desk on the wall to the living room with two screens, an
 //    office chair, the PC, oak shelves and ivy; a sofa bed that pulls out, on the wall to the bedroom; a PAX by the door; a rug;
@@ -11,7 +11,7 @@
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
-import { buildBath } from './bath.js?v=6';
+import { buildBath } from './bath.js?v=7';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -227,8 +227,34 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   bedParts.push(box(BX0 + 4, BX1 - 4, 30, 52, WZ - 18, WZ - 218, sheet, { r: 6, scale: LINEN, soft: .3, seed: 3 }));        // the mattress, sheeted
   bedParts.push(box(BX0 + 1, BX1 - 1, 44, 57.5, WZ - 80, WZ - 220, duvetM, { r: 9, scale: LINEN, soft: 1.6, seed: 7 }));     // the duvet, over the edges
   bedParts.push(box(BX0 + 2, BX1 - 2, 53, 60.5, WZ - 74, WZ - 94, duvetM, { r: 4.5, scale: LINEN, soft: .7, seed: 8 }));     // its folded top
-  bedParts.push(box(BX0 - 2, BX1 + 2, 56.5, 58.3, WZ - 172, WZ - 206, throwM, { r: .8, scale: LINEN, soft: 1.1, seed: 9 }));  // the throw across the foot,
-  for (const x of [BX0 - 3.2, BX1 + 1.4]) bedParts.push(box(x, x + 1.8, 34, 58, WZ - 174, WZ - 204, throwM, { r: .8, scale: LINEN, soft: .9, seed: 10 }));   // hanging down its sides
+  // a chunky knit blanket in caramel wool, thrown across the foot at a slant: a cloth of 150 x 125 laid on the duvet, and where it runs
+  // past the bed's edge it falls, in soft folds, down the side and the foot
+  { const TW = 150, TD = 125, NU = 72, NV = 60, top = 60.4, ang = .3, c0 = [BX1 - 62, WZ - BL + 52], q = rng(33);
+    const knit = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#b98556'; g.fillRect(0, 0, w, h); const cols = 8, rows = 12, cw = w / cols, rh = h / rows;
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { const x = i * cw, y = j * rh;            // the stitches: fat V's of wool, lit from above
+        for (const sd of [-1, 1]) { const gr = g.createLinearGradient(x + cw / 2, y, x + cw / 2 + sd * cw / 2, y + rh);
+          gr.addColorStop(0, '#dcae80'); gr.addColorStop(.55, '#c08d5e'); gr.addColorStop(1, '#8f6038'); g.fillStyle = gr;
+          g.beginPath(); g.ellipse(x + cw / 2 + sd * cw * .22, y + rh * .55, cw * .26, rh * .62, sd * .55, 0, 7); g.fill(); } }
+      for (let i = 0; i < 3000; i++) { g.fillStyle = `rgba(255,236,210,${q() * .12})`; g.fillRect(q() * w, q() * h, 1, 2); } });
+    knit.wrapS = knit.wrapT = THREE.RepeatWrapping;
+    const geo = new THREE.PlaneGeometry(1, 1, NU, NV), P = geo.attributes.position, UV = geo.attributes.uv, ca = Math.cos(ang), sa = Math.sin(ang);
+    const ex0 = BX0 + 1, ex1 = BX1 - 1, ez = WZ - BL + 2;             // the bed's top edges (the frame's rounded corners, near enough)
+    for (let i = 0; i < P.count; i++) {
+      const u = UV.getX(i), v = UV.getY(i), sx = (u - .5) * TW, sz = (v - .5) * TD;
+      let x = c0[0] + sx * ca - sz * sa, z = c0[1] + sx * sa + sz * ca, y = top + .9 * Math.sin(sx * .09 + sz * .05) * Math.sin(sz * .11);
+      const ox = Math.max(0, x - ex1, ex0 - x), oz = Math.max(0, ez - z);   // how far past an edge: that much falls
+      if (ox > 0 || oz > 0) {
+        const fall = Math.hypot(ox, oz), R0 = 6, roll = Math.min(fall, R0 * Math.PI / 2) / R0;   // over the edge on a 6 cm roll, then straight down
+        const out = R0 * Math.sin(roll) + 2.2 * Math.sin((x + z) * .19) * Math.min(1, fall / 18), drop = R0 * (1 - Math.cos(roll)) + Math.max(0, fall - R0 * Math.PI / 2);
+        if (ox > 0) x = (x > ex1 ? ex1 : ex0) + Math.sign(x - BC) * out; else x += out * .3;
+        if (oz > 0) z = ez - out;
+        y = Math.max(4, top - drop);
+      }
+      P.setXYZ(i, x, y, z); UV.setXY(i, sx / 28, sz / 20);
+    }
+    geo.computeVertexNormals();
+    const bl = new THREE.Mesh(geo, std({ name: 'knit', map: knit, normalMap: lnN, normalScale: new THREE.Vector2(.6, .6), roughness: 1, side: THREE.DoubleSide }));
+    bl.castShadow = bl.receiveShadow = true; root.add(bl); bedParts.push(bl); void throwM; }
   // a pillow: a sphere squared off (a superellipse) and thinned to its edges, a soft uneven fill; its uv on the linen's scale
   const pillowGeo = (w, d, t, seed) => { const g = new THREE.SphereGeometry(1, 48, 32), p = g.attributes.position, uv = g.attributes.uv, q = rng(seed), ph = [q() * 6, q() * 6];
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
@@ -244,24 +270,6 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   }
   pillow(52, 32, 13, rust, BC + 3, 52 + 15, WZ - 55, .75, 25, .05);                                                          // the lumbar cushion
   foot.push([[BX0, WZ], [BX1, WZ], [BX1, WZ - BL], [BX0, WZ - BL]]);
-  // the rug under the bed's foot and out in front: 300 x 200 in warm wool, sand with a rust lattice and ochre diamonds, a rust border,
-  // a fringe at its short ends
-  { const W = 300, D = 200, cx = 940, cz = -220;
-    const tex = canvasTex(1536, 1024, (g, w, h) => { const q = rng(91); g.fillStyle = '#d7b596'; g.fillRect(0, 0, w, h);
-      for (let i = 0; i < 90000; i++) { g.fillStyle = q() < .5 ? 'rgba(246,222,196,.22)' : 'rgba(150,98,64,.12)'; g.fillRect(q() * w, q() * h, 1 + q() * 2.5, 1 + q() * 2.5); }   // the pile
-      const b = 28; g.strokeStyle = '#a5573a'; g.lineWidth = 10; g.strokeRect(b, b, w - 2 * b, h - 2 * b); g.lineWidth = 3; g.strokeRect(b + 18, b + 18, w - 2 * b - 36, h - 2 * b - 36);
-      g.save(); g.beginPath(); g.rect(b + 30, b + 30, w - 2 * b - 60, h - 2 * b - 60); g.clip();
-      const cw = w / 14, ch = h / 7;
-      g.strokeStyle = 'rgba(165,87,58,.85)'; g.lineWidth = 3;
-      for (let i = -14; i <= 28; i++) for (const sgn of [1, -1]) { g.beginPath(); g.moveTo(i * cw, 0); g.lineTo(i * cw + sgn * h * cw / ch, h); g.stroke(); }
-      g.fillStyle = 'rgba(201,138,62,.9)';
-      for (let i = 0; i <= 14; i++) for (let j = 0; j <= 7; j++) { const x = i * cw, y = j * ch; if ((i + j) % 2) continue; g.beginPath(); g.moveTo(x, y - 14); g.lineTo(x + 10, y); g.lineTo(x, y + 14); g.lineTo(x - 10, y); g.fill(); }
-      g.restore(); });
-    const top = new THREE.Mesh(new THREE.PlaneGeometry(W, D), std({ name: 'rug', map: tex, roughness: 1 })); top.rotation.x = -Math.PI / 2; top.position.set(cx, 1.1, cz); top.receiveShadow = true; root.add(top);
-    const edge = std({ name: 'rugEdge', color: '#c9a383', roughness: 1 });
-    box(cx - W / 2, cx + W / 2, 0, 1.05, cz - D / 2, cz + D / 2, edge, { r: .4 });
-    const fr = []; for (const s2 of [-1, 1]) for (let z = cz - D / 2 + 1.5; z < cz + D / 2 - 1; z += 1.3) fr.push(new THREE.BoxGeometry(6 + Math.sin(z * 1.7) * .9, .25, .38).translate(cx + s2 * (W / 2 + 3), .3, z));
-    const F = new THREE.Mesh(mergeGeometries(fr), std({ name: 'rugEdge', color: '#e2cdb5', roughness: 1 })); F.receiveShadow = true; root.add(F); }
   // the bedside tables: floating oak boxes 38 x 35 x 26 with a drawer, and a ceramic lamp with a linen drum
   const ceramic = std({ name: 'lampBase', color: '#e9e2d6', roughness: .55 }), lamps = [];
   for (const [x0, x1] of [[810, BX0], [BX1, 1070]]) {
@@ -302,7 +310,11 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     foot.push([[a[0], a[1]], [b[0], b[1]], [b[0] + n[0] * (d + 5), b[1] + n[1] * (d + 5)], [a[0] + n[0] * (d + 5), a[1] + n[1] * (d + 5)]]);
   }
   { const p0 = [921, -362], d = [.7895, -.609];                               // the bedroom: on its angled wall to the study, by the window (the developer's), 600 x 1100
-    radiator([p0[0] + d[0] * 11.5, p0[1] + d[1] * 11.5], [p0[0] + d[0] * 121.5, p0[1] + d[1] * 121.5], [.609, .7895], 14, 60); }
+    radiator([p0[0] + d[0] * 11.5, p0[1] + d[1] * 11.5], [p0[0] + d[0] * 121.5, p0[1] + d[1] * 121.5], [.609, .7895], 14, 60);
+    // over it, ivy trailing from a little oak shelf at 1.5 m, its strands stopping short of the radiator (in a frame: the wall at z = 0)
+    const G = new THREE.Group(), c = [p0[0] + d[0] * 66.5, p0[1] + d[1] * 66.5]; G.position.set(c[0], 0, c[1]); G.rotation.y = Math.atan2(-.609, -.7895); root.add(G);
+    box(-24, 24, 150, 152.4, -18, 0, oak, { r: .3, parent: G });
+    ivy({ THREE, root: G, std, WZ: 0, CX: 0, y: 152.4, seed: 717, reach: .55 }); }
   radiator([393, -176], [393, -96], [-1, 0], 14, 60);                       // the child's room: by the window, on its right wall (A.04), 600 x 800
   { const p0 = [919, -376], d = [.7925, -.6099];                              // the study: on its angled wall by the window (A.04), 600 x 800
     radiator([p0[0] + d[0] * 30, p0[1] + d[1] * 30], [p0[0] + d[0] * 110, p0[1] + d[1] * 110], [-.6099, -.7925], 14, 60); }
@@ -317,7 +329,7 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   function ceilingLamp(name, x, z, D) {
     const k = D / 38, G = new THREE.Group(); G.position.set(x, 0, z); root.add(G);
     const amber = std({ name: 'amberGlass', color: '#c47a36', roughness: .04, metalness: .15, transparent: true, opacity: .55, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
-    const led = std({ name: 'islandLED', color: '#fff4e2', roughness: .4, emissive: '#ffcf8a', emissiveIntensity: 0 });
+    const led = std({ name: 'ceilingLED', color: '#fff4e2', roughness: .4, emissive: '#ffcf8a', emissiveIntensity: 0 });   // (its own name: the evening render keeps these off)
     const y0 = H - 22 - 16.8 * k;                                    // the rim; the crown 22 cm under the ceiling
     const shade = new THREE.Mesh(shadeG, amber); shade.scale.setScalar(k); shade.position.y = y0; shade.castShadow = true; G.add(shade);
     const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(6.4 * k, 6.4 * k, 9 * k, 48, 1, true), brass); sleeve.position.y = y0 + 7.5 * k; G.add(sleeve);
