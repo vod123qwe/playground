@@ -248,8 +248,8 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
       const g = new RoundedBoxGeometry(dw - .3, Y1 - 2 - Y0 - .3, 1.9, 2, .15); planarUV(g, OAK);   // one grain across the four, the reeds straight up
       mesh(g, flute, TV, dw * (i + .5), (Y0 + Y1 - 2) / 2, D - 2 + .95);
     }
-    // the TV: 65", 143.9 x 82.4, 2.5 thick, on a flat wall mount 3 cm off the wall, centred over the console, its bottom 13 cm over the top
-    const tx = L / 2, ty = Y1 + 13 + 41.2, tz = 3 + 1.25;
+    // the TV: 65", 143.9 x 82.4, 2.5 thick, on a flat wall mount 3 cm off the wall, centred over the console, its bottom 25 cm over the top
+    const tx = L / 2, ty = Y1 + 25 + 41.2, tz = 3 + 1.25;
     mesh(new RoundedBoxGeometry(143.9, 82.4, 2.5, 2, .4), bezel, TV, tx, ty, tz);
     mesh(new RoundedBoxGeometry(40, 30, 3, 1, .3), black, TV, tx, ty, 1.5).castShadow = false;   // the mount, behind
     mesh(new THREE.PlaneGeometry(142.9, 81.2), screen, TV, tx, ty + .3, tz + 1.26).castShadow = false;
@@ -365,16 +365,17 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     lamps.push({ name: 'dining', on: false, meshes, set(v) { this.on = v; light.intensity = v ? 3 : 0; glow.emissiveIntensity = v ? 6 : 0; } });   // click it, or Lamps on
   }));
   await Promise.all(decor);
-  // a floor lamp in the corner by the window end of the console, in the bedside lamps' family: a round black base, a slim black stem,
-  // a linen drum 42 across at 1.3 to 1.6 m; clear of the gathered drapes (its drum 20 cm off the facade) and just in front of the console
-  { const G = new THREE.Group(); G.position.set(-4, 0, 55); TV.add(G);
-    const metal = std({ name: 'legs', color: '#141414', roughness: .45, metalness: .6 }), shade = std({ name: 'bedLamp', color: '#f2ebdf', roughness: .95, side: THREE.DoubleSide, emissive: '#ffd9a0', emissiveIntensity: 0 });
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(13, 13.5, 2.2, 48), metal); base.position.y = 1.1; base.castShadow = base.receiveShadow = true; G.add(base);
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, 134, 16), metal); stem.position.y = 2 + 67; stem.castShadow = true; G.add(stem);
-    const drum = new THREE.Mesh(new THREE.CylinderGeometry(19, 21, 30, 64, 1, true), shade); drum.position.y = 145; drum.castShadow = true; G.add(drum);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(19, .25, 8, 64), metal); ring.rotation.x = Math.PI / 2; ring.position.y = 160; G.add(ring);
-    const light = new THREE.PointLight('#ffcf94', 0, 5, 2); light.position.y = 142; G.add(light);
-    lamps.push({ name: 'floor', on: false, meshes: [base, stem, drum, ring], set(v) { this.on = !!v; shade.emissiveIntensity = v ? 1.8 : 0; light.intensity = v ? 2.2 : 0; } });
+  // on the console, beside the aloe: an IKEA VARMBLIXT (the "donut"), orange glass, about 30 across and 11 high, lit from inside
+  { const G = new THREE.Group(); G.position.set(52, 62, 20); TV.add(G);
+    const glow = (() => { const c = document.createElement('canvas'); c.width = 4; c.height = 64; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 64);   // along the profile (from the base up): the base, the rim, the top, the dimple
+      gr.addColorStop(0, '#f25200'); gr.addColorStop(.45, '#ff7408'); gr.addColorStop(.7, '#ff9420'); gr.addColorStop(.88, '#ffb040'); gr.addColorStop(1, '#ffc25a'); g.fillStyle = gr; g.fillRect(0, 0, 4, 64);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();   // brightest low down, where the light shines through
+    const glass = new THREE.MeshPhysicalMaterial({ name: 'donutGlass', color: '#e8780f', roughness: .16, clearcoat: 1, clearcoatRoughness: .08, emissive: '#ffffff', emissiveMap: glow, emissiveIntensity: 0, ...clip });
+    const prof = [[.01, 7.5], [1.5, 7.5], [3, 7.7], [4.6, 8.3], [6, 9.4], [7.4, 10.4], [8.6, 10.9], [9.8, 11], [11.2, 10.7], [12.5, 10.1], [13.6, 9.1], [14.4, 7.9], [15, 6.3], [15.1, 4.8], [14.8, 3.2], [14.1, 2], [13, 1.2], [11.5, .8], [11.2, 0], [.01, 0]];
+    const g = new THREE.LatheGeometry(prof.reverse().map(([r, y]) => new THREE.Vector2(r, y)), 128);   // its own normals, from the profile (walked from the base up, so they face out)
+    const d = new THREE.Mesh(g, glass); d.castShadow = true; d.receiveShadow = false; G.add(d);   // (glass: no shadow on itself, it streaked the dimple)
+    const light = new THREE.PointLight('#ffa640', 0, 2.2, 2); light.position.set(0, 1, 17); G.add(light);   // under its rim, towards the room: a warm pool on the top
+    lamps.push({ name: 'donut', on: false, meshes: [d], set(v) { this.on = !!v; glass.emissiveIntensity = v ? .6 : 0; light.intensity = v ? .3 : 0; } });
   }
 
   // lamps on or off; the light is in candela per the renderer's metres, the group being in cm
@@ -393,7 +394,6 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   const fixed = [
     [[0, 0], [LIVING.console.len, 0], [LIVING.console.len, 40], [0, 40]].map(([x, z]) => inF(TVd, x, z)),
     circle(LIVING.dining, 80),
-    [[-17, 42], [9, 42], [9, 68], [-17, 68]].map(([x, z]) => inF(TVd, x, z)),   // the floor lamp
   ];
   let foot = [];
   function setSofa(kind) {
