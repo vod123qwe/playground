@@ -344,8 +344,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const led = std({ name: 'islandLED', color: '#fff4e2', roughness: .4, emissive: '#ffcf8a', emissiveIntensity: 0 });
   const opal = led;                                                   // (the name the evening render lights them by went with the globes)
   const islandLight = new THREE.PointLight('#ffc98a', 0, 5, 2); islandLight.position.set(0, TOP + 62, 0); I.add(islandLight);
-  islandLight.shadow.mapSize.set(512, 512); islandLight.shadow.camera.near = .03; islandLight.shadow.bias = -.004; islandLight.shadow.normalBias = .02;   // its light stops at the walls: a shadow, on while it is on
-  const islandLamps = { name: 'island', on: false, meshes: [], set(v) { this.on = v; led.emissiveIntensity = v ? 3 : 0; amber.emissive.set(v ? '#6a3208' : '#000'); islandLight.intensity = v ? 3.2 : 0; islandLight.castShadow = !!v; } };   // one switch for the three
+  islandLight.shadow.mapSize.set(512, 512); islandLight.shadow.camera.near = .03; islandLight.shadow.bias = -.004; islandLight.shadow.normalBias = .02;   // its shadow: the walk lends one of its shadow slots to the nearest lamps that are on
+  const islandLamps = { name: 'island', on: false, light: islandLight, meshes: [], set(v) { this.on = v; led.emissiveIntensity = v ? 3 : 0; amber.emissive.set(v ? '#6a3208' : '#000'); islandLight.intensity = v ? 3.2 : 0; } };   // one switch for the three
   const shadeG = new THREE.LatheGeometry([[19, 0], [19.35, .8], [19.2, 3], [18.8, 7.5], [18, 11.5], [16.4, 14.4], [13.4, 16], [6, 16.7], [1.3, 16.8]].map(([r, y]) => new THREE.Vector2(r, y)), 96);
   for (const [px, drop, pz] of [[-60, 72, 1.5], [0, 61, -1], [60, 80, .5]]) {
     const y0 = TOP + drop, top = y0 + 16.8;                           // the rim, the crown of the shade

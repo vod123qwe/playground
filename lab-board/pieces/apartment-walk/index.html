@@ -239,10 +239,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=12';
-import { buildLiving } from './living.js?v=27';
+import { buildKitchen } from './kitchen.js?v=13';
+import { buildLiving } from './living.js?v=29';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=14';
+import { buildRooms } from './rooms.js?v=17';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -993,6 +993,25 @@ function segDist(x, z, dr) {                                       // how far a 
 }
 const toggleDoor = dr => { if (dr.kind !== 'fixed') dr.to = dr.to > .5 ? 0 : 1; };
 const OPEN = [];
+// a lamp's light stops at the walls: the lamps' own point lights stay hidden, and three shadow-casting lights take the place of the three
+// lamps that are on nearest to you (a lamp further off still glows, its light would not reach you anyway). Their shadows are drawn only when
+// something changes (a lamp, a door, a curtain). So the light count never changes (switching a lamp needs no new shaders) and stays low
+const SLOTS = [0, 1, 2].map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); l.castShadow = true; l.shadow.autoUpdate = false; l.shadow.mapSize.set(512, 512);
+  l.shadow.camera.near = .03; l.shadow.bias = -.004; l.shadow.normalBias = .02; scene.add(l); return l; });
+let slotKey = '';
+function lendShadows(changed) {
+  const all = lampList().filter(l => l.light), wp = new THREE.Vector3();
+  for (const l of all) l.light.visible = false;
+  const on = all.filter(l => l.on && l.light.intensity > 0);
+  for (const l of on) l._d = l.light.getWorldPosition(wp).distanceToSquared(camera.position);
+  const pick = on.sort((a, b) => a._d - b._d).slice(0, SLOTS.length), key = pick.map(l => l.name + l.light.intensity).join('|');
+  if (key === slotKey && !changed) return; slotKey = key;
+  SLOTS.forEach((sl, i) => {
+    const l = pick[i]; if (!l) { sl.intensity = 0; return; }
+    l.light.getWorldPosition(sl.position); sl.color.copy(l.light.color); sl.distance = l.light.distance; sl.decay = l.light.decay; sl.intensity = l.light.intensity;
+    sl.shadow.needsUpdate = true;
+  });
+}
 // drawn drapes darken their room: the window's soft light (the portal) dims with them (to 12 %), and so does the ambient (to 35 %) while
 // you stand in that room; the sun they already stop, casting shadows. Daylight or dusk, it scales what comes in from outside
 let shadeNow = null;
@@ -1194,7 +1213,7 @@ canvas.addEventListener('pointerup', e => {                         // a click (
   const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const dr = pickLeaf(e.clientX, e.clientY);
-  if (dr && dr.meshes) { dr.set(!dr.on); ptScene(); grabFlash(); }      // a lamp: on or off
+  if (dr && dr.meshes) { dr.set(!dr.on); lendShadows(true); ptScene(); grabFlash(); }      // a lamp: on or off
   else if (dr) { toggleDoor(dr); grabFlash(); }
 });
 // the lamps you can click: the pendants over the island (one switch) and over the table
@@ -1804,10 +1823,11 @@ function frame(now) {
     const r = roomAt(P.x, P.z);
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
-  if (OPEN.some(o => o.moved)) { for (const o of OPEN) o.moved = false; ptScene(); }
-  if (FURN && FURN.step(dt)) { ptScene(); moved(); shadeNow = null; }   // the drapes being drawn or let back
+  if (OPEN.some(o => o.moved)) { for (const o of OPEN) o.moved = false; ptScene(); lendShadows(true); }
+  if (FURN && FURN.step(dt)) { ptScene(); moved(); shadeNow = null; lendShadows(true); }   // the drapes being drawn or let back
   if (FURN) shadeRooms();
-  if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); if (FURN) FURN.update(doors); }   // a leaf moved: the traced scene is out of date, the curtains make way
+  lendShadows(false);
+  if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); if (FURN) FURN.update(doors); lendShadows(true); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
   const idle = S.pt && mode === 'walk' && !tween && !SPOT.cur && performance.now() - lastMove > 280;
   if (idle && ptReady()) {
@@ -1874,6 +1894,7 @@ const livingReady = kitchenReady.then(async () => {
 }).catch(err => { console.warn('living', err); LIV = LIV || false; });   // (false: failed, the tracer goes on without it)
 livingReady.then(async () => {
   loadStep(4, 'Switching on the light…');
+  lendShadows(true);                                                // the lamps' own lights hidden before the shaders are made
   try { await renderer.compileAsync(scene, camera); } catch (err) { console.warn('compile', err); }
   await new Promise(r => { requestAnimationFrame(() => requestAnimationFrame(r)); setTimeout(r, 600); });   // two frames drawn with it all in place (a hidden tab draws none: then a moment), then away
   loaded();

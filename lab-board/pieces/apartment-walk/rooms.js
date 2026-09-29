@@ -229,14 +229,64 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     b.position.set(cx, 56, cz); b.castShadow = b.receiveShadow = true; root.add(b);
     const sh = new THREE.Mesh(new THREE.CylinderGeometry(13, 15, 19, 48, 1, true), shadeM); sh.position.set(cx, 56 + 36, cz); root.add(sh);
     const light = new THREE.PointLight('#ffcf94', 0, 4, 2); light.position.set(cx, 56 + 34, cz); root.add(light);
-    light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;   // its light stops at the walls: a shadow, on while it is on
-    lamps.push({ name: x0 < BX0 ? 'bedside left' : 'bedside right', on: false, meshes: [b, sh], set(v) { this.on = !!v; shadeM.emissiveIntensity = v ? 1.6 : 0; light.intensity = v ? 1.2 : 0; light.castShadow = !!v; } });
+    light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;   // its shadow: the walk lends one of its shadow slots to the nearest lamps that are on
+    lamps.push({ name: x0 < BX0 ? 'bedside left' : 'bedside right', on: false, light, meshes: [b, sh], set(v) { this.on = !!v; shadeM.emissiveIntensity = v ? 1.6 : 0; light.intensity = v ? 1.2 : 0; } });
     foot.push([[x0, WZ], [x1, WZ], [x1, WZ - 35], [x0, WZ - 35]]);
   }
   // the TV, 55" (123 x 71), on the wall facing the bed (z = -362), its right edge 6 cm from where the wall turns
   { const cx = 921 - 6 - 61.5, y0 = 98, screen = std({ name: 'screen', color: '#050607', roughness: .07, metalness: .1 }), bezel = std({ name: 'bezel', color: '#1b1c1f', roughness: .5, metalness: .3 });
     box(cx - 61.5, cx + 61.5, y0, y0 + 71, -362 + 3, -362 + 6.5, bezel, { r: .5 });
     const s = new THREE.Mesh(new THREE.PlaneGeometry(122, 69.4), screen); s.position.set(cx, y0 + 35.5, -362 + 6.52); root.add(s); }
+  // ---------- the radiators, where A.04 puts them (it moves the study's, the bedroom's and the child's room's, and swaps the living room's
+  // for a tall one), the bathroom's towel rail where the developer's heating drawing has it. Steel panels, white, a satin finish, the face
+  // in vertical channels, a grille on top, a chrome valve; hung 4 cm off the wall. (a: along the wall from, b: to; n: into the room)
+  const radM = std({ name: 'radiator', color: '#f4f4f1', roughness: .38, metalness: .1 }), chrome = std({ name: 'steel', color: '#d6d7d8', roughness: .15, metalness: 1 });
+  function radiator(a, b, n, y0, h, d = 10, kind = 'panel') {
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]), e = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+    const F = new THREE.Group(); F.position.set(a[0] + n[0] * 4, 0, a[1] + n[1] * 4); F.rotation.y = Math.atan2(-e[1], e[0]); root.add(F);
+    if (Math.sign(-e[1] * n[0] + e[0] * n[1]) < 0) F.scale.z = -1;      // local +z into the room
+    if (kind === 'ladder') {                                           // a towel rail: two round uprights, flat bars
+      for (const x of [1.5, len - 1.5]) { const u = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, h, 16), radM); u.position.set(x, y0 + h / 2, d / 2); F.add(u); }
+      for (let y = y0 + 4; y < y0 + h - 2; y += (y > y0 + h * .55 ? 3.6 : 5.2)) box(2, len - 2, y, y + 1.4, d / 2 - 1, d / 2 + 1, radM, { r: .5, parent: F });
+    } else {
+      box(0, len, y0, y0 + h, 0, d, radM, { r: .8, parent: F });
+      for (let x = 2.5; x < len - 2; x += 5) box(x - .4, x + .4, y0 + 2, y0 + h - 2, d - .05, d + .35, radM, { r: .2, parent: F });   // the channels
+      box(1, len - 1, y0 + h - .1, y0 + h + .3, 1.5, d - 1.5, std({ name: 'shadowGap', color: '#b9b6b0', roughness: .9 }), { r: .1, parent: F });   // the grille
+      const v = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 7, 16), chrome); v.position.set(len - 4, y0 + h + 4, d / 2); F.add(v);   // the valve
+    }
+    foot.push([[a[0], a[1]], [b[0], b[1]], [b[0] + n[0] * (d + 5), b[1] + n[1] * (d + 5)], [a[0] + n[0] * (d + 5), a[1] + n[1] * (d + 5)]]);
+  }
+  radiator([806, -362], [917, -362], [0, 1], 14, 60);                       // the bedroom: under the TV (A.04 moves it here), 600 x 1100
+  radiator([393, -176], [393, -96], [-1, 0], 14, 60);                       // the child's room: by the window, on its right wall (A.04), 600 x 800
+  { const p0 = [919, -376], d = [.7925, -.6099];                              // the study: on its angled wall by the window (A.04), 600 x 800
+    radiator([p0[0] + d[0] * 30, p0[1] + d[1] * 30], [p0[0] + d[0] * 110, p0[1] + d[1] * 110], [-.6099, -.7925], 14, 60); }
+  radiator([350, -610], [400, -610], [0, -1], 12, 180, 9);                  // the living room: A.04's tall one, by the laundry's corner, 1800 x 500
+  radiator([405, -232], [405, -172], [1, 0], 22, 122, 6, 'ladder');         // the bathroom: a towel rail on the left wall (the developer's), 1222 x 600
+
+  // ---------- the ceiling lights, at the outlets of the electrical drawing (its points read off onto the plan, to within a few tens of
+  // cm): the island's family, closer to the ceiling: the amber glass bowl on a short brass stem and canopy, the LED in its brass sleeve
+  // (3000 K); 38 across in the living room and the bedroom, 26 in the study and the child's room. Each a switch ----------
+  const shadeG = new THREE.LatheGeometry([[19, 0], [19.35, .8], [19.2, 3], [18.8, 7.5], [18, 11.5], [16.4, 14.4], [13.4, 16], [6, 16.7], [1.3, 16.8]].map(([r, y]) => new THREE.Vector2(r, y)), 96);
+  const brass = std({ name: 'brass', color: '#c9a063', roughness: .28, metalness: 1 });
+  function ceilingLamp(name, x, z, D) {
+    const k = D / 38, G = new THREE.Group(); G.position.set(x, 0, z); root.add(G);
+    const amber = std({ name: 'amberGlass', color: '#c47a36', roughness: .04, metalness: .15, transparent: true, opacity: .55, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
+    const led = std({ name: 'islandLED', color: '#fff4e2', roughness: .4, emissive: '#ffcf8a', emissiveIntensity: 0 });
+    const y0 = H - 22 - 16.8 * k;                                    // the rim; the crown 22 cm under the ceiling
+    const shade = new THREE.Mesh(shadeG, amber); shade.scale.setScalar(k); shade.position.y = y0; shade.castShadow = true; G.add(shade);
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(6.4 * k, 6.4 * k, 9 * k, 48, 1, true), brass); sleeve.position.y = y0 + 7.5 * k; G.add(sleeve);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(5.8 * k, 48), led); disc.rotation.x = Math.PI / 2; disc.position.y = y0 + 3.2 * k; G.add(disc);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, 22, 16), brass); stem.position.y = H - 11; G.add(stem);
+    const rose = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 1.6, 32), brass); rose.position.y = H - .8; G.add(rose);
+    const light = new THREE.PointLight('#ffc98a', 0, 6, 2); light.position.y = y0 - 4; G.add(light);
+    light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;
+    lamps.push({ name, on: false, light, meshes: [shade, sleeve, disc, stem, rose], set(v) { this.on = !!v; led.emissiveIntensity = v ? 3 : 0; amber.emissive.set(v ? '#6a3208' : '#000'); light.intensity = v ? 2.4 * k : 0; } });
+  }
+  ceilingLamp('ceiling living', 537, -758, 38);                      // H1(5/5'), over the sofa
+  ceilingLamp('ceiling bedroom', 913, -260, 38);                     // H1(11/11'), by the foot of the bed
+  ceilingLamp('ceiling study', 774, -515, 26);                       // H1(12/12')
+  ceilingLamp('ceiling child', 212, -227, 26);                       // H1(8/8')
+
   const setLamps = on => lamps.forEach(l => l.set(on));
   // lying on it: the head on the pillows, the eyes 80 cm up, looking down the bed at the TV; where you stand up beside it
   const bed = { x0: BX0, x1: BX1, headZ: WZ - 50, standZ: WZ - 125, eye: 80, yaw: -Math.PI / 2, pitch: .19, meshes: bedParts };
