@@ -339,7 +339,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   // ---------- three pendants over the island: opal glass globes 22 cm across on black cords, 75 cm over the top, 60 cm apart ----------
   const opal = std({ name: 'opal', color: '#f3f0ea', roughness: .22, emissive: '#ffe2b8', emissiveIntensity: 0 });
   const islandLight = new THREE.PointLight('#ffd9a8', 0, 5, 2); islandLight.position.set(0, TOP + 70, 0); I.add(islandLight);
-  const islandLamps = { name: 'island', on: false, meshes: [], set(v) { this.on = v; opal.emissiveIntensity = v ? 2.2 : 0; islandLight.intensity = v ? 3 : 0; } };   // one switch for the three
+  islandLight.shadow.mapSize.set(512, 512); islandLight.shadow.camera.near = .03; islandLight.shadow.bias = -.004; islandLight.shadow.normalBias = .02;   // its light stops at the walls: a shadow, on while it is on
+  const islandLamps = { name: 'island', on: false, meshes: [], set(v) { this.on = v; opal.emissiveIntensity = v ? 2.2 : 0; islandLight.intensity = v ? 3 : 0; islandLight.castShadow = !!v; } };   // one switch for the three
   for (const px of [-60, 0, 60]) {
     const R = 11, cy = TOP + 75 + R;
     const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), opal); globe.position.set(px, cy, 0); globe.castShadow = true; I.add(globe);
