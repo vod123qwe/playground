@@ -61,6 +61,12 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Lampy klikalne:** kliknij lampę (kursor-dłoń jak przy drzwiach), żeby ją zapalić albo zgasić: trzy kule nad wyspą mają jeden włącznik, lampa nad stołem swój. **Lamps on** (panel, Light) zapala wszystkie; domyślnie wyłączone (dzień).
 - Meble blokują chodzenie (obrysy w cm, jak kuchnia). Kto utknie (róg, mebel, który pojawił się pod nogami), może zawsze wyjść: w zaklinowaniu dozwolony jest każdy krok, który nie wchodzi głębiej; kliknięcie w minimapę albo wejście do pokoju stawia w najbliższym wolnym miejscu.
 
+## Przekąski (snacks.js)
+
+- W górnej szafce nad zlewem leżą dwie paczki chipsów. Klik w paczkę bierze ją do ręki. `F` albo klik w nią to jeden chips.
+- Klik w blat, stół albo półkę z paczką w ręce wysypuje chipsy do miski w tym miejscu. Klik w miskę z paczką w ręce dosypuje do niej.
+- Klik w miskę, gdziekolwiek stoi (także na siedząco), to chips do ust. Shift i klik bierze miskę do ręki, żeby ją przenieść. Kosz pod zlewem wyrzuca to, co trzymasz.
+
 ## Telewizor i gra (tvgame.js)
 
 - Klik w telewizor go włącza: ekran startowy z wyborem gry. Siedząc na kanapie: klik w TV, `T` albo przycisk A / Start na padzie to granie. Widok obraca się na ekran i przybliża, klawisze i pad idą do gry. `Esc` (B na padzie) wychodzi z gry, drugi `Esc` wstaje z kanapy.
@@ -167,6 +173,7 @@ Punkty zdjęciowe to rendery z Blendera Cycles w **kafelkach 16K**: sześcian 6 
 - `kitchen.js` · kuchnia (w cm, na ścianie kuchennej)
 - `living.js` · salon (w cm planu)
 - `tvgame.js` · gra na telewizorze (canvas jako tekstura ekranu)
+- `snacks.js` · paczka chipsów, miska, chips
 - `hall.js` · szafa PAX w przedpokoju (w cm planu)
 - `assets/oak_*.jpg` · Oak Veneer 01, Poly Haven (CC0)
 - `assets/tex/teddy_*.jpg` · Curly Teddy Natural, Poly Haven (CC0)

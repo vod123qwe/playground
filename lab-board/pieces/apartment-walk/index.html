@@ -259,7 +259,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=17';
+import { buildKitchen } from './kitchen.js?v=18';
+import { makeBowl, makeCrisp } from './snacks.js?v=1';
 import { buildLiving } from './living.js?v=42';
 import { buildHall } from './hall.js?v=4';
 import { buildRooms } from './rooms.js?v=46';
@@ -1318,40 +1319,82 @@ function nearestDoor() {                                           // the closes
   }
   return best;
 }
-// ---------- a can of beer: a click on one (in the fridge, or wherever one was put down) takes it in your hand; F, or a click on it in your
-// hand, is a sip (five to a can); a click on a level top within reach (a counter, the island, a table, a shelf in the fridge, a desk)
-// puts it down there, upright; a click on a bin under the sink throws it away. What you hold hangs off the camera ----------
+// ---------- in your hand: a can of beer, a bag of crisps, a bowl of them. A click on a can or a bag (in the fridge, in the cupboard over
+// the sink, or wherever one was put down) takes it; F, or a click on it in your hand: a sip (five to a can) or a crisp. A click on a level
+// top within reach (a counter, the island, a table, a shelf, a desk) puts it down, upright; a bag put down is poured into a bowl there
+// (or into the bowl you click). A click on a bowl, wherever it stands: a crisp from it into your mouth (Shift + click: the bowl into
+// your hand, to carry). A click on a bin under the sink throws away what you hold. What you hold hangs off the camera ----------
 scene.add(camera);
 const HAND = { can: null, sips: 0, t: 0 }, handPos = new THREE.Vector3(.24, -.31, -.66), mouthPos = new THREE.Vector3(.02, -.075, -.2), CANY = Math.PI - .45;   // (its label towards you)
+const HOLD = { can: { pos: handPos, rot: [0, CANY, .05] }, chips: { pos: new THREE.Vector3(.27, -.3, -.85), rot: [.05, -.4, .1] }, bowl: { pos: new THREE.Vector3(.1, -.25, -.5), rot: [.35, 0, 0] } };
+const kindOf = m => m?.userData.kind || 'can';
+const leftOf = m => kindOf(m) === 'can' ? 5 - (m === HAND.can ? HAND.sips : m.userData.sips || 0) : m.userData.n || 0;
+const snackOf = o => { for (let q = o; q; q = q.parent) { if (q.userData.snack) return q.userData.snack; if (q.userData.can) return q; } return null; };
+const noTrace = (m, v) => m.traverse(o => { o.userData.noTrace = v; });
 function takeCan(m) {
-  if (HAND.can) return; m.removeFromParent(); camera.add(m); m.scale.setScalar(M); m.position.copy(handPos); m.rotation.set(0, CANY, .05);
-  m.userData.noTrace = true; HAND.can = m; HAND.sips = m.userData.sips || 0; HAND.t = 0; paintHint(); moved(); ptScene();
+  if (HAND.can) return; m.removeFromParent(); camera.add(m); m.scale.setScalar(M); const h = HOLD[kindOf(m)]; m.position.copy(h.pos); m.rotation.set(...h.rot);
+  noTrace(m, true); HAND.can = m; HAND.sips = m.userData.sips || 0; HAND.t = 0; paintHint(); moved(); ptScene();
 }
 function putCan(point) {
-  const m = HAND.can; if (!m) return; m.removeFromParent(); scene.add(m); m.scale.setScalar(M); m.position.copy(point); m.rotation.set(0, Math.random() * 6.28, 0);
-  m.userData.noTrace = false; m.userData.sips = HAND.sips; HAND.can = null; paintHint(); moved(); ptScene();
+  const m = HAND.can; if (!m) return; m.removeFromParent(); HAND.can = null;
+  if (kindOf(m) === 'chips') { const b = makeBowl(THREE, m.userData.n, clip); b.scale.setScalar(M); b.position.copy(point); b.rotation.y = Math.random() * 6.28; scene.add(b); }   // poured into a bowl there; the bag goes
+  else { scene.add(m); m.scale.setScalar(M); m.position.copy(point); m.rotation.set(0, Math.random() * 6.28, 0); noTrace(m, false); if (kindOf(m) === 'can') m.userData.sips = HAND.sips; }
+  paintHint(); moved(); ptScene();
+}
+function pour(bag, bowl) {                                             // the bag into a bowl, as much as it takes; an empty bag goes
+  const k = Math.min(bag.userData.n, bowl.userData.slots.length - bowl.userData.n); bowl.userData.add(k); bag.userData.n -= k;
+  if (bag.userData.n <= 0) { bag.removeFromParent(); HAND.can = null; }
+  paintHint(); moved(); ptScene();
 }
 function binCan() { const m = HAND.can; if (!m) return; m.removeFromParent(); HAND.can = null; paintHint(); moved(); }
-function sip() { if (HAND.can && HAND.t === 0 && HAND.sips < 5) HAND.t = 1e-4; }
-function stepHand(dt) {                                               // a sip: up to the mouth, tipped, a moment, back down
+// a crisp: from a bowl (wherever it is) or the bag in your hand, flying up to your mouth
+const FLY = [], _fw = new THREE.Vector3();
+function eatFrom(sn) {
+  let c;
+  if (kindOf(sn) === 'bowl') { if (sn.userData.n <= 0) return false; const top = sn.children[sn.children.length - 1]; top.getWorldPosition(_fw); c = sn.userData.take(); }
+  else { if (sn.userData.n <= 0) return false; sn.userData.n--; sn.localToWorld(_fw.set(0, 25, 0)); c = makeCrisp(THREE); }
+  camera.add(c); c.scale.setScalar(M); c.position.copy(camera.worldToLocal(_fw)); noTrace(c, true); FLY.push({ m: c, from: c.position.clone(), t: 0 });
+  paintHint(); moved(); ptScene(); return true;
+}
+function stepFly(dt) {
+  for (const f of FLY) { f.t = Math.min(1, f.t + dt / (reduce ? .15 : .5)); const e = THREE.MathUtils.smootherstep(f.t, 0, 1);
+    f.m.position.lerpVectors(f.from, mouthPos, e); f.m.position.y += Math.sin(f.t * Math.PI) * .04; f.m.rotation.x += dt * 6; f.m.scale.setScalar(M * (1 - .5 * e)); }
+  for (let i = FLY.length - 1; i >= 0; i--) if (FLY[i].t >= 1) { FLY[i].m.removeFromParent(); FLY.splice(i, 1); }
+  if (FLY.length) moved();
+}
+function sip() {
+  const m = HAND.can; if (!m || HAND.t !== 0 || leftOf(m) <= 0) return;
+  if (kindOf(m) !== 'can') eatFrom(m);                                // a crisp: the hand comes up a little with it
+  HAND.t = 1e-4;
+}
+function stepHand(dt) {                                               // a sip: up to the mouth, tipped, a moment, back down; a crisp: the hand a little up
+  stepFly(dt);
   const m = HAND.can; if (!m || HAND.t === 0) return;
-  HAND.t = Math.min(1, HAND.t + dt / (reduce ? .3 : 1.7)); const t = HAND.t, k = t < .3 ? THREE.MathUtils.smootherstep(t, 0, .3) : t < .68 ? 1 : 1 - THREE.MathUtils.smootherstep(t, .68, 1);
-  m.position.lerpVectors(handPos, mouthPos, k); m.rotation.set(1.25 * k, CANY - .3 * k, .05 * (1 - k));
-  if (t >= 1) { HAND.t = 0; HAND.sips++; paintHint(); }
+  const can = kindOf(m) === 'can', h = HOLD[kindOf(m)];
+  HAND.t = Math.min(1, HAND.t + dt / (reduce ? .3 : can ? 1.7 : .6)); const t = HAND.t, k = t < .3 ? THREE.MathUtils.smootherstep(t, 0, .3) : t < .68 ? 1 : 1 - THREE.MathUtils.smootherstep(t, .68, 1);
+  if (can) { m.position.lerpVectors(handPos, mouthPos, k); m.rotation.set(1.25 * k, CANY - .3 * k, .05 * (1 - k)); }
+  else { m.position.lerpVectors(h.pos, mouthPos, k * .3); m.rotation.set(h.rot[0] + .25 * k, h.rot[1], h.rot[2]); }
+  if (t >= 1) { HAND.t = 0; if (can) HAND.sips++; paintHint(); }
   moved();
 }
 const _cn = new THREE.Vector3();
-function beerClick() {                                                // (the ray already set); true when the click was the can's
+function beerClick(e) {                                               // (the ray already set); true when the click was for what you hold or can take
   const hits = ray.intersectObjects(scene.children, true).filter(h => h.object.visible && !h.object.userData.noRay && h.object.material && !(h.object.material.transparent && h.object.material.opacity < .6 && !h.object.userData.can));
   const h = hits[0]; if (!h) return false;
-  if (HAND.can) {
-    if (h.object === HAND.can) { sip(); return true; }
-    if (h.distance > 3.2) return false;
+  const sn = snackOf(h.object), held = HAND.can;
+  if (held && sn === held) { sip(); return true; }
+  if (h.distance > 3.2) return false;
+  if (sn && kindOf(sn) === 'bowl' && sn !== held) {
+    if (held && kindOf(held) === 'chips') { pour(held, sn); return true; }
+    if (!held && e?.shiftKey) { takeCan(sn); return true; }
+    eatFrom(sn); return true;                                         // (an empty bowl: nothing, but the click is its)
+  }
+  if (held) {
     if (h.object.userData.bin) { binCan(); return true; }
     if (h.face) { _cn.copy(h.face.normal).transformDirection(h.object.matrixWorld); if (_cn.y > .85) { putCan(h.point); return true; } }
     return false;
   }
-  if (h.object.userData.can && h.distance < 3.2) { takeCan(h.object); return true; }
+  if (sn) { takeCan(sn); return true; }
   return false;
 }
 let down = null;
@@ -1360,7 +1403,7 @@ canvas.addEventListener('pointerup', e => {                         // a click (
   if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
   const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (mode === 'walk' && beerClick()) { grabFlash(); return; }
+  if (mode === 'walk' && beerClick(e)) { grabFlash(); return; }
   const dr = pickLeaf(e.clientX, e.clientY);
   if (dr && dr.meshes) { dr.set(!dr.on); lendShadows(true); ptScene(); grabFlash(); }      // a lamp, a seat: on or off
   else if (dr) { toggleDoor(dr); grabFlash(); }
@@ -1534,7 +1577,9 @@ function paintModes() {
 mOver.addEventListener('click', () => setMode('over')); mWalk.addEventListener('click', () => setMode('walk'));
 const hint = document.getElementById('hint');
 function paintHint() {
-  const beer = HAND.can ? (HAND.sips < 5 ? ` · <kbd>F</kbd> or tap the can: a sip (${5 - HAND.sips} left)` : ' · the can is empty') + ' · tap a top to put it down, the bin under the sink to throw it away' : '';
+  const hk = kindOf(HAND.can), left = HAND.can ? leftOf(HAND.can) : 0, what = { can: 'the can', chips: 'the bag', bowl: 'the bowl' }[hk];
+  const beer = HAND.can ? (left > 0 ? ` · <kbd>F</kbd> or tap ${what}: ${hk === 'can' ? 'a sip' : 'a crisp'} (${left} left)` : ` · ${what} is empty`)
+    + (hk === 'chips' ? ' · tap a top: into a bowl there' : ' · tap a top to put it down') + ', the bin under the sink to throw it away' : '';
   const seated = LIE && LIE.seat ? ' · <kbd>Esc</kbd> or a step key: stand up' + (LIE.seat.name === 'sofa' && LIV?.tv ? ' · <kbd>T</kbd>, a pad or a click on the TV: play' : '') : '';
   if (mode === 'walk' && TVF.on) { hint.innerHTML = '<span class="keys">Playing (the controls are on the screen) · <kbd>Esc</kbd> or B on the pad: leave the TV</span><span class="touch">Playing · a pad plays</span>'; return; }   // (the game shows the keys or the pad's buttons, whichever you use)
   hint.innerHTML = mode === 'walk'
@@ -2079,7 +2124,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { PANO, get FURN() { return FURN; }, lieDown, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; }, HAND, takeCan, putCan, sip, binCan, sitDown, getUp, get LIE() { return LIE; }, TVF, tvFocus, tvSwitch };
+window.AW = { PANO, get FURN() { return FURN; }, lieDown, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; }, HAND, takeCan, putCan, sip, binCan, eatFrom, pour, sitDown, getUp, get LIE() { return LIE; }, TVF, tvFocus, tvSwitch };
 </script>
 </body>
 </html>

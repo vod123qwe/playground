@@ -14,6 +14,7 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { makeBag } from './snacks.js?v=1';
 
 const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -188,6 +189,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     const canM = std({ name: 'can', map: label, roughness: .3, metalness: .6 });
     for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(canG, canM); m.position.set(X[0] + 12 + i * 7.6, 132.5, D - 14 - (i % 2) * 7); m.rotation.y = i * .9;
       m.castShadow = m.receiveShadow = true; m.userData.can = true; root.add(m); cans.push(m); } }
+  // two bags of crisps in the upper cupboard over the sink, on its bottom (open the door, a click takes one)
+  for (const [x, ry] of [[X[1] + 18, .12], [X[1] + 40, -.18]]) { const b = makeBag(THREE, 30, clip); b.position.set(x, UP0 + 2, 15); b.rotation.y = ry; root.add(b); }
   box(X[0] + 12, X[1] - 12, 186.5, 187.2, 12, 40, std({ name: 'fridgeLight', color: '#ffffff', emissive: '#fff6ea', emissiveIntensity: .8, roughness: .3 }));
   for (let i = 0; i < 9; i++) box(X[0] + 8, X[1] - 8, 1.6 + i * .8, 2 + i * .8, D - 5.3, D - 4.9, legs, OAK, root, 0);
   { const fz = tallFront(X[0], X[1], Y0, 82, D - 2, true), fr = tallFront(X[0], X[1], 82, 190, D - 2, true);
