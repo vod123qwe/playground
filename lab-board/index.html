@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>lab board</title>
-<meta name="description" content="Infinite draggable board of experiments. WebGL bends the field while it moves; click a piece to open its side panel.">
+<meta name="description" content="Infinite draggable board of experiments; click a piece to open its side panel.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
@@ -288,13 +288,6 @@
     <div class="cur-label" id="curlabel"></div>
   </div>
   <div class="grain" aria-hidden="true"></div>
-  <header class="top">
-    <a class="brand" href="#">lab board</a>
-    <a class="right" href="#" aria-disabled="true">contact</a>
-  </header>
-  <footer class="foot">
-    <span><span class="k" id="hint">drag to pan · scroll to zoom · </span><span class="v" id="count"></span></span>
-  </footer>
   <nav class="review" id="review" aria-label="Review">
     <button class="rv-group" id="rv-group" type="button" aria-label="What the arrows change">space</button>
     <button class="rv-btn" id="rv-prev" type="button" aria-label="Previous hover effect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -400,14 +393,14 @@ const CFG = {
   // 'lens' (liquid lens + ripple + bulge under the cursor) · 'focus' (field desaturates, tile resolves from pixels)
   hover: (new URLSearchParams(location.search).get('hover')) || 'lift',
   // full-screen overlay profile: 'static' (the v1 SVG grain) · 'off' · 'film' · 'crt' · 'tv' · 'dither' · 'live' (wakes up with motion)
-  overlay: (new URLSearchParams(location.search).get('overlay')) || 'live',
+  overlay: (new URLSearchParams(location.search).get('overlay')) || 'static',   // a clean view by default (no grain or scanlines while moving; 'live' was the default)
   fx: { ease: 0.12, lift: 46, tilt: 0.12, innerZoom: 0.06, parallax: 0.016, frontParallax: 6, bulge: 34, bulgeR: 150, pixelStart: 26, pixelEase: 0.075, depth: 0.034, depthLift: 26, relief: 70, reliefTilt: 0.2, flatTilt: 0.04 },               // the symbol squares on hover are parked; the cursor alone carries the hover
-  bend: 0.85,                      // × viewport height → z amplitude in px
+  bend: 0,                         // × viewport height → z amplitude in px (off: the field stays flat when it moves; it was 0.85)
   strengthDragGain: 12.5,          // bend gain while dragging
   strengthCoastGain: 4,            // bend gain while coasting (original: 1)
   strengthSmooth: 0.15,
   hoverGain: 15e-5, hoverMax: 0.03, hoverDecay: 0.86, hoverFloor: 3e-4,
-  aberrThreshold: 0.006, aberrScale: 0.42,
+  aberrThreshold: 0.006, aberrScale: 0,          // the colour split while moving is off too (it was 0.42)
   entrance: { time: 1.1, drop: 340, push: 1.8 },
   planeSegments: 28,
   // space layouts: tiles live in real 3D instead of on the flat board
@@ -921,7 +914,7 @@ function createGL(canvas) {
 const stage = document.getElementById('stage'), board = document.getElementById('board'), slotsEl = document.getElementById('slots'), canvas = document.getElementById('gl');
 // overflow:hidden is still scrollable by focus/scrollIntoView; clip where supported and snap back anywhere else
 stage.addEventListener('scroll', () => { if (stage.scrollTop || stage.scrollLeft) { stage.scrollTop = 0; stage.scrollLeft = 0; } });
-const modeEl = document.getElementById('mode'); { const n = PIECES.filter(p => !p.empty).length; document.getElementById('count').textContent = `${n} ${n === 1 ? 'piece' : 'pieces'}`; }
+const modeEl = document.getElementById('mode'); { const n = PIECES.filter(p => !p.empty).length; const cEl = document.getElementById('count'); if (cEl) cEl.textContent = `${n} ${n === 1 ? 'piece' : 'pieces'}`; }
 
 const covers = PIECES.map(makeCover);
 loadImageCovers();
@@ -1251,7 +1244,7 @@ function setLayout(v, init) {
   CFG.layout = LAYOUT_ORDER.includes(v) ? v : 'plane';
   trav = 0; travVel = 0; zoomT = 0; if (!init) clearHover();   // cursor code is further down the file; skip on first call
   spaceSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.layout)); setDesc('space', CFG.layout);
-  document.getElementById('hint').textContent = hintText();
+  const hEl = document.getElementById('hint'); if (hEl) hEl.textContent = hintText();   // (the hint is off: a clean view)
   const u = new URL(location.href); u.searchParams.set('space', CFG.layout); history.replaceState(null, '', u);
   updateReview();
 }
