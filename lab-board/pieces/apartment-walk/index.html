@@ -56,9 +56,22 @@
   .pts i{width:8px; height:8px; border-radius:50%; background:#c9a15a; transition:background .3s} .pts.done i{background:#3fae6a}
   body.pt-on .pts{display:flex}
   /* photo spots: a marker where a 360 photo was taken; in a photo, a bar to go back */
-  .spot{position:absolute; left:0; top:0; display:flex; align-items:center; gap:6px; height:32px; padding:0 12px 0 9px; border:0; border-radius:999px; background:#fff; color:var(--ink);
-        font:600 12px/1 Inter, sans-serif; box-shadow:0 0 0 1px var(--line); cursor:pointer; pointer-events:auto; white-space:nowrap}
-  .spot svg{width:16px; height:16px} .spot:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:2px}
+  /* a quiet dot; under the pointer it grows a little and shows a camera and the room's name; a spot in another room is faded and
+     blurred, so it does not get in the way of walking round (the hit area stays the same size, so it does not jitter) */
+  .spot{position:absolute; left:0; top:0; width:36px; height:36px; padding:0; border:0; background:transparent; display:grid; place-items:center; cursor:pointer; pointer-events:auto;
+        transition:opacity .45s ease, filter .45s ease}
+  .spot::before{content:''; position:absolute; width:20px; height:20px; border-radius:50%; box-shadow:0 0 0 1px rgba(255,255,255,.55); transition:opacity .2s, transform .25s cubic-bezier(.2,.8,.2,1)}
+  .spot .dot{position:relative; width:11px; height:11px; border-radius:50%; background:#fff; color:var(--ink); display:grid; place-items:center; overflow:hidden;
+        box-shadow:0 0 0 1px rgba(20,20,20,.14), 0 1px 6px rgba(0,0,0,.28); transition:width .25s cubic-bezier(.2,.8,.2,1), height .25s cubic-bezier(.2,.8,.2,1)}
+  .spot svg{width:15px; height:15px; flex:none; opacity:0; transform:scale(.5); transition:opacity .18s, transform .25s cubic-bezier(.2,.8,.2,1)}
+  .spot .nm{position:absolute; top:calc(100% - 2px); left:50%; transform:translate(-50%, -3px); padding:4px 9px; border-radius:999px; background:rgba(255,255,255,.94); color:var(--ink);
+        font:600 11.5px/1 Inter, sans-serif; white-space:nowrap; box-shadow:0 0 0 1px var(--line); opacity:0; pointer-events:none; transition:opacity .18s, transform .25s cubic-bezier(.2,.8,.2,1)}
+  .spot:hover .dot, .spot:focus-visible .dot{width:30px; height:30px} .spot:hover::before, .spot:focus-visible::before{opacity:0; transform:scale(1.4)}
+  .spot:hover svg, .spot:focus-visible svg{opacity:1; transform:none} .spot:hover .nm, .spot:focus-visible .nm{opacity:1; transform:translate(-50%, 0)}
+  .spot:focus-visible{outline:none} .spot:focus-visible .dot{box-shadow:0 0 0 2px rgba(20,20,20,.45)}
+  .spot.far{opacity:.3; filter:blur(1.6px)} .spot.far .dot{width:8px; height:8px} .spot.far::before{opacity:0}
+  .spot.far:hover, .spot.far:focus-visible{opacity:1; filter:none}
+  @media (prefers-reduced-motion: reduce){ .spot, .spot *, .spot::before{transition:none} }
   body:not(.walk) .spot, body.in-spot .spot{display:none}
   .spotbar{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:6; transform:translateX(-50%); display:none; align-items:center; gap:6px; padding:5px; border-radius:999px; background:#fff; box-shadow:0 0 0 1px var(--line)}
   body.in-spot .spotbar{display:flex} body.in-spot .dock, body.in-spot .hint, body.in-spot .qbox, body.in-spot .mini{display:none}
@@ -435,7 +448,8 @@ for (const sp of SPOTS) {                                            // the file
       if (r && r.ok && r.headers.get('content-type')?.startsWith('image')) { sp.file = f; break; }
     }
     if (!sp.file) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'spot'; b.innerHTML = spotIcon + `<span>${sp.name}${sp.file === 'render.jpg' ? ' · render' : ''}</span>`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'spot'; b.innerHTML = `<span class="dot">${spotIcon}</span><span class="nm">${sp.name}${sp.file === 'render.jpg' ? ' · render' : ''}</span>`;
+    b.setAttribute('aria-label', `${sp.name}: a 360 view from here`);
     b.title = `A 360 ${sp.file === 'photo.jpg' ? 'photo' : 'render'} from here: look round in it`; b.addEventListener('click', () => enterSpot(sp));
     document.getElementById('overlay').appendChild(b); SPOT.els.push({ el: b, sp, v: new THREE.Vector3(wx(sp.at[0]), sp.eye * M * .8, wz(sp.at[1])) });
     paintSpotbar();
@@ -1970,6 +1984,8 @@ function frame(now) {
   for (const s2 of SPOT.els) {
     v.copy(s2.v).project(camera); const d = camera.position.distanceTo(s2.v), vis = mode === 'walk' && !SPOT.cur && v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1 && d > .6 && d < 9;
     s2.el.style.transform = `translate(${(v.x + 1) / 2 * w}px, ${(1 - v.y) / 2 * h}px) translate(-50%, -50%)`; s2.el.style.visibility = vis ? '' : 'hidden';
+    if (vis) { if (s2.room === undefined) s2.room = roomAt(s2.sp.at[0], s2.sp.at[1]) || null;       // another room than yours: faded, blurred
+      const far = !!s2.room && roomAt(P.x, P.z) !== s2.room; if (far !== s2.far) { s2.far = far; s2.el.classList.toggle('far', far); } }
   }
   for (const l of labelsAt) {
     v.copy(l.v).project(camera);
