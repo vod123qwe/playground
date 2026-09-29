@@ -42,18 +42,21 @@ def upgrade(X, lamps=False):
     warm = (1, .78, .52, 1)                                      # 2700 K
     for m in bpy.data.materials:
         b = base(m.name)
-        if b == 'islandLED': lamp(m, warm, 40 if lamps else 0)       # the LEDs in the three amber pendants over the island
-        elif b == 'glow': lamp(m, warm, 7 if lamps else 0)           # the pendant over the dining table
-        elif b == 'bedLamp': lamp(m, warm, 5 if lamps else 0)        # the bedside lamps' drums
-        elif b == 'donutGlass': lamp(m, (1, .6, .25, 1), 4 if lamps else 0)   # the orange glass donut on the TV console
+        # the evening is lit softly, by the lamps you would have on for it: the three amber pendants over the island (low), the pendant over
+        # the table, the bedside lamps, the donut, the LED under the uppers; the ceiling lamps, the mirror's halo and the spots stay off
+        if b == 'islandLED': lamp(m, warm, 24 if lamps else 0)       # the LEDs in the three amber pendants over the island
+        elif b == 'glow': lamp(m, warm, 5 if lamps else 0)           # the pendant over the dining table
+        elif b == 'bedLamp': lamp(m, warm, 4 if lamps else 0)        # the bedside lamps' drums
+        elif b == 'donutGlass': lamp(m, (1, .6, .25, 1), 3 if lamps else 0)   # the orange glass donut on the TV console
+        elif b in ('ceilingLED', 'mirrorLED'): lamp(m, warm, 0)       # the ceiling lamps and the bathroom mirror: off
     for m in bpy.data.materials:
         b = base(m.name)
         if b == 'glass': thin_glass(m)
         elif b == 'amberGlass': thin_glass(m, (.86, .55, .28, 1))        # the pendants' cognac glass
         elif b == 'rail': thin_glass(m, (.9, .96, .96, 1))
         elif b == 'sheerM': sheer(m)
-        elif b == 'led': glow(m, (1, .86, .68, 1), 25 if lamps else 12)
-        elif b == 'downlight': glow(m, (1, .84, .64, 1), 160 if lamps else .3)
+        elif b == 'led': glow(m, (1, .86, .68, 1), 14 if lamps else 12)
+        elif b == 'downlight': glow(m, (1, .84, .64, 1), .3)          # the spots: off, day and evening
         elif b == 'frosted':
             p = principled(m)
             if p: p.inputs['Alpha'].default_value = .85; p.inputs['Roughness'].default_value = .6

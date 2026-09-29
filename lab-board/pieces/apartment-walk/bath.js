@@ -170,7 +170,7 @@ export function buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, 
     const blue = std({ name: 'towel', color: '#9fbfd6', roughness: 1 });
     for (const [x, z] of [[VX1 - 10, -86], [VX1 - 15, -92]]) { const t = cyl(3.1, 17, blue, x, 85 + 3.1, z, 'x', 20); t.rotation.y = -.5 - (x - VX1) * .06; } }
   // the mirror: round, 80 across, backlit; two opal globes on short brass arms either side, at its top. One switch
-  const halo = std({ name: 'islandLED', color: '#fff4e2', roughness: .4, emissive: '#fff1dc', emissiveIntensity: 0 });
+  const halo = std({ name: 'mirrorLED', color: '#fff4e2', roughness: .4, emissive: '#fff1dc', emissiveIntensity: 0 });
   const globeM = std({ name: 'bathGlobe', color: '#f5f2ec', roughness: .35, emissive: '#fff1d9', emissiveIntensity: 0 });
   const mir = cyl(40, 1.2, mirrorM, BX, 166, -45.7, 'z', 96);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(40.3, .9, 8, 96), halo); ring.position.set(BX, 166, -45.2); root.add(ring);

@@ -274,8 +274,14 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
       slide(v, 24);
     }
   }
-  { const led = new THREE.Mesh(new THREE.BoxGeometry(X[5] - X[1] - 4, .4, 1.2), new THREE.MeshBasicMaterial({ name: 'led', color: '#ffe2b8', ...clip })); led.position.set((X[1] + X[5]) / 2, UP0 - .2, UD - 6); root.add(led);
-    const light = new THREE.RectAreaLight('#ffd9a8', 40, (X[5] - X[1] - 6) / 100, .03); light.position.set((X[1] + X[5]) / 2, UP0 - .5, UD - 6); light.rotation.x = -Math.PI / 2; root.add(light); }
+  // the LED strip under the uppers, over the worktop: on at first, a switch of its own (a click under the uppers, or the panel); its
+  // light an area light, so switching it changes no shaders. A clear strip under the uppers takes the click (the LED itself is 4 mm)
+  const counterLED = (() => { const ledM = new THREE.MeshBasicMaterial({ name: 'led', color: '#ffe2b8', ...clip });
+    const led = new THREE.Mesh(new THREE.BoxGeometry(X[5] - X[1] - 4, .4, 1.2), ledM); led.position.set((X[1] + X[5]) / 2, UP0 - .2, UD - 6); root.add(led);
+    const light = new THREE.RectAreaLight('#ffd9a8', 40, (X[5] - X[1] - 6) / 100, .03); light.position.set((X[1] + X[5]) / 2, UP0 - .5, UD - 6); light.rotation.x = -Math.PI / 2; root.add(light);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(X[5] - X[1], 5, UD - 4), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, ...clip }));
+    hit.position.set((X[1] + X[5]) / 2, UP0 - 3, (UD - 4) / 2 + 2); hit.userData.noTrace = true; root.add(hit);
+    return { name: 'counter LED', on: true, meshes: [led, hit], set(v) { this.on = !!v; ledM.color.set(v ? '#ffe2b8' : '#6f6a64'); light.intensity = v ? 40 : 0; } }; })();
 
   // ---------- the island: 180 x 80, drawers towards the kitchen, fluted oak towards the living room, a 25 cm overhang for the knees ----------
   const I = new THREE.Group(); root.add(I);
@@ -373,5 +379,5 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const isl = (u, v) => P(K.island.along + u, K.island.off + v);
   const islandFoot = off => { const q = (u, v) => P(K.island.along + u, off + v); return [q(ix0, iz0), q(ix1, iz0), q(ix1, back + 2), q(ix0, back + 2)]; };
   foot.push(islandFoot(K.island.off));
-  return { root, foot, island: I, islandFoot, frontOfRun: D + 2, setLamps, lamps: [islandLamps], openers };
+  return { root, foot, island: I, islandFoot, frontOfRun: D + 2, setLamps, lamps: [islandLamps, counterLED], counterLED, openers };
 }
