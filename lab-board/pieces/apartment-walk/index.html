@@ -478,14 +478,14 @@ async function captureSpot(id, url, size = 4096) {
 }
 
 // the 360 in traced light (locally, from the console): AW.traceSpot('living-a', { post: 'http://127.0.0.1:8811/f/' }). The tracer's own
-// equirectangular camera at the spot, 4096 x 2048, 5 bounces, up to 320 samples; fireflies out and denoised, as the traced photo. It is
+// equirectangular camera at the spot, 4096 x 2048, 5 bounces, 640 samples (about 70 min); fireflies out, denoised less as it cleans up. It is
 // kind to the card: small tiles, each waited for, then the card rests (duty .55 = busy 55 % of the time). It keeps going in a hidden tab:
-// the waits run on a worker's clock, which the browser does not throttle. Every 32 samples a JPEG goes to post + (9400 + n), the last one
+// the waits run on a worker's clock, which the browser does not throttle. Every 64 samples a JPEG goes to post + (9400 + n), the last one
 // to post + 9499; Esc or AW.traceStop() ends it early with what is there.
 let traceStop = false;
 const workerSleep = (() => { let w = null, q = [];
   return ms => new Promise(res => { if (!w) { w = new Worker(URL.createObjectURL(new Blob(['onmessage = e => setTimeout(() => postMessage(0), e.data)'], { type: 'text/javascript' }))); w.onmessage = () => { const f = q.shift(); if (f) f(); }; } q.push(res); w.postMessage(Math.max(0, ms)); }); })();
-async function traceSpot(id, { size = 4096, samples = 320, duty = .55, every = 32, post = null } = {}) {
+async function traceSpot(id, { size = 4096, samples = 640, duty = .55, every = 64, post = null } = {}) {
   const sp = SPOTS.find(s => s.id === id); if (!sp) throw new Error('no such spot');
   if (photoing) throw new Error('busy');
   const keep = { view: S.view, pr: renderer.getPixelRatio(), rs: pt.renderScale, tiles: pt.tiles.clone(), dyn: pt.dynamicLowRes, fade: pt.fadeDuration, delay: pt.renderDelay, min: pt.minSamples, b: pt.bounces, gf: pt.filterGlossyFactor, ls: pt.lowResScale };
@@ -497,7 +497,7 @@ async function traceSpot(id, { size = 4096, samples = 320, duty = .55, every = 3
   document.getElementById('shot-t').textContent = `Tracing the 360 · ${sp.name}`; document.getElementById('shot-save').hidden = false; shot.classList.add('open');
   const onKey = e => { if (e.key === 'Escape') traceStop = true; }; addEventListener('keydown', onKey);
   const saveNow = () => { traceStop = true; }; document.getElementById('shot-save').addEventListener('click', saveNow, { once: true });
-  const develop = async n => { const b = await developTrace(W, H); if (post) await fetch(post + n, { method: 'POST', body: b }); return b; };
+  const develop = async n => { const k = pt.samples, b = await developTrace(W, H, { sigma: k >= 600 ? 3.6 : k >= 300 ? 4 : 5, threshold: k >= 600 ? .09 : k >= 300 ? .1 : .12, lift: 1.18 }); if (post) await fetch(post + n, { method: 'POST', body: b }); return b; };   // (the room a shade lighter than the photo)
   let result = null;
   try {
     ceiling.visible = true; world.visible = true;
@@ -1369,17 +1369,17 @@ function savePNG(blob) {
   document.body.appendChild(aEl); aEl.click(); aEl.remove(); setTimeout(() => URL.revokeObjectURL(aEl.href), 4000);
 }
 // the tracer's result to a PNG: fireflies out, an edge-aware denoise, tone mapping and sRGB, read back through a canvas kept in memory
-async function developTrace(W, Hh) {
+async function developTrace(W, Hh, { sigma = 5, threshold = .12, lift = 1 } = {}) {   // (more samples, less denoise: the detail stays)
   // first the fireflies: a lone pixel brighter than all eight of its neighbours takes their average (the LED strip on the glossy tiles makes them)
   const fly = flyMaterial(pt.target.texture, W, Hh);
   const clean = new THREE.WebGLRenderTarget(W, Hh, { type: THREE.FloatType }), tmp = clean.clone();
   const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fly), qs = new THREE.Scene(), qc = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1); q.frustumCulled = false; qs.add(q);   // (a near plane at 0 would clip the quad)
   renderer.setRenderTarget(clean); renderer.render(qs, qc);
-  const den = new DenoiseMaterial({ map: clean.texture, sigma: 5, threshold: .12, kSigma: 1 }); q.material = den;   // then the edge-aware denoise
+  const den = new DenoiseMaterial({ map: clean.texture, sigma, threshold, kSigma: 1 }); q.material = den;   // then the edge-aware denoise
   renderer.setRenderTarget(tmp); renderer.render(qs, qc); renderer.setRenderTarget(null);
   // tone mapping and sRGB into an 8-bit target, read back and saved from a 2D canvas (the tracer leaves the WebGL canvas in no state to read)
   const ldr = new THREE.WebGLRenderTarget(W, Hh), out = new OutputPass(); out.renderToScreen = false; renderer.setScissorTest(false);
-  const ex = renderer.toneMappingExposure; renderer.toneMappingExposure = S.exposure * PT_EXPOSURE; out.render(renderer, ldr, tmp); renderer.toneMappingExposure = ex;
+  const ex = renderer.toneMappingExposure; renderer.toneMappingExposure = S.exposure * PT_EXPOSURE * lift; out.render(renderer, ldr, tmp); renderer.toneMappingExposure = ex;
   const px = new Uint8Array(W * Hh * 4); renderer.readRenderTargetPixels(ldr, 0, 0, W, Hh, px);
   let lit = 0; for (let i = 0; i < px.length; i += 4 * 97) lit += px[i] + px[i + 1] + px[i + 2];
   if (!lit) throw new Error('the trace came back empty');          // never save a blank file
