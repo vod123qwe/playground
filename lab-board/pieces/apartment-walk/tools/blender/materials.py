@@ -45,6 +45,7 @@ def upgrade(X, lamps=False):
         if b == 'opal': lamp(m, warm, 9 if lamps else 0)             # the three globes over the island
         elif b == 'glow': lamp(m, warm, 7 if lamps else 0)           # the pendant over the dining table
         elif b == 'bedLamp': lamp(m, warm, 5 if lamps else 0)        # the bedside lamps' drums
+        elif b == 'donutGlass': lamp(m, (1, .6, .25, 1), 4 if lamps else 0)   # the orange glass donut on the TV console
     for m in bpy.data.materials:
         b = base(m.name)
         if b == 'glass': thin_glass(m)
