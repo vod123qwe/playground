@@ -42,13 +42,14 @@ def upgrade(X, lamps=False):
     warm = (1, .78, .52, 1)                                      # 2700 K
     for m in bpy.data.materials:
         b = base(m.name)
-        if b == 'opal': lamp(m, warm, 9 if lamps else 0)             # the three globes over the island
+        if b == 'islandLED': lamp(m, warm, 40 if lamps else 0)       # the LEDs in the three amber pendants over the island
         elif b == 'glow': lamp(m, warm, 7 if lamps else 0)           # the pendant over the dining table
         elif b == 'bedLamp': lamp(m, warm, 5 if lamps else 0)        # the bedside lamps' drums
         elif b == 'donutGlass': lamp(m, (1, .6, .25, 1), 4 if lamps else 0)   # the orange glass donut on the TV console
     for m in bpy.data.materials:
         b = base(m.name)
         if b == 'glass': thin_glass(m)
+        elif b == 'amberGlass': thin_glass(m, (.86, .55, .28, 1))        # the pendants' cognac glass
         elif b == 'rail': thin_glass(m, (.9, .96, .96, 1))
         elif b == 'sheerM': sheer(m)
         elif b == 'led': glow(m, (1, .86, .68, 1), 25 if lamps else 12)
