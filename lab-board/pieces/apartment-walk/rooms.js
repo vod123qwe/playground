@@ -12,6 +12,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
 import { buildBath } from './bath.js?v=11';
+import { buildBalconies } from './balcony.js?v=1';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -27,7 +28,7 @@ const TRACKS = {
   F: { lines: [[[1026, -443], [1174, -253]], [[1105, -70], [1071, -44]]], r: 24, endGap: 14 },
 };
 
-export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', hallMats, openings = [] }) {
+export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', hallMats, openings = [], balconies = [] }) {
   const aniso = renderer.capabilities.getMaxAnisotropy(), tl = new THREE.TextureLoader();
   const load = (f, srgb) => new Promise(res => tl.load(base + f, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; res(t); }));
   const [lnN, lnR, oakC, oakN, oakR] = await Promise.all([load('tex/linen_nor.jpg'), load('tex/linen_rough.jpg'), load('oak_diff.jpg', true), load('oak_nor.jpg'), load('oak_rough.jpg')]);
@@ -591,6 +592,7 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     bookRow(root, q, L2[1] - 3, L2[2] + 2.4, WZ, 6, -1);
   }
 
+  buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, rng, mergeGeometries, linen, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR }, balconies });   // the balconies, to sit out on
   const bath = buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, H, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR } });   // G, the bathroom
 
   const setLamps = on => lamps.forEach(l => l.set(on));

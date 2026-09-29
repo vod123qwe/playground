@@ -249,7 +249,7 @@ import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=14';
 import { buildLiving } from './living.js?v=32';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=38';
+import { buildRooms } from './rooms.js?v=39';
 import { startGhosts } from './ghosts.js?v=2';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
@@ -1930,7 +1930,7 @@ function applySofa() {                                              // the sofa 
 let FURN = null;                                                    // the bedroom, the study, the child's room (rooms.js)
 const livingReady = kitchenReady.then(async () => {
   loadStep(3, 'Furnishing the rooms…');
-  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats, openings: A.openings }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); OPEN.push(...(FURN.openers || [])); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
+  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats, openings: A.openings, balconies: A.balconies }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); OPEN.push(...(FURN.openers || [])); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
   catch (err) { console.warn('rooms', err); }
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
