@@ -239,9 +239,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=7';
-import { buildLiving } from './living.js?v=11';
-import { buildHall } from './hall.js?v=2';
+import { buildKitchen } from './kitchen.js?v=8';
+import { buildLiving } from './living.js?v=12';
+import { buildHall } from './hall.js?v=3';
+import { buildRooms } from './rooms.js?v=5';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -408,6 +409,7 @@ world.add(wallsG, capsG);
 const SPOTS = [
   { id: 'living-a', name: 'Living room', at: [330, -860], eye: 145 },          // between the table and the island: the sofa, the windows, the kitchen
   { id: 'kitchen-a', name: 'Kitchen', at: [313.8, -1038.2], eye: 145 },        // in the aisle, between the run and the island
+  { id: 'bedroom-a', name: 'Bedroom', at: [785, -325], eye: 145 },              // in the corner by the door: the bed, the PAX, the windows, the TV
 ];
 const SPOT = { cur: null, tex: {}, els: [] };
 const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>';
@@ -727,7 +729,7 @@ for (const p of A.walls) { const m = prism(p.outer, p.holes, 0, H, mat.wall); wa
 const SASH = {
   'O17 balcony door + window 270': [{}, { turn: 0 }, { turn: 1 }],   // three leaves: the left one fixed, the middle and the right open inwards, wide
   'O22 balcony door 90': [{ turn: 0 }],
-  'O25 window 180, sill 30': { transom: 94, below: [{ tilt: true }], above: [{}, {}] },   // a low horizontal pane that tilts, two fixed above
+  'O25 window 180, sill 30': { transom: 94, below: [{ tilt: true }], above: [{ turn: 0 }, { turn: 1 }] },   // a low horizontal pane that tilts, two side-hung leaves above
   'O21 balcony door 90': [{ turn: 0 }],
   'balcony door 113': [{ turn: 1 }],
   'balcony door 180': [{ turn: 0 }, {}],
@@ -804,9 +806,13 @@ function buildGlazing(o) {
 const caps = [];                                                   // the cut surfaces, drawn black like the plan
 for (const p of A.walls) caps.push({ poly: p, lo: 0, hi: H, m: mat.cap });
 for (const p of A.thin) caps.push({ poly: p, lo: 0, hi: H, m: mat.capThin, dy: .1, thinOnly: true });   // the partitions in grey, over the black
+// a door's lintel is cut in the colour of the wall it is in: grey in a partition, black in a structural wall (the pantry, the front door)
+const inPolyPt = ([x, z], poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [x1, z1] = poly[i], [x2, z2] = poly[j]; if ((z1 > z) !== (z2 > z) && x < (x2 - x1) * (z - z1) / (z2 - z1) + x1) c = !c; } return c; };
+const inPartition = o => { const q = o.quad, ends = [[(q[0][0] + q[3][0]) / 2, (q[0][1] + q[3][1]) / 2], [(q[1][0] + q[2][0]) / 2, (q[1][1] + q[2][1]) / 2]];
+  return ends.some(([x, z]) => A.thin.some(p => [-3, 0, 3].some(dx => [-3, 0, 3].some(dz => inPolyPt([x + dx, z + dz], p.outer))))); };
 for (const o of A.openings) {
   if (o.sill > 0) { wallsG.add(prism(o.quad, [], 0, o.sill, mat.wall)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: 0, hi: o.sill, m: mat.cap }); }
-  if (o.head < H) { wallsG.add(prism(o.quad, [], o.head, H, mat.wall)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: o.head, hi: H, m: o.glazed ? mat.cap : mat.capThin }); }
+  if (o.head < H) { wallsG.add(prism(o.quad, [], o.head, H, mat.wall)); caps.push({ poly: { outer: o.quad, holes: [] }, lo: o.head, hi: H, m: o.glazed || !inPartition(o) ? mat.cap : mat.capThin }); }
   if (o.glazed) buildGlazing(o);
 }
 // floor, ceiling, balconies, railings
@@ -1732,7 +1738,7 @@ function frame(now) {
     const r = roomAt(P.x, P.z);
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
-  if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); }   // a leaf moved: the traced scene is out of date, the curtains make way
+  if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); if (FURN) FURN.update(doors); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
   const idle = S.pt && mode === 'walk' && !tween && !SPOT.cur && performance.now() - lastMove > 280;
   if (idle && ptReady()) {
@@ -1787,10 +1793,13 @@ function curtainsNow(force) {
   if (!force && key === curKey) return; curKey = key; LIV.setCurtains(S.curtains, lv); lensList = null;
 }
 function applySofa() {                                              // the sofa chosen in the panel, its outline for walking
-  if (!LIV) return; LIV.setSofa(S.sofa); livingFoot = [...HALL.foot, ...LIV.foot]; lensList = null; ptScene(); if (mode === 'walk') unstick();
+  if (!LIV) return; LIV.setSofa(S.sofa); livingFoot = [...HALL.foot, ...LIV.foot, ...(FURN ? FURN.foot : [])]; lensList = null; ptScene(); if (mode === 'walk') unstick();
 }
+let FURN = null;                                                    // the bedroom, the study, the child's room (rooms.js)
 const livingReady = kitchenReady.then(async () => {
-  loadStep(3, 'Furnishing the living room…');
+  loadStep(3, 'Furnishing the rooms…');
+  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats }); FURN.update(doors); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
+  catch (err) { console.warn('rooms', err); }
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
   LIV.setLamps(S.lamps); curtainsNow(true); applySofa();
