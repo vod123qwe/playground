@@ -3,7 +3,8 @@
 // teleport up to the Lord of Hate on his dais, dodge his blood bolts, freeze him down with frost orbs; he bursts, the loot flies
 // out with its names in the colours of their rarity, you run over it to pick it up, and Start is the next run.
 // Input each frame: { x, y } the move (-1..1, the pad's left stick or WASD), and edges: tele (A / Space), cast (X / J, held), start
-// (Start / Enter), back (B / Esc: the caller handles leaving the TV); teleHeld, cast: held.
+// (Start / Enter), back (B / Esc: the caller handles leaving the TV); teleHeld, cast: held; dev: 'pad' or 'keys', the one last used
+// (the controls on the screen are drawn for it, so a pad's A is never mistaken for the key A, which runs left).
 
 export function createTVGame({ THREE }) {
   const W = 960, H = 540, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -11,7 +12,7 @@ export function createTVGame({ THREE }) {
   const rnd = (a, b) => a + Math.random() * (b - a);
   const TW = 64, TH = 32, AW = 17, AH = 13;                           // the tile, the arena in tiles
   const iso = (x, y) => [(x - y) * TW / 2, (x + y) * TH / 2];
-  let state = 'menu', sel = 0, t = 0, runN = 0, runT = 0, found = [], goldSum = 0, msg = null;
+  let dev = 'keys', state = 'menu', sel = 0, t = 0, runN = 0, runT = 0, found = [], goldSum = 0, msg = null;
   const START = [AW - 2.5, AH - 2.5];                                  // you come in at the near corner (the bottom of the screen); he waits at the far one (the top)
   const pl = { x: START[0], y: START[1], hp: 100, mp: 100, cd: 0, cast: 0, face: [1, -1], moving: 0, flash: 0 };
   const boss = { x: 3, y: 3, hp: 100, max: 100, cd: 1.5, hit: 0, dead: false, burst: 0 };
@@ -46,7 +47,7 @@ export function createTVGame({ THREE }) {
 
   // ---------- the step ----------
   function step(dt, inp) {
-    t += dt;
+    t += dt; if (inp.dev) dev = inp.dev;
     if (state === 'menu') { if (inp.left) sel = 0; if (inp.right) sel = 1; if ((inp.tele || inp.start) && sel === 0) reset(); return; }
     if (state === 'dead') { if (inp.start || inp.tele) reset(); sparksStep(dt); return; }
     runT += boss.dead ? 0 : dt;
@@ -187,11 +188,28 @@ export function createTVGame({ THREE }) {
   function orb(x, y, r, v, c0, c1) { g.fillStyle = '#120c0a'; g.beginPath(); g.arc(x, y, r + 4, 0, 7); g.fill();
     g.save(); g.beginPath(); g.arc(x, y, r, 0, 7); g.clip(); const gr = g.createRadialGradient(x - r * .3, y - r * .3, 2, x, y, r); gr.addColorStop(0, c0); gr.addColorStop(1, c1); g.fillStyle = gr; g.fillRect(x - r, y + r - 2 * r * v, 2 * r, 2 * r * v); g.restore();
     g.strokeStyle = '#8a7a52'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r + 2, 0, 7); g.stroke(); }
+  // the controls, as caps for the keys or the pad's own buttons (A green, X blue, B red, as a pad marks them; the stick a ring)
+  const PADC = { A: '#3fae4a', X: '#3a7bd5', B: '#d0463b', Y: '#e0b22e' };
+  function controls(list, x, y, align, font, col) {
+    g.font = font; g.textBaseline = 'middle'; g.textAlign = 'left';
+    const capW = c => c === 'stick' || PADC[c] ? 22 : g.measureText(c).width + 14, gap = 7, sep = 18;
+    const total = list.reduce((a, [c, l]) => a + capW(c) + gap + g.measureText(l).width, 0) + sep * (list.length - 1);
+    let cx = align === 'center' ? x - total / 2 : x;
+    for (const [c, l] of list) {
+      const w = capW(c);
+      if (c === 'stick') { g.strokeStyle = '#cfc6a6'; g.lineWidth = 2.5; g.beginPath(); g.arc(cx + 11, y, 10, 0, 7); g.stroke(); g.fillStyle = '#cfc6a6'; g.beginPath(); g.arc(cx + 11, y, 4.5, 0, 7); g.fill(); }
+      else if (PADC[c]) { g.fillStyle = PADC[c]; g.beginPath(); g.arc(cx + 11, y, 11, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = '700 13px Inter, sans-serif'; g.textAlign = 'center'; g.fillText(c, cx + 11, y + 1); g.textAlign = 'left'; g.font = font; }
+      else { g.fillStyle = 'rgba(255,255,255,.1)'; g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(cx, y - 12, w, 24, 5); g.fill(); g.stroke();
+        g.fillStyle = '#f2ecd8'; g.font = '700 13px Inter, sans-serif'; g.textAlign = 'center'; g.fillText(c, cx + w / 2, y + 1); g.textAlign = 'left'; g.font = font; }
+      cx += w + gap; g.fillStyle = col; g.fillText(l, cx, y); cx += g.measureText(l).width + sep;
+    }
+  }
   function hud() {
     g.fillStyle = 'rgba(30,26,22,.92)'; g.fillRect(0, H - 64, W, 64); g.strokeStyle = '#8a7a52'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H - 64); g.lineTo(W, H - 64); g.stroke();
     orb(70, H - 56, 46, Math.max(0, pl.hp) / 100, '#ff5a4a', '#5a0808'); orb(W - 70, H - 56, 46, pl.mp / 100, '#6a7cff', '#0a0e5a');
-    g.fillStyle = '#d8cfa8'; g.font = '600 15px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('A · teleport     X · lodowy pocisk     Start · nowy bieg     B · wyjście', W / 2, H - 30);
+    controls(dev === 'pad' ? [['stick', 'bieg'], ['A', 'teleport'], ['X', 'lodowy pocisk'], ['START', 'nowy bieg'], ['B', 'wyjście']]
+      : [['WASD', 'bieg'], ['Spacja', 'teleport'], ['J', 'lodowy pocisk'], ['Enter', 'nowy bieg'], ['Esc', 'wyjście']], W / 2, H - 30, 'center', '600 14px Georgia, serif', '#d8cfa8');
+    g.textAlign = 'center'; g.textBaseline = 'middle';
     if (!boss.dead) { const bw = 360, bx = W / 2 - bw / 2; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx - 4, 14, bw + 8, 34); g.fillStyle = '#5a0a0a'; g.fillRect(bx, 34, bw, 9); g.fillStyle = '#d23a2a'; g.fillRect(bx, 34, bw * Math.max(0, boss.hp) / boss.max, 9);
       g.fillStyle = '#e8d8a8'; g.font = '700 15px Georgia, serif'; g.fillText('MEFISTO · WŁADCA NIENAWIŚCI', W / 2, 24); }
     g.textAlign = 'left'; g.fillStyle = '#cbbd96'; g.font = '600 14px Georgia, serif'; const s = Math.floor(runT);
@@ -202,7 +220,7 @@ export function createTVGame({ THREE }) {
   function drawMenu() {                                                // the TV's home: pick a game
     const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#15161c'); gr.addColorStop(1, '#2a1f2a'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     g.fillStyle = '#f2efe8'; g.font = '600 30px Inter, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText('Gry', 64, 92);
-    g.fillStyle = '#9a96a0'; g.font = '500 17px Inter, sans-serif'; g.fillText('Wybierz grę · pad albo strzałki, A / Enter: graj', 64, 124);
+    g.fillStyle = '#9a96a0'; g.font = '500 17px Inter, sans-serif'; controls(dev === 'pad' ? [['stick', 'wybór'], ['A', 'graj']] : [['←→', 'wybór'], ['Enter', 'graj']], 64, 118, 'left', '500 17px Inter, sans-serif', '#9a96a0');
     const tiles = [{ name: 'Mefisto Run', sub: 'teleport, boss, łup', ok: true }, { name: 'Wkrótce', sub: 'kolejna gra', ok: false }];
     tiles.forEach((tl, i) => { const x = 64 + i * 300, y = 170, w = 270, h = 250, on = sel === i;
       g.fillStyle = tl.ok ? '#3a0f14' : '#24242a'; g.fillRect(x, y, w, h);
