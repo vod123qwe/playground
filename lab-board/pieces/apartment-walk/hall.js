@@ -8,7 +8,7 @@ export const PAX = { x0: 18.2, z0: -799, z1: -645.2, depth: 58, frames: [100, 50
 
 export function buildHall({ THREE, clip }) {
   const std = o => new THREE.MeshStandardMaterial({ ...o, ...clip });
-  const carcass = std({ color: '#f1f0ec', roughness: .6 }), door = std({ color: '#f4f3ef', roughness: .45 }), gap = std({ color: '#cfcac1', roughness: .9 });
+  const carcass = std({ name: 'carcass', color: '#f1f0ec', roughness: .6 }), door = std({ name: 'door', color: '#f4f3ef', roughness: .45 }), gap = std({ name: 'gap', color: '#cfcac1', roughness: .9 });
   const root = new THREE.Group();
   const box = (x0, x1, y0, y1, z0, z1, m, r = .15) => {
     const g = new RoundedBoxGeometry(x1 - x0, y1 - y0, z1 - z0, 2, Math.min(r, Math.min(x1 - x0, y1 - y0, z1 - z0) / 2 - .01));

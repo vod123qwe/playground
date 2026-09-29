@@ -222,9 +222,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=5';
-import { buildLiving } from './living.js?v=10';
-import { buildHall } from './hall.js?v=1';
+import { buildKitchen } from './kitchen.js?v=6';
+import { buildLiving } from './living.js?v=11';
+import { buildHall } from './hall.js?v=2';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -364,7 +364,7 @@ const mat = {
   front: new THREE.MeshStandardMaterial({ color: '#43454a', roughness: .5, metalness: .1, ...clip }),
   nickel: new THREE.MeshStandardMaterial({ color: '#dcd7ce', roughness: .36, metalness: .9, envMapIntensity: 1.6, ...clip }),   // satin nickel: warm silver, soft reflection
 };
-const glassMat = () => new THREE.MeshStandardMaterial({ color: '#d6ecef', roughness: .04, metalness: .1, transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide, ...clip });
+const glassMat = () => new THREE.MeshStandardMaterial({ name: 'glass', color: '#d6ecef', roughness: .04, metalness: .1, transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide, ...clip });
 
 // ---------- geometry ----------
 const shape = (outer, holes = []) => {
@@ -397,7 +397,8 @@ const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 for (const sp of SPOTS) {                                            // the files there are, the photo before the render
   sp.file = null;
   (async () => {
-    for (const f of ['photo.jpg', 'traced.jpg', 'render.jpg']) {
+    const big = renderer.capabilities.maxTextureSize >= 8192;       // the Blender 360 in 8K where the card takes it, in 4K elsewhere
+    for (const f of ['photo.jpg', big ? 'blender.jpg' : 'blender-4k.jpg', 'traced.jpg', 'render.jpg']) {
       const r = await fetch(`assets/spots/${sp.id}/${f}`, { method: 'HEAD' }).catch(() => null);
       if (r && r.ok && r.headers.get('content-type')?.startsWith('image')) { sp.file = f; break; }
     }
@@ -412,7 +413,7 @@ function paintSpotbar() {
   const bar = document.getElementById('spotbar'), ok = SPOTS.filter(s => s.file);
   bar.innerHTML = ''; const back = document.createElement('button'); back.type = 'button'; back.className = 'sb-back'; back.textContent = 'Back to the walk'; back.addEventListener('click', leaveSpot); bar.appendChild(back);
   for (const sp of ok) { const b = document.createElement('button'); b.type = 'button'; b.textContent = sp.name; b.setAttribute('aria-pressed', String(SPOT.cur === sp)); b.addEventListener('click', () => enterSpot(sp)); bar.appendChild(b); }
-  if (SPOT.cur) { const n = document.createElement('small'); n.textContent = { 'photo.jpg': 'photo', 'traced.jpg': 'traced light' }[SPOT.cur.file] || 'render · the photo is on its way'; bar.appendChild(n); }
+  if (SPOT.cur) { const n = document.createElement('small'); n.textContent = { 'photo.jpg': 'photo', 'blender.jpg': 'Blender · Cycles', 'blender-4k.jpg': 'Blender · Cycles', 'traced.jpg': 'traced light' }[SPOT.cur.file] || 'render · the photo is on its way'; bar.appendChild(n); }
 }
 async function enterSpot(sp) {
   if (!sp.file) return;
@@ -531,6 +532,24 @@ async function traceSpot(id, { size = 4096, samples = 640, duty = .55, every = 6
   return { samples: Math.floor(pt.samples), minutes: +((performance.now() - t0) / 60000).toFixed(1), busy: +(busy / (performance.now() - t0)).toFixed(2), size: result && result.size };
 }
 
+// the scene for Blender (locally, from the console): AW.exportScene('http://127.0.0.1:8812/save/apartment.glb'). The tracer's flat copy as
+// it stands (the clock, the curtains, the lamps), one glTF binary, each mesh named after its material; the sun, the paint and the photo
+// spots go along in the scene's extras. tools/blender/ takes it from there: the real materials, the sky and the 8K 360s.
+async function exportScene(post = null) {
+  if (mode !== 'walk') { setMode('walk'); await workerSleep(1500); }
+  await loadSky();
+  for (const [k, m] of Object.entries(mat)) if (!m.name) m.name = k;
+  const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+  ceiling.visible = true; world.visible = true;
+  const ts = tracerScene(), { el, az } = sunAt(S.time), d = sun.position.clone().sub(sun.target.position).normalize();
+  ts.traverse(o => { if (o.isRectAreaLight) o.visible = false; });   // the window portals were only for the tracer
+  ts.userData = { sun: { dir: d.toArray(), color: '#' + sun.color.getHexString(), intensity: sun.intensity, el, az }, time: S.time, paint: S.paint,
+    exposure: S.exposure * PT_EXPOSURE, viewRotY: Math.PI / 2, spots: SPOTS.map(s => ({ id: s.id, name: s.name, eye: [wx(s.at[0]), s.eye * M, wz(s.at[1])] })) };
+  const glb = await new GLTFExporter().parseAsync(ts, { binary: true, onlyVisible: true, maxTextureSize: 4096 });
+  if (post) await fetch(post, { method: 'POST', body: glb });
+  return { bytes: glb.byteLength, meshes: ts.children.filter(o => o.isMesh).length };
+}
+
 // ---------- the clock ----------
 const clockEl = document.getElementById('clock'), fmt = m => `${Math.floor(m / 60) % 24}:${String(Math.round(m % 60)).padStart(2, '0')}`;
 const dialAt = (min, r) => { const a = (min / 1440) * Math.PI * 2 + Math.PI; return [60 + r * Math.sin(a), 60 - r * Math.cos(a)]; };   // noon at the top
@@ -617,8 +636,8 @@ const SASH = {
 };
 const sashes = [], glazingG = [];
 const pip = (x, z, ps) => { let c = false; for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) { const [xi, zi] = ps[i], [xj, zj] = ps[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
-const whiteFrame = new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: .45, ...clip });
-const winHandle = new THREE.MeshStandardMaterial({ color: '#f7f7f5', roughness: .3, ...clip });
+const whiteFrame = new THREE.MeshStandardMaterial({ name: 'windowFrame', color: '#f4f4f2', roughness: .45, ...clip });
+const winHandle = new THREE.MeshStandardMaterial({ name: 'windowHandle', color: '#f7f7f5', roughness: .3, ...clip });
 function buildGlazing(o) {
   const [q0, q1, q2, q3] = o.quad, a = [(q0[0] + q3[0]) / 2, (q0[1] + q3[1]) / 2], b = [(q1[0] + q2[0]) / 2, (q1[1] + q2[1]) / 2];
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]), e = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
@@ -714,12 +733,12 @@ let hbMesh = null, hbP = 168;
 const hbUV = (x, z) => { const al = Math.PI / 4 - HB_AXES[S.hb], c = Math.cos(al), s = Math.sin(al), X = x - HB_C[0], Z = z - HB_C[1]; return [(X * c - Z * s) / hbP, -(X * s + Z * c) / hbP]; };
 async function buildFloors() {
   const hb = await herringbone({ base: 'assets/', hq: HQ }); hbP = hb.period;
-  const oak = new THREE.MeshStandardMaterial({ map: texOf(hb.col, true), normalMap: texOf(hb.nor), normalScale: new THREE.Vector2(.45, .45), roughnessMap: texOf(hb.rou), roughness: 1, metalness: 0,
+  const oak = new THREE.MeshStandardMaterial({ name: 'floorOak', map: texOf(hb.col, true), normalMap: texOf(hb.nor), normalScale: new THREE.Vector2(.45, .45), roughnessMap: texOf(hb.rou), roughness: 1, metalness: 0,
     polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
   hbMesh = surface(A.floorIn || A.floor, .02, oak, hbUV); world.add(hbMesh);   // the rooms' floor ends on the glass line of the balcony doors
   for (const t of A.finishes.tiles) {
     const st = stoneTiles(t.finish, { hq: HQ });
-    const tm = new THREE.MeshStandardMaterial({ map: texOf(st.col, true), normalMap: texOf(st.nor), normalScale: new THREE.Vector2(.6, .6), roughnessMap: texOf(st.rou), roughness: 1, metalness: 0,
+    const tm = new THREE.MeshStandardMaterial({ name: `tiles_${t.finish}`, map: texOf(st.col, true), normalMap: texOf(st.nor), normalScale: new THREE.Vector2(.6, .6), roughnessMap: texOf(st.rou), roughness: 1, metalness: 0,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     for (const z of t.zones) {
       const x0 = Math.min(...z.outer.map(p => p[0])), z0 = Math.min(...z.outer.map(p => p[1]));   // the tiles start from the zone's corner
@@ -770,8 +789,8 @@ function vectorV() {                                               // the leaf's
   return { col: tex(col, true), nor: tex(nor) };
 }
 const vV = vectorV();
-const leafFace = new THREE.MeshStandardMaterial({ color: '#f7f6f3', map: vV.col, normalMap: vV.nor, normalScale: new THREE.Vector2(.9, .9), roughness: .42, ...clip });   // white UV lacquer, satin
-const leafEdge = new THREE.MeshStandardMaterial({ color: '#f2f1ee', roughness: .5, ...clip });
+const leafFace = new THREE.MeshStandardMaterial({ name: 'doorLeaf', color: '#f7f6f3', map: vV.col, normalMap: vV.nor, normalScale: new THREE.Vector2(.9, .9), roughness: .42, ...clip });   // white UV lacquer, satin
+const leafEdge = new THREE.MeshStandardMaterial({ name: 'doorEdge', color: '#f2f1ee', roughness: .5, ...clip });
 const doors = [];
 const box = (w, h, d, m, x, y, z, parent) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w * M, h * M, d * M), m); b.position.set(x * M, y * M, z * M); b.castShadow = b.receiveShadow = true; parent.add(b); return b; };
 function handle(parent, x, zFace, out) {                           // Rumba: square rose 50 mm, square neck, flat straight lever towards the hinge
@@ -1303,7 +1322,7 @@ let skyHDR = null;
 const loadSky = () => skyHDR ? Promise.resolve(skyHDR) : new Promise(res => new HDRLoader().load('assets/lebombo_1k.hdr', t => { t.mapping = THREE.EquirectangularReflectionMapping; skyHDR = t; res(t); }));
 function tracerScene() {
   const ts = new THREE.Scene(); ts.background = scene.background; ts.environment = skyHDR || scene.environment; ts.environmentIntensity = scene.environmentIntensity;
-  const wallPaint = new THREE.MeshStandardMaterial({ color: S.paint, roughness: mat.wall.roughness });
+  const wallPaint = new THREE.MeshStandardMaterial({ name: 'wall', color: S.paint, roughness: mat.wall.roughness });
   const pos = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
   scene.updateMatrixWorld(true);
   scene.traverseVisible(o => {
@@ -1321,7 +1340,7 @@ function tracerScene() {
       } else g = src.clone();
       g.clearGroups(); g.applyMatrix4(o.matrixWorld);
       if (m.normalMap && !g.attributes.tangent && g.attributes.uv && g.attributes.normal) { g = mergeVertices(g); g.computeTangents(); }
-      ts.add(new THREE.Mesh(g, m === mat.wall ? wallPaint : m));
+      const tm = new THREE.Mesh(g, m === mat.wall ? wallPaint : m); tm.name = o.name || tm.material.name; ts.add(tm);   // names: Blender swaps materials by them
     }
   });
   return ts;
@@ -1675,7 +1694,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

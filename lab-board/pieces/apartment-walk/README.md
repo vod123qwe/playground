@@ -74,6 +74,14 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Śledzone światło 360°** (`traced.jpg`, pokazywane przed `render.jpg`): `AW.traceSpot('<id>', { post })` liczy panoramę prosto kamerą sferyczną tracera, 4096 × 2048, 5 odbić, 640 próbek, filtr iskier i odszumianie słabsze przy większej liczbie próbek. Oszczędza kartę: kafelki po ok. 30 tys. px, każdy czekany na karcie, potem przerwa (ok. 55 % obciążenia); liczy też w ukrytej karcie (odmierzanie w workerze). Salon: 640 próbek w ok. 90 min.
 - Nagranie: `AW.captureSpot('<id>', 'http://127.0.0.1:8811/f/')` w konsoli (kostka 2048 na ścianę, 4096 × 2048, te same kolory co spacer).
 
+## Render 360 w Blenderze (tools/blender)
+
+Punkt zdjęciowy dostaje render z Blendera Cycles: panorama 8192 × 4096 (4096 × 2048 dla kart, które nie przyjmą 8K), 256 próbek, odszumianie OpenImageDenoise, około 7 minut na RTX 4080. Tryb Photo woli go od śledzonego światła z przeglądarki (`blender.jpg`, na pasku „Blender · Cycles”).
+
+1. `python tools/blender/save_server.py` (odbiornik na 127.0.0.1:8812), potem w konsoli spaceru: `AW.exportScene('http://127.0.0.1:8812/save/apartment.glb')`. Scena idzie tak, jak stoi (zegar, zasłony, lampy), każdy materiał z nazwą.
+2. `blender -b -P tools/blender/render.py -- --spot living-a --size 8192 --samples 256 --exposure 0.15 --wb 6700 --out work/living-a-8k.png`.
+3. Materiały: `materials.py` (szkło, firany, LED; z `python tools/blender/get_textures.py` także skany Poly Haven CC0 w 4K: dąb, bukla, szenil, len, juta, tynk). Folder `work/` i `tex/` nie idą do repo.
+
 ## Widok za oknami
 
 - **Panorama 360°** (równoprostokątna 2:1, 8192 × 4096) jako tło spaceru, widoczna przez wszystkie okna i z balkonów; z 4. piętra (oko 13,7 m nad terenem), obrócona zgodnie ze stronami świata, wieczorem przygasa razem z zegarem. W widoku z góry tło zostaje gładkie.

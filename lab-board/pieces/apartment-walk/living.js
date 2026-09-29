@@ -53,24 +53,24 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     load('tex/teddy_diff.jpg', true), load('tex/teddy_nor.jpg'), load('tex/teddy_rough.jpg'),
     load('oak_diff.jpg', true), load('oak_nor.jpg'), load('oak_rough.jpg')]);
   const LINEN = 27, WAFFLE = 28, JUTE = 80, TEDDY = 33, OAK = 140;  // what one scan covers, cm (the rug's weave is chunkier than the hessian's)
-  const linen = col => std({ map: lnC, normalMap: lnN, normalScale: new THREE.Vector2(.8, .8), roughnessMap: lnR, roughness: 1, color: col });
+  const linen = col => std({ name: 'linen', map: lnC, normalMap: lnN, normalScale: new THREE.Vector2(.8, .8), roughnessMap: lnR, roughness: 1, color: col });
   const sofaF = linen('#cdbfab');                                    // warm greige linen, a shade deeper than the Oat walls
   const ivory = linen('#ece4d6'), clay = linen('#b98466');
-  const waffle = std({ map: wfC, normalMap: wfN, normalScale: new THREE.Vector2(1, 1), roughnessMap: wfR, roughness: 1, color: '#e6d3b6' });   // a soft ochre
-  const jute = std({ map: hsC, normalMap: hsN, normalScale: new THREE.Vector2(1.4, 1.4), roughnessMap: hsR, roughness: 1, color: '#e8dcc6' });
-  const boucle = std({ map: tdC, normalMap: tdN, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: tdR, roughness: 1, color: '#e9dccb' });
-  const oak = std({ map: oakC, normalMap: oakN, normalScale: new THREE.Vector2(.35, .35), roughnessMap: oakR, roughness: .9, color: '#e6d3bd' });
-  const recess = std({ color: '#2d2621', roughness: .9 });
-  const black = std({ color: '#121212', roughness: .45, metalness: .6 });
-  const screen = std({ color: '#050607', roughness: .07, metalness: .1 });
-  const bezel = std({ color: '#1b1c1f', roughness: .5, metalness: .3 });
+  const waffle = std({ name: 'waffle', map: wfC, normalMap: wfN, normalScale: new THREE.Vector2(1, 1), roughnessMap: wfR, roughness: 1, color: '#e6d3b6' });   // a soft ochre
+  const jute = std({ name: 'jute', map: hsC, normalMap: hsN, normalScale: new THREE.Vector2(1.4, 1.4), roughnessMap: hsR, roughness: 1, color: '#e8dcc6' });
+  const boucle = std({ name: 'boucle', map: tdC, normalMap: tdN, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: tdR, roughness: 1, color: '#e9dccb' });
+  const oak = std({ name: 'oak', map: oakC, normalMap: oakN, normalScale: new THREE.Vector2(.35, .35), roughnessMap: oakR, roughness: .9, color: '#e6d3bd' });
+  const recess = std({ name: 'recess', color: '#2d2621', roughness: .9 });
+  const black = std({ name: 'black', color: '#121212', roughness: .45, metalness: .6 });
+  const screen = std({ name: 'screen', color: '#050607', roughness: .07, metalness: .1 });
+  const bezel = std({ name: 'bezel', color: '#1b1c1f', roughness: .5, metalness: .3 });
   // travertine: warm beige, soft bands and small open pores, honed
   const travertine = (() => {
     const N = 1024, c = canvas(N, N), g = c.getContext('2d'), r = rng(31);
     g.fillStyle = '#dccbb1'; g.fillRect(0, 0, N, N);
     for (let i = 0; i < 60; i++) { const y = r() * N, h = 4 + r() * 40; g.fillStyle = `rgba(${r() > .5 ? '236,224,204' : '196,176,146'},${.12 + r() * .18})`; g.fillRect(0, y, N, h); }
     for (let i = 0; i < 1400; i++) { const x = r() * N, y = r() * N, w = 2 + r() * 14, h = .8 + r() * 2.2; g.fillStyle = `rgba(150,124,92,${.25 + r() * .35})`; g.beginPath(); g.ellipse(x, y, w, h, 0, 0, Math.PI * 2); g.fill(); }
-    return std({ map: tex(c, true), roughness: .5 });
+    return std({ name: 'travertine', map: tex(c, true), roughness: .5 });
   })();
   const TRAV = 80;
   // chenille, fine structure (Gala, "Sunel" beige): rows of soft round chenille yarn 1.6 mm apart, slubby, a plain weave under them, fibre
@@ -103,7 +103,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
       const ro = 255 * (.78 + .22 * (1 - Math.max(0, v))); dr.data[i] = dr.data[i + 1] = dr.data[i + 2] = ro; dr.data[i + 3] = 255;
     }
     col.getContext('2d').putImageData(dc, 0, 0); nor.getContext('2d').putImageData(dn, 0, 0); rou.getContext('2d').putImageData(dr, 0, 0);
-    return new THREE.MeshPhysicalMaterial({ map: tex(col, true), normalMap: tex(nor), normalScale: new THREE.Vector2(.9, .9), roughnessMap: tex(rou), roughness: 1, color: '#c9bba7',
+    return new THREE.MeshPhysicalMaterial({ name: 'chenille', map: tex(col, true), normalMap: tex(nor), normalScale: new THREE.Vector2(.9, .9), roughnessMap: tex(rou), roughness: 1, color: '#c9bba7',
       sheen: .8, sheenRoughness: .45, sheenColor: new THREE.Color('#dcd0bf'), ...clip });   // Sunel beige: a warm light beige
   })();
   // fluting as on the island: half-round reeds 2.5 cm, as a normal map
@@ -241,7 +241,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   {
     const L = LIVING.console.len, D = 40, Y0 = 22, Y1 = 62;
     const box = (x0, x1, y0, y1, z0, z1, m, sc = OAK) => { const g = new RoundedBoxGeometry(x1 - x0, y1 - y0, z1 - z0, 2, Math.min(.2, (Math.min(x1 - x0, y1 - y0, z1 - z0)) / 2 - .01)); planarUV(g, sc, .3, .1); return mesh(g, m, TV, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); };
-    box(0, L, Y0, Y1 - 2, 0, D - 2, std({ color: '#e9e3da', roughness: .8 }));
+    box(0, L, Y0, Y1 - 2, 0, D - 2, std({ name: 'consoleCarcass', color: '#e9e3da', roughness: .8 }));
     box(0, L, Y1 - 2, Y1, 0, D, oak);                                // the oak top, 2 cm over the doors
     const n = 4, dw = L / n;
     for (let i = 0; i < n; i++) {                                    // four fluted doors, a 3 mm gap between them
@@ -292,9 +292,9 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   // balcony doors and at the far end; sheers = the sheers drawn across; closed = the drapes drawn too ----------
   const FAC = { o: [405.9, -1243.8], e: [.6127, .7903], len: 622.9, from: 64 };   // the facade's inside face from the kitchen corner (+z into the room)
   const FC = frame(FAC.o, FAC.e), CUR = new THREE.Group(); FC.add(CUR);
-  { const g = new RoundedBoxGeometry(FAC.len - FAC.from + 2, 12, 21, 2, .4); mesh(g, std({ color: '#f7f6f3', roughness: .92 }), FC, (FAC.from - 2 + FAC.len) / 2, H - 6, 10.5); }
-  const sheerM = std({ color: '#fbf9f4', roughness: 1, normalMap: lnN, normalScale: new THREE.Vector2(.5, .5), transparent: true, opacity: .52, side: THREE.DoubleSide, depthWrite: false });
-  const drapeM = std({ map: lnC, normalMap: lnN, normalScale: new THREE.Vector2(1, 1), roughnessMap: lnR, roughness: 1, color: '#cbbba4', side: THREE.DoubleSide });
+  { const g = new RoundedBoxGeometry(FAC.len - FAC.from + 2, 12, 21, 2, .4); mesh(g, std({ name: 'pelmet', color: '#f7f6f3', roughness: .92 }), FC, (FAC.from - 2 + FAC.len) / 2, H - 6, 10.5); }
+  const sheerM = std({ name: 'sheerM', color: '#fbf9f4', roughness: 1, normalMap: lnN, normalScale: new THREE.Vector2(.5, .5), transparent: true, opacity: .52, side: THREE.DoubleSide, depthWrite: false });
+  const drapeM = std({ name: 'drapeM', map: lnC, normalMap: lnN, normalScale: new THREE.Vector2(1, 1), roughnessMap: lnR, roughness: 1, color: '#cbbba4', side: THREE.DoubleSide });
   // a panel of fabric fw wide hung between s0 and s1: n wave folds, as deep as the fabric allows, flaring a little towards the hem
   const curtain = (s0, s1, fw, z, top, n, m, { scale = LINEN, seed = 1, shadow = true } = {}) => {
     const W = s1 - s0, f = Math.max(1.02, fw / W), A = (W / n) * Math.sqrt(f * f - 1) / 4, q = rng(seed);
@@ -338,7 +338,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
 
   // ---------- lamps (off by day; the panel lights them) ----------
   const lamps = [];
-  const glow = std({ color: '#fff3df', emissive: '#ffd9a0', emissiveIntensity: 0, roughness: .6 });
+  const glow = std({ name: 'glow', color: '#fff3df', emissive: '#ffd9a0', emissiveIntensity: 0, roughness: .6 });
 
   // ---------- models (Poly Haven, CC0), placed by their real size ----------
   const gl = new GLTFLoader();
