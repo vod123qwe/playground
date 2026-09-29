@@ -86,6 +86,9 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Lampy:** nad wyspą trzy bursztynowe klosze (na wzór Czcina, styl B, 38 cm) na różnych wysokościach; lampy sufitowe z tej rodziny w punktach z rzutu elektryki (salon, sypialnia, gabinet, pokój dziecka); donut IKEA VARMBLIXT na konsoli RTV; wszystkie klikalne. Światło lamp nie przechodzi przez ściany: trzy wspólne światła z cieniem przejmują trzy najbliższe zapalone lampy.
 - **Kuchnia:** wszystko się otwiera (fronty, szuflady, lodówka z wnętrzem, piekarniki, zmywarka, okap).
 - **Chodzenie:** delikatny krok (Customize → Head bob).
+- **Inni odwiedzający na żywo (`ghosts.js`):** każdy, kto ma spacer otwarty, jest dla innych duchem: świecący kontur postaci z podpisem „Guest N”, pierścień na podłodze w stronę, w którą patrzy, słabo widoczny także przez ściany, i kolorowa kropka na minimapie; do 10 naraz, licznik u góry. Przeglądarki znajdują się przez publiczne przekaźniki Nostr (biblioteka Trystero z esm.sh; bez konta, klucza i własnego serwera; sygnalizacja szyfrowana), potem łączą się bezpośrednio (WebRTC, więc znają nawzajem swój adres sieciowy). Wysyłane są tylko: losowy identyfikator, pozycja na planie, kierunek patrzenia, wysokość oka, tryb. Wyłączenie: Customize → Other visitors, live. Duchy nie trafiają do śledzenia promieni ani do eksportu do Blendera.
+- **Światło lamp:** świeci każda zapalona lampa w pokoju, w którym stoisz (trzy najbliższe z miękkimi cieniami 1024 px, reszta bez cienia), do tego ciepłe światło odbite rosnące z liczbą zapalonych lamp; lampy w innych pokojach świecą tylko z cieniem, więc nie przechodzą przez ściany.
+- **Widok z góry:** ściany po stronie kamery opadają płynnie w pasie ok. 3 m (od 2,8 m za środkiem widoku), bez schodka.
 
 ## Render 360 w Blenderze (tools/blender)
 
