@@ -1,6 +1,6 @@
 // The three rooms on A.04 beyond the living room, in plan centimetres (x, and the plan's y as z):
 //  F, the bedroom (16.7 m2): an IKEA PAX along the bathroom wall (two 100 frames, four white doors, a filler to the corner), a 180 x 200
-//    bed with its head on the wall opposite the door, two floating oak bedside tables with ceramic lamps, a 55" TV on the wall facing
+//    bed after the Kave Home Odina (rounded ecru boucle, ash legs) with its head on the wall opposite the door, a warm rug under its foot, two floating oak bedside tables with ceramic lamps, a 55" TV on the wall facing
 //    the bed (on its straight part, as close to the bed's axis as the corner allows), sheers and linen drapes along the windows;
 //  E, the study (11.3 m2), as the third revision of A.04 has it: a 120 oak desk on the wall to the living room with two screens, an
 //    office chair, the PC, oak shelves and ivy; a sofa bed that pulls out, on the wall to the bedroom; a PAX by the door; a rug;
@@ -32,6 +32,8 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   const load = (f, srgb) => new Promise(res => tl.load(base + f, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; res(t); }));
   const [lnN, lnR, oakC, oakN, oakR] = await Promise.all([load('tex/linen_nor.jpg'), load('tex/linen_rough.jpg'), load('oak_diff.jpg', true), load('oak_nor.jpg'), load('oak_rough.jpg')]);
   const std = o => new THREE.MeshStandardMaterial({ ...o, ...clip });
+  const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);   // a texture drawn here
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso; return t; };
   const sheerM = std({ name: 'sheerM', color: '#fbf9f4', roughness: 1, normalMap: lnN, normalScale: new THREE.Vector2(.5, .5), transparent: true, opacity: .52, side: THREE.DoubleSide, depthWrite: false });
   const drapeM = std({ name: 'drapeM', normalMap: lnN, normalScale: new THREE.Vector2(1, 1), roughnessMap: lnR, roughness: 1, color: '#cbbba4', side: THREE.DoubleSide });
   const pelmetM = std({ name: 'pelmet', color: '#f7f6f3', roughness: .92 });
@@ -210,21 +212,56 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   // ---------- F, the bedroom ----------
   // the PAX along the bathroom wall (x 693), the doors facing into the room; the filler at the corner with the bed's wall
   const run = pax({ THREE, root, mats: hallMats, x0: 693, z0: -252, z1: -44, frames: [100, 100], fill: 'z1' }); foot.push(run.foot);
-  // the bed: 180 x 200, an upholstered frame in beige linen, a headboard 110 high, head on the wall z = -44, running to -z
-  const WZ = -44, BX0 = 848, BX1 = 1032, upholstery = linen('#d9cbb8'), sheet = linen('#f3efe8'), duvetM = linen('#efe8dd'), throwM = linen('#a99985');
-  box(BX0 + 6, BX1 - 6, 0, 8, WZ - 14, WZ - 204, std({ name: 'gap', color: '#6d655c', roughness: .9 }));   // the recessed plinth
+  // the bed, after the Kave Home Odina: one soft rounded body in ecru boucle, frame and headboard (83 high), on solid ash legs that rise
+  // through its corners a little above the cover; narrowed to 188 x 228 to keep to A.04's bedside tables. A 180 x 200 mattress sunk into
+  // it, the duvet over its lower two thirds, a terracotta throw across the foot; against the headboard two linen euro squares, two
+  // white sleeping pillows leaning on them, a rust lumbar cushion in front. Head on the wall z = -44, running to -z
+  const WZ = -44, BX0 = 846, BX1 = 1034, BC = (BX0 + BX1) / 2, BL = 228;
+  const boucle = linen('#e9e1d4'), sheet = linen('#f4f0e9'), duvetM = linen('#efe8dd'), throwM = linen('#b8765a');
   const bedParts = [];
-  bedParts.push(box(BX0, BX1, 0, 112, WZ - 9, WZ - .5, upholstery, { r: 3.5, scale: LINEN }));             // the headboard
-  bedParts.push(box(BX0, BX1, 8, 32, WZ - 9, WZ - 213, upholstery, { r: 2.5, scale: LINEN }));                             // the frame
-  bedParts.push(box(BX0 + 2, BX1 - 2, 32, 53, WZ - 11, WZ - 211, sheet, { r: 5, scale: LINEN, soft: .3, seed: 3 }));        // the mattress, sheeted
-  bedParts.push(box(BX0 - 2, BX1 + 2, 40, 58, WZ - 62, WZ - 214, duvetM, { r: 8, scale: LINEN, soft: 1.4, seed: 7 }));      // the duvet, over the edges
-  bedParts.push(box(BX0 - 1, BX1 + 1, 53, 62, WZ - 58, WZ - 74, duvetM, { r: 4.5, scale: LINEN, soft: .6, seed: 8 }));      // its folded top
-  bedParts.push(box(BX0 + 2, BX1 - 2, 57.5, 60.5, WZ - 168, WZ - 205, throwM, { r: 1.4, scale: LINEN, soft: .5, seed: 9 })); // a throw across the foot
-  for (const [x, k] of [[BX0 + 48, 0], [BX1 - 48, 1]]) {             // two pillows against the headboard, two in front, leaning back
-    const p1 = box(x - 40, x + 40, 0, 50, -7, 7, sheet, { r: 6, scale: LINEN, soft: 1, seed: 11 + k }); p1.position.set(x, 76, WZ - 22); p1.rotation.x = -.35; bedParts.push(p1);
-    const p2 = box(x - 34, x + 34, 0, 36, -6, 6, linen(k ? '#e6dccd' : '#ddd1c0'), { r: 5, scale: LINEN, soft: .8, seed: 13 + k }); p2.position.set(x, 70, WZ - 36); p2.rotation.x = -.5; bedParts.push(p2);
+  bedParts.push(box(BX0, BX1, 14, 83, WZ - 1, WZ - 17, boucle, { r: 8, scale: LINEN, soft: .7, seed: 2 }));                  // the headboard
+  bedParts.push(box(BX0, BX1, 14, 34, WZ - 12, WZ - BL, boucle, { r: 9, scale: LINEN, soft: .5, seed: 4 }));                 // the frame
+  for (const x of [BX0 + 5.5, BX1 - 5.5]) for (const z of [WZ - 22, WZ - BL + 5.5]) {                                      // the ash legs, through the corners
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.6, 38, 24), oak); l.position.set(x, 19, z); l.castShadow = l.receiveShadow = true; root.add(l); bedParts.push(l);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(3.3, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), oak); cap.position.set(x, 38, z); root.add(cap); bedParts.push(cap); }
+  bedParts.push(box(BX0 + 4, BX1 - 4, 30, 52, WZ - 18, WZ - 218, sheet, { r: 6, scale: LINEN, soft: .3, seed: 3 }));        // the mattress, sheeted
+  bedParts.push(box(BX0 + 1, BX1 - 1, 44, 57.5, WZ - 80, WZ - 220, duvetM, { r: 9, scale: LINEN, soft: 1.6, seed: 7 }));     // the duvet, over the edges
+  bedParts.push(box(BX0 + 2, BX1 - 2, 53, 60.5, WZ - 74, WZ - 94, duvetM, { r: 4.5, scale: LINEN, soft: .7, seed: 8 }));     // its folded top
+  bedParts.push(box(BX0 - 2, BX1 + 2, 56.5, 58.3, WZ - 172, WZ - 206, throwM, { r: .8, scale: LINEN, soft: 1.1, seed: 9 }));  // the throw across the foot,
+  for (const x of [BX0 - 3.2, BX1 + 1.4]) bedParts.push(box(x, x + 1.8, 34, 58, WZ - 174, WZ - 204, throwM, { r: .8, scale: LINEN, soft: .9, seed: 10 }));   // hanging down its sides
+  // a pillow: a sphere squared off (a superellipse) and thinned to its edges, a soft uneven fill; its uv on the linen's scale
+  const pillowGeo = (w, d, t, seed) => { const g = new THREE.SphereGeometry(1, 48, 32), p = g.attributes.position, uv = g.attributes.uv, q = rng(seed), ph = [q() * 6, q() * 6];
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const sx = Math.sign(x) * Math.pow(Math.abs(x), .42), sz = Math.sign(z) * Math.pow(Math.abs(z), .42), fill = 1 + .05 * Math.sin(sx * 5 + ph[0]) * Math.sin(sz * 4 + ph[1]);
+      p.setXYZ(i, sx * w / 2, y * t / 2 * fill * (1 - .3 * Math.max(sx * sx, sz * sz)), sz * d / 2); uv.setXY(i, sx * w / 2 / LINEN + .5, sz * d / 2 / LINEN + .5); }
+    g.computeVertexNormals(); return g; };
+  const pillow = (w, d, t, m, x, y, z, lean, seed, turn = 0) => { const o = new THREE.Mesh(pillowGeo(w, d, t, seed), m); o.position.set(x, y, z); o.rotation.set(-Math.PI / 2 + lean, turn, 0, 'YXZ');
+    o.castShadow = o.receiveShadow = true; root.add(o); bedParts.push(o); return o; };
+  const euroM = linen('#dccfbd'), pillowM = linen('#f5f2ec'), rust = linen('#a65e3e');
+  for (const [s, k] of [[-1, 0], [1, 1]]) {
+    pillow(62, 62, 17, euroM, BC + s * 44, 52 + 30, WZ - 27, .2, 21 + k, s * .03);                                             // the euro squares, upright
+    pillow(76, 50, 15, pillowM, BC + s * 43, 52 + 22, WZ - 43, .62, 23 + k, -s * .04);                                        // the sleeping pillows, leaning
   }
-  foot.push([[BX0, WZ], [BX1, WZ], [BX1, WZ - 213], [BX0, WZ - 213]]);
+  pillow(52, 32, 13, rust, BC + 3, 52 + 15, WZ - 55, .75, 25, .05);                                                          // the lumbar cushion
+  foot.push([[BX0, WZ], [BX1, WZ], [BX1, WZ - BL], [BX0, WZ - BL]]);
+  // the rug under the bed's foot and out in front: 300 x 200 in warm wool, sand with a rust lattice and ochre diamonds, a rust border,
+  // a fringe at its short ends
+  { const W = 300, D = 200, cx = 940, cz = -220;
+    const tex = canvasTex(1536, 1024, (g, w, h) => { const q = rng(91); g.fillStyle = '#d7b596'; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 90000; i++) { g.fillStyle = q() < .5 ? 'rgba(246,222,196,.22)' : 'rgba(150,98,64,.12)'; g.fillRect(q() * w, q() * h, 1 + q() * 2.5, 1 + q() * 2.5); }   // the pile
+      const b = 28; g.strokeStyle = '#a5573a'; g.lineWidth = 10; g.strokeRect(b, b, w - 2 * b, h - 2 * b); g.lineWidth = 3; g.strokeRect(b + 18, b + 18, w - 2 * b - 36, h - 2 * b - 36);
+      g.save(); g.beginPath(); g.rect(b + 30, b + 30, w - 2 * b - 60, h - 2 * b - 60); g.clip();
+      const cw = w / 14, ch = h / 7;
+      g.strokeStyle = 'rgba(165,87,58,.85)'; g.lineWidth = 3;
+      for (let i = -14; i <= 28; i++) for (const sgn of [1, -1]) { g.beginPath(); g.moveTo(i * cw, 0); g.lineTo(i * cw + sgn * h * cw / ch, h); g.stroke(); }
+      g.fillStyle = 'rgba(201,138,62,.9)';
+      for (let i = 0; i <= 14; i++) for (let j = 0; j <= 7; j++) { const x = i * cw, y = j * ch; if ((i + j) % 2) continue; g.beginPath(); g.moveTo(x, y - 14); g.lineTo(x + 10, y); g.lineTo(x, y + 14); g.lineTo(x - 10, y); g.fill(); }
+      g.restore(); });
+    const top = new THREE.Mesh(new THREE.PlaneGeometry(W, D), std({ name: 'rug', map: tex, roughness: 1 })); top.rotation.x = -Math.PI / 2; top.position.set(cx, 1.1, cz); top.receiveShadow = true; root.add(top);
+    const edge = std({ name: 'rugEdge', color: '#c9a383', roughness: 1 });
+    box(cx - W / 2, cx + W / 2, 0, 1.05, cz - D / 2, cz + D / 2, edge, { r: .4 });
+    const fr = []; for (const s2 of [-1, 1]) for (let z = cz - D / 2 + 1.5; z < cz + D / 2 - 1; z += 1.3) fr.push(new THREE.BoxGeometry(6 + Math.sin(z * 1.7) * .9, .25, .38).translate(cx + s2 * (W / 2 + 3), .3, z));
+    const F = new THREE.Mesh(mergeGeometries(fr), std({ name: 'rugEdge', color: '#e2cdb5', roughness: 1 })); F.receiveShadow = true; root.add(F); }
   // the bedside tables: floating oak boxes 38 x 35 x 26 with a drawer, and a ceramic lamp with a linen drum
   const ceramic = std({ name: 'lampBase', color: '#e9e2d6', roughness: .55 }), lamps = [];
   for (const [x0, x1] of [[810, BX0], [BX1, 1070]]) {
@@ -300,8 +337,6 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   // 6 cm off it (172 x 60: A.04 draws it 120, but it runs on to the window wall), the chair pulled out before it; a sofa bed on the wall to the bedroom, to the corner by the radiator, that pulls
   // out 80 cm into a bed; a PAX (100 + 50) right of the door; a Beni Ourain style rug before the sofa ----------
   const movers = [];                                                  // things in motion (the sofa bed): run by step()
-  const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso; return t; };
   const cover = ['#8a6f5a', '#c9b79c', '#5f6b62', '#e2d7c5', '#9a8c7a', '#3f4a52', '#b8a48a', '#d9cdb8', '#7a4e3c'].map(color => std({ name: 'book', color, roughness: .8 }));
   // a photo in a frame, standing on a shelf and leaning back a little, or hung on the wall: an oak or black frame, a white mat, the picture (drawn)
   const matM = std({ name: 'print', color: '#f3f0ea', roughness: .9 }), blackFrame = std({ name: 'plasticBlack', color: '#1f1e1d', roughness: .5 });
