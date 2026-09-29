@@ -880,7 +880,8 @@ buildPanel(); resize(); styleChanged(); changed(true);
 document.body.classList.add('ready');
 if (STILL) { S.dims = false; document.body.classList.add('nodims'); }
 requestAnimationFrame(frame);
-window.FC = { C: () => C, S: () => S, pt, camera, controls, items: () => items, fit: () => fitTo, exportRender, cutList, planSvg, select: i => { sel = i; renderBar(); }, changed };
+window.FC = { renderer, scene, animateFronts, bayQuad, C: () => C, S: () => S, pt, camera, controls,   // (renderer, scene, fronts, quads: the lab board's hover clip is recorded from these)
+   items: () => items, fit: () => fitTo, exportRender, cutList, planSvg, select: i => { sel = i; renderBar(); }, changed };
 </script>
 </body>
 </html>
