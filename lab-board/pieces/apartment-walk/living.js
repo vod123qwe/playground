@@ -361,8 +361,9 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     const y = 168; g.position.y += y - (H - g.userData.h);           // the model hangs 95 cm: raised, its rod runs on into the ceiling
     const bulb = mesh(new THREE.SphereGeometry(4, 24, 16), glow, DT, 0, y + 4, 0); bulb.castShadow = false;
     const light = new THREE.PointLight('#ffd4a0', 0, 5, 2); light.position.set(0, y - 2, 0); DT.add(light);
+    light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;   // its light stops at the walls: a shadow, on while it is on
     const meshes = [bulb]; g.traverse(o => { if (o.isMesh) meshes.push(o); });
-    lamps.push({ name: 'dining', on: false, meshes, set(v) { this.on = v; light.intensity = v ? 3 : 0; glow.emissiveIntensity = v ? 6 : 0; } });   // click it, or Lamps on
+    lamps.push({ name: 'dining', on: false, meshes, set(v) { this.on = v; light.intensity = v ? 3 : 0; light.castShadow = !!v; glow.emissiveIntensity = v ? 6 : 0; } });   // click it, or Lamps on
   }));
   await Promise.all(decor);
   // on the console, beside the aloe: an IKEA VARMBLIXT (the "donut"), orange glass, about 30 across and 11 high, lit from inside
@@ -375,7 +376,8 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     const g = new THREE.LatheGeometry(prof.reverse().map(([r, y]) => new THREE.Vector2(r, y)), 128);   // its own normals, from the profile (walked from the base up, so they face out)
     const d = new THREE.Mesh(g, glass); d.castShadow = true; d.receiveShadow = false; G.add(d);   // (glass: no shadow on itself, it streaked the dimple)
     const light = new THREE.PointLight('#ffa640', 0, 2.2, 2); light.position.set(0, 1, 17); G.add(light);   // under its rim, towards the room: a warm pool on the top
-    lamps.push({ name: 'donut', on: false, meshes: [d], set(v) { this.on = !!v; glass.emissiveIntensity = v ? .6 : 0; light.intensity = v ? .3 : 0; } });
+    light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;   // its light stops at the walls: a shadow, on while it is on
+    lamps.push({ name: 'donut', on: false, meshes: [d], set(v) { this.on = !!v; glass.emissiveIntensity = v ? .6 : 0; light.intensity = v ? .3 : 0; light.castShadow = !!v; } });
   }
 
   // lamps on or off; the light is in candela per the renderer's metres, the group being in cm

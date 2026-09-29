@@ -223,7 +223,8 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     b.position.set(cx, 56, cz); b.castShadow = b.receiveShadow = true; root.add(b);
     const sh = new THREE.Mesh(new THREE.CylinderGeometry(13, 15, 19, 48, 1, true), shadeM); sh.position.set(cx, 56 + 36, cz); root.add(sh);
     const light = new THREE.PointLight('#ffcf94', 0, 4, 2); light.position.set(cx, 56 + 34, cz); root.add(light);
-    lamps.push({ name: x0 < BX0 ? 'bedside left' : 'bedside right', on: false, meshes: [b, sh], set(v) { this.on = !!v; shadeM.emissiveIntensity = v ? 1.6 : 0; light.intensity = v ? 1.2 : 0; } });
+    light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;   // its light stops at the walls: a shadow, on while it is on
+    lamps.push({ name: x0 < BX0 ? 'bedside left' : 'bedside right', on: false, meshes: [b, sh], set(v) { this.on = !!v; shadeM.emissiveIntensity = v ? 1.6 : 0; light.intensity = v ? 1.2 : 0; light.castShadow = !!v; } });
     foot.push([[x0, WZ], [x1, WZ], [x1, WZ - 35], [x0, WZ - 35]]);
   }
   // the TV, 55" (123 x 71), on the wall facing the bed (z = -362), its right edge 6 cm from where the wall turns
