@@ -242,7 +242,7 @@ import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=13';
 import { buildLiving } from './living.js?v=32';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=28';
+import { buildRooms } from './rooms.js?v=29';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -693,8 +693,11 @@ function setTime(m) { S.time = ((Math.round(m / 5) * 5) % 1440 + 1440) % 1440; p
 
 // ---------- the cutaway (overview): as you come in close, the walls on your side of the middle of the view come down to 20 % of their
 // height, with everything in them (frames, glass, lintels, the black tops); the cut shows dark, like the plan. Furniture stays whole.
-// A fragment above cutH on the camera's side (dot > cutO along cutD from cutT) is dropped; a wall seen from inside shows the fill.
-const CUT = { cutH: { value: 1e3 }, cutT: { value: new THREE.Vector2() }, cutD: { value: new THREE.Vector2(1, 0) }, cutO: { value: 0 }, cutFill: { value: new THREE.Color('#1b1c20') } };
+// Not at a line but over a band: along the view (cutD, from cutT) the walls' top slopes from their full height (cutTop) down to cutH
+// across 2 x cutW, from cutO - cutW beyond the middle of the view, so no wall stops short in a step. A wall seen from inside shows the
+// fill (a dithered edge was tried: through its holes the dark insides showed, as grit).
+const CUT = { cutH: { value: 1e3 }, cutTop: { value: 1e3 }, cutT: { value: new THREE.Vector2() }, cutD: { value: new THREE.Vector2(1, 0) }, cutO: { value: 0 }, cutW: { value: 1.6 },
+  cutFill: { value: new THREE.Color('#1b1c20') } };
 function cutaway(m, fill = false) {
   if (m.userData.cutaway) return; m.userData.cutaway = true;
   const prev = m.onBeforeCompile;
@@ -704,9 +707,11 @@ function cutaway(m, fill = false) {
     sh.vertexShader = `varying vec3 vCutW;
 ${sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
   vCutW = (modelMatrix * vec4(transformed, 1.)).xyz;`)}`;
-    sh.fragmentShader = `uniform float cutH, cutO; uniform vec2 cutT, cutD; uniform vec3 cutFill; varying vec3 vCutW;
+    sh.fragmentShader = `uniform float cutH, cutTop, cutO, cutW; uniform vec2 cutT, cutD; uniform vec3 cutFill; varying vec3 vCutW;
 ${sh.fragmentShader.replace('void main() {', `void main() {
-  if (vCutW.y > cutH && dot(vCutW.xz - cutT, cutD) > cutO) discard;`)}`;
+  { float k = smoothstep(cutO - cutW, cutO + cutW, dot(vCutW.xz - cutT, cutD));
+    float h = mix(cutTop, cutH, k * k * (3. - 2. * k));
+    if (h < 99. && vCutW.y > h) discard; }`)}`;
     if (fill) sh.fragmentShader = sh.fragmentShader.replace(/}\s*$/, `  if (!gl_FrontFacing) gl_FragColor = vec4(cutFill, 1.);
 }`);
   };
@@ -1789,10 +1794,11 @@ function frame(now) {
   if (archDirty) archCut();
   { // the cutaway comes in between 13 m and 7 m up (the whole flat at a glance keeps its walls); in the walk the walls stand whole
     const k = mode === 'over' ? THREE.MathUtils.smoothstep(camera.position.y, 7, 13) : 1;
-    CUT.cutH.value = k >= .999 ? 1e3 : THREE.MathUtils.lerp(.2 * H * M, H * M + .3, k);
+    CUT.cutH.value = k >= .999 ? 1e3 : THREE.MathUtils.lerp(.2 * H * M, H * M + .3, k); CUT.cutTop.value = k >= .999 ? 1e3 : H * M + .3;
     const dx = camera.position.x - controls.target.x, dz = camera.position.z - controls.target.z, l = Math.hypot(dx, dz);
     CUT.cutT.value.set(controls.target.x, controls.target.z);
-    if (l > .4) { CUT.cutD.value.set(dx / l, dz / l); CUT.cutO.value = -.3; } else { CUT.cutO.value = -1e5; }   // straight down: every wall comes down
+    if (l > .4) { CUT.cutD.value.set(dx / l, dz / l); CUT.cutO.value = -1.2; } else { CUT.cutO.value = -1e5; }   // the band from 2.6 m beyond the middle to just short of it;
+    // straight down: every wall comes down
   }
   for (const dr of doors) {
     if (dr.f !== dr.to) { const k = reduce ? 1 : Math.min(1, dt * 2.6); dr.f += Math.sign(dr.to - dr.f) * Math.min(Math.abs(dr.to - dr.f), k * (.35 + Math.abs(dr.to - dr.f))); if (Math.abs(dr.to - dr.f) < .002) dr.f = dr.to; }
