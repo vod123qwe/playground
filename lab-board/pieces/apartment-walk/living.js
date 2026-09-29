@@ -53,7 +53,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     load('tex/teddy_diff.jpg', true), load('tex/teddy_nor.jpg'), load('tex/teddy_rough.jpg'),
     load('oak_diff.jpg', true), load('oak_nor.jpg'), load('oak_rough.jpg')]);
   const LINEN = 27, WAFFLE = 28, JUTE = 80, TEDDY = 33, OAK = 140;  // what one scan covers, cm (the rug's weave is chunkier than the hessian's)
-  const linen = col => std({ name: 'linen', map: lnC, normalMap: lnN, normalScale: new THREE.Vector2(.8, .8), roughnessMap: lnR, roughness: 1, color: col });
+  const linen = col => std({ name: 'linen', normalMap: lnN, normalScale: new THREE.Vector2(.8, .8), roughnessMap: lnR, roughness: 1, color: col });
   const sofaF = linen('#cdbfab');                                    // warm greige linen, a shade deeper than the Oat walls
   const ivory = linen('#ece4d6'), clay = linen('#b98466');
   const waffle = std({ name: 'waffle', map: wfC, normalMap: wfN, normalScale: new THREE.Vector2(1, 1), roughnessMap: wfR, roughness: 1, color: '#e6d3b6' });   // a soft ochre
@@ -294,7 +294,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   const FC = frame(FAC.o, FAC.e), CUR = new THREE.Group(); FC.add(CUR);
   { const g = new RoundedBoxGeometry(FAC.len - FAC.from + 2, 12, 21, 2, .4); mesh(g, std({ name: 'pelmet', color: '#f7f6f3', roughness: .92 }), FC, (FAC.from - 2 + FAC.len) / 2, H - 6, 10.5); }
   const sheerM = std({ name: 'sheerM', color: '#fbf9f4', roughness: 1, normalMap: lnN, normalScale: new THREE.Vector2(.5, .5), transparent: true, opacity: .52, side: THREE.DoubleSide, depthWrite: false });
-  const drapeM = std({ name: 'drapeM', map: lnC, normalMap: lnN, normalScale: new THREE.Vector2(1, 1), roughnessMap: lnR, roughness: 1, color: '#cbbba4', side: THREE.DoubleSide });
+  const drapeM = std({ name: 'drapeM', normalMap: lnN, normalScale: new THREE.Vector2(1, 1), roughnessMap: lnR, roughness: 1, color: '#cbbba4', side: THREE.DoubleSide });
   // a panel of fabric fw wide hung between s0 and s1: n wave folds, as deep as the fabric allows, flaring a little towards the hem
   const curtain = (s0, s1, fw, z, top, n, m, { scale = LINEN, seed = 1, shadow = true } = {}) => {
     const W = s1 - s0, f = Math.max(1.02, fw / W), A = (W / n) * Math.sqrt(f * f - 1) / 4, q = rng(seed);

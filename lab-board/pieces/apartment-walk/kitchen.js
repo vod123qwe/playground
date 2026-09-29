@@ -131,8 +131,9 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   // ---------- the run (x along the wall from the entrance side, z out of the wall) ----------
   const L = Math.min(K.len, 350), Y0 = 10, WT = 87, TOP = 90, UP0 = 145, CEIL = H, D = 60, UD = 35;   // A.04: the run 350 long, 40 short of the window wall
   const X = [0, 60, 120, 180, 260, 290, 350];                        // fridge | sink | dishwasher | hob | cargo | oven
-  // carcasses and the plinth (a dark recess 5 cm deep)
-  box(0, L, 0, Y0, 0, D - 5, shadowGap);
+  // carcasses and the plinth (a dark recess 5 cm deep), under the filler too
+  const LF = K.len - .2;                                             // the filler's end: the window wall
+  box(0, LF, 0, Y0, 0, D - 5, shadowGap);
   box(X[1], X[5], Y0, WT, 0, D - 2, carcass);
   box(X[0], X[1], Y0, CEIL, 0, D - 2, carcass); box(X[5], L, Y0, CEIL, 0, D - 2, carcass);
   // lower fronts: the sink (one door), the dishwasher (a full panel), three drawers under the hob, the cargo pull-out
@@ -148,6 +149,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   lowerFront(X[5], L, Y0, 76, D - 2);
   appliance(X[5], L, 76.5, 136, 'oven'); appliance(X[5], L, 137, 182, 'combi');
   tallFront(X[5], L, 183, CEIL, D - 2, false);
+  // the 40 cm A.04 leaves to the window wall: an oak filler, flush with the fronts, from the plinth to the ceiling
+  box(L + G / 2, LF, Y0, CEIL - G / 2, D - 2, D - .1, oak); box(L, LF, Y0, CEIL, 0, D - 2, carcass);
   // the worktop with the sink cut out, 62 deep (2 cm over the fronts)
   const topShape = new THREE.Shape([new THREE.Vector2(X[1] - .01, 0), new THREE.Vector2(X[5] + .01, 0), new THREE.Vector2(X[5] + .01, D + 2), new THREE.Vector2(X[1] - .01, D + 2)]);
   const SX0 = X[1] + 6, SX1 = X[2] - 6, SZ0 = 12, SZ1 = 52;         // the undermount bowl: 48 x 40, set off the tall fridge
@@ -283,7 +286,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
 
   // the run and the island on the floor, for walking (plan cm): polygons
   const P = (u, v) => [K.a[0] + K.d[0] * u + K.n[0] * v, K.a[1] + K.d[1] * u + K.n[1] * v];
-  const foot = [[P(0, 0), P(L, 0), P(L, D + 2), P(0, D + 2)]];
+  const foot = [[P(0, 0), P(LF, 0), P(LF, D + 2), P(0, D + 2)]];
   const isl = (u, v) => P(K.island.along + u, K.island.off + v);
   const islandFoot = off => { const q = (u, v) => P(K.island.along + u, off + v); return [q(ix0, iz0), q(ix1, iz0), q(ix1, back + 2), q(ix0, back + 2)]; };
   foot.push(islandFoot(K.island.off));

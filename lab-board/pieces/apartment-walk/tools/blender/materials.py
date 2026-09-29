@@ -44,6 +44,7 @@ def upgrade(X, lamps=False):
         b = base(m.name)
         if b == 'opal': lamp(m, warm, 9 if lamps else 0)             # the three globes over the island
         elif b == 'glow': lamp(m, warm, 7 if lamps else 0)           # the pendant over the dining table
+        elif b == 'bedLamp': lamp(m, warm, 5 if lamps else 0)        # the bedside lamps' drums
     for m in bpy.data.materials:
         b = base(m.name)
         if b == 'glass': thin_glass(m)
@@ -64,7 +65,7 @@ FINISH = {    # material name: (scan, tile size in m, tint (or None: the scan's 
     'boucle':    ('wool_boucle', .35, 'flat', 1.0, 1.0, .6),       # the dining chairs: the scan's loops and sheen, our colour (the scan is checked)
     'fabric':    ('wool_boucle', .35, 'flat', 1.0, 1.0, .6),
     'chenille':  ('velour_velvet', .5, (.88, .78, .65), .8, 1.0, .55),  # the sofa: a warm light beige chenille
-    'linen':     ('rough_linen', .45, None, .8, 1.0, .3),               # cushions
+    'linen':     ('rough_linen', .45, 'keep', .8, 1.0, .3),             # cushions, the bedding, the bed: the viewer's colours, the scan's weave
     'drapeM':    ('rough_linen', .6, (.80, .73, .64), 1.0, 1.0, .4),     # the drapes
     'jute':      ('hessian_230', .6, (.91, .86, .78), 1.2, 1.0, 0),     # the rug
     'wall':      ('painted_plaster_wall', 2.0, 'keep', .15, 1.0, 0),   # the paint keeps its colour; only a faint roller texture
