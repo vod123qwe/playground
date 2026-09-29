@@ -8,7 +8,7 @@
 //  - the vanity wall: the pipes boxed in, 9 deep: a tiled ledge 110 high by the vanity, and behind the bath's foot a tiled column to the
 //    ceiling (aqua, the bath mixer and the slide rail on its face); a floating walnut drawer under a white marble top at 85 with a
 //    countertop basin and a tall brass mixer standing at its back; a round backlit mirror, 80 across, two opal globes at its top;
-//  - the bath, 170 x 72, from the door's wall on a tiled head box to the ledge, its front tiled, a brass framed glass screen from its foot;
+//  - the bath, 170 x 72, from the door's wall on a tiled head box to the ledge, its front tiled, a two-pane sliding glass screen from its foot;
 //    two brass towel bars over its head.
 // The cabinet's doors and the drawer open, the screen slides along its rail: a click on them.
 // Plan centimetres (x, and the plan's y as z), as rooms.js. Everything here is drawn: the textures in canvases, the fittings our own shapes.
@@ -190,15 +190,19 @@ export function buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, 
     put(loft([[THX - 5.5, THZ - 7.2, 25, 57], [THX - 5.8, THZ - 7.6, 24.5, 54], [THX - 7.2, THZ - 9.8, 22.5, 40], [THX - 10.5, THZ - 14, 19.5, 26], [THX - 15.5, THZ - 22, 15.5, 18.5], [THX - 24, THZ - 33, 9, 16.3], [.01, THZ - 43, 0, 16]]), white, 0, 0, 0, G);
     cyl(2.2, .4, chrome, 0, 16.4, THZ - 20, 'y', 24).parent = G; }
   foot.push([[TB, -242.3], [681.6, -242.3], [681.6, LZ], [TB, LZ]]);
-  // the screen: clear glass 89 x 140 from the bath's foot, brushed brass frame, its top rail running the bath's length, a handle bar
-  box(TB - .2, TB + 1.4, 197, 199, -242.3, LZ, brass, { r: .3 });                                      // the rail, the post at the column
-  box(TB - .2, TB + 1.4, 57.5, 197, LZ - 1.8, LZ, brass, { r: .2 });
-  { const SC = new THREE.Group(); root.add(SC);                                                          // the pane, its edge profiles, the handle
-    const parts = [box(TB + .2, TB + 1, 57.5, 196.6, -142, LZ - 2, glass, { r: .1, parent: SC }), box(TB - .2, TB + 1.4, 57.5, 196.6, -143.6, -142, brass, { r: .2, parent: SC }),
-      box(TB - .2, TB + 1.4, 57.5, 196.6, LZ - 3.2, LZ - 2, brass, { r: .2, parent: SC })];
-    const hb = cyl(.7, 40, brass, TB - 1.6, 125, -133); SC.attach(hb); parts.push(hb);
-    for (const y of [106, 144]) { const c = cyl(.4, 1.8, brass, TB - .6, y, -133, 'x', 8); SC.attach(c); parts.push(c); }
-    opener(parts, e => { SC.position.z = -76 * e; }); }
+  // the screen: two panes of clear glass on two tracks from the bath's foot, 140 high, in brushed brass profiles. Closed they cover half
+  // the bath (86 cm): the one at the foot stays, the other slides back over it, and open they take a quarter (44)
+  const SH = 57.5, ST = 196.6;                                       // the panes' bottom (the rim) and top
+  box(TB - 1.6, TB + 1.4, ST, ST + 2.6, -141, LZ, brass, { r: .3 });                                    // the top rail, both tracks
+  box(TB - .2, TB + 1.4, SH, ST, LZ - 1.8, LZ, brass, { r: .2 });                                       // the wall post
+  box(TB + .2, TB + 1, SH, ST, -97.5, LZ - 1.8, glass, { r: .1 });                                        // the fixed pane,
+  box(TB - .2, TB + 1.4, SH, ST, -98.7, -97.5, brass, { r: .2 });                                       // its free edge
+  { const SC = new THREE.Group(); root.add(SC);                                                          // the sliding pane, its two edges, the handle
+    const parts = [box(TB - 1.4, TB - .6, SH, ST, -139.5, -94.5, glass, { r: .1, parent: SC }), box(TB - 1.6, TB - .4, SH, ST, -140.7, -139.5, brass, { r: .2, parent: SC }),
+      box(TB - 1.6, TB - .4, SH, ST, -94.5, -93.3, brass, { r: .2, parent: SC })];
+    const hb = cyl(.7, 40, brass, TB - 3, 125, -131); SC.attach(hb); parts.push(hb);
+    for (const y of [106, 144]) { const c = cyl(.4, 1.8, brass, TB - 2, y, -131, 'x', 8); SC.attach(c); parts.push(c); }
+    opener(parts, e => { SC.position.z = 41.5 * e; }); }
   // the mixer on the column's face at the bath's foot; the slide rail over it with two little shelves, the hand shower, its hose
   const LF = LZ - .1;
   cyl(2.8, 30, brass, 646, 76, LF - 3, 'x', 24); for (const s of [-1, 1]) cyl(3.2, 3.4, brass, 646 + s * 16.6, 76, LF - 3, 'x', 24);
