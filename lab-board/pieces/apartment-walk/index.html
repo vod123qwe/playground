@@ -247,10 +247,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=17';
-import { buildLiving } from './living.js?v=41';
+import { buildLiving } from './living.js?v=42';
 import { buildHall } from './hall.js?v=4';
 import { buildRooms } from './rooms.js?v=46';
-import { startGhosts } from './ghosts.js?v=3';
+import { startGhosts } from './ghosts.js?v=4';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -1189,7 +1189,7 @@ const bedSwitch = { name: 'bed', t: 0, get on() { return !!LIE && LIE.dir > 0 &&
 // Start is to play: the view turns to the screen and closes in on it, the keys and the pad go to the game; Esc (the pad's B) leaves the
 // game, a second Esc gets you up. Playing, it throws its light into the room, coloured as its picture ----------
 const TVF = { on: false, prev: {}, padA: true, gt: 0, keys: new Set(), dev: 'keys' }, _tvc = new THREE.Vector3();
-const TV_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyJ', 'KeyK', 'Enter'];
+const TV_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyJ', 'KeyK', 'Enter', 'KeyI', 'KeyQ', 'KeyX', 'Delete', 'Backspace'];
 const seatedHere = () => !!LIE && !!LIE.seat && LIE.seat.name === 'sofa' && LIE.dir > 0;
 function tvFocus(v) {
   if (v && !(LIV?.tv?.on && seatedHere())) return;
@@ -1207,9 +1207,10 @@ function tvInput(gp) {
   if (gp) { const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0; if (Math.hypot(ax, ay) > .2) { x = ax; y = ay; }            // the left stick, or the d-pad
     if (b(14)) x = -1; if (b(15)) x = 1; if (b(12)) y = -1; if (b(13)) y = 1;
     if (gp.buttons.some(q => q.pressed) || Math.hypot(ax, ay) > .3) TVF.dev = 'pad'; }   // the last thing used: the screen shows its controls
-  const now = { tele: K.has('Space') || b(0), cast: K.has('KeyJ') || K.has('KeyK') || b(2) || b(3) || (gp?.buttons[7]?.value || 0) > .4, start: K.has('Enter') || b(9), back: b(1), left: x < -.5, right: x > .5 };
+  const now = { tele: K.has('Space') || b(0), cast: K.has('KeyJ') || K.has('KeyK') || b(2) || (gp?.buttons[7]?.value || 0) > .4, start: K.has('Enter') || b(9), back: b(1), left: x < -.5, right: x > .5, up: y < -.5, down: y > .5,
+    inv: K.has('KeyI') || b(3), potion: K.has('KeyQ') || b(4), drop: K.has('KeyX') || K.has('Delete') || K.has('Backspace') || b(2) };
   const was = TVF.prev, edge = k => !!now[k] && !was[k]; TVF.prev = now;
-  return { dev: TVF.dev, x, y, tele: edge('tele'), teleHeld: now.tele, cast: now.cast, start: edge('start'), back: edge('back'), left: edge('left'), right: edge('right') };
+  return { dev: TVF.dev, x, y, tele: edge('tele'), teleHeld: now.tele, cast: now.cast, start: edge('start'), back: edge('back'), left: edge('left'), right: edge('right'), up: edge('up'), down: edge('down'), inv: edge('inv'), potion: edge('potion'), drop: edge('drop') };
 }
 function stepTV(dt) {
   const tv = LIV?.tv; if (!tv) return;
@@ -1219,7 +1220,9 @@ function stepTV(dt) {
   if (TVF.on && !(tv.on && seatedHere())) tvFocus(false);
   if (!tv.on) return;
   const inp = TVF.on ? tvInput(gp) : IDLE;
-  if (inp.back) tvFocus(false);
+  if (inp.back && !tv.game.closeOverlay()) tvFocus(false);          // B: the inventory, the lobby, the duel first; then off the TV
+  if (GH?.tv && !GH.tv.onMessage) { GH.tv.onMessage = (d, id) => LIV?.tv?.game.receive(d, id); GH.tv.onLeave = id => LIV?.tv?.game.leave(id); }
+  tv.game.setNet(GH?.tv ? { send: GH.tv.send, id: GH.selfId } : null);
   tv.game.frame(dt, inp); moved();
   if ((TVF.gt += dt) > .15) { TVF.gt = 0; const c = tv.game.glow(), l = Math.max(c.r, c.g, c.b);   // its light: the picture's colour, brightness
     tv.light.color.copy(c).multiplyScalar(1 / Math.max(l, .05)); tv.light.intensity = Math.round((.15 + 1.6 * Math.sqrt(l)) * 20) / 20; }
@@ -1283,7 +1286,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') { setMode(mode === 'walk' ? 'over' : 'walk'); return; }
   if (mode === 'over' && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); if (!e.code.startsWith('Shift')) e.preventDefault(); return; }
   if (mode !== 'walk') return;
-  if (TVF.on) { if (e.code === 'Escape') tvFocus(false); else if (TV_KEYS.includes(e.code)) { TVF.keys.add(e.code); TVF.dev = 'keys'; } else return; e.preventDefault(); return; }   // playing: the keys are the game's
+  if (TVF.on) { if (e.code === 'Escape') { if (!LIV.tv.game.closeOverlay()) tvFocus(false); } else if (TV_KEYS.includes(e.code)) { TVF.keys.add(e.code); TVF.dev = 'keys'; } else return; e.preventDefault(); return; }   // playing: the keys are the game's
   if (e.code === 'KeyT' && seatedHere() && LIV?.tv) { if (!LIV.tv.on) { LIV.tv.set(true); lendShadows(true); } tvFocus(true); return; }
   if (LIE && (e.code === 'Escape' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].includes(e.code))) { getUp(); e.preventDefault(); return; }
   if (e.code === 'KeyF' && HAND.can) { sip(); return; }
