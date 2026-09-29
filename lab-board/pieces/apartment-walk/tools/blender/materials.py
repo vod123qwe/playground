@@ -48,7 +48,9 @@ def upgrade(X, lamps=False):
         elif b == 'glow': lamp(m, warm, 8 if lamps else 0)           # the pendant over the dining table
         elif b == 'bedLamp': lamp(m, warm, 6 if lamps else 0)        # the bedside lamps' drums
         elif b == 'donutGlass': lamp(m, (1, .6, .25, 1), 5 if lamps else 0)   # the orange glass donut on the TV console
-        elif b == 'ceilingLED': lamp(m, warm, 0)                        # the ceiling lamps: off
+        elif b == 'ceilingLED': lamp(m, warm, 0)                        # the ceiling lamps: off,
+        elif b == 'ceilingLEDdim': lamp(m, warm, 14 if lamps else 0) # but the child's room's, dimmed
+        elif b == 'kidLamp': lamp(m, warm, 16 if lamps else 0)       # the child's desk lamp
         elif b == 'fairyBulb': lamp(m, warm, 30 if lamps else 0)     # the string lights on the balconies
         elif b == 'mirrorLED': lamp(m, warm, 18 if lamps else 0)     # the bathroom (no window: its 360 is made at dusk): the mirror's halo,
         elif b == 'bathGlobe': lamp(m, warm, 7 if lamps else 0)      # the two opal globes,
