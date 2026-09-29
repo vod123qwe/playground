@@ -11,6 +11,7 @@
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
+import { buildBath } from './bath.js?v=4';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -269,7 +270,7 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   { const p0 = [919, -376], d = [.7925, -.6099];                              // the study: on its angled wall by the window (A.04), 600 x 800
     radiator([p0[0] + d[0] * 30, p0[1] + d[1] * 30], [p0[0] + d[0] * 110, p0[1] + d[1] * 110], [-.6099, -.7925], 14, 60); }
   radiator([231, -610], [394, -610], [0, -1], 14, 90);                      // the living room: behind the table (the developer's), 900 x 1600
-  radiator([405, -232], [405, -172], [1, 0], 22, 122, 6, 'ladder');         // the bathroom: a towel rail on the left wall (the developer's), 1222 x 600
+  // (the bathroom's: a narrow tube radiator by its door, as the architect's design has it: bath.js)
 
   // ---------- the ceiling lights, at the outlets of the electrical drawing (its points read off onto the plan, to within a few tens of
   // cm): the island's family, closer to the ceiling: the amber glass bowl on a short brass stem and canopy, the LED in its brass sleeve
@@ -542,6 +543,8 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     { const cd = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 7, 32), std({ name: 'candle', color: '#f1ece2', roughness: .7 })); cd.position.set(L2[0] + 46, py + 3.5, WZ - 10); cd.castShadow = true; root.add(cd); }
     bookRow(root, q, L2[1] - 3, L2[2] + 2.4, WZ, 6, -1);
   }
+
+  buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, H, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR } });   // G, the bathroom
 
   const setLamps = on => lamps.forEach(l => l.set(on));
   // lying on it: the head on the pillows, the eyes 80 cm up, looking down the bed at the TV; where you stand up beside it
