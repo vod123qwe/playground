@@ -242,7 +242,7 @@ import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=13';
 import { buildLiving } from './living.js?v=32';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=27';
+import { buildRooms } from './rooms.js?v=28';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -278,7 +278,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.localClippingEnabled = true;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#e8e5df');
@@ -411,6 +411,7 @@ const SPOTS = [
   { id: 'living-a', name: 'Living room', at: [330, -860], eye: 145 },          // between the table and the island: the sofa, the windows, the kitchen
   { id: 'kitchen-a', name: 'Kitchen', at: [313.8, -1038.2], eye: 145 },        // in the aisle, between the run and the island
   { id: 'bedroom-a', name: 'Bedroom', at: [785, -325], eye: 145 },              // in the corner by the door: the bed, the PAX, the windows, the TV
+  { id: 'study-a', name: 'Study', at: [660, -520], eye: 145 },                 // by the door: the desk and its screens, the sofa bed, the window
 ];
 const SPOT = { cur: null, tex: {}, els: [] };
 const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>';
@@ -993,25 +994,33 @@ function segDist(x, z, dr) {                                       // how far a 
 }
 const toggleDoor = dr => { if (dr.kind !== 'fixed') dr.to = dr.to > .5 ? 0 : 1; };
 const OPEN = [];
-// a lamp's light stops at the walls: the lamps' own point lights stay hidden, and three shadow-casting lights take the place of the three
-// lamps that are on nearest to you (a lamp further off still glows, its light would not reach you anyway). Their shadows are drawn only when
-// something changes (a lamp, a door, a curtain). So the light count never changes (switching a lamp needs no new shaders) and stays low
-const SLOTS = [0, 1, 2].map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); l.castShadow = true; l.shadow.autoUpdate = false; l.shadow.mapSize.set(512, 512);
-  l.shadow.camera.near = .03; l.shadow.bias = -.004; l.shadow.normalBias = .02; l.shadow.needsUpdate = true; scene.add(l); return l; });   // (drawn once at the start: a shadow map never drawn
+// a lamp's light stops at the walls: the lamps' own point lights stay hidden, and a fixed set of lights takes their place. Three cast
+// shadows (1024 px, soft-edged): they go first to the lamps that are on in the room you stand in, nearest first, then to the nearest
+// elsewhere (a lamp in another room lights only with its shadow, so its light cannot come through a wall). Five more, without shadows,
+// light the rest of the lamps on in your room, so every lamp you see switched on lights it. And a warm ambient, rising with the lamps on
+// in the room, stands for the light they bounce off the walls and the ceiling: the shadows soften as in a real room instead of going
+// black. The number of lights never changes (switching a lamp needs no new shaders); the shadows are drawn only when something changes
+// (a lamp, a door, a front, a curtain, the furniture moving)
+const SLOTS = [0, 1, 2].map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); l.castShadow = true; l.shadow.autoUpdate = false; l.shadow.mapSize.set(1024, 1024);
+  l.shadow.camera.near = .03; l.shadow.bias = -.002; l.shadow.normalBias = .015; l.shadow.needsUpdate = true; scene.add(l); return l; });   // (drawn once at the start: a shadow map never drawn
 // has no texture, and a sampler without one stops every lit material from drawing: only the sky showed)
+const FILLS = [0, 1, 2, 3, 4].map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); scene.add(l); return l; });
+const bounce = new THREE.AmbientLight('#ffd6a8', 0); scene.add(bounce);
 let slotKey = '';
 function lendShadows(changed) {
-  const all = lampList().filter(l => l.light), wp = new THREE.Vector3();
+  const all = lampList().filter(l => l.light), wp = new THREE.Vector3(), here = mode === 'walk' ? roomAt(P.x, P.z) : null;
   for (const l of all) l.light.visible = false;
   const on = all.filter(l => l.on && l.light.intensity > 0);
-  for (const l of on) l._d = l.light.getWorldPosition(wp).distanceToSquared(camera.position);
-  const pick = on.sort((a, b) => a._d - b._d).slice(0, SLOTS.length), key = pick.map(l => l.name + l.light.intensity).join('|');
+  for (const l of on) { l.light.getWorldPosition(wp); l._d = wp.distanceToSquared(camera.position); l._here = !!here && roomAt(wp.x / M + CX, wp.z / M + CZ) === here; }
+  on.sort((a, b) => (b._here - a._here) || (a._d - b._d));
+  const pick = on.slice(0, SLOTS.length), fill = on.slice(SLOTS.length).filter(l => l._here).slice(0, FILLS.length);
+  const key = [...pick, '/', ...fill].map(l => l.name ? l.name + l.light.intensity : l).join('|');
   if (key === slotKey && !changed) return; slotKey = key;
-  SLOTS.forEach((sl, i) => {
-    const l = pick[i]; if (!l) { sl.intensity = 0; return; }
-    l.light.getWorldPosition(sl.position); sl.color.copy(l.light.color); sl.distance = l.light.distance; sl.decay = l.light.decay; sl.intensity = l.light.intensity;
-    sl.shadow.needsUpdate = true;
-  });
+  const copy = (sl, l) => { l.light.getWorldPosition(sl.position); sl.color.copy(l.light.color); sl.distance = l.light.distance; sl.decay = l.light.decay; sl.intensity = l.light.intensity; };
+  SLOTS.forEach((sl, i) => { const l = pick[i]; if (!l) { sl.intensity = 0; return; } copy(sl, l); sl.shadow.needsUpdate = true; });
+  FILLS.forEach((sl, i) => { const l = fill[i]; if (!l) sl.intensity = 0; else copy(sl, l); });
+  const lit = on.filter(l => l._here).reduce((a, l) => a + l.light.intensity, 0);
+  bounce.intensity = Math.min(.5, .045 * lit);                      // about a tenth of the hemisphere's per lamp, no more than its level
 }
 // drawn drapes darken their room: the window's soft light (the portal) dims with them (to 12 %), and so does the ambient (to 35 %) while
 // you stand in that room; the sun they already stop, casting shadows. Daylight or dusk, it scales what comes in from outside
@@ -1887,7 +1896,7 @@ function applySofa() {                                              // the sofa 
 let FURN = null;                                                    // the bedroom, the study, the child's room (rooms.js)
 const livingReady = kitchenReady.then(async () => {
   loadStep(3, 'Furnishing the rooms…');
-  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats, openings: A.openings }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
+  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats, openings: A.openings }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); OPEN.push(...(FURN.openers || [])); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
   catch (err) { console.warn('rooms', err); }
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);

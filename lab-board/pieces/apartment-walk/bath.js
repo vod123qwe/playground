@@ -5,15 +5,18 @@
 //    on it; over it to the ceiling a walnut-toned cabinet, flush with it: four doors from the door's wall, an open niche of shelves at
 //    the vanity's end;
 //  - the door's wall: a narrow vertical radiator of seven cream tubes between the boxed-in frame and the door;
-//  - the vanity wall: the pipes boxed in as a tiled ledge 9 deep and 110 high along the whole wall, on behind the bath's foot (tiled aqua
-//    there, the bath mixer on its face, the slide rail over it); a floating walnut drawer under a white marble top at 85 with a
+//  - the vanity wall: the pipes boxed in, 9 deep: a tiled ledge 110 high by the vanity, and behind the bath's foot a tiled column to the
+//    ceiling (aqua, the bath mixer and the slide rail on its face); a floating walnut drawer under a white marble top at 85 with a
 //    countertop basin and a tall brass mixer standing at its back; a round backlit mirror, 80 across, two opal globes at its top;
 //  - the bath, 170 x 72, from the door's wall on a tiled head box to the ledge, its front tiled, a brass framed glass screen from its foot;
 //    two brass towel bars over its head.
+// The cabinet's doors and the drawer open, the screen slides along its rail: a click on them.
 // Plan centimetres (x, and the plan's y as z), as rooms.js. Everything here is drawn: the textures in canvases, the fittings our own shapes.
 
 export function buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, H, oakMaps }) {
   const rep = t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
+  const openers = [];                                                // what opens: the cabinet's doors, the drawer, the screen (as the kitchen's)
+  const opener = (parts, apply) => { const o = { kind: 'fx', f: 0, to: 0, parts: [], apply }; for (const m of parts) m.traverse(c => { if (c.isMesh) { c.userData.door = o; o.parts.push(c); } }); openers.push(o); return o; };
   // ---------- the materials ----------
   const beigeTex = rep(canvasTex(1024, 1024, (g, w, h) => {            // four 60 x 60 tiles over 120 x 120 cm: a soft beige stone
     const q = rng(101); g.fillStyle = '#e6dcca'; g.fillRect(0, 0, w, h);
@@ -105,7 +108,11 @@ export function buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, 
   // ---------- over it, flush, the cabinet to the ceiling: four doors from the door's wall, an open niche of shelves at the vanity end ----------
   const NZ = -101.5, DW = (NZ - 1.8 + 242.3) / 4;                    // the niche: from NZ to the notch's wall (-79); the doors' width
   box(405.3, BF, 124, H, -242.3, NZ - 1.8, wood, { r: .2, scale: 140 });
-  for (let k = 0; k < 4; k++) { const z0 = -242.3 + k * DW; box(BF, BF + 2, 124.3, H - .3, z0 + .15, z0 + DW - .15, wood, { r: .3, scale: 140 }); }
+  for (let k = 0; k < 4; k++) {                                      // each door on its hinge at the edge towards the niche: the first then clears the radiator
+    const z1 = -242.3 + (k + 1) * DW, pv = new THREE.Group(); pv.position.set(BF + 2, 0, z1 - .15); root.add(pv);
+    const d = box(-2, 0, 124.3, H - .3, -DW + .3, 0, wood, { r: .3, scale: 140, parent: pv });
+    opener([d], e => { pv.rotation.y = -e * 1.75; });
+  }
   box(405.3, BF + 2, 124, 126, NZ - 1.8, -79, wood, { scale: 140 }); box(405.3, BF + 2, H - 2, H, NZ - 1.8, -79, wood, { scale: 140 });
   box(405.3, BF + 2, 124, H, NZ - 1.8, NZ, wood, { scale: 140 }); box(405.3, BF + 2, 124, H, -80.8, -79, wood, { scale: 140 });
   for (const y of [157, 189, 221]) box(405.3, BF + 1, y, y + 1.8, NZ, -80.8, wood, { scale: 140 });
@@ -128,10 +135,18 @@ export function buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, 
   // white marble top at 85 (A.04: 90 x 47), the countertop basin, the tall brass mixer standing at the top's back ----------
   const LZ = -53;                                                    // the ledge's face
   box(476.4, TB, 0, 110, LZ, -44.8, beige, { scale: S });
-  box(TB, 681.2, 0, 110, LZ, -44.8, aqua, { scale: 60 });
+  box(TB, 681.2, 0, H, LZ, -44.8, aqua, { scale: 60 });                  // behind the bath's foot: the column to the ceiling
   const VX0 = 487.1, VX1 = 577.5, VZ = -100, BX = (VX0 + VX1) / 2, BZ = -77;
-  box(VX0 + 1, VX1 - 1, 36, 81, VZ + .5, LZ, wood, { r: .4, scale: 140 });
-  box(VX0 + 2, VX1 - 2, 77.5, 78, VZ + .38, VZ + .5, std({ name: 'shadowGap', color: '#3a302a', roughness: .9 }));
+  box(VX0 + 1, VX1 - 1, 79, 81, VZ + 2.3, LZ, wood, { r: .3, scale: 140 });                          // the carcass: top, back, sides
+  box(VX0 + 1, VX1 - 1, 36, 81, LZ - 1.6, LZ, wood, { scale: 140 });
+  for (const x of [VX0 + 1, VX1 - 2.6]) box(x, x + 1.6, 36, 81, VZ + 2.3, LZ, wood, { scale: 140 });
+  { const DR = new THREE.Group(), dm = std({ name: 'carcass', color: '#efe9df', roughness: .6 }); root.add(DR);
+    const parts = [box(VX0 + 1, VX1 - 1, 36, 78.6, VZ + .5, VZ + 2.3, wood, { r: .4, scale: 140, parent: DR })];                // the front, 42.6 high
+    parts.push(box(VX0 + 3, VX1 - 3, 39, 40.2, VZ + 2.3, LZ - 3, dm, { parent: DR }));                                          // its box: the bottom,
+    for (const x of [VX0 + 3, VX1 - 4.2]) parts.push(box(x, x + 1.2, 40.2, 60, VZ + 2.3, LZ - 3, dm, { parent: DR }));        // the sides,
+    parts.push(box(VX0 + 3, VX1 - 3, 40.2, 60, LZ - 4.2, LZ - 3, dm, { parent: DR }));                                          // the back
+    parts.push(box(VX0 + 30, VX1 - 30, 58.3, 59.3, VZ - .6, VZ + .5, std({ name: 'shadowGap', color: '#3a302a', roughness: .9 }), { parent: DR }));   // a finger pull under its top edge
+    opener(parts, e => { DR.position.z = -35 * e; }); }
   box(VX0, VX1, 81, 85, VZ, LZ, marble, { r: .3, scale: 100 });
   { const G = new THREE.Group(); G.position.set(BX, 85, BZ); root.add(G);                                  // the basin: 46 x 38, 14 high, softly square
     put(loft([[23, 19, 13, 14], [22.6, 18.6, 12.7, 12.5], [20.6, 16.6, 11.3, 6], [17.6, 13.6, 9.4, 1.2], [16.6, 12.6, 8.8, 0], [.01, .01, 0, 0]]), white, 0, 0, 0, G);
@@ -176,21 +191,26 @@ export function buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, 
     cyl(2.2, .4, chrome, 0, 16.4, THZ - 20, 'y', 24).parent = G; }
   foot.push([[TB, -242.3], [681.6, -242.3], [681.6, LZ], [TB, LZ]]);
   // the screen: clear glass 89 x 140 from the bath's foot, brushed brass frame, its top rail running the bath's length, a handle bar
-  box(TB + .2, TB + 1, 57.5, 197, -142, LZ - 1.5, glass, { r: .1 });
-  box(TB - .2, TB + 1.4, 197, 199, -242.3, LZ, brass, { r: .3 });
-  box(TB - .2, TB + 1.4, 57.5, 197, LZ - 1.8, LZ, brass, { r: .2 }); box(TB - .2, TB + 1.4, 57.5, 197, -143.6, -142, brass, { r: .2 });
-  cyl(.7, 40, brass, TB - 1.6, 125, -133); for (const y of [106, 144]) cyl(.4, 1.8, brass, TB - .6, y, -133, 'x', 8);
-  // the mixer on the ledge's face at the bath's foot; the slide rail over the ledge with two little shelves, the hand shower, its hose
+  box(TB - .2, TB + 1.4, 197, 199, -242.3, LZ, brass, { r: .3 });                                      // the rail, the post at the column
+  box(TB - .2, TB + 1.4, 57.5, 197, LZ - 1.8, LZ, brass, { r: .2 });
+  { const SC = new THREE.Group(); root.add(SC);                                                          // the pane, its edge profiles, the handle
+    const parts = [box(TB + .2, TB + 1, 57.5, 196.6, -142, LZ - 2, glass, { r: .1, parent: SC }), box(TB - .2, TB + 1.4, 57.5, 196.6, -143.6, -142, brass, { r: .2, parent: SC }),
+      box(TB - .2, TB + 1.4, 57.5, 196.6, LZ - 3.2, LZ - 2, brass, { r: .2, parent: SC })];
+    const hb = cyl(.7, 40, brass, TB - 1.6, 125, -133); SC.attach(hb); parts.push(hb);
+    for (const y of [106, 144]) { const c = cyl(.4, 1.8, brass, TB - .6, y, -133, 'x', 8); SC.attach(c); parts.push(c); }
+    opener(parts, e => { SC.position.z = -76 * e; }); }
+  // the mixer on the column's face at the bath's foot; the slide rail over it with two little shelves, the hand shower, its hose
   const LF = LZ - .1;
   cyl(2.8, 30, brass, 646, 76, LF - 3, 'x', 24); for (const s of [-1, 1]) cyl(3.2, 3.4, brass, 646 + s * 16.6, 76, LF - 3, 'x', 24);
   { const sp = cyl(1.1, 10, brass, 646, 73.5, LF - 8, 'z', 12); sp.rotation.x = Math.PI / 2 + .25; }
-  cyl(.9, 95, brass, 664, 112 + 47.5, -47.6); for (const y of [116, 205]) box(662.5, 665.5, y - 1.2, y + 1.2, -47.6, -44.8, brass, { r: .3 });
-  for (const y of [140, 158]) { box(652, 676, y - .4, y + .4, -56, -45.5, glass, { r: .2 }); box(652, 676, y + .4, y + 1.8, -56.4, -55.6, brass, { r: .2 });
-    cyl(1.6, 9, std({ name: 'lampBase', color: y > 150 ? '#d9cfc0' : '#f0ebe2', roughness: .5 }), 670, y + 4.9, -50.5); }
-  { const head = cyl(5.6, 2, brass, 664, 190, -51.5, 'z', 32); head.rotation.x = Math.PI / 2 - .5;
-    const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(646, 73, LF - 4), new THREE.Vector3(650, 62, LF - 9), new THREE.Vector3(660, 60, LF - 10), new THREE.Vector3(664, 90, LF - 6), new THREE.Vector3(664, 182, -50)]), 40, .6, 8), chrome);
+  cyl(.9, 95, brass, 664, 112 + 47.5, LF - 2.8); for (const y of [116, 205]) box(662.5, 665.5, y - 1.2, y + 1.2, LF - 2.8, LF, brass, { r: .3 });
+  for (const y of [140, 158]) { box(652, 676, y - .4, y + .4, LF - 10.5, LF, glass, { r: .2 }); box(652, 676, y + .4, y + 1.8, LF - 10.9, LF - 10.1, brass, { r: .2 });
+    cyl(1.6, 9, std({ name: 'lampBase', color: y > 150 ? '#d9cfc0' : '#f0ebe2', roughness: .5 }), 670, y + 4.9, LF - 5); }
+  { const head = cyl(5.6, 2, brass, 664, 190, LF - 6.5, 'z', 32); head.rotation.x = Math.PI / 2 - .5;
+    const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(646, 73, LF - 4), new THREE.Vector3(650, 62, LF - 9), new THREE.Vector3(660, 60, LF - 10), new THREE.Vector3(664, 90, LF - 6), new THREE.Vector3(664, 182, LF - 5)]), 40, .6, 8), chrome);
     hose.castShadow = true; root.add(hose); }
   // ---------- over the bath's head, on the door's wall: two brass towel bars, a white towel over the lower one ----------
   for (const y of [162, 174]) { cyl(.8, 44, brass, 646, y, -235.3, 'x', 12); for (const x of [624.5, 667.5]) cyl(.7, 6, brass, x, y, -238.3, 'z', 10); }
   box(634, 658, 128, 162.8, -236.8, -234, towel, { r: 1.2, scale: 45, soft: .5, seed: 61 });
+  return { openers };
 }
