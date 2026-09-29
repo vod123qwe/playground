@@ -249,7 +249,7 @@ import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=14';
 import { buildLiving } from './living.js?v=32';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=34';
+import { buildRooms } from './rooms.js?v=38';
 import { startGhosts } from './ghosts.js?v=2';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
@@ -419,7 +419,8 @@ const SPOTS = [
   { id: 'living-a', name: 'Living room', at: [330, -860], eye: 145 },          // between the table and the island: the sofa, the windows, the kitchen
   { id: 'kitchen-a', name: 'Kitchen', at: [313.8, -1038.2], eye: 145 },        // in the aisle, between the run and the island
   { id: 'bedroom-a', name: 'Bedroom', at: [785, -325], eye: 145 },              // in the corner by the door: the bed, the PAX, the windows, the TV
-  { id: 'study-a', name: 'Study', at: [660, -520], eye: 145 },                 // by the door: the desk and its screens, the sofa bed, the window
+  { id: 'study-a', name: 'Study', at: [660, -520], eye: 145 },
+  { id: 'bath-a', name: 'Bathroom', at: [535, -150], eye: 150 },                // where the architect's tour stands: the vanity, the bath, the WC; rendered at dusk, its lamps on                 // by the door: the desk and its screens, the sofa bed, the window
 ];
 const SPOT = { cur: null, tex: {}, els: [] };
 const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>';
