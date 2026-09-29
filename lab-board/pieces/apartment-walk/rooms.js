@@ -21,7 +21,7 @@ const TRACKS = {
   F: { lines: [[[1026, -443], [1174, -253]], [[1105, -70], [1071, -44]]], r: 24, endGap: 14 },
 };
 
-export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', hallMats }) {
+export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', hallMats, openings = [] }) {
   const aniso = renderer.capabilities.getMaxAnisotropy(), tl = new THREE.TextureLoader();
   const load = (f, srgb) => new Promise(res => tl.load(base + f, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; res(t); }));
   const [lnN, lnR, oakC, oakN, oakR] = await Promise.all([load('tex/linen_nor.jpg'), load('tex/linen_rough.jpg'), load('oak_diff.jpg', true), load('oak_nor.jpg'), load('oak_rough.jpg')]);
@@ -115,7 +115,14 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     const P = trackPath(T), [u0, u1] = T.span || [0, P.len - (T.endGap || 0)];
     pelmet(P, u0, T.span ? u1 : P.len);
     const SH = new THREE.Group(), DR = new THREE.Group(); CURS.add(SH, DR);   // rebuilt when a leaf moves or the drapes are drawn
-    RUNS.push({ room, P, u0, u1, SH, DR, span: !!T.span, closed: false, c: 0, hem: 0, hemV: 0, seed: (P.at(0).x * 7) | 0, key: null, leaves: [] });
+    // where the drapes gather: the run's two ends and the middle of every pier between two windows (the windows: the glazed openings
+    // whose inner face lies along the track). Between two such places, two halves that meet when drawn
+    const wins = openings.filter(o => o.glazed).map(o => o.quad.map(([x, z]) => P.near(x, z)).filter(h => h.d < 45).map(h => h.q.s)).filter(v => v.length >= 2)
+      .map(v => [Math.min(...v), Math.max(...v)]).filter(([a, b]) => b > u0 && a < u1).sort((a, b) => a[0] - b[0]);
+    const anchors = [{ p: u0 + 2, w: 1e9 }];
+    for (let i = 0; i < wins.length - 1; i++) { const gap = wins[i + 1][0] - wins[i][1]; if (gap >= 30) anchors.push({ p: (wins[i][1] + wins[i + 1][0]) / 2, w: gap / 2 - 3 }); }
+    anchors.push({ p: u1 - 2, w: 1e9 });
+    RUNS.push({ room, P, u0, u1, SH, DR, span: !!T.span, anchors, closed: false, c: 0, hem: 0, hemV: 0, seed: (P.at(0).x * 7) | 0, key: null, leaves: [] });
   }
   // a layer of fabric across a run, split where its window's leaves are; a leaf that opens pushes its panel aside: a side-hung one past
   // its hinge, just outside its swing (round a corner if it has to), a tilting one to the nearer end. leaves: { h, s, W, f, tilt } in cm along it
@@ -144,13 +151,17 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   // the drapes: two halves on the front track, each from its end of the run: gathered there (18 or 30 cm) or drawn to meet in the middle.
   // Drawing them moves the top along the track, eased; the hem trails on a spring and sways a little as it settles, as heavy linen does
   function drapes(R) {
-    const L = R.u1 - R.u0, dw = R.span ? 18 : 30, mid = (R.u0 + R.u1) / 2, fw = L, n = Math.max(4, Math.round(fw / 24));
-    const reach = c => THREE.MathUtils.lerp(dw, L / 2 - 1, c);       // how far a half reaches from its end
-    const ext = side => v => { const c = THREE.MathUtils.lerp(R.hem, R.c, Math.pow(v, .6)), w = reach(c); return side < 0 ? [R.u0 + 2, R.u0 + 2 + w] : [R.u1 - 2 - w, R.u1 - 2]; };
-    const swing = THREE.MathUtils.clamp(R.hemV * 18, -4, 4);
-    if (!R.halves) { R.halves = [-1, 1].map(sd => { const o = curtain(R.P, ext(sd), null, fw, 13, TOP, n, drapeM, { seed: R.seed + (sd < 0 ? 5 : 7) }); R.DR.add(o); return o; }); }
-    else R.halves.forEach((o, i) => curtain(R.P, ext(i ? 1 : -1), null, fw, 13, TOP, n, drapeM, { seed: R.seed + (i ? 7 : 5), swing: swing * (i ? -1 : 1), into: o.geometry }));
-    void mid;
+    const dw = R.span ? 18 : 30, swing = THREE.MathUtils.clamp(R.hemV * 18, -4, 4);
+    if (!R.halfDefs) {                                               // a half from each side of every stretch between two gathering places
+      R.halfDefs = [];
+      for (let i = 0; i < R.anchors.length - 1; i++) {
+        const A = R.anchors[i], B = R.anchors[i + 1], reach = (B.p - A.p) / 2 - (i === 0 || i === R.anchors.length - 2 ? .5 : 1);
+        R.halfDefs.push({ from: A.p + (i ? 1.5 : 0), dir: 1, stack: Math.min(dw, A.w), reach }, { from: B.p - (i < R.anchors.length - 2 ? 1.5 : 0), dir: -1, stack: Math.min(dw, B.w), reach });
+      }
+    }
+    const ext = h => v => { const c = THREE.MathUtils.lerp(R.hem, R.c, Math.pow(v, .6)), w = THREE.MathUtils.lerp(h.stack, h.reach, c); return h.dir > 0 ? [h.from, h.from + w] : [h.from - w, h.from]; };
+    if (!R.halves) R.halves = R.halfDefs.map((h, k) => { const fw = h.reach * 2, o = curtain(R.P, ext(h), null, fw, 13, TOP, Math.max(3, Math.round(fw / 24)), drapeM, { seed: R.seed + 5 + k }); R.DR.add(o); return o; });
+    else R.halves.forEach((o, k) => { const h = R.halfDefs[k], fw = h.reach * 2; curtain(R.P, ext(h), null, fw, 13, TOP, Math.max(3, Math.round(fw / 24)), drapeM, { seed: R.seed + 5 + k, swing: swing * h.dir, into: o.geometry }); });
   }
   function step(dt) {                                                 // the drapes' motion; true while anything moved
     let any = false;
