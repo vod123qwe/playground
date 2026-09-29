@@ -75,7 +75,8 @@
   @media (pointer:coarse){ .hint .keys{display:none} } @media (pointer:fine){ .hint .touch{display:none} }
 
   /* room names over the model (overview) and the room you are in (walk) */
-  .overlay{position:fixed; inset:0; z-index:3; pointer-events:none}
+  .overlay{position:fixed; inset:0; z-index:3; pointer-events:none; transition:opacity .5s ease}
+  body:not(.ready) .overlay{opacity:0}                              /* the room labels come in with the flat */
   .rl{position:absolute; left:0; top:0; padding:5px 10px; border-radius:999px; background:rgba(255,255,255,.9); text-align:center; white-space:nowrap; transition:opacity .35s ease}
   .rl b{display:block; font-size:12px; font-weight:600; line-height:1.2} .rl small{display:block; color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums}
   body.walk .rl, body.nolabels .rl{opacity:0}
@@ -131,8 +132,19 @@
   .xmenu button:disabled{opacity:.45; cursor:default} .xmenu button:disabled:hover{background:transparent}
   .xmenu .sep{height:1px; margin:4px 8px; background:var(--line)}
   .card .bt{display:flex; gap:6px}
-  .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; color:var(--muted); font-weight:600; transition:opacity .5s ease}
-  body.ready .loading{opacity:0}
+  /* the first load: a white pill, as the buttons, with bricks being laid in a loop (transform and opacity only, so they keep moving on the
+     compositor while the kitchen and the living room are built) and the step in words */
+  .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; transition:opacity .5s ease, visibility 0s linear .5s}
+  body.ready .loading{opacity:0; visibility:hidden}
+  .build{display:flex; align-items:center; gap:12px; height:46px; padding:0 22px 0 16px; border-radius:999px; background:#fff; color:var(--ink); font-weight:600;
+    box-shadow:0 8px 28px rgba(20,20,20,.08); transition:transform .5s var(--ease)}
+  body.ready .build{transform:translateY(8px) scale(.97)}
+  .build small{color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+  .bricks{width:30px; height:23px; overflow:visible}
+  .bricks rect{fill:#cf8a5e; transform-box:fill-box; transform-origin:50% 100%; opacity:0; animation:lay 2.6s var(--ease) infinite; animation-delay:calc(var(--i) * .17s)}
+  .bricks rect:nth-child(even){fill:#dca07a}
+  @keyframes lay{ 0%{opacity:0; transform:translateY(-9px) scale(.9)} 11%{opacity:1; transform:none} 72%{opacity:1; transform:none} 86%,100%{opacity:0; transform:none} }
+  @media (prefers-reduced-motion:reduce){ .bricks rect{animation:none; opacity:1} }
   /* the hand (the same as in the Glass Button): over something that opens, and while Space-panning */
   body.hand-on #gl{cursor:none !important}
   .hand{position:fixed; left:0; top:0; z-index:20; width:30px; height:30px; margin:-15px 0 0 -15px; pointer-events:none; opacity:0; will-change:transform, opacity; transition:opacity .22s ease}
@@ -146,7 +158,12 @@
 </style>
 <body>
 <canvas id="gl" tabindex="0" aria-label="The apartment in 3D"></canvas>
-<div class="loading" id="loading">Laying the floors…</div>
+<div class="loading" id="loading" role="status" aria-live="polite"><div class="build">
+  <svg class="bricks" viewBox="0 0 30 23" aria-hidden="true">
+    <rect x="0" y="16" width="14" height="6.5" rx="1.2" style="--i:0"/><rect x="16" y="16" width="14" height="6.5" rx="1.2" style="--i:1"/>
+    <rect x="0" y="8.25" width="6" height="6.5" rx="1.2" style="--i:2"/><rect x="8" y="8.25" width="14" height="6.5" rx="1.2" style="--i:3"/><rect x="24" y="8.25" width="6" height="6.5" rx="1.2" style="--i:4"/>
+    <rect x="0" y=".5" width="14" height="6.5" rx="1.2" style="--i:5"/><rect x="16" y=".5" width="14" height="6.5" rx="1.2" style="--i:6"/>
+  </svg><span id="loading-t">Laying the floors…</span><small id="loading-n">1 / 4</small></div></div>
 <div class="overlay" id="overlay"></div>
 <div class="hand" id="hand" aria-hidden="true"><svg viewBox="-2 -2 28 28" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="h-open"><g class="halo"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g><g class="ink"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></g><g class="h-grab"><g class="halo"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g><g class="ink"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g></g></svg></div>
 
@@ -1657,11 +1674,15 @@ function frame(now) {
 
 placeSun(); paintWalls(); applyCut(S.cut); plan.visible = S.plan; renderer.toneMappingExposure = S.exposure;
 resize(); paintHint(); requestAnimationFrame(frame);
-document.body.classList.add('ready');
+// the loader stays until the whole flat is built and its shaders are compiled (that was the stutter on the first visit)
+const loadStep = (n, t) => { document.getElementById('loading-t').textContent = t; document.getElementById('loading-n').textContent = `${n} / 4`; };
+const loaded = () => document.body.classList.add('ready');
+setTimeout(loaded, 30000);                                          // whatever happens, the page is never held behind it
 const floorsReady = new Promise(r => setTimeout(r, 60)).then(buildFloors).catch(err => console.warn('floors', err));
 // the kitchen (concept M48 on the layout A.04), in centimetres, set on the kitchen wall
 let KIT = null;
 const kitchenReady = floorsReady.then(async () => {
+  loadStep(2, 'Fitting the kitchen…');
   const K = A.kitchen; if (!K) return;
   KIT = await buildKitchen({ THREE, K, H, clip, renderer });
   const g = KIT.root; g.scale.setScalar(M); g.position.set(wx(K.a[0]), 0, wz(K.a[1])); g.rotation.y = Math.atan2(-K.d[1], K.d[0]); world.add(g);
@@ -1686,10 +1707,17 @@ function applySofa() {                                              // the sofa 
   if (!LIV) return; LIV.setSofa(S.sofa); livingFoot = [...HALL.foot, ...LIV.foot]; lensList = null; ptScene(); if (mode === 'walk') unstick();
 }
 const livingReady = kitchenReady.then(async () => {
+  loadStep(3, 'Furnishing the living room…');
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
   LIV.setLamps(S.lamps); curtainsNow(true); applySofa();
 }).catch(err => { console.warn('living', err); LIV = LIV || false; });   // (false: failed, the tracer goes on without it)
+livingReady.then(async () => {
+  loadStep(4, 'Switching on the light…');
+  try { await renderer.compileAsync(scene, camera); } catch (err) { console.warn('compile', err); }
+  await new Promise(r => { requestAnimationFrame(() => requestAnimationFrame(r)); setTimeout(r, 600); });   // two frames drawn with it all in place (a hidden tab draws none: then a moment), then away
+  loaded();
+});
 function setAisle(v) {                                              // move the island square to the run
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
