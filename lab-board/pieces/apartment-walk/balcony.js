@@ -8,7 +8,7 @@
 //  - on both, a string of warm bulbs along the wall at 2.3 m, sagging between hooks: a switch of its own (lit on the evening 360s).
 
 export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, rng, mergeGeometries, linen, oakMaps, balconies }) {
-  const q = rng(1201);
+  const q = rng(1201), seats = [];
   const put = (g, m, x, y, z, parent = root) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
   // a frame along a wall: s along it from p0 (unit e), t out from it (unit n); a group placed and turned so its x = s, its z = t
   const frame = (p0, e) => { const G = new THREE.Group(); G.position.set(p0[0], 0, p0[1]); G.rotation.y = Math.atan2(-e[1], e[0]); root.add(G); return G; };
@@ -52,6 +52,7 @@ export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, 
     c(-29, 29, 24, 38, -30, 34, cream, { r: 5, scale: 45, soft: .9, seed: 3 + turn * 10 | 0 });                           // the seat cushion
     const bc = box(-28, 28, 4, 50, 0, 13, cream, { r: 5, scale: 45, soft: 1, seed: 5, parent: back }); void bc;        // the back cushion
     const sc = c(-18, 18, 38, 70, -18, -8, turn > 0 ? terra : sand, { r: 5, scale: 45, soft: .8, seed: 7 }); sc.rotation.x = -.35;   // a scatter cushion
+    const an = new THREE.Object3D(); an.position.set(0, 40, 6); C.add(an); seats.push({ name: 'lounge chair', anchors: [an], get meshes() { const m = []; C.traverse(o => { if (o.isMesh) m.push(o); }); return m; } });
     return C;
   }
   function roundTable(G, s, t, d, h) {                                  // teak, on three legs
@@ -112,9 +113,11 @@ export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, 
   // ---------- the bedroom's balcony, its strip under the bedroom (z 0 .. 150, from x 660): the half-parasol over the daybed ----------
   { const G = new THREE.Group(); root.add(G);                           // plain plan axes here: the wall at z = 0, the rail at 150
     const X0 = 690, X1 = 890, Z0 = 6, Z1 = 144;                         // the daybed
-    box(X0, X1, 6, 30, Z0, Z1, teak, { r: 1.2, parent: G });                                                              // its teak platform,
+    const DB = new THREE.Group(); G.add(DB);                                                                                  // (the daybed's parts, to sit on)
+    box(X0, X1, 6, 30, Z0, Z1, teak, { r: 1.2, parent: DB });                                                             // its teak platform,
     for (const x of [X0 + 3, X1 - 7]) for (const z of [Z0 + 3, Z1 - 7]) box(x, x + 4, 0, 6, z, z + 4, teak, { r: .5, parent: G });
-    box(X0 + 2, X1 - 2, 30, 44, Z0 + 2, Z1 - 2, cream, { r: 6, scale: 45, soft: .8, seed: 31, parent: G });                  // the mattress,
+    box(X0 + 2, X1 - 2, 30, 44, Z0 + 2, Z1 - 2, cream, { r: 6, scale: 45, soft: .8, seed: 31, parent: DB });                 // the mattress,
+    { const an = [X0 + 55, X1 - 55].map(x => { const o = new THREE.Object3D(); o.position.set(x, 46, Z0 + 48); DB.add(o); return o; }); seats.push({ name: 'daybed', anchors: an, get meshes() { const m = []; DB.traverse(o => { if (o.isMesh) m.push(o); }); return m; } }); }
     for (let k = 0; k < 3; k++) { const c = box(X0 + 8 + k * 62, X0 + 64 + k * 62, 44, 88, Z0 + 4, Z0 + 20, k === 1 ? sand : cream, { r: 6, scale: 45, soft: 1.1, seed: 33 + k, parent: G }); c.rotation.x = -.2; }
     for (const [x, m, rt] of [[X0 + 40, terra, .3], [X1 - 44, olive, -.25]]) { const c = box(x - 20, x + 20, 44, 80, Z0 + 22, Z0 + 34, m, { r: 5, scale: 45, soft: .9, seed: 40 + (x | 0), parent: G }); c.rotation.set(-.45, rt, 0); }
     const throwC = box(X0 + 110, X1 - 6, 44, 46.5, Z0 + 60, Z1 - 4, linen('#c9b79c'), { r: 1, scale: 45, soft: .8, seed: 47, parent: G }); void throwC;
@@ -133,4 +136,5 @@ export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, 
     foot.push([[X0 - 2, 0], [X1 + 2, 0], [X1 + 2, 150], [X0 - 2, 150]], [[X1 + 12, 20], [X1 + 52, 20], [X1 + 52, 60], [X1 + 12, 60]], [[950, 119], [1085, 107], [1085, 150], [950, 150]]);
   }
   lamps.push({ name: 'balcony lights', on: false, meshes: bulbMeshes, set(v) { this.on = !!v; bulbM.emissiveIntensity = v ? 2.4 : 0; } });
+  return { seats };
 }
