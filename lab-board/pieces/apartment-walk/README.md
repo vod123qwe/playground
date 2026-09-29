@@ -71,6 +71,7 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 
 - W spacerze znaczniki z aparatem („Living room”, „Kitchen”) pokazują miejsca, z których jest panorama 360° wnętrza; kliknięcie zamienia widok na tę panoramę (rozglądanie przeciąganiem), pasek na dole przełącza punkty i wraca do spaceru (też Esc albo W/A/S/D).
 - Każdy punkt ma w `assets/spots/<id>/`: `render.jpg` (kolor, 4096 × 2048, z modelu, za oknem widok wymyślony), `depth.png` (głębia: biały blisko, czarny 8 m) i `normal.png` (normalne w układzie świata). Mapy głębi i normalnych są po to, żeby model obrazowy zrobił z renderu zdjęcie, nie przesuwając ściany ani krzesła; gotowe zdjęcie jako `photo.jpg` zastępuje render.
+- **Śledzone światło 360°** (`traced.jpg`, pokazywane przed `render.jpg`): `AW.traceSpot('<id>', { post })` liczy panoramę prosto kamerą sferyczną tracera, 4096 × 2048, 5 odbić, 640 próbek, filtr iskier i odszumianie słabsze przy większej liczbie próbek. Oszczędza kartę: kafelki po ok. 30 tys. px, każdy czekany na karcie, potem przerwa (ok. 55 % obciążenia); liczy też w ukrytej karcie (odmierzanie w workerze). Salon: 640 próbek w ok. 90 min.
 - Nagranie: `AW.captureSpot('<id>', 'http://127.0.0.1:8811/f/')` w konsoli (kostka 2048 na ścianę, 4096 × 2048, te same kolory co spacer).
 
 ## Widok za oknami
