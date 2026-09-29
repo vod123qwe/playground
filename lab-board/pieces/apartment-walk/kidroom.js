@@ -4,7 +4,7 @@
 //  - from the door, on the right, an IKEA PAX along the east wall (three 75 frames, white, a filler at the door's wall), stopping short
 //    of the corner, as A.04 draws it; there, along the north wall and pushed into the corner behind the PAX, a 90 x 200 bed built in
 //    on the wall side: a padded pink panel along the wall and an arched headboard, cream bedding; a knitted pouf at its foot;
-//  - by the radiator, standing free as A.04 draws it, an IKEA MICKE desk (73 x 50, white) and an ORFJALL chair on castors, pink; on
+//  - at the radiator, facing it, an IKEA MICKE desk (73 x 50, white) and an ORFJALL chair on castors, pink; on
 //    the south wall between the door and the radiator a small white toy cabinet;
 //  - in the middle a round, subtly shaggy rug (160, a blush cream) and over it a hanging bag swing from the ceiling, its way in
 //    towards the door, kept clear of the ceiling lamp.
@@ -60,24 +60,27 @@ export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTe
       p.setXYZ(i, x * 22.5 * bump, (y > 0 ? y * .85 : y) * 17.5 + 17.5, z * 22.5 * bump); }
     g.computeVertexNormals(); put(g, linen('#eee2d6'), 58, 0, -172); foot.push(Array.from({ length: 10 }, (_, i) => [58 + Math.cos(i / 10 * 6.283) * 24, -172 + Math.sin(i / 10 * 6.283) * 24])); }
 
-  // ---------- the desk: IKEA MICKE, 73 x 50 x 75, white, standing free by the radiator as A.04 draws it, its back to the window ----------
-  { const X0 = 282, X1 = X0 + 73, Z1 = -102, Z0 = Z1 - 50;
-    box(X0, X1, 73, 75, Z0, Z1, white, { r: .4 });                                                                         // the top
-    for (const x of [X0, X1 - 1.8]) box(x, x + 1.8, 0, 73, Z0 + 1, Z1, white, { r: .3 });                                // the sides
-    box(X0 + 1.8, X1 - 1.8, 30, 73, Z1 - 1.8, Z1, white);                                                                   // the back
-    box(X1 - 36, X1 - 1.8, 62, 73, Z0 + 1, Z1 - 2, white, { r: .3 });                                                       // the drawer,
-    box(X1 - 35.5, X1 - 2.3, 62.5, 72.5, Z0 + .5, Z0 + 1, white, { r: .2 }); box(X1 - 24, X1 - 14, 66.5, 68.5, Z0, Z0 + .6, std({ name: 'shadowGap', color: '#b9b6b0', roughness: .9 }), { r: .2 });   // its front and grip
+  // ---------- the desk: IKEA MICKE, 73 x 50 x 75, white, by the radiator, facing it: its back 2 cm off the radiator's face (in a frame
+  // turned so the desk's back, local +z, is towards the south wall) ----------
+  { const G = new THREE.Group(); G.position.set(377, 0, -136); G.rotation.y = Math.PI / 2; root.add(G);
+    const toW = (x, z) => [377 + z, -136 - x], bx = (x0, x1, y0, y1, z0, z1, m, o = {}) => box(x0, x1, y0, y1, z0, z1, m, { parent: G, ...o }), pt = (g, m, x, y, z) => put(g, m, x, y, z, G);
+    const X0 = -36.5, X1 = 36.5, Z1 = 0, Z0 = -50;
+    bx(X0, X1, 73, 75, Z0, Z1, white, { r: .4 });                                                                         // the top
+    for (const x of [X0, X1 - 1.8]) bx(x, x + 1.8, 0, 73, Z0 + 1, Z1, white, { r: .3 });                                // the sides
+    bx(X0 + 1.8, X1 - 1.8, 30, 73, Z1 - 1.8, Z1, white);                                                                   // the back
+    bx(X1 - 36, X1 - 1.8, 62, 73, Z0 + 1, Z1 - 2, white, { r: .3 });                                                       // the drawer,
+    bx(X1 - 35.5, X1 - 2.3, 62.5, 72.5, Z0 + .5, Z0 + 1, white, { r: .2 }); bx(X1 - 24, X1 - 14, 66.5, 68.5, Z0, Z0 + .6, std({ name: 'shadowGap', color: '#b9b6b0', roughness: .9 }), { r: .2 });   // its front and grip
     const DX0 = X0, DX1 = X1, Z0d = Z0, Z1d = Z1;
     // on it: a pink desk lamp, a pencil pot, a few books
     const lampM = std({ name: 'lampPink', color: '#e7aeb5', roughness: .5 });
-    put(new THREE.CylinderGeometry(6, 7, 1.6, 32), lampM, DX1 - 12, 75.8, Z1d - 12);
-    { const arm = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(DX1 - 12, 76, Z1d - 12), new THREE.Vector3(DX1 - 14, 105, Z1d - 13), new THREE.Vector3(DX1 - 20, 118, Z1d - 24)]), 16, .7, 8); put(arm, lampM, 0, 0, 0); }
-    { const sh = put(new THREE.ConeGeometry(7.5, 10, 32, 1, true), std({ name: 'lampPink', color: '#e7aeb5', roughness: .5, side: THREE.DoubleSide }), DX1 - 22, 113, Z1d - 28); sh.rotation.x = -.5; }
-    put(new THREE.CylinderGeometry(3.4, 3.4, 10, 24), std({ name: 'lampBase', color: '#f2ece2', roughness: .6 }), DX0 + 10, 80, Z1d - 10);
-    for (let i = 0; i < 4; i++) box(DX0 + 16, DX0 + 38, 75 + i * 2.2, 77 + i * 2.2, Z1d - 22 + (q() - .5) * 2, Z1d - 6 + (q() - .5) * 2, std({ name: 'book', color: ['#8fb3c9', '#f0c8a8', '#bfa6cf', '#e8e0cf'][i], roughness: .8 }), { r: .3 });
-    foot.push([[DX0, Z0d], [DX1, Z0d], [DX1, Z1d], [DX0, Z1d]]);
+    pt(new THREE.CylinderGeometry(6, 7, 1.6, 32), lampM, DX1 - 12, 75.8, Z1d - 12);
+    { const arm = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(DX1 - 12, 76, Z1d - 12), new THREE.Vector3(DX1 - 14, 105, Z1d - 13), new THREE.Vector3(DX1 - 20, 118, Z1d - 24)]), 16, .7, 8); pt(arm, lampM, 0, 0, 0); }
+    { const sh = pt(new THREE.ConeGeometry(7.5, 10, 32, 1, true), std({ name: 'lampPink', color: '#e7aeb5', roughness: .5, side: THREE.DoubleSide }), DX1 - 22, 113, Z1d - 28); sh.rotation.x = -.5; }
+    pt(new THREE.CylinderGeometry(3.4, 3.4, 10, 24), std({ name: 'lampBase', color: '#f2ece2', roughness: .6 }), DX0 + 10, 80, Z1d - 10);
+    for (let i = 0; i < 4; i++) bx(DX0 + 16, DX0 + 38, 75 + i * 2.2, 77 + i * 2.2, Z1d - 22 + (q() - .5) * 2, Z1d - 6 + (q() - .5) * 2, std({ name: 'book', color: ['#8fb3c9', '#f0c8a8', '#bfa6cf', '#e8e0cf'][i], roughness: .8 }), { r: .3 });
+    foot.push([toW(DX0, Z0d), toW(DX1, Z0d), toW(DX1, Z1d), toW(DX0, Z1d)]);
     // the chair: IKEA ORFJALL, white on castors, the seat and back in Vissle pink; pulled out a little, turned towards the desk
-    const C = new THREE.Group(); C.position.set((DX0 + DX1) / 2 - 4, 0, Z0d - 22); C.rotation.y = .2; root.add(C);   // on the room's side, facing the desk (+z)
+    const C = new THREE.Group(); C.position.set((DX0 + DX1) / 2 - 4, 0, Z0d - 22); C.rotation.y = .2; G.add(C);   // on the room's side, facing the desk and the radiator
     const wP = std({ name: 'plasticWhite', color: '#f1f0ec', roughness: .45 }), pinkF = linen('#e8a5ae');
     for (let k = 0; k < 5; k++) { const A = new THREE.Group(); A.rotation.y = k / 5 * Math.PI * 2 + .2; C.add(A);
       box(2, 25, 5, 7.5, -1.8, 1.8, wP, { r: .8, parent: A });
@@ -87,7 +90,7 @@ export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTe
     const bk = box(-19, 19, 48, 82, -21, -17.5, wP, { r: 3, parent: C }); bk.rotation.x = -.1;                                   // the back's shell
     const bc = box(-18, 18, 50, 80, -17.8, -15, pinkF, { r: 3, scale: 45, soft: .4, seed: 72, parent: C }); bc.rotation.x = -.1;  // and cushion
     box(-2, 2, 42, 52, -21, -17, wP, { r: .6, parent: C });
-    const [cx, cz] = [C.position.x, C.position.z]; foot.push(Array.from({ length: 10 }, (_, i) => [cx + Math.cos(i / 10 * 6.283) * 27, cz + Math.sin(i / 10 * 6.283) * 27]));
+    const [cx, cz] = toW(C.position.x, C.position.z); foot.push(Array.from({ length: 10 }, (_, i) => [cx + Math.cos(i / 10 * 6.283) * 27, cz + Math.sin(i / 10 * 6.283) * 27]));
   }
 
   // ---------- the toy cabinet: small, white, two doors with round pink knobs, on the south wall between the door and the radiator;

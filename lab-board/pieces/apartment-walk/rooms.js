@@ -13,7 +13,7 @@ import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
 import { buildBath } from './bath.js?v=11';
 import { buildBalconies } from './balcony.js?v=2';
-import { buildKidroom } from './kidroom.js?v=2';
+import { buildKidroom } from './kidroom.js?v=3';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
