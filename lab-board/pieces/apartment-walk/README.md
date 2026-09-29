@@ -75,6 +75,15 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Śledzone światło 360°** (`traced.jpg`, pokazywane przed `render.jpg`): `AW.traceSpot('<id>', { post })` liczy panoramę prosto kamerą sferyczną tracera, 4096 × 2048, 5 odbić, 640 próbek, filtr iskier i odszumianie słabsze przy większej liczbie próbek. Oszczędza kartę: kafelki po ok. 30 tys. px, każdy czekany na karcie, potem przerwa (ok. 55 % obciążenia); liczy też w ukrytej karcie (odmierzanie w workerze). Salon: 640 próbek w ok. 90 min.
 - Nagranie: `AW.captureSpot('<id>', 'http://127.0.0.1:8811/f/')` w konsoli (kostka 2048 na ścianę, 4096 × 2048, te same kolory co spacer).
 
+## Pokoje, zasłony, światło (rooms.js)
+
+- **Sypialnia (F, A.04):** PAX 2 × 100 wzdłuż ściany łazienki, łóżko 180 × 200 wezgłowiem do ściany przy balkonie, dwie wiszące szafki nocne z dębu i lampki z lnianym kloszem, TV 55" na ścianie naprzeciw łóżka. Kliknij łóżko, żeby się położyć (bliższa strona, głowa na poduszce, rozglądanie się); klawisz ruchu, Esc albo klik wstaje.
+- **Zasłony w każdym pokoju:** jedna ciągła szyna na pokój (w sypialni z łukiem w narożniku, jak na A.04), maskownica domknięta na końcach; firany zawsze, zasłony dwiema połówkami na odcinek, zbierane na końcach i na filarach między oknami. Klik w zasłonę zasuwa albo odsuwa (animacja jak materiał: dół się spóźnia i kołysze), klik w firanę przechodzi do drzwi za nią; firana chowa się za otwierane skrzydło. Zasunięte zasłony przyciemniają pokój (światło z okien do 12 %, otoczenie do 35 %, gdy w nim stoisz).
+- **Grzejniki:** jak na A.04 (przeniesione w gabinecie, sypialni i pokoju dziecka, w salonie wymiana na wysoki), drabinka w łazience wg rysunku dewelopera.
+- **Lampy:** nad wyspą trzy bursztynowe klosze (na wzór Czcina, styl B, 38 cm) na różnych wysokościach; lampy sufitowe z tej rodziny w punktach z rzutu elektryki (salon, sypialnia, gabinet, pokój dziecka); donut IKEA VARMBLIXT na konsoli RTV; wszystkie klikalne. Światło lamp nie przechodzi przez ściany: trzy wspólne światła z cieniem przejmują trzy najbliższe zapalone lampy.
+- **Kuchnia:** wszystko się otwiera (fronty, szuflady, lodówka z wnętrzem, piekarniki, zmywarka, okap).
+- **Chodzenie:** delikatny krok (Customize → Head bob).
+
 ## Render 360 w Blenderze (tools/blender)
 
 Punkty zdjęciowe to rendery z Blendera Cycles w **kafelkach 16K**: sześcian 6 × 4096 px, każda ściana w piramidzie poziomów (512, 1024, 2048, 4096) i kafelkach 512 px. Spacer wczytuje od razu całość w 512 i 1024, potem kafelki w polu widzenia w rozdzielczości, jakiej potrzebuje ekran; przy zbliżeniu dociąga 4096 tylko tam, gdzie patrzysz. Ostro do ok. 2× zbliżenia na ekranie 1080p.

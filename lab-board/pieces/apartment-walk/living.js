@@ -383,7 +383,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   // ---------- ivy on the wall behind the table (z = -610, the room at -z): a small oak shelf at 1.86 m, a white pot, a dozen trailing
   // strands, 40 to 110 cm, hanging close to the wall and drifting a little sideways; lobed leaves every few cm, smaller towards the tips ----------
   {
-    const WZ = -610, CX = LIVING.dining[0] - 70, r = rng(907);   // off to the side of the pendant, between the pantry door and the table (the tall radiator: the other end)
+    const WZ = -610, CX = 205, r = rng(907);   // between the hidden pantry door (to 180) and the radiator (from 231), its strands kept to that gap
     const shelfY = 186, potY = shelfY + 2.4;
     mesh(new RoundedBoxGeometry(44, 2.4, 18, 2, .3), oak, root, CX, shelfY + 1.2, WZ - 9);
     const potM = std({ name: 'lampBase', color: '#ece6dc', roughness: .5 });
@@ -417,7 +417,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     // the back ones find the wall; each sways at its own pace, so they cross and weave; a few branch
     for (let k = 0; k < 15; k++) {
       const a = (k / 15) * Math.PI * 2 + (r() - .5) * .5, ca = Math.cos(a), sa = Math.sin(a), front = sa < -.2;
-      const len = 30 + r() * 80 * (k % 4 === 0 ? 1.1 : .75), amp = 3 + r() * 6, fr = .05 + r() * .05, ph = r() * 6.3, lean = ca * (8 + r() * 26);
+      const len = 30 + r() * 80 * (k % 4 === 0 ? 1.1 : .75), amp = 2 + r() * 3, fr = .05 + r() * .05, ph = r() * 6.3, lean = ca * (3 + r() * 7);
       const pts = [new THREE.Vector3(CX + ca * 3, SOIL, PZ + sa * 2.5), new THREE.Vector3(CX + ca * 7, RIM + 3 + r() * 4, PZ + sa * 5.5), new THREE.Vector3(CX + ca * 11, RIM - 1.5, PZ + sa * 8)];
       const zEnd = front ? PZ - 9 - r() * 4 : WZ - 1.6 - r() * 1.2;
       for (let d = 8; d <= len; d += 8) { const t = d / len;
@@ -425,7 +425,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
       const c = vine(pts, 3.3, 5.6, 2.5);
       if (r() < .45 && len > 50) {                                    // a side shoot from partway down
         const t0 = .3 + r() * .3, b0 = c.getPoint(t0), dir = r() < .5 ? -1 : 1, bl = 18 + r() * 25, bp = [b0.clone()];
-        for (let d = 6; d <= bl; d += 6) bp.push(new THREE.Vector3(b0.x + dir * d * .6 + Math.sin(d * .4 + ph) * 2, b0.y - d * .8, b0.z + (front ? -1 : .3) * Math.min(3, d * .1)));
+        for (let d = 6; d <= bl; d += 6) bp.push(new THREE.Vector3(b0.x + dir * d * .22 + Math.sin(d * .4 + ph) * 1.5, b0.y - d * .8, b0.z + (front ? -1 : .3) * Math.min(3, d * .1)));
         vine(bp, 3.2, 4, 2.4);
       }
     }

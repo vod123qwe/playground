@@ -237,14 +237,15 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   { const cx = 921 - 6 - 61.5, y0 = 98, screen = std({ name: 'screen', color: '#050607', roughness: .07, metalness: .1 }), bezel = std({ name: 'bezel', color: '#1b1c1f', roughness: .5, metalness: .3 });
     box(cx - 61.5, cx + 61.5, y0, y0 + 71, -362 + 3, -362 + 6.5, bezel, { r: .5 });
     const s = new THREE.Mesh(new THREE.PlaneGeometry(122, 69.4), screen); s.position.set(cx, y0 + 35.5, -362 + 6.52); root.add(s); }
-  // ---------- the radiators, where A.04 puts them (it moves the study's, the bedroom's and the child's room's, and swaps the living room's
-  // for a tall one), the bathroom's towel rail where the developer's heating drawing has it. Steel panels, white, a satin finish, the face
+  // ---------- the radiators, where the developer's heating drawing has them (the living room's 900 x 1600 behind the table, the bedroom's
+  // 600 x 1100 on its angled wall to the study, the bathroom's towel rail), but the study's, moved as A.04 draws it; the child's room's
+  // as A.04 too (the developer's drawing does not show it clearly). Steel panels, white, a satin finish, the face
   // in vertical channels, a grille on top, a chrome valve; hung 4 cm off the wall. (a: along the wall from, b: to; n: into the room)
   const radM = std({ name: 'radiator', color: '#f4f4f1', roughness: .38, metalness: .1 }), chrome = std({ name: 'steel', color: '#d6d7d8', roughness: .15, metalness: 1 });
   function radiator(a, b, n, y0, h, d = 10, kind = 'panel') {
+    if (-(b[1] - a[1]) * n[0] + (b[0] - a[0]) * n[1] < 0) [a, b] = [b, a];   // walked with the room on the left: local +z into the room (no mirroring)
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]), e = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
     const F = new THREE.Group(); F.position.set(a[0] + n[0] * 4, 0, a[1] + n[1] * 4); F.rotation.y = Math.atan2(-e[1], e[0]); root.add(F);
-    if (Math.sign(-e[1] * n[0] + e[0] * n[1]) < 0) F.scale.z = -1;      // local +z into the room
     if (kind === 'ladder') {                                           // a towel rail: two round uprights, flat bars
       for (const x of [1.5, len - 1.5]) { const u = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, h, 16), radM); u.position.set(x, y0 + h / 2, d / 2); F.add(u); }
       for (let y = y0 + 4; y < y0 + h - 2; y += (y > y0 + h * .55 ? 3.6 : 5.2)) box(2, len - 2, y, y + 1.4, d / 2 - 1, d / 2 + 1, radM, { r: .5, parent: F });
@@ -256,11 +257,12 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     }
     foot.push([[a[0], a[1]], [b[0], b[1]], [b[0] + n[0] * (d + 5), b[1] + n[1] * (d + 5)], [a[0] + n[0] * (d + 5), a[1] + n[1] * (d + 5)]]);
   }
-  radiator([806, -362], [917, -362], [0, 1], 14, 60);                       // the bedroom: under the TV (A.04 moves it here), 600 x 1100
+  { const p0 = [921, -362], d = [.7895, -.609];                               // the bedroom: on its angled wall to the study, by the window (the developer's), 600 x 1100
+    radiator([p0[0] + d[0] * 11.5, p0[1] + d[1] * 11.5], [p0[0] + d[0] * 121.5, p0[1] + d[1] * 121.5], [.609, .7895], 14, 60); }
   radiator([393, -176], [393, -96], [-1, 0], 14, 60);                       // the child's room: by the window, on its right wall (A.04), 600 x 800
   { const p0 = [919, -376], d = [.7925, -.6099];                              // the study: on its angled wall by the window (A.04), 600 x 800
     radiator([p0[0] + d[0] * 30, p0[1] + d[1] * 30], [p0[0] + d[0] * 110, p0[1] + d[1] * 110], [-.6099, -.7925], 14, 60); }
-  radiator([350, -610], [400, -610], [0, -1], 12, 180, 9);                  // the living room: A.04's tall one, by the laundry's corner, 1800 x 500
+  radiator([231, -610], [394, -610], [0, -1], 14, 90);                      // the living room: behind the table (the developer's), 900 x 1600
   radiator([405, -232], [405, -172], [1, 0], 22, 122, 6, 'ladder');         // the bathroom: a towel rail on the left wall (the developer's), 1222 x 600
 
   // ---------- the ceiling lights, at the outlets of the electrical drawing (its points read off onto the plan, to within a few tens of
