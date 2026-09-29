@@ -240,9 +240,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=11';
-import { buildLiving } from './living.js?v=25';
+import { buildLiving } from './living.js?v=27';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=13';
+import { buildRooms } from './rooms.js?v=14';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -348,7 +348,8 @@ function placeSun() {                                               // the sun, 
   sun.intensity = 2.4 * S.power * sm(el / DEG, -1, 6) * (.55 + .45 * sm(el / DEG, 4, 30));
   hemi.color.copy(warm).lerp(SKY, .35); hemi.intensity = .55 * S.power * (.1 + .9 * day);
   scene.environmentIntensity = .55 * S.power * (.12 + .88 * day);
-  for (const l of portals) { l.color.copy(SKY).lerp(warm, .45).lerp(kelvin(2600), low * .5 * day); l.intensity = S.portal * S.power * (.03 + .97 * day); }
+  for (const l of portals) { l.color.copy(SKY).lerp(warm, .45).lerp(kelvin(2600), low * .5 * day); l.userData.base = l.intensity = S.portal * S.power * (.03 + .97 * day); }
+  hemi.userData.base = hemi.intensity; scene.userData.envBase = scene.environmentIntensity; shadeNow = null;
   bgColor.copy(BG_NIGHT).lerp(BG_DAY, .15 + .85 * day); scene.backgroundIntensity = .06 + .94 * day;
   if (typeof paintClock === 'function') paintClock();
   if (typeof ptScene === 'function') ptScene();
@@ -749,7 +750,7 @@ function buildGlazing(o) {
   if (!portals.some(l => l.userData.o === o)) {                     // once per opening (the leaves may be rebuilt, the portal stays)
     const hgt = o.head - o.sill, lg = new THREE.RectAreaLight('#eef3ff', S.portal, len * M, hgt * M), c = [mid[0] + n[0] * 4, mid[1] + n[1] * 4];
     lg.position.set(wx(c[0]), (o.sill + hgt / 2) * M, wz(c[1])); lg.lookAt(wx(c[0] + n[0] * 100), (o.sill + hgt / 2) * M, wz(c[1] + n[1] * 100));
-    lg.userData.o = o; scene.add(lg); portals.push(lg);
+    lg.userData.o = o; lg.userData.mid = mid; scene.add(lg); portals.push(lg);
   }
   // a bar in two halves: the inside one white, the outside one graphite (x, y: centre in the plane; w, h: size; depth 7 cm)
   const bar = (parent, w, h, x, y) => {
@@ -991,7 +992,19 @@ function segDist(x, z, dr) {                                       // how far a 
   return Math.hypot(x - ax - v[0] * t, z - az - v[1] * t);
 }
 const toggleDoor = dr => { if (dr.kind !== 'fixed') dr.to = dr.to > .5 ? 0 : 1; };
-const OPEN = [];                                                    // the kitchen's fronts, drawers and appliances, the PAX doors: { f, to, parts, apply }
+const OPEN = [];
+// drawn drapes darken their room: the window's soft light (the portal) dims with them (to 12 %), and so does the ambient (to 35 %) while
+// you stand in that room; the sun they already stop, casting shadows. Daylight or dusk, it scales what comes in from outside
+let shadeNow = null;
+function shadeRooms() {
+  const r = roomAt(P.x, P.z), here = r && FURN.inside ? Object.keys(FURN.inside).find(k => roomAt(...FURN.inside[k]) === r) : null;
+  const key = portals.map(l => (l.userData.track ??= FURN.trackOf(...l.userData.mid || [0, 0])) + FURN.closure(l.userData.track).toFixed(2)).join() + '|' + here + (here ? FURN.closure(here).toFixed(2) : '') + mode;
+  if (key === shadeNow) return; shadeNow = key;
+  for (const l of portals) if (l.userData.base !== undefined) l.intensity = l.userData.base * (1 - .88 * FURN.closure(l.userData.track));
+  const k = mode === 'walk' && here ? 1 - .65 * FURN.closure(here) : 1;
+  if (hemi.userData.base !== undefined) hemi.intensity = hemi.userData.base * k;
+  if (scene.userData.envBase !== undefined) scene.environmentIntensity = scene.userData.envBase * k;
+}                                                    // the kitchen's fronts, drawers and appliances, the PAX doors: { f, to, parts, apply }
 // a soft ground for the shadow, far enough below to read as the storey height
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.ShadowMaterial({ opacity: .12 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.23; ground.receiveShadow = true; scene.add(ground);
 // the drawing on the floor, to check the model against it
@@ -1186,9 +1199,7 @@ canvas.addEventListener('pointerup', e => {                         // a click (
 });
 // the lamps you can click: the pendants over the island (one switch) and over the table
 // the living room's drapes as a switch: drawn across (closed) or gathered with the sheers across; the sheers let a click through
-const livingDrapes = { name: 'curtains living', get on() { return S.curtains === 'closed'; }, get meshes() { return LIV?.drapeMeshes ? LIV.drapeMeshes() : []; },
-  set(v) { S.curtains = v ? 'closed' : 'sheers'; ctl.curtains?.set?.(S.curtains); curtainsNow(true); } };
-function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : []), ...(LIV ? [livingDrapes] : [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
+function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
 // ---------- the hand: over a leaf that opens, and while Space-panning the overview ----------
 const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0 };
 const sp = { held: false, id: null, x: 0, y: 0 };
@@ -1369,7 +1380,7 @@ const ctl = {};
   g.appendChild(kn);
   g = LabUI.group(panel, 'Living room', { key: 'lab.aw.group.living' });
   ctl.sofa = LabUI.seg(g, { label: 'Sofa', options: [['gala3', 'Gala 210'], ['gala', 'Gala 300 + chaise'], ['a04', 'As A.04']], value: S.sofa, onChange: v => { S.sofa = v; applySofa(); } });
-  ctl.curtains = LabUI.seg(g, { label: 'Curtains', options: [['open', 'Open'], ['sheers', 'Sheers'], ['closed', 'Closed']], value: S.curtains, onChange: v => { S.curtains = v; curtainsNow(true); } });
+  ctl.curtains = LabUI.seg(g, { label: 'Curtains', options: [['sheers', 'Drapes open'], ['closed', 'Drapes drawn']], value: S.curtains === 'closed' ? 'closed' : 'sheers', onChange: v => { S.curtains = v; curtainsNow(true); } });
   const ln = document.createElement('p'); ln.className = 'note';
   ln.textContent = 'Kave Home Gala in a fine beige chenille (drawn here, not a scan): seat 42, back 87, 105 deep. The 3-seater, 210 cm, fits where A.04 has the sofa: about 1 m to the dining chairs, its arm 60 cm off the window wall. The 4-seater with the right chaise, 300 × 193, reaches the dining chair next to it (about 3 cm), stands in front of the whole 90 cm balcony door and leaves about 45 cm to the TV console. Curtains: sheers and linen drapes on two tracks under a ceiling pelmet.';
   g.appendChild(ln);
@@ -1794,7 +1805,8 @@ function frame(now) {
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
   if (OPEN.some(o => o.moved)) { for (const o of OPEN) o.moved = false; ptScene(); }
-  if (FURN && FURN.step(dt)) { ptScene(); moved(); }                 // the drapes being drawn or let back
+  if (FURN && FURN.step(dt)) { ptScene(); moved(); shadeNow = null; }   // the drapes being drawn or let back
+  if (FURN) shadeRooms();
   if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); if (FURN) FURN.update(doors); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
   const idle = S.pt && mode === 'walk' && !tween && !SPOT.cur && performance.now() - lastMove > 280;
@@ -1845,12 +1857,8 @@ livingFoot = [...HALL.foot];
 let LIV = null;
 // the curtains follow the balcony doors of the living room: the leaves' hinges along the facade, which way they run, how open they are
 let curKey = '';
-function curtainsNow(force) {
-  if (!LIV) return;
-  const F = LIV.FAC, lv = doors.filter(d => d.kind === 'turn' && /^O(17|22) /.test(d.o.name)).map(d => ({
-    h: (d.ph[0] - F.o[0]) * F.e[0] + (d.ph[1] - F.o[1]) * F.e[1], s: Math.sign(d.dir[0] * F.e[0] + d.dir[1] * F.e[1]) || 1, W: d.lw, f: Math.round(d.f * 50) / 50 }));
-  const key = S.curtains + lv.map(l => l.f).join(',');
-  if (!force && key === curKey) return; curKey = key; LIV.setCurtains(S.curtains, lv); lensList = null;
+function curtainsNow() {                                            // the living room's drapes, from the panel (the track and its motion: rooms.js)
+  if (FURN) FURN.setClosed('L', S.curtains === 'closed');
 }
 function applySofa() {                                              // the sofa chosen in the panel, its outline for walking
   if (!LIV) return; LIV.setSofa(S.sofa); livingFoot = [...HALL.foot, ...LIV.foot, ...(FURN ? FURN.foot : [])]; lensList = null; ptScene(); if (mode === 'walk') unstick();
