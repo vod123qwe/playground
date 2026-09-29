@@ -85,6 +85,12 @@
   .here small{color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums}
   body.walk .here.on{opacity:1; transform:translate(-50%, 0)}
   @media (max-width:760px){ .here{top:70px} }
+  /* the others walking the flat now (ghosts.js) */
+  .live{position:fixed; top:70px; left:50%; z-index:4; transform:translate(-50%, -6px); display:flex; align-items:center; gap:7px; height:30px; padding:0 13px; border-radius:999px;
+        background:rgba(255,255,255,.92); font-size:12px; font-weight:600; opacity:0; transition:opacity .35s ease, transform .45s var(--ease); pointer-events:none; white-space:nowrap}
+  .live i{width:8px; height:8px; border-radius:50%; background:#2fb36b; box-shadow:0 0 0 3px rgba(47,179,107,.2)}
+  .live.on{opacity:1; transform:translate(-50%, 0)}
+  @media (max-width:760px){ .live{top:122px} }
 
   /* the minimap (walk) */
   .mini{position:fixed; top:72px; left:16px; z-index:4; width:196px; height:180px; border-radius:18px; background:#fff; opacity:0; visibility:hidden; transform:translateY(-6px);
@@ -169,6 +175,7 @@
 
 <a class="icon back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
 <div class="here" id="here" aria-live="polite"><span id="here-n"></span><small id="here-a"></small></div>
+<div class="live" id="live" aria-live="polite"><i></i><span id="live-n"></span></div>
 <canvas class="mini" id="mini" width="392" height="360" aria-label="Minimap: click to move there"></canvas>
 <div class="stick" id="stick" aria-hidden="true"><i></i></div>
 
@@ -243,6 +250,7 @@ import { buildKitchen } from './kitchen.js?v=13';
 import { buildLiving } from './living.js?v=32';
 import { buildHall } from './hall.js?v=4';
 import { buildRooms } from './rooms.js?v=29';
+import { startGhosts } from './ghosts.js?v=2';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -268,7 +276,7 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
-const S = { bob: true, view: 'generic', sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
+const S = { bob: true, live: true, view: 'generic', sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -1367,8 +1375,23 @@ function drawMini() {
   const x = P.x * s + ox, z = P.z * s + oz, half = THREE.MathUtils.degToRad(S.fov) * .55;
   const grd = g.createRadialGradient(x, z, 0, x, z, 56); grd.addColorStop(0, 'rgba(47,111,235,.35)'); grd.addColorStop(1, 'rgba(47,111,235,0)');
   g.fillStyle = grd; g.beginPath(); g.moveTo(x, z); g.arc(x, z, 56, P.yaw - half, P.yaw + half); g.closePath(); g.fill();
+  for (const o of GH ? GH.list() : []) {                             // the others: their colour, where they look
+    const gx = o.x * s + ox, gz = o.z * s + oz, c = `hsl(${Math.round(o.hue * 360)} 80% 55%`;
+    g.fillStyle = `${c} / .28)`; g.beginPath(); g.moveTo(gx, gz); g.arc(gx, gz, 34, o.yaw - .5, o.yaw + .5); g.closePath(); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(gx, gz, 7, 0, 7); g.fill(); g.fillStyle = `${c})`; g.beginPath(); g.arc(gx, gz, 4.8, 0, 7); g.fill();
+  }
   g.fillStyle = '#fff'; g.beginPath(); g.arc(x, z, 8, 0, 7); g.fill(); g.fillStyle = '#2f6feb'; g.beginPath(); g.arc(x, z, 5.5, 0, 7); g.fill();
 }
+// ---------- the others, live (ghosts.js): started once the flat is up, off with the panel's switch ----------
+let GH = null, ghStarting = false;
+const liveEl = document.getElementById('live'), liveN = document.getElementById('live-n');
+const paintLive = () => { const n = GH ? GH.count : 0; liveEl.classList.toggle('on', n > 0); liveN.textContent = n === 1 ? '1 other person here' : `${n} other people here`; };
+async function startLive() {
+  if (GH || ghStarting || !S.live) return; ghStarting = true;
+  try { GH = await startGhosts({ THREE, scene, wx, wz, pose: () => ({ x: P.x, z: P.z, yaw: P.yaw, eye: S.eye, mode }), onChange: paintLive }); } finally { ghStarting = false; }
+  if (GH && !S.live) stopLive(); paintLive();
+}
+function stopLive() { if (GH) { GH.stop(); GH = null; } paintLive(); }
 mini.addEventListener('click', e => {
   const r = mini.getBoundingClientRect(), { s, ox, oz } = MF;
   const x = ((e.clientX - r.left) / r.width * mini.width - ox) / s, z = ((e.clientY - r.top) / r.height * mini.height - oz) / s;
@@ -1436,6 +1459,7 @@ const ctl = {};
   ctl.speed = LabUI.slider(g, { label: 'Speed', min: .5, max: 3, step: .1, unit: ' m/s', value: S.speed, def: DEF.speed, onInput: v => { S.speed = v; } });
   ctl.fov = LabUI.slider(g, { label: 'Field of view', min: 50, max: 100, step: 1, unit: '°', value: S.fov, def: DEF.fov, onInput: v => { S.fov = v; if (mode === 'walk' && !tween) { camera.fov = v; camera.updateProjectionMatrix(); } } });
   ctl.bob = LabUI.check(g, { label: 'Head bob', value: S.bob, onChange: v => { S.bob = v; } });
+  ctl.live = LabUI.check(g, { label: 'Other visitors, live', value: S.live, onChange: v => { S.live = v; v ? startLive() : stopLive(); } });
   ctl.ceiling = LabUI.check(g, { label: 'Ceiling', value: S.ceiling, onChange: v => { S.ceiling = v; } });
   g = LabUI.group(panel, 'Doors', { key: 'lab.aw.group.doors' });
   ctl.doors = LabUI.seg(g, { label: 'All doors', options: [['built', 'As left'], ['open', 'Open'], ['closed', 'Closed']], value: 'built',
@@ -1527,6 +1551,7 @@ function tracerScene() {
   const pos = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
   scene.updateMatrixWorld(true);
   scene.traverseVisible(o => {
+    if (o.userData.noTrace) return;                                  // (the other visitors' ghosts)
     if (o.isRectAreaLight) { o.matrixWorld.decompose(pos, q, sc); const l = new THREE.RectAreaLight(o.color, o.intensity, o.width, o.height); l.position.copy(pos); l.quaternion.copy(q); ts.add(l); return; }
     if (o.isDirectionalLight) { const l = new THREE.DirectionalLight(o.color, o.intensity); l.position.setFromMatrixPosition(o.matrixWorld); l.target.position.setFromMatrixPosition(o.target.matrixWorld); ts.add(l, l.target); return; }
     if (!o.isMesh || o.material.isShadowMaterial) return;
@@ -1843,6 +1868,7 @@ function frame(now) {
   if (FURN && FURN.step(dt)) { ptScene(); moved(); shadeNow = null; lendShadows(true); }   // the drapes being drawn or let back
   if (FURN) shadeRooms();
   lendShadows(false);
+  if (GH && GH.step(dt)) moved();
   if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); if (FURN) FURN.update(doors); lendShadows(true); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
   const idle = S.pt && mode === 'walk' && !tween && !SPOT.cur && performance.now() - lastMove > 280;
@@ -1914,12 +1940,13 @@ livingReady.then(async () => {
   try { await renderer.compileAsync(scene, camera); } catch (err) { console.warn('compile', err); }
   await new Promise(r => { requestAnimationFrame(() => requestAnimationFrame(r)); setTimeout(r, 600); });   // two frames drawn with it all in place (a hidden tab draws none: then a moment), then away
   loaded();
+  startLive();                                                       // the others: once the flat is up
 });
 function setAisle(v) {                                              // move the island square to the run
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { PANO, get FURN() { return FURN; }, lieDown, getUp, get LIE() { return LIE; }, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { PANO, get FURN() { return FURN; }, lieDown, getUp, get LIE() { return LIE; }, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; } };
 </script>
 </body>
 </html>
