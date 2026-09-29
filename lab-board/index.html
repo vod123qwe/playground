@@ -737,7 +737,7 @@ void main () {
     d = depthAt(uv);
   }
   vec2 excess = max(abs(uStrength) - vec2(uAberrThreshold), 0.0);
-  vec2 off = excess * sign(uStrength) * uAberrScale + uHover / aspect + lensOff;
+  vec2 off = vec2(0.0) * (excess * sign(uStrength) * uAberrScale + uHover / aspect + lensOff);   // no colour split at all: not while the field moves, not under the cursor (a clean view)
   vec3 col;
   if (uMode > 6.5 && uMode < 7.5 && uHasDepth > 0.5) {
     // dof: sharp at the depth under the cursor, the rest melts (9-tap disc)
