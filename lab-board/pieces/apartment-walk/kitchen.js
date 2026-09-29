@@ -336,18 +336,29 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
         const c = l.clone(); c.scale.setScalar(100); c.position.set(12 + px_, TOP + py_, -4 + pz_); c.rotation.set(r() * 3, r() * 6, r() * 3); I.add(c); } })); }
   await Promise.all(decor);
 
-  // ---------- three pendants over the island: opal glass globes 22 cm across on black cords, 75 cm over the top, 60 cm apart ----------
-  const opal = std({ name: 'opal', color: '#f3f0ea', roughness: .22, emissive: '#ffe2b8', emissiveIntensity: 0 });
-  const islandLight = new THREE.PointLight('#ffd9a8', 0, 5, 2); islandLight.position.set(0, TOP + 70, 0); I.add(islandLight);
+  // ---------- three pendants over the island, at three heights: a Scandinavian pendant with an amber glass shade (Czcina, style B, 38
+  // across): a wide, low bowl of cognac glass with round shoulders, a brass sleeve inside holding the LED (3000 K), shining down, a
+  // short brass stem, a pale cord to a brass canopy; 60 cm apart, their rims 60 to 80 cm over the top ----------
+  const amber = std({ name: 'amberGlass', color: '#c47a36', roughness: .04, metalness: .15, transparent: true, opacity: .55, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
+  const brass = std({ name: 'brass', color: '#c9a063', roughness: .28, metalness: 1 }), cordM = std({ name: 'cord', color: '#e9e6e0', roughness: .6 });
+  const led = std({ name: 'islandLED', color: '#fff4e2', roughness: .4, emissive: '#ffcf8a', emissiveIntensity: 0 });
+  const opal = led;                                                   // (the name the evening render lights them by went with the globes)
+  const islandLight = new THREE.PointLight('#ffc98a', 0, 5, 2); islandLight.position.set(0, TOP + 62, 0); I.add(islandLight);
   islandLight.shadow.mapSize.set(512, 512); islandLight.shadow.camera.near = .03; islandLight.shadow.bias = -.004; islandLight.shadow.normalBias = .02;   // its light stops at the walls: a shadow, on while it is on
-  const islandLamps = { name: 'island', on: false, meshes: [], set(v) { this.on = v; opal.emissiveIntensity = v ? 2.2 : 0; islandLight.intensity = v ? 3 : 0; islandLight.castShadow = !!v; } };   // one switch for the three
-  for (const px of [-60, 0, 60]) {
-    const R = 11, cy = TOP + 75 + R;
-    const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), opal); globe.position.set(px, cy, 0); globe.castShadow = true; I.add(globe);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 3.2, 3, 32), legs); cap.position.set(px, cy + R - .6, 0); I.add(cap); islandLamps.meshes.push(globe, cap);
-    const cord = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, CEIL - (cy + R + 1), 8), legs); cord.position.set(px, (CEIL + cy + R + 1) / 2, 0); I.add(cord);
-    const rose = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 1.5, 32), legs); rose.position.set(px, CEIL - .75, 0); I.add(rose);
+  const islandLamps = { name: 'island', on: false, meshes: [], set(v) { this.on = v; led.emissiveIntensity = v ? 3 : 0; amber.emissive.set(v ? '#6a3208' : '#000'); islandLight.intensity = v ? 3.2 : 0; islandLight.castShadow = !!v; } };   // one switch for the three
+  const shadeG = new THREE.LatheGeometry([[19, 0], [19.35, .8], [19.2, 3], [18.8, 7.5], [18, 11.5], [16.4, 14.4], [13.4, 16], [6, 16.7], [1.3, 16.8]].map(([r, y]) => new THREE.Vector2(r, y)), 96);
+  for (const [px, drop, pz] of [[-60, 72, 1.5], [0, 61, -1], [60, 80, .5]]) {
+    const y0 = TOP + drop, top = y0 + 16.8;                           // the rim, the crown of the shade
+    const shade = new THREE.Mesh(shadeG, amber); shade.position.set(px, y0, pz); shade.castShadow = true; I.add(shade);
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 6.4, 9, 48, 1, true), brass); sleeve.position.set(px, y0 + 7.5, pz); I.add(sleeve);
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 6.4, .4, 48), brass); lid.position.set(px, y0 + 12, pz); I.add(lid);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(5.8, 48), led); disc.rotation.x = Math.PI / 2; disc.position.set(px, y0 + 3.2, pz); I.add(disc);   // the LED, facing down
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, 13, 16), brass); stem.position.set(px, top + 6.5 - 1, pz); I.add(stem);
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(.28, .28, CEIL - (top + 12), 8), cordM); cord.position.set(px, (CEIL + top + 12) / 2, pz); I.add(cord);
+    const rose = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 1.5, 32), brass); rose.position.set(px, CEIL - .75, pz); I.add(rose);
+    islandLamps.meshes.push(shade, sleeve, lid, disc, stem);
   }
+  void opal;
   const setLamps = on => islandLamps.set(on);
 
   // ---------- five black surface spots on the ceiling, over the front of the run ----------
