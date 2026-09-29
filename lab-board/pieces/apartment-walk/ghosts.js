@@ -4,7 +4,8 @@
 // How: the browsers find each other over public Nostr relays (Trystero; no account, no key, no server of ours; what the relays carry
 // is encrypted) and then talk directly, peer to peer (WebRTC; so they learn each other's network address, as any call does).
 // What goes out, a few times a second while you move: a random id, where you stand on the plan (cm), which way you look, your eye
-// height, and whether you walk or look from above. Nothing else.
+// height, and whether you walk or look from above. Nothing else. At the TV, when you pick the duel: that you wait for one, and then, to
+// the one you play, only the duel (where your figure is, its life, where your orbs fly).
 
 const APP = 'aw-lab-apartment-walk-v1', ROOM = 'flat', LIB = 'https://esm.sh/trystero@0.25.4/nostr';
 
@@ -13,6 +14,9 @@ export async function startGhosts({ THREE, scene, wx, wz, pose, onChange = () =>
   const room = T.joinRoom({ appId: APP, password: APP }, ROOM);
   const act = room.makeAction('pose');                               // (Trystero 0.25: an object with send and an onMessage setter)
   const send = (d, to) => act.send(d, to ? { target: to } : {}).catch(() => {});
+  const tvAct = room.makeAction('tv');                                // the TV's duel: its own channel (tvgame.js checks what comes)
+  const tv = { onMessage: null, onLeave: null, send: (d, to) => tvAct.send(d, to ? { target: to } : {}).catch(() => {}) };
+  tvAct.onMessage = (d, from) => { const id = typeof from === 'string' ? from : from?.peerId; if (id && tv.onMessage) tv.onMessage(d, id); };
   const on = (k, fn) => { if (typeof room[k] === 'function') room[k](fn); else room[k] = fn; };
   const G = new THREE.Group(); G.name = 'ghosts'; scene.add(G);
   const peers = new Map(), numbers = new Set();
@@ -56,7 +60,7 @@ export async function startGhosts({ THREE, scene, wx, wz, pose, onChange = () =>
     P.to = { x: d.x, z: d.z, yaw: +d.y || 0, eye: THREE.MathUtils.clamp(+d.e || 165, 60, 200), mode: d.m === 'over' ? 'over' : 'walk', can: !!d.b }; P.seen = performance.now();
     if (P.fresh) { Object.assign(P, P.to); P.fresh = false; }
   };
-  on('onPeerLeave', drop);
+  on('onPeerLeave', id => { drop(id); tv.onLeave?.(id); });
   let lastKey = '', lastSent = 0;
   const pack = () => { const p = pose(); return { x: Math.round(p.x), z: Math.round(p.z), y: +p.yaw.toFixed(2), e: Math.round(p.eye), m: p.mode, b: p.can ? 1 : 0 }; };
   on('onPeerJoin', id => send(pack(), id));                           // a newcomer hears where you are at once
@@ -84,5 +88,5 @@ export async function startGhosts({ THREE, scene, wx, wz, pose, onChange = () =>
   }
   const list = () => [...peers.values()].filter(P => P.to).map(P => ({ n: P.n, x: P.x, z: P.z, yaw: P.yaw, hue: P.hue, mode: P.to.mode }));
   function stop() { clearInterval(tick); for (const id of [...peers.keys()]) drop(id); scene.remove(G); room.leave(); onChange(); }
-  return { step, list, stop, get count() { return [...peers.values()].filter(P => P.to).length; }, selfId: T.selfId };
+  return { step, list, stop, get count() { return [...peers.values()].filter(P => P.to).length; }, selfId: T.selfId, tv };
 }
