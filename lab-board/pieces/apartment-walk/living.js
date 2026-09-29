@@ -292,7 +292,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   // balcony doors and at the far end; sheers = the sheers drawn across; closed = the drapes drawn too ----------
   const FAC = { o: [405.9, -1243.8], e: [.6127, .7903], len: 622.9, from: 64 };   // the facade's inside face from the kitchen corner (+z into the room)
   const FC = frame(FAC.o, FAC.e), CUR = new THREE.Group(); FC.add(CUR);
-  { const g = new RoundedBoxGeometry(FAC.len - FAC.from + 2, 12, 21, 2, .4); mesh(g, std({ name: 'pelmet', color: '#f7f6f3', roughness: .92 }), FC, (FAC.from - 2 + FAC.len) / 2, H - 6, 10.5); }
+  // (the track, the pelmet and the curtains themselves now come from rooms.js, as in the other rooms: animated, gathered on the pier)
   const sheerM = std({ name: 'sheerM', color: '#fbf9f4', roughness: 1, normalMap: lnN, normalScale: new THREE.Vector2(.5, .5), transparent: true, opacity: .52, side: THREE.DoubleSide, depthWrite: false });
   const drapeM = std({ name: 'drapeM', normalMap: lnN, normalScale: new THREE.Vector2(1, 1), roughnessMap: lnR, roughness: 1, color: '#cbbba4', side: THREE.DoubleSide });
   // a panel of fabric fw wide hung between s0 and s1: n wave folds, as deep as the fabric allows, flaring a little towards the hem
@@ -334,7 +334,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     if (state === 'closed') drawn(13, 2, 24, drapeM, {}, leaves);
     else for (const [a, b] of [[S0, S0 + 44], [345, 389], [389, 433], [S1 - 42, S1]]) CUR.add(curtain(a, b, 150, 13, TOP, Math.round(150 / 24), drapeM, { seed: (a * 7) | 0 }));
   }
-  setCurtains('sheers');
+  const setCurtainsOld = setCurtains; void setCurtainsOld;
 
   // ---------- lamps (off by day; the panel lights them) ----------
   const lamps = [];
@@ -380,11 +380,11 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     lamps.push({ name: 'donut', on: false, meshes: [d], set(v) { this.on = !!v; glass.emissiveIntensity = v ? .6 : 0; light.intensity = v ? .3 : 0; light.castShadow = !!v; } });
   }
 
-  // ---------- ivy on the wall behind the table (z = -610, the room at -z): a small oak shelf at 1.7 m, a white pot, a dozen trailing
+  // ---------- ivy on the wall behind the table (z = -610, the room at -z): a small oak shelf at 1.86 m, a white pot, a dozen trailing
   // strands, 40 to 110 cm, hanging close to the wall and drifting a little sideways; lobed leaves every few cm, smaller towards the tips ----------
   {
     const WZ = -610, CX = LIVING.dining[0] + 62, r = rng(907);   // off to the side of the pendant, as seen from the room
-    const shelfY = 168, potY = shelfY + 2.4;
+    const shelfY = 186, potY = shelfY + 2.4;
     mesh(new RoundedBoxGeometry(44, 2.4, 18, 2, .3), oak, root, CX, shelfY + 1.2, WZ - 9);
     const potM = std({ name: 'lampBase', color: '#ece6dc', roughness: .5 });
     const pot = new THREE.LatheGeometry([[0, 0], [7.5, 0], [8.5, 1], [9.5, 13], [10.2, 14.5], [9.6, 14.8], [8.9, 13.2], [0, 13]].map(([a, b]) => new THREE.Vector2(a, b)), 48);
@@ -397,18 +397,36 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
       s2.moveTo(0, -.12); for (const [x, y] of pts) s2.lineTo(x, y); s2.lineTo(0, -.12); return s2; })();
     const leafBase = new THREE.ShapeGeometry(leafShape, 6); { const q = leafBase.attributes.position; for (let i = 0; i < q.count; i++) { const x = q.getX(i), y = q.getY(i); q.setZ(i, -.18 * x * x + .06 * y); } leafBase.computeVertexNormals(); }
     const leaves = [], stems = [], m4 = new THREE.Matrix4(), qu = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), ps = new THREE.Vector3();
-    for (let k = 0; k < 16; k++) {
-      const ang = (k / 16) * Math.PI * 2 + r() * .4, sx = CX + Math.cos(ang) * 8, sz = WZ - 10 + Math.sin(ang) * 6;   // from the pot's rim
-      const len = 35 + r() * 85 * (k % 3 === 0 ? 1 : .7), drift = (Math.cos(ang) + (r() - .5) * .8) * (30 + r() * 40), pts = [];   // spreading out to both sides
-      for (let i = 0; i <= 12; i++) { const t = i / 12, y = potY + 14 - t * len, out = Math.min(1, t * 3);
-        pts.push(new THREE.Vector3(sx + drift * Math.sqrt(t) + Math.sin(t * 5 + k) * 3, y + Math.sin(t * 3.1) * 4 * (1 - t), THREE.MathUtils.lerp(sz, WZ - 1.8 - r() * 1.5, out) - (1 - out) * 3)); }   // over the rim, then down the wall
-      const curve = new THREE.CatmullRomCurve3(pts); stems.push(new THREE.TubeGeometry(curve, 36, .16, 5));
-      const n = Math.floor(len / 3.4);
-      for (let i = 1; i <= n; i++) {
-        const t = i / (n + 1), p0 = curve.getPoint(t), size = THREE.MathUtils.lerp(6.2, 2.6, t) * (.8 + r() * .4), side = i % 2 ? 1 : -1;
-        e.set(-.25 + r() * .5 - .3, (r() - .5) * .8, side * (.5 + r() * .7) + Math.PI);   // hanging, facing out from the wall, alternate sides
-        qu.setFromEuler(e); sc.set(size, size, size); ps.set(p0.x + side * 1.2, p0.y, p0.z - .8 - r() * 1.5);
-        leaves.push(leafBase.clone().applyMatrix4(m4.compose(ps, qu, sc)));
+    const PZ = WZ - 10, SOIL = potY + 12.6, RIM = potY + 14.8;
+    const leafAt = (p0, size, out = 0) => {                           // a leaf on its stalk, facing mostly out of the wall, turned every which way
+      e.set(-.4 + r() * .8 - out * .5, (r() - .5) * 1.4, (r() - .5) * 2.2 + Math.PI); qu.setFromEuler(e); sc.set(size, size, size);
+      ps.set(p0.x + (r() - .5) * 1.6, p0.y + (r() - .5) * 1, p0.z - .6 - r() * 1.4); leaves.push(leafBase.clone().applyMatrix4(m4.compose(ps, qu, sc)));
+    };
+    const vine = (pts, leafEvery, s0, s1, out = 0) => {
+      const c = new THREE.CatmullRomCurve3(pts); stems.push(new THREE.TubeGeometry(c, Math.max(8, pts.length * 6), .15, 5));
+      const n = Math.max(2, Math.floor(c.getLength() / leafEvery)); for (let i = 1; i <= n; i++) { const t = i / (n + .5); leafAt(c.getPoint(t), THREE.MathUtils.lerp(s0, s1, t) * (.8 + r() * .4), out); }
+      return c;
+    };
+    // the crown: short shoots from the soil, arching up and out over the rim
+    for (let k = 0; k < 10; k++) {
+      const a = r() * Math.PI * 2, r0 = 1 + r() * 5, h = 5 + r() * 9, reach = 7 + r() * 7;
+      vine([new THREE.Vector3(CX + Math.cos(a) * r0, SOIL, PZ + Math.sin(a) * r0 * .7), new THREE.Vector3(CX + Math.cos(a) * (r0 + reach * .4), SOIL + h, PZ + Math.sin(a) * (r0 + reach * .4) * .7),
+        new THREE.Vector3(CX + Math.cos(a) * (r0 + reach), SOIL + h * .7, PZ + Math.sin(a) * (r0 + reach) * .7)], 2.6, 5.4, 4.2, .6);
+    }
+    // the trailing strands: from the soil, up a little, over the rim at their side, then down: the front ones hang free before the shelf,
+    // the back ones find the wall; each sways at its own pace, so they cross and weave; a few branch
+    for (let k = 0; k < 15; k++) {
+      const a = (k / 15) * Math.PI * 2 + (r() - .5) * .5, ca = Math.cos(a), sa = Math.sin(a), front = sa < -.2;
+      const len = 30 + r() * 80 * (k % 4 === 0 ? 1.1 : .75), amp = 3 + r() * 6, fr = .05 + r() * .05, ph = r() * 6.3, lean = ca * (8 + r() * 26);
+      const pts = [new THREE.Vector3(CX + ca * 3, SOIL, PZ + sa * 2.5), new THREE.Vector3(CX + ca * 7, RIM + 3 + r() * 4, PZ + sa * 5.5), new THREE.Vector3(CX + ca * 11, RIM - 1.5, PZ + sa * 8)];
+      const zEnd = front ? PZ - 9 - r() * 4 : WZ - 1.6 - r() * 1.2;
+      for (let d = 8; d <= len; d += 8) { const t = d / len;
+        pts.push(new THREE.Vector3(CX + ca * 11 + lean * Math.sqrt(t) + amp * Math.sin(fr * d * 6.3 + ph), RIM - 1.5 - d, THREE.MathUtils.lerp(PZ + sa * 8, zEnd, Math.min(1, t * 2.2)) + Math.sin(d * .21 + ph) * 1.2)); }
+      const c = vine(pts, 3.3, 5.6, 2.5);
+      if (r() < .45 && len > 50) {                                    // a side shoot from partway down
+        const t0 = .3 + r() * .3, b0 = c.getPoint(t0), dir = r() < .5 ? -1 : 1, bl = 18 + r() * 25, bp = [b0.clone()];
+        for (let d = 6; d <= bl; d += 6) bp.push(new THREE.Vector3(b0.x + dir * d * .6 + Math.sin(d * .4 + ph) * 2, b0.y - d * .8, b0.z + (front ? -1 : .3) * Math.min(3, d * .1)));
+        vine(bp, 3.2, 4, 2.4);
       }
     }
     const leafM = std({ name: 'ivyLeaf', color: '#2f4a2c', roughness: .42, side: THREE.DoubleSide }), stemM = std({ name: 'ivyStem', color: '#4d4630', roughness: .8 });
@@ -440,6 +458,6 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     foot = [k.out.map(([x, z]) => inF(SFd, x, z)), circle(k.side, 27), ...fixed]; return foot;
   }
   setSofa('gala3');
-  const drapeMeshes = () => CUR.children.filter(c => c.material === drapeM);   // the drapes, a switch in the walk (the sheers are not)
+  const drapeMeshes = () => [];                                     // (the drapes: rooms.js)
   return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes };
 }

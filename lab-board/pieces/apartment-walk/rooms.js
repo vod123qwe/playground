@@ -16,6 +16,7 @@ const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Mat
 // curve, as A.04 draws it: along the line of the first window wall, then along the pier's by the bed; its end stops short of the bedside
 // table. The study's hangs over its window and 20 cm either side, its pelmet closed at both ends
 const TRACKS = {
+  L: { pts: [[445.1, -1193.2], [787.0, -752.2]] },                     // the living room: along the facade, from the kitchen run's end to the console's corner
   H: { pts: [[393, -44], [20, -44]] },
   E: { pts: [[801, -735], [1019, -453]], span: [93, 314] },
   F: { lines: [[[1026, -443], [1174, -253]], [[1105, -70], [1071, -44]]], r: 24, endGap: 14 },
@@ -193,6 +194,11 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   // the door or the window behind
   const switches = RUNS.map(R => ({ name: `curtains ${R.room}`, curtains: true, get on() { return R.closed; },
     get meshes() { return [...R.DR.children]; }, set(v) { R.closed = !!v; } }));   // (the motion: step)
+  // for the walk's light: how far a room's drapes are drawn (0..1, as they move), which track a window is on, a point inside each room
+  const setClosed = (room, v) => { const R = RUNS.find(q => q.room === room); if (R) R.closed = !!v; };
+  const closure = room => { const R = RUNS.find(q => q.room === room); return R ? THREE.MathUtils.clamp(R.c, 0, 1) : 0; };
+  const trackOf = (x, z) => { let best = null, bd = 60; for (const R of RUNS) { const { d } = R.P.near(x, z); if (d < bd) { bd = d; best = R.room; } } return best; };
+  const inside = Object.fromEntries(RUNS.map(R => { const c = R.P.at((R.u0 + R.u1) / 2); return [R.room, [c.x + c.nx * 80, c.z + c.nz * 80]]; }));
 
   // ---------- F, the bedroom ----------
   // the PAX along the bathroom wall (x 693), the doors facing into the room; the filler at the corner with the bed's wall
@@ -234,5 +240,5 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   const setLamps = on => lamps.forEach(l => l.set(on));
   // lying on it: the head on the pillows, the eyes 80 cm up, looking down the bed at the TV; where you stand up beside it
   const bed = { x0: BX0, x1: BX1, headZ: WZ - 50, standZ: WZ - 125, eye: 80, yaw: -Math.PI / 2, pitch: .19, meshes: bedParts };
-  return { root, foot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: run.doors, bed };
+  return { root, foot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: run.doors, bed, setClosed, closure, trackOf, inside };
 }
