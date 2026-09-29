@@ -997,7 +997,8 @@ const OPEN = [];
 // lamps that are on nearest to you (a lamp further off still glows, its light would not reach you anyway). Their shadows are drawn only when
 // something changes (a lamp, a door, a curtain). So the light count never changes (switching a lamp needs no new shaders) and stays low
 const SLOTS = [0, 1, 2].map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); l.castShadow = true; l.shadow.autoUpdate = false; l.shadow.mapSize.set(512, 512);
-  l.shadow.camera.near = .03; l.shadow.bias = -.004; l.shadow.normalBias = .02; scene.add(l); return l; });
+  l.shadow.camera.near = .03; l.shadow.bias = -.004; l.shadow.normalBias = .02; l.shadow.needsUpdate = true; scene.add(l); return l; });   // (drawn once at the start: a shadow map never drawn
+// has no texture, and a sampler without one stops every lit material from drawing: only the sky showed)
 let slotKey = '';
 function lendShadows(changed) {
   const all = lampList().filter(l => l.light), wp = new THREE.Vector3();
