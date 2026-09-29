@@ -239,10 +239,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=8';
-import { buildLiving } from './living.js?v=12';
-import { buildHall } from './hall.js?v=3';
-import { buildRooms } from './rooms.js?v=5';
+import { buildKitchen } from './kitchen.js?v=10';
+import { buildLiving } from './living.js?v=13';
+import { buildHall } from './hall.js?v=4';
+import { buildRooms } from './rooms.js?v=8';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -268,7 +268,7 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
-const S = { view: 'generic', sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
+const S = { bob: true, view: 'generic', sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
 const DEF = { ...S };
 const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d / 2 - 62) * 10) / 10 : 90;   // the aisle as A.04 draws it
 
@@ -991,6 +991,7 @@ function segDist(x, z, dr) {                                       // how far a 
   return Math.hypot(x - ax - v[0] * t, z - az - v[1] * t);
 }
 const toggleDoor = dr => { if (dr.kind !== 'fixed') dr.to = dr.to > .5 ? 0 : 1; };
+const OPEN = [];                                                    // the kitchen's fronts, drawers and appliances, the PAX doors: { f, to, parts, apply }
 // a soft ground for the shadow, far enough below to read as the storey height
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.ShadowMaterial({ opacity: .12 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.23; ground.receiveShadow = true; scene.add(ground);
 // the drawing on the floor, to check the model against it
@@ -1060,11 +1061,52 @@ const P = { x: A.start[0], z: A.start[1], yaw: 0, pitch: -.04, vx: 0, vz: 0 };  
 const keys = new Set(), ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let mode = 'over', tween = null;
 const overPose = { pos: camera.position.clone(), target: controls.target.clone() };
+// the walk's eye. Walking, it sways as a head does: down and up with every step (1.3 cm), side to side with every stride (0.8 cm), a
+// touch of roll; it fades in with the pace and out when you stop (off with Head bob in the panel, or for reduced motion). Lying on the
+// bed (LIE), it comes down onto the pillow
+const BOB = { ph: 0, amp: 0 };
+let LIE = null;                                                      // { e: 0..1 how far down, dir: +1 lying down / -1 getting up, from, to, eye, yaw0, side }
 const eyePose = () => {
-  const pos = new THREE.Vector3(wx(P.x), S.eye * M, wz(P.z));
-  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(P.pitch, -P.yaw - Math.PI / 2, 0, 'YXZ'));
+  const k = LIE ? THREE.MathUtils.smootherstep(LIE.e, 0, 1) : 0;
+  const pos = new THREE.Vector3(wx(P.x), THREE.MathUtils.lerp(S.eye, LIE ? LIE.eye : S.eye, k) * M, wz(P.z));
+  let roll = 0, nod = 0;
+  if (BOB.amp > .001) {
+    const sw = Math.sin(BOB.ph), up = Math.cos(2 * BOB.ph);
+    pos.y += up * 1.3 * BOB.amp * M; pos.x += -Math.sin(P.yaw) * sw * .8 * BOB.amp * M; pos.z += Math.cos(P.yaw) * sw * .8 * BOB.amp * M;
+    roll = sw * .0055 * BOB.amp; nod = up * .003 * BOB.amp;
+  }
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(P.pitch + nod, -P.yaw - Math.PI / 2, roll, 'YXZ'));
   return { pos, q };
 };
+function stepBob(dt) {                                               // the phase runs with the distance walked: half a turn a step of 65 cm
+  const v = Math.hypot(P.vx, P.vz), on = S.bob && !reduce && mode === 'walk' && !tween && !LIE && !SPOT.cur;
+  BOB.amp += ((on ? THREE.MathUtils.smoothstep(v, 12, 110) : 0) - BOB.amp) * (1 - Math.exp(-dt * 6));
+  BOB.ph += dt * v / 65 * Math.PI;
+}
+// lying down: a click on the bed (within reach) lays you on its nearer side, the head on the pillow, looking down the bed; you can turn
+// your head (drag) to the sides and up to the ceiling. A step key, Escape or another click on the bed gets you up beside it
+function lieDown() {
+  const B = FURN?.bed; if (!B || LIE || mode !== 'walk' || SPOT.cur) return;
+  if (Math.hypot(P.x - (B.x0 + B.x1) / 2, P.z - (B.headZ + B.standZ) / 2) > 260) return;   // walk up to it first
+  const left = P.x < (B.x0 + B.x1) / 2, hx = left ? B.x0 + 48 : B.x1 - 48;
+  LIE = { e: 0, dir: 1, eye: B.eye, yaw0: B.yaw, side: left ? -1 : 1, from: { x: P.x, z: P.z, yaw: P.yaw, pitch: P.pitch }, to: { x: hx, z: B.headZ, yaw: B.yaw, pitch: B.pitch } };
+  P.vx = P.vz = 0; keys.clear(); paintHint();
+}
+function getUp() {
+  if (!LIE || LIE.dir < 0) return;
+  const B = FURN.bed, x = LIE.side < 0 ? B.x0 - 36 : B.x1 + 36;
+  LIE.dir = -1; LIE.to = { x: P.x, z: P.z, yaw: P.yaw, pitch: P.pitch }; LIE.from = { x, z: B.standZ, yaw: LIE.side < 0 ? Math.PI : 0, pitch: 0 };
+}
+function stepLie(dt) {
+  if (!LIE) return;
+  LIE.e = THREE.MathUtils.clamp(LIE.e + LIE.dir * dt / (reduce ? .01 : 1.25), 0, 1);
+  const k = THREE.MathUtils.smootherstep(LIE.e, 0, 1), F = LIE.from, T = LIE.to, dy = Math.atan2(Math.sin(T.yaw - F.yaw), Math.cos(T.yaw - F.yaw));
+  if (LIE.dir < 0 || LIE.e < 1) { P.x = F.x + (T.x - F.x) * k; P.z = F.z + (T.z - F.z) * k; P.yaw = F.yaw + dy * k; P.pitch = F.pitch + (T.pitch - F.pitch) * k; }
+  if (LIE.dir < 0 && LIE.e <= 0) { LIE = null; unstick(); paintHint(); }
+  moved();
+}
+const bedSwitch = { name: 'bed', t: 0, get on() { return !!LIE && LIE.dir > 0; }, get meshes() { return FURN?.bed?.meshes || []; },
+  set(v) { const now = performance.now(); if (now - this.t < 900) return; this.t = now; v ? lieDown() : getUp(); } };   // (one click, one change)
 function setMode(m, at) {
   if (m === mode && !at) return;
   const from = { pos: camera.position.clone(), q: camera.quaternion.clone(), fov: camera.fov, cut: S.cutNow ?? S.cut };
@@ -1073,7 +1115,7 @@ function setMode(m, at) {
     if (mode === 'over') { overPose.pos.copy(camera.position); overPose.target.copy(controls.target); }
     controls.enabled = false;
   }
-  mode = m; Z.level = Z.target = 1; document.body.classList.toggle('walk', m === 'walk'); paintModes(); paintHint();
+  mode = m; Z.level = Z.target = 1; if (LIE) { LIE = null; unstick(); } document.body.classList.toggle('walk', m === 'walk'); paintModes(); paintHint();
   const to = () => {
     if (m === 'walk') { const e = eyePose(); return { pos: e.pos, q: e.q, fov: S.fov, cut: H }; }
     const c = new THREE.PerspectiveCamera(); c.position.copy(overPose.pos); c.lookAt(overPose.target);
@@ -1117,6 +1159,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') { setMode(mode === 'walk' ? 'over' : 'walk'); return; }
   if (mode === 'over' && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); if (!e.code.startsWith('Shift')) e.preventDefault(); return; }
   if (mode !== 'walk') return;
+  if (LIE && (e.code === 'Escape' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].includes(e.code))) { getUp(); e.preventDefault(); return; }
   if (e.code === 'KeyE') { const dr = nearestDoor(); if (dr) toggleDoor(dr); return; }
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); e.preventDefault(); }
 });
@@ -1142,7 +1185,7 @@ canvas.addEventListener('pointerup', e => {                         // a click (
   else if (dr) { toggleDoor(dr); grabFlash(); }
 });
 // the lamps you can click: the pendants over the island (one switch) and over the table
-function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
+function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
 // ---------- the hand: over a leaf that opens, and while Space-panning the overview ----------
 const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0 };
 const sp = { held: false, id: null, x: 0, y: 0 };
@@ -1150,7 +1193,7 @@ let hoverLeaf = null, hoverDirty = false, grabUntil = 0;
 function pickLeaf(cx, cy) {                                         // the first thing under the pointer, if it is a leaf that opens
   const r = canvas.getBoundingClientRect(); ndc.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const leaves = doors.filter(d => d.kind !== 'fixed').map(d => d.leaf), lamps = lampList().flatMap(l => l.meshes);
+  const leaves = [...doors.filter(d => d.kind !== 'fixed').map(d => d.leaf), ...OPEN.flatMap(o => o.parts)], lamps = lampList().flatMap(l => l.meshes);
   const hit = ray.intersectObjects([...wallMeshes, ...leaves, ...lamps], false).find(h => h.object.visible);
   if (!hit || hit.distance > (mode === 'walk' ? 6 : 60)) return null;
   const u = hit.object.userData; return u.door && hit.distance < (mode === 'walk' ? 4 : 60) ? u.door : u.lamp || null;
@@ -1222,6 +1265,10 @@ canvas.addEventListener('pointermove', e => {
   if (!look || e.pointerId !== look.id) return;
   const k = e.pointerType === 'touch' ? .006 : .0038;
   P.yaw += (e.clientX - look.x) * k; P.pitch = THREE.MathUtils.clamp(P.pitch - (e.clientY - look.y) * k, -1.2, 1.2);
+  if (LIE && LIE.dir > 0 && LIE.e >= 1) {                             // lying: the head turns about 105 degrees either way, looks up to the ceiling
+    const d = Math.atan2(Math.sin(P.yaw - LIE.yaw0), Math.cos(P.yaw - LIE.yaw0)); P.yaw = LIE.yaw0 + THREE.MathUtils.clamp(d, -1.85, 1.85);
+    P.pitch = THREE.MathUtils.clamp(P.pitch, -.8, 1.5);
+  }
   look.x = e.clientX; look.y = e.clientY;
 });
 const endLook = e => { if (look && e.pointerId === look.id) { look = null; document.body.classList.remove('looking'); } };
@@ -1340,6 +1387,7 @@ const ctl = {};
   ctl.eye = LabUI.slider(g, { label: 'Eye height', min: 110, max: 195, step: 1, unit: ' cm', value: S.eye, def: DEF.eye, onInput: v => { S.eye = v; } });
   ctl.speed = LabUI.slider(g, { label: 'Speed', min: .5, max: 3, step: .1, unit: ' m/s', value: S.speed, def: DEF.speed, onInput: v => { S.speed = v; } });
   ctl.fov = LabUI.slider(g, { label: 'Field of view', min: 50, max: 100, step: 1, unit: '°', value: S.fov, def: DEF.fov, onInput: v => { S.fov = v; if (mode === 'walk' && !tween) { camera.fov = v; camera.updateProjectionMatrix(); } } });
+  ctl.bob = LabUI.check(g, { label: 'Head bob', value: S.bob, onChange: v => { S.bob = v; } });
   ctl.ceiling = LabUI.check(g, { label: 'Ceiling', value: S.ceiling, onChange: v => { S.ceiling = v; } });
   g = LabUI.group(panel, 'Doors', { key: 'lab.aw.group.doors' });
   ctl.doors = LabUI.seg(g, { label: 'All doors', options: [['built', 'As left'], ['open', 'Open'], ['closed', 'Closed']], value: 'built',
@@ -1350,7 +1398,7 @@ const ctl = {};
   g = LabUI.group(panel, 'Light', { key: 'lab.aw.group.light' });
   ctl.warmth = LabUI.slider(g, { label: 'Light warmth', min: 2700, max: 6500, step: 100, unit: ' K', value: S.warmth, def: DEF.warmth, onInput: v => { S.warmth = v; placeSun(); } });
   ctl.power = LabUI.slider(g, { label: 'Light strength', min: .2, max: 2, step: .05, value: S.power, def: DEF.power, onInput: v => { S.power = v; placeSun(); } });
-  ctl.lamps = LabUI.check(g, { label: 'Lamps on', value: S.lamps, onChange: v => { S.lamps = v; LIV?.setLamps(v); KIT?.setLamps?.(v); ptScene(); } });
+  ctl.lamps = LabUI.check(g, { label: 'Lamps on', value: S.lamps, onChange: v => { S.lamps = v; LIV?.setLamps(v); KIT?.setLamps?.(v); FURN?.setLamps?.(v); ptScene(); } });
   ctl.portal = LabUI.slider(g, { label: 'Window light', min: 0, max: 10, step: .1, value: S.portal, def: DEF.portal, onInput: v => { S.portal = v; placeSun(); } });
   {
     ctl.bounces = LabUI.slider(g, { label: 'Light bounces', min: 2, max: 8, step: 1, value: S.bounces, def: DEF.bounces, onInput: v => { S.bounces = v; ptScene(); } });
@@ -1688,7 +1736,7 @@ function frame(now) {
     const cut = tween.from.cut + (to.cut - tween.from.cut) * e; if (Math.abs(cut - (S.cutNow ?? -1)) > .5 || k === 1) applyCut(cut);
     if (k === 1) { tween = null; if (mode === 'over') { controls.target.copy(overPose.target); controls.enabled = true; controls.update(); } }
   } else if (mode === 'walk') {
-    if (!SPOT.cur) stepWalk(dt); stepLens(dt); const e = eyePose(); if (SPOT.cur) e.pos.y = SPOT.cur.eye * M; camera.position.copy(e.pos); camera.quaternion.copy(e.q);
+    if (!SPOT.cur && !LIE) stepWalk(dt); stepLie(dt); stepBob(dt); stepLens(dt); const e = eyePose(); if (SPOT.cur) e.pos.y = SPOT.cur.eye * M; camera.position.copy(e.pos); camera.quaternion.copy(e.q);
   } else {                                                          // the overview: no lower than the tops of the walls
     panOver(dt);
     const up = OV_Y - controls.target.y, dist = camera.position.distanceTo(controls.target);
@@ -1709,6 +1757,10 @@ function frame(now) {
     if (dr.kind === 'tilt') dr.pivot.rotation.x = dr.sI * ez * .17;        // tips in about 10°
     else if (dr.kind === 'turn') dr.pivot.rotation.y = -dr.sI * dr.hs * ez * Math.PI / 2;   // wide open, square to the wall
     else if (!dr.kind) dr.pivot.rotation.y = -dr.sg * ez * Math.PI / 2 * .98;
+  }
+  for (const o of OPEN) if (o.f !== o.to) {                           // the cupboards: the same easing, a little quicker
+    const k = reduce ? 1 : Math.min(1, dt * 3.2); o.f += Math.sign(o.to - o.f) * Math.min(Math.abs(o.to - o.f), k * (.35 + Math.abs(o.to - o.f))); if (Math.abs(o.to - o.f) < .002) o.f = o.to;
+    o.apply(THREE.MathUtils.smootherstep(o.f, 0, 1)); o.moved = true;
   }
   if (hoverDirty && !look && sp.id === null) { hoverDirty = false; hoverLeaf = pickLeaf(hv.x, hv.y); }
   paintHand(now);
@@ -1738,6 +1790,7 @@ function frame(now) {
     const r = roomAt(P.x, P.z);
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
+  if (OPEN.some(o => o.moved)) { for (const o of OPEN) o.moved = false; ptScene(); }
   if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); if (FURN) FURN.update(doors); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
   const idle = S.pt && mode === 'walk' && !tween && !SPOT.cur && performance.now() - lastMove > 280;
@@ -1775,11 +1828,14 @@ const kitchenReady = floorsReady.then(async () => {
   const K = A.kitchen; if (!K) return;
   KIT = await buildKitchen({ THREE, K, H, clip, renderer });
   const g = KIT.root; g.scale.setScalar(M); g.position.set(wx(K.a[0]), 0, wz(K.a[1])); g.rotation.y = Math.atan2(-K.d[1], K.d[0]); world.add(g);
-  kitchenFoot = KIT.foot; KIT.setLamps(S.lamps); lensList = null; ptScene(); unstick();
+  kitchenFoot = KIT.foot; KIT.setLamps(S.lamps); OPEN.push(...KIT.openers); lensList = null; ptScene(); unstick();
   if (S.aisle !== AISLE0) setAisle(S.aisle);
 }).catch(err => console.warn('kitchen', err));
 // the entrance: the PAX wardrobe in the tiled strip, where A.04 draws it (plan centimetres)
 const HALL = buildHall({ THREE, clip }); HALL.root.scale.setScalar(M); HALL.root.position.set(wx(0), 0, wz(0)); world.add(HALL.root);
+// the PAX doors open too (to about 95 degrees), as the kitchen's fronts: openers the frame eases and applies
+function paxOpeners(list) { for (const d of list) { const o = { kind: 'fx', f: 0, to: 0, parts: [d.mesh], apply: ez => { d.pivot.rotation.y = d.s * ez * 1.66; } }; d.mesh.userData.door = o; OPEN.push(o); } }
+paxOpeners(HALL.doors);
 livingFoot = [...HALL.foot];
 // the living room on A.04: the sofa, the tables, the TV console, the rug, lamps and a few things (plan centimetres)
 let LIV = null;
@@ -1798,7 +1854,7 @@ function applySofa() {                                              // the sofa 
 let FURN = null;                                                    // the bedroom, the study, the child's room (rooms.js)
 const livingReady = kitchenReady.then(async () => {
   loadStep(3, 'Furnishing the rooms…');
-  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats }); FURN.update(doors); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
+  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
   catch (err) { console.warn('rooms', err); }
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
@@ -1814,7 +1870,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { PANO, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { PANO, lieDown, getUp, get LIE() { return LIE; }, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>

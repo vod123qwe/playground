@@ -3,9 +3,12 @@
 // the wall's return by the entrance to 40 cm short of the window wall (as A.04 draws it), the island 180 x 80 where A.04 draws it.
 // The worktops in Taj Mahal quartzite (tools/make_tajmahal.py), polished, 3 cm. Everything is modelled in centimetres.
 //
-// Run, from the entrance side: integrated fridge-freezer 60 (tall) | undermount sink 60 | integrated dishwasher 60 | flush induction 80 |
-// cargo 30 | oven 60 + compact oven with microwave 45 (tall). Heights: plinth 10, worktop 87-90, uppers 145 to the ceiling (55 cm of
-// backsplash), tall units to the ceiling.
+// Run, from the entrance side: a 5 cm oak filler (the fridge's drawers clear the wall) | integrated fridge-freezer 60 (tall) | undermount
+// sink 60 over a pull-out with bins | integrated dishwasher 60 | flush induction 80 | cargo 30 | oven 60 + compact oven with microwave 45
+// (tall) | a tall 36 cm cupboard to the window wall (trays, boards). Uppers over the worktop split as the lowers (60 | 60 | 80 | 30), the
+// 80 over the hob holding a pull-out hood. Heights: plinth 10, worktop 87-90, uppers 145 to the ceiling (55 cm of backsplash).
+// Everything opens (openers): doors on their hinges, drawers and pull-outs, the oven doors drop, the dishwasher tips down, the hood's
+// visor slides out; inside, carcasses with shelves, the fridge's liner, shelves and door bins, the ovens' cavities and racks.
 
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -85,11 +88,41 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   }
   const G = .3;                                                      // the gap between two fronts
   // a lower front with the integrated handle: a 3 cm groove along its top edge (the concept's "frez")
-  function lowerFront(x0, x1, y0, y1, z) { box(x0 + G / 2, x1 - G / 2, y0 + G / 2, y1 - 3, z, z + 1.9, oak); box(x0 + G / 2, x1 - G / 2, y1 - 3, y1 - G / 2, z, z + .6, shadowGap); }
+  function lowerFront(x0, x1, y0, y1, z, parent = root) { return [box(x0 + G / 2, x1 - G / 2, y0 + G / 2, y1 - 3, z, z + 1.9, oak, OAK, parent), box(x0 + G / 2, x1 - G / 2, y1 - 3, y1 - G / 2, z, z + .6, shadowGap, OAK, parent)]; }
   function tallFront(x0, x1, y0, y1, z, handleRight) {                // a tall front with a vertical groove on the handle side
     const gx = handleRight ? x1 - 3 : x0;
-    box(handleRight ? x0 + G / 2 : x0 + 3, handleRight ? x1 - 3 : x1 - G / 2, y0 + G / 2, y1 - G / 2, z, z + 1.9, oak);
-    box(gx + (handleRight ? 0 : G / 2), gx + 3 - (handleRight ? G / 2 : 0), y0 + G / 2, y1 - G / 2, z, z + .6, shadowGap);
+    return [box(handleRight ? x0 + G / 2 : x0 + 3, handleRight ? x1 - 3 : x1 - G / 2, y0 + G / 2, y1 - G / 2, z, z + 1.9, oak),
+      box(gx + (handleRight ? 0 : G / 2), gx + 3 - (handleRight ? G / 2 : 0), y0 + G / 2, y1 - G / 2, z, z + .6, shadowGap)];
+  }
+  // ---------- what opens: each opener moves its parts by f (0 shut, 1 open), the viewer eases f and calls apply ----------
+  const openers = [];
+  const inner = std({ name: 'carcassIn', color: '#ece8e1', roughness: .7 }), drawerM = std({ name: 'drawerBox', color: '#dcdcd9', roughness: .45, metalness: .2 });
+  const wire = std({ name: 'wire', color: '#c9cacc', roughness: .3, metalness: 1 }), liner = std({ name: 'fridgeLiner', color: '#f3f4f3', roughness: .35 });
+  const cavity = std({ name: 'ovenCavity', color: '#17181a', roughness: .3, metalness: .25 }), tub = std({ name: 'dwTub', color: '#c2c4c6', roughness: .35, metalness: .9 });
+  const clear = std({ name: 'glass', color: '#e9f2f2', roughness: .05, transparent: true, opacity: .25, depthWrite: false });
+  function opener(parts, apply) { const o = { kind: 'fx', f: 0, to: 0, parts: [], apply }; for (const m of parts) m.traverse(c => { if (c.isMesh) { c.userData.door = o; o.parts.push(c); } }); openers.push(o); return o; }
+  function pivot(x, y, z, parts, parent = root) { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); parent.updateMatrixWorld(true); for (const m of parts) g.attach(m); return g; }
+  // a side-hung door: the hinge on the left (+1) or the right (-1) edge, at the carcass face zf, swinging out to about 100 degrees
+  const hinged = (parts, hx, zf, side, parent = root) => { const g = pivot(hx, 0, zf, parts, parent); return opener([g], ez => { g.rotation.y = -side * ez * 1.75; }); };
+  // a drawer: its front and box slide out along +z (or dir -1: -z)
+  const slide = (parts, dist, parent = root, dir = 1) => { const g = pivot(0, 0, 0, parts, parent); return opener([g], ez => { g.position.z = dir * ez * dist; }); };
+  // a door hinged at its bottom edge, tipping out (the ovens, the dishwasher)
+  const drop = (parts, y, zf, max = 1.52) => { const g = pivot(0, y, zf, parts); return opener([g], ez => { g.rotation.x = ez * max; }); };
+  // a carcass open at the front: back, sides, bottom, top, shelves (in the inner colour)
+  function shell(x0, x1, y0, y1, z0, z1, shelves = [], m = inner, parent = root) {
+    const t = 1.8, out = [box(x0, x1, y0, y1, z0, z0 + .8, m, OAK, parent, 0), box(x0, x0 + t, y0, y1, z0, z1, m, OAK, parent, 0), box(x1 - t, x1, y0, y1, z0, z1, m, OAK, parent, 0),
+      box(x0, x1, y0, y0 + t, z0, z1, m, OAK, parent, 0), box(x0, x1, y1 - t, y1, z0, z1, m, OAK, parent, 0)];
+    for (const y of shelves) out.push(box(x0 + t, x1 - t, y - t / 2, y + t / 2, z0 + .8, z1 - 2, m, OAK, parent, .1));
+    return out;
+  }
+  // a drawer box behind a front: metal sides, a bottom, a back; its top edge a little under the front's
+  const drawerBox = (x0, x1, y0, y1, z0, z1, parent = root) => [box(x0 + 1, x0 + 2.4, y0, y1, z0, z1, drawerM, OAK, parent, .2), box(x1 - 2.4, x1 - 1, y0, y1, z0, z1, drawerM, OAK, parent, .2),
+    box(x0 + 1, x1 - 1, y0, y0 + 1.2, z0, z1, inner, OAK, parent, .1), box(x0 + 1, x1 - 1, y0, y1, z0, z0 + 1.2, drawerM, OAK, parent, .2)];
+  // a wire rack: a frame and bars (the ovens, the dishwasher, the cargo)
+  function rack(x0, x1, y, z0, z1, n = 9, parent = root) {
+    const out = [box(x0, x1, y, y + .5, z0, z0 + .5, wire, OAK, parent, 0), box(x0, x1, y, y + .5, z1 - .5, z1, wire, OAK, parent, 0), box(x0, x0 + .5, y, y + .5, z0, z1, wire, OAK, parent, 0), box(x1 - .5, x1, y, y + .5, z0, z1, wire, OAK, parent, 0)];
+    for (let i = 1; i < n; i++) { const x = x0 + (x1 - x0) * i / n; out.push(box(x - .15, x + .15, y, y + .3, z0, z1, wire, OAK, parent, 0)); }
+    return out;
   }
 
   // ---------- the appliances: black glass fronts with a control strip (a small display, touch symbols) and a steel bar handle ----------
@@ -121,36 +154,64 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   }
   function appliance(x0, x1, y0, y1, kind) {                         // a glass door 2 cm proud of the carcass, its face printed, a bar on two posts
     const W = x1 - x0 - 1, Hh = y1 - y0, face = std({ name: `${kind}Face`, map: fascia(W, Hh, kind), roughness: .05, metalness: .15 });
-    box(x0 + .5, x1 - .5, y0, y1, D - 2, D - .05, blackGlass, OAK, root, .3);
-    const pane = new THREE.Mesh(new THREE.PlaneGeometry(W - .4, Hh - .4), face); pane.position.set((x0 + x1) / 2, (y0 + y1) / 2, D - .03); pane.receiveShadow = true; root.add(pane);
+    const out = [box(x0 + .5, x1 - .5, y0, y1, D - 2, D - .05, blackGlass, OAK, root, .3)];
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(W - .4, Hh - .4), face); pane.position.set((x0 + x1) / 2, (y0 + y1) / 2, D - .03); pane.receiveShadow = true; root.add(pane); out.push(pane);
     const hy = y1 - 9 - 3.2, bar = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, W - 10, 32), steel);
-    bar.rotation.z = Math.PI / 2; bar.position.set((x0 + x1) / 2, hy, D + 3.2); bar.castShadow = true; root.add(bar);
-    for (const sd of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 3.2, 16), steel); post.rotation.x = Math.PI / 2; post.position.set((x0 + x1) / 2 + sd * (W / 2 - 7), hy, D + 1.6); root.add(post); }
+    bar.rotation.z = Math.PI / 2; bar.position.set((x0 + x1) / 2, hy, D + 3.2); bar.castShadow = true; root.add(bar); out.push(bar);
+    for (const sd of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 3.2, 16), steel); post.rotation.x = Math.PI / 2; post.position.set((x0 + x1) / 2 + sd * (W / 2 - 7), hy, D + 1.6); root.add(post); out.push(post); }
+    return out;
   }
 
   // ---------- the run (x along the wall from the entrance side, z out of the wall) ----------
-  const L = Math.min(K.len, 350), Y0 = 10, WT = 87, TOP = 90, UP0 = 145, CEIL = H, D = 60, UD = 35;   // A.04: the run 350 long, 40 short of the window wall
-  const X = [0, 60, 120, 180, 260, 290, 350];                        // fridge | sink | dishwasher | hob | cargo | oven
-  // carcasses and the plinth (a dark recess 5 cm deep), under the filler too
-  const LF = K.len - .2;                                             // the filler's end: the window wall
-  box(0, LF, 0, Y0, 0, D - 5, shadowGap);
-  box(X[1], X[5], Y0, WT, 0, D - 2, carcass);
-  box(X[0], X[1], Y0, CEIL, 0, D - 2, carcass); box(X[5], L, Y0, CEIL, 0, D - 2, carcass);
-  // lower fronts: the sink (one door), the dishwasher (a full panel), three drawers under the hob, the cargo pull-out
-  lowerFront(X[1], X[2], Y0, WT, D - 2);
-  lowerFront(X[2], X[3], Y0, WT, D - 2);
-  lowerFront(X[3], X[4], Y0, 32, D - 2); lowerFront(X[3], X[4], 32, 58, D - 2); lowerFront(X[3], X[4], 58, WT, D - 2);
-  lowerFront(X[4], X[5], Y0, WT, D - 2);
-  // the fridge column: an integrated fridge-freezer (178 niche) behind oak: the freezer door, the fridge door, a store above; the
-  // appliance breathes through a black grille in the plinth
-  tallFront(X[0], X[1], Y0, 82, D - 2, true); tallFront(X[0], X[1], 82, 190, D - 2, true); tallFront(X[0], X[1], 190, CEIL, D - 2, true);
+  const Y0 = 10, WT = 87, TOP = 90, UP0 = 145, CEIL = H, D = 60, UD = 35;
+  const X = [5, 65, 125, 185, 265, 295, 355];                        // filler | fridge | sink | dishwasher | hob | cargo | oven | tall cupboard
+  const L = X[6], LF = K.len - .2;                                   // the ovens' column ends at 355 (A.04's 350 from the 5 cm filler); the cupboard to the wall
+  box(0, LF, 0, Y0, 0, D - 5, shadowGap);                             // the plinth, a dark recess 5 cm deep
+  // the filler by the wall's return, flush with the fronts, plinth to ceiling
+  box(G / 2, X[0] - G / 2, Y0, CEIL - G / 2, D - 2, D - .1, oak); box(0, X[0], Y0, CEIL, 0, D - 2, carcass);
+  // the fridge column: an integrated fridge-freezer (178 niche) behind oak doors, a store above; the appliance breathes through a black
+  // grille in the plinth. Inside: the liner, three freezer drawers, glass shelves, the crisper, a light; bins on the fridge door's back
+  shell(X[0], X[1], Y0, CEIL, 0, D - 2, [82, 190]);
+  shell(X[0] + 2, X[1] - 2, Y0 + 2, 188.5, 2, D - 3, [], liner);
+  for (const [y0, y1] of [[Y0 + 4, 32], [33, 56], [57, 79]]) box(X[0] + 4, X[1] - 4, y0, y1, 4, D - 4, std({ name: 'freezerDrawer', color: '#f5f6f6', roughness: .3, transparent: true, opacity: .85 }), OAK, root, .6);
+  box(X[0] + 3.8, X[1] - 3.8, 81, 82.5, 2.8, D - 3.2, liner);          // the freezer's lid
+  for (const y of [112, 132, 152, 170]) box(X[0] + 4, X[1] - 4, y, y + .5, 3, D - 6, clear, OAK, root, .1);
+  box(X[0] + 4, X[1] - 4, 84, 104, 4, D - 5, clear, OAK, root, .8);    // the crisper
+  box(X[0] + 12, X[1] - 12, 186.5, 187.2, 12, 40, std({ name: 'fridgeLight', color: '#ffffff', emissive: '#fff6ea', emissiveIntensity: .8, roughness: .3 }));
   for (let i = 0; i < 9; i++) box(X[0] + 8, X[1] - 8, 1.6 + i * .8, 2 + i * .8, D - 5.3, D - 4.9, legs, OAK, root, 0);
-  // the oven column: a drawer, the oven (60), the compact oven with microwave (45), a store above; black glass, the same line
-  lowerFront(X[5], L, Y0, 76, D - 2);
-  appliance(X[5], L, 76.5, 136, 'oven'); appliance(X[5], L, 137, 182, 'combi');
-  tallFront(X[5], L, 183, CEIL, D - 2, false);
-  // the 40 cm A.04 leaves to the window wall: an oak filler, flush with the fronts, from the plinth to the ceiling
-  box(L + G / 2, LF, Y0, CEIL - G / 2, D - 2, D - .1, oak); box(L, LF, Y0, CEIL, 0, D - 2, carcass);
+  { const fz = tallFront(X[0], X[1], Y0, 82, D - 2, true), fr = tallFront(X[0], X[1], 82, 190, D - 2, true);
+    fz.push(box(X[0] + 3, X[1] - 3, Y0 + 3, 79, D - 3.5, D - 2, liner, OAK, root, .5));
+    fr.push(box(X[0] + 3, X[1] - 3, 85, 187, D - 3.5, D - 2, liner, OAK, root, .5));
+    for (const y of [100, 125, 150, 172]) fr.push(box(X[0] + 7, X[1] - 7, y, y + 7, D - 13, D - 3.5, clear, OAK, root, .4));   // the door bins
+    hinged(fz, X[0], D - 2, 1); hinged(fr, X[0], D - 2, 1); hinged(tallFront(X[0], X[1], 190, CEIL, D - 2, true), X[0], D - 2, 1); }
+  // the sink: a pull-out below the bowl with two bins
+  { const box0 = box(X[1], X[2], Y0, 64, 0, D - 2, carcass);          // (the bowl and its trap above)
+    const f = lowerFront(X[1], X[2], Y0, WT, D - 2), db = drawerBox(X[1] + 1, X[2] - 1, Y0 + 3, 62, 6, D - 2.2);
+    for (const [a, b] of [[X[1] + 3, X[1] + 29], [X[1] + 31, X[2] - 3]]) db.push(box(a, b, Y0 + 4.2, 52, 9, D - 6, std({ name: 'bin', color: '#8b8d90', roughness: .6 }), OAK, root, 1.2));
+    slide([...f, ...db], 46); void box0; }
+  // the dishwasher: the oak panel tips down; the tub and two racks inside
+  shell(X[2], X[3], Y0, WT - 3, 0, D - 2, [], tub);
+  rack(X[2] + 3, X[3] - 3, 28, 6, D - 6, 12); rack(X[2] + 3, X[3] - 3, 56, 6, D - 6, 12);
+  { const f = lowerFront(X[2], X[3], Y0, WT, D - 2); f.push(box(X[2] + 2, X[3] - 2, Y0 + 3, WT - 5, D - 3, D - 2, tub, OAK, root, .4)); drop(f, Y0, D - 2, 1.45); }
+  // three drawers under the hob, the cargo pull-out with three wire baskets
+  box(X[3], X[5], Y0, WT, 0, D - 2, carcass);
+  for (const [y0, y1] of [[Y0, 32], [32, 58], [58, WT - 6]]) slide([...lowerFront(X[3], X[4], y0, y1 === WT - 6 ? WT : y1, D - 2), ...drawerBox(X[3] + 1, X[4] - 1, y0 + 3, y1 - 4, 6, D - 2.2)], 45);
+  { const f = lowerFront(X[4], X[5], Y0, WT, D - 2); for (const y of [16, 40, 64]) f.push(...rack(X[4] + 2, X[5] - 2, y, 6, D - 4, 5), box(X[4] + 2, X[5] - 2, y, y + 6, 6, 6.5, wire, OAK, root, 0));
+    f.push(box(X[4] + 2, X[4] + 3, Y0 + 2, 80, 6, D - 3, drawerM, OAK, root, .2)); slide(f, 48); }
+  // the oven column: a drawer, the oven (60), the compact oven with microwave (45), a store above; black glass, the same line. Behind
+  // the doors the enamel cavities with racks and a light
+  shell(X[5], L, Y0, CEIL, 0, D - 2, [76, 136.5, 182.5]);
+  slide([...lowerFront(X[5], L, Y0, 76, D - 2), ...drawerBox(X[5] + 1, L - 1, Y0 + 3, 70, 6, D - 2.2)], 45);
+  for (const [y0, y1] of [[76.5, 136], [137, 182]]) {
+    shell(X[5] + 2, L - 2, y0 + 1, y1 - 1, 2, D - 2.1, [], cavity);
+    rack(X[5] + 4, L - 4, y0 + (y1 - y0) * .38, 5, D - 5, 11);
+    box(L - 6, L - 4.5, y1 - 7, y1 - 5.5, 6, 8, std({ name: 'ovenLight', color: '#fff4e0', emissive: '#ffd9a0', emissiveIntensity: .6 }), OAK, root, .2);
+  }
+  drop(appliance(X[5], L, 76.5, 136, 'oven'), 76.5, D - 2); drop(appliance(X[5], L, 137, 182, 'combi'), 137, D - 2);
+  hinged(tallFront(X[5], L, 183, CEIL, D - 2, false), L, D - 2, -1);
+  // the tall cupboard to the window wall: shelves, the doors hinged on the wall's side
+  shell(L, LF, Y0, CEIL, 0, D - 2, [48, 88, 128, 183, 220]);
+  hinged(tallFront(L, LF, Y0, 183, D - 2, false), LF, D - 2, -1); hinged(tallFront(L, LF, 183, CEIL, D - 2, false), LF, D - 2, -1);
   // the worktop with the sink cut out, 62 deep (2 cm over the fronts)
   const topShape = new THREE.Shape([new THREE.Vector2(X[1] - .01, 0), new THREE.Vector2(X[5] + .01, 0), new THREE.Vector2(X[5] + .01, D + 2), new THREE.Vector2(X[1] - .01, D + 2)]);
   const SX0 = X[1] + 6, SX1 = X[2] - 6, SZ0 = 12, SZ1 = 52;         // the undermount bowl: 48 x 40, set off the tall fridge
@@ -198,9 +259,21 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / tiles.w, uv.getY(i) * h / tiles.h);
     const m = new THREE.Mesh(g, tiles.mat); m.position.set((X[1] + X[5]) / 2, (TOP + UP0) / 2, .15); m.receiveShadow = true; root.add(m);
   }
-  // the uppers: three cashmere fronts to the ceiling, push to open, the LED in a profile under them
-  box(X[1], X[5], UP0, CEIL, 0, UD - 2, carcass);
-  for (let i = 0; i < 3; i++) { const a = X[1] + (X[5] - X[1]) * i / 3, b = X[1] + (X[5] - X[1]) * (i + 1) / 3; box(a + G / 2, b - G / 2, UP0 + G / 2, CEIL - G / 2, UD - 2, UD - .1, cashmere); }
+  // the uppers: cashmere fronts to the ceiling split as the lowers (60 | 60 | 80 | 30), push to open, shelves inside; the 80 over the hob
+  // holds a pull-out hood: its visor, a strip in the fronts' colour under the door, slides out with the grille and two lights; the LED
+  // in a profile under them
+  for (const [a, b, side, hood] of [[X[1], X[2], 1, 0], [X[2], X[3], -1, 0], [X[3], X[4], 1, 1], [X[4], X[5], -1, 0]]) {
+    shell(a, b, UP0, CEIL, 0, UD - 2, hood ? [200, 228] : [182, 218]);
+    const y0 = hood ? UP0 + 5 : UP0;
+    hinged([box(a + G / 2, b - G / 2, y0 + G / 2, CEIL - G / 2, UD - 2, UD - .1, cashmere)], side > 0 ? a : b, UD - 2, side);
+    if (hood) {
+      box(a + 2, b - 2, UP0 + 1.8, UP0 + 24, 2, UD - 4, std({ name: 'hoodBody', color: '#2b2c2f', roughness: .5, metalness: .4 }));
+      const lamp = std({ name: 'hoodLight', color: '#fff6ea', emissive: '#fff1dc', emissiveIntensity: .7, roughness: .3 });
+      const v = [box(a + G / 2, b - G / 2, UP0 + .2, UP0 + 4.7, UD - 2, UD - .1, cashmere), box(a + 3, b - 3, UP0 + .6, UP0 + 1.2, 6, UD - 2, steel)];
+      for (const x of [a + 18, b - 18]) v.push(box(x - 3, x + 3, UP0 + .4, UP0 + .6, 22, 27, lamp, OAK, root, .2));
+      slide(v, 24);
+    }
+  }
   { const led = new THREE.Mesh(new THREE.BoxGeometry(X[5] - X[1] - 4, .4, 1.2), new THREE.MeshBasicMaterial({ name: 'led', color: '#ffe2b8', ...clip })); led.position.set((X[1] + X[5]) / 2, UP0 - .2, UD - 6); root.add(led);
     const light = new THREE.RectAreaLight('#ffd9a8', 40, (X[5] - X[1] - 6) / 100, .03); light.position.set((X[1] + X[5]) / 2, UP0 - .5, UD - 6); light.rotation.x = -Math.PI / 2; root.add(light); }
 
@@ -213,7 +286,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   box(ix0 + 2, ix1 - 2, Y0, WT, iz0 + 2, back, carcass, OAK, I);
   const cw = (IW - 4) / 3;
   for (let c = 0; c < 3; c++) { const a = ix0 + 2 + c * cw, b = a + cw;
-    const lf = (y0, y1) => { box(a + G / 2, b - G / 2, y0 + G / 2, y1 - 3, iz0, iz0 + 1.9, oak, OAK, I); box(a + G / 2, b - G / 2, y1 - 3, y1 - G / 2, iz0 + 1.3, iz0 + 1.9, shadowGap, OAK, I); };
+    const lf = (y0, y1) => { const f = [box(a + G / 2, b - G / 2, y0 + G / 2, y1 - 3, iz0, iz0 + 1.9, oak, OAK, I), box(a + G / 2, b - G / 2, y1 - 3, y1 - G / 2, iz0 + 1.3, iz0 + 1.9, shadowGap, OAK, I)];
+      f.push(...drawerBox(a + 1, b - 1, y0 + 3, y1 - 5, iz0 + 1.95, iz0 + 48, I)); slide(f, 44, I, -1); };
     lf(Y0, 50); lf(50, WT); }
   box(ix0, ix0 + 2, 0, WT, iz0, -iz0, oak, OAK, I); box(ix1 - 2, ix1, 0, WT, iz0, -iz0, oak, OAK, I);   // the oak ends, floor to top
   { const fw = IW - 4, fh = WT, n = Math.floor(fw / 2.5), step = fw / n, parts = [];      // the fluted back, under the overhang: half-round reeds, 2.5 cm, down to the floor
@@ -245,7 +319,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     const bk = new THREE.Mesh(backRail, oak); bk.position.y = SEAT + 12; bk.castShadow = true; St.add(bk);
   }
 
-  // ---------- things on the tops (Poly Haven, CC0): two clay vases by the oven, a carved wooden bowl of limes on the island; a pachira by the window ----------
+  // ---------- things on the tops (Poly Haven, CC0): two clay vases by the oven, a carved wooden bowl of limes on the island ----------
   const gl = new GLTFLoader();
   const clipIt = g => g.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; for (const m of [].concat(o.material)) { m.clippingPlanes = clip.clippingPlanes; m.clipShadows = true; } } });
   const model = async (id, x, y, z, sc = 1, rot = 0, parent = root) => {
@@ -260,9 +334,6 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     decor.push(gl.loadAsync(`${base}models/food_lime_01/food_lime_01.gltf`).then(({ scene: l }) => { clipIt(l);
       for (const [px_, pz_, py_] of [[-4, -3, .9], [3, -5, .9], [5, 2, .9], [-2, 4, .9], [0, -.5, 5.6], [-5, 1, 4.8], [3.5, -1.5, 5]]) {
         const c = l.clone(); c.scale.setScalar(100); c.position.set(12 + px_, TOP + py_, -4 + pz_); c.rotation.set(r() * 3, r() * 6, r() * 3); I.add(c); } })); }
-  { const pot = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [15, 0], [16.5, 2], [19.5, 36], [20, 38], [18.8, 38.2], [18.4, 35], [0, 35]].map(([r, y]) => new THREE.Vector2(r, y)), 48), std({ name: 'pot', color: '#cbb59a', roughness: .85 }));
-    pot.position.set(K.len + 38, 0, 100); pot.castShadow = pot.receiveShadow = true; root.add(pot);   // a clay planter in front of the pier by the balcony door
-    decor.push(model('pachira_aquatica_01', K.len + 38, 34, 100, .74, 2.2)); }
   await Promise.all(decor);
 
   // ---------- three pendants over the island: opal glass globes 22 cm across on black cords, 75 cm over the top, 60 cm apart ----------
@@ -290,5 +361,5 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const isl = (u, v) => P(K.island.along + u, K.island.off + v);
   const islandFoot = off => { const q = (u, v) => P(K.island.along + u, off + v); return [q(ix0, iz0), q(ix1, iz0), q(ix1, back + 2), q(ix0, back + 2)]; };
   foot.push(islandFoot(K.island.off));
-  return { root, foot, island: I, islandFoot, frontOfRun: D + 2, setLamps, lamps: [islandLamps] };
+  return { root, foot, island: I, islandFoot, frontOfRun: D + 2, setLamps, lamps: [islandLamps], openers };
 }

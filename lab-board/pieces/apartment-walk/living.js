@@ -355,7 +355,6 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     model('ceramic_vase_04', TV, Lc - 28, 62, 25, 2.1),             // a white jug and a framed print at the other end
     model('standing_picture_frame_02', TV, Lc - 10, 62, 29, -.25),     // (its face to the room)
     model('ceramic_vase_01', ST, 6, 45, -4, 1.9, { s: .8 }),          // a small clay vase on the side table
-    model('potted_plant_02', root, 443.8, 0, -1121.4, 1.3),          // a leafy plant in terracotta by the fixed leaf of the triple door
   ];
   // the pendant over the table: the dome 93 cm over the table (its bottom at 168), the rod up to the ceiling
   decor.push(model('modern_ceiling_lamp_01', DT, 0, 0, 0, 0, { top: H }).then(g => {
