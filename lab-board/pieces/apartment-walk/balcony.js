@@ -1,7 +1,7 @@
 // The balconies, to sit out on (plan centimetres, as rooms.js; their slabs' top is 3 cm under the floor inside):
 //  - all three decked in wood-look boards (acacia tones, 14.5 cm, along each balcony's length);
-//  - the living room's (5.5 x 1.5 m): by its single door, two low teak lounge chairs with thick cream cushions and a round teak table
-//    between them, along the rail so the way out of the door stays free; an olive tree in a stone pot at the far end; troughs of
+//  - the living room's (5.5 x 1.5 m): by its single door, close to it, two low teak lounge chairs with thick cream cushions and a
+//    little round teak coffee table between them; an olive tree in a stone pot at the far end; troughs of
 //    feather grass along the rail by the big window;
 //  - the bedroom's (the strip under the bedroom, 4.2 x 1.5 m): a sand half-parasol on a mast at the wall over a low teak daybed,
 //    140 x 200, a mattress and cushions on it, a little side table; grass troughs further along;
@@ -102,11 +102,11 @@ export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, 
   // ---------- the living room's balcony: along its wall from (459, -1248), out to the rail at 150 ----------
   { const p0 = [459, -1248], p1 = [796, -813], L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), e = [(p1[0] - p0[0]) / L, (p1[1] - p0[1]) / L], n = [e[1], -e[0]];   // n: out, away from the flat
     const G = frame(p0, e);                                              // (in G: x = s along the wall, z = -t: the frame's z runs into the flat)
-    lounge(G, 368, -104, 2.18); lounge(G, 510, -104, -2.18);                 // (each facing the table, turned 35 degrees out to the view) roundTable(G, 439, -112, 44, 45);   // by the single door (s 408..499), at the rail
+    lounge(G, 385, -50, 2.18); lounge(G, 493, -50, -2.18);                   // (each facing the table, turned 35 degrees out to the view) roundTable(G, 439, -60, 34, 36);     // by the single door (s 408..499), close to it: a little coffee table between them
     oliveTree(G, 30, -112);
     trough(G, 110, -135, 80); trough(G, 205, -135, 80);
     stringLights(G, 10, 540, -8);
-    for (const [s, t, rr] of [[368, 104, 40], [510, 104, 40], [439, 112, 24], [30, 112, 28]]) { const c = toW(p0, e, n, s, t); foot.push(Array.from({ length: 10 }, (_, i) => [c[0] + Math.cos(i / 10 * Math.PI * 2) * rr, c[1] + Math.sin(i / 10 * Math.PI * 2) * rr])); }
+    for (const [s, t, rr] of [[385, 50, 40], [493, 50, 40], [439, 60, 19], [30, 112, 28]]) { const c = toW(p0, e, n, s, t); foot.push(Array.from({ length: 10 }, (_, i) => [c[0] + Math.cos(i / 10 * Math.PI * 2) * rr, c[1] + Math.sin(i / 10 * Math.PI * 2) * rr])); }
     for (const s of [110, 205]) { const a = toW(p0, e, n, s - 40, 124), b = toW(p0, e, n, s + 40, 124), c = toW(p0, e, n, s + 40, 146), d = toW(p0, e, n, s - 40, 146); foot.push([a, b, c, d]); }
   }
   // ---------- the bedroom's balcony, its strip under the bedroom (z 0 .. 150, from x 660): the half-parasol over the daybed ----------
