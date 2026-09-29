@@ -95,8 +95,8 @@ try: vs.view_transform = 'AgX'; vs.look = 'AgX - Base Contrast'
 except Exception as e: print('view transform', e)
 # the exposure follows the light as an eye would: the day as set, a little up in the golden hour, well up in the dusk (the lamps carry it)
 low = 1 - min(1, max(0, (math.degrees(el) - 2) / 18))            # 1 with the sun low, 0 from 20 up
-vs.exposure = a.exposure if a.exposure is not None else (.8 if lamps else .15 + 3.3 * low)
-vs.use_white_balance = True; vs.white_balance_temperature = a.wb + (0 if lamps else 3400 * low)   # the golden hour warmer (higher = warmer here)
+vs.exposure = a.exposure if a.exposure is not None else (2.2 if lamps else .15 + 3.3 * low)   # (the evening: only a few lamps, softly on)
+vs.use_white_balance = True; vs.white_balance_temperature = a.wb + (-900 if lamps else 3400 * low)   # the golden hour warmer (higher = warmer here)
 sc.render.image_settings.file_format = 'PNG'; sc.render.image_settings.color_depth = '8'
 if a.save_blend: bpy.ops.wm.save_as_mainfile(filepath=a.save_blend)
 print('SETUP', round(time.time() - t0, 1), 's; sun el', round(math.degrees(el), 1), 'rot', round(math.degrees(rot), 1), 'lamps', lamps, 'exposure', round(vs.exposure, 2))
