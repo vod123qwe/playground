@@ -5,13 +5,15 @@
 //   up. The loot has stats (cold damage, cast rate, teleport, life, mana, luck with loot, resistance, run speed): what you wear makes
 //   the next run quicker and luckier. An inventory (a figure with its slots and a backpack); runes work from the backpack; a set of
 //   four with bonuses; potions. It all keeps in this browser (localStorage).
-// - a duel for two visitors of the page, over the ghosts' connection (see ghosts.js): both at the TV, both pick it, first to three.
-//   Each side is the judge of its own figure: it moves itself, fires its own orbs, and takes the hits of the other's orbs as they reach
-//   it here (so a hit is never argued about by lag). Everything that comes from the other side is checked and clamped.
+// - a duel for two visitors of the page, over the ghosts' connection (see ghosts.js), with a draft first: the host picks the mode (each
+//   their own hero, a mirror of one, or at random), then each picks a hero (the frost mage, the archer, the knight: each its own attack
+//   and move), then one of three things for each of nine slots, then two skills of four; the hero so built is the one that fights.
+//   First to three. Each side is the judge of its own figure: it moves itself, fires its own shots, and takes the other's shots as they
+//   reach it here (so a hit is never argued about by lag). Everything that comes from the other side is checked and clamped.
 // Input each frame: { x, y } the move (-1..1, the pad's left stick or WASD), edges: tele (A / Space), start (Start / Enter), back
-// (handled by the caller, through closeOverlay), inv (Y / I), potion (LB / Q), drop (X / X), up, down, left, right; held: teleHeld,
-// cast (X / J); dev: 'pad' or 'keys', the one last used (the controls on the screen are drawn for it, so a pad's A is never taken for
-// the key A, which runs left).
+// (handled by the caller, through closeOverlay), inv (Y / I), potion (LB / Q), drop (X / X), sk1 (Y / K), sk2 (RB / L), up, down, left,
+// right; held: teleHeld, cast (X / J); dev: 'pad' or 'keys', the one last used (the controls on the screen are drawn for it, so a
+// pad's A is never taken for the key A, which runs left).
 
 export function createTVGame({ THREE }) {
   const W = 960, H = 540, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -22,12 +24,26 @@ export function createTVGame({ THREE }) {
   const iso = (x, y) => [(x - y) * TW / 2, (x + y) * TH / 2];
   const START = [AW - 2.5, AH - 2.5], FAR = [3, 3];                    // you come in at the near corner (the bottom of the screen); he waits at the far one (the top)
   let dev = 'keys', state = 'menu', sel = 0, t = 0, runT = 0, found = [], msg = null, net = null;
-  const pl = { x: START[0], y: START[1], hp: 100, mp: 100, cd: 0, cast: 0, face: [-.7, -.7], moving: 0, flash: 0, hurt: 0, heal: 0, alive: true };
+  const pl = { x: START[0], y: START[1], hp: 100, mp: 100, cd: 0, cast: 0, face: [-.7, -.7], moving: 0, flash: 0, hurt: 0, heal: 0, alive: true, sk: [0, 0], shield: 0, haste: 0 };
   const boss = { x: FAR[0], y: FAR[1], hp: 150, max: 150, cd: 1.5, hit: 0, dead: false, burst: 0 };
-  let shots = [], fshots = [], bolts = [], loot = [], sparks = [], trail = [];
+  let shots = [], fshots = [], bolts = [], loot = [], sparks = [], trail = [], aoes = [];
   const floor = Array.from({ length: AW * AH }, () => ({ l: rnd(.75, 1.1), crack: Math.random() < .12, blood: Math.random() < .06 }));
   const pillars = [[4.5, 8.5], [9, 3], [11, 10.5], [15, 6.5], [7.5, 6]];
   const braziers = [[1.2, 6], [6.5, 1.2], [12.5, 12], [16, 9.5]];
+
+  // ---------- the heroes: each its attack (held), its move (A / Space), and four skills to pick two from ----------
+  const CLASSES = {
+    mag: { n: 'Mag mrozu', hp: 100, mp: 100, run: 4.2, res: 0, prim: { n: 'lodowy pocisk', lo: 6, hi: 11, sp: 9, cd: .28, mp: 4, r: .55, life: 1.4, c: '#9fe0ff' }, mob: { n: 'teleport', d: 5, cd: .3, mp: 9, tp: 1 },
+      sk: [{ id: 'nova', n: 'Nowa mrozu', d: 'krąg 12 lodowych odłamków wokół ciebie', cd: 6, mp: 20 }, { id: 'aoe', n: 'Meteor', d: 'spada tam, gdzie stał przeciwnik, po sekundzie', cd: 8, mp: 25, dm: 30, r: 1.6, dl: 1 },
+        { id: 'shield', n: 'Pancerz lodu', d: 'o połowę mniej obrażeń przez 4 s', cd: 12, mp: 20 }, { id: 'heal', n: 'Odnowa', d: '+40% życia od razu', cd: 14, mp: 25 }] },
+    lucz: { n: 'Łuczniczka', hp: 90, mp: 80, run: 4.9, res: 0, prim: { n: 'strzała', lo: 4, hi: 8, sp: 14, cd: .2, mp: 2, r: .45, life: 1.1, c: '#fff2c0', arrow: 1 }, mob: { n: 'przewrót', d: 3, cd: .7, mp: 0 },
+      sk: [{ id: 'volley', n: 'Salwa', d: '5 strzał wachlarzem', cd: 4, mp: 10 }, { id: 'aoe', n: 'Deszcz strzał', d: 'spada tam, gdzie stał przeciwnik', cd: 8, mp: 20, dm: 24, r: 1.9, dl: .8 },
+        { id: 'haste', n: 'Wiatr', d: '+50% szybkości biegu przez 4 s', cd: 10, mp: 10 }, { id: 'heal', n: 'Opatrunek', d: '+40% życia od razu', cd: 14, mp: 20 }] },
+    ryc: { n: 'Rycerz', hp: 150, mp: 60, run: 4.0, res: 10, prim: { n: 'rzut młotem', lo: 10, hi: 16, sp: 6.5, cd: .5, mp: 3, r: .75, life: 1.3, c: '#ffd27a' }, mob: { n: 'szarża', d: 4, cd: 1.2, mp: 6 },
+      sk: [{ id: 'nova', n: 'Wir', d: 'krąg 10 uderzeń tuż wokół ciebie', cd: 6, mp: 15, short: 1 }, { id: 'shield', n: 'Tarcza', d: 'o połowę mniej obrażeń przez 4 s', cd: 10, mp: 15 },
+        { id: 'aoe', n: 'Młot niebios', d: 'uderza tam, gdzie stał przeciwnik', cd: 8, mp: 20, dm: 34, r: 1.4, dl: 1.1 }, { id: 'heal', n: 'Modlitwa', d: '+40% życia od razu', cd: 14, mp: 20 }] },
+  };
+  const CLS = Object.keys(CLASSES);
 
   // ---------- what you have: kept in this browser ----------
   const KEY = 'aw.tvgame.v1';
@@ -41,7 +57,7 @@ export function createTVGame({ THREE }) {
     gloves: ['Rękawice'], ring: ['Pierścień', 'Sygnet'], belt: ['Pas'], boots: ['Buty', 'Trzewiki'] };
   const AFF = [{ k: 'dmg', n: 'Mrozu', lo: 8, hi: 25 }, { k: 'fcr', n: 'Szybkości', lo: 8, hi: 20 }, { k: 'ftp', n: 'Wiatru', lo: 10, hi: 30 }, { k: 'life', n: 'Życia', lo: 10, hi: 35 },
     { k: 'mana', n: 'Umysłu', lo: 10, hi: 35 }, { k: 'mf', n: 'Szczęścia', lo: 10, hi: 35 }, { k: 'res', n: 'Ochrony', lo: 4, hi: 12 }, { k: 'reg', n: 'Skupienia', lo: 15, hi: 50 }, { k: 'run', n: 'Pośpiechu', lo: 5, hi: 15 }];
-  const STAT = { dmg: v => `+${v}% obrażeń od zimna`, fcr: v => `+${v}% szybkości rzucania`, ftp: v => `+${v}% szybkości teleportu`, life: v => `+${v} do życia`, mana: v => `+${v} do many`,
+  const STAT = { dmg: v => `+${v}% obrażeń`, fcr: v => `+${v}% szybkości ataku`, ftp: v => `+${v}% szybkości ruchu specjalnego`, life: v => `+${v} do życia`, mana: v => `+${v} do many`,
     mf: v => `+${v}% szczęścia do przedmiotów`, res: v => `${v}% odporności`, reg: v => `+${v}% regeneracji many`, run: v => `+${v}% szybkości biegu` };
   const ORDER = Object.keys(STAT);
   const RA = ['Szept', 'Pazur', 'Oko', 'Krąg', 'Cień', 'Znak', 'Kieł', 'Echo'], RB = ['Burzy', 'Zmierzchu', 'Otchłani', 'Popiołu', 'Szronu', 'Nocy', 'Wilka', 'Gwiazd'];
@@ -51,31 +67,36 @@ export function createTVGame({ THREE }) {
   const SETP = [{ slot: 'helm', name: 'Kaptur Wędrowca', base: 'Kaptur', st: { ftp: 15, life: 15 } }, { slot: 'armor', name: 'Płaszcz Wędrowca', base: 'Płaszcz', st: { res: 8, mana: 20 } },
     { slot: 'boots', name: 'Buty Wędrowca', base: 'Buty', st: { run: 10, ftp: 10 } }, { slot: 'gloves', name: 'Rękawice Wędrowca', base: 'Rękawice', st: { fcr: 10, mf: 15 } }];
   const RUNES = [{ name: 'Runa Oth', st: { life: 10 } }, { name: 'Runa Vel', st: { mf: 7 } }, { name: 'Runa Zar', st: { dmg: 6 } }, { name: 'Runa Kel', st: { fcr: 5 } }];
-  function makeItem(kind) {
-    if (kind === 'unique') { const u = pick(UNIQ); return { kind, slot: u.slot, name: u.name, base: u.base, st: { ...u.st } }; }
-    if (kind === 'set') { const s = pick(SETP); return { kind, slot: s.slot, name: s.name, base: s.base, set: 1, st: { ...s.st } }; }
+  // one thing: of a kind, for a slot when asked (a unique or a set piece the slot has none of: a rare instead); duel: no luck with loot
+  const WEAPONS = { mag: ['Kostur', 'Różdżka', 'Laska'], lucz: ['Łuk', 'Długi łuk', 'Łuk refleksyjny'], ryc: ['Młot', 'Buława', 'Młot bojowy'] };
+  function makeItem(kind, want, duel, cls) {                         // (cls: whose weapon it would be)
+    if (kind === 'unique') { const u = pick(UNIQ.filter(x => (!want || x.slot === want) && !(x.slot === 'weapon' && cls && cls !== 'mag'))); if (u) { const st = { ...u.st }; if (duel && st.mf) { st.life = (st.life || 0) + st.mf; delete st.mf; } return { kind, slot: u.slot, name: u.name, base: u.base, st }; } kind = 'rare'; }
+    if (kind === 'set') { const s = pick(SETP.filter(x => !want || x.slot === want)); if (s) { const st = { ...s.st }; if (duel && st.mf) { st.dmg = (st.dmg || 0) + st.mf; delete st.mf; } return { kind, slot: s.slot, name: s.name, base: s.base, set: 1, st }; } kind = 'rare'; }
     if (kind === 'rune') { const r = pick(RUNES); return { kind, slot: 'rune', name: r.name, base: 'Runa, działa z plecaka', st: { ...r.st } }; }
-    const slot = pick(Object.keys(BASES)), base = pick(BASES[slot]), affs = shuffle(AFF.slice()).slice(0, kind === 'rare' ? irnd(3, 4) : irnd(1, 2)), st = {};
-    for (const a of affs) st[a.k] = Math.max(1, Math.round(rnd(a.lo, a.hi) * (kind === 'rare' ? 1 : .8)));
+    const slot = want || pick(Object.keys(BASES)), base = pick(slot === 'weapon' && cls ? WEAPONS[cls] : BASES[slot]), pool = AFF.filter(a => !duel || a.k !== 'mf');
+    const affs = shuffle(pool.slice()).slice(0, kind === 'rare' ? irnd(3, 4) : duel ? 2 : irnd(1, 2)), st = {};
+    for (const a of affs) st[a.k] = Math.max(1, Math.round(rnd(a.lo, a.hi) * (kind === 'rare' ? 1 : duel ? 1.25 : .8)));   // (a magic one in the draft: fewer, stronger)
     return { kind, slot, base, st, name: kind === 'rare' ? `${pick(RA)} ${pick(RB)}` : `${base} ${affs[0].n}` };
   }
-  // what it all adds up to
+  // what it all adds up to, for a hero in what they wear (and the runes they carry)
   let ST = null;
-  function recalc() {
-    const tt = {}, add = st => { for (const k in st) tt[k] = (tt[k] || 0) + st[k]; };
-    for (const k in SAVE.eq) if (SAVE.eq[k]) add(SAVE.eq[k].st);
-    for (const it of SAVE.bag) if (it.slot === 'rune') add(it.st);
-    const sets = Object.values(SAVE.eq).filter(i => i && i.set).length; if (sets >= 2) add({ life: 20 }); if (sets >= 4) add({ dmg: 25, mf: 25 });
-    ST = { t: tt, sets, maxHp: 100 + (tt.life || 0), maxMp: 100 + (tt.mana || 0), dmg: 1 + (tt.dmg || 0) / 100, cast: .28 / (1 + (tt.fcr || 0) / 100), tp: .3 / (1 + (tt.ftp || 0) / 100),
-      run: 4.2 * (1 + (tt.run || 0) / 100), mf: tt.mf || 0, res: Math.min(60, tt.res || 0), reg: 14 * (1 + (tt.reg || 0) / 100) };
+  function calc(eq, bag, cls) {
+    const tt = {}, add = st => { for (const k in st) tt[k] = (tt[k] || 0) + st[k]; }, C = CLASSES[cls];
+    for (const k in eq) if (eq[k]) add(eq[k].st);
+    for (const it of bag) if (it.slot === 'rune') add(it.st);
+    const sets = Object.values(eq).filter(i => i && i.set).length; if (sets >= 2) add({ life: 20 }); if (sets >= 4) add({ dmg: 25, mf: 25 });
+    ST = { t: tt, sets, cls, C, maxHp: C.hp + (tt.life || 0), maxMp: C.mp + (tt.mana || 0), dmg: 1 + (tt.dmg || 0) / 100, cast: C.prim.cd / (1 + (tt.fcr || 0) / 100), mob: C.mob.cd / (1 + (tt.ftp || 0) / 100),
+      run: C.run * (1 + (tt.run || 0) / 100), mf: tt.mf || 0, res: Math.min(60, C.res + (tt.res || 0)), reg: 14 * (C.mp / 100) * (1 + (tt.reg || 0) / 100) };
     pl.hp = Math.min(pl.hp, ST.maxHp); pl.mp = Math.min(pl.mp, ST.maxMp);
   }
+  const recalc = () => calc(SAVE.eq, SAVE.bag, 'mag');                  // the run: the mage, in what the inventory holds
   recalc();
 
   function reset() {
-    Object.assign(pl, { x: START[0], y: START[1], hp: ST.maxHp, mp: ST.maxMp, cd: 0, cast: 0, face: [-.7, -.7], flash: 0, hurt: 0, heal: 0, alive: true });
+    recalc();
+    Object.assign(pl, { x: START[0], y: START[1], hp: ST.maxHp, mp: ST.maxMp, cd: 0, cast: 0, face: [-.7, -.7], flash: 0, hurt: 0, heal: 0, alive: true, sk: [0, 0], shield: 0, haste: 0 });
     Object.assign(boss, { hp: boss.max, cd: 1.5, hit: 0, dead: false, burst: 0 });
-    shots = []; fshots = []; bolts = []; loot = []; sparks = []; trail = []; runT = 0; msg = null; state = 'run'; SAVE.runs++; save();
+    shots = []; fshots = []; bolts = []; loot = []; sparks = []; trail = []; aoes = []; runT = 0; msg = null; state = 'run'; SAVE.runs++; save();
   }
   function drop() {                                                    // gold, a potion or two, three to five things; luck makes them better
     const f = 1 + ST.mf / 120, out = [{ kind: 'gold', amount: irnd(300, 2400) }, { kind: 'potion' }];
@@ -94,38 +115,55 @@ export function createTVGame({ THREE }) {
   }
   let noteT = 0, noteS = ''; const note = s => { noteS = s; noteT = 2.2; };
 
-  // ---------- you: moving, teleporting, casting, drinking (the same in the run and the duel; tgt: whom you aim at) ----------
+  // ---------- you: moving, your move, your attack, a potion (the same in the run and the duel; tgt: whom you aim at) ----------
   function control(dt, inp, tgt) {
-    const mx = inp.x || 0, my = inp.y || 0, ml = Math.hypot(mx, my), dir = ml > .2;
+    const C = ST.C, mx = inp.x || 0, my = inp.y || 0, ml = Math.hypot(mx, my), dir = ml > .2, run = ST.run * (pl.haste > 0 ? 1.5 : 1);
     if (dir) { const wx = mx + my, wy = my - mx, wl = Math.hypot(wx, wy); pl.face = [wx / wl, wy / wl];   // the arena's axes are turned 45 degrees to the screen
-      pl.x += pl.face[0] * ST.run * dt * Math.min(1, ml); pl.y += pl.face[1] * ST.run * dt * Math.min(1, ml); pl.moving = 1; } else pl.moving = 0;
+      pl.x += pl.face[0] * run * dt * Math.min(1, ml); pl.y += pl.face[1] * run * dt * Math.min(1, ml); pl.moving = 1; } else pl.moving = 0;
     pl.cd = Math.max(0, pl.cd - dt); pl.mp = Math.min(ST.maxMp, pl.mp + ST.reg * dt); pl.hp = Math.min(ST.maxHp, pl.hp + 2.5 * dt);
+    pl.shield = Math.max(0, pl.shield - dt); pl.haste = Math.max(0, pl.haste - dt); pl.sk = pl.sk.map(v => Math.max(0, v - dt));
     const aim = () => { if (!tgt) return null; const dx = tgt.x - pl.x, dy = tgt.y - pl.y, l = Math.hypot(dx, dy); return l > .01 && l < 12 ? [dx / l, dy / l] : null; };
-    let tp = false;
-    if ((inp.tele || inp.teleHeld) && pl.cd === 0 && pl.mp >= 9) {   // 5 tiles where you face, or at them when you stand still
-      const f = (!dir && aim()) || pl.face; pl.face = f; trail.push({ x: pl.x, y: pl.y, a: 1 });
-      pl.x += f[0] * 5; pl.y += f[1] * 5; pl.cd = ST.tp; pl.mp -= 9; pl.flash = 1; tp = true;
-      for (let i = 0; i < 14; i++) sparks.push({ x: pl.x, y: pl.y, vx: rnd(-2, 2), vy: rnd(-2, 2), z: rnd(0, 1.5), vz: rnd(1, 3), life: rnd(.3, .6), c: '#9fd8ff' });
+    let tp = false; const out = [];
+    if ((inp.tele || inp.teleHeld) && pl.cd === 0 && pl.mp >= C.mob.mp) {   // the move: where you face, or at them when you stand still
+      const f = (!dir && aim()) || pl.face; pl.face = f;
+      if (C.mob.tp) trail.push({ x: pl.x, y: pl.y, a: 1 }); else for (let k = 0; k < 4; k++) trail.push({ x: pl.x + f[0] * C.mob.d * k / 4, y: pl.y + f[1] * C.mob.d * k / 4, a: .5 + k * .12 });
+      pl.x += f[0] * C.mob.d; pl.y += f[1] * C.mob.d; pl.cd = ST.mob; pl.mp -= C.mob.mp; pl.flash = C.mob.tp ? 1 : .4; tp = true;
+      for (let i = 0; i < 14; i++) sparks.push({ x: pl.x, y: pl.y, vx: rnd(-2, 2), vy: rnd(-2, 2), z: rnd(0, 1.5), vz: rnd(1, 3), life: rnd(.3, .6), c: C.mob.tp ? '#9fd8ff' : '#d8cfb8' });
     }
     pl.x = Math.min(AW - .6, Math.max(.6, pl.x)); pl.y = Math.min(AH - .6, Math.max(.6, pl.y));
     for (const [px, py] of pillars) { const dx = pl.x - px, dy = pl.y - py, d = Math.hypot(dx, dy); if (d < .8) { pl.x = px + dx / (d || 1) * .8; pl.y = py + dy / (d || 1) * .8; } }
-    pl.cast = Math.max(0, pl.cast - dt); let shot = null;
-    if (inp.cast && pl.cast === 0 && pl.mp >= 4) { const f = aim() || pl.face;
-      shot = { x: pl.x + f[0] * .4, y: pl.y + f[1] * .4, vx: f[0] * 9, vy: f[1] * 9, life: 1.4, dm: rnd(6, 11) * ST.dmg }; shots.push(shot); pl.cast = ST.cast; pl.mp -= 4; }
-    if (inp.potion) { if (SAVE.pot > 0 && pl.hp < ST.maxHp) { SAVE.pot--; pl.heal = 1.2; save(); } else if (!SAVE.pot) note('Brak mikstur'); }
+    pl.cast = Math.max(0, pl.cast - dt);
+    if (inp.cast && pl.cast === 0 && pl.mp >= C.prim.mp) { const f = aim() || pl.face; out.push(fire(f, C.prim, 1)); pl.cast = ST.cast; pl.mp -= C.prim.mp; }
+    if (inp.potion && state !== 'duel') { if (SAVE.pot > 0 && pl.hp < ST.maxHp) { SAVE.pot--; pl.heal = 1.2; save(); } else if (!SAVE.pot) note('Brak mikstur'); }
     if (pl.heal > 0) { const k = Math.min(dt, pl.heal); pl.hp = Math.min(ST.maxHp, pl.hp + ST.maxHp * .5 * k / 1.2); pl.heal -= dt; }
     pl.flash = Math.max(0, pl.flash - dt * 3); pl.hurt = Math.max(0, pl.hurt - dt * 3);
-    return { shot, tp };
+    return { out, tp, aim };
   }
-  function hurt(n) { pl.hp -= n * (1 - ST.res / 100); pl.hurt = 1; for (let i = 0; i < 8; i++) sparks.push({ x: pl.x, y: pl.y, vx: rnd(-3, 3), vy: rnd(-3, 3), z: rnd(.5, 1.5), vz: rnd(0, 3), life: rnd(.2, .5), c: '#ff3b30' }); }
+  function fire(f, P, mul, sp = P.sp, life = P.life) {                 // a shot of yours: where it flies, how hard it hits, how big it is
+    const s = { x: pl.x + f[0] * .4, y: pl.y + f[1] * .4, vx: f[0] * sp, vy: f[1] * sp, life, dm: rnd(P.lo, P.hi) * ST.dmg * mul, r: P.r, c: P.c, arrow: P.arrow };
+    shots.push(s); return s;
+  }
+  function skill(i, aimF, tgt) {                                        // the duel's two skills (K / L, Y / RB)
+    const s = D.build?.skills[i]; if (!s || pl.sk[i] > 0 || pl.mp < s.mp) { if (s && pl.sk[i] > 0) note(`${s.n}: jeszcze ${pl.sk[i].toFixed(1)} s`); return []; }
+    pl.sk[i] = s.cd; pl.mp -= s.mp; const P = ST.C.prim, out = [];
+    if (s.id === 'nova') { const n = s.short ? 10 : 12; for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2; out.push(fire([Math.cos(a), Math.sin(a)], P, s.short ? .9 : .6, s.short ? 5 : 7, s.short ? .45 : 1)); } }
+    else if (s.id === 'volley') { const f = aimF() || pl.face, a0 = Math.atan2(f[1], f[0]); for (let k = -2; k <= 2; k++) out.push(fire([Math.cos(a0 + k * .22), Math.sin(a0 + k * .22)], P, .8)); }
+    else if (s.id === 'aoe') { const x = tgt ? tgt.x : pl.x + pl.face[0] * 5, y = tgt ? tgt.y : pl.y + pl.face[1] * 5, dm = s.dm * ST.dmg;
+      aoes.push({ x, y, r: s.r, t: s.dl, t0: s.dl, dm, mine: true, c: P.c }); net?.send({ t: 'aoe', x: +x.toFixed(2), y: +y.toFixed(2), r: s.r, dm: +dm.toFixed(1), dl: s.dl }, D.opp); }
+    else if (s.id === 'shield') pl.shield = 4;
+    else if (s.id === 'haste') pl.haste = 4;
+    else if (s.id === 'heal') { pl.hp = Math.min(ST.maxHp, pl.hp + ST.maxHp * .4); pop(pl.x, pl.y, '#8aff9a', 16); }
+    return out;
+  }
+  function hurt(n) { pl.hp -= n * (1 - ST.res / 100) * (pl.shield > 0 ? .5 : 1); pl.hurt = 1; for (let i = 0; i < 8; i++) sparks.push({ x: pl.x, y: pl.y, vx: rnd(-3, 3), vy: rnd(-3, 3), z: rnd(.5, 1.5), vz: rnd(0, 3), life: rnd(.2, .5), c: '#ff3b30' }); }
   const pop = (x, y, c, n = 8) => { for (let i = 0; i < n; i++) sparks.push({ x, y, vx: rnd(-3, 3), vy: rnd(-3, 3), z: rnd(1, 2), vz: rnd(0, 3), life: rnd(.2, .5), c }); };
   const fly = (list, dt) => { for (const s of list) { s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; } return list.filter(s => s.life > 0 && s.x > -1 && s.y > -1 && s.x < AW + 1 && s.y < AH + 1); };
 
   // ---------- the step ----------
   function step(dt, inp) {
     t += dt; if (inp.dev) dev = inp.dev; noteT = Math.max(0, noteT - dt);
-    if (inp.inv && state !== 'lobby') { INV.open = !INV.open; INV.confirm = -1; }
-    if (INV.open) { invInput(inp); if (state === 'duel') duelStep(dt, {}); else sparksStep(dt); return; }   // (the run waits while you look; the duel does not)
+    if (inp.inv && state !== 'lobby' && state !== 'duel') { INV.open = !INV.open; INV.confirm = -1; }
+    if (INV.open) { invInput(inp); sparksStep(dt); return; }            // (the run waits while you look)
     if (state === 'menu') { if (inp.left) sel = 0; if (inp.right) sel = 1; if (inp.tele || inp.start) { if (sel === 0) reset(); else { state = 'lobby'; D.seekT = 0; D.msg = ''; } } return; }
     if (state === 'lobby') { lobbyStep(dt); return; }
     if (state === 'duel') { duelStep(dt, inp); return; }
@@ -158,42 +196,76 @@ export function createTVGame({ THREE }) {
   function trailStep(dt) { for (const tr of trail) tr.a -= dt * 2.5; trail = trail.filter(tr => tr.a > 0); }
   function sparksStep(dt) { for (const s of sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; s.vz -= 9 * dt; if (s.z < 0) { s.z = 0; s.vz *= -.3; } s.life -= dt; } sparks = sparks.filter(s => s.life > 0); }
 
-  // ---------- the duel: two visitors, over the ghosts' connection ----------
-  const D = { opp: null, host: false, seekT: 0, o: null, my: 0, over: false, sendT: 0, respawn: 0, tpN: 0, msg: '' };
+  // ---------- the duel: two visitors, over the ghosts' connection; a draft, then the fight ----------
+  // phases: mode (the host picks; the guest waits), hero (or mclass: the guest waits for the host's pick in a mirror), items (nine slots,
+  // one of three each), skills (two of four), wait (for the other), count (3, 2, 1), fight
+  const SLOTS = [['weapon', 'Broń'], ['helm', 'Hełm'], ['armor', 'Zbroja'], ['gloves', 'Rękawice'], ['belt', 'Pas'], ['boots', 'Buty'], ['amulet', 'Amulet'], ['ring1', 'Pierścień'], ['ring2', 'Drugi pierścień']];
+  const MODES = [{ id: 'own', n: 'Wybór postaci', d: 'każdy wybiera swoją' }, { id: 'mirror', n: 'Lustro', d: 'obaj tą samą postacią' }, { id: 'rand', n: 'Losowo', d: 'postacie losowane' }];
+  const D = { opp: null, host: false, seekT: 0, o: null, my: 0, over: false, sendT: 0, hbT: 0, respawn: 0, tpN: 0, msg: '', ph: 'mode', sel: 0, mode: null, build: null, offer: [], slotI: 0, count: 0 };
   const N = (v, lo, hi, def = 0) => typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def;
   const spawnOf = host => host ? START : FAR;
+  const prog = () => !D.build ? 0 : (D.build.cls ? 1 : 0) + Object.keys(D.build.eq).length + D.build.skills.length;   // of 12
   function lobbyStep(dt) {
     D.seekT -= dt; if (net && net.id && D.seekT <= 0) { net.send({ t: 'seek' }); D.seekT = 1; }   // once a second: anyone else at a TV, waiting?
     sparksStep(dt);
   }
   function startDuel(id, host) {
-    const [ox, oy] = spawnOf(!host);
-    D.opp = id; D.host = host; D.my = 0; D.over = false; D.respawn = 0; D.tpN = 0; D.msg = '';
-    D.o = { x: ox, y: oy, tx: ox, ty: oy, hp: 100, mh: 100, fx: 0, fy: 0, a: 1, d: 0, tp: 0, seen: t, moving: 0, burst: 0 };
-    const [sx, sy] = spawnOf(host);
-    Object.assign(pl, { x: sx, y: sy, hp: ST.maxHp, mp: ST.maxMp, cd: 0, cast: 0, face: host ? [-.7, -.7] : [.7, .7], flash: 0, hurt: 0, heal: 0, alive: true });
-    shots = []; fshots = []; bolts = []; loot = []; trail = []; msg = null; state = 'duel'; boss.dead = true; boss.burst = 0;
+    D.opp = id; D.host = host; D.my = 0; D.over = false; D.respawn = 0; D.tpN = 0; D.msg = ''; D.sel = 0; D.mode = null; D.build = { cls: null, eq: {}, skills: [] }; D.ph = 'mode';
+    D.o = { x: 0, y: 0, tx: 0, ty: 0, hp: 100, mh: 100, fx: 0, fy: 0, a: 1, d: 0, tp: 0, seen: t, moving: 0, burst: 0, cls: 'mag', ready: false, prog: 0, sh: 0 };
+    shots = []; fshots = []; bolts = []; loot = []; trail = []; aoes = []; msg = null; state = 'duel'; boss.dead = true; boss.burst = 0;
   }
-  function endDuel(m) { D.opp = null; D.o = null; state = 'lobby'; D.msg = m; D.seekT = 1.5; }
-  function round() { D.my = 0; if (D.o) D.o.d = 0; D.over = false; msg = null; const [sx, sy] = spawnOf(D.host); Object.assign(pl, { x: sx, y: sy, hp: ST.maxHp, mp: ST.maxMp, alive: true }); D.respawn = 0; }
+  function endDuel(m) { D.opp = null; D.o = null; state = 'lobby'; D.msg = m; D.seekT = 1.5; recalc(); }
+  function setMode(m) { D.mode = m; D.sel = 0; if (m === 'rand') { const c = pick(CLS); note(`Wylosowano: ${CLASSES[c].n}`); setHero(c); } else D.ph = D.host || m === 'own' ? 'hero' : 'mclass'; }
+  function setHero(c) { D.build.cls = c; calc({}, [], c); toItems(); }
+  function toItems() { D.ph = 'items'; D.slotI = 0; offerItems(); }
+  function offerItems() {                                               // three for the slot: a magic one, a rare, and one that might be better
+    const slot = SLOTS[D.slotI][0].replace(/\d/, ''), r = Math.random();
+    const c = D.build.cls; D.offer = [makeItem('magic', slot, true, c), makeItem('rare', slot, true, c), makeItem(r < .4 ? 'unique' : r < .7 ? 'set' : 'rare', slot, true, c)]; D.sel = 0;
+  }
+  function takeOffer() {
+    const b = D.build;
+    if (D.ph === 'mode') { if (D.host) { const m = MODES[D.sel].id; net?.send({ t: 'mode', m }, D.opp); setMode(m); } return; }
+    if (D.ph === 'hero') { const c = CLS[D.sel]; if (D.mode === 'mirror' && D.host) net?.send({ t: 'cls', c }, D.opp); setHero(c); return; }
+    if (D.ph === 'items') { b.eq[SLOTS[D.slotI][0]] = D.offer[D.sel]; calc(b.eq, [], b.cls); if (++D.slotI < SLOTS.length) offerItems(); else { D.ph = 'skills'; D.offer = CLASSES[b.cls].sk.slice(); D.sel = 0; } return; }
+    if (D.ph === 'skills') { b.skills.push(D.offer.splice(D.sel, 1)[0]); D.sel = 0; if (b.skills.length >= 2) { D.ph = 'wait'; calc(b.eq, [], b.cls); net?.send({ t: 'ready', c: b.cls }, D.opp); if (D.o.ready) countIn(); } }
+  }
+  function countIn() { D.ph = 'count'; D.count = 3; }
+  function fightStart() {
+    D.ph = 'fight'; calc(D.build.eq, [], D.build.cls); const [sx, sy] = spawnOf(D.host), [ox, oy] = spawnOf(!D.host);
+    Object.assign(D.o, { x: ox, y: oy, tx: ox, ty: oy, a: 1, d: 0 });
+    Object.assign(pl, { x: sx, y: sy, hp: ST.maxHp, mp: ST.maxMp, cd: 0, cast: 0, face: D.host ? [-.7, -.7] : [.7, .7], flash: 0, hurt: 0, heal: 0, alive: true, sk: [0, 0], shield: 0, haste: 0 });
+    D.my = 0; D.over = false; msg = null; shots = []; fshots = []; aoes = [];
+  }
+  function round() { D.my = 0; if (D.o) D.o.d = 0; D.over = false; msg = null; const [sx, sy] = spawnOf(D.host); Object.assign(pl, { x: sx, y: sy, hp: ST.maxHp, mp: ST.maxMp, alive: true, sk: [0, 0] }); D.respawn = 0; }
   function duelStep(dt, inp) {
     const O = D.o; if (!O) return;
-    if (t - O.seen > 6) { endDuel('Przeciwnik zniknął'); return; }
+    if (t - O.seen > 8) { endDuel('Przeciwnik zniknął'); return; }
+    if ((D.hbT -= dt) <= 0 && net) { D.hbT = 1; net.send({ t: 'hb', p: prog() }, D.opp); }           // (so each knows the other is still there, and how far)
+    if (D.ph !== 'fight' && D.ph !== 'count') {                         // the draft
+      const n = D.ph === 'mode' ? MODES.length : D.ph === 'hero' ? CLS.length : D.offer.length;
+      if (inp.left) D.sel = (D.sel + n - 1) % n; if (inp.right) D.sel = (D.sel + 1) % n;
+      if (inp.tele || inp.start) takeOffer();
+      sparksStep(dt); return;
+    }
+    if (D.ph === 'count') { D.count -= dt; if (D.count <= 0) fightStart(); return; }
     const k = 1 - Math.exp(-dt * 12); O.moving = Math.hypot(O.tx - O.x, O.ty - O.y) > .05 ? 1 : 0; O.x += (O.tx - O.x) * k; O.y += (O.ty - O.y) * k; O.burst = Math.max(0, O.burst - dt);
-    let out = { shot: null, tp: false };
-    if (pl.alive) out = control(dt, D.over ? { x: inp.x, y: inp.y, dev: inp.dev } : inp, O.a ? O : null);
+    let c = { out: [], tp: false, aim: () => null };
+    const live = D.over ? { x: inp.x, y: inp.y, dev: inp.dev } : inp;
+    if (pl.alive) { c = control(dt, live, O.a ? O : null); if (!D.over) { if (inp.sk1) c.out.push(...skill(0, c.aim, O.a ? O : null)); if (inp.sk2) c.out.push(...skill(1, c.aim, O.a ? O : null)); } }
     else if ((D.respawn -= dt) <= 0) { const [sx, sy] = spawnOf(D.host); Object.assign(pl, { x: sx, y: sy, hp: ST.maxHp, mp: ST.maxMp, alive: true, flash: 1 }); }
-    if (out.tp) D.tpN++;
-    if (out.shot && net) net.send({ t: 'o', x: +out.shot.x.toFixed(2), y: +out.shot.y.toFixed(2), vx: +out.shot.vx.toFixed(2), vy: +out.shot.vy.toFixed(2), dm: +out.shot.dm.toFixed(1) }, D.opp);
-    for (const s of shots) if (O.a && s.life > 0 && Math.hypot(s.x - O.x, s.y - O.y) < .6) { s.life = 0; pop(s.x, s.y, '#bfe9ff'); }   // (only a flash: the hit is theirs to count)
+    if (c.tp) D.tpN++;
+    if (c.out.length && net) net.send({ t: 'O', l: c.out.slice(0, 16).map(s => [+s.x.toFixed(2), +s.y.toFixed(2), +s.vx.toFixed(2), +s.vy.toFixed(2), +s.dm.toFixed(1), s.r, +s.life.toFixed(2)]) }, D.opp);
+    for (const s of shots) if (O.a && s.life > 0 && Math.hypot(s.x - O.x, s.y - O.y) < s.r + .1) { s.life = 0; pop(s.x, s.y, s.c); }   // (only a flash: the hit is theirs to count)
     shots = fly(shots, dt);
-    for (const s of fshots) if (pl.alive && !D.over && s.life > 0 && Math.hypot(s.x - pl.x, s.y - pl.y) < .55) { s.life = 0; hurt(s.dm); }
+    for (const s of fshots) if (pl.alive && !D.over && s.life > 0 && Math.hypot(s.x - pl.x, s.y - pl.y) < s.r) { s.life = 0; hurt(s.dm); }
     fshots = fly(fshots, dt);
+    for (const a of aoes) { a.t -= dt; if (a.t <= 0 && !a.done) { a.done = true; pop(a.x, a.y, a.c, 30); if (!a.mine && pl.alive && !D.over && Math.hypot(a.x - pl.x, a.y - pl.y) < a.r) hurt(a.dm); } }
+    aoes = aoes.filter(a => a.t > -.5);
     if (pl.alive && pl.hp <= 0) { pl.alive = false; D.my++; D.respawn = 2; pop(pl.x, pl.y, '#ff4a3a', 40); D.sendT = 0; }
     if (!D.over && (D.my >= 3 || O.d >= 3)) { D.over = true; const won = O.d >= 3; if (won) { SAVE.wins++; save(); } msg = won ? 'Wygrana! · Start: rewanż' : 'Przegrana · Start: rewanż'; }
     if (D.over && inp.start) { net?.send({ t: 're' }, D.opp); round(); }
     if ((D.sendT -= dt) <= 0 && net) { D.sendT = 1 / 15;
-      net.send({ t: 's', x: +pl.x.toFixed(2), y: +pl.y.toFixed(2), h: Math.round(Math.max(0, pl.hp)), m: ST.maxHp, fx: +pl.face[0].toFixed(2), fy: +pl.face[1].toFixed(2), a: pl.alive ? 1 : 0, d: D.my, p: D.tpN, c: pl.cast > .15 ? 1 : 0 }, D.opp); }
+      net.send({ t: 's', x: +pl.x.toFixed(2), y: +pl.y.toFixed(2), h: Math.round(Math.max(0, pl.hp)), m: ST.maxHp, fx: +pl.face[0].toFixed(2), fy: +pl.face[1].toFixed(2), a: pl.alive ? 1 : 0, d: D.my, p: D.tpN, c: pl.cast > ST.cast * .5 ? 1 : 0, sh: pl.shield > 0 ? 1 : 0 }, D.opp); }
     trailStep(dt); sparksStep(dt);
   }
   function receive(d, from) {                                          // what the other side says: checked, clamped
@@ -202,13 +274,20 @@ export function createTVGame({ THREE }) {
     if (d.t === 'go') { if (state === 'lobby' && !D.opp) startDuel(from, false); return; }
     if (from !== D.opp || state !== 'duel' || !D.o) return;
     const O = D.o; O.seen = t;
-    if (d.t === 's') {
-      O.tx = N(d.x, 0, AW, O.tx); O.ty = N(d.y, 0, AH, O.ty); O.hp = N(d.h, 0, 1000, O.hp); O.mh = N(d.m, 1, 1000, 100); O.fx = N(d.fx, -1, 1); O.fy = N(d.fy, -1, 1); O.c = d.c ? 1 : 0;
+    if (d.t === 'hb') O.prog = N(d.p, 0, 12, O.prog) | 0;
+    else if (d.t === 'mode') { if (!D.host && D.ph === 'mode' && MODES.some(m => m.id === d.m)) setMode(d.m); }
+    else if (d.t === 'cls') { if (!D.host && D.ph === 'mclass' && CLASSES[d.c]) setHero(d.c); }
+    else if (d.t === 'ready') { if (CLASSES[d.c]) O.cls = d.c; O.ready = true; if (D.ph === 'wait') countIn(); }
+    else if (D.ph !== 'fight') return;
+    else if (d.t === 's') {
+      O.tx = N(d.x, 0, AW, O.tx); O.ty = N(d.y, 0, AH, O.ty); O.hp = N(d.h, 0, 1000, O.hp); O.mh = N(d.m, 1, 1000, 100); O.fx = N(d.fx, -1, 1); O.fy = N(d.fy, -1, 1); O.c = d.c ? 1 : 0; O.sh = d.sh ? 1 : 0;
       const a = d.a ? 1 : 0; if (O.a && !a) { O.burst = 1; pop(O.x, O.y, '#ff4a3a', 40); } O.a = a;
       O.d = N(d.d, 0, 99, O.d) | 0;
       const tp = N(d.p, 0, 1e9, 0) | 0; if (tp !== O.tp) { trail.push({ x: O.x, y: O.y, a: 1 }); O.tp = tp; O.x = O.tx; O.y = O.ty; pop(O.x, O.y, '#ffb0b0', 10); }
       if (Math.hypot(O.tx - O.x, O.ty - O.y) > 3) { O.x = O.tx; O.y = O.ty; }
-    } else if (d.t === 'o') { if (fshots.length < 40) fshots.push({ x: N(d.x, 0, AW), y: N(d.y, 0, AH), vx: N(d.vx, -12, 12), vy: N(d.vy, -12, 12), dm: N(d.dm, 0, 40, 8), life: 1.4 }); }
+    } else if (d.t === 'O' && Array.isArray(d.l)) { const P = CLASSES[O.cls].prim;
+      for (const q of d.l.slice(0, 16)) if (Array.isArray(q) && fshots.length < 60) fshots.push({ x: N(q[0], 0, AW), y: N(q[1], 0, AH), vx: N(q[2], -15, 15), vy: N(q[3], -15, 15), dm: N(q[4], 0, 40, 8), r: N(q[5], .3, 1, .5), life: N(q[6], .1, 2, 1.2), c: P.c, arrow: P.arrow, foe: 1 }); }
+    else if (d.t === 'aoe') { if (aoes.length < 8) { const dl = N(d.dl, .5, 1.5, 1); aoes.push({ x: N(d.x, 0, AW), y: N(d.y, 0, AH), r: N(d.r, .5, 2, 1.5), dm: N(d.dm, 0, 45, 25), t: dl, t0: dl, c: '#ff9a6a' }); } }
     else if (d.t === 're') round();
     else if (d.t === 'bye') endDuel('Przeciwnik wyszedł');
   }
@@ -257,12 +336,12 @@ export function createTVGame({ THREE }) {
     }
     g.restore();
   }
-  function tip(it, x, y, w) {                                          // the item's name, kind, stats; returns where it ended
+  function tip(it, x, y, setsOn = ST.sets) {                           // the item's name, kind, stats; returns where it ended
     g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillStyle = COL[it.kind]; g.font = '700 17px Georgia, serif'; g.fillText(it.name, x, y);
     g.fillStyle = '#9d9480'; g.font = '600 13px Georgia, serif'; g.fillText({ magic: 'Magiczny', rare: 'Rzadki', set: 'Zestaw', unique: 'Unikat', rune: 'Runa' }[it.kind] + ' · ' + it.base, x, y + 18); y += 38;
     g.font = '600 14px Georgia, serif'; g.fillStyle = '#8fa8ff';
     for (const k of ORDER) if (it.st[k]) { g.fillText(STAT[k](it.st[k]), x, y); y += 18; }
-    if (it.set) { g.fillStyle = '#39d34b'; g.fillText(`Zestaw Wędrowca (${ST.sets}/4 na sobie): 2 · +20 do życia, 4 · +25% obrażeń i szczęścia`, x, y); y += 18; }
+    if (it.set) { g.fillStyle = '#39d34b'; g.fillText(`Zestaw (${setsOn}/4): 2 · +20 życia, 4 · +25% obr.`, x, y); y += 18; }
     return y;
   }
   function drawInv() {
@@ -275,15 +354,13 @@ export function createTVGame({ THREE }) {
     for (let i = 0; i < GRID.c * GRID.r; i++) { const x = GRID.x + (i % GRID.c) * GRID.s, y = GRID.y + (i / GRID.c | 0) * GRID.s, it = SAVE.bag[i], on = cur.bag === i;
       g.fillStyle = it ? '#1d1712' : '#120e0b'; g.fillRect(x + 1, y + 1, GRID.s - 2, GRID.s - 2); g.strokeStyle = on ? '#ffffff' : '#3a3226'; g.lineWidth = on ? 3 : 1; g.strokeRect(x + 1, y + 1, GRID.s - 2, GRID.s - 2);
       if (it) icon(it, x + GRID.s / 2, y + GRID.s / 2, GRID.s * .8); }
-    // your stats
-    const T = ST.t, L = [[`Życie ${Math.round(ST.maxHp)}`, `Mana ${Math.round(ST.maxMp)}`], [`Zimno +${T.dmg || 0}%`, `Rzucanie +${T.fcr || 0}%`], [`Teleport +${T.ftp || 0}%`, `Bieg +${T.run || 0}%`],
+    const T = ST.t, L = [[`Życie ${Math.round(ST.maxHp)}`, `Mana ${Math.round(ST.maxMp)}`], [`Obrażenia +${T.dmg || 0}%`, `Atak +${T.fcr || 0}%`], [`Teleport +${T.ftp || 0}%`, `Bieg +${T.run || 0}%`],
       [`Szczęście +${ST.mf}%`, `Odporność ${ST.res}%`], [`Złoto ${SAVE.gold.toLocaleString('pl-PL')}`, `Mikstury ${SAVE.pot}`], [`Biegi ${SAVE.runs} · bossy ${SAVE.kills}`, `Pojedynki: ${SAVE.wins} wygr.`]];
     g.font = '600 14px Georgia, serif'; L.forEach(([a, b], i) => { g.fillStyle = i === 4 ? '#e8c65a' : '#cbbd96'; g.fillText(a, 140, 372 + i * 16); g.fillText(b, 292, 372 + i * 16); });
-    // the one under the cursor, and what you wear there now
     const it = nodeItem(cur);
-    if (it) { let y = tip(it, GRID.x, 302, 480);
+    if (it) { tip(it, GRID.x, 302);
       if (cur.bag !== undefined && it.slot !== 'rune') { const k = it.slot === 'ring' ? (SAVE.eq.ring1 ? 'ring1' : null) : it.slot, on = k && SAVE.eq[k];
-        if (on) { g.fillStyle = '#6f6857'; g.font = '600 12px Georgia, serif'; g.fillText('Na sobie teraz:', GRID.x + 250, 302); g.save(); g.globalAlpha = .75; tip(on, GRID.x + 250, 320, 220); g.restore(); } } }
+        if (on) { g.fillStyle = '#6f6857'; g.font = '600 12px Georgia, serif'; g.fillText('Na sobie teraz:', GRID.x + 250, 302); g.save(); g.globalAlpha = .75; tip(on, GRID.x + 250, 320); g.restore(); } } }
     else { g.fillStyle = '#6f6857'; g.font = '600 14px Georgia, serif'; g.fillText(cur.doll ? `${cur.doll.l}: pusto` : 'Pusto', GRID.x, 302); }
   }
 
@@ -291,6 +368,7 @@ export function createTVGame({ THREE }) {
   function draw() {
     if (state === 'menu') { drawMenu(); if (INV.open) { drawInv(); bar(); } return; }
     if (state === 'lobby') return drawLobby();
+    if (state === 'duel' && D.ph !== 'fight') return drawDraft();
     const [cx, cy] = iso(pl.x, pl.y), ox = W / 2 - cx, oy = H / 2 - cy + 30, P = (x, y, z = 0) => { const [a, b] = iso(x, y); return [a + ox, b + oy - z * 24]; };
     g.fillStyle = '#050304'; g.fillRect(0, 0, W, H);
     for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) { const f = floor[y * AW + x], [sx, sy] = P(x + .5, y + .5), dais = state !== 'duel' && Math.hypot(x + .5 - boss.x, y + .5 - boss.y) < 2.6;
@@ -300,22 +378,26 @@ export function createTVGame({ THREE }) {
       if (f.crack) { g.strokeStyle = 'rgba(0,0,0,.6)'; g.beginPath(); g.moveTo(sx - 12, sy - 3); g.lineTo(sx + 2, sy + 2); g.lineTo(sx + 14, sy - 4); g.stroke(); }
       if (f.blood) { g.fillStyle = 'rgba(120,6,10,.55)'; g.beginPath(); g.ellipse(sx + 4, sy, 16, 7, 0, 0, 7); g.fill(); } }
     for (let x = 0; x < AW; x++) wallBlock(P(x + .5, 0)); for (let y = 0; y < AH; y++) wallBlock(P(0, y + .5));
+    for (const a of aoes) { const [sx, sy] = P(a.x, a.y), k = a.t > 0 ? 1 - a.t / a.t0 : 1;   // where it will fall: a ring closing in
+      g.strokeStyle = a.mine ? 'rgba(160,210,255,.7)' : 'rgba(255,90,60,.85)'; g.lineWidth = 2; g.beginPath(); g.ellipse(sx, sy, a.r * TW / 1.41, a.r * TH / 1.41, 0, 0, 7); g.stroke();
+      g.fillStyle = a.t > 0 ? (a.mine ? 'rgba(120,180,255,.18)' : 'rgba(255,60,40,.22)') : `rgba(255,200,120,${.6 * (1 + a.t * 2)})`; g.beginPath(); g.ellipse(sx, sy, a.r * TW / 1.41 * (a.t > 0 ? k : 1), a.r * TH / 1.41 * (a.t > 0 ? k : 1), 0, 0, 7); g.fill(); }
     const items = [], O = state === 'duel' ? D.o : null;
     for (const [px, py] of pillars) items.push({ d: px + py, draw: () => { const [sx, sy] = P(px, py), [qx, qy] = P(pl.x, pl.y);   // one in front of you goes see-through
       const over = px + py > pl.x + pl.y && Math.abs(sx - qx) < 34 && qy < sy + 4 && qy > sy - 130; g.globalAlpha = over ? .32 : 1; pillar([sx, sy]); g.globalAlpha = 1; } });
     for (const [bx, by] of braziers) items.push({ d: bx + by, draw: () => brazier(P(bx, by)) });
     if (state !== 'duel' && (!boss.dead || boss.burst > 0)) items.push({ d: boss.x + boss.y, draw: () => drawBoss(P(boss.x, boss.y)) });
     for (const it of loot) if (!it.got && it.dl <= 0) items.push({ d: it.x + it.y - .01, draw: () => drawLoot(it, P) });
-    if (pl.alive) items.push({ d: pl.x + pl.y, draw: () => mage(P(pl.x, pl.y), pl.face, pl.moving, pl.cast > .15, ['#22314f', '#35507f', '#8fd6ff']) });
-    if (O && O.a) items.push({ d: O.x + O.y, draw: () => { const [sx, sy] = P(O.x, O.y); mage([sx, sy], [O.fx, O.fy], O.moving, O.c, ['#4f1d22', '#7f3035', '#ff9a8a']);
-      g.font = '700 13px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ff8a7a'; g.fillText('Przeciwnik', sx, sy - 74);
-      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(sx - 22, sy - 66, 44, 5); g.fillStyle = '#d23a2a'; g.fillRect(sx - 22, sy - 66, 44 * Math.max(0, O.hp) / O.mh, 5); } });
+    if (pl.alive) items.push({ d: pl.x + pl.y, draw: () => { hero(P(pl.x, pl.y), pl.face, pl.moving, pl.cast > ST.cast * .5, ST.cls, 0); if (pl.shield > 0) bubble(P(pl.x, pl.y), '#9fd0ff'); } });
+    if (O && O.a) items.push({ d: O.x + O.y, draw: () => { const [sx, sy] = P(O.x, O.y); hero([sx, sy], [O.fx, O.fy], O.moving, O.c, O.cls, 1); if (O.sh) bubble([sx, sy], '#ffb0a0');
+      g.font = '700 13px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ff8a7a'; g.fillText(CLASSES[O.cls].n, sx, sy - 80);
+      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(sx - 22, sy - 72, 44, 5); g.fillStyle = '#d23a2a'; g.fillRect(sx - 22, sy - 72, 44 * Math.max(0, O.hp) / O.mh, 5); } });
     items.sort((a, b) => a.d - b.d).forEach(i => i.draw());
     for (const tr of trail) { const [sx, sy] = P(tr.x, tr.y); g.fillStyle = `rgba(140,200,255,${tr.a * .35})`; g.beginPath(); g.ellipse(sx, sy - 22, 10, 26, 0, 0, 7); g.fill(); }
-    const orb = (s, c0, c1, r) => { const [sx, sy] = P(s.x, s.y, 1); const gr = g.createRadialGradient(sx, sy, 1, sx, sy, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.4, c0); gr.addColorStop(1, c1); g.fillStyle = gr; g.beginPath(); g.arc(sx, sy, r, 0, 7); g.fill(); };
-    for (const s of shots) orb(s, '#9fe0ff', 'rgba(80,160,255,0)', 14);
-    for (const s of fshots) orb(s, '#ff9a6a', 'rgba(255,80,40,0)', 14);
-    for (const b of bolts) orb(b, '#ff3b30', 'rgba(150,0,0,0)', 13);
+    const shot = s => { const [sx, sy] = P(s.x, s.y, 1);
+      if (s.arrow) { const l = Math.hypot(s.vx, s.vy), [ex, ey] = P(s.x - s.vx / l * .7, s.y - s.vy / l * .7, 1); g.strokeStyle = s.c; g.lineWidth = 2.5; g.beginPath(); g.moveTo(ex, ey); g.lineTo(sx, sy); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(sx, sy, 2.5, 0, 7); g.fill(); return; }
+      const r = 10 + s.r * 8, gr = g.createRadialGradient(sx, sy, 1, sx, sy, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.4, s.foe ? '#ff9a6a' : s.c || '#9fe0ff'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(sx, sy, r, 0, 7); g.fill(); };
+    shots.forEach(shot); fshots.forEach(shot);
+    for (const b of bolts) { const [sx, sy] = P(b.x, b.y, 1); const gr = g.createRadialGradient(sx, sy, 1, sx, sy, 13); gr.addColorStop(0, '#ffe0d0'); gr.addColorStop(.35, '#ff3b30'); gr.addColorStop(1, 'rgba(150,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(sx, sy, 13, 0, 7); g.fill(); }
     for (const s of sparks) { const [sx, sy] = P(s.x, s.y, s.z); g.fillStyle = s.c; g.globalAlpha = Math.min(1, s.life * 3); g.fillRect(sx - 1.5, sy - 1.5, 3, 3); g.globalAlpha = 1; }
     // the light: your radius and the braziers', the rest in the dark
     const [lx, ly] = P(pl.x, pl.y, .8); g.save(); g.globalCompositeOperation = 'multiply';
@@ -345,14 +427,32 @@ export function createTVGame({ THREE }) {
   function brazier([sx, sy]) { g.fillStyle = '#2a2622'; g.fillRect(sx - 3, sy - 44, 6, 44); g.fillStyle = '#3d3630'; g.beginPath(); g.ellipse(sx, sy - 46, 12, 5, 0, 0, 7); g.fill();
     const fl = Math.sin(t * 17 + sx) * 3; g.fillStyle = '#ff9a3c'; g.beginPath(); g.moveTo(sx - 9, sy - 48); g.quadraticCurveTo(sx - 6 + fl, sy - 66, sx + fl, sy - 80); g.quadraticCurveTo(sx + 8, sy - 64, sx + 9, sy - 48); g.fill();
     g.fillStyle = '#ffe7a0'; g.beginPath(); g.ellipse(sx + fl * .4, sy - 56, 3.5, 7, 0, 0, 7); g.fill(); }
-  function mage([sx, sy], face, moving, casting, [robe, robe2, tip]) {
-    const bob = moving ? Math.sin(t * 14) * 2 : 0, fx = face[0] - face[1] > 0 ? 1 : -1;
+  function bubble([sx, sy], c) { g.strokeStyle = c; g.globalAlpha = .5 + .2 * Math.sin(t * 8); g.lineWidth = 2; g.beginPath(); g.ellipse(sx, sy - 30, 22, 36, 0, 0, 7); g.stroke(); g.globalAlpha = 1; }
+  // a hero: the mage with a staff, the archer with a bow and a hood, the knight in plate with a shield and a hammer; yours blue, theirs red
+  function hero([sx, sy], face, moving, casting, cls, team) {
+    const bob = moving ? Math.sin(t * 14) * 2 : 0, fx = face[0] - face[1] > 0 ? 1 : -1, [robe, robe2] = team ? ['#4f1d22', '#7f3035'] : ['#22314f', '#35507f'];
     g.fillStyle = 'rgba(0,0,0,.5)'; g.beginPath(); g.ellipse(sx, sy, 14, 6, 0, 0, 7); g.fill();
+    if (cls === 'ryc') {
+      g.fillStyle = robe; g.beginPath(); g.moveTo(sx - 13, sy - 2); g.lineTo(sx - 11, sy - 40 + bob); g.lineTo(sx + 11, sy - 40 + bob); g.lineTo(sx + 13, sy - 2); g.closePath(); g.fill();
+      g.fillStyle = '#8a9098'; g.fillRect(sx - 11, sy - 42 + bob, 22, 16); g.fillStyle = '#9aa1aa'; g.beginPath(); g.arc(sx, sy - 50 + bob, 8, Math.PI, 0); g.fill(); g.fillRect(sx - 8, sy - 50 + bob, 16, 7);   // plate, the helm,
+      g.fillStyle = '#1a1c20'; g.fillRect(sx - 6, sy - 48 + bob, 12, 2);                                                                                                  // its visor
+      g.fillStyle = robe2; g.strokeStyle = '#c9b27a'; g.lineWidth = 2; g.beginPath(); g.roundRect(sx - fx * 22 - 8, sy - 36 + bob, 16, 22, 4); g.fill(); g.stroke();                    // the shield,
+      g.strokeStyle = '#6a5034'; g.lineWidth = 3; const ly = casting ? -66 : -54; g.beginPath(); g.moveTo(sx + fx * 14, sy - 14); g.lineTo(sx + fx * 16, sy + ly + bob); g.stroke();   // the hammer
+      g.fillStyle = '#b8bec6'; g.fillRect(sx + fx * 16 - 7, sy + ly - 6 + bob, 14, 9); return;
+    }
     g.fillStyle = robe; g.beginPath(); g.moveTo(sx - 11, sy - 2); g.lineTo(sx - 7, sy - 38 + bob); g.lineTo(sx + 7, sy - 38 + bob); g.lineTo(sx + 11, sy - 2); g.closePath(); g.fill();   // the robe
     g.fillStyle = robe2; g.fillRect(sx - 7, sy - 40 + bob, 14, 12);
-    g.fillStyle = '#e8c3a0'; g.beginPath(); g.arc(sx, sy - 46 + bob, 6, 0, 7); g.fill(); g.fillStyle = '#6b4a30'; g.beginPath(); g.arc(sx, sy - 49 + bob, 6.5, Math.PI, 0); g.fill();
+    g.fillStyle = '#e8c3a0'; g.beginPath(); g.arc(sx, sy - 46 + bob, 6, 0, 7); g.fill();
+    if (cls === 'lucz') {
+      g.fillStyle = robe2; g.beginPath(); g.moveTo(sx - 8, sy - 42 + bob); g.quadraticCurveTo(sx, sy - 62 + bob, sx + 8, sy - 42 + bob); g.lineTo(sx + 5, sy - 46 + bob); g.quadraticCurveTo(sx, sy - 54 + bob, sx - 5, sy - 46 + bob); g.closePath(); g.fill();   // the hood,
+      g.fillStyle = '#5a3a22'; g.fillRect(sx - fx * 9 - 3, sy - 44 + bob, 6, 16);                                                                                                  // the quiver,
+      g.strokeStyle = '#8a6a44'; g.lineWidth = 2.5; g.beginPath(); g.arc(sx + fx * 8, sy - 30 + bob, 16, fx > 0 ? -1.2 : Math.PI - 1.2 + 0, fx > 0 ? 1.2 : Math.PI + 1.2); g.stroke();   // the bow,
+      g.strokeStyle = 'rgba(240,230,210,.8)'; g.lineWidth = 1; const pull = casting ? fx * -6 : 0, bx = sx + fx * 8 + fx * 16 * Math.cos(1.2);
+      g.beginPath(); g.moveTo(bx, sy - 30 + bob - 16 * Math.sin(1.2)); g.lineTo(bx + pull, sy - 30 + bob); g.lineTo(bx, sy - 30 + bob + 16 * Math.sin(1.2)); g.stroke(); return;   // its string
+    }
+    g.fillStyle = '#6b4a30'; g.beginPath(); g.arc(sx, sy - 49 + bob, 6.5, Math.PI, 0); g.fill();
     g.strokeStyle = '#8a6a44'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(sx + fx * 10, sy - 2); g.lineTo(sx + fx * 12, sy - 58 + bob); g.stroke();   // the staff,
-    g.fillStyle = casting ? '#ffffff' : tip; g.beginPath(); g.arc(sx + fx * 12, sy - 60 + bob, 4, 0, 7); g.fill();                                   // its glowing tip
+    g.fillStyle = casting ? '#ffffff' : team ? '#ff9a8a' : '#8fd6ff'; g.beginPath(); g.arc(sx + fx * 12, sy - 60 + bob, 4, 0, 7); g.fill();          // its glowing tip
   }
   function drawBoss([sx, sy]) {
     const a = boss.dead ? boss.burst : 1, bob = Math.sin(t * 2.2) * 5; g.globalAlpha = a;
@@ -376,7 +476,7 @@ export function createTVGame({ THREE }) {
     g.restore();
   }
   function orbGauge(x, y, r, v, c0, c1) { g.fillStyle = '#120c0a'; g.beginPath(); g.arc(x, y, r + 4, 0, 7); g.fill();
-    g.save(); g.beginPath(); g.arc(x, y, r, 0, 7); g.clip(); const gr = g.createRadialGradient(x - r * .3, y - r * .3, 2, x, y, r); gr.addColorStop(0, c0); gr.addColorStop(1, c1); g.fillStyle = gr; g.fillRect(x - r, y + r - 2 * r * v, 2 * r, 2 * r * v); g.restore();
+    g.save(); g.beginPath(); g.arc(x, y, r, 0, 7); g.clip(); const gr = g.createRadialGradient(x - r * .3, y - r * .3, 2, x, y, r); gr.addColorStop(0, c0); gr.addColorStop(1, c1); g.fillStyle = gr; g.fillRect(x - r, y + r - 2 * r * Math.max(0, Math.min(1, v)), 2 * r, 2 * r * Math.max(0, Math.min(1, v))); g.restore();
     g.strokeStyle = '#8a7a52'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r + 2, 0, 7); g.stroke(); }
   // the controls, as caps for the keys or the pad's own buttons (A green, X blue, B red, Y yellow, as a pad marks them; the stick a ring)
   const PADC = { A: '#3fae4a', X: '#3a7bd5', B: '#d0463b', Y: '#e0b22e' };
@@ -397,9 +497,11 @@ export function createTVGame({ THREE }) {
   }
   function bar() {                                                     // the bottom: the orbs, the controls for what is on
     g.fillStyle = 'rgba(30,26,22,.96)'; g.fillRect(0, H - 64, W, 64); g.strokeStyle = '#8a7a52'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H - 64); g.lineTo(W, H - 64); g.stroke();
-    orbGauge(70, H - 56, 46, Math.max(0, pl.hp) / ST.maxHp, '#ff5a4a', '#5a0808'); orbGauge(W - 70, H - 56, 46, pl.mp / ST.maxMp, '#6a7cff', '#0a0e5a');
-    const pad = dev === 'pad', F = '600 14px Georgia, serif', C = '#d8cfa8';
+    orbGauge(70, H - 56, 46, pl.hp / ST.maxHp, '#ff5a4a', '#5a0808'); orbGauge(W - 70, H - 56, 46, pl.mp / ST.maxMp, '#6a7cff', '#0a0e5a');
+    const pad = dev === 'pad', F = '600 14px Georgia, serif', C = '#d8cfa8', K = ST.C;
     if (INV.open) controls(pad ? [['stick', 'wybór'], ['A', 'załóż / zdejmij'], ['X', 'wyrzuć'], ['Y', 'zamknij']] : [['←↑↓→', 'wybór'], ['Spacja', 'załóż / zdejmij'], ['X', 'wyrzuć'], ['I', 'zamknij']], W / 2, H - 30, 'center', F, C);
+    else if (state === 'duel') controls(pad ? [['stick', 'bieg'], ['A', K.mob.n], ['X', K.prim.n], ['Y', D.build.skills[0]?.n || ''], ['RB', D.build.skills[1]?.n || ''], ['B', 'wyjście']]
+      : [['WASD', 'bieg'], ['Spacja', K.mob.n], ['J', K.prim.n], ['K', D.build.skills[0]?.n || ''], ['L', D.build.skills[1]?.n || ''], ['Esc', 'wyjście']], W / 2, H - 30, 'center', '600 13px Georgia, serif', C);
     else controls(pad ? [['stick', 'bieg'], ['A', 'teleport'], ['X', 'pocisk'], ['LB', 'mikstura'], ['Y', 'ekwipunek'], ['B', 'wyjście']]
       : [['WASD', 'bieg'], ['Spacja', 'teleport'], ['J', 'pocisk'], ['Q', 'mikstura'], ['I', 'ekwipunek'], ['Esc', 'wyjście']], W / 2, H - 30, 'center', F, C);
   }
@@ -411,24 +513,30 @@ export function createTVGame({ THREE }) {
       const O = D.o; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(W / 2 - 150, 12, 300, 36);
       g.font = '700 20px Georgia, serif'; g.textAlign = 'right'; g.fillStyle = '#9fd0ff'; g.fillText(`Ty ${O ? O.d : 0}`, W / 2 - 12, 30); g.textAlign = 'center'; g.fillStyle = '#e8d8a8'; g.fillText(':', W / 2, 29);
       g.textAlign = 'left'; g.fillStyle = '#ff9a8a'; g.fillText(`${D.my} Przeciwnik`, W / 2 + 12, 30); g.textAlign = 'center';
-      g.font = '600 13px Georgia, serif'; g.fillStyle = '#cbbd96'; g.fillText('do trzech', W / 2, 58);
+      g.font = '600 13px Georgia, serif'; g.fillStyle = '#cbbd96'; g.fillText(`${CLASSES[ST.cls].n} przeciw: ${CLASSES[O?.cls || 'mag'].n} · do trzech`, W / 2, 58);
       if (!pl.alive) { g.font = '700 18px Georgia, serif'; g.fillStyle = '#ff5a4a'; g.fillText(`Wracasz za ${Math.max(0, D.respawn).toFixed(1)} s`, W / 2, H / 2 - 60); }
+      D.build.skills.forEach((s, i) => { const x = 130 + i * 58, y = H - 118, k = pl.sk[i] / s.cd;          // the skills: their cooldowns
+        g.fillStyle = 'rgba(0,0,0,.65)'; g.fillRect(x, y, 50, 40); g.strokeStyle = k > 0 ? '#5a5040' : '#c9b27a'; g.lineWidth = 2; g.strokeRect(x, y, 50, 40);
+        if (k > 0) { g.fillStyle = 'rgba(120,110,90,.5)'; g.fillRect(x, y + 40 * (1 - k), 50, 40 * k); }
+        g.fillStyle = k > 0 ? '#8a8270' : '#f2ecd8'; g.font = '700 11px Inter, sans-serif'; g.textAlign = 'center'; g.fillText(dev === 'pad' ? (i ? 'RB' : 'Y') : (i ? 'L' : 'K'), x + 25, y + 13);
+        g.font = '600 10px Georgia, serif'; g.fillText(s.n.length > 11 ? s.n.slice(0, 10) + '.' : s.n, x + 25, y + 29); });
     } else {
       if (!boss.dead && !INV.open) { const bw = 360, bx = W / 2 - bw / 2; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx - 4, 14, bw + 8, 34); g.fillStyle = '#5a0a0a'; g.fillRect(bx, 34, bw, 9); g.fillStyle = '#d23a2a'; g.fillRect(bx, 34, bw * Math.max(0, boss.hp) / boss.max, 9);
         g.fillStyle = '#e8d8a8'; g.font = '700 15px Georgia, serif'; g.textAlign = 'center'; g.fillText('MEFISTO · WŁADCA NIENAWIŚCI', W / 2, 24); }
       if (!INV.open) { const s = Math.floor(runT); g.textAlign = 'left'; g.font = '600 14px Georgia, serif'; g.fillStyle = '#cbbd96';
         g.fillText(`Bieg ${SAVE.runs} · ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} · złoto ${SAVE.gold.toLocaleString('pl-PL')}`, 14, 22);
-        if (found.length) { g.textAlign = 'right'; g.font = '600 13px Georgia, serif'; found.forEach((it, i) => { g.fillStyle = COL[it.rar]; g.fillText(it.name, W - 14, 22 + i * 18); }); } }
+        if (found.length) { g.textAlign = 'right'; g.font = '600 13px Georgia, serif'; found.forEach((it, i) => { g.fillStyle = COL[it.rar]; g.fillText(it.name, W - 14, 22 + i * 18); }); }
+        g.textAlign = 'left'; g.font = '600 13px Georgia, serif'; g.fillStyle = '#e07060'; g.fillText(`Mikstury ${SAVE.pot}`, 124, H - 78); }
     }
-    if (!INV.open) { g.textAlign = 'left'; g.font = '600 13px Georgia, serif'; g.fillStyle = '#e07060'; g.fillText(`Mikstury ${SAVE.pot}`, 124, H - 78); }
     if (msg && !INV.open) { g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(W / 2 - 230, H / 2 - 30, 460, 44); g.fillStyle = state === 'dead' || msg.startsWith('Przegrana') ? '#ff5a4a' : '#e8d8a8'; g.font = '700 20px Georgia, serif'; g.fillText(msg, W / 2, H / 2 - 8); }
-    if (noteT > 0) { g.textAlign = 'center'; g.globalAlpha = Math.min(1, noteT * 2); g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(W / 2 - 150, H - 112, 300, 30); g.fillStyle = '#f2ecd8'; g.font = '600 15px Georgia, serif'; g.fillText(noteS, W / 2, H - 97); g.globalAlpha = 1; }
+    noteDraw();
   }
+  function noteDraw() { if (noteT > 0) { g.textAlign = 'center'; g.textBaseline = 'middle'; g.globalAlpha = Math.min(1, noteT * 2); g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(W / 2 - 170, H - 112, 340, 30); g.fillStyle = '#f2ecd8'; g.font = '600 15px Georgia, serif'; g.fillText(noteS, W / 2, H - 97); g.globalAlpha = 1; } }
   function drawMenu() {                                                // the TV's home: pick a game
     const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#15161c'); gr.addColorStop(1, '#2a1f2a'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     g.fillStyle = '#f2efe8'; g.font = '600 30px Inter, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText('Gry', 64, 92);
     controls(dev === 'pad' ? [['stick', 'wybór'], ['A', 'graj'], ['Y', 'ekwipunek']] : [['←→', 'wybór'], ['Enter', 'graj'], ['I', 'ekwipunek']], 64, 118, 'left', '500 17px Inter, sans-serif', '#9a96a0');
-    const tiles = [{ name: 'Mefisto Run', sub: 'teleport, boss, łup' }, { name: 'Pojedynek', sub: 'przez sieć, 2 osoby, do trzech' }];
+    const tiles = [{ name: 'Mefisto Run', sub: 'teleport, boss, łup' }, { name: 'Pojedynek', sub: 'draft postaci, 2 osoby przez sieć' }];
     tiles.forEach((tl, i) => { const x = 64 + i * 300, y = 160, w = 270, h = 250, on = sel === i, cx = x + w / 2, cy = y + 120;
       g.fillStyle = i ? '#101a2e' : '#3a0f14'; g.fillRect(x, y, w, h);
       const glow = (gx, c) => { const gl = g.createRadialGradient(gx, cy, 5, gx, cy, 110); gl.addColorStop(0, c); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(x, y, w, h); };
@@ -453,11 +561,55 @@ export function createTVGame({ THREE }) {
     if (!net || !net.id) { g.fillStyle = '#ffb0a0'; g.fillText('Brak połączenia z innymi odwiedzającymi.', W / 2, 220); g.fillStyle = '#a8a4ae'; g.fillText('Włącz w panelu „Other visitors, live”.', W / 2, 250); }
     else { g.fillStyle = '#d8d4de'; g.fillText('Szukam drugiej osoby przy telewizorze' + '.'.repeat(1 + (t * 2 | 0) % 3), W / 2, 220);
       g.fillStyle = '#a8a4ae'; g.font = '500 16px Inter, sans-serif'; g.fillText('Druga osoba: usiądź na kanapie w salonie, włącz telewizor i wybierz Pojedynek.', W / 2, 256);
-      g.fillText('Każdy gra swoim sprzętem z ekwipunku. Pierwszy do trzech wygrywa.', W / 2, 282); }
+      g.fillText('Potem draft: tryb, postać, po jednym przedmiocie z trzech na każdy slot, dwie umiejętności.', W / 2, 282); }
     if (D.msg) { g.fillStyle = '#ffcf8a'; g.font = '600 16px Inter, sans-serif'; g.fillText(D.msg, W / 2, 330); }
     const s = t * 2; g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.beginPath(); g.arc(W / 2, 390, 18, s, s + 4.2); g.stroke();
     controls(dev === 'pad' ? [['B', 'wróć']] : [['Esc', 'wróć']], W / 2, H - 40, 'center', '500 16px Inter, sans-serif', '#a8a4ae');
   }
+  // ---------- the draft's screens: three (or four) cards, the one picked outlined; your build so far along the bottom ----------
+  function card(x, y, w, h, on, fill = '#16110d') { g.fillStyle = fill; g.fillRect(x, y, w, h); g.strokeStyle = on ? '#ffffff' : '#4a3f2c'; g.lineWidth = on ? 4 : 1.5; g.strokeRect(x, y, w, h); }
+  function drawDraft() {
+    const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#120e0c'); gr.addColorStop(1, '#221416'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    const b = D.build, O = D.o, head = (a, s) => { g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillStyle = '#e8d8a8'; g.font = '700 24px Georgia, serif'; g.fillText(a, 48, 58);
+      g.fillStyle = '#9d9480'; g.font = '600 15px Georgia, serif'; g.fillText(s, 48, 84); };
+    g.textAlign = 'right'; g.textBaseline = 'alphabetic'; g.fillStyle = O?.ready ? '#8fd08a' : '#9d9480'; g.font = '600 14px Georgia, serif';
+    g.fillText(O?.ready ? 'Przeciwnik gotowy' : `Przeciwnik: krok ${O?.prog || 0} z 12`, W - 48, 58);
+    const pickLine = dev === 'pad' ? [['stick', 'wybór'], ['A', 'wybierz'], ['B', 'wyjdź']] : [['←→', 'wybór'], ['Spacja', 'wybierz'], ['Esc', 'wyjdź']];
+    if (D.ph === 'mode' || D.ph === 'mclass') {
+      if (D.ph === 'mclass' || !D.host) { head('Draft', D.ph === 'mclass' ? 'Lustro: gospodarz wybiera postać dla was obu…' : 'Gospodarz wybiera tryb…');
+        const s = t * 2; g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.beginPath(); g.arc(W / 2, 280, 20, s, s + 4.2); g.stroke(); }
+      else { head('Draft · tryb', 'Ty wybierasz, jak gracie'); MODES.forEach((m, i) => { const x = 60 + i * 290, y = 130; card(x, y, 260, 230, D.sel === i, '#18120e');
+        g.textAlign = 'center'; g.fillStyle = '#f2ecd8'; g.font = '700 22px Georgia, serif'; g.fillText(m.n, x + 130, y + 110); g.fillStyle = '#9d9480'; g.font = '600 15px Georgia, serif'; g.fillText(m.d, x + 130, y + 140); }); }
+    } else if (D.ph === 'hero') {
+      head('Draft · postać', D.mode === 'mirror' ? 'Lustro: ta postać będzie dla was obu' : 'Każdy wybiera swoją');
+      CLS.forEach((c, i) => { const C = CLASSES[c], x = 60 + i * 290, y = 110; card(x, y, 260, 300, D.sel === i, '#18120e');
+        hero([x + 130, y + 150], [.7, -.7], 0, D.sel === i && Math.sin(t * 6) > 0, c, 0);
+        g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#f2ecd8'; g.font = '700 20px Georgia, serif'; g.fillText(C.n, x + 130, y + 196);
+        g.fillStyle = '#b8ad90'; g.font = '600 13px Georgia, serif'; [`Życie ${C.hp} · mana ${C.mp} · bieg ${C.run}`, `Atak: ${C.prim.n}`, `Ruch: ${C.mob.n}`, C.res ? `Odporność ${C.res}%` : ''].forEach((l, k) => g.fillText(l, x + 130, y + 222 + k * 18)); });
+    } else if (D.ph === 'items' || D.ph === 'skills') {
+      const skills = D.ph === 'skills';
+      head(skills ? `Draft · umiejętność ${b.skills.length + 1} z 2` : `Draft · ${SLOTS[D.slotI][1]} (${D.slotI + 1} z ${SLOTS.length})`, `${CLASSES[b.cls].n}: ${skills ? 'wybierz jedną' : 'jeden z trzech'}`);
+      const n = D.offer.length, w = n > 3 ? 200 : 260, gap = n > 3 ? 18 : 30, x0 = (W - (n * w + (n - 1) * gap)) / 2;
+      D.offer.forEach((it, i) => { const x = x0 + i * (w + gap), y = 110; card(x, y, w, 270, D.sel === i);
+        if (skills) { g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#f2ecd8'; g.font = '700 19px Georgia, serif'; g.fillText(it.n, x + w / 2, y + 60);
+          g.fillStyle = '#b8ad90'; g.font = '600 13px Georgia, serif'; wrap(it.d, x + w / 2, y + 96, w - 24, 18); g.fillStyle = '#8fa8ff'; g.fillText(`co ${it.cd} s · ${it.mp} many`, x + w / 2, y + 230); }
+        else { icon(it, x + w / 2, y + 62, 64); tip(it, x + 16, y + 128, Object.values(b.eq).filter(e => e && e.set).length); } });
+      // the build so far
+      g.textAlign = 'left'; g.fillStyle = '#6f6857'; g.font = '600 12px Georgia, serif'; g.fillText('Twoja postać:', 48, 418);
+      SLOTS.forEach(([k], i) => { const x = 48 + i * 44, y = 426, it = b.eq[k]; g.fillStyle = '#120e0b'; g.fillRect(x, y, 38, 38); g.strokeStyle = it ? COL[it.kind] + 'aa' : '#3a3226'; g.lineWidth = 1.5; g.strokeRect(x, y, 38, 38); if (it) icon(it, x + 19, y + 19, 32); });
+      g.fillStyle = '#cbbd96'; g.font = '600 13px Georgia, serif'; const T = ST.t;
+      g.fillText(`Życie ${Math.round(ST.maxHp)} · mana ${Math.round(ST.maxMp)} · obrażenia +${T.dmg || 0}% · atak +${T.fcr || 0}%`, 460, 434);
+      g.fillText(`Ruch +${T.ftp || 0}% · bieg +${T.run || 0}% · odporność ${ST.res}%`, 460, 452);
+      if (b.skills.length) g.fillText(`Umiejętności: ${b.skills.map(s => s.n).join(', ')}`, 460, 470);
+    } else if (D.ph === 'wait') { head('Gotowe', `${CLASSES[b.cls].n}: ${b.skills.map(s => s.n).join(', ')}. Czekam na przeciwnika…`);
+      const s = t * 2; g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.beginPath(); g.arc(W / 2, 280, 20, s, s + 4.2); g.stroke(); }
+    else if (D.ph === 'count') { g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#f2ecd8'; g.font = '700 120px Georgia, serif'; g.fillText(String(Math.ceil(D.count)), W / 2, H / 2 - 20);
+      g.font = '600 18px Georgia, serif'; g.fillStyle = '#cbbd96'; g.fillText(`${CLASSES[b.cls].n} przeciw: ${CLASSES[O.cls].n}`, W / 2, H / 2 + 70); }
+    if (['mode', 'hero', 'items', 'skills'].includes(D.ph) && (D.ph !== 'mode' || D.host)) controls(pickLine, W / 2, H - 28, 'center', '600 14px Georgia, serif', '#d8cfa8');
+    else controls(dev === 'pad' ? [['B', 'wyjdź']] : [['Esc', 'wyjdź']], W / 2, H - 28, 'center', '600 14px Georgia, serif', '#d8cfa8');
+    noteDraw();
+  }
+  function wrap(s, x, y, w, lh) { const words = s.split(' '); let line = ''; for (const wd of words) { const tl = line ? line + ' ' + wd : wd; if (g.measureText(tl).width > w && line) { g.fillText(line, x, y); y += lh; line = wd; } else line = tl; } if (line) g.fillText(line, x, y); }
   function frame(dt, inp) { step(Math.min(dt, .05), inp); draw(); tex.needsUpdate = true; }
   // the screen's average colour, for the glow the TV throws into the room (read small, a few times a second)
   const small = document.createElement('canvas'); small.width = 8; small.height = 5; const sg = small.getContext('2d', { willReadFrequently: true }), avg = new THREE.Color();
@@ -467,11 +619,11 @@ export function createTVGame({ THREE }) {
   function closeOverlay() {
     if (INV.open) { INV.open = false; return true; }
     if (state === 'lobby') { state = 'menu'; return true; }
-    if (state === 'duel') { if (net && D.opp) net.send({ t: 'bye' }, D.opp); D.opp = null; D.o = null; state = 'menu'; msg = null; return true; }
+    if (state === 'duel') { if (net && D.opp) net.send({ t: 'bye' }, D.opp); D.opp = null; D.o = null; state = 'menu'; msg = null; recalc(); return true; }
     return false;
   }
   function home() { closeOverlay(); closeOverlay(); state = 'menu'; sel = 0; }
   draw();
   return { canvas: cv, texture: tex, frame, glow, home, closeOverlay, receive, setNet(n) { net = n; }, leave(id) { if (id === D.opp && state === 'duel') endDuel('Przeciwnik wyszedł'); },
-    get state() { return state; }, get inv() { return INV.open; }, SAVE, _dbg: () => ({ pl, loot, D }) };   // (_dbg: for tests)
+    get state() { return state; }, get inv() { return INV.open; }, SAVE, _dbg: () => ({ pl, loot, D, ST }) };   // (_dbg: for tests)
 }

@@ -261,7 +261,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=18';
 import { makeBowl, makeCrisp } from './snacks.js?v=1';
-import { buildLiving } from './living.js?v=42';
+import { buildLiving } from './living.js?v=43';
 import { buildHall } from './hall.js?v=4';
 import { buildRooms } from './rooms.js?v=46';
 import { startGhosts } from './ghosts.js?v=4';
@@ -1204,7 +1204,7 @@ const bedSwitch = { name: 'bed', t: 0, get on() { return !!LIE && LIE.dir > 0 &&
 // Start is to play: the view turns to the screen and closes in on it, the keys and the pad go to the game; Esc (the pad's B) leaves the
 // game, a second Esc gets you up. Playing, it throws its light into the room, coloured as its picture ----------
 const TVF = { on: false, prev: {}, padA: true, gt: 0, keys: new Set(), dev: 'keys' }, _tvc = new THREE.Vector3();
-const TV_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyJ', 'KeyK', 'Enter', 'KeyI', 'KeyQ', 'KeyX', 'Delete', 'Backspace'];
+const TV_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyJ', 'KeyK', 'Enter', 'KeyI', 'KeyQ', 'KeyX', 'Delete', 'Backspace', 'KeyL'];
 const seatedHere = () => !!LIE && !!LIE.seat && LIE.seat.name === 'sofa' && LIE.dir > 0;
 function tvFocus(v) {
   if (v && !(LIV?.tv?.on && seatedHere())) return;
@@ -1222,10 +1222,10 @@ function tvInput(gp) {
   if (gp) { const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0; if (Math.hypot(ax, ay) > .2) { x = ax; y = ay; }            // the left stick, or the d-pad
     if (b(14)) x = -1; if (b(15)) x = 1; if (b(12)) y = -1; if (b(13)) y = 1;
     if (gp.buttons.some(q => q.pressed) || Math.hypot(ax, ay) > .3) TVF.dev = 'pad'; }   // the last thing used: the screen shows its controls
-  const now = { tele: K.has('Space') || b(0), cast: K.has('KeyJ') || K.has('KeyK') || b(2) || (gp?.buttons[7]?.value || 0) > .4, start: K.has('Enter') || b(9), back: b(1), left: x < -.5, right: x > .5, up: y < -.5, down: y > .5,
-    inv: K.has('KeyI') || b(3), potion: K.has('KeyQ') || b(4), drop: K.has('KeyX') || K.has('Delete') || K.has('Backspace') || b(2) };
+  const now = { tele: K.has('Space') || b(0), cast: K.has('KeyJ') || b(2) || (gp?.buttons[7]?.value || 0) > .4, start: K.has('Enter') || b(9), back: b(1), left: x < -.5, right: x > .5, up: y < -.5, down: y > .5,
+    inv: K.has('KeyI') || b(3), potion: K.has('KeyQ') || b(4), drop: K.has('KeyX') || K.has('Delete') || K.has('Backspace') || b(2), sk1: K.has('KeyK') || b(3), sk2: K.has('KeyL') || b(5) };
   const was = TVF.prev, edge = k => !!now[k] && !was[k]; TVF.prev = now;
-  return { dev: TVF.dev, x, y, tele: edge('tele'), teleHeld: now.tele, cast: now.cast, start: edge('start'), back: edge('back'), left: edge('left'), right: edge('right'), up: edge('up'), down: edge('down'), inv: edge('inv'), potion: edge('potion'), drop: edge('drop') };
+  return { dev: TVF.dev, x, y, tele: edge('tele'), teleHeld: now.tele, cast: now.cast, start: edge('start'), back: edge('back'), left: edge('left'), right: edge('right'), up: edge('up'), down: edge('down'), inv: edge('inv'), potion: edge('potion'), drop: edge('drop'), sk1: edge('sk1'), sk2: edge('sk2') };
 }
 function stepTV(dt) {
   const tv = LIV?.tv; if (!tv) return;
