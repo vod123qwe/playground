@@ -226,7 +226,7 @@ import { buildKitchen } from './kitchen.js?v=5';
 import { buildLiving } from './living.js?v=10';
 import { buildHall } from './hall.js?v=1';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import { WebGLPathTracer, DenoiseMaterial } from 'three-gpu-pathtracer';
+import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -397,12 +397,12 @@ const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 for (const sp of SPOTS) {                                            // the files there are, the photo before the render
   sp.file = null;
   (async () => {
-    for (const f of ['photo.jpg', 'render.jpg']) {
+    for (const f of ['photo.jpg', 'traced.jpg', 'render.jpg']) {
       const r = await fetch(`assets/spots/${sp.id}/${f}`, { method: 'HEAD' }).catch(() => null);
       if (r && r.ok && r.headers.get('content-type')?.startsWith('image')) { sp.file = f; break; }
     }
     if (!sp.file) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'spot'; b.innerHTML = spotIcon + `<span>${sp.name}${sp.file === 'photo.jpg' ? '' : ' · render'}</span>`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'spot'; b.innerHTML = spotIcon + `<span>${sp.name}${sp.file === 'render.jpg' ? ' · render' : ''}</span>`;
     b.title = `A 360 ${sp.file === 'photo.jpg' ? 'photo' : 'render'} from here: look round in it`; b.addEventListener('click', () => enterSpot(sp));
     document.getElementById('overlay').appendChild(b); SPOT.els.push({ el: b, sp, v: new THREE.Vector3(wx(sp.at[0]), sp.eye * M * .8, wz(sp.at[1])) });
     paintSpotbar();
@@ -412,7 +412,7 @@ function paintSpotbar() {
   const bar = document.getElementById('spotbar'), ok = SPOTS.filter(s => s.file);
   bar.innerHTML = ''; const back = document.createElement('button'); back.type = 'button'; back.className = 'sb-back'; back.textContent = 'Back to the walk'; back.addEventListener('click', leaveSpot); bar.appendChild(back);
   for (const sp of ok) { const b = document.createElement('button'); b.type = 'button'; b.textContent = sp.name; b.setAttribute('aria-pressed', String(SPOT.cur === sp)); b.addEventListener('click', () => enterSpot(sp)); bar.appendChild(b); }
-  if (SPOT.cur) { const n = document.createElement('small'); n.textContent = SPOT.cur.file === 'photo.jpg' ? 'photo' : 'render · the photo is on its way'; bar.appendChild(n); }
+  if (SPOT.cur) { const n = document.createElement('small'); n.textContent = { 'photo.jpg': 'photo', 'traced.jpg': 'traced light' }[SPOT.cur.file] || 'render · the photo is on its way'; bar.appendChild(n); }
 }
 async function enterSpot(sp) {
   if (!sp.file) return;
@@ -475,6 +475,60 @@ async function captureSpot(id, url, size = 4096) {
   }
   if (url) for (let i = 0; i < out.length; i++) await fetch(url + (9201 + i), { method: 'POST', body: out[i] });
   return out.map(b => b.size);
+}
+
+// the 360 in traced light (locally, from the console): AW.traceSpot('living-a', { post: 'http://127.0.0.1:8811/f/' }). The tracer's own
+// equirectangular camera at the spot, 4096 x 2048, 5 bounces, up to 320 samples; fireflies out and denoised, as the traced photo. It is
+// kind to the card: small tiles, each waited for, then the card rests (duty .55 = busy 55 % of the time). It keeps going in a hidden tab:
+// the waits run on a worker's clock, which the browser does not throttle. Every 32 samples a JPEG goes to post + (9400 + n), the last one
+// to post + 9499; Esc or AW.traceStop() ends it early with what is there.
+let traceStop = false;
+const workerSleep = (() => { let w = null, q = [];
+  return ms => new Promise(res => { if (!w) { w = new Worker(URL.createObjectURL(new Blob(['onmessage = e => setTimeout(() => postMessage(0), e.data)'], { type: 'text/javascript' }))); w.onmessage = () => { const f = q.shift(); if (f) f(); }; } q.push(res); w.postMessage(Math.max(0, ms)); }); })();
+async function traceSpot(id, { size = 4096, samples = 320, duty = .55, every = 32, post = null } = {}) {
+  const sp = SPOTS.find(s => s.id === id); if (!sp) throw new Error('no such spot');
+  if (photoing) throw new Error('busy');
+  const keep = { view: S.view, pr: renderer.getPixelRatio(), rs: pt.renderScale, tiles: pt.tiles.clone(), dyn: pt.dynamicLowRes, fade: pt.fadeDuration, delay: pt.renderDelay, min: pt.minSamples, b: pt.bounces, gf: pt.filterGlossyFactor, ls: pt.lowResScale };
+  S.view = 'generic'; leaveSpot(); if (mode !== 'walk') { setMode('walk'); await workerSleep(1500); }
+  P.x = sp.at[0]; P.z = sp.at[1]; await workerSleep(300);
+  photoing = true; traceStop = false;
+  const W = size, H = size / 2, gl = renderer.getContext(), t0 = performance.now(); let saved = 0, busy = 0;
+  const shot = document.getElementById('shot'), bar = document.getElementById('shot-bar'), cnt = document.getElementById('shot-n');
+  document.getElementById('shot-t').textContent = `Tracing the 360 · ${sp.name}`; document.getElementById('shot-save').hidden = false; shot.classList.add('open');
+  const onKey = e => { if (e.key === 'Escape') traceStop = true; }; addEventListener('keydown', onKey);
+  const saveNow = () => { traceStop = true; }; document.getElementById('shot-save').addEventListener('click', saveNow, { once: true });
+  const develop = async n => { const b = await developTrace(W, H); if (post) await fetch(post + n, { method: 'POST', body: b }); return b; };
+  let result = null;
+  try {
+    ceiling.visible = true; world.visible = true;
+    scene.background = VIEW.tex.generic || bgColor; scene.backgroundRotation.set(0, Math.PI / 2, 0);
+    await loadSky();
+    renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+    Object.assign(pt, { renderScale: 1, dynamicLowRes: false, fadeDuration: 0, renderDelay: 0, minSamples: 0, bounces: 5, filterGlossyFactor: .8, pausePathTracing: false, renderToCanvas: false });
+    pt.tiles.set(Math.ceil(W / 200), Math.ceil(H / 170));           // about 30 000 px a draw, as the photo
+    const cam = new EquirectCamera(); cam.position.set(wx(sp.at[0]), sp.eye * M, wz(sp.at[1])); cam.updateMatrixWorld();
+    pt.setScene(tracerScene(), cam); pt.updateCamera();
+    while (pt.samples < samples && !traceStop) {
+      const a = performance.now();
+      pt.renderSample();
+      const f = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); gl.flush();
+      while (!gl.isContextLost() && gl.clientWaitSync(f, 0, 0) === gl.TIMEOUT_EXPIRED) await workerSleep(2);
+      gl.deleteSync(f); if (gl.isContextLost()) throw new Error('the graphics card reset');
+      const took = performance.now() - a; busy += took;
+      await workerSleep(took * (1 - duty) / duty);                     // the card rests
+      const k = pt.samples / samples, el = (performance.now() - t0) / 1000, left = k > .01 ? el / k - el : 0;
+      bar.style.width = `${k * 100}%`; cnt.textContent = `${Math.floor(pt.samples)} / ${samples} samples${left ? ` · about ${Math.max(1, Math.round(left / 60))} min left` : ''}`;
+      if (Math.floor(pt.samples / every) > saved && Math.floor(pt.samples) < samples) { saved = Math.floor(pt.samples / every); await develop(9400 + saved); }
+    }
+    if (pt.samples >= 1) result = await develop(9499);
+  } catch (err) { console.warn('traced 360:', err); }
+  finally {
+    removeEventListener('keydown', onKey);
+    Object.assign(pt, { renderScale: keep.rs, dynamicLowRes: keep.dyn, fadeDuration: keep.fade, renderDelay: keep.delay, minSamples: keep.min, bounces: keep.b, filterGlossyFactor: keep.gf, lowResScale: keep.ls, renderToCanvas: true });
+    pt.tiles.copy(keep.tiles); renderer.setPixelRatio(keep.pr); resize(); ptDirty = true; S.view = keep.view;
+    document.getElementById('shot-t').textContent = 'Developing the photo'; document.getElementById('shot-save').hidden = true; shot.classList.remove('open'); photoing = false;
+  }
+  return { samples: Math.floor(pt.samples), minutes: +((performance.now() - t0) / 60000).toFixed(1), busy: +(busy / (performance.now() - t0)).toFixed(2), size: result && result.size };
 }
 
 // ---------- the clock ----------
@@ -1621,7 +1675,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
