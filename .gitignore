@@ -25,3 +25,4 @@ Thumbs.db
 lab-board/pieces/apartment-walk/assets/private/
 lab-board/pieces/apartment-walk/tools/blender/work/
 lab-board/pieces/apartment-walk/tools/blender/tex/
+__pycache__/
