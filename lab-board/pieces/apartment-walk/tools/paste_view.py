@@ -14,9 +14,14 @@ from PIL import Image
 
 HERE = os.path.dirname(__file__); P = os.path.join(HERE, '..', 'assets', 'private')
 PHOTOS = [   # file, bearing, horizontal fov, horizon row (in the photo), mirrored, the row just over the highest hilltop
-    ('ai-output/living-south-east.webp', 142, 90, 285, False, 232),
-    ('ai-output/south.webp', 180, 90, 232, True, 158),
+    # four views from the flat round the facade, left to right: along the street towards the block (2), the yard with the
+    # warehouse (3), the field and the tracks (4), the street away to the bend (1); an image model's, from the render and a photo
+    ('ai-output/gpt-2.webp', 40, 75, 322, False, 296),
+    ('ai-output/gpt-3.webp', 88, 75, 356, False, 360),
+    ('ai-output/gpt-4.webp', 135, 75, 356, False, 360),
+    ('ai-output/gpt-1.webp', 185, 75, 334, False, 322),
 ]
+TONE = (.8, .9)   # the photos' colour kept (the rest to grey) and their contrast: image models over-cook both
 base8 = np.asarray(Image.open(os.path.join(P, 'view-real-render.jpg')).convert('RGB'))
 H, W, _ = base8.shape
 bear_u = lambda az: (math.atan2(-math.cos(math.radians(az)), math.sin(math.radians(az))) / (2 * math.pi) + .5) % 1
@@ -33,6 +38,7 @@ for f, az, fov, hrow, mirror, top in PHOTOS:
     im = Image.open(os.path.join(P, f)).convert('RGB')
     if mirror: im = im.transpose(Image.FLIP_LEFT_RIGHT)
     ph = np.asarray(im).astype(np.float32) / 255; h, w, _ = ph.shape
+    g = ph @ np.array([.2126, .7152, .0722], np.float32); ph = g[..., None] + (ph - g[..., None]) * TONE[0]; ph = np.clip(.5 + (ph - .5) * TONE[1], 0, 1)
     # only what is under the hilltops: the photo's sky fades out over 36 rows above them, the render's sky (matched in colour) stays
     # above, so there is no seam across the sky
     ground = np.clip((np.arange(h)[:, None] - (top - 36)) / 36, 0, 1).astype(np.float32) * np.ones((1, w), np.float32)
