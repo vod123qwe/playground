@@ -9,7 +9,7 @@
 //  - in the middle a round, subtly shaggy rug (160, a blush cream) and over it a hanging bag swing from the ceiling, its way in
 //    towards the door, kept clear of the ceiling lamp.
 
-export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTex, rng, mergeGeometries, pax, hallMats, H }) {
+export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTex, rng, mergeGeometries, pax, hallMats, H, lamps }) {
   const q = rng(4401), paxDoors = [], seats = [];
   const put = (g, m, x, y, z, parent = root) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
   const pink = std({ name: 'paintPink', color: '#e6c6bf', roughness: .92 }), mould = std({ name: 'paintPink', color: '#ebcfc9', roughness: .85 });
@@ -75,7 +75,11 @@ export function buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTe
     const lampM = std({ name: 'lampPink', color: '#e7aeb5', roughness: .5 });
     pt(new THREE.CylinderGeometry(6, 7, 1.6, 32), lampM, DX1 - 12, 75.8, Z1d - 12);
     { const arm = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(DX1 - 12, 76, Z1d - 12), new THREE.Vector3(DX1 - 14, 105, Z1d - 13), new THREE.Vector3(DX1 - 20, 118, Z1d - 24)]), 16, .7, 8); pt(arm, lampM, 0, 0, 0); }
-    { const sh = pt(new THREE.ConeGeometry(7.5, 10, 32, 1, true), std({ name: 'lampPink', color: '#e7aeb5', roughness: .5, side: THREE.DoubleSide }), DX1 - 22, 113, Z1d - 28); sh.rotation.x = -.5; }
+    { const sh = pt(new THREE.ConeGeometry(7.5, 10, 32, 1, true), std({ name: 'lampPink', color: '#e7aeb5', roughness: .5, side: THREE.DoubleSide }), DX1 - 22, 113, Z1d - 28); sh.rotation.x = -.5;
+      const bulbM = std({ name: 'kidLamp', color: '#fff6e8', roughness: .3, emissive: '#ffd9a8', emissiveIntensity: 0 }), bulb = pt(new THREE.SphereGeometry(2.6, 16, 12), bulbM, DX1 - 22, 110.5, Z1d - 26.5);
+      const light = new THREE.PointLight('#ffd2a0', 0, 4, 2); light.position.set(DX1 - 22, 106, Z1d - 25); G.add(light);
+      light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;
+      lamps.push({ name: 'desk lamp (child)', on: false, light, meshes: [sh, bulb], set(v) { this.on = !!v; bulbM.emissiveIntensity = v ? 2.2 : 0; light.intensity = v ? .9 : 0; } }); }
     pt(new THREE.CylinderGeometry(3.4, 3.4, 10, 24), std({ name: 'lampBase', color: '#f2ece2', roughness: .6 }), DX0 + 10, 80, Z1d - 10);
     for (let i = 0; i < 4; i++) bx(DX0 + 16, DX0 + 38, 75 + i * 2.2, 77 + i * 2.2, Z1d - 22 + (q() - .5) * 2, Z1d - 6 + (q() - .5) * 2, std({ name: 'book', color: ['#8fb3c9', '#f0c8a8', '#bfa6cf', '#e8e0cf'][i], roughness: .8 }), { r: .3 });
     foot.push([toW(DX0, Z0d), toW(DX1, Z0d), toW(DX1, Z1d), toW(DX0, Z1d)]);

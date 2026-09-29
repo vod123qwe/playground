@@ -13,7 +13,7 @@ import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
 import { buildBath } from './bath.js?v=11';
 import { buildBalconies } from './balcony.js?v=3';
-import { buildKidroom } from './kidroom.js?v=4';
+import { buildKidroom } from './kidroom.js?v=5';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -328,10 +328,10 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   // (3000 K); 38 across in the living room and the bedroom, 26 in the study and the child's room. Each a switch ----------
   const shadeG = new THREE.LatheGeometry([[19, 0], [19.35, .8], [19.2, 3], [18.8, 7.5], [18, 11.5], [16.4, 14.4], [13.4, 16], [6, 16.7], [1.3, 16.8]].map(([r, y]) => new THREE.Vector2(r, y)), 96);
   const brass = std({ name: 'brass', color: '#c9a063', roughness: .28, metalness: 1 });
-  function ceilingLamp(name, x, z, D) {
+  function ceilingLamp(name, x, z, D, ledName = 'ceilingLED') {                  // (ledName: the evening 360s light them by it)
     const k = D / 38, G = new THREE.Group(); G.position.set(x, 0, z); root.add(G);
     const amber = std({ name: 'amberGlass', color: '#c47a36', roughness: .04, metalness: .15, transparent: true, opacity: .55, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
-    const led = std({ name: 'ceilingLED', color: '#fff4e2', roughness: .4, emissive: '#ffcf8a', emissiveIntensity: 0 });   // (its own name: the evening render keeps these off)
+    const led = std({ name: ledName, color: '#fff4e2', roughness: .4, emissive: '#ffcf8a', emissiveIntensity: 0 });   // (its own name: the evening render keeps these off, but the child's, dimmed)
     const y0 = H - 22 - 16.8 * k;                                    // the rim; the crown 22 cm under the ceiling
     const shade = new THREE.Mesh(shadeG, amber); shade.scale.setScalar(k); shade.position.y = y0; shade.castShadow = true; G.add(shade);
     const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(6.4 * k, 6.4 * k, 9 * k, 48, 1, true), brass); sleeve.position.y = y0 + 7.5 * k; G.add(sleeve);
@@ -345,7 +345,7 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   ceilingLamp('ceiling living', 537, -758, 38);                      // H1(5/5'), over the sofa
   ceilingLamp('ceiling bedroom', 913, -260, 38);                     // H1(11/11'), by the foot of the bed
   ceilingLamp('ceiling study', 774, -515, 26);                       // H1(12/12')
-  ceilingLamp('ceiling child', 212, -227, 26);                       // H1(8/8')
+  ceilingLamp('ceiling child', 212, -227, 26, 'ceilingLEDdim');                       // H1(8/8')
 
   // ---------- E, the study, as the functional layout (A.04, its third revision) draws it: the desk on the wall to the living room,
   // 6 cm off it (172 x 60: A.04 draws it 120, but it runs on to the window wall), the chair pulled out before it; a sofa bed on the wall to the bedroom, to the corner by the radiator, that pulls
@@ -596,7 +596,7 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   }
 
   seats.push(...buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, rng, mergeGeometries, linen, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR }, balconies }).seats);   // the balconies, to sit out on
-  const kid = buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTex, rng, mergeGeometries, pax, hallMats, H });   // H, the child's room
+  const kid = buildKidroom({ THREE, root, std, box, foot, linen, oak, canvasTex, rng, mergeGeometries, pax, hallMats, H, lamps });   // H, the child's room
   seats.push(...kid.seats);
   const bath = buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, H, oakMaps: { map: oakC, normalMap: oakN, roughnessMap: oakR } });   // G, the bathroom
 
