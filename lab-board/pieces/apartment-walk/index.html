@@ -240,9 +240,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=10';
-import { buildLiving } from './living.js?v=13';
+import { buildLiving } from './living.js?v=14';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=11';
+import { buildRooms } from './rooms.js?v=12';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -1185,7 +1185,10 @@ canvas.addEventListener('pointerup', e => {                         // a click (
   else if (dr) { toggleDoor(dr); grabFlash(); }
 });
 // the lamps you can click: the pendants over the island (one switch) and over the table
-function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
+// the living room's drapes as a switch: drawn across (closed) or gathered with the sheers across; the sheers let a click through
+const livingDrapes = { name: 'curtains living', get on() { return S.curtains === 'closed'; }, get meshes() { return LIV?.drapeMeshes ? LIV.drapeMeshes() : []; },
+  set(v) { S.curtains = v ? 'closed' : 'sheers'; ctl.curtains?.set?.(S.curtains); curtainsNow(true); } };
+function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : []), ...(LIV ? [livingDrapes] : [])]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
 // ---------- the hand: over a leaf that opens, and while Space-panning the overview ----------
 const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0 };
 const sp = { held: false, id: null, x: 0, y: 0 };
@@ -1855,7 +1858,7 @@ function applySofa() {                                              // the sofa 
 let FURN = null;                                                    // the bedroom, the study, the child's room (rooms.js)
 const livingReady = kitchenReady.then(async () => {
   loadStep(3, 'Furnishing the rooms…');
-  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
+  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats, openings: A.openings }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
   catch (err) { console.warn('rooms', err); }
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);

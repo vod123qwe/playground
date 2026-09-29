@@ -365,6 +365,17 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     lamps.push({ name: 'dining', on: false, meshes, set(v) { this.on = v; light.intensity = v ? 3 : 0; glow.emissiveIntensity = v ? 6 : 0; } });   // click it, or Lamps on
   }));
   await Promise.all(decor);
+  // a floor lamp in the corner by the window end of the console, in the bedside lamps' family: a round black base, a slim black stem,
+  // a linen drum 42 across at 1.3 to 1.6 m; clear of the gathered drapes (its drum 20 cm off the facade) and just in front of the console
+  { const G = new THREE.Group(); G.position.set(-4, 0, 55); TV.add(G);
+    const metal = std({ name: 'legs', color: '#141414', roughness: .45, metalness: .6 }), shade = std({ name: 'bedLamp', color: '#f2ebdf', roughness: .95, side: THREE.DoubleSide, emissive: '#ffd9a0', emissiveIntensity: 0 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(13, 13.5, 2.2, 48), metal); base.position.y = 1.1; base.castShadow = base.receiveShadow = true; G.add(base);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, 134, 16), metal); stem.position.y = 2 + 67; stem.castShadow = true; G.add(stem);
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(19, 21, 30, 64, 1, true), shade); drum.position.y = 145; drum.castShadow = true; G.add(drum);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(19, .25, 8, 64), metal); ring.rotation.x = Math.PI / 2; ring.position.y = 160; G.add(ring);
+    const light = new THREE.PointLight('#ffcf94', 0, 5, 2); light.position.y = 142; G.add(light);
+    lamps.push({ name: 'floor', on: false, meshes: [base, stem, drum, ring], set(v) { this.on = !!v; shade.emissiveIntensity = v ? 1.8 : 0; light.intensity = v ? 2.2 : 0; } });
+  }
 
   // lamps on or off; the light is in candela per the renderer's metres, the group being in cm
   const setLamps = on => { for (const l of lamps) l.set(on); };
@@ -381,7 +392,8 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   };
   const fixed = [
     [[0, 0], [LIVING.console.len, 0], [LIVING.console.len, 40], [0, 40]].map(([x, z]) => inF(TVd, x, z)),
-    circle(LIVING.dining, 80), circle([443.8, -1121.4], 30, 12),
+    circle(LIVING.dining, 80),
+    [[-17, 42], [9, 42], [9, 68], [-17, 68]].map(([x, z]) => inF(TVd, x, z)),   // the floor lamp
   ];
   let foot = [];
   function setSofa(kind) {
@@ -390,5 +402,6 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     foot = [k.out.map(([x, z]) => inF(SFd, x, z)), circle(k.side, 27), ...fixed]; return foot;
   }
   setSofa('gala3');
-  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC };
+  const drapeMeshes = () => CUR.children.filter(c => c.material === drapeM);   // the drapes, a switch in the walk (the sheers are not)
+  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes };
 }
