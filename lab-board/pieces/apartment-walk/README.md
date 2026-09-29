@@ -28,12 +28,13 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 
 ## Kuchnia (koncept M48 na układzie A.04)
 
-- **Ciąg 390 cm** wzdłuż ściany kuchennej (w danych 391,2 cm, od szachtu do filaru przy drzwiach balkonowych): lodówka w zabudowie 60 · zlew 60 · zmywarka 80 · płyta indukcyjna 80 · cargo 50 · piekarnik + mikrofala w słupku 60.
+- **Ciąg 350 × 60 cm** jak na A.04 (zmierzone z wektorów PDF, skala 1:50): od występu ściany przy wejściu do 40 cm przed ścianą okienną (ściana ma 390 cm). Lodówko-zamrażarka w zabudowie 60 (dwoje drzwi dębowych + schowek, kratka wentylacyjna w cokole) · zlew podwieszany 60 · zmywarka w zabudowie 60 · indukcja 80 · cargo 30 · słupek 60: szuflada, piekarnik 60, kompaktowy piekarnik z mikrofalą 45, schowek.
 - **Wysokości:** cokół 10 cm (cofnięty 5 cm), blat 87–90 cm (3 cm), szafki górne od 145 cm do sufitu (55 cm płytek nad blatem), słupki do sufitu (2,55 m zamiast 2,60 z konceptu).
-- **Materiały:** fronty dolne i słupki dąb naturalny (skan CC0 Oak Veneer 01, słoje pionowo, uchwyt frezowany w górnej krawędzi), fronty górne beż / kaszmir mat, listwa dębowa pod górnymi + LED (światło powierzchniowe), blat i zlew wpuszczany z beżowego konglomeratu, płytki z połyskiem strukturalne 7,5 × 30 pionowo, bateria stal szczotkowana, AGD czarne szkło, 5 czarnych spotów na suficie.
+- **Materiały:** fronty dolne i słupki dąb naturalny (skan CC0 Oak Veneer 01, słoje pionowo, uchwyt frezowany w górnej krawędzi), trzy fronty górne beż / kaszmir mat do sufitu (bez listwy dębowej), pod nimi LED, blaty z kwarcytu **Taj Mahal** polerowanego (`tools/make_tajmahal.py`: kremowe tło, miękkie złote pasma i cienkie żyły wzdłuż przekątnej płyty, mapa 250 × 250 cm, 4K dla Blendera, 2K w przeglądarce; to rysunek, nie skan płyty), zlew ze stali szczotkowanej pod blatem, płytki z połyskiem strukturalne 7,5 × 30 pionowo, bateria stal szczotkowana, 5 czarnych spotów na suficie.
+- **AGD:** piekarnik i kompakt w jednej linii: czarne szkło, pasek sterowania z wyświetlaczem i symbolami dotykowymi, okno drzwi, stalowy reling na dwóch wspornikach. Indukcja 78 × 52 zlicowana z blatem (fuga 2 mm): dwie strefy flex, trzy okrągłe, suwak mocy.
 - **Detal:** wszystkie fronty, panele i korpusy z krawędzią zaokrągloną 1,5 mm (łapią światło), blat z fazką 2 mm, ryflowanie wyspy z prawdziwych półokrągłych listewek 2,5 cm, fronty ze szczelinami 3 mm i frezem uchwytowym.
-- **Hokery:** miękkie okrągłe siedzisko i wygięte oparcie w tkaninie bouclé (skan CC0 *curly teddy natural*, Poly Haven), czarne stalowe nogi rozchylone na zewnątrz, podnóżek, stopki.
-- **Dekoracje (Poly Haven, CC0):** dwa gliniane wazony przy piekarniku, rzeźbiona drewniana misa z limonkami na wyspie, pachira w glinianej donicy przy drzwiach balkonowych.
+- **Hokery:** lity dąb z niskim łukowym oparciem, na wzór HAY About A Stool AAS 38 (wysokość barowa „counter”): siedzisko Ø 38 na 65 cm, cztery rozchylone, zwężane nogi, rama podnóżka na 24 cm, oparcie 12–18 cm nad siedziskiem na dwóch słupkach.
+- **Dekoracje (Poly Haven, CC0):** dwa gliniane wazony na cargo, rzeźbiona drewniana misa z limonkami na wyspie, pachira w glinianej donicy przy drzwiach balkonowych.
 - **Światło od okien:** w każdym przeszkleniu miękkie światło powierzchniowe skierowane do środka (*Light → Window light*).
 - **Photo** (prawy górny róg) ma dwie opcje:
   - **Quick · 4K:** 32 klatki w 3840 px, każda z kamerą przesuniętą o ułamek piksela i słońcem o ułamek stopnia, z okluzją otoczenia (GTAO, szkło pominięte), uśrednione: gładkie krawędzie, miękkie cienie, cienie kontaktowe. Około minuty.
@@ -76,11 +77,14 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 
 ## Render 360 w Blenderze (tools/blender)
 
-Punkt zdjęciowy dostaje render z Blendera Cycles: panorama 8192 × 4096 (4096 × 2048 dla kart, które nie przyjmą 8K), 256 próbek, odszumianie OpenImageDenoise, około 7 minut na RTX 4080. Tryb Photo woli go od śledzonego światła z przeglądarki (`blender.jpg`, na pasku „Blender · Cycles”).
+Punkty zdjęciowe to rendery z Blendera Cycles w **kafelkach 16K**: sześcian 6 × 4096 px, każda ściana w piramidzie poziomów (512, 1024, 2048, 4096) i kafelkach 512 px. Spacer wczytuje od razu całość w 512 i 1024, potem kafelki w polu widzenia w rozdzielczości, jakiej potrzebuje ekran; przy zbliżeniu dociąga 4096 tylko tam, gdzie patrzysz. Ostro do ok. 2× zbliżenia na ekranie 1080p.
 
-1. `python tools/blender/save_server.py` (odbiornik na 127.0.0.1:8812), potem w konsoli spaceru: `AW.exportScene('http://127.0.0.1:8812/save/apartment.glb')`. Scena idzie tak, jak stoi (zegar, zasłony, lampy), każdy materiał z nazwą.
-2. `blender -b -P tools/blender/render.py -- --spot living-a --size 8192 --samples 256 --exposure 0.15 --wb 6700 --out work/living-a-8k.png`.
-3. Materiały: `materials.py` (szkło, firany, LED; z `python tools/blender/get_textures.py` także skany Poly Haven CC0 w 4K: dąb, bukla, szenil, len, juta, tynk). Folder `work/` i `tex/` nie idą do repo.
+**Pory dnia:** 11:30, złota godzina 17:45 i 19:00 po zachodzie z lampami (kule nad wyspą, lampa nad stołem, spoty, LED). Zegar wybiera najbliższą wyrenderowaną porę (pasek: „Blender · Cycles · 17:45”). O 17:45 słońce jest na zachodzie, a okna salonu wychodzą na południowy wschód, więc do salonu wpada tylko ciepłe światło nieba.
+
+1. `python tools/blender/save_server.py` (odbiornik na 127.0.0.1:8812), potem w konsoli spaceru: `AW.exportScene('http://127.0.0.1:8812/save/apartment.glb')`. Scena idzie tak, jak stoi (zasłony, sofa), każdy materiał z nazwą, a z nią słońce dla każdej pory (`PANO_TIMES`).
+2. `sh tools/blender/run_cubes.sh` (w `tools/blender`): każdy punkt w każdej porze jako 6 ścian 4096 px, 256 próbek (512 z lampami), odszumianie OpenImageDenoise; ok. 20 minut na zestaw na RTX 4080.
+3. `python tools/blender/tile.py`: tnie ściany na kafelki do `assets/spots/<punkt>/t<pora>/` i pisze `pano.json`.
+4. Materiały (`materials.py`): szkło, firany, LED, lampy wieczorem, blat Taj Mahal w 4K, a z `python tools/blender/get_textures.py` skany Poly Haven CC0 w 4K: dąb (po UV, słoje w górę frontów), bukla (tylko faktura, kolor nasz: skan jest w kratę), szenil, len, juta, tynk. Kontrolne ujęcie: `render.py -- --spot kitchen-a --persp 127.6,-12,95 --back 1.6 --out work/k.png`. Foldery `work/` i `tex/` nie idą do repo.
 
 ## Widok za oknami
 

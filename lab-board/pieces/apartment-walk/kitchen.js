@@ -1,9 +1,11 @@
-// The kitchen of the concept "M48" (oak lower fronts and tall units, cashmere beige uppers to the ceiling, beige conglomerate top and
-// sink, glossy structured tiles, black appliances, LED under the uppers, a fluted island with three stools), placed on the layout A.04:
-// the run along the 390 cm kitchen wall, the island 180 x 80 where A.04 draws it. Everything is modelled in centimetres.
+// The kitchen of the concept "M48" (oak lower fronts and tall units, cashmere beige uppers to the ceiling, glossy structured tiles, black
+// appliances, LED under the uppers, a fluted island with three stools) on the layout A.04: the run 350 x 60 along the kitchen wall, from
+// the wall's return by the entrance to 40 cm short of the window wall (as A.04 draws it), the island 180 x 80 where A.04 draws it.
+// The worktops in Taj Mahal quartzite (tools/make_tajmahal.py), polished, 3 cm. Everything is modelled in centimetres.
 //
-// Run, from the entrance side: fridge 60 (tall) | sink 60 | dishwasher 80 | induction 80 | cargo 50 | oven + microwave 60 (tall).
-// Heights: plinth 10, worktop 87-90 (3 cm), uppers 145-255 (55 cm of backsplash), tall units to the ceiling.
+// Run, from the entrance side: integrated fridge-freezer 60 (tall) | undermount sink 60 | integrated dishwasher 60 | flush induction 80 |
+// cargo 30 | oven 60 + compact oven with microwave 45 (tall). Heights: plinth 10, worktop 87-90, uppers 145 to the ceiling (55 cm of
+// backsplash), tall units to the ceiling.
 
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -33,15 +35,10 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   const legs = std({ name: 'legs', color: '#141414', roughness: .45, metalness: .6 });
   const [tdC, tdN, tdR] = await Promise.all([load('tex/teddy_diff.jpg', true), load('tex/teddy_nor.jpg'), load('tex/teddy_rough.jpg')]);
   const fabric = std({ name: 'fabric', map: tdC, normalMap: tdN, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: tdR, roughness: 1, color: '#e9dccb' });   // boucle: Poly Haven "curly teddy natural" (CC0)          // stool seats: beige boucle
-  // conglomerate: a warm beige with a fine speckle
-  const quartz = (() => {
-    const N = 1024, c = canvas(N, N), g = c.getContext('2d'), r = rng(77);
-    g.fillStyle = '#dccab0'; g.fillRect(0, 0, N, N);
-    for (let i = 0; i < 26000; i++) { const x = r() * N, y = r() * N, s = r() * 1.6 + .3, v = r(); g.fillStyle = v < .5 ? `rgba(160,138,110,${.25 + r() * .3})` : v < .85 ? `rgba(245,236,220,${.3 + r() * .4})` : `rgba(120,100,80,${.3})`; g.fillRect(x, y, s, s); }
-    for (let i = 0; i < 90; i++) { const x = r() * N, y = r() * N, rad = 12 + r() * 40; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${r() > .5 ? '232,220,200' : '206,190,164'},.1)`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }
-    return std({ name: 'quartz', map: tex(c, true), roughness: .38 });              // honed, a soft sheen
-  })();
-  const QUARTZ_CM = 120;                                             // the speckle map covers 120 cm
+  // Taj Mahal quartzite, polished: one map over 250 x 250 cm; the run's top and the island's take different parts of it
+  const [tmC, tmR] = await Promise.all([load('tex/tajmahal.jpg', true), load('tex/tajmahal_rough.jpg')]);
+  const quartz = std({ name: 'tajmahal', map: tmC, roughnessMap: tmR, roughness: 1 });
+  const QUARTZ_CM = 250;
   // glossy structured tiles, 7.5 x 30 cm, stacked vertically, 2 mm joint: slightly uneven faces, each tile its own shade
   const tiles = (() => {
     const W = 7.5, T = 30, cols = 8, rows = 2, PX = 17, Wp = Math.round(W * cols * PX), Hp = Math.round(T * rows * PX);
@@ -95,9 +92,45 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     box(gx + (handleRight ? 0 : G / 2), gx + 3 - (handleRight ? G / 2 : 0), y0 + G / 2, y1 - G / 2, z, z + .6, shadowGap);
   }
 
+  // ---------- the appliances: black glass fronts with a control strip (a small display, touch symbols) and a steel bar handle ----------
+  function fascia(W, Hh, kind) {                                     // the front's face, drawn at 17 px per cm
+    const PX = 17, cw = Math.round(W * PX), ch = Math.round(Hh * PX), c = canvas(cw, ch), g = c.getContext('2d');
+    g.fillStyle = '#0c0d0f'; g.fillRect(0, 0, cw, ch);
+    const strip = 9 * PX;                                            // the control strip along the top
+    g.fillStyle = '#111316'; g.fillRect(0, 0, cw, strip); g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(0, strip, cw, 2);
+    const dw = 14 * PX, dh = 3.4 * PX, dx = (cw - dw) / 2, dy = (strip - dh) / 2;   // the display
+    g.fillStyle = '#050607'; g.beginPath(); g.roundRect(dx, dy, dw, dh, 8); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.88)'; g.font = `600 ${Math.round(2.2 * PX)}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(kind === 'oven' ? '180°' : '11:30', cw / 2, dy + dh / 2 + 2);
+    g.fillStyle = 'rgba(240,160,70,.9)'; g.beginPath(); g.arc(dx + 1.2 * PX, dy + dh / 2, .35 * PX, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(210,210,215,.45)'; g.lineWidth = 3;
+    for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {       // touch symbols either side of the display
+      const x = cw / 2 + side * (dw / 2 + (3 + i * 4.2) * PX), y = strip / 2;
+      g.beginPath();
+      if (i === 0) g.arc(x, y, .9 * PX, 0, 7);
+      else if (i === 1) { g.moveTo(x - .9 * PX, y); g.lineTo(x + .9 * PX, y); if (side > 0) { g.moveTo(x, y - .9 * PX); g.lineTo(x, y + .9 * PX); } }
+      else g.rect(x - .8 * PX, y - .8 * PX, 1.6 * PX, 1.6 * PX);
+      g.stroke();
+    }
+    const wx0 = 6 * PX, wy0 = strip + 7 * PX, wx1 = cw - 6 * PX, wy1 = ch - 5 * PX;   // the door's window: a shade lighter, the rack behind it
+    const gr = g.createLinearGradient(0, wy0, 0, wy1); gr.addColorStop(0, '#16181b'); gr.addColorStop(1, '#0f1012');
+    g.fillStyle = gr; g.beginPath(); g.roundRect(wx0, wy0, wx1 - wx0, wy1 - wy0, 14); g.fill();
+    g.strokeStyle = 'rgba(160,160,165,.08)'; g.lineWidth = 4;
+    for (let i = 1; i < 12; i++) { const x = wx0 + (wx1 - wx0) * i / 12; g.beginPath(); g.moveTo(x, wy0 + (wy1 - wy0) * .55); g.lineTo(x, wy0 + (wy1 - wy0) * .62); g.stroke(); }
+    return tex(c, true);
+  }
+  function appliance(x0, x1, y0, y1, kind) {                         // a glass door 2 cm proud of the carcass, its face printed, a bar on two posts
+    const W = x1 - x0 - 1, Hh = y1 - y0, face = std({ name: `${kind}Face`, map: fascia(W, Hh, kind), roughness: .05, metalness: .15 });
+    box(x0 + .5, x1 - .5, y0, y1, D - 2, D - .05, blackGlass, OAK, root, .3);
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(W - .4, Hh - .4), face); pane.position.set((x0 + x1) / 2, (y0 + y1) / 2, D - .03); pane.receiveShadow = true; root.add(pane);
+    const hy = y1 - 9 - 3.2, bar = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, W - 10, 32), steel);
+    bar.rotation.z = Math.PI / 2; bar.position.set((x0 + x1) / 2, hy, D + 3.2); bar.castShadow = true; root.add(bar);
+    for (const sd of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 3.2, 16), steel); post.rotation.x = Math.PI / 2; post.position.set((x0 + x1) / 2 + sd * (W / 2 - 7), hy, D + 1.6); root.add(post); }
+  }
+
   // ---------- the run (x along the wall from the entrance side, z out of the wall) ----------
-  const L = K.len, Y0 = 10, WT = 87, TOP = 90, UP0 = 145, CEIL = H, D = 60, UD = 35;
-  const X = [0, 60, 120, 200, 280, 330, 390];                        // fridge | sink | dishwasher | hob | cargo | oven
+  const L = Math.min(K.len, 350), Y0 = 10, WT = 87, TOP = 90, UP0 = 145, CEIL = H, D = 60, UD = 35;   // A.04: the run 350 long, 40 short of the window wall
+  const X = [0, 60, 120, 180, 260, 290, 350];                        // fridge | sink | dishwasher | hob | cargo | oven
   // carcasses and the plinth (a dark recess 5 cm deep)
   box(0, L, 0, Y0, 0, D - 5, shadowGap);
   box(X[1], X[5], Y0, WT, 0, D - 2, carcass);
@@ -107,23 +140,28 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   lowerFront(X[2], X[3], Y0, WT, D - 2);
   lowerFront(X[3], X[4], Y0, 32, D - 2); lowerFront(X[3], X[4], 32, 58, D - 2); lowerFront(X[3], X[4], 58, WT, D - 2);
   lowerFront(X[4], X[5], Y0, WT, D - 2);
-  // the fridge column: the fridge door, a store above
-  tallFront(X[0], X[1], Y0, 205, D - 2, true); tallFront(X[0], X[1], 205, CEIL, D - 2, true);
-  // the oven column: a drawer, the oven (60), the microwave (38), a store above
-  lowerFront(X[5], L, Y0, 80, D - 2);
-  box(X[5] + .5, L - .5, 80.5, 140, D - 2, D - .1, blackGlass); box(X[5] + 5, L - 5, 134, 135.4, D - .1, D + 2.4, steel);   // oven glass and its bar
-  box(X[5] + .5, L - .5, 142, 180, D - 2, D - .1, blackGlass); box(X[5] + 3, X[5] + 38, 146, 176, D - .1, D, std({ name: 'microwaveGlass', color: '#1c1f23', roughness: .02, metalness: .3 }));  // microwave and its window
-  tallFront(X[5], L, 182, CEIL, D - 2, false);
+  // the fridge column: an integrated fridge-freezer (178 niche) behind oak: the freezer door, the fridge door, a store above; the
+  // appliance breathes through a black grille in the plinth
+  tallFront(X[0], X[1], Y0, 82, D - 2, true); tallFront(X[0], X[1], 82, 190, D - 2, true); tallFront(X[0], X[1], 190, CEIL, D - 2, true);
+  for (let i = 0; i < 9; i++) box(X[0] + 8, X[1] - 8, 1.6 + i * .8, 2 + i * .8, D - 5.3, D - 4.9, legs, OAK, root, 0);
+  // the oven column: a drawer, the oven (60), the compact oven with microwave (45), a store above; black glass, the same line
+  lowerFront(X[5], L, Y0, 76, D - 2);
+  appliance(X[5], L, 76.5, 136, 'oven'); appliance(X[5], L, 137, 182, 'combi');
+  tallFront(X[5], L, 183, CEIL, D - 2, false);
   // the worktop with the sink cut out, 62 deep (2 cm over the fronts)
   const topShape = new THREE.Shape([new THREE.Vector2(X[1] - .01, 0), new THREE.Vector2(X[5] + .01, 0), new THREE.Vector2(X[5] + .01, D + 2), new THREE.Vector2(X[1] - .01, D + 2)]);
-  const SX0 = X[1] + 6, SX1 = X[2] - 6, SZ0 = 12, SZ1 = 52;         // the bowl: 48 x 40, set off the tall fridge
-  topShape.holes.push(new THREE.Path([new THREE.Vector2(SX0, SZ0), new THREE.Vector2(SX0, SZ1), new THREE.Vector2(SX1, SZ1), new THREE.Vector2(SX1, SZ0)]));
+  const SX0 = X[1] + 6, SX1 = X[2] - 6, SZ0 = 12, SZ1 = 52;         // the undermount bowl: 48 x 40, set off the tall fridge
+  const rrect = (x0, z0, x1, z1, r) => { const p = new THREE.Path(); p.moveTo(x0 + r, z0); p.lineTo(x1 - r, z0); p.absarc(x1 - r, z0 + r, r, -Math.PI / 2, 0); p.lineTo(x1, z1 - r); p.absarc(x1 - r, z1 - r, r, 0, Math.PI / 2);
+    p.lineTo(x0 + r, z1); p.absarc(x0 + r, z1 - r, r, Math.PI / 2, Math.PI); p.lineTo(x0, z0 + r); p.absarc(x0 + r, z0 + r, r, Math.PI, Math.PI * 1.5); return p; };
+  topShape.holes.push(rrect(SX0, SZ0, SX1, SZ1, 1.6));
+  const HX = (X[3] + X[4]) / 2, HZ = 31, HW = 78, HD = 52;           // the flush hob: its glass level with the top, a 2 mm joint all round
+  topShape.holes.push(rrect(HX - HW / 2 - .2, HZ - HD / 2 - .2, HX + HW / 2 + .2, HZ + HD / 2 + .2, .5));
   const tg = new THREE.ExtrudeGeometry(topShape, { depth: TOP - WT - .4, bevelEnabled: true, bevelThickness: .2, bevelSize: .2, bevelOffset: -.2, bevelSegments: 3 });
   tg.rotateX(Math.PI / 2); tg.translate(0, TOP - .2, 0);             // shape (x, z) from TOP down to WT, the edges eased 2 mm
-  { const p = tg.attributes.position, uv = tg.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / QUARTZ_CM, p.getZ(i) / QUARTZ_CM); }
+  { const p = tg.attributes.position, uv = tg.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) - 50) / QUARTZ_CM, p.getZ(i) / QUARTZ_CM); }
   const topM = new THREE.Mesh(tg, quartz); topM.castShadow = topM.receiveShadow = true; root.add(topM);
-  // the sink: an inset bowl in the same conglomerate, 18 deep, and a drain
-  const bowl = std({ name: 'bowl', color: '#cbb89c', roughness: .55 });
+  // the sink: a brushed steel bowl under the stone, 18 deep, and a drain
+  const bowl = std({ name: 'sinkSteel', color: '#c9cacc', roughness: .38, metalness: 1 });
   box(SX0, SX1, WT - 18, WT - 17, SZ0, SZ1, bowl);
   box(SX0, SX0 + 1, WT - 18, WT, SZ0, SZ1, bowl); box(SX1 - 1, SX1, WT - 18, WT, SZ0, SZ1, bowl);
   box(SX0, SX1, WT - 18, WT, SZ0, SZ0 + 1, bowl); box(SX0, SX1, WT - 18, WT, SZ1 - 1, SZ1, bowl);
@@ -136,14 +174,20 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     const base0 = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, 5, 32), steel); base0.position.set(tx, TOP + 2.5, tz); root.add(base0);
     const lever = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 9, 12), steel); lever.rotation.z = Math.PI / 2 - .3; lever.position.set(tx + 5, TOP + 9, tz); root.add(lever);
   }
-  // the induction hob: black glass, 78 x 52, zones printed faintly
+  // the induction hob, flush: black glass 78 x 52 level with the top; two flex zones on the left, three round ones on the right, the
+  // slider along the front; the joint and the hob's body show dark in the 2 mm gap
   {
-    const c = canvas(780, 520), g = c.getContext('2d'); g.fillStyle = '#0b0c0e'; g.fillRect(0, 0, 780, 520); g.strokeStyle = 'rgba(200,200,200,.22)'; g.lineWidth = 3;
-    for (const [x, y, r] of [[190, 170, 110], [190, 380, 90], [560, 170, 90], [560, 370, 120]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); }
-    g.fillStyle = 'rgba(210,210,210,.35)'; for (let i = 0; i < 9; i++) g.fillRect(300 + i * 20, 470, 10, 10);
-    const m = std({ name: 'm', map: tex(c, true), roughness: .05, metalness: .1 });
-    const hob = new THREE.Mesh(new THREE.BoxGeometry(78, .6, 52), [blackGlass, blackGlass, m, blackGlass, blackGlass, blackGlass]);
-    hob.position.set((X[3] + X[4]) / 2, TOP + .3, 30); hob.receiveShadow = true; root.add(hob);
+    const PX = 26, cw = HW * PX, ch = HD * PX, c = canvas(cw, ch), g = c.getContext('2d'); g.fillStyle = '#0b0c0e'; g.fillRect(0, 0, cw, ch);
+    g.strokeStyle = 'rgba(205,205,210,.2)'; g.lineWidth = 4;
+    for (const y0 of [4, 21]) { g.beginPath(); g.roundRect(4 * PX, y0 * PX, 20 * PX, 16 * PX, 2 * PX); g.stroke(); }
+    for (const [x, y, r] of [[48, 14, 10], [66, 13, 7.5], [57, 32, 6]]) { g.beginPath(); g.arc(x * PX, y * PX, r * PX, 0, 7); g.stroke(); g.beginPath(); g.arc(x * PX, y * PX, (r - 1.2) * PX, 0, 7); g.stroke(); }
+    g.fillStyle = 'rgba(215,215,220,.42)'; g.font = `600 ${Math.round(1.3 * PX)}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillRect(28 * PX, 47 * PX, 22 * PX, 3); for (let i = 0; i <= 9; i++) g.fillText(String(i), (28 + i * 22 / 9) * PX, 44.5 * PX);
+    for (const [x, t] of [[10, 'I/O'], [17, 'P'], [62, '−'], [68, '+']]) g.fillText(t, x * PX, 46 * PX);
+    const m = std({ name: 'hobGlass', map: tex(c, true), roughness: .04, metalness: .1 });
+    const hob = new THREE.Mesh(new THREE.BoxGeometry(HW, .6, HD), [blackGlass, blackGlass, m, blackGlass, blackGlass, blackGlass]);
+    hob.position.set(HX, TOP - .3, HZ); hob.receiveShadow = true; root.add(hob);
+    box(HX - HW / 2 - .3, HX + HW / 2 + .3, TOP - 6, TOP - .7, HZ - HD / 2 - .3, HZ + HD / 2 + .3, shadowGap, OAK, root, 0);   // the body under the joint
   }
   // the backsplash: tiles from the worktop to the uppers, between the tall units, on the wall face
   {
@@ -151,10 +195,9 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / tiles.w, uv.getY(i) * h / tiles.h);
     const m = new THREE.Mesh(g, tiles.mat); m.position.set((X[1] + X[5]) / 2, (TOP + UP0) / 2, .15); m.receiveShadow = true; root.add(m);
   }
-  // the uppers: cashmere fronts to the ceiling, an oak strip along their bottom, the LED under it
+  // the uppers: three cashmere fronts to the ceiling, push to open, the LED in a profile under them
   box(X[1], X[5], UP0, CEIL, 0, UD - 2, carcass);
-  for (let i = 1; i < 5; i++) box(X[i] + G / 2, X[i + 1] - G / 2, UP0 + 4 + G / 2, CEIL - G / 2, UD - 2, UD - .1, cashmere);
-  box(X[1], X[5], UP0, UP0 + 4, UD - 2, UD, oak);                    // the decorative oak strip between the uppers and the lowers
+  for (let i = 0; i < 3; i++) { const a = X[1] + (X[5] - X[1]) * i / 3, b = X[1] + (X[5] - X[1]) * (i + 1) / 3; box(a + G / 2, b - G / 2, UP0 + G / 2, CEIL - G / 2, UD - 2, UD - .1, cashmere); }
   { const led = new THREE.Mesh(new THREE.BoxGeometry(X[5] - X[1] - 4, .4, 1.2), new THREE.MeshBasicMaterial({ name: 'led', color: '#ffe2b8', ...clip })); led.position.set((X[1] + X[5]) / 2, UP0 - .2, UD - 6); root.add(led);
     const light = new THREE.RectAreaLight('#ffd9a8', 40, (X[5] - X[1] - 6) / 100, .03); light.position.set((X[1] + X[5]) / 2, UP0 - .5, UD - 6); light.rotation.x = -Math.PI / 2; root.add(light); }
 
@@ -175,26 +218,28 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     for (let k = 0; k < n; k++) { const c = new THREE.CylinderGeometry(step / 2 - .05, step / 2 - .05, fh, 14, 1, true); c.translate(ix0 + 2 + step * (k + .5), fh / 2, back + .8); parts.push(c); }
     const g = mergeGeometries(parts); planarUV(g, OAK, .37, .11);
     const m = new THREE.Mesh(g, oak); m.castShadow = m.receiveShadow = true; I.add(m); }
-  { const g = new RoundedBoxGeometry(IW, TOP - WT, ID, 3, .25); planarUV(g, QUARTZ_CM, .3, .6);
+  { const g = new RoundedBoxGeometry(IW, TOP - WT, ID, 3, .25); planarUV(g, QUARTZ_CM, .5, .5);   // the middle of the map; the run's top takes its first quarter
     const m = new THREE.Mesh(g, quartz); m.position.set(0, (TOP + WT) / 2, 0); m.castShadow = m.receiveShadow = true; I.add(m); }
-  // three counter stools (seat 66 cm, 24 cm below the top): a soft round boucle cushion, a curved back, black steel legs and a footrest
-  const cushion = (() => { const pts = [[0, 0], [17.5, 0], [19.8, .6], [20.9, 2.2], [21.2, 4], [20.8, 5.8], [19.4, 7.2], [16.5, 8], [0, 8.2]].map(([r, y]) => new THREE.Vector2(r, y));
-    const g = new THREE.LatheGeometry(pts, 64), uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 4.4, uv.getY(i) * 1.5); return g; })();   // the scan covers about 30 cm
-  const backG = (() => { const sh = new THREE.Shape(), a0 = -Math.PI / 2 - .95, a1 = -Math.PI / 2 + .95;
-    sh.absarc(0, 0, 20.5, a0, a1, false); sh.absarc(0, 0, 16.5, a1, a0, true);
-    const g = new THREE.ExtrudeGeometry(sh, { depth: 17, bevelEnabled: true, bevelThickness: 1.6, bevelSize: 1.4, bevelSegments: 4, curveSegments: 32 });
-    g.rotateX(-Math.PI / 2); g.computeVertexNormals(); planarUV(g, 30); return g; })();
-  const legG = new THREE.CylinderGeometry(.75, .65, 58, 16), capM = std({ name: 'capM', color: '#0a0a0a', roughness: .9 });
+  // three counter stools in solid oak with a low curved back (after HAY's About A Stool AAS 38, counter height): a shaped seat 38
+  // across at 65 cm (25 below the top), four splayed round legs tapering to the floor, a footrest frame at 24 cm, the back rail 12 to
+  // 18 cm above the seat on two posts, away from the island
+  const seatG = (() => { const g = new THREE.LatheGeometry([[0, 0], [17.6, 0], [18.8, .5], [19.2, 1.3], [18.9, 2.1], [18, 2.5], [9, 2.2], [0, 2.1]].map(([r, y]) => new THREE.Vector2(r, y)), 64); planarUV(g, OAK, .2, .7); return g; })();
+  const rod = (a, b, r0, r1, seg = 16) => { const d = new THREE.Vector3().subVectors(b, a), g = new THREE.CylinderGeometry(r1, r0, d.length(), seg); planarUV(g, OAK, (a.x + 50) / 97, (a.z + 50) / 89);
+    const m = new THREE.Mesh(g, oak); m.position.copy(a).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); m.castShadow = m.receiveShadow = true; return m; };
+  const backRail = (() => { const sh = new THREE.Shape(), b0 = -Math.PI / 2 - 1.15, b1 = -Math.PI / 2 + 1.15;
+    sh.absarc(0, 0, 19, b0, b1, false); sh.absarc(0, 0, 17.2, b1, b0, true);
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 5.5, bevelEnabled: true, bevelThickness: .5, bevelSize: .5, bevelSegments: 3, curveSegments: 48 });
+    g.rotateX(-Math.PI / 2); g.computeVertexNormals(); planarUV(g, OAK, .5, .1); return g; })();   // shape -y becomes +z: the arc behind the sitter
   for (const sx of [-60, 0, 60]) {
-    const St = new THREE.Group(); St.position.set(sx, 0, ID / 2 + 4); I.add(St);
-    const seat = new THREE.Mesh(cushion, fabric); seat.position.y = 58; seat.castShadow = seat.receiveShadow = true; St.add(seat);
-    const bk = new THREE.Mesh(backG, fabric); bk.position.y = 67.6; bk.castShadow = true; St.add(bk);   // the back sits behind the sitter, away from the island
-    const plate = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 1, 32), legs); plate.position.y = 57.5; St.add(plate);
-    for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const lg = new THREE.Mesh(legG, legs); lg.position.set(lx * 12.5, 29, lz * 12.5); lg.rotation.set(-lz * .09, 0, lx * .09); lg.castShadow = true; St.add(lg);   // splayed outwards, onto the caps
-      const cap = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, .8, 12), capM); cap.position.set(lx * 15.1, .4, lz * 15.1); St.add(cap);
-    }
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(14.2, .6, 10, 64), legs); ring.rotation.x = Math.PI / 2; ring.position.y = 24; ring.castShadow = true; St.add(ring);
+    const St = new THREE.Group(); St.position.set(sx, 0, ID / 2 + 6); I.add(St);
+    const SEAT = 65, seat = new THREE.Mesh(seatG, oak); seat.position.y = SEAT - 2.5; seat.castShadow = seat.receiveShadow = true; St.add(seat);
+    const top = [], bot = [];
+    for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { top.push(new THREE.Vector3(lx * 11.5, SEAT - 2.5, lz * 11.5)); bot.push(new THREE.Vector3(lx * 16.5, 0, lz * 16.5)); }
+    for (let i = 0; i < 4; i++) St.add(rod(bot[i], top[i], 1.25, 1.65));
+    const at = (i, y) => new THREE.Vector3().lerpVectors(bot[i], top[i], y / (SEAT - 2.5));
+    for (const [i, j] of [[0, 1], [1, 3], [3, 2], [2, 0]]) St.add(rod(at(i, 24), at(j, 24), .9, .9));
+    for (const s2 of [-1, 1]) St.add(rod(new THREE.Vector3(s2 * 12.4, SEAT - .2, 12.4), new THREE.Vector3(s2 * 13.1, SEAT + 12.5, 13.1), 1.1, .95));
+    const bk = new THREE.Mesh(backRail, oak); bk.position.y = SEAT + 12; bk.castShadow = true; St.add(bk);
   }
 
   // ---------- things on the tops (Poly Haven, CC0): two clay vases by the oven, a carved wooden bowl of limes on the island; a pachira by the window ----------
@@ -205,7 +250,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     g.scale.setScalar(100 * sc); g.position.set(x, y, z); g.rotation.y = rot; parent.add(g); return g;
   };
   const decor = [
-    model('ceramic_vase_02', 296, TOP, 22, 1, .4), model('ceramic_vase_01', 318, TOP, 16, .85, 1.2),
+    model('ceramic_vase_02', 268, TOP, 24, 1, .4), model('ceramic_vase_01', 282, TOP, 15, .85, 1.2),
     model('carved_wooden_plate', 12, TOP, -4, 1, .3, I),
   ];
   { const r = rng(5);
@@ -213,8 +258,8 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
       for (const [px_, pz_, py_] of [[-4, -3, .9], [3, -5, .9], [5, 2, .9], [-2, 4, .9], [0, -.5, 5.6], [-5, 1, 4.8], [3.5, -1.5, 5]]) {
         const c = l.clone(); c.scale.setScalar(100); c.position.set(12 + px_, TOP + py_, -4 + pz_); c.rotation.set(r() * 3, r() * 6, r() * 3); I.add(c); } })); }
   { const pot = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [15, 0], [16.5, 2], [19.5, 36], [20, 38], [18.8, 38.2], [18.4, 35], [0, 35]].map(([r, y]) => new THREE.Vector2(r, y)), 48), std({ name: 'pot', color: '#cbb59a', roughness: .85 }));
-    pot.position.set(L + 38, 0, 100); pot.castShadow = pot.receiveShadow = true; root.add(pot);   // a clay planter in front of the pier by the balcony door
-    decor.push(model('pachira_aquatica_01', L + 38, 34, 100, .74, 2.2)); }
+    pot.position.set(K.len + 38, 0, 100); pot.castShadow = pot.receiveShadow = true; root.add(pot);   // a clay planter in front of the pier by the balcony door
+    decor.push(model('pachira_aquatica_01', K.len + 38, 34, 100, .74, 2.2)); }
   await Promise.all(decor);
 
   // ---------- three pendants over the island: opal glass globes 22 cm across on black cords, 75 cm over the top, 60 cm apart ----------
