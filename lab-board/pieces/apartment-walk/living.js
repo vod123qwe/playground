@@ -16,6 +16,7 @@ import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.j
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ivy } from './ivy.js?v=1';
+import { createTVGame } from './tvgame.js?v=4';
 
 const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -63,7 +64,8 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   const oak = std({ name: 'oak', map: oakC, normalMap: oakN, normalScale: new THREE.Vector2(.35, .35), roughnessMap: oakR, roughness: .9, color: '#e6d3bd' });
   const recess = std({ name: 'recess', color: '#2d2621', roughness: .9 });
   const black = std({ name: 'black', color: '#121212', roughness: .45, metalness: .6 });
-  const screen = std({ name: 'screen', color: '#050607', roughness: .07, metalness: .1 });
+  const game = createTVGame({ THREE });                               // what the TV shows when it is on: its home screen and a game
+  const screen = std({ name: 'screen', color: '#050607', roughness: .07, metalness: .1, emissive: '#ffffff', emissiveMap: game.texture, emissiveIntensity: 0 });
   const bezel = std({ name: 'bezel', color: '#1b1c1f', roughness: .5, metalness: .3 });
   // travertine: warm beige, soft bands and small open pores, honed
   const travertine = (() => {
@@ -238,7 +240,7 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   }
 
   // ---------- the TV console: floating, oak with fluted doors like the island, 188 x 40 x 40 at 22 cm; a 65" TV on the wall ----------
-  const TV = frame(LIVING.console.o, LIVING.console.u);
+  const TV = frame(LIVING.console.o, LIVING.console.u); let tv = null;
   {
     const L = LIVING.console.len, D = 40, Y0 = 22, Y1 = 62;
     const box = (x0, x1, y0, y1, z0, z1, m, sc = OAK) => { const g = new RoundedBoxGeometry(x1 - x0, y1 - y0, z1 - z0, 2, Math.min(.2, (Math.min(x1 - x0, y1 - y0, z1 - z0)) / 2 - .01)); planarUV(g, sc, .3, .1); return mesh(g, m, TV, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); };
@@ -253,7 +255,12 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     const tx = L / 2, ty = Y1 + 25 + 41.2, tz = 3 + 1.25;
     mesh(new RoundedBoxGeometry(143.9, 82.4, 2.5, 2, .4), bezel, TV, tx, ty, tz);
     mesh(new RoundedBoxGeometry(40, 30, 3, 1, .3), black, TV, tx, ty, 1.5).castShadow = false;   // the mount, behind
-    mesh(new THREE.PlaneGeometry(142.9, 81.2), screen, TV, tx, ty + .3, tz + 1.26).castShadow = false;
+    const scr = mesh(new THREE.PlaneGeometry(142.9, 81.2), screen, TV, tx, ty + .3, tz + 1.26); scr.castShadow = false;
+    // on: a click on it; it throws its light into the room (a light ahead of the screen, coloured as the picture is, a few times a second)
+    const tvLight = new THREE.PointLight('#9ab4ff', 0, 4.5, 2); tvLight.position.set(tx, ty, tz + 60); TV.add(tvLight);
+    const aim = new THREE.Object3D(); aim.position.set(tx, ty + .3, tz + 1.3); TV.add(aim);   // the screen's centre, for looking at it
+    tv = { name: 'TV', on: false, light: tvLight, meshes: [scr], game, aim, size: [142.9, 81.2],
+      set(v) { this.on = v; screen.emissiveIntensity = v ? 1.35 : 0; screen.color.set(v ? '#000000' : '#050607'); screen.envMapIntensity = v ? .3 : 1; screen.roughness = v ? .5 : .07; tvLight.intensity = 0; if (v) game.home(); } };   // (on: the room's reflection fainter over the picture)
   }
 
   // ---------- the dining table: 100 across, 75 high, oak; a fluted oak pedestal on a round foot; four boucle tub chairs ----------
@@ -420,5 +427,5 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   }
   setSofa('gala3');
   const drapeMeshes = () => [];                                     // (the drapes: rooms.js)
-  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes, seats };
+  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes, seats, tv };
 }

@@ -61,6 +61,13 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Lampy klikalne:** kliknij lampę (kursor-dłoń jak przy drzwiach), żeby ją zapalić albo zgasić: trzy kule nad wyspą mają jeden włącznik, lampa nad stołem swój. **Lamps on** (panel, Light) zapala wszystkie; domyślnie wyłączone (dzień).
 - Meble blokują chodzenie (obrysy w cm, jak kuchnia). Kto utknie (róg, mebel, który pojawił się pod nogami), może zawsze wyjść: w zaklinowaniu dozwolony jest każdy krok, który nie wchodzi głębiej; kliknięcie w minimapę albo wejście do pokoju stawia w najbliższym wolnym miejscu.
 
+## Telewizor i gra (tvgame.js)
+
+- Klik w telewizor go włącza: ekran startowy z wyborem gry. Siedząc na kanapie: klik w TV, `T` albo przycisk A / Start na padzie to granie. Widok obraca się na ekran i przybliża, klawisze i pad idą do gry. `Esc` (B na padzie) wychodzi z gry, drugi `Esc` wstaje z kanapy.
+- Gra „Mefisto Run”: hołd dla starych izometrycznych hack'n'slashy, cała grafika rysowana w canvasie, własne nazwy przedmiotów. Biegniesz (WASD / lewa gałka) i teleportujesz się (Spacja / A; bez kierunku teleport leci w stronę bossa), strzelasz lodowymi pociskami (J / X). Boss odpowiada krwawymi pociskami, poniżej połowy życia wachlarzem trzech. Po jego śmierci sypie się łup z nazwami w kolorach rzadkości (magiczne, rzadkie, zestaw, unikat, runy, złoto); zbierasz go, przechodząc po nim. Start / Enter to nowy bieg.
+- Włączony telewizor rzuca światło do pokoju w kolorze obrazu (punktowe światło przed ekranem, kolor liczony kilka razy na sekundę).
+- Do eksportu sceny do Blendera telewizor ma być wyłączony.
+
 ## Pora dnia i światło
 
 - **Zegar** w prawym dolnym rogu (na telefonie u góry po prawej): tarcza 24 h, południe u góry, łuk dnia od wschodu do zachodu słońca na dziś. Przeciągnij słońce po tarczy, przewiń kółkiem (co 15 min) albo użyj strzałek (Shift: co godzinę, Home: 12:00). W środku godzina i wysokość słońca.
@@ -155,6 +162,7 @@ Punkty zdjęciowe to rendery z Blendera Cycles w **kafelkach 16K**: sześcian 6 
 - `floors.js` · jodełka i płytki rysowane w canvasie (bezszwowe mapy: kolor, normalne, szorstkość)
 - `kitchen.js` · kuchnia (w cm, na ścianie kuchennej)
 - `living.js` · salon (w cm planu)
+- `tvgame.js` · gra na telewizorze (canvas jako tekstura ekranu)
 - `hall.js` · szafa PAX w przedpokoju (w cm planu)
 - `assets/oak_*.jpg` · Oak Veneer 01, Poly Haven (CC0)
 - `assets/tex/teddy_*.jpg` · Curly Teddy Natural, Poly Haven (CC0)

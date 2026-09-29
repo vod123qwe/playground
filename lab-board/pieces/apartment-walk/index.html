@@ -247,7 +247,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=17';
-import { buildLiving } from './living.js?v=33';
+import { buildLiving } from './living.js?v=39';
 import { buildHall } from './hall.js?v=4';
 import { buildRooms } from './rooms.js?v=46';
 import { startGhosts } from './ghosts.js?v=3';
@@ -1185,6 +1185,51 @@ function stepLie(dt) {
 }
 const bedSwitch = { name: 'bed', t: 0, get on() { return !!LIE && LIE.dir > 0 && !LIE.seat; }, get meshes() { return FURN?.bed?.meshes || []; },
   set(v) { const now = performance.now(); if (now - this.t < 900) return; this.t = now; v ? lieDown() : getUp(); } };   // (one click, one change)
+// ---------- the TV: a click on it turns it on (its home screen, a game to pick); seated on the sofa, a click on it, T, or a pad's A or
+// Start is to play: the view turns to the screen and closes in on it, the keys and the pad go to the game; Esc (the pad's B) leaves the
+// game, a second Esc gets you up. Playing, it throws its light into the room, coloured as its picture ----------
+const TVF = { on: false, prev: {}, padA: true, gt: 0, keys: new Set() }, _tvc = new THREE.Vector3();
+const TV_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyJ', 'KeyK', 'Enter'];
+const seatedHere = () => !!LIE && !!LIE.seat && LIE.seat.name === 'sofa' && LIE.dir > 0;
+function tvFocus(v) {
+  if (v && !(LIV?.tv?.on && seatedHere())) return;
+  if (TVF.on === v) return; TVF.on = v; TVF.keys.clear(); keys.clear(); TVF.prev = { tele: true, start: true, back: true }; Z.nx = Z.ny = 0; if (!v) Z.target = 1; paintHint();
+}
+const tvSwitch = { name: 'TV', t: 0, get on() { return !!LIV?.tv?.on; }, get light() { return LIV.tv.light; }, get meshes() { return LIV?.tv?.meshes || []; },
+  set(v) { const tv = LIV.tv, now = performance.now(); if (now - this.t < 600) return; this.t = now;
+    if (tv.on && seatedHere()) { if (!TVF.on) tvFocus(true); return; }         // seated, a click on it is to play, not to turn it off
+    tv.set(v); if (v) tvFocus(true); else tvFocus(false); } };
+const pad = () => { for (const g of navigator.getGamepads?.() || []) if (g && g.connected) return g; return null; };
+const IDLE = { x: 0, y: 0 };
+function tvInput(gp) {
+  const K = TVF.keys, b = i => !!gp?.buttons[i]?.pressed;
+  let x = (K.has('KeyD') || K.has('ArrowRight') ? 1 : 0) - (K.has('KeyA') || K.has('ArrowLeft') ? 1 : 0), y = (K.has('KeyS') || K.has('ArrowDown') ? 1 : 0) - (K.has('KeyW') || K.has('ArrowUp') ? 1 : 0);
+  if (gp) { const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0; if (Math.hypot(ax, ay) > .2) { x = ax; y = ay; }            // the left stick, or the d-pad
+    if (b(14)) x = -1; if (b(15)) x = 1; if (b(12)) y = -1; if (b(13)) y = 1; }
+  const now = { tele: K.has('Space') || b(0), cast: K.has('KeyJ') || K.has('KeyK') || b(2) || b(3) || (gp?.buttons[7]?.value || 0) > .4, start: K.has('Enter') || b(9), back: b(1), left: x < -.5, right: x > .5 };
+  const was = TVF.prev, edge = k => !!now[k] && !was[k]; TVF.prev = now;
+  return { x, y, tele: edge('tele'), teleHeld: now.tele, cast: now.cast, start: edge('start'), back: edge('back'), left: edge('left'), right: edge('right') };
+}
+function stepTV(dt) {
+  const tv = LIV?.tv; if (!tv) return;
+  const gp = pad();
+  if (gp) { const a = !!(gp.buttons[0]?.pressed || gp.buttons[9]?.pressed);               // seated on the sofa, the pad turns it on and plays
+    if (!TVF.on && a && !TVF.padA && seatedHere() && LIE.e >= 1) { if (!tv.on) { tv.set(true); lendShadows(true); } tvFocus(true); } TVF.padA = a; }
+  if (TVF.on && !(tv.on && seatedHere())) tvFocus(false);
+  if (!tv.on) return;
+  const inp = TVF.on ? tvInput(gp) : IDLE;
+  if (inp.back) tvFocus(false);
+  tv.game.frame(dt, inp); moved();
+  if ((TVF.gt += dt) > .15) { TVF.gt = 0; const c = tv.game.glow(), l = Math.max(c.r, c.g, c.b);   // its light: the picture's colour, brightness
+    tv.light.color.copy(c).multiplyScalar(1 / Math.max(l, .05)); tv.light.intensity = Math.round((.15 + 1.6 * Math.sqrt(l)) * 20) / 20; }
+  if (TVF.on && LIE.e >= 1) {                                         // the view to the screen, closing in till it fills about three quarters
+    tv.aim.getWorldPosition(_tvc); _tvc.sub(camera.position); const dh = Math.hypot(_tvc.x, _tvc.z), d = _tvc.length(), k = 1 - Math.exp(-dt * 4);
+    const yaw = Math.atan2(_tvc.z, _tvc.x), pitch = Math.atan2(_tvc.y, dh), dy = Math.atan2(Math.sin(yaw - P.yaw), Math.cos(yaw - P.yaw));
+    P.yaw += dy * k; P.pitch += (pitch - P.pitch) * k;
+    const fv = Math.max(2 * Math.atan(tv.size[1] * 1.4 * M / 2 / d), 2 * Math.atan(tv.size[0] * 1.3 * M / 2 / d / camera.aspect));
+    Z.nx = Z.ny = 0; Z.target = THREE.MathUtils.clamp(S.fov / THREE.MathUtils.radToDeg(fv), 1, 6);
+  }
+}
 function setMode(m, at) {
   if (m === mode && !at) return;
   const from = { pos: camera.position.clone(), q: camera.quaternion.clone(), fov: camera.fov, cut: S.cutNow ?? S.cut };
@@ -1237,13 +1282,15 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') { setMode(mode === 'walk' ? 'over' : 'walk'); return; }
   if (mode === 'over' && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); if (!e.code.startsWith('Shift')) e.preventDefault(); return; }
   if (mode !== 'walk') return;
+  if (TVF.on) { if (e.code === 'Escape') tvFocus(false); else if (TV_KEYS.includes(e.code)) TVF.keys.add(e.code); else return; e.preventDefault(); return; }   // playing: the keys are the game's
+  if (e.code === 'KeyT' && seatedHere() && LIV?.tv) { if (!LIV.tv.on) { LIV.tv.set(true); lendShadows(true); } tvFocus(true); return; }
   if (LIE && (e.code === 'Escape' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].includes(e.code))) { getUp(); e.preventDefault(); return; }
   if (e.code === 'KeyF' && HAND.can) { sip(); return; }
   if (e.code === 'KeyE') { const dr = nearestDoor(); if (dr) toggleDoor(dr); return; }
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { keys.add(e.code); e.preventDefault(); }
 });
-addEventListener('keyup', e => keys.delete(e.code));
-addEventListener('blur', () => keys.clear());
+addEventListener('keyup', e => { keys.delete(e.code); TVF.keys.delete(e.code); });
+addEventListener('blur', () => { keys.clear(); TVF.keys.clear(); });
 function nearestDoor() {                                           // the closest leaf within 1.8 m, roughly ahead
   const fx = Math.cos(P.yaw), fz = Math.sin(P.yaw); let best = null, bd = 1e9;
   for (const dr of doors) {
@@ -1302,7 +1349,7 @@ canvas.addEventListener('pointerup', e => {                         // a click (
 });
 // the lamps you can click: the pendants over the island (one switch) and over the table
 // the living room's drapes as a switch: drawn across (closed) or gathered with the sheers across; the sheers let a click through
-function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : []), ...[...(KIT?.seats || []), ...(LIV?.seats || []), ...(FURN?.seats || [])].map(seatSwitch)]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
+function lampList() { const l = [...(KIT?.lamps || []), ...(LIV?.lamps || []), ...(FURN?.lamps || []), ...(FURN?.bed ? [bedSwitch] : []), ...(LIV?.tv ? [tvSwitch] : []), ...[...(KIT?.seats || []), ...(LIV?.seats || []), ...(FURN?.seats || [])].map(seatSwitch)]; for (const k of l) for (const m of k.meshes) m.userData.lamp = k; return l; }
 // ---------- the hand: over a leaf that opens, and while Space-panning the overview ----------
 const handEl = document.getElementById('hand'), hv = { x: -99, y: -99, lx: -99, ly: -99, vx: 0, vy: 0, r: 0 };
 const sp = { held: false, id: null, x: 0, y: 0 };
@@ -1470,7 +1517,8 @@ mOver.addEventListener('click', () => setMode('over')); mWalk.addEventListener('
 const hint = document.getElementById('hint');
 function paintHint() {
   const beer = HAND.can ? (HAND.sips < 5 ? ` · <kbd>F</kbd> or tap the can: a sip (${5 - HAND.sips} left)` : ' · the can is empty') + ' · tap a top to put it down, the bin under the sink to throw it away' : '';
-  const seated = LIE && LIE.seat ? ' · <kbd>Esc</kbd> or a step key: stand up' : '';
+  const seated = LIE && LIE.seat ? ' · <kbd>Esc</kbd> or a step key: stand up' + (LIE.seat.name === 'sofa' && LIV?.tv ? ' · <kbd>T</kbd>, a pad or a click on the TV: play' : '') : '';
+  if (mode === 'walk' && TVF.on) { hint.innerHTML = '<span class="keys">Playing · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the stick: run · <kbd>Space</kbd> / A: teleport · <kbd>J</kbd> / X: frost orb · <kbd>Enter</kbd> / Start: new run · <kbd>Esc</kbd> / B: leave the TV</span><span class="touch">Playing · a pad plays</span>'; return; }
   hint.innerHTML = mode === 'walk'
     ? `<span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>E</kbd> door${seated}${beer || ' · scroll to look closer'}</span><span class="touch">Stick to walk · drag to look${beer}</span>`
     : `<span class="keys">Drag to orbit · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>Space</kbd> + drag to move · double-click a room to walk in</span><span class="touch">Drag to orbit · double-tap a room to walk in</span>`;
@@ -1874,7 +1922,7 @@ function frame(now) {
     const cut = tween.from.cut + (to.cut - tween.from.cut) * e; if (Math.abs(cut - (S.cutNow ?? -1)) > .5 || k === 1) applyCut(cut);
     if (k === 1) { tween = null; if (mode === 'over') { controls.target.copy(overPose.target); controls.enabled = true; controls.update(); } }
   } else if (mode === 'walk') {
-    if (!SPOT.cur && !LIE) stepWalk(dt); stepLie(dt); stepBob(dt); stepHand(dt); stepLens(dt); const e = eyePose(); if (SPOT.cur) e.pos.y = SPOT.cur.eye * M; camera.position.copy(e.pos); camera.quaternion.copy(e.q);
+    if (!SPOT.cur && !LIE) stepWalk(dt); stepLie(dt); stepBob(dt); stepHand(dt); stepTV(dt); stepLens(dt); const e = eyePose(); if (SPOT.cur) e.pos.y = SPOT.cur.eye * M; camera.position.copy(e.pos); camera.quaternion.copy(e.q);
   } else {                                                          // the overview: no lower than the tops of the walls
     panOver(dt);
     const up = OV_Y - controls.target.y, dist = camera.position.distanceTo(controls.target);
@@ -2011,7 +2059,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { PANO, get FURN() { return FURN; }, lieDown, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; }, HAND, takeCan, putCan, sip, binCan, sitDown, getUp, get LIE() { return LIE; } };
+window.AW = { PANO, get FURN() { return FURN; }, lieDown, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; }, HAND, takeCan, putCan, sip, binCan, sitDown, getUp, get LIE() { return LIE; }, TVF, tvFocus, tvSwitch };
 </script>
 </body>
 </html>
