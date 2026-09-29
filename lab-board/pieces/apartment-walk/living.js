@@ -380,6 +380,42 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
     lamps.push({ name: 'donut', on: false, meshes: [d], set(v) { this.on = !!v; glass.emissiveIntensity = v ? .6 : 0; light.intensity = v ? .3 : 0; light.castShadow = !!v; } });
   }
 
+  // ---------- ivy on the wall behind the table (z = -610, the room at -z): a small oak shelf at 1.7 m, a white pot, a dozen trailing
+  // strands, 40 to 110 cm, hanging close to the wall and drifting a little sideways; lobed leaves every few cm, smaller towards the tips ----------
+  {
+    const WZ = -610, CX = LIVING.dining[0] + 62, r = rng(907);   // off to the side of the pendant, as seen from the room
+    const shelfY = 168, potY = shelfY + 2.4;
+    mesh(new RoundedBoxGeometry(44, 2.4, 18, 2, .3), oak, root, CX, shelfY + 1.2, WZ - 9);
+    const potM = std({ name: 'lampBase', color: '#ece6dc', roughness: .5 });
+    const pot = new THREE.LatheGeometry([[0, 0], [7.5, 0], [8.5, 1], [9.5, 13], [10.2, 14.5], [9.6, 14.8], [8.9, 13.2], [0, 13]].map(([a, b]) => new THREE.Vector2(a, b)), 48);
+    mesh(pot, potM, root, CX, potY, WZ - 10);
+    const soil = new THREE.Mesh(new THREE.CircleGeometry(8.9, 32), std({ name: 'soil', color: '#3b2e24', roughness: 1 })); soil.rotation.x = -Math.PI / 2; soil.position.set(CX, potY + 12.6, WZ - 10); root.add(soil);
+    // an ivy leaf: five lobes, the middle one longest, 1 unit across; bent a little along its midrib
+    const leafShape = (() => { const s2 = new THREE.Shape(), pts = [];
+      for (let i = 0; i <= 40; i++) { const a = Math.PI * (i / 40), lobe = .55 + .45 * Math.pow(Math.abs(Math.cos(a * 2.5)), .6) + .35 * Math.exp(-Math.pow((a - Math.PI / 2) / .35, 2));
+        pts.push([Math.cos(a) * lobe * .55, Math.sin(a) * lobe * .6]); }
+      s2.moveTo(0, -.12); for (const [x, y] of pts) s2.lineTo(x, y); s2.lineTo(0, -.12); return s2; })();
+    const leafBase = new THREE.ShapeGeometry(leafShape, 6); { const q = leafBase.attributes.position; for (let i = 0; i < q.count; i++) { const x = q.getX(i), y = q.getY(i); q.setZ(i, -.18 * x * x + .06 * y); } leafBase.computeVertexNormals(); }
+    const leaves = [], stems = [], m4 = new THREE.Matrix4(), qu = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), ps = new THREE.Vector3();
+    for (let k = 0; k < 16; k++) {
+      const ang = (k / 16) * Math.PI * 2 + r() * .4, sx = CX + Math.cos(ang) * 8, sz = WZ - 10 + Math.sin(ang) * 6;   // from the pot's rim
+      const len = 35 + r() * 85 * (k % 3 === 0 ? 1 : .7), drift = (Math.cos(ang) + (r() - .5) * .8) * (30 + r() * 40), pts = [];   // spreading out to both sides
+      for (let i = 0; i <= 12; i++) { const t = i / 12, y = potY + 14 - t * len, out = Math.min(1, t * 3);
+        pts.push(new THREE.Vector3(sx + drift * Math.sqrt(t) + Math.sin(t * 5 + k) * 3, y + Math.sin(t * 3.1) * 4 * (1 - t), THREE.MathUtils.lerp(sz, WZ - 1.8 - r() * 1.5, out) - (1 - out) * 3)); }   // over the rim, then down the wall
+      const curve = new THREE.CatmullRomCurve3(pts); stems.push(new THREE.TubeGeometry(curve, 36, .16, 5));
+      const n = Math.floor(len / 3.4);
+      for (let i = 1; i <= n; i++) {
+        const t = i / (n + 1), p0 = curve.getPoint(t), size = THREE.MathUtils.lerp(6.2, 2.6, t) * (.8 + r() * .4), side = i % 2 ? 1 : -1;
+        e.set(-.25 + r() * .5 - .3, (r() - .5) * .8, side * (.5 + r() * .7) + Math.PI);   // hanging, facing out from the wall, alternate sides
+        qu.setFromEuler(e); sc.set(size, size, size); ps.set(p0.x + side * 1.2, p0.y, p0.z - .8 - r() * 1.5);
+        leaves.push(leafBase.clone().applyMatrix4(m4.compose(ps, qu, sc)));
+      }
+    }
+    const leafM = std({ name: 'ivyLeaf', color: '#2f4a2c', roughness: .42, side: THREE.DoubleSide }), stemM = std({ name: 'ivyStem', color: '#4d4630', roughness: .8 });
+    const L = new THREE.Mesh(mergeGeometries(leaves), leafM); L.castShadow = L.receiveShadow = true; root.add(L);
+    const St = new THREE.Mesh(mergeGeometries(stems), stemM); St.castShadow = true; root.add(St);
+  }
+
   // lamps on or off; the light is in candela per the renderer's metres, the group being in cm
   const setLamps = on => { for (const l of lamps) l.set(on); };
   setLamps(false);
