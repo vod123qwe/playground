@@ -1,0 +1,16 @@
+{
+ "face": 4096,
+ "tile": 512,
+ "levels": 4,
+ "faces": [
+  "px",
+  "nx",
+  "py",
+  "ny",
+  "pz",
+  "nz"
+ ],
+ "times": [
+  690
+ ]
+}
