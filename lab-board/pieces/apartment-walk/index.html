@@ -242,7 +242,7 @@ import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=10';
 import { buildLiving } from './living.js?v=13';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=8';
+import { buildRooms } from './rooms.js?v=11';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -1791,6 +1791,7 @@ function frame(now) {
     if (r !== lastRoom) { lastRoom = r; here.classList.toggle('on', !!r); if (r) { hereN.textContent = r.name; hereA.textContent = r.area.toFixed(1) + ' m²'; } }
   }
   if (OPEN.some(o => o.moved)) { for (const o of OPEN) o.moved = false; ptScene(); }
+  if (FURN && FURN.step(dt)) { ptScene(); moved(); }                 // the drapes being drawn or let back
   if (doors.some(d => d.f !== d.to)) { ptScene(); curtainsNow(); if (FURN) FURN.update(doors); }   // a leaf moved: the traced scene is out of date, the curtains make way
   if (look || tween || pinch || Z.level > 1.02 || Z.target > 1.02 || doors.some(d => d.f !== d.to)) moved();
   const idle = S.pt && mode === 'walk' && !tween && !SPOT.cur && performance.now() - lastMove > 280;
@@ -1870,7 +1871,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { PANO, lieDown, getUp, get LIE() { return LIE; }, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
+window.AW = { PANO, get FURN() { return FURN; }, lieDown, getUp, get LIE() { return LIE; }, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; } };
 </script>
 </body>
 </html>
