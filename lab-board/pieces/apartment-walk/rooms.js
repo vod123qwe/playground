@@ -12,7 +12,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { pax } from './hall.js?v=4';
 import { ivy } from './ivy.js?v=1';
 import { buildBath } from './bath.js?v=11';
-import { buildBalconies } from './balcony.js?v=3';
+import { buildBalconies } from './balcony.js?v=5';
 import { buildKidroom } from './kidroom.js?v=5';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 

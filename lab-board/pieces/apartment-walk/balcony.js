@@ -1,5 +1,4 @@
 // The balconies, to sit out on (plan centimetres, as rooms.js; their slabs' top is 3 cm under the floor inside):
-//  - all three decked in wood-look boards (acacia tones, 14.5 cm, along each balcony's length);
 //  - the living room's (5.5 x 1.5 m): by its single door, close to it, two low teak lounge chairs with thick cream cushions and a
 //    little round teak coffee table between them; an olive tree in a stone pot at the far end; troughs of
 //    feather grass along the rail by the big window;
@@ -15,30 +14,6 @@ export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, 
   const toW = (p0, e, n, s, t) => [p0[0] + e[0] * s + n[0] * t, p0[1] + e[1] * s + n[1] * t];
   const teak = std({ name: 'teak', ...oakMaps, normalScale: new THREE.Vector2(.3, .3), color: '#b98a5e', roughness: .75 });
   const cream = linen('#efe7da'), sand = linen('#d9c7a8'), terra = linen('#b86f4f'), olive = linen('#8d8f6a');
-
-  // ---------- the decking: a board texture over 120 x 120 cm, laid along the balcony ----------
-  const deckTex = canvasTex(1024, 1024, (g, w, h) => { const r = rng(77), bw = w / 8;
-    for (let i = 0; i < 8; i++) {
-      const y0 = i * bw, cut = r() * w;
-      for (const [x0, x1] of [[-w + cut, cut], [cut, cut + w]]) {
-        const L = 150 + r() * 40, gr = g.createLinearGradient(0, y0, 0, y0 + bw);
-        gr.addColorStop(0, `rgb(${L},${L * .72},${L * .5})`); gr.addColorStop(.5, `rgb(${L + 12},${(L + 12) * .73},${(L + 12) * .51})`); gr.addColorStop(1, `rgb(${L - 10},${(L - 10) * .7},${(L - 10) * .48})`);
-        g.fillStyle = gr; g.fillRect(x0, y0 + 2, x1 - x0 - 3, bw - 5);
-        for (let k = 0; k < 26; k++) { g.strokeStyle = `rgba(${r() < .5 ? '90,55,30' : '230,190,150'},${.08 + r() * .12})`; g.lineWidth = .8 + r() * 1.6; g.beginPath();
-          let yy = y0 + 4 + r() * (bw - 8); g.moveTo(x0, yy); for (let x = x0; x < x1; x += 40) { yy += (r() - .5) * 3; g.lineTo(x, yy); } g.stroke(); }
-      }
-      g.fillStyle = '#3a2c22'; g.fillRect(0, y0 + bw - 3, w, 3);
-    } });
-  deckTex.wrapS = deckTex.wrapT = THREE.RepeatWrapping;
-  const deckM = std({ name: 'deck', map: deckTex, roughness: .8 });
-  for (const b of balconies) {
-    const o = b.outer; let best = 0, e = [1, 0];                       // the boards run along the longest edge
-    for (let i = 0; i < o.length; i++) { const a = o[i], c = o[(i + 1) % o.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L > best) { best = L; e = [(c[0] - a[0]) / L, (c[1] - a[1]) / L]; } }
-    const sh = new THREE.Shape(o.map(([x, z]) => new THREE.Vector2(x, z))), g = new THREE.ShapeGeometry(sh);
-    const P = g.attributes.position, uv = g.attributes.uv;
-    for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getY(i); P.setXYZ(i, x, -1, z); uv.setXY(i, (x * e[0] + z * e[1]) / 120, (-x * e[1] + z * e[0]) / 120); }
-    g.computeVertexNormals(); const m = new THREE.Mesh(g, deckM); m.material.side = THREE.DoubleSide; m.receiveShadow = true; root.add(m);
-  }
 
   // ---------- pieces ----------
   function lounge(G, s, t, turn) {                                     // a low teak lounge chair, 70 x 76, its seat at 38, deep cream cushions
@@ -102,7 +77,7 @@ export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, 
 
   // ---------- the living room's balcony: along its wall from (459, -1248), out to the rail at 150 ----------
   { const p0 = [459, -1248], p1 = [796, -813], L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), e = [(p1[0] - p0[0]) / L, (p1[1] - p0[1]) / L], n = [e[1], -e[0]];   // n: out, away from the flat
-    const G = frame(p0, e);                                              // (in G: x = s along the wall, z = -t: the frame's z runs into the flat)
+    const G = frame(p0, e); G.position.y = -3;                          // (on the slab, 3 cm under the floor inside)                                              // (in G: x = s along the wall, z = -t: the frame's z runs into the flat)
     lounge(G, 385, -50, 2.18); lounge(G, 493, -50, -2.18);                   // (each facing the table, turned 35 degrees out to the view) roundTable(G, 439, -60, 34, 36);     // by the single door (s 408..499), close to it: a little coffee table between them
     oliveTree(G, 30, -112);
     trough(G, 110, -135, 80); trough(G, 205, -135, 80);
@@ -111,7 +86,7 @@ export function buildBalconies({ THREE, root, std, box, foot, lamps, canvasTex, 
     for (const s of [110, 205]) { const a = toW(p0, e, n, s - 40, 124), b = toW(p0, e, n, s + 40, 124), c = toW(p0, e, n, s + 40, 146), d = toW(p0, e, n, s - 40, 146); foot.push([a, b, c, d]); }
   }
   // ---------- the bedroom's balcony, its strip under the bedroom (z 0 .. 150, from x 660): the half-parasol over the daybed ----------
-  { const G = new THREE.Group(); root.add(G);                           // plain plan axes here: the wall at z = 0, the rail at 150
+  { const G = new THREE.Group(); G.position.y = -3; root.add(G);        // plain plan axes here: the wall at z = 0, the rail at 150; on the slab
     const X0 = 690, X1 = 890, Z0 = 6, Z1 = 144;                         // the daybed
     const DB = new THREE.Group(); G.add(DB);                                                                                  // (the daybed's parts, to sit on)
     box(X0, X1, 6, 30, Z0, Z1, teak, { r: 1.2, parent: DB });                                                             // its teak platform,
