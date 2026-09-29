@@ -24,22 +24,22 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
 
   // ---------- materials ----------
   const OAK = 140;                                                   // the veneer scan covers 140 cm
-  const oak = std({ map: oakC, normalMap: oakN, normalScale: new THREE.Vector2(.35, .35), roughnessMap: oakR, roughness: .9, color: '#e6d3bd' });   // natural oak, matt lacquer
-  const cashmere = std({ color: '#d7c9b6', roughness: .72 });        // upper fronts: beige / cashmere, matt
-  const carcass = std({ color: '#e9e3da', roughness: .8 });
-  const shadowGap = std({ color: '#3a302a', roughness: .9 });        // the integrated handle groove, the plinth recess
-  const blackGlass = std({ color: '#0b0c0e', roughness: .06, metalness: .2 });
-  const steel = std({ color: '#c8c9ca', roughness: .32, metalness: 1 });   // brushed steel tap and appliance handles
-  const legs = std({ color: '#141414', roughness: .45, metalness: .6 });
+  const oak = std({ name: 'oak', map: oakC, normalMap: oakN, normalScale: new THREE.Vector2(.35, .35), roughnessMap: oakR, roughness: .9, color: '#e6d3bd' });   // natural oak, matt lacquer
+  const cashmere = std({ name: 'cashmere', color: '#d7c9b6', roughness: .72 });        // upper fronts: beige / cashmere, matt
+  const carcass = std({ name: 'carcass', color: '#e9e3da', roughness: .8 });
+  const shadowGap = std({ name: 'shadowGap', color: '#3a302a', roughness: .9 });        // the integrated handle groove, the plinth recess
+  const blackGlass = std({ name: 'blackGlass', color: '#0b0c0e', roughness: .06, metalness: .2 });
+  const steel = std({ name: 'steel', color: '#c8c9ca', roughness: .32, metalness: 1 });   // brushed steel tap and appliance handles
+  const legs = std({ name: 'legs', color: '#141414', roughness: .45, metalness: .6 });
   const [tdC, tdN, tdR] = await Promise.all([load('tex/teddy_diff.jpg', true), load('tex/teddy_nor.jpg'), load('tex/teddy_rough.jpg')]);
-  const fabric = std({ map: tdC, normalMap: tdN, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: tdR, roughness: 1, color: '#e9dccb' });   // boucle: Poly Haven "curly teddy natural" (CC0)          // stool seats: beige boucle
+  const fabric = std({ name: 'fabric', map: tdC, normalMap: tdN, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: tdR, roughness: 1, color: '#e9dccb' });   // boucle: Poly Haven "curly teddy natural" (CC0)          // stool seats: beige boucle
   // conglomerate: a warm beige with a fine speckle
   const quartz = (() => {
     const N = 1024, c = canvas(N, N), g = c.getContext('2d'), r = rng(77);
     g.fillStyle = '#dccab0'; g.fillRect(0, 0, N, N);
     for (let i = 0; i < 26000; i++) { const x = r() * N, y = r() * N, s = r() * 1.6 + .3, v = r(); g.fillStyle = v < .5 ? `rgba(160,138,110,${.25 + r() * .3})` : v < .85 ? `rgba(245,236,220,${.3 + r() * .4})` : `rgba(120,100,80,${.3})`; g.fillRect(x, y, s, s); }
     for (let i = 0; i < 90; i++) { const x = r() * N, y = r() * N, rad = 12 + r() * 40; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${r() > .5 ? '232,220,200' : '206,190,164'},.1)`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }
-    return std({ map: tex(c, true), roughness: .38 });              // honed, a soft sheen
+    return std({ name: 'quartz', map: tex(c, true), roughness: .38 });              // honed, a soft sheen
   })();
   const QUARTZ_CM = 120;                                             // the speckle map covers 120 cm
   // glossy structured tiles, 7.5 x 30 cm, stacked vertically, 2 mm joint: slightly uneven faces, each tile its own shade
@@ -58,7 +58,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
       gn.fillStyle = 'rgb(128,200,225)'; gn.fillRect(x0, y0, w, e); gn.fillStyle = 'rgb(128,56,225)'; gn.fillRect(x0, y0 + h - e, w, e);
       gn.fillStyle = 'rgb(56,128,225)'; gn.fillRect(x0, y0, e, h); gn.fillStyle = 'rgb(200,128,225)'; gn.fillRect(x0 + w - e, y0, e, h);
     }
-    return { mat: std({ map: tex(c, true), normalMap: tex(n), normalScale: new THREE.Vector2(.8, .8), roughness: .12 }), w: W * cols, h: T * rows };
+    return { mat: std({ name: 'tiles', map: tex(c, true), normalMap: tex(n), normalScale: new THREE.Vector2(.8, .8), roughness: .12 }), w: W * cols, h: T * rows };
   })();
   // fluting: half-round reeds 2.5 cm wide on oak (the island, facing the living room)
   const flutes = (() => {
@@ -112,7 +112,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   // the oven column: a drawer, the oven (60), the microwave (38), a store above
   lowerFront(X[5], L, Y0, 80, D - 2);
   box(X[5] + .5, L - .5, 80.5, 140, D - 2, D - .1, blackGlass); box(X[5] + 5, L - 5, 134, 135.4, D - .1, D + 2.4, steel);   // oven glass and its bar
-  box(X[5] + .5, L - .5, 142, 180, D - 2, D - .1, blackGlass); box(X[5] + 3, X[5] + 38, 146, 176, D - .1, D, std({ color: '#1c1f23', roughness: .02, metalness: .3 }));  // microwave and its window
+  box(X[5] + .5, L - .5, 142, 180, D - 2, D - .1, blackGlass); box(X[5] + 3, X[5] + 38, 146, 176, D - .1, D, std({ name: 'microwaveGlass', color: '#1c1f23', roughness: .02, metalness: .3 }));  // microwave and its window
   tallFront(X[5], L, 182, CEIL, D - 2, false);
   // the worktop with the sink cut out, 62 deep (2 cm over the fronts)
   const topShape = new THREE.Shape([new THREE.Vector2(X[1] - .01, 0), new THREE.Vector2(X[5] + .01, 0), new THREE.Vector2(X[5] + .01, D + 2), new THREE.Vector2(X[1] - .01, D + 2)]);
@@ -123,7 +123,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   { const p = tg.attributes.position, uv = tg.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / QUARTZ_CM, p.getZ(i) / QUARTZ_CM); }
   const topM = new THREE.Mesh(tg, quartz); topM.castShadow = topM.receiveShadow = true; root.add(topM);
   // the sink: an inset bowl in the same conglomerate, 18 deep, and a drain
-  const bowl = std({ color: '#cbb89c', roughness: .55 });
+  const bowl = std({ name: 'bowl', color: '#cbb89c', roughness: .55 });
   box(SX0, SX1, WT - 18, WT - 17, SZ0, SZ1, bowl);
   box(SX0, SX0 + 1, WT - 18, WT, SZ0, SZ1, bowl); box(SX1 - 1, SX1, WT - 18, WT, SZ0, SZ1, bowl);
   box(SX0, SX1, WT - 18, WT, SZ0, SZ0 + 1, bowl); box(SX0, SX1, WT - 18, WT, SZ1 - 1, SZ1, bowl);
@@ -141,7 +141,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     const c = canvas(780, 520), g = c.getContext('2d'); g.fillStyle = '#0b0c0e'; g.fillRect(0, 0, 780, 520); g.strokeStyle = 'rgba(200,200,200,.22)'; g.lineWidth = 3;
     for (const [x, y, r] of [[190, 170, 110], [190, 380, 90], [560, 170, 90], [560, 370, 120]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); }
     g.fillStyle = 'rgba(210,210,210,.35)'; for (let i = 0; i < 9; i++) g.fillRect(300 + i * 20, 470, 10, 10);
-    const m = std({ map: tex(c, true), roughness: .05, metalness: .1 });
+    const m = std({ name: 'm', map: tex(c, true), roughness: .05, metalness: .1 });
     const hob = new THREE.Mesh(new THREE.BoxGeometry(78, .6, 52), [blackGlass, blackGlass, m, blackGlass, blackGlass, blackGlass]);
     hob.position.set((X[3] + X[4]) / 2, TOP + .3, 30); hob.receiveShadow = true; root.add(hob);
   }
@@ -155,7 +155,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   box(X[1], X[5], UP0, CEIL, 0, UD - 2, carcass);
   for (let i = 1; i < 5; i++) box(X[i] + G / 2, X[i + 1] - G / 2, UP0 + 4 + G / 2, CEIL - G / 2, UD - 2, UD - .1, cashmere);
   box(X[1], X[5], UP0, UP0 + 4, UD - 2, UD, oak);                    // the decorative oak strip between the uppers and the lowers
-  { const led = new THREE.Mesh(new THREE.BoxGeometry(X[5] - X[1] - 4, .4, 1.2), new THREE.MeshBasicMaterial({ color: '#ffe2b8', ...clip })); led.position.set((X[1] + X[5]) / 2, UP0 - .2, UD - 6); root.add(led);
+  { const led = new THREE.Mesh(new THREE.BoxGeometry(X[5] - X[1] - 4, .4, 1.2), new THREE.MeshBasicMaterial({ name: 'led', color: '#ffe2b8', ...clip })); led.position.set((X[1] + X[5]) / 2, UP0 - .2, UD - 6); root.add(led);
     const light = new THREE.RectAreaLight('#ffd9a8', 40, (X[5] - X[1] - 6) / 100, .03); light.position.set((X[1] + X[5]) / 2, UP0 - .5, UD - 6); light.rotation.x = -Math.PI / 2; root.add(light); }
 
   // ---------- the island: 180 x 80, drawers towards the kitchen, fluted oak towards the living room, a 25 cm overhang for the knees ----------
@@ -184,7 +184,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     sh.absarc(0, 0, 20.5, a0, a1, false); sh.absarc(0, 0, 16.5, a1, a0, true);
     const g = new THREE.ExtrudeGeometry(sh, { depth: 17, bevelEnabled: true, bevelThickness: 1.6, bevelSize: 1.4, bevelSegments: 4, curveSegments: 32 });
     g.rotateX(-Math.PI / 2); g.computeVertexNormals(); planarUV(g, 30); return g; })();
-  const legG = new THREE.CylinderGeometry(.75, .65, 58, 16), capM = std({ color: '#0a0a0a', roughness: .9 });
+  const legG = new THREE.CylinderGeometry(.75, .65, 58, 16), capM = std({ name: 'capM', color: '#0a0a0a', roughness: .9 });
   for (const sx of [-60, 0, 60]) {
     const St = new THREE.Group(); St.position.set(sx, 0, ID / 2 + 4); I.add(St);
     const seat = new THREE.Mesh(cushion, fabric); seat.position.y = 58; seat.castShadow = seat.receiveShadow = true; St.add(seat);
@@ -212,13 +212,13 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
     decor.push(gl.loadAsync(`${base}models/food_lime_01/food_lime_01.gltf`).then(({ scene: l }) => { clipIt(l);
       for (const [px_, pz_, py_] of [[-4, -3, .9], [3, -5, .9], [5, 2, .9], [-2, 4, .9], [0, -.5, 5.6], [-5, 1, 4.8], [3.5, -1.5, 5]]) {
         const c = l.clone(); c.scale.setScalar(100); c.position.set(12 + px_, TOP + py_, -4 + pz_); c.rotation.set(r() * 3, r() * 6, r() * 3); I.add(c); } })); }
-  { const pot = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [15, 0], [16.5, 2], [19.5, 36], [20, 38], [18.8, 38.2], [18.4, 35], [0, 35]].map(([r, y]) => new THREE.Vector2(r, y)), 48), std({ color: '#cbb59a', roughness: .85 }));
+  { const pot = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [15, 0], [16.5, 2], [19.5, 36], [20, 38], [18.8, 38.2], [18.4, 35], [0, 35]].map(([r, y]) => new THREE.Vector2(r, y)), 48), std({ name: 'pot', color: '#cbb59a', roughness: .85 }));
     pot.position.set(L + 38, 0, 100); pot.castShadow = pot.receiveShadow = true; root.add(pot);   // a clay planter in front of the pier by the balcony door
     decor.push(model('pachira_aquatica_01', L + 38, 34, 100, .74, 2.2)); }
   await Promise.all(decor);
 
   // ---------- three pendants over the island: opal glass globes 22 cm across on black cords, 75 cm over the top, 60 cm apart ----------
-  const opal = std({ color: '#f3f0ea', roughness: .22, emissive: '#ffe2b8', emissiveIntensity: 0 });
+  const opal = std({ name: 'opal', color: '#f3f0ea', roughness: .22, emissive: '#ffe2b8', emissiveIntensity: 0 });
   const islandLight = new THREE.PointLight('#ffd9a8', 0, 5, 2); islandLight.position.set(0, TOP + 70, 0); I.add(islandLight);
   const islandLamps = { name: 'island', on: false, meshes: [], set(v) { this.on = v; opal.emissiveIntensity = v ? 2.2 : 0; islandLight.intensity = v ? 3 : 0; } };   // one switch for the three
   for (const px of [-60, 0, 60]) {
@@ -233,7 +233,7 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   // ---------- five black surface spots on the ceiling, over the front of the run ----------
   for (let i = 0; i < 5; i++) {
     const x = 50 + i * (L - 100) / 4, sp = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 11, 32), legs); sp.position.set(x, CEIL - 5.5, 95); root.add(sp);
-    const lens = new THREE.Mesh(new THREE.CircleGeometry(3.2, 32), new THREE.MeshBasicMaterial({ color: '#fff4e0', ...clip })); lens.rotation.x = Math.PI / 2; lens.position.set(x, CEIL - 11.05, 95); root.add(lens);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(3.2, 32), new THREE.MeshBasicMaterial({ name: 'downlight', color: '#fff4e0', ...clip })); lens.rotation.x = Math.PI / 2; lens.position.set(x, CEIL - 11.05, 95); root.add(lens);
   }
 
   // the run and the island on the floor, for walking (plan cm): polygons

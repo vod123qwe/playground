@@ -23,3 +23,5 @@ Thumbs.db
 
 # private, local only: the real view out of the windows (built from the flat's location), never published
 lab-board/pieces/apartment-walk/assets/private/
+lab-board/pieces/apartment-walk/tools/blender/work/
+lab-board/pieces/apartment-walk/tools/blender/tex/
