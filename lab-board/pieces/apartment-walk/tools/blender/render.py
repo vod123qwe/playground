@@ -83,7 +83,8 @@ sc.render.engine = 'CYCLES'
 pr = bpy.context.preferences.addons['cycles'].preferences; pr.compute_device_type = 'OPTIX'; pr.refresh_devices()
 for dv in pr.devices: dv.use = dv.type == 'OPTIX'
 cy = sc.cycles; cy.device = 'GPU'; cy.samples = a.samples * (2 if lamps else 1); cy.use_adaptive_sampling = True; cy.adaptive_threshold = .008
-cy.max_bounces = a.bounces; cy.diffuse_bounces = a.bounces; cy.glossy_bounces = 6; cy.transmission_bounces = 12; cy.transparent_max_bounces = 16
+mb = max(a.bounces, 16) if a.spot.startswith('bath') else a.bounces   # (the bathroom: through two panes of the screen and the mirror, a path needs more)
+cy.max_bounces = mb; cy.diffuse_bounces = a.bounces; cy.glossy_bounces = 6; cy.transmission_bounces = max(12, mb); cy.transparent_max_bounces = 16
 cy.sample_clamp_indirect = 10; cy.caustics_reflective = False; cy.caustics_refractive = False; cy.blur_glossy = .5
 cy.use_denoising = True; cy.denoiser = 'OPENIMAGEDENOISE'; cy.denoising_prefilter = 'ACCURATE'; cy.denoising_input_passes = 'RGB_ALBEDO_NORMAL'; cy.denoising_use_gpu = True
 try: cy.denoising_quality = 'HIGH'

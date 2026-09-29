@@ -48,7 +48,10 @@ def upgrade(X, lamps=False):
         elif b == 'glow': lamp(m, warm, 8 if lamps else 0)           # the pendant over the dining table
         elif b == 'bedLamp': lamp(m, warm, 6 if lamps else 0)        # the bedside lamps' drums
         elif b == 'donutGlass': lamp(m, (1, .6, .25, 1), 5 if lamps else 0)   # the orange glass donut on the TV console
-        elif b in ('ceilingLED', 'mirrorLED'): lamp(m, warm, 0)       # the ceiling lamps and the bathroom mirror: off
+        elif b == 'ceilingLED': lamp(m, warm, 0)                        # the ceiling lamps: off
+        elif b == 'mirrorLED': lamp(m, warm, 18 if lamps else 0)     # the bathroom (no window: its 360 is made at dusk): the mirror's halo,
+        elif b == 'bathGlobe': lamp(m, warm, 7 if lamps else 0)      # the two opal globes,
+        elif b == 'bathDown': lamp(m, warm, 70 if lamps else 0)      # the three downlights
     for m in bpy.data.materials:
         b = base(m.name)
         if b == 'glass': thin_glass(m)

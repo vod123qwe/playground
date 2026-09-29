@@ -213,6 +213,33 @@ export function buildBath({ THREE, root, std, box, foot, lamps, canvasTex, rng, 
   { const head = cyl(5.6, 2, brass, 664, 190, LF - 6.5, 'z', 32); head.rotation.x = Math.PI / 2 - .5;
     const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(646, 73, LF - 4), new THREE.Vector3(650, 62, LF - 9), new THREE.Vector3(660, 60, LF - 10), new THREE.Vector3(664, 90, LF - 6), new THREE.Vector3(664, 182, LF - 5)]), 40, .6, 8), chrome);
     hose.castShadow = true; root.add(hose); }
+  // ---------- the bath mat: 50 x 75 before the bath, clear of the door's swing, a warm beige cotton pile (eight shells of tufts over its
+  // backing, rounded corners) ----------
+  { const W = 50, D = 75, cx = 578, cz = -140.5, NS = 8, PILE = 1.7, rr = 7, q = rng(606);
+    const shape = new THREE.Shape(); { const x0 = -W / 2, x1 = W / 2, z0 = -D / 2, z1 = D / 2;
+      shape.moveTo(x0 + rr, z0); shape.lineTo(x1 - rr, z0); shape.absarc(x1 - rr, z0 + rr, rr, -Math.PI / 2, 0); shape.lineTo(x1, z1 - rr); shape.absarc(x1 - rr, z1 - rr, rr, 0, Math.PI / 2);
+      shape.lineTo(x0 + rr, z1); shape.absarc(x0 + rr, z1 - rr, rr, Math.PI / 2, Math.PI); shape.lineTo(x0, z0 + rr); shape.absarc(x0 + rr, z0 + rr, rr, Math.PI, Math.PI * 1.5); }
+    const tufts = canvasTex(512, 512, (g, w, h) => { const img = g.createImageData(w, h), d = img.data;
+      for (let i = 0; i < d.length; i += 4) { d[i] = 224; d[i + 1] = 208; d[i + 2] = 184; d[i + 3] = 0; }
+      for (let k = 0; k < 70000; k++) { const x = (q() * w) | 0, y = (q() * h) | 0, a = 60 + q() * 195, r = 1 + (q() * 2) | 0, t = q();
+        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (dx * dx + dy * dy > r * r) continue; const j = (((y + dy + h) % h) * w + ((x + dx + w) % w)) * 4;
+          d[j] = 214 + t * 28; d[j + 1] = 196 + t * 28; d[j + 2] = 168 + t * 30; d[j + 3] = Math.max(d[j + 3], a); } }
+      g.putImageData(img, 0, 0); });
+    tufts.wrapS = tufts.wrapT = THREE.RepeatWrapping;
+    const flat = new THREE.ShapeGeometry(shape, 16).rotateX(Math.PI / 2); { const uv = flat.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 14, uv.getY(i) / 14); }
+    const backing = new THREE.ExtrudeGeometry(shape, { depth: .5, bevelEnabled: true, bevelThickness: .3, bevelSize: .4, bevelSegments: 2 }).rotateX(Math.PI / 2).translate(0, .8, 0);
+    put(backing, std({ name: 'bathMat', color: '#d8c5a7', roughness: 1 }), cx, 0, cz);
+    for (let k = 0; k < NS; k++) { const t = k / (NS - 1);
+      const m = std({ name: 'rugPile', map: tufts, alphaTest: .12 + .78 * t, color: new THREE.Color('#ddcbb0').lerp(new THREE.Color('#f4eadb'), t), roughness: 1, side: THREE.DoubleSide });
+      const o = new THREE.Mesh(flat, m); o.position.set(cx, .9 + PILE * t, cz); o.receiveShadow = true; root.add(o); } }
+  // ---------- the ceiling: three small recessed downlights (over the WC, by the vanity, over the bath), a switch of their own ----------
+  { const downM = std({ name: 'bathDown', color: '#f6f3ec', roughness: .3, emissive: '#fff1dc', emissiveIntensity: 0 }), trim = std({ name: 'bathWhite', color: '#f4f4f1', roughness: .4 }), meshes = [];
+    for (const [x, z] of [[455, -175], [532, -118], [646, -140]]) {
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, .5, 32), trim); r.position.set(x, H - .25, z); root.add(r);
+      const d = new THREE.Mesh(new THREE.CircleGeometry(3.8, 32), downM); d.rotation.x = Math.PI / 2; d.position.set(x, H - .55, z); root.add(d); meshes.push(r, d); }
+    const light = new THREE.PointLight('#ffe0b8', 0, 5, 2); light.position.set(545, H - 30, -150); root.add(light);
+    light.shadow.mapSize.set(512, 512); light.shadow.camera.near = .03; light.shadow.bias = -.004; light.shadow.normalBias = .02;
+    lamps.push({ name: 'bathroom ceiling', on: false, light, meshes, set(v) { this.on = !!v; downM.emissiveIntensity = v ? 3 : 0; light.intensity = v ? 1.8 : 0; } }); }
   // ---------- over the bath's head, on the door's wall: two brass towel bars, a white towel over the lower one ----------
   for (const y of [162, 174]) { cyl(.8, 44, brass, 646, y, -235.3, 'x', 12); for (const x of [624.5, 667.5]) cyl(.7, 6, brass, x, y, -238.3, 'z', 10); }
   box(634, 658, 128, 162.8, -236.8, -234, towel, { r: 1.2, scale: 45, soft: .5, seed: 61 });
