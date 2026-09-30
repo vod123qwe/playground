@@ -189,6 +189,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - pierwsza bójka to trening w trzech krokach (kontra, unik, cios w odsłonięcie), przeciwnik wtedy nie bije; Enter pomija
 - bójka nie przełącza już na widok z oczu (zza pleców widać obu, V dalej przełącza); gwiazda w tym widoku nad walczącymi
 
+## Wersja 17: auta od nowa, torba, skręt
+
+- auta: przeszklenie bardziej kanciaste (płaski dach z czystą krawędzią, piksele układają się równo), boczne szyby pod dachem, ich przód i tył pochylone wzdłuż słupków A i C, podzielone słupkiem B (dwie szyby z boku); przednia szyba na całą szerokość
+- pikap: skrzynia od ściany kabiny do klapy (przednia ściana, podłoga, burty z relingami, klapa), kabina kanciasta
+- klin: bez sterczącego grilla i lamp nad maską: szczelinowe reflektory na nosie, wlot powietrza w zderzaku; u wszystkich lampy i grill nie wyżej niż nos auta
+- sedan i długa limuzyna: dłuższa, niższa maska, krótszy, wyższy bagażnik, przednia szyba bardziej pochylona (przód nie myli się z tyłem)
+- torba (`src/bag.js`, jedna dla roweru, pieszo i Warsztatu): płócienna listonoszka z klapą przez górę i przód (przeszycie), dwa skórzane paski z mosiężnymi klamrami, kieszeń z klapką i napą, naszywka z gazetą, mosiężne kółka na pasek, ciemniejsze boki; gazety (rolki z czerwonymi opaskami i złożone) wystają spod klapy i ubywa ich, gdy rzucasz; w Warsztacie grupa Torba
+- rower skręca mocniej (większy skręt, szybsze wejście w zakręt)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

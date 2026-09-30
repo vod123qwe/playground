@@ -371,7 +371,7 @@ function ride(dt, inp) {
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
   const v0 = B.v; B.v = Math.max(-1.4, B.v + a * dt); if (!back && inp.pedal < .05 && !B.air && (Math.abs(B.v) < .1 || B.v < 0 || (v0 !== 0 && Math.sign(B.v) !== Math.sign(v0)))) B.v = 0;   // (crawling: he stops, a foot on the ground, on a hill too; back only if he walks it back)
   // steering (hardly any in the air)
-  const lock = .5 / (1 + Math.abs(B.v) * .38), want = inp.steer * lock * (B.air ? .25 : 1); B.steer += THREE.MathUtils.clamp(want - B.steer, -dt * 1.7, dt * 1.7);
+  const lock = .6 / (1 + Math.abs(B.v) * .3), want = inp.steer * lock * (B.air ? .25 : 1); B.steer += THREE.MathUtils.clamp(want - B.steer, -dt * 2.2, dt * 2.2);
   B.yaw += -B.v * Math.tan(B.steer) / L * dt;
   const leanT = THREE.MathUtils.clamp(Math.atan(B.v * Math.abs(B.v) * Math.tan(B.steer) / (L * g)) * .6, -.35, .35);
   B.leanV += (42 * (leanT - B.lean) - 12 * B.leanV) * dt; B.lean += B.leanV * dt;
@@ -756,6 +756,7 @@ function frame(now) {
   document.body.classList.toggle('walk', !menu.open && !asking);                          // (in the game: no cursor; the menu and the question have one)
   if (!asking && !menu.open && !window.PT?.hold) step(dt, input()); else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
+  { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }   // (the bag shows how many papers are left)
   drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.render(scene, camera); drawHud(dt);
   requestAnimationFrame(frame);

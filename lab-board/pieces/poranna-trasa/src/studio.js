@@ -10,6 +10,7 @@ import { createProps } from './props.js';
 import { createTextures } from './textures.js';
 import { createRider } from './rider.js';
 import { createDogs } from './dogs.js';
+import { makeBag } from './bag.js';
 
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false }); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -38,6 +39,7 @@ const CATS = [
   { k: 'rider', name: 'Rowerzysta', items: () => [{ k: 'rider', label: 'gazeciarz na rowerze', note: 'proceduralny' }] },
   { k: 'dogs', name: 'Psy', items: () => dogs.BREEDS.map((b, i) => ({ k: i, label: b.name, note: `${b.len} m` })) },
   { k: 'props', name: 'Rekwizyty', items: () => Object.keys(PROP_NAMES).map(k => ({ k, label: PROP_NAMES[k], note: k })) },
+  { k: 'bag', name: 'Torba', items: () => [{ k: 1, label: 'torba pełna', note: '20 gazet' }, { k: .5, label: 'torba w połowie', note: '10' }, { k: 0, label: 'torba pusta', note: '0' }] },
   { k: 'ramps', name: 'Skocznie', items: () => [['plank', 'deskowa'], ['kicker', 'kicker (stroma)'], ['big', 'duża na ramie']].map(([k, label]) => ({ k, label, note: k })) }];
 let cat = CATS[0], item = null, colour = null;
 const $ = id => document.getElementById(id);
@@ -74,6 +76,7 @@ async function show(it) {
   if (cat.k === 'rider') { rider = createRider({ THREE, ramp, toon }); place(rider.root); frame(rider.root, 'side'); describe('gazeciarz na rowerze', 'Rower i chłopak budowane w kodzie (bez pliku), pedałuje w podglądzie.', rider.root); }
   if (cat.k === 'dogs') { const d = dogs.makeDog(null, 1, Math.random, it.k); place(d.group); frame(d.group, 'side'); describe(dogs.BREEDS[it.k].name, 'Pies z brył (tułów z przekrojów, głowa, uszy i ogon wg rasy).', d.group); }
   if (cat.k === 'props') { const o = /Fence$/.test(it.k) ? props[it.k](6) : props[it.k](Math.random); place(o.group); frame(o.group); describe(PROP_NAMES[it.k], 'Rekwizyt z ogródków i ulicy.', o.group, [['kolizja', o.hit ? `${o.hit.kind} · ${(o.hit.hx * 2).toFixed(2)} × ${(o.hit.hz * 2).toFixed(2)} m` : '—']]); }
+  if (cat.k === 'bag') { const b = makeBag({ THREE, toon }); b.setFill(it.k); b.group.position.y = .3; b.group.rotation.y = Math.PI / 2; place(b.group); frame(b.group, 'iso'); describe('torba z gazetami', 'Płócienna listonoszka: klapa z przeszyciem, dwa paski z klamrami, kieszeń, naszywka, kółka na pasek; gazety ubywają, gdy rzucasz.', b.group); }
   if (cat.k === 'ramps') { const o = props.ramp(Math.random, it.k); place(o.group); frame(o.group); describe('skocznia: ' + it.label, 'Wysokość krawędzi decyduje o locie.', o.group, [['krawędź', o.hit.h.toFixed(2) + ' m']]); }
   applyWire();
 }
