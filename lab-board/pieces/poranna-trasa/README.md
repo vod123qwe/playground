@@ -275,6 +275,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - podjazd i ścieżka leżą na gruncie i przechylają się razem z nim (auto nie stoi już „pod” podjazdem)
 - pod gankiem i dobudówką jest kamienna podmurówka, żeby na spadku drogi nie było widać szpary
 
+## Wersja 26: cętkowany cień drzew, niższe słońce, widok z góry
+
+- korony drzew rzucają cień z dziurami: pod drzewem słońce przebija plamkami, które lekko drgają z wiatrem (wzór dziur jest liczony wzdłuż promienia słońca, więc przechodzi przez wszystkie warstwy korony naraz)
+- słońce niżej (około 34°) i cieplejsze: dłuższe cienie w poprzek drogi
+- nowa kamera **z góry (jak GTA 2)** pod klawiszem przełączania widoku: pionowo w dół, obrócona z kierunkiem jazdy, wyżej przy większej prędkości i przy rzucie
+- `?style=<nazwa>` w adresie (np. `?style=zlota`): ten styl tylko na tę wizytę, bez zapisywania (do porównań i testów)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

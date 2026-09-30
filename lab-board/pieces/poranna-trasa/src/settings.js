@@ -28,7 +28,9 @@ export function createSettings({ apply }) {
   let S = base();
   try { const saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved && typeof saved === 'object') { if (!(saved.v >= 2)) saved.vig = 0; S = { ...PRESETS[DEFAULT], ...S, ...saved }; } } catch { }   // (v2: no vignette unless asked for)
   S.v = 2;
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } };
+  // ?style=<preset>: that style for this visit only, nothing saved (for comparing, and for the tests)
+  const only = new URLSearchParams(location.search).get('style'); if (only && PRESETS[only]) S = { ...PRESETS[DEFAULT], ...PRESETS[only], preset: only, v: 2 };
+  const save = () => { if (only) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } };
 
   const css = document.createElement('style'); css.textContent = `
     #styl { position: fixed; top: 0; right: 0; bottom: 0; width: min(330px, 92vw); z-index: 6; overflow-y: auto; box-sizing: border-box; padding: 16px 16px 20px;
