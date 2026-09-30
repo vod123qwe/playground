@@ -132,10 +132,10 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const keepOut = [];
   const show = { house: [], tree: [], shacks: [], farm: [] }, rr = mulberry(53);   // (rr: for what came later, so the older layout stays)   // (what was built, one by one: for the workshop)
   function zone(o, hx, hz, ox = 0, oz = 0) { const yaw = o.rotation.y, c = Math.cos(yaw), sn = Math.sin(yaw); keepOut.push({ x: o.position.x + ox * c + oz * sn, z: o.position.z - ox * sn + oz * c, c, s: sn, hx, hz }); }
-  function free(i, d, r) {                                             // (nothing there: a house, a car, a fence, a drive, a porch)
+  function free(i, d, r, zones = true) {                              // (zones: false for a path, which minds only what stands: its own way is a zone)                                             // (nothing there: a house, a car, a fence, a drive, a porch)
     const p = at(i, d), over = C => { const dx = p.x - C.x, dz = p.z - C.z, lx = dx * C.c - dz * C.s, lz = dx * C.s + dz * C.c; return Math.abs(lx) < C.hx + r && Math.abs(lz) < C.hz + r; };
     for (const C of near(i)) if (C.kind === 'hard' || C.kind === 'soft') { if (over(C)) return false; }
-    for (const Z of keepOut) if (Math.abs(Z.x - p.x) + Math.abs(Z.z - p.z) < 40 && over(Z)) return false;
+    if (zones) for (const Z of keepOut) if (Math.abs(Z.x - p.x) + Math.abs(Z.z - p.z) < 40 && over(Z)) return false;
     return true;
   }
   function hit(o, spec, i, ox = 0, oz = 0) {                         // spec in o's space ({ hx, hz, h, kind }), o already placed (i: where along the road)
@@ -456,7 +456,12 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       seats.push({ h, local: new THREE.Vector3(.4, 0, .32), key: 'belly', lines: 'lump', stop: q.id, i: q.i });
       for (let k = 0; k < 1 + (rnd() < .5 ? 1 : 0); k++) seats.push({ h, local: new THREE.Vector3(-1 + k * 1.1, 0, -.45), stand: true, key: ['lady', 'teen', 'oldman', 'shopper'][rnd() * 4 | 0], face: Math.PI, lines: 'stop', stop: q.id, i: q.i });
       show.shacks.push({ o: h, label: 'przystanek', note: '4,3 × 1,5 m' }); } }
-  const lot = (i, s) => nearStop(i, s, 16) ? null : rnd() < .07 ? shacks(i, s) : house(i, s);
+  // the paths, planned before the houses: where one leaves the pavement there is a meadow (no house there, no fence across it), and
+  // its first stretch is kept clear (no tree, no tuft of grass on it)
+  const trailPlans = []; for (let i0 = Math.round(40 / ds); i0 < N - 40; i0 += Math.round((42 + nr() * 40) / ds)) { const sd = nr() < .5 ? -1 : 1; if (nearStop(i0, sd, 25)) continue;
+    trailPlans.push({ i0, sd }); zone({ position: at(i0, sd * (PAVE + 13)), rotation: { y: yawOf(i0) } }, 13, 3.2); }
+  const nearTrail = (i, s, m) => trailPlans.some(t => t.sd === s && Math.abs((((i - t.i0) % N) + N + N / 2) % N - N / 2) * ds < m);
+  const lot = (i, s) => nearStop(i, s, 16) || nearTrail(i, s, 11) ? null : rnd() < .07 ? shacks(i, s) : house(i, s);
   for (let i = 30; i < N - 40; i += Math.round((20 + rnd() * 10) / ds)) { lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1; tree(i, side * (PAVE + 1.6 + rnd() * 3)); if (rnd() < .25) tree(i + 7, (rnd() < .5 ? -1 : 1) * (VERGE - .6)); }
   const poles = []; for (let i = 10; i < N; i += Math.round(38 / ds)) poles.push(pole(i));
@@ -516,9 +521,9 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   for (let i = 0; i < N; i += Math.round((11 + rnd() * 10) / ds)) { const sd = rnd() < .5 ? -1 : 1, t = new THREE.Group(), H = 7 + rnd() * 6;
     const tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .22, H * .3, 6), wood); tr.position.y = H * .15; t.add(tr);
     for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry((1.9 - k * .38) * (H / 10), H * .34, 8), spruceM); c.position.y = H * (.3 + k * .19); t.add(c); }
-    show.tree.push({ o: t, label: 'świerk', note: H.toFixed(1) + ' m' }); put(t, i, sd * (PAVE + 22 + rnd() * 10), 0, rnd() * 6); if (rnd() < .4) tree(i + 9, sd * (PAVE + 19 + rnd() * 6)); }
+    const dS = sd * (PAVE + 22 + rnd() * 10); if (free(i, dS, 1.6)) { show.tree.push({ o: t, label: 'świerk', note: H.toFixed(1) + ' m' }); put(t, i, dS, 0, rnd() * 6); hit(t, { hx: .25, hz: .25, h: H, kind: 'hard' }, i); } if (rnd() < .4) tree(i + 9, sd * (PAVE + 19 + rnd() * 6)); }
   // ---------- between the houses: a side fence on the boundary, and what a garden has ----------
-  for (let k = 0; k < lots.length; k++) { const a = lots[k], b = lots.slice(k + 1).find(o => o.side === a.side); if (!b || b.i - a.i > 70) continue;
+  for (let k = 0; k < lots.length; k++) { const a = lots[k], b = lots.slice(k + 1).find(o => o.side === a.side); if (!b || b.i - a.i > 70 || trailPlans.some(t => t.sd === a.side && t.i0 > a.i && t.i0 < b.i)) continue;
     const mid = Math.round((a.i + b.i) / 2), sd = a.side, len = 14 + rnd() * 5, f = rnd() < .55 ? P.boardFence(len) : P.wireFence(len);
     put(f.group, mid, sd * (PAVE + 1.5 + len / 2), 0, Math.PI / 2); hit(f.group, f.hit, mid);
     const extras = [P.shed, P.washing, P.logs, P.sandbox, P.birdbath]; for (let n = 0; n < 1 + (rnd() * 2 | 0); n++) { const e = extras[rnd() * extras.length | 0](rnd), off = (rnd() < .5 ? -1 : 1) * (2.5 + rnd() * 2);
@@ -529,6 +534,70 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   for (let i = 0; i < N; i += Math.max(1, Math.round((1.6 + nr() * 2.2) / ds))) for (const sd of [-1, 1]) { if (nr() < .35) continue;
     const d = sd * (nr() < .5 ? KERB + .3 + nr() * .25 : nr() < .5 ? VERGE - .18 : PAVE + .15 + nr() * .4); if (!free(i, d, .25)) continue;
     const o = nr() < .12 && Math.abs(d) > PAVE ? NAT.flowers(nr, ['tulip', 'daisy', 'lupin', 'daisy'][nr() * 4 | 0]) : NAT.grassTuft(nr, nr() < .08 ? 'tall' : 'lawn'); put(o.group, i, d, 0, nr() * 6); }
+  // ---------- worn paths across the meadows between the houses: a strip of trodden earth wandering back from the pavement (inside the
+  //   loop, to the woods), grass and flowers thick along its edges, a few pebbles on it, at its end now and then a stump or a bench;
+  //   only where it runs into nothing (a house, a fence, a drive) ----------
+  { const dirtT = cvT(16, 16, g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 16, 16); for (let k = 0; k < 60; k++) { g.fillStyle = ['#d8cbb4', '#efe6d4', '#b9a98c', '#c9bb9e'][k % 4]; g.fillRect((k * 7 + (k >> 2)) % 16, (k * 11) % 16, 1 + (k % 3 === 0), 1); } });
+    dirtT.wrapS = dirtT.wrapT = THREE.RepeatWrapping; const dirtM = toon('#8f7654', { map: dirtT }), stumpM = toon('#7a5a3a'), ringM = toon('#c9a978'), benchM = toon('#9e7a4f');
+    // a bench, of a few kinds: the park's (slats on cast iron, green), a plank on two stumps, a concrete one; a park bin by the first
+    const ironM = toon('#2f4a3a'), concM = toon('#a8a49a'), binPM = toon('#3f6b35');
+    const bench = kind => { const b = new THREE.Group();
+      if (kind === 'park') { for (let q = 0; q < 3; q++) b.add(box(1.6, .04, .1, benchM, 0, .45, -.14 + q * .13)); for (let q = 0; q < 2; q++) { const sl = box(1.6, .1, .03, benchM, 0, .66 + q * .14, .24); sl.rotation.x = -.18; b.add(sl); }
+        for (const x of [-.7, .7]) { b.add(box(.06, .45, .06, ironM, x, .22, -.15)); b.add(box(.06, .9, .06, ironM, x, .45, .2)); b.add(box(.06, .06, .42, ironM, x, .43, .02)); b.add(box(.06, .05, .3, ironM, x, .62, .05)); } }
+      else if (kind === 'stumps') { for (const x of [-.55, .55]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.18, .21, .4, 8), stumpM); st.position.set(x, .2, 0); b.add(st); } b.add(box(1.7, .07, .32, toon('#8a6a45'), 0, .43, 0)); }
+      else { b.add(box(1.5, .1, .45, concM, 0, .42, 0)); for (const x of [-.55, .55]) b.add(box(.18, .38, .4, concM, x, .19, 0)); }
+      return b; };
+    const parkBin = () => { const g = new THREE.Group(); g.add(box(.06, .7, .06, ironM, 0, .35, 0)); const c = new THREE.Mesh(new THREE.CylinderGeometry(.22, .18, .45, 10, 1, true), binPM); c.position.y = .75; g.add(c); const rim = new THREE.Mesh(new THREE.TorusGeometry(.22, .02, 4, 12), ironM); rim.rotation.x = Math.PI / 2; rim.position.y = .97; g.add(rim); return g; };
+    // a treehouse: a big tree, and in it a platform, walls of boards, a pitched roof, a ladder up; at a path's end in the woods
+    const planksM = toon('#9e7a4f', { map: rep(tex.siding(), 1, 1) }), roofTM = toon('#6b4a2e');
+    const treehouse = (p, yaw) => { const t = new THREE.Group(); grow(t, 6.2, { x: .2, z: 0 }, 4.4, greenPal(), true);   // (a tall one: the crown over the house, not round it)
+      const h = new THREE.Group(); h.position.set(.25, 2.7, .1); t.add(h); h.add(box(2.4, .12, 2.2, planksM, 0, 0, 0)); for (const [x, z, w, d] of [[0, -1, 2.2, .08], [0, 1, 2.2, .08], [-1.1, 0, .08, 2.0]]) h.add(box(w, 1.3, d, planksM, x, .7, z));
+      for (const sg of [-1, 1]) { const rf = box(2.6, .08, 1.3, roofTM, 0, 1.62, sg * .55); rf.rotation.x = sg * .55; h.add(rf); } h.add(box(.5, .4, .06, toon('#2a2c30'), .4, .9, -1.03));   // (a window)
+      for (const z of [-.22, .22]) { const rl = box(.06, 3.0, .06, planksM, 1.75, 1.4, z); rl.rotation.z = .14; t.add(rl); } for (let q = 0; q < 7; q++) t.add(box(.06, .05, .46, planksM, 1.93 - q * .055, .3 + q * .38, 0));   // the ladder
+      t.position.copy(p); t.rotation.y = yaw; t.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); G.add(t); show.tree.push({ o: t, label: 'domek na drzewie', note: 'z drabinką' }); };
+    // a strip of trodden earth through points, grass thick a step off its edges (taller where nobody treads), flowers, a bush further
+    // off, pebbles on it; nothing grows on it after (the woods keep off)
+    const lay = (pts, narrow) => { const pos = [], uv = [], idx = []; let L = 0;
+      for (let k = 0; k < pts.length; k++) { const p0 = pts[Math.max(0, k - 1)], p1 = pts[Math.min(pts.length - 1, k + 1)], dx = p1.x - p0.x, dz = p1.z - p0.z, dl = Math.hypot(dx, dz) || 1, w = (narrow ? .38 : .5) + Math.sin(k * 1.7) * .08 - (k > pts.length - 4 ? (k - pts.length + 4) * .1 : 0);
+        if (k) L += pts[k].distanceTo(pts[k - 1]); const nx = -dz / dl, nz = dx / dl, p = pts[k];
+        pos.push(p.x + nx * w, p.y, p.z + nz * w, p.x - nx * w, p.y, p.z - nz * w); uv.push(0, L / 1.2, 1, L / 1.2); if (k) { const q = k * 2; idx.push(q - 2, q - 1, q, q - 1, q + 1, q); } }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+      { const n = g.attributes.normal; let up = 0; for (let k = 0; k < n.count; k++) up += n.getY(k); if (up < 0) { g.index.array.reverse(); g.computeVertexNormals(); } }
+      const m = new THREE.Mesh(g, dirtM); m.receiveShadow = true; G.add(m);
+      for (let k = 0; k < pts.length; k += 2) zone({ position: pts[k], rotation: { y: 0 } }, .9, .9);
+      for (let k = 1; k < pts.length - 1; k++) { const p = pts[k], q = pts[k + 1], dl = Math.hypot(q.x - p.x, q.z - p.z) || 1, nx = -(q.z - p.z) / dl, nz = (q.x - p.x) / dl;
+        for (const s2 of [-1, 1]) { const r0 = nr(), e = s2 * (r0 < .14 ? 1.5 + nr() * .8 : .75 + nr() * .6);
+          const o = r0 < .1 ? NAT.flowers(nr, ['daisy', 'daisy', 'lupin', 'tulip'][nr() * 4 | 0]) : r0 < .14 && k > 3 ? NAT.bush(nr, ['round', 'fern', 'tall'][nr() * 3 | 0]) : r0 < .7 ? NAT.grassTuft(nr, nr() < .15 ? 'tall' : 'lawn') : null;
+          if (o) { o.group.position.set(p.x + nx * e, p.y - .04, p.z + nz * e); o.group.rotation.y = nr() * 6; G.add(o.group); } }
+        if (nr() < .1) { const st = NAT.rocks(nr, 1).group; st.scale.setScalar(.2 + nr() * .14); st.position.set(p.x + nx * (nr() - .5) * .5, p.y - .04, p.z + nz * (nr() - .5) * .5); G.add(st); } } };
+    // by a path, a bench facing it (a park bin by the park's one), set a step off its side
+    const sitBy = (pts, k, kind) => { const p = pts[k], q = pts[Math.min(pts.length - 1, k + 1)], dl = Math.hypot(q.x - p.x, q.z - p.z) || 1, nx = -(q.z - p.z) / dl, nz = (q.x - p.x) / dl, sg = nr() < .5 ? -1 : 1;
+      const b = bench(kind); b.position.set(p.x + nx * sg * 1.25, p.y - .04, p.z + nz * sg * 1.25); b.rotation.y = Math.atan2(-nx * sg, -nz * sg) + Math.PI; G.add(b);
+      if (kind === 'park' && nr() < .75) { const bn = parkBin(); bn.position.set(p.x + nx * sg * 1.2 + (q.x - p.x) / dl * 1.2, p.y - .04, p.z + nz * sg * 1.2 + (q.z - p.z) / dl * 1.2); G.add(bn); } };
+    const benchKind = () => ['park', 'park', 'stumps', 'concrete'][nr() * 4 | 0];
+    // a path out from the pavement: straight on by the houses, then wandering (drift: how it turns along the road as it goes), as far
+    // as it gets; a branch off it now and then; at its end a stump, a bench, or (deep in the woods) a treehouse
+    const trail = (fi0, sd, d0, dEnd, drift0, depth) => { const pts = [], at2 = []; let off = 0, drift = drift0;
+      for (let d = d0; d < dEnd; d += .9) { drift = THREE.MathUtils.clamp(drift + (nr() - .5) * .16, -.9, .9); off += drift; if (!depth && d < 29) off = THREE.MathUtils.clamp(off, -2.2, 2.2);   // (by the houses: straight on)
+        const fi = fi0 + off / ds, ii = Math.round(fi), i1 = Math.floor(fi), t = fi - i1;
+        if (d > PAVE + 1.2 && !free(((ii % N) + N) % N, sd * d, 1.05, false)) break; pts.push(at(i1, sd * d, .045).lerp(at(i1 + 1, sd * d, .045), t)); at2.push([fi, d, drift]); }
+      if (pts.length < 6) return null;
+      lay(pts, depth);
+      if (pts.length > 12 && nr() < .45) sitBy(pts, Math.floor(pts.length * (.3 + nr() * .4)), benchKind());
+      if (!depth && pts.length > 14 && nr() < .5) { const k = Math.floor(pts.length * (.35 + nr() * .35)), [fi, d, dr] = at2[k]; trail(fi, sd, d, Math.min(dEnd, d + 10 + nr() * 14), dr + (nr() < .5 ? -1 : 1) * (.5 + nr() * .3), 1); }
+      const e = pts[pts.length - 1], kk = nr(), deep = at2[at2.length - 1][1] > 34;
+      if (deep && sd === INNER && !depth && kk < .4) { const e2 = pts[pts.length - 1], q = pts[pts.length - 2]; treehouse(e2.clone().setY(e2.y - .04).add(new THREE.Vector3((e2.x - q.x) * 2.5, 0, (e2.z - q.z) * 2.5)), Math.atan2(e2.x - q.x, e2.z - q.z) + Math.PI / 2); }
+      else if (kk < .3) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.28, .34, .4, 9), stumpM); st.position.set(e.x, e.y + .16, e.z); G.add(st); const top = new THREE.Mesh(new THREE.CylinderGeometry(.27, .27, .02, 9), ringM); top.position.set(e.x, e.y + .37, e.z); G.add(top); }
+      return pts; };
+    // a path along the backs of the gardens, from one path's meadow to the next: it finds its way round what is there (a little
+    // nearer or farther), or stops
+    const along = (iA, iB, sd, d0) => { const pts = []; let d = d0;
+      for (let i = iA; i < iB; i += Math.max(1, Math.round(.9 / ds))) { d = THREE.MathUtils.clamp(d + (nr() - .5) * .3, d0 - 2.5, d0 + 2.5); let ok = false;
+        for (const dd of [d, d - 1.2, d + 1.2, d - 2.2, d + 2.2]) if (free(i % N, sd * dd, 1, false)) { d = dd; ok = true; break; }
+        if (!ok) break; pts.push(at(i, sd * d, .045)); }
+      if (pts.length < 10) return; lay(pts, true); if (nr() < .6) sitBy(pts, Math.floor(pts.length / 2), benchKind()); };
+    for (const t of trailPlans) trail(t.i0, t.sd, PAVE + .3, t.sd === INNER ? 36 + nr() * 11 : 31 + nr() * 8, (nr() - .5) * .9, 0);   // (inside: into the woods, short of the lake)
+    for (let k = 0; k < trailPlans.length; k++) { const a = trailPlans[k], b = trailPlans.slice(k + 1).find(o => o.sd === a.sd); if (!b || (b.i0 - a.i0) * ds > 95 || nr() < .35) continue; along(a.i0 + 2, b.i0 - 2, a.sd, 30.5 + nr() * 2.5); } }
   // ---------- on the road and the pavement: things to ride round, over or into ----------
   const bundles = [], ramps = [];
   const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)

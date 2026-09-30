@@ -339,6 +339,16 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - autobus: jasny dach z klimatyzatorem i dwoma włazami, przednia szyba (z ciemnym wnętrzem za nią) i tylna, podświetlana tablica „7 CENTRUM”; z góry nie jest już gładkim prostokątem
 - pozostałe auta sprawdzone z góry: dach w kolorze lakieru, szyby, skrzynka pikapa bez zmian
 
+## Wersja 35: wydeptane ścieżki, ławki, domki na drzewie
+
+- ścieżki z udeptanej ziemi: zaplanowane przed domami (tam, gdzie ścieżka odchodzi od chodnika, jest łączka: bez domu, bez płotu między działkami, świerki i drzewa omijają wejście); przy domach idą prosto, dalej skręcają na skos i wiją się: wewnątrz pętli przez laski prawie do jeziora, na zewnątrz przez pas świerków pod tory; część się rozwidla; gdy trafią na przeszkodę, kończą się tam
+- ścieżki za domami: wzdłuż drogi za tylnymi płotami, od jednej łączki do następnej, omijają to, co tam stoi
+- wzdłuż ścieżek trawy (wyższe tam, gdzie nikt nie chodzi), kwiaty, krzaki dalej od brzegu, kamyki na ścieżce; nic na nich nie rośnie
+- ławki trzech rodzajów przy ścieżkach: parkowa (listwy na żeliwnych nogach, zielona) często z koszem na słupku, deska na dwóch pniakach, betonowa; na końcach ścieżek pniaki ze słojami
+- domki na drzewie: na końcu niektórych ścieżek w laskach duże drzewo z pomostem, ścianami z desek, daszkiem, okienkiem i drabinką (widać je też w Warsztacie, w grupie Drzewa)
+- pnie świerków za domami zatrzymują teraz rower
+- poprawka: wywrotka przy trzymanym rzucie mogła zatrzymać grę (kamera czytała siłę rzutu, którego już nie było); celownik znika przy wywrotce
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
