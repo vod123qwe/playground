@@ -66,6 +66,24 @@ Pomysł Jarka: kilka wyjątkowych budynków na trasie, każdy z własną sytuacj
 
 Do decyzji: ile tych miejsc na pętlę (propozycja 3–4, losowane z puli), czy scenki mają dialogi z wyborem czy tylko z reakcją na akcję, i czy zakończenia wpływają na progresję (reputacja, kasa).
 
+## 3c. Napady na pieszych: co z tego wynika (burza mózgów, do decyzji)
+
+Zasada: napad się opłaca od razu (drobne, fanty), ale kosztuje później. Każdy typ przechodnia reaguje inaczej, a świat pamięta.
+
+- **Obława (gorąco):** każdy napad przy świadkach podbija licznik obławy (1–3 gwiazdki w stylu listu gończego). Przy 3 przyjeżdża policja; to się liczy do „policja za trzecim razem = koniec runu”. Obława stygnie, gdy jedziesz spokojnie i nikt cię nie widzi.
+- **Każdy ofiarą, ale nie każdy bezbronny:**
+  - babka tłucze parasolką i woła inne babki;
+  - dresiarz oddaje, a potem wraca ze szwagrem;
+  - biegacz ucieka i nagrywa telefonem (jutro jesteś w gazecie, którą sam roznosisz);
+  - pani z psem spuszcza psa;
+  - facet w garniturze okazuje się tajniakiem;
+  - emeryt z laską płaci „za spokój” i dzwoni do wnuka policjanta.
+- **Łup:** drobne, bułki (leczą HP), bilet, kupon lotto (event losowania), klucze (skrzynka pocztowa do otwarcia), stare zdjęcie (początek wątku).
+- **Renoma:** napady w dzielnicy obniżają renomę; prenumeratorzy rezygnują, napiwki maleją, babki plotkują przy furtkach. Oddanie łupu albo pomoc ofierze (na przykład pogonienie złodzieja) ją podnosi. Wybór jest: karmazyn czy Robin Hood.
+- **Zemsta:** okradziony może wrócić później w tym samym runie, z kumplem, czasem na rowerze.
+- **Świadkowie i kamera:** monitoring na parkingu albo przy sklepie; zakapturzenie (kupiony kaptur) zmniejsza obławę.
+- **Dla ostrzejszego humoru:** okradziony mówi coś zaskakującego („NARESZCIE KTOŚ MNIE ZAUWAŻYŁ”, „WEŹ TEŻ TEŚCIOWĄ”), a czasem to on okrada ciebie.
+
 ## 4. Progresja (żeby chciało się wracać)
 
 **Propozycja: dni pracy (rekomendacja).**
