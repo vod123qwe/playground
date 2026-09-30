@@ -142,6 +142,20 @@ Wspólny szkielet: zapowiedź z daleka (dźwięk, znak, ludzie się oglądają),
 - **Co możesz:** zrzucić (upadają z hulajnogą, obława +1, rodzice w oknie), prześcignąć (za sprint o kasę jak z kolarzami), ukraść hulajnogę (szybka, ale bateria się kończy i nie da się z niej rzucać gazetami).
 - **Porzucone hulajnogi** leżą w poprzek chodnika jako przeszkoda.
 
+## 3g. Wygląd: analiza względem referencji Jarka i plan (ciepła ulica z drzewami)
+
+Referencja to malowana ilustracja: każdy piksel postawiony celowo, nie render w czasie rzeczywistym. Da się do niej zbliżyć, nie da się jej odtworzyć 1:1 przy 60 klatkach na telefonie. Najważniejsze różnice i co z nimi zrobić:
+
+1. **Światło:** nisko stojące ciepłe słońce, długie miękkie cienie, **cętkowany cień liści** na jezdni. U nas cień jest twardy i jednolity. → cień koron z mapy „dziur w liściach” (plama światła i cienia przesuwa się lekko z wiatrem), cieplejszy domyślny styl.
+2. **Zamknięcie ulicy:** drzewa nad jezdnią, żywopłoty wzdłuż chodnika, rabaty, kosze, flagi, lampy; widok jest „obudowany”. U nas trawniki są szerokie i puste. → więcej rzeczy przy chodniku i drzewa przy jezdni, których korony wchodzą nad drogę.
+3. **Faktura w skali piksela:** krawężnik z bloczków, płyty chodnika, asfalt z łatami, trawa z kwiatkami; tekstury są rysowane tak, że jeden teksel to jeden piksel ekranu. U nas tekstury powtarzają się w różnych skalach i się rozmywają. → tekstury przerysowane pod docelową gęstość pikseli, z paletą.
+4. **Drzewa:** pień rozgałęzia się szybko, kora z fakturą i cieniem, korona z kęp z jasną i ciemną stroną. U nas jeden pień i kule. → nowe drzewa: gałęzie, kora, kępy liści z dwoma tonami.
+5. **Kolor i powietrze:** ciepła paleta, a w oddali niebieska mgiełka (miasteczko nad jeziorem tonie w powietrzu). → mgła zależna od odległości, z kolorem nieba.
+6. **Szyby aut:** przezroczyste, z pikselową smugą odbicia. → szkło półprzezroczyste z ukośnym paskiem blasku.
+7. **Droga nie zawsze taka sama:** odcinki jednopasmowe, zatoka autobusowa z wysepką i przystankiem, buspas, studzienki, łaty. → warianty odcinków drogi; przystanek z lumpem (obudzony gazetą: ludzie klaszczą, wpadają monety) jako zdarzenie.
+
+**Pogoda w panelu stylu (U):** mgła (gęstość), deszcz (natężenie: krople, mokra ciemniejsza droga), kałuże (mienią się odbiciem nieba), może pora dnia. Panel U przebudowany na grupy: Obraz i piksele · Kolor · Światło · Kontur i linie · Pogoda i powietrze · Efekty.
+
 ## 4. Progresja (żeby chciało się wracać)
 
 **Propozycja: dni pracy (rekomendacja).**
