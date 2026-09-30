@@ -80,10 +80,10 @@ function setToon(n) { const d = RAMPS[n] || RAMPS[3]; ramp.image = { data: new U
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; }
 scene.fog = new THREE.Fog('#dfe5cf', 90, 620);
 const hemi = new THREE.HemisphereLight('#cfe6f2', '#6b5a3a', 1.1); scene.add(hemi);
-const sun = new THREE.DirectionalLight('#fff0d2', 2.6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+const sun = new THREE.DirectionalLight('#ffe6bf', 2.7); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 1, far: 120 }); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03;
 scene.add(sun, sun.target);
-const SUN = new THREE.Vector3(-.55, .62, -.35).normalize();             // low, from ahead and to the left: long shadows across the road
+const SUN = new THREE.Vector3(-.6, .5, -.38).normalize();              // low (about 34°), from ahead and to the left: long shadows across the road
 // clouds: three shapes, lit on top and shaded under; two layers (nearer and higher, farther and lower) drifting with the wind at
 // different speeds, so the sky has depth
 const clouds = [];
@@ -111,7 +111,7 @@ function drift(dt) { for (const c of clouds) { c.a += c.speed * dt; c.s.position
 drift(0);
 
 // ---------- the street, the traffic, the dogs, the rider ----------
-const track = createTrack({ THREE, toon, tex: createTextures({ THREE }) }); scene.add(track.group);
+const track = createTrack({ THREE, toon, tex: createTextures({ THREE }) }); track.dapSun.value.copy(SUN); scene.add(track.group);
 const backdrop = createBackdrop({ THREE }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
 const traffic = createTraffic({ THREE, track, cars: track.cars, n: 6, makeRider: () => createRider({ THREE, ramp, toon }), bikes: 2 }); scene.add(traffic.group);   // (cars, and now and then a cyclist coming the other way)
 const dogs = createDogs({ THREE, toon, probe: track.probe });
@@ -536,6 +536,7 @@ const CAMS = [
   { name: 'daleko', back: 5.4, up: 3.1, ahead: 7, lookUp: 1.0, fov: 60 },
   { name: 'wysoko', back: 7.5, up: 7.2, ahead: 6, lookUp: 0, fov: 56 },
   { name: 'bardzo daleko', back: 7.6, up: 3.9, ahead: 8, lookUp: 1.1, fov: 58 },
+  { name: 'z góry (jak GTA 2)', top: true, fov: 50 },
 ];
 let camI = 3; const CP = { ...CAMS[3] };
 function setCam(i) { camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
@@ -555,7 +556,7 @@ function follow(dt) {
   const tw = THREE.MathUtils.smootherstep(watchPaper(dt), 0, 1);
   const k = 1 - Math.exp(-dt * 3.2), dy = Math.atan2(Math.sin(B.yaw - C.yaw), Math.cos(B.yaw - C.yaw)); C.yaw += dy * k;
   const gq = track.probe(B.x, B.z, B.hint); C.gy += ((B.air ? gq.y : B.y) - C.gy) * Math.min(1, dt * (B.air ? 1.5 : 8));   // (the ground under him, not his wheels: so a hop is seen as one)
-  const T = CAMS[camI], ke = 1 - Math.exp(-dt * 4); if (!T.fpv) for (const k of ['back', 'up', 'ahead', 'lookUp', 'fov']) CP[k] = (CP[k] ?? T[k]) + (T[k] - (CP[k] ?? T[k])) * ke; else CP.fov += (T.fov - CP.fov) * ke;
+  const T = CAMS[camI], ke = 1 - Math.exp(-dt * 4); if (T.top) { } else if (!T.fpv) for (const k of ['back', 'up', 'ahead', 'lookUp', 'fov']) CP[k] = (CP[k] ?? T[k]) + (T[k] - (CP[k] ?? T[k])) * ke; else CP.fov += (T.fov - CP.fov) * ke;
   rider.head.visible = !T.fpv;
   if (T.fpv) {                                                         // through his eyes: from his head, looking where he rides, rolling with him
     rider.head.updateMatrixWorld(true); rider.head.getWorldPosition(_eye); const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw));
@@ -564,6 +565,15 @@ function follow(dt) {
     camera.up.set(0, 1, 0); camera.lookAt(lk); camera.rotateZ(-B.lean * .9); camera.fov = CP.fov + Math.max(0, B.v) * .6; camera.updateProjectionMatrix();
     C.init = false; sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return;
   }
+  // from above, straight down (as the old top-down games): turned with him so ahead is up the screen, higher the faster he goes
+  //   (and when a paper is in the air), looking at a point a little ahead of him
+  if (T.top) { const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), h = 15 + Math.max(0, B.v) * .7 + tw * 4 + (aim.on ? 3 : 0);
+    const want = new THREE.Vector3(B.x + fx * 3.5, C.gy + h, B.z + fz * 3.5);
+    if (!C.init) { C.gy = B.y; C.pos.copy(want); C.init = true; }
+    C.pos.lerp(want, 1 - Math.exp(-dt * 6)); camera.position.copy(C.pos); camera.up.set(fx, 0, fz); camera.lookAt(C.pos.x, C.gy, C.pos.z);
+    if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
+    CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov; camera.updateProjectionMatrix();
+    sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return; }
   const ch = aim.on ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
   const want = new THREE.Vector3(B.x - Math.sin(C.yaw) * back - Math.cos(C.yaw) * aside, C.gy + CP.up + tw * 1.4 + ch * 1.8, B.z - Math.cos(C.yaw) * back + Math.sin(C.yaw) * aside);   // (far and high enough to see the houses, and a window go)
   const look = new THREE.Vector3(B.x + Math.sin(B.yaw) * CP.ahead - Math.cos(B.yaw) * mlook.x * 2.6, C.gy + CP.lookUp - mlook.y * 1.2, B.z + Math.cos(B.yaw) * CP.ahead + Math.sin(B.yaw) * mlook.x * 2.6);   // (the mouse turns it a little)
@@ -760,7 +770,7 @@ const dbg = (() => { if (!Q.has('debug')) return null; const d = document.create
 // the fires in the drums by the shacks: the flame flickers, puffs of smoke rise, grow and fade
 const smokeM = new THREE.MeshBasicMaterial({ color: '#9a9690', transparent: true, depthWrite: false }), smokeG = new THREE.IcosahedronGeometry(.22, 0);
 let fireT = 0;
-function stepFires(dt) { const t = (fireT += dt); track.train.update(dt);
+function stepFires(dt) { const t = (fireT += dt); track.train.update(dt); track.dapT.value = t;
   for (const f of track.fires) { const k = 1 + Math.sin(t * 17 + f.drum.id) * .12 + Math.sin(t * 29) * .08; f.flame.scale.set(1, k, 1); f.core.scale.set(1, 2 - k, 1); f.flame.rotation.y += dt * 3;
     if (!f.puffs) { f.puffs = []; for (let n = 0; n < 6; n++) { const m = new THREE.Mesh(smokeG, smokeM.clone()); f.drum.add(m); f.puffs.push({ m, t: n / 6 }); } }
     for (const p of f.puffs) { p.t = (p.t + dt * .22) % 1; const u = p.t; p.m.position.set(Math.sin(u * 5 + p.m.id) * .25 + u * .6, 1.2 + u * 3.2, Math.cos(u * 4) * .15); p.m.scale.setScalar(.6 + u * 2.4); p.m.material.opacity = .55 * (1 - u) * Math.min(1, u * 6); } } }

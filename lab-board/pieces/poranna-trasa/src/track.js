@@ -302,6 +302,21 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const clumpM = toon('#ffffff', { vertexColors: true, flatShading: true, map: leafT });
   const cardT = tex.leafCard(1), cardM = toon('#ffffff', { vertexColors: true, map: cardT, alphaTest: .5, side: THREE.DoubleSide });
   const cardDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: cardT, alphaTest: .5, side: THREE.DoubleSide });
+  // the crowns' shadows, dappled: what they cast has holes in it (a noise in the world, two sizes of it), so under a tree the sun
+  // comes through in flecks, and the flecks shift a little as the wind moves (dapT: the time)
+  const dapT = { value: 0 }, dapSun = { value: new THREE.Vector3(-.6, .5, -.38).normalize() };   // (the sun's direction: main sets it)
+  const dappled = m => { m.onBeforeCompile = sh => { sh.uniforms.dapT = dapT; sh.uniforms.dapSun = dapSun;
+      sh.vertexShader = 'varying vec3 vDapW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vDapW = (modelMatrix * vec4(transformed, 1.)).xyz;');
+      sh.fragmentShader = `varying vec3 vDapW; uniform float dapT; uniform vec3 dapSun;
+        float dH(vec3 p) { p = fract(p * .3183099 + .1); p *= 17.; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+        float dN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3. - 2. * f);
+          return mix(mix(mix(dH(i), dH(i + vec3(1, 0, 0)), f.x), mix(dH(i + vec3(0, 1, 0)), dH(i + vec3(1, 1, 0)), f.x), f.y),
+                     mix(mix(dH(i + vec3(0, 0, 1)), dH(i + vec3(1, 0, 1)), f.x), mix(dH(i + vec3(0, 1, 1)), dH(i + vec3(1, 1, 1)), f.x), f.y), f.z); }
+        ` + sh.fragmentShader.replace('void main() {', `void main() {
+        { vec2 g = vDapW.xz - dapSun.xz / dapSun.y * vDapW.y;             // (where on the ground this bit's shadow falls: the same holes through every layer of the crown)
+          float n = dN(vec3(g * 1.1 + vec2(sin(dapT * .7) * .25, dapT * .12), 0.)) * .6 + dN(vec3(g * 2.9, dapT * .3)) * .4; if (n > .56) discard; }`); };
+    m.customProgramCacheKey = () => 'dapple'; return m; };
+  const clumpDepth = dappled(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })); dappled(cardDepth);
   const hash3 = (x, y, z) => { const v = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return v - Math.floor(v); };
   function crown(t, C, R, pal, nClump = 18, nCard = 44) {
     const P = PAL[pal], tone = (up, h, j) => P[Math.max(0, Math.min(P.length - 1, Math.round((up * .45 + h * .75 + j) * (P.length - 1))))];
@@ -569,7 +584,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   if (!showcase) { G.updateMatrixWorld(true); const by = new Map(), gone = [];
     G.traverse(o => { if (!o.isMesh || !o.userData.foliage) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(g); gone.push(o); });
     for (const o of gone) o.parent.remove(o);
-    for (const [m, gs] of by) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = true; mm.receiveShadow = true; if (m === cardM) mm.customDepthMaterial = cardDepth; G.add(mm); } }
+    for (const [m, gs] of by) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = true; mm.receiveShadow = true; mm.customDepthMaterial = m === cardM ? cardDepth : clumpDepth; G.add(mm); } }
   // ---------- all the still things merged, material by material, into a few meshes (a mailbox stays itself: its flag moves) ----------
   if (!showcase) { G.updateMatrixWorld(true); const buckets = new Map(), gone = [];
     const kept = o => { for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return true; return false; };
@@ -590,6 +605,6 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const cy = a.p.y + (b.p.y - a.p.y) * k, off = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z;
     return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
-  return { group: G, probe, S, N, ds, len, INNER, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  return { group: G, probe, S, N, ds, len, INNER, dapT, dapSun, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
