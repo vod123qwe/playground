@@ -730,7 +730,17 @@ const menu = createMenu({ hud, look, styles: MENU_STYLES, light: LIGHT, presets:
 addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (menu.open && !asking) { menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
   if (!asking && e.code === 'Escape') { menu.show('pause'); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
-if (!new URLSearchParams(location.search).has('play')) menu.show('title');   // (the title screen first; ?play skips it)
+const Q = new URLSearchParams(location.search), ARENA = Q.get('arena');
+if (!Q.has('play') && !ARENA) menu.show('title');   // (the title screen first; ?play skips it, as does the arena)
+// the arena (from the workshop): off the bike on a field, an opponent of the kind chosen; when one is done, the next a moment after
+const arenaState = { on: !!ARENA, init: false, wait: 0 };
+const dbg = (() => { if (!Q.has('debug')) return null; const d = document.createElement('div'); d.className = 'ui'; Object.assign(d.style, { left: '50%', top: '46px', transform: 'translateX(-50%)', padding: '4px 10px', background: 'rgba(23,24,27,.8)', borderRadius: '6px', color: '#efc970', whiteSpace: 'pre', textAlign: 'center' }); document.body.appendChild(d); return d; })();
+function stepArena(dt) { if (!arenaState.on || !foot.ready) return;
+  if (!arenaState.init) { arenaState.init = true; const i = 60, S = track.S[i], d = -track.INNER * 60; B.x = S.p.x + S.r.x * d; B.z = S.p.z + S.r.z * d; B.hint = i; B.y = track.probe(B.x, B.z, i).y; B.yaw = Math.atan2(S.f.x, S.f.z); B.v = 0; B.crash = null; dismount('Arena: ' + ARENA + '. Esc: menu'); arenaState.wait = .8; }
+  if (!foot.active) return;
+  if (!foot.fighting && !foot.chasing) { if ((arenaState.wait -= dt) <= 0) { foot.arena(ARENA, { god: Q.has('god'), train: Q.has('train') && !arenaState.trainedOnce }); arenaState.trainedOnce = true; arenaState.wait = 2.5; } }
+  else arenaState.wait = 2.5;
+  if (dbg) { const p = foot.phase(); dbg.textContent = p ? `${p.kind}${p.train ? ' · TRENING ' + p.train + '/3' : ''}\n${p.phase}\nON ${p.hp}/${p.max} · TY ${p.myHp} HP, oddech ${p.mySt}${foot.god ? ' · NIEŚMIERTELNY' : ''}` : 'następny za chwilę…'; } }   // (the title screen first; ?play skips it)
 addEventListener('wheel', e => { if (menu.open) { menu.wheel(e.deltaY); e.preventDefault(); } }, { passive: false });   // (a long menu page: the wheel moves down it)
 for (const [ev, type] of [['pointerdown', 'down'], ['pointermove', 'move'], ['pointerup', 'up']]) addEventListener(ev, e => { if (!menu.open || asking) return; menu.pointer(type, e.clientX, e.clientY); e.preventDefault(); e.stopPropagation(); }, true);
 // asked: a touch or a click on TAK or NIE (the pointer mapped to the picture's pixels); the pointer over one picks it
@@ -768,7 +778,7 @@ function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
   if ((menu.open || asking) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking);                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !window.PT?.hold) step(dt, input()); else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if (!asking && !menu.open && !window.PT?.hold) { step(dt, input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.5; }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
