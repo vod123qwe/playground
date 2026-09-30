@@ -22,7 +22,7 @@ import { createHud } from './hud.js';
 import { createGranny } from './granny.js';
 import { createTouch } from './touch.js';
 import { createPedestrians } from './pedestrians.js';
-import { createSettings, PRESETS, MENU_STYLES, LIGHT } from './settings.js';
+import { createSettings, PRESETS, MENU_STYLES, LIGHT, lookUniforms, DEFAULTS as LOOK0 } from './settings.js';
 import { createMenu } from './menu.js';
 import { createWater } from './water.js';
 import { createResidents } from './residents.js';
@@ -34,7 +34,7 @@ import { createHudBag } from './hudbag.js';
 import { makeBag } from './bag.js';
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
-const STEP = { fps: 0 };
+const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
 { const upd = THREE.AnimationMixer.prototype.update; THREE.AnimationMixer.prototype.update = function (dt) { if (!STEP.fps) return upd.call(this, dt); this._acc = (this._acc || 0) + dt; if (this._acc < 1 / STEP.fps) return this; const a = this._acc; this._acc = 0; return upd.call(this, a); }; }
 installCursors();
 
@@ -626,7 +626,8 @@ function setInk(i) { inkI = i; const o = INKS[i]; for (const k of ['outline', 'o
 const look = createSettings({ apply(S) { const u = px.uniforms; px.setSmooth(S.smooth); setPix(S.pix); setInk(S.ink); setToon(S.toon);
   u.palOn.value = S.palette ? 1 : 0; u.hue.value = S.hue; u.dither.value = S.dither; u.skyDither.value = S.sky; u.exposure.value = S.exposure; u.on.value = S.pixel ? 1 : 0; RIM.k.value = S.rim ?? .5;
   if (S.ink > 0) { u.outline.value = S.oStr ?? u.outline.value; u.oThr.value = S.oThr ?? u.oThr.value; }
-  u.mode.value = +S.mode || 0; u.wobA.value = S.wob ?? 0; px.snap.on = !!S.snap; u.crease.value = S.crease ?? .7; STEP.fps = +S.stepAnim || 0;
+  { const L = lookUniforms(S); u.mode.value = L.mode; u.fx.value = L.fx; u.p1.value = L.p[0]; u.p2.value = L.p[1]; u.p3.value = L.p[2]; u.p4.value = L.p[3]; u.inkA.value.set(...L.ink[0]); u.inkB.value.set(...L.ink[1]); u.inkC.value.set(...L.ink[2]); }
+  u.wobA.value = S.wob ?? LOOK0.wob; u.haze.value = S.haze ?? LOOK0.haze; FXK.blur = S.blur ?? LOOK0.blur; px.snap.on = !!S.snap; u.crease.value = S.crease ?? .7; STEP.fps = +S.stepAnim || 0;
   u.palMix.value = S.palMix ?? 1; u.levels.value = S.levels ?? 0; u.sat.value = S.sat ?? 1; u.contrast.value = S.contrast ?? 1; u.vig.value = S.vig ?? 0; u.crt.value = S.crt ?? 0; } });
 
 let rush = 0, slowmo = 0, shake = 0;                                                        // (Shift at speed: the picture's colours part at its edges, the view widens a touch)
@@ -660,7 +661,7 @@ function step(dt, inp) {
     if (ev === 'shout') hud.rant(granny.mouth, 'NIE PO SIONYM!', true);
     if (ev === 'caught') { const n = B.points; B.points = 0; hud.rant(granny.mouth, 'MAM CIE!', true);
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
-  rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = rush;
+  rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = rush * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
   traffic.update(dt, { s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);

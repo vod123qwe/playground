@@ -373,6 +373,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
   - **1 bit**: dwa kolory i dithering, tusz na krawędziach
 - styl bez nakładki zdejmuje poprzednią (każdy gotowy styl mówi, że nakładki nie ma)
 
+## Wersja 39: nowy panel stylu (U)
+
+- panel w zakładkach: **Styl** (gotowe style w grupach: pikselowe, gładkie, rysunkowe; każdy z paskiem swoich kolorów; zapis jako „Mój”) · **Obraz** · **Kolor** · **Linie** · **Nakładka** · **Ruch** · **Powietrze**; pamięta ostatnią zakładkę
+- **Nakładka**: wybór rysunku i tylko jego ustawienia: malowany (pędzel, płótno, obrys), komiks (wielkość i kąt kropek, grubość tuszu, próg cienia), akwarela (papier, barwnik na brzegach, ziarno, rozmycie), ołówek (gęstość i siła kresek, ile koloru, papier: kremowy, biały, szary karton), riso (zestaw farb, przesunięcie, wielkość rastra), 1 bit (para kolorów, skala ditheringu); do tego wspólne: siła nakładki i drżenie kreski
+- ustawienie, które przy wybranym stylu nic nie robi, jest wyszarzone z powodem (np. „ta nakładka rysuje własnymi kolorami”, „tylko w wyglądzie pikselowym”, „kontur wyłączony”)
+- każda zakładka ma „Przywróć z gotowego stylu”; nagłówek mówi, na jakim stylu jesteś i czy go zmieniłeś
+- nowe suwaki: siła rozmycia przy sprincie (Ruch), mgiełka w oddali (Powietrze)
+- poprawka: wygląd „gładki” (bez pikseli) wyłączał też kontur, linie, nasycenie, kontrast i winietę; teraz wyłącza tylko paletę, dithering i posteryzację
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
