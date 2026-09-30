@@ -31,7 +31,7 @@ const tex = createTextures({ THREE }), cars = createCars({ THREE, toon }), props
 let mixer = null, rider = null, current = null, clipBtns = null;
 
 // ---------- the groups and what is in them ----------
-const NAMES = { saloon: 'sedan trzybryłowy', liftback: 'liftback', estate: 'kombi', pickup: 'pikap', wedge: 'klin (sportowy)', hatch: 'hatchback', micro: 'maluch', twostroke: 'dwusuw', fastback: 'kanciasty liftback', barge: 'długa limuzyna', van: 'dostawczak' };
+const NAMES = { saloon: 'sedan trzybryłowy', liftback: 'liftback', estate: 'kombi', pickup: 'pikap', wedge: 'klin (sportowy)', hatch: 'hatchback', micro: 'maluch', twostroke: 'dwusuw', fastback: 'kanciasty liftback', barge: 'długa limuzyna', van: 'dostawczak', bus: 'autobus' };
 const PEOPLE_NAMES = { oldman: 'staruszek z laską', jogger: 'biegaczka', mum: 'mama z wózkiem', dogman: 'pan z psem', teen: 'nastolatek', suit: 'facet w garniturze', shopper: 'pani z zakupami', kid: 'dzieciak z balonem', gardener: 'ogrodnik', lady: 'pani w sukience', belly: 'brzuchacz (leżak)', granma: 'babcia (krzesło)', grandpa: 'dziadek (krzesło)', boy: 'gazeciarz pieszo', brawler: 'bójkarz' };
 const PROP_NAMES = { boardFence: 'płot z desek', wireFence: 'płot z siatki', shed: 'szopa', washing: 'pranie', logs: 'drewno', sandbox: 'piaskownica', birdbath: 'poidełko', cone: 'pachołek', bags: 'worki', wagon: 'wózek', barrier: 'zapora', pothole: 'dziura', manhole: 'studzienka', bundle: 'paczka gazet', leafPile: 'kupka liści', swing: 'huśtawka', kidBike: 'rowerek', trampoline: 'trampolina', grill: 'grill', gnome: 'krasnal', stones: 'kamienie' };
 const CATS = [

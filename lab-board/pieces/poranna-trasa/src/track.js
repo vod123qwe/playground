@@ -58,13 +58,32 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     for (const [a, b] of (s === INNER ? [[14, 20], [20, 28], [28, 40]] : [[14, 20], [20, 28], [28, 38], [38, 52], [52, 72], [72, 84], [88, 100], [100, 135], [135, 170], [170, 200]])) strip(s * a, s * b, '#78963f', .2, .08, tex.grass(2), 2.2);
     if (s !== INNER) { strip(s * 84, s * 88, '#55595e', .06, .5, tex.asphalt(), 3); strip(s * 83.4, s * 84, '#a8a08a', .1, .5, null, 1); strip(s * 88, s * 88.6, '#a8a08a', .1, .5, null, 1); }   // (a country road out there, gravel edges)   // the land beyond, rolling (inside the loop: not so far, the other side of it is there)
   }
+  // the road's stretches: three bus stops (painted bays, a shelter on the pavement's far side), bike lanes by the kerb on a few long
+  // stretches (red, a white line, a bike painted every so often), and quiet streets with no line down the middle
+  const stops = [.18, .5, .8].map((f, k) => { const i = Math.round(N * f); return { i, s: i * ds, sd: k % 2 ? -1 : 1, id: k }; });
+  const bikeZones = [[.25, .34, -1], [.55, .66, 1], [.85, .95, -1]].map(([a, b, sd]) => ({ i0: Math.round(N * a), i1: Math.round(N * b), sd }));
+  const quiet = [[.38, .45], [.68, .74]].map(([a, b]) => [Math.round(N * a), Math.round(N * b)]);
+  const nearStop = (i, sd, m) => stops.some(q => q.sd === sd && Math.abs(((i - q.i) % N + N + N / 2) % N - N / 2) * ds < m);
+  const cvT = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
+  const bikeIcon = cvT(16, 16, g => { g.fillStyle = '#fff'; for (const cx of [4, 12]) for (let a = 0; a < 24; a++) g.fillRect(Math.round(cx + Math.cos(a / 24 * 6.283) * 3.2), Math.round(10 + Math.sin(a / 24 * 6.283) * 3.2), 1, 1);
+    for (const [x, y] of [[4, 10], [5, 9], [6, 8], [7, 7], [8, 7], [9, 7], [10, 8], [11, 9], [12, 10], [7, 8], [8, 9], [8, 10], [7, 6], [6, 5], [7, 5], [10, 6], [10, 5], [11, 5]]) g.fillRect(x, y, 1, 1); });
+  const busWord = cvT(32, 12, g => { g.fillStyle = '#f2c33a'; const L = { B: ['110', '101', '110', '101', '110'], U: ['101', '101', '101', '101', '111'], S: ['011', '100', '010', '001', '110'] }; let x = 4;
+    for (const ch of 'BUS') { L[ch].forEach((row, y) => [...row].forEach((v, k) => { if (v === '1') g.fillRect(x + k * 2, 1 + y * 2, 2, 2); })); x += 9; } });
+  const decalG = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), decal = (map, i, d, w, l, turn = 0) => { const o = new THREE.Mesh(decalG, toon('#ffffff', { map, alphaTest: .5 })); o.scale.set(w, 1, l); put(o, i, d, .014, turn); o.userData.noShadow = true; return o; };
   // the lines: a dashed one down the middle, a solid one near each edge
   { const pos = [], idx = []; let n = 0; const quad = (i0, i1, d0, d1) => { for (const [i, d] of [[i0, d0], [i0, d1], [i1, d0], [i1, d1]]) { const s = S[i % N]; pos.push(s.p.x + s.r.x * d, s.p.y + .012, s.p.z + s.r.z * d); } idx.push(n, n + 1, n + 2, n + 1, n + 3, n + 2); n += 4; };
     const dash = Math.round(3 / ds), gap = Math.round(5 / ds);
-    for (let i = 0; i < N; i += dash + gap) quad(i, i + dash, -.07, .07);
+    for (let i = 0; i < N; i += dash + gap) { if (quiet.some(([a, b]) => i >= a && i <= b)) continue; quad(i, i + dash, -.07, .07); }   // (none on a quiet street)
+    for (const z of bikeZones) for (let i = z.i0; i < z.i1; i += 2) { if (nearStop(i, z.sd, 14)) continue; quad(i, i + 2, Math.min(z.sd * 2.2, z.sd * 2.3), Math.max(z.sd * 2.2, z.sd * 2.3)); }   // the bike lane's line
+    for (const q of stops) for (let k = -Math.round(11 / ds); k < Math.round(11 / ds); k += 3) quad(q.i + k, q.i + k + 2, Math.min(q.sd * 2.9, q.sd * 3.0), Math.max(q.sd * 2.9, q.sd * 3.0));   // the bay's dashes
     for (let i = 0; i < N; i += 2) for (const s of [-1, 1]) quad(i, i + 2, s * 3.15, s * 3.27);
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
     const m = new THREE.Mesh(g, toon('#e8e4d6')); m.receiveShadow = true; G.add(m); }
+  // the bike lanes' red, under the lines; a bike painted on them; BUS in the bays
+  { const pos = [], idx = []; let n = 0; const quad = (i0, i1, d0, d1) => { for (const [i, d] of [[i0, d0], [i0, d1], [i1, d0], [i1, d1]]) { const s = S[i % N]; pos.push(s.p.x + s.r.x * d, s.p.y + .011, s.p.z + s.r.z * d); } idx.push(n, n + 1, n + 2, n + 1, n + 3, n + 2); n += 4; };
+    for (const z of bikeZones) for (let i = z.i0; i < z.i1; i += 2) { if (nearStop(i, z.sd, 14)) continue; quad(i, i + 2, Math.min(z.sd * 2.3, z.sd * 3.12), Math.max(z.sd * 2.3, z.sd * 3.12)); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, toon('#a3503f', { map: tex.asphalt() })); m.receiveShadow = true; G.add(m); }
   // the small things on the ground, all one mesh (coloured per vertex, lit as the ground is: normals up):
   // leaves (two-tone, pointed) strewn on the road and drifted thick in the gutters and against the kerb; grass tufts hanging over the
   // kerb and along the pavement's edges; flowers in clumps on the verges and at the lawns' edges
@@ -416,7 +435,26 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     // the lads, standing round the fire on its far side (their faces to the road), facing it
     for (let k = 0; k < 3; k++) { const a = -1.2 + k * 1.2, x = .5 + Math.sin(a) * 1.25, z = -1.2 + Math.cos(a) * 1.3; seats.push({ h, local: new THREE.Vector3(x, 0, z), stand: true, key: ['teen', 'brawler', 'dogman', 'gardener'][(rnd() * 4) | 0], face: Math.atan2(.5 - x, -1.2 - z), lines: 'shacks', i }); }
   }
-  const lot = (i, s) => rnd() < .07 ? shacks(i, s) : house(i, s);
+  // the bus stops: a shelter on the pavement's far side (posts, a roof, glass at the back and the ends, a bench, a bin, an advert), the
+  // stop's sign by the kerb; on the bench a man asleep with his bottle (a paper wakes him, see main), one or two waiting by it
+  for (const z of bikeZones) for (let i = z.i0 + 4; i < z.i1; i += Math.round(18 / ds)) if (!nearStop(i, z.sd, 14)) decal(bikeIcon, i, z.sd * 2.72, .72, .72, z.sd > 0 ? 0 : Math.PI);   // a bike painted on the lane
+  for (const q of stops) decal(busWord, q.i, q.sd * 2.6, 2.6, .95, (q.sd > 0 ? 0 : Math.PI) + Math.PI / 2);                 // BUS in the bay
+  { const glassS = toon('#b9d3dc'), post = toon('#44484c'), wood = toon('#9e7a4f'), roofS = toon('#2a2c30');
+    const signT = cvT(16, 16, g => { g.fillStyle = '#2f5aa0'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#f6f3ea'; g.fillRect(1, 1, 14, 1); g.fillRect(3, 5, 10, 6); g.fillStyle = '#2f5aa0'; g.fillRect(4, 6, 2, 2); g.fillRect(7, 6, 2, 2); g.fillRect(10, 6, 2, 2); g.fillStyle = '#f6f3ea'; g.fillRect(4, 11, 2, 2); g.fillRect(10, 11, 2, 2); });
+    const adT = cvT(12, 18, g => { g.fillStyle = '#e3b83a'; g.fillRect(0, 0, 12, 18); g.fillStyle = '#c8323a'; g.fillRect(1, 1, 10, 4); g.fillStyle = '#f6f3ea'; g.fillRect(2, 7, 8, 6); g.fillStyle = '#44484c'; for (let y = 8; y < 13; y += 2) g.fillRect(3, y, 6, 1); g.fillStyle = '#17181b'; g.fillRect(2, 15, 8, 2); });
+    for (const q of stops) { const h = new THREE.Group();
+      for (const x of [-2, 2]) for (const z of [-.55, .6]) h.add(box(.08, 2.4, .08, post, x, 1.2, z));
+      h.add(box(4.3, .1, 1.5, roofS, 0, 2.45, .02)); h.add(box(4.0, 1.8, .04, glassS, 0, 1.2, .6)); for (const x of [-2, 2]) h.add(box(.04, 1.8, 1.1, glassS, x, 1.2, .05));
+      h.add(box(2.4, .07, .42, wood, .3, .45, .3)); for (const x of [-.8, 1.4]) h.add(box(.06, .45, .36, post, x, .22, .3));
+      h.add(box(.9, 1.5, .06, toon('#ffffff', { map: adT }), 2.5, 1.1, .1)); h.add(box(.06, 1.7, .06, post, 2.95, .85, .1));
+      { const b = box(.4, .6, .4, toon('#3f6b35'), -1.6, .3, .2); h.add(b); }
+      const sp = new THREE.Group(); sp.position.set(-2.6, 0, -1.25); h.add(sp); sp.add(box(.07, 2.6, .07, post, 0, 1.3, 0)); sp.add(box(.5, .5, .05, toon('#ffffff', { map: signT }), 0, 2.4, -.03)); sp.add(box(.34, .44, .06, toon('#e3b83a'), 0, 1.5, -.03));
+      put(h, q.i, q.sd * (PAVE + 1.0), 0, q.sd > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true);
+      hit(h, { hx: 2.1, hz: .12, h: 2.4, kind: 'hard' }, q.i, 0, .6); hit(h, { hx: .1, hz: .1, h: 2.6, kind: 'hard' }, q.i, -2.6, -1.25); zone(h, 2.8, 1.4, 0, 0);
+      seats.push({ h, local: new THREE.Vector3(.4, 0, .32), key: 'belly', lines: 'lump', stop: q.id, i: q.i });
+      for (let k = 0; k < 1 + (rnd() < .5 ? 1 : 0); k++) seats.push({ h, local: new THREE.Vector3(-1 + k * 1.1, 0, -.45), stand: true, key: ['lady', 'teen', 'oldman', 'shopper'][rnd() * 4 | 0], face: Math.PI, lines: 'stop', stop: q.id, i: q.i });
+      show.shacks.push({ o: h, label: 'przystanek', note: '4,3 × 1,5 m' }); } }
+  const lot = (i, s) => nearStop(i, s, 16) ? null : rnd() < .07 ? shacks(i, s) : house(i, s);
   for (let i = 30; i < N - 40; i += Math.round((20 + rnd() * 10) / ds)) { lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1; tree(i, side * (PAVE + 1.6 + rnd() * 3)); if (rnd() < .25) tree(i + 7, (rnd() < .5 ? -1 : 1) * (VERGE - .6)); }
   const poles = []; for (let i = 10; i < N; i += Math.round(38 / ds)) poles.push(pole(i));
@@ -626,6 +664,6 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const cy = a.p.y + (b.p.y - a.p.y) * k, off = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z;
     return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
-  return { group: G, probe, S, N, ds, len, INNER, dapT, dapSun, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  return { group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

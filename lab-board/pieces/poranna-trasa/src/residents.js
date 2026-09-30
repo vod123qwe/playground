@@ -12,6 +12,8 @@ export function createResidents({ THREE, toon, track, hud, scene, max = 7 }) {
     granma: ['DZIEŃ DOBRY!', 'OSTROŻNIE, DZIECKO!', 'A GAZETKA?', 'NIE TAK SZYBKO!'],
     grandpa: ['HEJ, KOLEGO!', 'ZA MOICH CZASÓW...', 'DOBRZE JEDZIESZ!', 'A KASK GDZIE?'],
   };
+  const LUMP = ['ZZZ...', 'CHRRR... PSSS...', 'MAMO, JESZCZE PIĘĆ MINUT...', 'ZZZ... PIWKO...', 'NIE ŚPIĘ, TYLKO MRUGAM...'], LUMP_AWAKE = ['DZIĘKI, MŁODY!', 'KTÓRA GODZINA?!', 'AUTOBUS ODJECHAŁ?!', 'CO TAM W GAZECIE?'];
+  const STOP = ['AUTOBUS ZNOWU SPÓŹNIONY!', 'MŁODY, KTÓRA GODZINA?', 'TEN ZNOWU ŚPI...', 'GAZETKĘ BY SIĘ POCZYTAŁO...', 'CZEKAM OD PÓŁ GODZINY!'];
   const SHACKS = ['EJ, MŁODY! POŻYCZ DYSZKĘ!', 'DAWAJ GAZETĘ, NA ROZPAŁKĘ!', 'CO SIĘ GAPISZ?', 'MASZ FAJKĘ?', 'ROWER FAJNY. SPRZEDASZ?', 'TU SIĘ NIE JEŹDZI, TU SIĘ ŻYJE!', 'GAZETA? U NAS TELEWIZJA PRZEZ ŚCIANĘ!'];
   const WALKING = {                                                      // (him on foot: nothing about riding)
     belly: ['HEJ MŁODY!', 'CO, ROWER CI UKRADLI?', 'HEHE, SPÓŹNIONY!', 'NA PIECHOTĘ? ZDROWO!', 'ZA MOICH CZASÓW...', 'PODAJ PIWO, JAK IDZIESZ!'],
@@ -32,17 +34,17 @@ export function createResidents({ THREE, toon, track, hud, scene, max = 7 }) {
       const mixer = new THREE.AnimationMixer(m), clip = n => g.animations.find(c => c.name === n), acts = { idle: mixer.clipAction(clip('idle')), talk: clip('talk') ? mixer.clipAction(clip('talk')) : null };
       acts.idle.play(); acts.idle.time = Math.random() * 2; if (acts.talk) { acts.talk.play(); acts.talk.setEffectiveWeight(0); }
       let bottle = null; if (key === 'belly') { bottle = new THREE.Group(); G.add(bottle); const glass = toon('#6b4a2e'); const b = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .16, 8), glass); bottle.add(b); const n = new THREE.Mesh(new THREE.CylinderGeometry(.012, .03, .08, 8), glass); n.position.y = .12; bottle.add(n); const lb = new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .06, 8), toon('#efc970')); bottle.add(lb); }
-      list.push({ key, lines: seat.lines, G, m, mixer, acts, bottle, hand: m.getObjectByName('hand_r'), head: m.getObjectByName('head'), cool: 3 + Math.random() * 6, talkT: 0, mouth: new THREE.Vector3() });
+      list.push({ key, lines: seat.lines, stop: seat.stop, awakeT: 0, G, m, mixer, acts, bottle, hand: m.getObjectByName('hand_r'), head: m.getObjectByName('head'), cool: 3 + Math.random() * 6, talkT: 0, mouth: new THREE.Vector3() });
     });
   });
   const _v = new THREE.Vector3();
   function update(dt, R) {
     for (const r of list) {
-      r.cool -= dt; r.talkT = Math.max(0, r.talkT - dt);
+      r.cool -= dt; r.talkT = Math.max(0, r.talkT - dt); r.awakeT = Math.max(0, r.awakeT - dt);
       const d = Math.hypot(R.x - r.G.position.x, R.z - r.G.position.z);
       r.G.visible = d < 90; if (d > 90) continue;                                                        // (far off: not drawn, not moved)
       if (d < 13 && r.cool <= 0 && Math.abs(R.v) > .5) { r.cool = 14 + Math.random() * 10; r.talkT = 2.6; r.head?.getWorldPosition(r.mouth); r.mouth.y += .35;
-        hud.rant(r.mouth, pick(r.lines === 'shacks' ? SHACKS : (R.foot ? WALKING : LINES)[r.key]), true); }                                                  // (a call to him as he goes by)
+        hud.rant(r.mouth, pick(r.lines === 'shacks' ? SHACKS : r.lines === 'lump' ? (r.awakeT > 0 ? LUMP_AWAKE : LUMP) : r.lines === 'stop' ? STOP : (R.foot ? WALKING : LINES)[r.key]), true); }                                                  // (a call to him as he goes by)
       if (r.acts.talk) { const w = r.talkT > 0 ? 1 : 0, cur = r.acts.talk.getEffectiveWeight(), nw = cur + (w - cur) * Math.min(1, dt * 5); r.acts.talk.setEffectiveWeight(nw); r.acts.idle.setEffectiveWeight(1 - nw); }
       r.mixer.update(dt);
       if (r.bottle && r.hand) { r.G.updateMatrixWorld(true); r.hand.getWorldPosition(_v); r.bottle.position.copy(r.G.worldToLocal(_v)); r.bottle.position.y += .05; }   // (the beer in his hand)

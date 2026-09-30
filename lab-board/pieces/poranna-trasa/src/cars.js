@@ -41,6 +41,8 @@ export function createCars({ THREE, toon }) {
     //   van: the snub-nosed delivery van (about 4.3 x 1.84 x 2.1 m, 2.65 m): the cab over the front wheels, windows only in the cab, a tall box behind
     van: { L: 4.3, W: 1.84, R: .34, WB: 2.65, OF: .72, sq: 9, body: [[0, .38], [0, .78], [.08, .92], [4.3, 1.02], [4.3, .4]], gh: [.06, 4.26, .38, 4.22, .98], glassTo: 1.3, box: true, backDoors: true },
     hatch: { L: 3.95, W: 1.68, R: .3, WB: 2.45, OF: .78, sq: 5, body: [[0, .3], [0, .64], [.3, .74], [1.05, .8], [3.7, .84], [3.95, .8], [3.95, .32]], gh: [.8, 3.9, 1.5, 3.6, .56] },
+    //   bus: the town's bus (10.4 x 2.45 x about 2.9 m): a box on the road, a row of windows parted by pillars, doors at the front and the middle
+    bus: { L: 10.4, W: 2.45, R: .48, WB: 5.4, OF: 2.2, sq: 10, body: [[0, .42], [0, 1.18], [.06, 1.26], [10.4, 1.3], [10.4, .42]], gh: [.04, 10.36, .1, 10.3, 1.6], box: true, pillars: 1.25, bus: true },
   };
   const bev = { bevelEnabled: true, bevelThickness: .05, bevelSize: .05, bevelSegments: 2, curveSegments: 10 };
   // an extrusion across the width, the profile in (along the car, up), centred, turned so its length runs along +z
@@ -94,7 +96,8 @@ export function createCars({ THREE, toon }) {
         if (yn > .86 || yn < .1) return 0;                                                // (the roof's edge over the side glass; the sill under)
         const xf = a0 + .12 + (b0 - a0) * yn * .92, xr = Math.min(K.glassTo || 99, a1 - .12 - (a1 - b1) * yn * .9);   // the A- and C-pillars' lines
         if (x < xf || x > xr) return 0;
-        if (!K.glassTo) { const xb = doors4 ? mB : xf + (xr - xf) * .68, lean = (yn - .5) * .08; if (Math.abs(x - xb - lean) < .045) return 0; }   // the B-pillar, leaning a touch
+        if (K.pillars) { if (((x - xf) % K.pillars) < .1) return 0; }                     // (a bus: a pillar every so often)
+        else if (!K.glassTo) { const xb = doors4 ? mB : xf + (xr - xf) * .68, lean = (yn - .5) * .08; if (Math.abs(x - xb - lean) < .045) return 0; }   // the B-pillar, leaning a touch
         return 1; });
     // front and back: bumpers, lights, grille, plates; wheels
     const fz = L / 2, bz = -L / 2, by = K.R + .1;
@@ -130,7 +133,9 @@ export function createCars({ THREE, toon }) {
       G.add(box(W - .14, .05, bl, bedM, 0, base - .02, zc)); for (const sd of [-1, 1]) { G.add(box(.07, .38, bl, paint, sd * (W / 2 - .04), base + .17, zc)); G.add(box(.1, .03, bl + .05, shared.trim, sd * (W / 2 - .04), base + .37, zc)); }
       G.add(box(W - .06, .46, .07, paint, 0, base + .21, fz - bx0)); G.add(box(W - .06, .38, .07, paint, 0, base + .17, fz - (L - .04))); G.add(box(W * .5, .04, .08, shared.chrome, 0, base + .28, fz - L)); }
     // inside, seen through the glass: the dashboard, the two front seats, a bench at the back (not in a van's or a pickup's cab)
-    { const a0 = K.gh[0], a1 = Math.min(K.gh[1], K.glassTo || 99), span = a1 - a0, xs = a0 + span * (K.glassTo ? .55 : .42);
+    if (K.bus) { for (let x = 2.4; x < K.L - 1; x += 1.25) for (const sd of [-1, 1]) G.add(box(W * .34, .7, .14, shared.seat, sd * W * .24, base + .12, fz - x));   // rows of seats
+      for (const zz of [fz - 1.1, fz - 5.6]) for (const sd of [-1, 1]) G.add(box(.04, 1.95, 1.05, shared.dark, sd * (W / 2 + .005), base + .55, zz)); }   // the doors
+    else { const a0 = K.gh[0], a1 = Math.min(K.gh[1], K.glassTo || 99), span = a1 - a0, xs = a0 + span * (K.glassTo ? .55 : .42);
       G.add(box(W * .84, .14, .34, shared.dark, 0, base + .02, fz - (a0 + .38)));
       const hS = K.gh[4];                                                  // (the cabin's height over the waist: the seats kept well under the roof)
       for (const sd of [-1, 1]) { G.add(box(W * .34, hS * .72, .14, shared.seat, sd * W * .21, base - .05 + hS * .36, fz - xs)); G.add(box(W * .24, hS * .18, .12, shared.seat, sd * W * .21, base - .05 + hS * .8, fz - xs + .02)); }
@@ -141,7 +146,7 @@ export function createCars({ THREE, toon }) {
     return { group: G, wheels, half: [W / 2, L / 2], kind: kindName, R: K.R };
   }
   function spin(car, metres) { for (const w of car.wheels) w.rotation.x += metres / car.R; }
-  const COLOURS = { common: ['#c9b77a', '#7b5836', '#8e2e25', '#34465a', '#9aa0a4', '#e9e3d1', '#355f31', '#8fb0bd', '#a3322a', '#5a5f66'], wedge: ['#cf5a3e', '#efc970', '#f6f3ea', '#17181b'],
+  const COLOURS = { bus: ['#c8323a', '#e3b83a', '#3f6b35', '#e9e3d1'], common: ['#c9b77a', '#7b5836', '#8e2e25', '#34465a', '#9aa0a4', '#e9e3d1', '#355f31', '#8fb0bd', '#a3322a', '#5a5f66'], wedge: ['#cf5a3e', '#efc970', '#f6f3ea', '#17181b'],
     micro: ['#e9e3d1', '#8e2e25', '#efc970', '#8fb0bd', '#355f31', '#c9b77a', '#cf5a3e'], twostroke: ['#b7c4a0', '#8fb0bd', '#e9e3d1', '#c9b77a', '#9aa0a4', '#d9c9a0'], van: ['#5f7a4e', '#8e2e25', '#9aa0a4', '#34465a', '#e9e3d1'], barge: ['#e9e3d1', '#34465a', '#7b5836', '#17181b', '#9aa0a4'] };
   const MIX = [['liftback', .18], ['pickup', .14], ['estate', .14], ['saloon', .11], ['fastback', .12], ['micro', .1], ['barge', .08], ['twostroke', .06], ['van', .05], ['hatch', .02], ['wedge', .03]];   // (how often each is on the street)
   const random = r => { let x = r() * MIX.reduce((a, [, w]) => a + w, 0), k = MIX[0][0]; for (const [n, w] of MIX) { if ((x -= w) < 0) { k = n; break; } } const pal = COLOURS[COLOURS[k] ? k : 'common']; return makeCar(k, pal[r() * pal.length | 0]); };
