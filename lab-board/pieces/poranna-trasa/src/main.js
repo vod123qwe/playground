@@ -209,12 +209,12 @@ const padPrev = {};
 function lockPointer() { if (document.pointerLockElement || mouse.failed || menu.open || asking) return;   // (the cursor kept in the game's window; refused: not asked again)
   try { const pr = canvas.requestPointerLock?.(); pr?.catch?.(() => { mouse.failed = true; }); } catch { mouse.failed = true; } }
 const mouse = { dx: 0, dy: 0, l: false, r: false, lh: false, rh: false, locked: false, used: false, nx: 0, ny: 0, inside: false, failed: false };   // (l, r: pressed this frame; lh, rh: held)
-// the camera as he likes it: the wheel held down and the mouse moved (up and down: the angle, higher or lower; left and right: nearer,
-// farther), or the wheel turned (nearer, farther); a double click of the wheel puts it back. Kept in the browser.
-const camUser = (() => { try { const v = JSON.parse(localStorage.getItem('pt.cam') || 'null'); if (v && isFinite(v.dist) && isFinite(v.tilt)) return v; } catch { } return { dist: 1, tilt: 0 }; })();
+// the camera as he likes it: the wheel turned brings it nearer or farther; the wheel held down and the mouse moved turns it (up and
+// down: higher or lower; left and right: round him, up to a side view); a double click of the wheel puts it back. Kept in the browser.
+const camUser = (() => { try { const v = JSON.parse(localStorage.getItem('pt.cam') || 'null'); if (v && isFinite(v.dist) && isFinite(v.tilt)) return { yaw: 0, ...v }; } catch { } return { dist: 1, tilt: 0, yaw: 0 }; })();
 const saveCam = () => { try { localStorage.setItem('pt.cam', JSON.stringify(camUser)); } catch { } };
 function userCam(back, up) { const r = Math.hypot(back, up) * camUser.dist, a = THREE.MathUtils.clamp(Math.atan2(up, back) + camUser.tilt, .06, 1.45); return [r * Math.cos(a), r * Math.sin(a)]; }
-addEventListener('mousemove', e => { if (mouse.mh) { camUser.tilt = THREE.MathUtils.clamp(camUser.tilt - e.movementY * .004, -.7, 1); camUser.dist = THREE.MathUtils.clamp(camUser.dist * (1 + e.movementX * .004), .45, 2.6); return; } });
+addEventListener('mousemove', e => { if (mouse.mh) { camUser.tilt = THREE.MathUtils.clamp(camUser.tilt - e.movementY * .004, -.7, 1); camUser.yaw = THREE.MathUtils.clamp(camUser.yaw - e.movementX * .005, -1.7, 1.7); return; } });
 addEventListener('mousemove', e => { if (mouse.mh) return; mouse.nx = e.clientX / innerWidth * 2 - 1; mouse.ny = e.clientY / innerHeight * 2 - 1; mouse.inside = true;
   if (document.pointerLockElement || (!menu.open && !asking)) { mouse.dx += e.movementX; mouse.dy += e.movementY; if (foot.active) mouse.used = true; } });
 document.addEventListener('mouseleave', () => { mouse.inside = false; });
@@ -222,7 +222,7 @@ document.addEventListener('pointerlockerror', () => { if (!mouse.failed) { mouse
 addEventListener('mousedown', e => { if (menu.open || asking || e.target.closest?.('#styl, #stylBtn, #pix, #ink, button')) return;
   lockPointer(); if (foot.active) mouse.used = true;
   if (e.button === 0) { mouse.l = true; mouse.lh = true; } if (e.button === 2) { mouse.r = true; mouse.rh = true; }
-  if (e.button === 1) { e.preventDefault(); if (e.detail >= 2) { camUser.dist = 1; camUser.tilt = 0; saveCam(); flash('Kamera: jak była'); } else mouse.mh = true; } });
+  if (e.button === 1) { e.preventDefault(); if (e.detail >= 2) { camUser.dist = 1; camUser.tilt = 0; camUser.yaw = 0; saveCam(); flash('Kamera: jak była'); } else mouse.mh = true; } });
 addEventListener('mouseup', e => { if (e.button === 0) mouse.lh = false; if (e.button === 2) { mouse.r = false; mouse.rh = false; } if (e.button === 1 && mouse.mh) { mouse.mh = false; saveCam(); } });
 addEventListener('contextmenu', e => { if (!menu.open) e.preventDefault(); });
 addEventListener('blur', () => { mouse.lh = mouse.rh = mouse.r = false; });
@@ -577,7 +577,7 @@ function follow(dt) {
   }
   // from above, straight down (as the old top-down games): turned with him so ahead is up the screen, higher the faster he goes
   //   (and when a paper is in the air), looking at a point a little ahead of him
-  if (T.top) { const fx = Math.sin(C.yaw), fz = Math.cos(C.yaw), h = (15 + Math.max(0, B.v) * .7 + tw * 4 + (aim.on ? 3 : 0)) * camUser.dist;
+  if (T.top) { const fx = Math.sin(C.yaw + camUser.yaw), fz = Math.cos(C.yaw + camUser.yaw), h = (15 + Math.max(0, B.v) * .7 + tw * 4 + (aim.on ? 3 : 0)) * camUser.dist;
     const want = new THREE.Vector3(B.x + fx * 3.5, C.gy + h, B.z + fz * 3.5);
     if (!C.init) { C.gy = B.y; C.pos.copy(want); C.init = true; }
     C.pos.lerp(want, 1 - Math.exp(-dt * 6)); camera.position.copy(C.pos); camera.up.set(fx, 0, fz); camera.lookAt(C.pos.x, C.gy, C.pos.z);
@@ -585,7 +585,7 @@ function follow(dt) {
     CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov; camera.updateProjectionMatrix();
     sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return; }
   const ch = aim.on ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
-  const [bk, upU] = userCam(back, CP.up), want = new THREE.Vector3(B.x - Math.sin(C.yaw) * bk - Math.cos(C.yaw) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(C.yaw) * bk + Math.sin(C.yaw) * aside);   // (far and high enough to see the houses, and a window go)
+  const [bk, upU] = userCam(back, CP.up), cy = C.yaw + camUser.yaw, want = new THREE.Vector3(B.x - Math.sin(cy) * bk - Math.cos(cy) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(cy) * bk + Math.sin(cy) * aside);   // (cy: turned round him as he set it)   // (far and high enough to see the houses, and a window go)
   const look = new THREE.Vector3(B.x + Math.sin(B.yaw) * CP.ahead - Math.cos(B.yaw) * mlook.x * 2.6, C.gy + CP.lookUp - mlook.y * 1.2, B.z + Math.cos(B.yaw) * CP.ahead + Math.sin(B.yaw) * mlook.x * 2.6);   // (the mouse turns it a little)
   if (tw > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(throwCam.at, .5), .2 * tw);
   if (ch > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(aim.at, .5), .35 * ch);   // (holding a throw: wider, higher, turned a little to where it will come down)   // (between him and the paper)
