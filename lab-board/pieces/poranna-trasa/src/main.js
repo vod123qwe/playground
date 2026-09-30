@@ -741,7 +741,7 @@ const dbg = (() => { if (!Q.has('debug')) return null; const d = document.create
 // the fires in the drums by the shacks: the flame flickers, puffs of smoke rise, grow and fade
 const smokeM = new THREE.MeshBasicMaterial({ color: '#9a9690', transparent: true, depthWrite: false }), smokeG = new THREE.IcosahedronGeometry(.22, 0);
 let fireT = 0;
-function stepFires(dt) { const t = (fireT += dt);
+function stepFires(dt) { const t = (fireT += dt); track.train.update(dt);
   for (const f of track.fires) { const k = 1 + Math.sin(t * 17 + f.drum.id) * .12 + Math.sin(t * 29) * .08; f.flame.scale.set(1, k, 1); f.core.scale.set(1, 2 - k, 1); f.flame.rotation.y += dt * 3;
     if (!f.puffs) { f.puffs = []; for (let n = 0; n < 6; n++) { const m = new THREE.Mesh(smokeG, smokeM.clone()); f.drum.add(m); f.puffs.push({ m, t: n / 6 }); } }
     for (const p of f.puffs) { p.t = (p.t + dt * .22) % 1; const u = p.t; p.m.position.set(Math.sin(u * 5 + p.m.id) * .25 + u * .6, 1.2 + u * 3.2, Math.cos(u * 4) * .15); p.m.scale.setScalar(.6 + u * 2.4); p.m.material.opacity = .55 * (1 - u) * Math.min(1, u * 6); } } }
