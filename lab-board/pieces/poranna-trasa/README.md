@@ -297,6 +297,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - rzut: trzymając go, mysz w górę kieruje gazetę bardziej do przodu, w dół do tyłu (do około 30°), ruch w stronę rzutu dodaje zasięgu (do 25%); w tym czasie mysz nie obraca widoku
 - podgląd rzutu subtelniejszy: 7 małych, gasnących kropek tylko na początku lotu, cieńszy i bledszy pierścień lądowania
 
+## Wersja 29: szyby aut
+
+- szyby półprzezroczyste, przyciemnione na niebiesko, z ukośną pikselową smugą odbicia nieba (smuga przesuwa się wzdłuż auta i w górę szyby)
+- w środku widać wnętrze: deskę rozdzielczą, dwa fotele z zagłówkami i tylną kanapę (w pikapie i dostawczaku bez kanapy), wszystko poniżej dachu
+- nadwozie i szkło to teraz dwie osobne siatki (jedna z dwoma materiałami, z których jeden przezroczysty, sprawiała kłopoty)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
