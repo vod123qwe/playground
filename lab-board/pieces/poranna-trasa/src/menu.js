@@ -2,25 +2,33 @@
 // and a graphics page: the four styles, the pixel size (120-300), smoothing (1-10x), the pixel look on or off (P), and the few
 // settings the chosen style offers. Keys: up/down (W/S) to choose a row, left/right (A/D) to change it, Enter/Space to press,
 // Esc back. The pointer: over a row chooses it; a click presses or sets (a slider can be dragged).
+// A controls page (STEROWANIE): the mouse's speed, then each action by where it works (on the bike, on foot, in a fight, anywhere),
+// what it does and its key; Enter or a click on one waits for a new key (Esc: leave it). It scrolls when longer than the picture.
 // createMenu({ hud, look, styles, light, presets, onRestart, onClose }) → { get open, show(page), close(), key(e), pointer(type, x, y) }
 
-export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys }) {
+export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys, sens, controls }) {
   // its own canvas, the same size whatever the game's pixels are (so the menu does not grow or shrink as they change)
   const cv = document.createElement('canvas'); Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', imageRendering: 'pixelated', pointerEvents: 'none', zIndex: 5 });
   document.body.appendChild(cv); const g = cv.getContext('2d'), wr = hud.writer(g), MH = 270;
   const A = { g, text: wr.text, big: wr.big, width: wr.width, W: 0, H: 0 };
   const resize = () => { A.H = cv.height = MH; A.W = cv.width = Math.max(200, Math.round(innerWidth / innerHeight * MH)); }; resize(); addEventListener('resize', resize);
-  let page = null, sel = 0, t = 0, rows = [], hits = [], drag = null;
+  let page = null, sel = 0, t = 0, rows = [], hits = [], drag = null, capture = null, scroll = 0, scrollT = 0;
+  const pickable = r => r && !['head', 'info'].includes(r.type);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), snap = (v, st) => Math.round(v / st) * st;
-  const fmt = (k, v) => k === 'pix' ? v + ' PX' : k === 'smooth' ? (v > 1 ? v + 'X' : 'BRAK') : k === 'levels' ? (v < 2 ? 'WYŁ.' : String(v)) : k === 'dither' ? (v * 100).toFixed(1) : Math.round(v * 100) + '%';
+  const fmt = (k, v) => k === 'sens' ? v.toFixed(1) + 'X' : k === 'pix' ? v + ' PX' : k === 'smooth' ? (v > 1 ? v + 'X' : 'BRAK') : k === 'levels' ? (v < 2 ? 'WYŁ.' : String(v)) : k === 'dither' ? (v * 100).toFixed(1) : Math.round(v * 100) + '%';
   function build() {
     const S = look.S;
     if (page === 'pause') return [
       { type: 'button', label: 'WRÓĆ DO GRY', act: () => close() },
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
       { type: 'button', label: document.fullscreenElement ? 'ZWYKŁE OKNO' : 'PEŁNY EKRAN', act: () => { onFull?.(); } },
-      { type: 'button', label: 'STEROWANIE', act: () => { close(); onKeys?.(); } },
+      { type: 'button', label: 'STEROWANIE', act: () => controls ? show('keys') : (close(), onKeys?.()) },
       { type: 'button', label: 'ZACZNIJ OD NOWA', act: () => { close(); onRestart(); } }];
+    if (page === 'keys') { const r = sens ? [{ type: 'slider', label: 'CZUŁOŚĆ MYSZY', key: 'sens', min: .2, max: 2, step: .1, get: sens.get, set: sens.set }] : [];
+      for (const sec of controls.sections()) { r.push({ type: 'head', label: sec.title });
+        for (const it of sec.items) r.push(it.act ? { type: 'bind', label: it.label, act: it.act, keys: it.keys, clash: it.clash } : { type: 'info', label: it.label, value: it.value }); }
+      r.push({ type: 'button', label: 'PRZYWRÓĆ DOMYŚLNE', act: () => { controls.reset(); rows = build(); } }, { type: 'button', label: 'WRÓĆ', act: () => show('pause') });
+      return r; }
     const st = styles.includes(S.preset) ? S.preset : null;
     const r = [
       { type: 'styles', label: 'STYL', options: styles.map(k => ({ k, name: presets[k].name.toUpperCase() })), value: st, set: k => look.set({ preset: k, ...presets[k] }, true) },
@@ -31,20 +39,24 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     r.push({ type: 'button', label: 'WRÓĆ', act: () => show('pause') });
     return r;
   }
-  function show(p) { page = p; sel = 0; t = 0; rows = build(); }
-  function close() { page = null; drag = null; onClose && onClose(); }
-  const setVal = (row, v) => { v = clamp(snap(v, row.step), row.min, row.max); v = +v.toFixed(4); if (look.S[row.key] !== v) look.set({ [row.key]: v }, true); rows = build(); };
+  function show(p) { page = p; t = 0; capture = null; window.PT_capturing = false; scroll = scrollT = 0; rows = build(); sel = Math.max(0, rows.findIndex(pickable)); }
+  function close() { page = null; drag = null; capture = null; window.PT_capturing = false; onClose && onClose(); }
+  const valOf = row => row.get ? row.get() : look.S[row.key];                    // (a slider's value: in the look, or kept by its own get / set)
+  const setVal = (row, v) => { v = clamp(snap(v, row.step), row.min, row.max); v = +v.toFixed(4); if (valOf(row) !== v) { if (row.set) row.set(v); else look.set({ [row.key]: v }, true); } rows = build(); };
   function change(row, dir) {
-    if (row.type === 'slider') setVal(row, look.S[row.key] + dir * row.step);
+    if (row.type === 'slider') setVal(row, valOf(row) + dir * row.step);
     if (row.type === 'toggle') { look.set({ [row.key]: !look.S[row.key] }, true); rows = build(); }
     if (row.type === 'styles') { const i = Math.max(0, styles.indexOf(row.value)); row.set(styles[(i + dir + styles.length) % styles.length]); rows = build(); }
   }
-  function press(row) { if (row.type === 'button') row.act(); else if (row.type === 'toggle') change(row, 1); else if (row.type === 'styles') change(row, 1); }
+  function press(row) { if (row.type === 'bind') { capture = row; capture.t0 = performance.now(); window.PT_capturing = true; return; } if (row.type === 'button') row.act(); else if (row.type === 'toggle') change(row, 1); else if (row.type === 'styles') change(row, 1); }
   function key(e) {
     const c = e.code, row = rows[sel];
-    if (c === 'Escape') { page === 'gfx' ? show('pause') : close(); }
-    else if (c === 'ArrowUp' || c === 'KeyW') sel = (sel + rows.length - 1) % rows.length;
-    else if (c === 'ArrowDown' || c === 'KeyS' || c === 'Tab') sel = (sel + 1) % rows.length;
+    if (capture) { if (performance.now() - capture.t0 < 150) { e.preventDefault(); return; }   // (the key that opened it, not a new one)
+      if (c !== 'Escape') { controls.set(capture.act, c); rows = build(); } capture = null; window.PT_capturing = false; e.preventDefault(); return; }   // (waiting for a key: this is it)
+    const step = d => { let i = sel; for (let n = 0; n < rows.length; n++) { i = (i + d + rows.length) % rows.length; if (pickable(rows[i])) break; } sel = i; };
+    if (c === 'Escape') { page === 'gfx' || page === 'keys' ? show('pause') : close(); }
+    else if (c === 'ArrowUp' || c === 'KeyW') step(-1);
+    else if (c === 'ArrowDown' || c === 'KeyS' || c === 'Tab') step(1);
     else if (c === 'ArrowLeft' || c === 'KeyA') change(row, -1);
     else if (c === 'ArrowRight' || c === 'KeyD') change(row, 1);
     else if (c === 'Enter' || c === 'Space') press(row);
@@ -57,6 +69,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     const h = hits.find(h => x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h);
     if (type === 'move') { if (drag) { setVal(drag.row, drag.row.min + (x - drag.x0) / drag.w * (drag.row.max - drag.row.min)); return true; } if (h) sel = h.i; return !!h; }
     if (type === 'up') { drag = null; return true; }
+    if (type === 'down' && capture) { capture = null; window.PT_capturing = false; return true; }   // (a click elsewhere: leave the key as it was)
     if (type === 'down' && h) { sel = h.i; const row = rows[h.i];
       if (h.opt != null) row.set(h.opt), rows = build();
       else if (h.bar) { drag = { row, x0: h.bar.x, w: h.bar.w }; setVal(row, row.min + (x - h.bar.x) / h.bar.w * (row.max - row.min)); }
@@ -65,22 +78,33 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   }
   // ---------- drawing ----------
   function draw(dt) {
-    g.clearRect(0, 0, A.W, A.H); if (!page) return; t += dt; const W = A.W, H = A.H, k = Math.min(1, t / .14), e = 1 - Math.pow(1 - k, 3), side = page === 'gfx';
+    g.clearRect(0, 0, A.W, A.H); if (!page) return; t += dt; const W = A.W, H = A.H, k = Math.min(1, t / .14), e = 1 - Math.pow(1 - k, 3), side = page === 'gfx', keysPage = page === 'keys';
     g.fillStyle = '#0c0d0f'; if (!side) for (let y = 0; y < H; y++) for (let x = (y % 2); x < W; x += 2) g.fillRect(x, y, 1, 1);   // (pause: a dither over the picture; graphics: none, so the change shows)
-    const rowH = r => r.type === 'styles' ? 36 : r.type === 'button' ? 16 : 13, title = page === 'pause' ? 'PAUZA' : 'GRAFIKA';
-    const pw = Math.min(W - 8, page === 'pause' ? 150 : 236), ph = 34 + rows.reduce((a, r) => a + rowH(r), 0) + 8;
+    const rowH = r => r.type === 'styles' ? 36 : r.type === 'button' ? 16 : r.type === 'head' ? 15 : r.type === 'bind' || r.type === 'info' ? 10 : 13, title = page === 'pause' ? 'PAUZA' : keysPage ? 'STEROWANIE' : 'GRAFIKA';
+    const full = rows.reduce((a, r) => a + rowH(r), 0), view = Math.min(full, H - 60), pw = Math.min(W - 8, page === 'pause' ? 196 : keysPage ? 340 : 236), ph = 34 + view + 8;
+    // scrolled so the chosen row is in view
+    { let yy = 0; for (let i = 0; i < sel; i++) yy += rowH(rows[i]); const hh = rowH(rows[sel] || {}); if (yy - scrollT < 10) scrollT = Math.max(0, yy - 10); if (yy + hh - scrollT > view - 10) scrollT = Math.min(full - view, yy + hh - view + 10); scrollT = Math.max(0, Math.min(full - view, scrollT)); scroll += (scrollT - scroll) * Math.min(1, dt * 14); }
     const x0 = side ? Math.round(10 - (1 - e) * 20) : Math.round((W - pw) / 2), y0 = side ? Math.max(6, Math.round((H - ph) / 2)) : Math.max(4, Math.round((H - ph) / 2 - (1 - e) * 14));
     const panel = (x, y, w, h, fill, edge) => { g.fillStyle = '#17181b'; g.fillRect(x + 1, y - 1, w - 2, h + 2); g.fillRect(x - 1, y + 1, w + 2, h - 2); g.fillRect(x, y, w, h); g.fillStyle = edge; g.fillRect(x + 1, y + 1, w - 2, h - 2); g.fillStyle = fill; g.fillRect(x + 2, y + 2, w - 4, h - 4); };
     g.fillStyle = '#0c0d0f'; g.fillRect(x0 + 3, y0 + 4, pw, ph); panel(x0, y0, pw, ph, '#25272b', '#efc970');
     A.big(title, Math.round(x0 + pw / 2 - A.width(title)), y0 + 8, '#f6f3ea', '#17181b');
-    hits = []; let y = y0 + 28; const blink = ((t * 3) | 0) % 2;
+    hits = []; const top = y0 + 28; let y = top - Math.round(scroll); const blink = ((t * 3) | 0) % 2;
+    g.save(); g.beginPath(); g.rect(x0 + 2, top - 3, pw - 4, view + 4); g.clip();
     rows.forEach((r, i) => {
       const on = i === sel, lx = x0 + 10, rx = x0 + pw - 10, hgt = rowH(r);
+      if (y + hgt < top - 3 || y > top + view) { y += hgt; return; }                                   // (scrolled out of the panel)
+      if (r.type === 'head') { g.fillStyle = '#44484c'; g.fillRect(lx, y + 11, pw - 20, 1); A.text(r.label, lx, y + 4, '#efc970', null); y += hgt; return; }
+      if (r.type === 'info') { A.text(r.label, lx + 4, y + 1, '#979a97', null); A.text(r.value, rx - A.width(r.value), y + 1, '#b8b8ae', null); y += hgt; return; }
+      if (r.type === 'bind') { if (on) { g.fillStyle = '#33363a'; g.fillRect(x0 + 4, y - 1, pw - 8, hgt - 1); }
+        A.text(r.label, lx + 4, y + 1, on ? '#efc970' : '#d3d0c3', null);
+        const s = capture === r ? (blink ? 'NACIŚNIJ KLAWISZ · ESC: BEZ ZMIAN' : '') : r.keys, w = A.width(s) + 6, bx = rx - w;
+        if (s) { panel(bx, y - 1, w, 9, capture === r ? '#efc970' : r.clash ? '#8e2e25' : '#33363a', r.clash ? '#cf5a3e' : '#44484c'); A.text(s, bx + 3, y + 1, capture === r ? '#17181b' : '#f6f3ea', null); }
+        hits.push({ x: x0 + 4, y: y - 1, w: pw - 8, h: hgt, i }); y += hgt; return; }
       if (on && r.type !== 'button') { g.fillStyle = '#33363a'; g.fillRect(x0 + 4, y - 2, pw - 8, hgt - 1); if (blink) { g.fillStyle = '#efc970'; for (let q = 0; q < 3; q++) g.fillRect(x0 + 5 + q, y + 1 + q, 1, 5 - q * 2); } }
       if (r.type === 'button') { const bw = pw - 40, bx = x0 + 20; panel(bx, y, bw, 12, on ? '#efc970' : '#33363a', on ? '#f6f3ea' : '#44484c');
         A.text(r.label, Math.round(bx + bw / 2 - A.width(r.label) / 2), y + 3, on ? '#17181b' : '#d3d0c3', null); hits.push({ x: bx, y, w: bw, h: 12, i }); }
       else A.text(r.label, lx, y + 1, on ? '#efc970' : '#d3d0c3', null);
-      if (r.type === 'slider') { const v = look.S[r.key], bw = 70, bx = rx - bw - 30, f = (v - r.min) / (r.max - r.min);
+      if (r.type === 'slider') { const v = valOf(r), bw = 70, bx = rx - bw - 30, f = (v - r.min) / (r.max - r.min);
         g.fillStyle = '#17181b'; g.fillRect(bx - 1, y + 1, bw + 2, 5); g.fillStyle = '#44484c'; g.fillRect(bx, y + 2, bw, 3); g.fillStyle = on ? '#efc970' : '#b8b8ae'; g.fillRect(bx, y + 2, Math.round(bw * f), 3);
         const kx = bx + Math.round(bw * f); g.fillStyle = '#17181b'; g.fillRect(kx - 2, y - 1, 5, 9); g.fillStyle = on ? '#f6f3ea' : '#d3d0c3'; g.fillRect(kx - 1, y, 3, 7);   // the knob
         const s = fmt(r.key, v); A.text(s, rx - A.width(s), y + 1, '#f6f3ea', null);
@@ -92,8 +116,12 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
           A.text(s, Math.round(bx + bw / 2 - A.width(s) / 2), by + 3, act ? '#17181b' : '#d3d0c3', null); hits.push({ x: bx, y: by, w: bw, h: bh, i, opt: o.k }); });
         if (!r.value) A.text('WŁASNY', rx - A.width('WŁASNY'), y + 1, '#979a97', null); }
       y += hgt; });
-    const hint = page === 'pause' ? 'ESC: WRÓĆ DO GRY' : '↑ ↓ WYBÓR · ← → ZMIANA · ESC WRÓĆ'; A.text(hint, side ? x0 + 2 : Math.round(W / 2 - A.width(hint) / 2), Math.min(H - 8, y0 + ph + 7), '#f6f3ea');
+    g.restore();
+    if (full > view) { const bh = Math.max(8, view * view / full), by = top + (view - bh) * (scroll / (full - view)); g.fillStyle = '#44484c'; g.fillRect(x0 + pw - 5, top, 2, view); g.fillStyle = '#efc970'; g.fillRect(x0 + pw - 5, Math.round(by), 2, Math.round(bh)); }   // (where in the list)
+    const hint = page === 'pause' ? 'ESC: WRÓĆ DO GRY' : keysPage ? '↑ ↓ WYBÓR · ENTER: NOWY KLAWISZ · CZERWONY: KLAWISZ ZAJĘTY · ESC WRÓĆ' : '↑ ↓ WYBÓR · ← → ZMIANA · ESC WRÓĆ'; A.text(hint, side ? x0 + 2 : Math.round(W / 2 - A.width(hint) / 2), Math.min(H - 8, y0 + ph + 7), '#f6f3ea');
   }
   hud.setOverlay(draw);
-  return { get open() { return !!page; }, show, close, key, pointer };
+  // the wheel scrolls a long page (the chosen row follows)
+  function wheel(dy) { if (!page) return; const d = dy > 0 ? 1 : -1; let i = sel; for (let n = 0; n < 3; n++) { let j = i; do { j = (j + d + rows.length) % rows.length; } while (!pickable(rows[j]) && j !== i); i = j; } sel = i; }
+  return { get open() { return !!page; }, get capturing() { return !!capture; }, show, close, key, pointer, wheel };
 }

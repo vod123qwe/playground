@@ -150,6 +150,18 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - czapka gazeciarza dopasowana do jego głowy (mierzona z modelu): czerwona, z daszkiem, szwami i przyciskiem; krótsza fryzura spod niej; torba jak na rowerze: oliwkowa listonoszka nisko na plecach z gazetami, pasek po skosie
 - przeciwnik, który nie może do ciebie dojść (płot, żywopłot), obchodzi przeszkodę, a w końcu przez nią przechodzi
 
+## Wersja 12: w sieci, porządek na ekranie
+
+- na żywo: https://vod123qwe.github.io/playground/lab-board/pieces/poranna-trasa/ (kafel na planszy lab-board); kopię do playground robi `tools/publish.sh`, potem commit na main i na gałęzi Pages
+- H: okno ze sterowaniem (pogrupowane: rower, skocznia, pieszo, bójka, inne), domyślnie schowane, stan zapamiętany; w rogu tylko podpowiedź „H sterowanie · L pełny ekran”
+- L albo PEŁNY EKRAN w menu Esc (w panelu przeglądarki aplikacji Claude pełny ekran jest zablokowany, w zwykłej przeglądarce działa); w menu też STEROWANIE
+- kursor schowany w całej grze (jest tylko w menu, w pytaniu „od nowa”, w panelu stylu i nad przyciskami w rogu)
+- menu Esc → STEROWANIE: osobny ekran. Na górze czułość myszy (0.2–2X, zapamiętana; 1X to połowa dawnej), pod nią każda akcja w sekcjach NA ROWERZE, PIESZO, W BÓJCE, OGÓLNE: co robi i na jakim klawiszu; Enter albo klik i nowy klawisz przypisuje (Esc: bez zmian), klawisz zajęty w tym samym trybie świeci na czerwono, PRZYWRÓĆ DOMYŚLNE; do tego wiersze z myszą (LPM, PPM, ruch) dla każdego trybu. Lista się przewija (strzałki, kółko). Przypisania zapamiętane w przeglądarce, okno pomocy (H) pokazuje aktualne
+- na rowerze: LPM rzuca w lewo, PPM w prawo (trzymasz: rośnie siła, puszczasz: leci), lekki ruch myszy obraca widok w tę stronę i wraca, gdy mysz stoi
+- paczki gazet do zebrania: świecący krąg na ziemi, słup światła widoczny z daleka i strzałka nad paczką
+- niskie zdrowie: czerwona winieta w ditherze zachodzi od krawędzi, pulsuje jak serce (szybciej, im gorzej), przy krytycznym miga; każde trafienie: błysk i plamy krwi na brzegach ekranu (zostają, póki jesteś ranny, bledną, gdy zdrowie wraca)
+- wywrotka na auto: ciało nie wylatuje już na kilkanaście metrów (to była korekta pozycji na dachu auta zamieniana w prędkość; teraz prędkość po zderzeniu ma limit)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

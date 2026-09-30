@@ -113,7 +113,7 @@ export function createSettings({ apply }) {
   let isOpen = false;
   function open(v = !isOpen) { isOpen = v; P.classList.toggle('on', v); if (v) P.querySelector('[data-preset]')?.focus({ preventScroll: true }); else btn.focus({ preventScroll: true }); }
   btn.addEventListener('click', () => open());
-  addEventListener('keydown', e => { if (e.repeat) return; if (e.code === 'KeyU' && !e.target.closest?.('input')) { open(); e.preventDefault(); } else if (e.code === 'Escape' && isOpen) { open(false); e.stopImmediatePropagation(); } }, true);
+  addEventListener('keydown', e => { if (e.repeat || window.PT_capturing) return; if ((window.PT_styleKeys ? window.PT_styleKeys() : ['KeyU']).includes(e.code) && !e.target.closest?.('input')) { open(); e.preventDefault(); } else if (e.code === 'Escape' && isOpen) { open(false); e.stopImmediatePropagation(); } }, true);
   apply(S); refresh();
   return { get S() { return S; }, set, open, get isOpen() { return isOpen; } };
 }
