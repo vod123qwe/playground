@@ -1,7 +1,8 @@
 // Chess at a table: the set (chessset.js), the rules (chess.js), a little panel, and a game with someone else on the page.
 // The set lies folded on a shelf in the study; taken in the hand and put down on a table (or any level top) it opens as a real one
 // does (the lid up, the pieces out, the case turned over, the board on its outside up), white's side towards you, the pieces standing
-// by the board. At the board a single action shows ("Szachy", and how the game stands); a click on it opens the panel with the rest. Set them up by hand (a click on a piece, a click on a square; a click off the board
+// by the board. Grabbed by its frame or the case's side, the board turns with its pieces on it (dragged; it settles square to the
+// table when near a quarter turn); the panel turns it a quarter at a time. At the board a single action shows ("Szachy", and how the game stands); a click on it opens the panel with the rest. Set them up by hand (a click on a piece, a click on a square; a click off the board
 // sends it back) or with one click; then play: a click on a piece shows where it may go, a click there moves it; the rules are all
 // there (check, mate, stalemate, castling, en passant, promotion, the draws). Alone you move both sides.
 // With someone: "Zagraj z kimś" shares the board: everyone else on the page sees it on the same table, and one of them can sit in as
@@ -109,6 +110,18 @@ export function createChess({ THREE, scene, camera, M, clip, onChange = () => {}
     select(B, own && pc !== B.sel ? pc : null); onChange(); return true;
   }
 
+  // ---------- turning the board: grabbed by its frame (off the squares) or the case's side, dragged sideways; it settles square
+  // when let go near a quarter turn; a quarter turn from the panel ----------
+  let turning = null, turnTo = null;
+  function grabZone(hit) {
+    if (!hit || hit.distance > 3.2 || L.shared && !L.owner) return false; const B = boardOf(hit.object); if (B !== L || !L.set.isOpen || hit.object.userData.chessPiece) return false;
+    L.set.group.worldToLocal(_p.copy(hit.point)); return !(L.set.boardMeshes.includes(hit.object) && L.set.sqAt(_p.x, _p.z) >= 0);
+  }
+  function grab(hit) { if (!grabZone(hit)) return false; turning = { yaw0: L.set.group.rotation.y }; turnTo = null; return true; }
+  function turn(dx) { if (!turning) return; L.set.group.rotation.y = turning.yaw0 - dx * .009; onChange(); }
+  function release() { if (!turning) return; turning = null; const y = L.set.group.rotation.y, q = Math.PI / 2, n = Math.round(y / q) * q; if (Math.abs(y - n) < .2) turnTo = n; else if (L.shared) share(); }
+  function quarter() { const q = Math.PI / 2, y = turnTo ?? L.set.group.rotation.y; turnTo = Math.round(y / q) * q + q; }
+
   // ---------- with someone ----------
   let shareT = 0;
   function share() { if (!net) return; L.shared = true; L.owner = net.id; L.w = net.id; const g = L.set.group, wp = g.getWorldPosition(new THREE.Vector3());
@@ -188,7 +201,7 @@ export function createChess({ THREE, scene, camera, M, clip, onChange = () => {}
     const head = document.createElement('div'), mv = document.createElement('div'), row = document.createElement('div'); mv.className = 'mv'; row.className = 'row';
     if (B.promo) { head.innerHTML = '<b>Promocja.</b> Na co zamieniasz pionka?'; for (const [t, n] of PROMO) row.appendChild(btn(n, () => promoteTo(t), t === 'q')); row.appendChild(btn('Anuluj', () => { B.promo = null; paint(); })); el.append(head, row); return; }
     if (B.phase === 'setup') { head.innerHTML = '<b>Szachy.</b> Ułóż figury na szachownicy (klik w figurę, potem w pole) albo zrób to jednym kliknięciem.';
-      row.append(btn('Ułóż figury', autoSetup, true), btn('Graj sam', startFromSetup), btn('Zagraj z kimś', startShared), btn('Złóż do pudełka', pack)); }
+      row.append(btn('Ułóż figury', autoSetup, true), btn('Graj sam', startFromSetup), btn('Zagraj z kimś', startShared), btn('Obróć planszę', quarter), btn('Złóż do pudełka', pack)); }
     else {
       const you = B.remote ? (B.b === net?.id ? ' · grasz czarnymi' : B.b ? ' · oglądasz' : '') : B.shared ? ` · grasz białymi${B.b ? '' : ' · czekam, aż ktoś usiądzie do czarnych'}` : ' · grasz sam, obiema stronami';
       head.innerHTML = statusLine(B) + you;
@@ -196,7 +209,7 @@ export function createChess({ THREE, scene, camera, M, clip, onChange = () => {}
       mv.textContent = n ? (first ? '… ' : '') + t.trim() : 'Białe zaczynają.';
       if (B.remote) { if (!B.b) row.appendChild(btn('Dołącz jako czarne', () => net?.send({ t: 'join' }, B.owner), true)); else if (B.b === net?.id) row.appendChild(btn('Wstań od gry', () => net?.send({ t: 'leave' }, B.owner))); }
       else { if (!B.shared) row.appendChild(btn('Cofnij ruch', undo)); row.appendChild(btn('Nowa partia', () => newGame(L), B.phase === 'over'));
-        row.appendChild(B.shared ? btn('Zakończ wspólną grę', unshare) : btn('Zagraj z kimś', startShared)); row.appendChild(btn('Złóż do pudełka', pack)); }
+        row.appendChild(B.shared ? btn('Zakończ wspólną grę', unshare) : btn('Zagraj z kimś', startShared)); row.appendChild(btn('Obróć planszę', quarter)); row.appendChild(btn('Złóż do pudełka', pack)); }
     }
     el.append(head); if (B.phase !== 'setup') el.append(mv); if (L.msg && B === L) { const nt = document.createElement('div'); nt.className = 'note'; nt.textContent = L.msg; el.append(nt); } el.append(row);
   }
@@ -210,9 +223,12 @@ export function createChess({ THREE, scene, camera, M, clip, onChange = () => {}
     if (show) for (const B of boards()) { if (!B.set.group.parent || !B.set.isOpen) continue; B.set.group.getWorldPosition(_c); const d = _c.distanceTo(camera.position), keep = B === near ? (UI.open ? 2.4 : 2) : 1.6;
       if ((d < keep || B === hovB || (B === near && B.promo)) && d < bd) { bd = d; best = B; } }
     if (best !== near) { near = best; UI.open = false; paint(); }
+    if (turnTo !== null && !turning) { const g = L.set.group, d = turnTo - g.rotation.y; g.rotation.y += d * Math.min(1, dt * 9); moved = true;
+      if (Math.abs(d) < .002) { g.rotation.y = turnTo; turnTo = null; if (L.shared) share(); } }
+    if (turning) moved = true;
     if (L.shared && (shareT -= dt) <= 0) share();
     if (RB && performance.now() - RB.seen > 9000) dropRemote();
     return moved;
   }
-  return { set: L.set, group: L.set.group, click, put, step, receive, joined, left, takeable, setNet(n) { net = n; if (!n && L.shared) { L.shared = false; L.b = null; paint(); } }, get phase() { return L.phase; }, set phase(v) { L.phase = v; }, _L: L, get _RB() { return RB; } };
+  return { set: L.set, group: L.set.group, click, put, step, grab, grabZone, turn, release, get turning() { return !!turning; }, receive, joined, left, takeable, setNet(n) { net = n; if (!n && L.shared) { L.shared = false; L.b = null; paint(); } }, get phase() { return L.phase; }, set phase(v) { L.phase = v; }, _L: L, get _RB() { return RB; } };
 }

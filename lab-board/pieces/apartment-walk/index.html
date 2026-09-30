@@ -108,13 +108,15 @@
   .live.on{opacity:1; transform:translate(-50%, 0)}
   @media (max-width:760px){ .live{top:122px} }
 
+  body.walk.chessgrab #gl, body.walk.chessturn #gl{cursor:ew-resize}                /* (the chess board's frame: drag to turn it) */
   /* the minimap (walk) */
   .mini{position:fixed; top:72px; left:16px; z-index:4; width:196px; height:180px; border-radius:18px; background:#fff; opacity:0; visibility:hidden; transform:translateY(-6px);
         transition:opacity .35s ease, transform .45s var(--ease), visibility 0s linear .45s; cursor:crosshair}
   /* folded while you walk: small and faint in its corner; under the pointer it opens to its full size (and folds back a moment after
      the pointer leaves). Where there is no hover (a touch screen) it stays open */
-  body.walk .mini{opacity:.55; visibility:visible; transform:scale(.4); transform-origin:0 0; transition:opacity .3s ease .45s, transform .45s var(--ease) .45s, visibility 0s}
-  body.walk .mini:hover{opacity:1; transform:none; transition-delay:0s, 0s, 0s}
+  body.walk .mini{opacity:.55; visibility:visible; transform:scale(.4); transform-origin:0 0; border-radius:28px; will-change:transform;
+        transition:opacity .35s ease .5s, transform .5s cubic-bezier(.4,0,.2,1) .5s, border-radius .5s ease .5s, visibility 0s}
+  body.walk .mini:hover{opacity:1; transform:none; border-radius:18px; transition:opacity .25s ease, transform .6s cubic-bezier(.34,1.32,.64,1), border-radius .6s ease, visibility 0s}   /* (opening: a touch of spring) */
   @media (hover:none){ body.walk .mini{opacity:1; transform:none} }
   @media (max-width:760px){ .mini{width:132px; height:122px; top:auto; bottom:calc(128px + env(safe-area-inset-bottom)); left:auto; right:16px; transform-origin:100% 100%} }
 
@@ -268,7 +270,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=19';
 import { makeBowl, makeCrisp } from './snacks.js?v=1';
-import { createChess } from './chessplay.js?v=4';
+import { createChess } from './chessplay.js?v=5';
 import { buildLiving } from './living.js?v=45';
 import { buildHall } from './hall.js?v=4';
 import { buildRooms } from './rooms.js?v=47';
@@ -1507,12 +1509,16 @@ function panOver(dt) {
 }
 // looking: drag on the canvas (mouse or finger)
 let look = null;
+let turnDrag = null;                                                // grabbing the chess board by its frame: dragging turns it instead of the view
 canvas.addEventListener('pointerdown', e => {
   if (mode !== 'walk' || tween) return;
+  if (CHESS && !HAND.can) { const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera);
+    if (CHESS.grab(ray.intersectObject(CHESS.group, true)[0])) { turnDrag = { id: e.pointerId, x0: e.clientX }; try { canvas.setPointerCapture(e.pointerId); } catch (err) {} document.body.classList.add('chessturn'); return; } }
   look = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   document.body.classList.add('looking');
 });
 canvas.addEventListener('pointermove', e => {
+  if (turnDrag && e.pointerId === turnDrag.id) { CHESS.turn(e.clientX - turnDrag.x0); return; }
   if (!look || e.pointerId !== look.id) return;
   const k = e.pointerType === 'touch' ? .006 : .0038;
   P.yaw += (e.clientX - look.x) * k; P.pitch = THREE.MathUtils.clamp(P.pitch - (e.clientY - look.y) * k, -1.2, 1.2);
@@ -1522,7 +1528,7 @@ canvas.addEventListener('pointermove', e => {
   }
   look.x = e.clientX; look.y = e.clientY;
 });
-const endLook = e => { if (look && e.pointerId === look.id) { look = null; document.body.classList.remove('looking'); } };
+const endLook = e => { if (turnDrag && e.pointerId === turnDrag.id) { turnDrag = null; CHESS.release(); document.body.classList.remove('chessturn'); } if (look && e.pointerId === look.id) { look = null; document.body.classList.remove('looking'); } };
 canvas.addEventListener('pointerup', endLook); canvas.addEventListener('pointercancel', endLook);
 // the stick
 const stick = { x: 0, y: 0 }, stickEl = document.getElementById('stick'), knob = stickEl.firstElementChild;
@@ -2024,7 +2030,8 @@ function frame(now) {
     if (GH?.chess && !GH.chess.onMessage) { GH.chess.onMessage = (d, id) => CHESS.receive(d, id); GH.chess.onJoin = id => CHESS.joined(id); GH.chess.onLeave = id => CHESS.left(id); }
     CHESS.setNet(GH?.chess ? { send: GH.chess.send, id: GH.selfId } : null);
     if (PTR.on) PTR.ray.setFromCamera(PTR.ndc, camera);
-    const cm = CHESS.step(dt, mode === 'walk' && !SPOT.cur && !tween, PTR.on ? PTR.ray : null); if (cm) moved(); else if (chessMoving) ptScene(); chessMoving = cm;
+    const cm = CHESS.step(dt, mode === 'walk' && !SPOT.cur && !tween, PTR.on ? PTR.ray : null);
+    document.body.classList.toggle('chessgrab', !!(mode === 'walk' && PTR.on && !HAND.can && CHESS.grabZone(PTR.ray.intersectObject(CHESS.group, true)[0])));   // (the frame under the pointer: a hand to grab it) if (cm) moved(); else if (chessMoving) ptScene(); chessMoving = cm;
   }
   if (archDirty) archCut();
   { // the cutaway comes in between 13 m and 7 m up (the whole flat at a glance keeps its walls); in the walk the walls stand whole
