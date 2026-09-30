@@ -330,7 +330,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   function end(winner, loser) {
     const g = fightNow; fightNow = null; me.mode = 'walk'; fx.tip(null); winner.mode = loser.mode = 'walk'; if (g.autoView) view = 'third';
     if (loser === me) { const line = fx.take(); say(winner, line || pick(SAY.won)); g.state = 'leave'; g.wait = 3.2; }
-    else { fx.score(15, head(loser), 'NOKAUT! +15', '#efc970'); fx.flash('Nokaut!'); setTimeout(() => say(loser, pick(SAY.ko)), 900); g.state = 'lying'; g.wait = 4.5; }
+    else { fx.drop?.({ x: loser.x, y: loser.y, z: loser.z }); fx.score(15, head(loser), 'NOKAUT! +15', '#efc970'); fx.flash('Nokaut!'); setTimeout(() => say(loser, pick(SAY.ko)), 900); g.state = 'lying'; g.wait = 4.5; }
   }
 
   // ---------- each frame ----------

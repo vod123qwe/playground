@@ -29,11 +29,11 @@ export function createPixel({ THREE, renderer, height = 240 }) {
   const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(4, 4) });
   const pal = PALETTE.map(h => new THREE.Color(h));                    // (as written: sRGB)
   const mat = new THREE.ShaderMaterial({
-    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(4, 4) }, shift: { value: new THREE.Vector2() }, crease: { value: 0 }, cThr: { value: .012 }, near: { value: .1 }, far: { value: 500 },
+    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(4, 4) }, shift: { value: new THREE.Vector2() }, haze: { value: 1.2 }, hazeCol: { value: new THREE.Vector3(.76, .83, .86) }, crease: { value: 0 }, cThr: { value: .012 }, near: { value: .1 }, far: { value: 500 },
       pal: { value: pal.map(c => new THREE.Vector3(c.r, c.g, c.b)) }, dither: { value: .02 }, skyDither: { value: .07 }, outline: { value: .85 }, oInk: { value: 0 }, oThr: { value: .12 }, oWide: { value: 0 }, aber: { value: 0 }, ss: { value: 1 }, palOn: { value: 1 }, hue: { value: 1 }, palMix: { value: 1 }, levels: { value: 0 }, sat: { value: 1 }, contrast: { value: 1 }, vig: { value: 0 }, hurt: { value: 0 }, crt: { value: 0 }, exposure: { value: 1.0 }, on: { value: 1 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
     fragmentShader: `
-      uniform sampler2D tColor, tDepth; uniform vec2 res, shift; uniform float crease, cThr; uniform float near, far, dither, skyDither, outline, oInk, oThr, oWide, aber, ss, palOn, hue, palMix, levels, sat, contrast, vig, hurt, crt, exposure, on; uniform vec3 pal[${PALETTE.length}];
+      uniform sampler2D tColor, tDepth; uniform vec2 res, shift; uniform float crease, cThr, haze; uniform vec3 hazeCol; uniform float near, far, dither, skyDither, outline, oInk, oThr, oWide, aber, ss, palOn, hue, palMix, levels, sat, contrast, vig, hurt, crt, exposure, on; uniform vec3 pal[${PALETTE.length}];
       varying vec2 vUv;
       float lin(float d){ float z = d * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
       vec3 aces(vec3 x){ return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
@@ -56,7 +56,12 @@ export function createPixel({ THREE, renderer, height = 240 }) {
         vec2 dv = uv - .5;
         if (aber > .01) { vec3 acc = c; for (int k = 1; k < 4; k++) acc += texture2D(tColor, uv - dv * float(k) * .02 * aber).rgb;   // and the world streaming out from the middle
           c = mix(c, acc / 4., smoothstep(.06, .42, length(dv)) * aber); }
+        // the air: the far land paler, bluer, a little soft (the more the farther: from about 45 m, most by 300 m); the sky left as it is
+        float rawA = texture2D(tDepth, uv).r, hz = rawA > .9999 ? 0. : haze * smoothstep(45., 300., lin(rawA));
+        if (hz > .02) { vec3 bl = (texture2D(tColor, (px + vec2(1., 0.) + .5) / res).rgb + texture2D(tColor, (px + vec2(-1., 0.) + .5) / res).rgb + texture2D(tColor, (px + vec2(0., 1.) + .5) / res).rgb + texture2D(tColor, (px + vec2(0., -1.) + .5) / res).rgb) * .25;
+          c = mix(c, bl, min(1., hz * 1.4)); }
         c = toSRGB(aces(c * exposure));
+        c = mix(c, hazeCol, hz * .35);                                  // (a little before the palette, so it picks paler colours far off; the rest after it)
         if (on < .5) { gl_FragColor = vec4(hurtIt(c, floor(gl_FragCoord.xy / 3.), vUv), 1.); return; }
         // the outline: this pixel is behind the one next to it by a good deal
         // shading as drawn: shadows cooler, lights warmer
@@ -83,10 +88,10 @@ export function createPixel({ THREE, renderer, height = 240 }) {
         c += (bayer(px) - .47) * (raw > .9999 ? skyDither : dither);
         if (levels > 1.5) c = floor(c * levels + .5) / levels;                                                // posterize: fewer steps of each colour           // (the sky: the gradient dithered; things: barely)
         float scan = crt > .01 ? 1. - crt * .3 * step(.5, fract(gl_FragCoord.y * .5)) : 1.;             // (scanlines, as an old screen)
-        if (palOn < .5) { gl_FragColor = vec4(hurtIt(clamp(c, 0., 1.) * scan, px, uv), 1.); return; }
+        if (palOn < .5) { gl_FragColor = vec4(hurtIt(mix(clamp(c, 0., 1.), hazeCol, hz * .5) * scan, px, uv), 1.); return; }
         vec3 best = pal[0]; float bd = 1e9;
         for (int k = 0; k < ${PALETTE.length}; k++) { vec3 q = pal[k] - c; float w = dot(q * q, vec3(.3, .59, .11)); if (w < bd) { bd = w; best = pal[k]; } }
-        gl_FragColor = vec4(hurtIt(mix(clamp(c, 0., 1.), best, palMix) * scan, px, uv), 1.);
+        gl_FragColor = vec4(hurtIt(mix(mix(clamp(c, 0., 1.), best, palMix), hazeCol, hz * .5) * scan, px, uv), 1.);
       }`,
     depthTest: false, depthWrite: false,
   });

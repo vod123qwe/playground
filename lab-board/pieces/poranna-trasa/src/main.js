@@ -63,7 +63,7 @@ function rimmed(m) { m.onBeforeCompile = sh => { sh.uniforms.rimK = RIM.k; sh.un
       #endif`);
     sh.fragmentShader = 'varying vec3 vFadeW; uniform vec3 fadeCam, fadeTgt; uniform float fadeR;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
       if (fadeR > 0.) { vec3 ab = fadeTgt - fadeCam; float t = clamp(dot(vFadeW - fadeCam, ab) / max(dot(ab, ab), 1e-4), 0., 1.);
-        float d = length(vFadeW - (fadeCam + ab * t)), rad = fadeR * max(smoothstep(0., .3, t), 1. - smoothstep(0., .12, t));   // (wide by him, and wide right at the lens too: a crown the camera is in)
+        float d = length(vFadeW - (fadeCam + ab * t)), rad = fadeR * max(smoothstep(0., .3, t), 1.7 * (1. - smoothstep(0., .14, t)));   // (wide by him, and wide right at the lens too: a crown the camera is in)
         if (t < .92 && d < rad && vFadeW.y > fadeTgt.y - .75) { float k = 1. - d / rad, n = fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy / 2.), vec2(.06711056, .00583715)))); if (n < k * 2.2) discard; } }`);   // (not the ground under him: only what stands higher than his knees)
     sh.fragmentShader = 'uniform float rimK; uniform vec3 rimCol; uniform vec3 sunV; uniform vec3 upV;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `#include <opaque_fragment>
       { float fr = 1. - clamp(dot(normal, normalize(vViewPosition)), 0., 1.), lit = dot(normal, sunV);
@@ -140,7 +140,7 @@ function loseFight() {
   B.points = Math.max(0, B.points - 3); flash('Zrobił sobie z tobą selfie. -3 zł za prawa do wizerunku.'); return pickOf(['FOTKA NA GRUPĘ OSIEDLA!', 'UŚMIECH! DO RELACJI!', 'MAMA BĘDZIE DUMNA!']);
 }
 const foot = createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx: { score: (n, at, l, c) => score(n, at, l, c), flash: t => flash(t), shake: v => { shake = Math.max(shake, v); }, slow: v => { slowmo = Math.max(slowmo, v); },
-  rant: (at, t) => hud.rant(at, t, true), pop: (at, t, c) => hud.pop(at, t, c), tip: t => hud.tip(t), impact: (at, t) => hud.impact(at, t || undefined), take: () => loseFight() } });
+  rant: (at, t) => hud.rant(at, t, true), pop: (at, t, c) => hud.pop(at, t, c), tip: t => hud.tip(t), impact: (at, t) => hud.impact(at, t || undefined), take: () => loseFight(), drop: at => dropLoot(at) } });
 function parkBike() { rider.root.position.set(B.x, B.y, B.z); rider.root.rotation.set(0, B.yaw, .2, 'YXZ'); }   // (the bike on its stand, leaning a little)
 function dismount(why) {
   const lf = { x: Math.cos(B.yaw), z: -Math.sin(B.yaw) };
@@ -722,6 +722,29 @@ function stepBundles(dt, px_, pz_) { const t = performance.now() / 1000;
   for (const m of bundleMarks) { const on = !m.C.used && Math.hypot(m.g.position.x - px_, m.g.position.z - pz_) < 90; m.g.visible = on; if (!on) continue;
     const k = .5 + .5 * Math.sin(t * 4 + m.ph); m.ring.scale.setScalar(.85 + k * .35); m.ring.material.opacity = .35 + k * .45;
     m.arrow.position.y = 1.15 + Math.sin(t * 3 + m.ph) * .12; m.arrow.rotation.y = t * 2 + m.ph; m.C.o.rotation.y += dt * .8; } }
+// what a beaten cyclist leaves on the ground (three times in four): a wallet with a few złoty, a few of his papers, a bun (health);
+// lit as the bundles are (a ring, a beam, an arrow over it), picked up walking up to it or riding over it; gone after a minute
+const drops = [];
+function dropLoot(at) { if (Math.random() < .25) return; const k = Math.random(), kind = k < .45 ? 'cash' : k < .8 ? 'papers' : 'bun';
+  const g = new THREE.Group(), y = track.probe(at.x, at.z, -1).y; g.position.set(at.x + (Math.random() - .5) * .8, y + .03, at.z + (Math.random() - .5) * .8); scene.add(g);
+  const item = new THREE.Group(); g.add(item);
+  if (kind === 'cash') { const w = new THREE.Mesh(new THREE.BoxGeometry(.2, .04, .14), toon('#6b4a2e')); w.position.y = .03; item.add(w); for (let q = 0; q < 4; q++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .012, 10), toon('#efc970')); c.position.set(.12 + q * .05, .008 + (q % 2) * .012, (q - 1.5) * .04); item.add(c); } }
+  if (kind === 'papers') for (let q = 0; q < 3; q++) { const r = new THREE.Mesh(paperG, paperM); r.rotation.z = Math.PI / 2; r.rotation.y = q * .5; r.position.set(0, .04 + q * .06, 0); r.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandM)); item.add(r); }
+  if (kind === 'bun') { const b = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 6), toon('#c98a45')); b.scale.set(1.3, .7, 1); b.position.y = .06; item.add(b); }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.28, .5, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: kind === 'bun' ? '#9fd27a' : '#efc970', transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending })); ring.renderOrder = 2;
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(.03, .12, 2.2, 10, 1, true).translate(0, 1.1, 0), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .08, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); beam.renderOrder = 2;
+  const arrow = new THREE.Group(); arrow.add(new THREE.Mesh(new THREE.ConeGeometry(.15, .28, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#17181b' })), new THREE.Mesh(new THREE.ConeGeometry(.12, .22, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#efc970' })));
+  g.add(ring, beam, arrow); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); drops.push({ g, item, ring, arrow, kind, t: 0, ph: Math.random() * 6 });
+  setTimeout(() => hud.pop(g.position.clone().setY(g.position.y + .9), kind === 'cash' ? 'PORTFEL!' : kind === 'papers' ? 'JEGO GAZETY!' : 'BUŁKA!', '#efc970'), 400); }
+function stepDrops(dt) { const me = foot.active ? foot.me : null, px_ = me ? me.x : B.x, pz_ = me ? me.z : B.z, reach = me ? 1.1 : 1.7, t = performance.now() / 1000;
+  for (let k = drops.length - 1; k >= 0; k--) { const d = drops[k]; d.t += dt; const kk = .5 + .5 * Math.sin(t * 4 + d.ph); d.ring.scale.setScalar(.85 + kk * .35); d.ring.material.opacity = .35 + kk * .45;
+    d.arrow.position.y = 1 + Math.sin(t * 3 + d.ph) * .12; d.arrow.rotation.y = t * 2 + d.ph; d.item.rotation.y += dt * .9;
+    const at = d.g.position, near = Math.hypot(at.x - px_, at.z - pz_) < reach;
+    if (near) { const lift = at.clone().setY(at.y + .7);
+      if (d.kind === 'cash') { const n = 3 + (Math.random() * 7 | 0); score(n, lift, `+${n} ZŁ`, '#efc970'); flash(pickOf(['Portfel! Dowodu nie ma, kasa jest.', 'Drobne na bułki. I na piwo.', 'Łup z bójki: ' + n + ' zł']));  }
+      if (d.kind === 'papers') { B.papers += 4; hud.pop(lift, '+4', '#f6f3ea'); flash('Jego gazety. Teraz twoje. +4'); }
+      if (d.kind === 'bun') { if (me) me.hp = Math.min(100, me.hp + 30); hud.pop(lift, '+30 HP', '#9fd27a'); flash('Bułka z makiem. Siły wracają.'); } }
+    if (near || d.t > 60) { scene.remove(d.g); drops.splice(k, 1); } } }
 function pickBundle(C) { C.used = true; C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); }
 function stepFoot(dt, inp) {                                           // (on foot: him walking or fighting; the world goes on round him)
   foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
@@ -780,7 +803,7 @@ const dbg = (() => { if (!Q.has('debug')) return null; const d = document.create
 // the fires in the drums by the shacks: the flame flickers, puffs of smoke rise, grow and fade
 const smokeM = new THREE.MeshBasicMaterial({ color: '#9a9690', transparent: true, depthWrite: false }), smokeG = new THREE.IcosahedronGeometry(.22, 0);
 let fireT = 0;
-function stepFires(dt) { const t = (fireT += dt); track.train.update(dt); track.dapT.value = t;
+function stepFires(dt) { stepDrops(dt); const t = (fireT += dt); track.train.update(dt); track.dapT.value = t;
   for (const f of track.fires) { const k = 1 + Math.sin(t * 17 + f.drum.id) * .12 + Math.sin(t * 29) * .08; f.flame.scale.set(1, k, 1); f.core.scale.set(1, 2 - k, 1); f.flame.rotation.y += dt * 3;
     if (!f.puffs) { f.puffs = []; for (let n = 0; n < 6; n++) { const m = new THREE.Mesh(smokeG, smokeM.clone()); f.drum.add(m); f.puffs.push({ m, t: n / 6 }); } }
     for (const p of f.puffs) { p.t = (p.t + dt * .22) % 1; const u = p.t; p.m.position.set(Math.sin(u * 5 + p.m.id) * .25 + u * .6, 1.2 + u * 3.2, Math.cos(u * 4) * .15); p.m.scale.setScalar(.6 + u * 2.4); p.m.material.opacity = .55 * (1 - u) * Math.min(1, u * 6); } } }
@@ -836,5 +859,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, scene, camera, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };
