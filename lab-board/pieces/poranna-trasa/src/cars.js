@@ -7,16 +7,17 @@
 export function createCars({ THREE, toon }) {
   const canvasT = (w, h, draw, rx = 1, ry = 1) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g); const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); return t; };
-  // glass: dark, a little bluer at the top, with two pale streaks of the sky across it
-  const glassT = canvasT(16, 16, g => { g.fillStyle = '#2b3a44'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#3a4e5a'; g.fillRect(0, 0, 16, 5);
-    g.fillStyle = '#8fb0bd'; for (let k = 0; k < 16; k++) { g.fillRect((k + 3) % 16, 15 - k, 2, 1); if (k % 2) g.fillRect((k + 9) % 16, 15 - k, 1, 1); } }, 1.4, 1.4);
+  // glass: see-through, tinted dark blue (a little more at the top), with a streak of the sky across it: a wide one and a thin one,
+  // on the slant, in whole pixels
+  const glassT = canvasT(16, 16, g => { g.fillStyle = 'rgba(43,58,68,.5)'; g.fillRect(0, 0, 16, 16); g.clearRect(0, 0, 16, 5); g.fillStyle = 'rgba(58,78,90,.62)'; g.fillRect(0, 0, 16, 5);
+    for (let k = 0; k < 16; k++) { g.fillStyle = 'rgba(190,215,225,.85)'; g.fillRect((k + 3) % 16, 15 - k, 2, 1); g.fillStyle = 'rgba(160,190,205,.6)'; if (k % 2) g.fillRect((k + 9) % 16, 15 - k, 1, 1); } }, 1.4, 1.4);
   // a number plate: light, a dark rim, dark letters
   const plateT = canvasT(16, 4, g => { g.fillStyle = '#ecebe3'; g.fillRect(0, 0, 16, 4); g.fillStyle = '#44484c'; g.fillRect(0, 0, 16, 1); g.fillRect(0, 3, 16, 1);
     for (const x of [2, 3, 5, 7, 8, 10, 12, 13]) g.fillRect(x, 1 + (x % 3 ? 0 : 1), 1, x % 2 ? 2 : 1); });
   // the soft dark under a car
   const shadeT = canvasT(32, 32, g => { const gr = g.createRadialGradient(16, 16, 2, 16, 16, 16); gr.addColorStop(0, 'rgba(8,6,12,.75)'); gr.addColorStop(.7, 'rgba(8,6,12,.45)'); gr.addColorStop(1, 'rgba(8,6,12,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); });
   const shadeM = new THREE.MeshBasicMaterial({ map: shadeT, transparent: true, depthWrite: false });
-  const shared = { glass: toon('#ffffff', { map: glassT }), glassHi: toon('#6c8796'), dark: toon('#1f2023'), trim: toon('#3a3c40'), chrome: toon('#c9cbc8'), tyre: toon('#232427'),
+  const shared = { glass: toon('#ffffff', { map: glassT, transparent: true, depthWrite: false }), seat: toon('#3a3430'), glassHi: toon('#6c8796'), dark: toon('#1f2023'), trim: toon('#3a3c40'), chrome: toon('#c9cbc8'), tyre: toon('#232427'),
     head: new THREE.MeshBasicMaterial({ color: '#fff3cf' }), tail: toon('#b3261e'), tailHi: new THREE.MeshBasicMaterial({ color: '#e0503f' }), reverse: toon('#e9e3d1'), amber: toon('#e0913a'), plate: toon('#ffffff', { map: plateT }), rim: toon('#aeb2b4'), well: toon('#17181b') };
   const KINDS = {
     //  length, width, wheel r, wheelbase, front overhang; body: the lower body's top along it [from the front, height]; gh: the glasshouse
@@ -69,8 +70,12 @@ export function createCars({ THREE, toon }) {
       const cap = (a, flip) => { const c0 = pos.length / 3, x = x0 + (x1 - x0) * a / nz; let sx = 0, sy = 0; for (let v = 0; v < nv; v++) { sx += pos[(a * (nv + 1) + v) * 3]; sy += pos[(a * (nv + 1) + v) * 3 + 1]; } pos.push(sx / nv, sy / nv, zf - x);
         for (let v = 0; v < nv; v++) { const k = a * (nv + 1) + v; if (flip) faces[0].push(c0, k + 1, k); else faces[0].push(c0, k, k + 1); } };
       cap(0, false); cap(nz, true);
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); let off = 0; for (let q = 0; q < 2; q++) { idx.push(...faces[q]); g.addGroup(off, faces[q].length, q); off += faces[q].length; }
-      g.setIndex(idx); g.computeVertexNormals(); const o = new THREE.Mesh(g, mats ? [paint, shared.glass] : paint); o.castShadow = o.receiveShadow = true; G.add(o); return o;
+      // two meshes on the same points: the paint, and the glass (see-through, so drawn apart from the paint; one mesh with the two
+      // lost its roof); the glass gets its streak from its own place along the car and up it
+      const pa = new THREE.Float32BufferAttribute(pos, 3), mk = (ix, m) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', pa); g.setIndex(ix); g.computeVertexNormals(); const o = new THREE.Mesh(g, m); o.castShadow = o.receiveShadow = true; G.add(o); return o; };
+      const o = mk(faces[0], paint);
+      if (mats && faces[1].length) { const gl = mk(faces[1], shared.glass), n = pos.length / 3, uv = new Float32Array(n * 2); for (let k = 0; k < n; k++) { uv[k * 2] = (zf - pos[k * 3 + 2]) * .9 + pos[k * 3] * .35; uv[k * 2 + 1] = pos[k * 3 + 1] * 1.6; } gl.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); gl.castShadow = false; }
+      return o;
     }
     loft(0, L, 44, (x, th) => { const e = Math.min(x, L - x), taper = 1 - .1 * Math.pow(1 - Math.min(1, e / .45), 2), top = topAt(x), bot = botAt(x), mid = (top + bot) / 2, hh = (top - bot) / 2;
       const cy = mid + hh * se(Math.sin(th), K.sq), up = Math.max(0, (cy - mid) / (hh || 1)); return [(W / 2) * taper * (1 - .07 * up) * se(Math.cos(th), K.sq), cy]; });
@@ -124,6 +129,12 @@ export function createCars({ THREE, toon }) {
     if (K.bed) { const bx0 = K.gh[1] + .03, bl = L - bx0 - .04, zc = fz - (bx0 + bl / 2), bedM = shared.trim;   // the bed: from the cab's back wall to the tail
       G.add(box(W - .14, .05, bl, bedM, 0, base - .02, zc)); for (const sd of [-1, 1]) { G.add(box(.07, .38, bl, paint, sd * (W / 2 - .04), base + .17, zc)); G.add(box(.1, .03, bl + .05, shared.trim, sd * (W / 2 - .04), base + .37, zc)); }
       G.add(box(W - .06, .46, .07, paint, 0, base + .21, fz - bx0)); G.add(box(W - .06, .38, .07, paint, 0, base + .17, fz - (L - .04))); G.add(box(W * .5, .04, .08, shared.chrome, 0, base + .28, fz - L)); }
+    // inside, seen through the glass: the dashboard, the two front seats, a bench at the back (not in a van's or a pickup's cab)
+    { const a0 = K.gh[0], a1 = Math.min(K.gh[1], K.glassTo || 99), span = a1 - a0, xs = a0 + span * (K.glassTo ? .55 : .42);
+      G.add(box(W * .84, .14, .34, shared.dark, 0, base + .02, fz - (a0 + .38)));
+      const hS = K.gh[4];                                                  // (the cabin's height over the waist: the seats kept well under the roof)
+      for (const sd of [-1, 1]) { G.add(box(W * .34, hS * .72, .14, shared.seat, sd * W * .21, base - .05 + hS * .36, fz - xs)); G.add(box(W * .24, hS * .18, .12, shared.seat, sd * W * .21, base - .05 + hS * .8, fz - xs + .02)); }
+      if (!K.glassTo && span > 2) G.add(box(W * .8, hS * .66, .16, shared.seat, 0, base - .05 + hS * .33, fz - (a0 + span * .78))); }
     const wheels = [];
     for (const [x, zz] of [[1, frontX], [-1, frontX], [1, rearX], [-1, rearX]]) { const w = wheel(K.R, paint); w.position.set(x * (W / 2 - .1), K.R, fz - zz); G.add(w); wheels.push(w); }
     G.traverse(o => { if (o.isMesh && !o.userData.noShadow) { o.castShadow = true; o.receiveShadow = true; } });
