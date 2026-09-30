@@ -332,6 +332,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - w świecie: w ogródkach losują się krzaki, kwiaty, kamienie i sterty liści; wzdłuż drogi kępy traw na brzegu pasa zieleni i trawników, co jakiś czas kępka kwiatów (nigdy na podjeździe ani ścieżce); w laskach paprocie i trawy; 5 stawów na łąkach wewnątrz pętli
 - źdźbła i kępy mają kolory w samych punktach, więc scalane są osobno, a każdy kolor to jeden wspólny materiał: siatek w świecie jest mniej niż przedtem (około 1750)
 
+## Wersja 34: natura nieidealna, autobus z góry
+
+- przyroda z niedoskonałościami: suche i złamane źdźbła, łysy placek ziemi pod kępą, w krzaku uschnięta kępa, ubytek z jednej strony, sterczące gałązki i pożółkłe liście, paproć z zeschniętymi liśćmi, zwiędłe główki kwiatów, opadłe płatki, złamana łodyga na ziemi, porosty na kamieniach, kamień wpuszczony w ziemię, goła ziemia wokół, patyki w stercie liści, glony i liście na stawie, złamana trzcina, czasem stara opona w błocie
+- bukszpan z wielu małych kęp jak przycięty żywopłot (czasem z łysym, brązowym placem)
+- autobus: jasny dach z klimatyzatorem i dwoma włazami, przednia szyba (z ciemnym wnętrzem za nią) i tylna, podświetlana tablica „7 CENTRUM”; z góry nie jest już gładkim prostokątem
+- pozostałe auta sprawdzone z góry: dach w kolorze lakieru, szyby, skrzynka pikapa bez zmian
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
