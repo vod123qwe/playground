@@ -310,6 +310,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - trawa: źdźbła w kępkach (ciemny korzeń, środek, jasny czubek), w trawnikach więcej kwiatków w teksturze
 - prawdziwych, ostrych kwiatków (osobnych, nie w teksturze) jest więcej i rosną też w głąb trawników
 
+## Wersja 31: łup po bójce, spokojniejsi kierowcy, powietrze w oddali
+
+- pokonany w bójce rowerzysta w 3 przypadkach na 4 coś upuszcza: portfelik z drobnymi (3–9 zł), kilka swoich gazet (+4) albo bułkę (+30 HP); łup leży podświetlony (pulsujący krąg, słaby snop, strzałka), podnosi się go podchodząc albo przejeżdżając po nim rowerem, znika po minucie
+- auta nie odbijają na drugi pas, gdy na chwilę wjedziesz na ich pas: rowerzysta liczy się „na pasie” dopiero 1 m od jego środka, a kierowca najpierw zwalnia i czeka (około 1,3 s), dopiero potem omija
+- powietrze: im dalej, tym bledsze i bardziej niebieskie kolory, a daleko obraz lekko miękki (od około 45 m, najwięcej przy 300 m); nakładane po palecie, żeby paleta go nie zjadała; bliskie plany zostają ostre
+- prześwit przy samym obiektywie szerszy (korona tuż przy kamerze nie zasłania pół ekranu)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

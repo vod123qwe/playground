@@ -28,16 +28,18 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       t.stop = Math.max(0, t.stop - dt);
       const mine = t.dir * LANE, other = -mine;
       // what is ahead of it in a lane (d), and how near, and how fast it goes our way
-      const lead = d => { let best = null; for (const o of things) { if (o.t === t || Math.abs(o.d - d) > 1.5) continue; const g = ahead(t.s, o.s, t.dir); if (g > 0 && g < 40 && (!best || g < best.g)) best = { g, v: o.v * t.dir, o }; } return best; };
+      const lead = d => { let best = null; for (const o of things) { if (o.t === t || Math.abs(o.d - d) > (o.rider ? 1 : 1.5)) continue; const g = ahead(t.s, o.s, t.dir); if (g > 0 && g < 40 && (!best || g < best.g)) best = { g, v: o.v * t.dir, o }; } return best; };
       const coming = () => { let near = 1e9; for (const o of list) { if (o === t || o.dir === t.dir) continue; const g = ahead(t.s, o.s, t.dir); if (g > -2 && g < near) near = g; } return near; };   // (the nearest one coming the other way)
       const L = lead(t.lane), inMine = Math.abs(t.lane - mine) < .5;
+      // the rider in its way: a driver waits a moment (slows, hoots) before going round him; a swerve over a moment's wobble is not how they drive
+      t.riderT = L && L.o.rider && L.g < 30 ? (t.riderT || 0) + dt : Math.max(0, (t.riderT || 0) - dt * 2);
       // stuck behind him a good while (he is ahead, near, and it has had to slow): it hoots, the driver has something to say
       const behind = L && L.o.rider && L.g < 14 && t.v < t.cruise * .75 && !t.pass; t.stuckT = behind ? (t.stuckT || 0) + dt : Math.max(0, (t.stuckT || 0) - dt * 2);
       t.shoutCool = Math.max(0, (t.shoutCool || 0) - dt); if (t.stuckT > 3.5 && t.shoutCool <= 0) { t.shoutNow = true; t.shoutCool = 7 + rnd() * 6; }
       let want = t.cruise;
       if (L) want = Math.max(0, Math.min(t.cruise, (L.g - 6.5) * 1.3 + Math.max(0, L.v)));        // (keep behind it)
       // go round something standing or crawling in its lane, if the other lane is clear far enough
-      if (!t.pass && inMine && L && L.g < 22 && Math.max(0, L.v) < 2.2 && !L.o.t?.pass) {
+      if (!t.pass && inMine && L && L.g < 22 && Math.max(0, L.v) < 2.2 && !L.o.t?.pass && (!L.o.rider || t.riderT > 1.3)) {
         const clear = coming() > 48 && !(lead(other) && lead(other).g < L.g + 12);
         if (clear) t.pass = { s: L.o.s, t: L.o.t || null, rider: !!L.o.rider }; }
       if (t.pass) { const past = -ahead(t.s, t.pass.t ? t.pass.t.s : t.pass.rider ? R.s : t.pass.s, t.dir), oc = coming();   // (how far past it we are)
