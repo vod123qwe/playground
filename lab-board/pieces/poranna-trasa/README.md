@@ -211,6 +211,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - na ścieżce furtka (czasem uchylona), przy podjeździe słupki, czasem dwuskrzydłowa brama otwarta na oścież
 - co trzeci ogrodzony dom ma płot dookoła: boczne odcinki od ulicy do frontu domu
 
+## Wersja 20: dobudówki, baraki, licznik rowerowy
+
+- co piąty dom bez garażu ma z boku dobudówkę z garażem: płaski dach, szare blaszane drzwi, własny podjazd do chodnika, czasem auto; płot ma przerwę i na podjazd, i na ścieżkę do drzwi
+- przed podjazdami (także na pasie zieleni) nie rosną już drzewa, które blokowały wyjazd
+- rzeczy w ogródkach (huśtawka, trampolina, piaskownica) trzymają się z dala od bocznych płotów, huśtawka już na nie nie zachodzi
+- czasem zamiast domu stoi działka z barakami: budki z blachy i desek z łatami, rdzawe dachy, przybudówki, kominki, beczka z ogniem i dymem, stara kanapa, opony, palety, pranie, auto na klockach, połamany płot; przy ogniu stoją chłopaki z baraków i zaczepiają („DAWAJ GAZETĘ, NA ROZPAŁKĘ!”)
+- licznik rowerowy jak dawniej: plastikowa obudowa z przyciskami, szarozielony LCD, prędkość cyframi siedmiosegmentowymi (niezapalone segmenty lekko widać), strzałka przyspieszania; dolny wiersz co 4 s: dystans (DST), prędkość maksymalna (MAX), czas jazdy (TM). Wszystko w pikselach.
+- mieszkańcy daleko od gracza nie są rysowani ani animowani (lżej przy wielu postaciach)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

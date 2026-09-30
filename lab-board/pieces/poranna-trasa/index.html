@@ -13,7 +13,7 @@
   html, body{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; }   /* a game: nothing to select */
   #gl{ position:fixed; inset:0; width:100%; height:100%; display:block; image-rendering:pixelated; }
   .ui{ position:fixed; font:600 13px/1.3 ui-monospace, 'Cascadia Mono', Consolas, monospace; color:var(--ink); letter-spacing:.02em; text-shadow:0 1px 0 #17181b; pointer-events:none; }
-  #hud{ left:16px; top:14px; padding:6px 10px; background:var(--shade); border-radius:6px; }
+  #hud{ left:12px; top:10px; filter:drop-shadow(0 2px 0 rgba(0,0,0,.35)); }   /* the bike computer (a canvas in it) */
   #hud b{ color:#efc970; }
   #keys{ right:16px; top:14px; padding:6px 10px; background:var(--shade); border-radius:6px; text-align:right; opacity:.9; }
   #note{ left:50%; top:22%; transform:translate(-50%, 6px); padding:6px 12px; background:var(--shade); border-radius:6px; color:#efc970; opacity:0; transition:opacity .2s, transform .25s; }

@@ -29,6 +29,7 @@ import { createResidents } from './residents.js';
 import { installCursors } from './cursor.js';
 import { createOnFoot } from './onfoot.js';
 import { createLife } from './life.js';
+import { createCyclo } from './cyclo.js';
 installCursors();
 
 const canvas = document.getElementById('gl');
@@ -574,7 +575,9 @@ function follow(dt) {
 // ---------- on the screen ----------
 const hudEl = document.getElementById('hud'), note = document.getElementById('note');
 let noteT = 0; function flash(s) { note.textContent = s; note.classList.add('on'); noteT = 1.6; }
-function paintHud() { hudEl.innerHTML = `<b>${Math.round(B.v * 3.6)}</b> km/h`; }
+// the bike computer: the speed, and the trip, the top speed and the time ridden (counted only while he rides)
+const cyclo = createCyclo(hudEl), trip = { dist: 0, max: 0, time: 0 };
+function paintHud() { cyclo.update({ v: B.v, ...trip, on: !foot.active }); }
 const _v = new THREE.Vector3();
 function project(w) { _v.copy(w).project(camera); if (_v.z > 1) return null; const [W, H] = px.size; return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H }; }
 
@@ -617,8 +620,8 @@ function step(dt, inp) {
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
   if (foot.active) return stepFoot(dt, inp);
-  stamina(dt, inp);
-  throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v });
+  stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
+  throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v });
   { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
   { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16, road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
@@ -685,7 +688,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
   if (!foot.active) return;
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
-  water.update(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true });
+  water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
   traffic.update(dt, { s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
@@ -735,6 +738,13 @@ if (!Q.has('play') && !ARENA) menu.show('title');   // (the title screen first; 
 // the arena (from the workshop): off the bike on a field, an opponent of the kind chosen; when one is done, the next a moment after
 const arenaState = { on: !!ARENA, init: false, wait: 0 };
 const dbg = (() => { if (!Q.has('debug')) return null; const d = document.createElement('div'); d.className = 'ui'; Object.assign(d.style, { left: '50%', top: '46px', transform: 'translateX(-50%)', padding: '4px 10px', background: 'rgba(23,24,27,.8)', borderRadius: '6px', color: '#efc970', whiteSpace: 'pre', textAlign: 'center' }); document.body.appendChild(d); return d; })();
+// the fires in the drums by the shacks: the flame flickers, puffs of smoke rise, grow and fade
+const smokeM = new THREE.MeshBasicMaterial({ color: '#9a9690', transparent: true, depthWrite: false }), smokeG = new THREE.IcosahedronGeometry(.22, 0);
+let fireT = 0;
+function stepFires(dt) { const t = (fireT += dt);
+  for (const f of track.fires) { const k = 1 + Math.sin(t * 17 + f.drum.id) * .12 + Math.sin(t * 29) * .08; f.flame.scale.set(1, k, 1); f.core.scale.set(1, 2 - k, 1); f.flame.rotation.y += dt * 3;
+    if (!f.puffs) { f.puffs = []; for (let n = 0; n < 6; n++) { const m = new THREE.Mesh(smokeG, smokeM.clone()); f.drum.add(m); f.puffs.push({ m, t: n / 6 }); } }
+    for (const p of f.puffs) { p.t = (p.t + dt * .22) % 1; const u = p.t; p.m.position.set(Math.sin(u * 5 + p.m.id) * .25 + u * .6, 1.2 + u * 3.2, Math.cos(u * 4) * .15); p.m.scale.setScalar(.6 + u * 2.4); p.m.material.opacity = .55 * (1 - u) * Math.min(1, u * 6); } } }
 function stepArena(dt) { if (!arenaState.on || !foot.ready) return;
   if (!arenaState.init) { arenaState.init = true; const i = 60, S = track.S[i], d = -track.INNER * 60; B.x = S.p.x + S.r.x * d; B.z = S.p.z + S.r.z * d; B.hint = i; B.y = track.probe(B.x, B.z, i).y; B.yaw = Math.atan2(S.f.x, S.f.z); B.v = 0; B.crash = null; dismount('Arena: ' + ARENA + '. Esc: menu'); arenaState.wait = .8; }
   if (!foot.active) return;
