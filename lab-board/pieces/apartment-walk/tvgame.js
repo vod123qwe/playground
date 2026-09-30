@@ -10,12 +10,15 @@
 //   and move), then one of three things for each of nine slots, then two skills of four; the hero so built is the one that fights.
 //   First to three. Each side is the judge of its own figure: it moves itself, fires its own shots, and takes the other's shots as they
 //   reach it here (so a hit is never argued about by lag). Everything that comes from the other side is checked and clamped.
+// - a training duel against a bot, to try the duel alone: the bot is a second copy of this game, unseen, joined to this one by a line
+//   in the page (no network): the same pairing, draft, hits and rematch as with a person. It drafts at random, and in the fight keeps
+//   its distance (the knight closes in), circles, fires, now and then dodges a shot with its move, and uses its skills.
 // Input each frame: { x, y } the move (-1..1, the pad's left stick or WASD), edges: tele (A / Space), start (Start / Enter), back
 // (handled by the caller, through closeOverlay), inv (Y / I), potion (LB / Q), drop (X / X), sk1 (Y / K), sk2 (RB / L), up, down, left,
 // right; held: teleHeld, cast (X / J); dev: 'pad' or 'keys', the one last used (the controls on the screen are drawn for it, so a
 // pad's A is never taken for the key A, which runs left).
 
-export function createTVGame({ THREE }) {
+export function createTVGame({ THREE, bot = false }) {                // (bot: the training's opponent: nothing drawn, nothing saved)
   const W = 960, H = 540, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d'), tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const rnd = (a, b) => a + Math.random() * (b - a), irnd = (a, b) => Math.round(rnd(a, b)), pick = a => a[Math.random() * a.length | 0];
@@ -47,9 +50,9 @@ export function createTVGame({ THREE }) {
 
   // ---------- what you have: kept in this browser ----------
   const KEY = 'aw.tvgame.v1';
-  const SAVE = (() => { try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && Array.isArray(s.bag) && s.eq && typeof s.eq === 'object') return s; } catch {} return null; })()
+  const SAVE = bot ? { gold: 0, runs: 0, kills: 0, pot: 3, wins: 0, bag: [], eq: {} } : (() => { try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && Array.isArray(s.bag) && s.eq && typeof s.eq === 'object') return s; } catch {} return null; })()
     || { gold: 0, runs: 0, kills: 0, pot: 3, wins: 0, bag: [], eq: {} };
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch {} };
+  const save = () => { if (bot) return; try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch {} };
 
   // ---------- the loot ----------
   const COL = { gold: '#e8c65a', potion: '#e8e0d8', magic: '#7b8cff', rare: '#f5e25a', set: '#39d34b', unique: '#c7a36a', rune: '#f08a2a' };
@@ -164,7 +167,7 @@ export function createTVGame({ THREE }) {
     t += dt; if (inp.dev) dev = inp.dev; noteT = Math.max(0, noteT - dt);
     if (inp.inv && state !== 'lobby' && state !== 'duel') { INV.open = !INV.open; INV.confirm = -1; }
     if (INV.open) { invInput(inp); sparksStep(dt); return; }            // (the run waits while you look)
-    if (state === 'menu') { if (inp.left) sel = 0; if (inp.right) sel = 1; if (inp.tele || inp.start) { if (sel === 0) reset(); else { state = 'lobby'; D.seekT = 0; D.msg = ''; } } return; }
+    if (state === 'menu') { if (inp.left) sel = Math.max(0, sel - 1); if (inp.right) sel = Math.min(2, sel + 1); if (inp.tele || inp.start) { if (sel === 0) reset(); else if (sel === 1) { state = 'lobby'; D.seekT = 0; D.msg = ''; } else startTraining(); } return; }
     if (state === 'lobby') { lobbyStep(dt); return; }
     if (state === 'duel') { duelStep(dt, inp); return; }
     if (state === 'dead') { if (inp.start || inp.tele) reset(); sparksStep(dt); return; }
@@ -214,7 +217,7 @@ export function createTVGame({ THREE }) {
     D.o = { x: 0, y: 0, tx: 0, ty: 0, hp: 100, mh: 100, fx: 0, fy: 0, a: 1, d: 0, tp: 0, seen: t, moving: 0, burst: 0, cls: 'mag', ready: false, prog: 0, sh: 0 };
     shots = []; fshots = []; bolts = []; loot = []; trail = []; aoes = []; msg = null; state = 'duel'; boss.dead = true; boss.burst = 0;
   }
-  function endDuel(m) { D.opp = null; D.o = null; state = 'lobby'; D.msg = m; D.seekT = 1.5; recalc(); }
+  function endDuel(m) { D.opp = null; D.o = null; recalc(); if (BOT) { BOT = null; net = null; state = 'menu'; note(m); return; } state = 'lobby'; D.msg = m; D.seekT = 1.5; }
   function setMode(m) { D.mode = m; D.sel = 0; if (m === 'rand') { const c = pick(CLS); note(`Wylosowano: ${CLASSES[c].n}`); setHero(c); } else D.ph = D.host || m === 'own' ? 'hero' : 'mclass'; }
   function setHero(c) { D.build.cls = c; calc({}, [], c); toItems(); }
   function toItems() { D.ph = 'items'; D.slotI = 0; offerItems(); }
@@ -262,7 +265,7 @@ export function createTVGame({ THREE }) {
     for (const a of aoes) { a.t -= dt; if (a.t <= 0 && !a.done) { a.done = true; pop(a.x, a.y, a.c, 30); if (!a.mine && pl.alive && !D.over && Math.hypot(a.x - pl.x, a.y - pl.y) < a.r) hurt(a.dm); } }
     aoes = aoes.filter(a => a.t > -.5);
     if (pl.alive && pl.hp <= 0) { pl.alive = false; D.my++; D.respawn = 2; pop(pl.x, pl.y, '#ff4a3a', 40); D.sendT = 0; }
-    if (!D.over && (D.my >= 3 || O.d >= 3)) { D.over = true; const won = O.d >= 3; if (won) { SAVE.wins++; save(); } msg = won ? 'Wygrana! · Start: rewanż' : 'Przegrana · Start: rewanż'; }
+    if (!D.over && (D.my >= 3 || O.d >= 3)) { D.over = true; const won = O.d >= 3; if (won && !BOT) { SAVE.wins++; save(); } msg = won ? 'Wygrana! · Start: rewanż' : 'Przegrana · Start: rewanż'; }
     if (D.over && inp.start) { net?.send({ t: 're' }, D.opp); round(); }
     if ((D.sendT -= dt) <= 0 && net) { D.sendT = 1 / 15;
       net.send({ t: 's', x: +pl.x.toFixed(2), y: +pl.y.toFixed(2), h: Math.round(Math.max(0, pl.hp)), m: ST.maxHp, fx: +pl.face[0].toFixed(2), fy: +pl.face[1].toFixed(2), a: pl.alive ? 1 : 0, d: D.my, p: D.tpN, c: pl.cast > ST.cast * .5 ? 1 : 0, sh: pl.shield > 0 ? 1 : 0 }, D.opp); }
@@ -513,7 +516,7 @@ export function createTVGame({ THREE }) {
       const O = D.o; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(W / 2 - 150, 12, 300, 36);
       g.font = '700 20px Georgia, serif'; g.textAlign = 'right'; g.fillStyle = '#9fd0ff'; g.fillText(`Ty ${O ? O.d : 0}`, W / 2 - 12, 30); g.textAlign = 'center'; g.fillStyle = '#e8d8a8'; g.fillText(':', W / 2, 29);
       g.textAlign = 'left'; g.fillStyle = '#ff9a8a'; g.fillText(`${D.my} Przeciwnik`, W / 2 + 12, 30); g.textAlign = 'center';
-      g.font = '600 13px Georgia, serif'; g.fillStyle = '#cbbd96'; g.fillText(`${CLASSES[ST.cls].n} przeciw: ${CLASSES[O?.cls || 'mag'].n} · do trzech`, W / 2, 58);
+      g.font = '600 13px Georgia, serif'; g.fillStyle = '#cbbd96'; g.fillText(`${CLASSES[ST.cls].n} przeciw: ${CLASSES[O?.cls || 'mag'].n}${BOT ? ' (bot)' : ''} · do trzech`, W / 2, 58);
       if (!pl.alive) { g.font = '700 18px Georgia, serif'; g.fillStyle = '#ff5a4a'; g.fillText(`Wracasz za ${Math.max(0, D.respawn).toFixed(1)} s`, W / 2, H / 2 - 60); }
       D.build.skills.forEach((s, i) => { const x = 130 + i * 58, y = H - 118, k = pl.sk[i] / s.cd;          // the skills: their cooldowns
         g.fillStyle = 'rgba(0,0,0,.65)'; g.fillRect(x, y, 50, 40); g.strokeStyle = k > 0 ? '#5a5040' : '#c9b27a'; g.lineWidth = 2; g.strokeRect(x, y, 50, 40);
@@ -536,9 +539,9 @@ export function createTVGame({ THREE }) {
     const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#15161c'); gr.addColorStop(1, '#2a1f2a'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
     g.fillStyle = '#f2efe8'; g.font = '600 30px Inter, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillText('Gry', 64, 92);
     controls(dev === 'pad' ? [['stick', 'wybór'], ['A', 'graj'], ['Y', 'ekwipunek']] : [['←→', 'wybór'], ['Enter', 'graj'], ['I', 'ekwipunek']], 64, 118, 'left', '500 17px Inter, sans-serif', '#9a96a0');
-    const tiles = [{ name: 'Mefisto Run', sub: 'teleport, boss, łup' }, { name: 'Pojedynek', sub: 'draft postaci, 2 osoby przez sieć' }];
+    const tiles = [{ name: 'Mefisto Run', sub: 'teleport, boss, łup' }, { name: 'Pojedynek', sub: 'draft postaci, 2 osoby przez sieć' }, { name: 'Trening', sub: 'pojedynek z botem, do testów' }];
     tiles.forEach((tl, i) => { const x = 64 + i * 300, y = 160, w = 270, h = 250, on = sel === i, cx = x + w / 2, cy = y + 120;
-      g.fillStyle = i ? '#101a2e' : '#3a0f14'; g.fillRect(x, y, w, h);
+      g.fillStyle = i === 2 ? '#1a1f18' : i ? '#101a2e' : '#3a0f14'; g.fillRect(x, y, w, h);
       const glow = (gx, c) => { const gl = g.createRadialGradient(gx, cy, 5, gx, cy, 110); gl.addColorStop(0, c); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(x, y, w, h); };
       if (!i) { glow(cx, 'rgba(255,70,40,.55)');
         g.fillStyle = '#12050a'; g.beginPath(); g.moveTo(cx - 30, cy + 50); g.quadraticCurveTo(cx - 40, cy - 10, cx - 14, cy - 40); g.lineTo(cx + 14, cy - 40); g.quadraticCurveTo(cx + 40, cy - 10, cx + 30, cy + 50); g.fill();
@@ -573,7 +576,7 @@ export function createTVGame({ THREE }) {
     const b = D.build, O = D.o, head = (a, s) => { g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.fillStyle = '#e8d8a8'; g.font = '700 24px Georgia, serif'; g.fillText(a, 48, 58);
       g.fillStyle = '#9d9480'; g.font = '600 15px Georgia, serif'; g.fillText(s, 48, 84); };
     g.textAlign = 'right'; g.textBaseline = 'alphabetic'; g.fillStyle = O?.ready ? '#8fd08a' : '#9d9480'; g.font = '600 14px Georgia, serif';
-    g.fillText(O?.ready ? 'Przeciwnik gotowy' : `Przeciwnik: krok ${O?.prog || 0} z 12`, W - 48, 58);
+    g.fillText((BOT ? 'Bot' : 'Przeciwnik') + (O?.ready ? ' gotowy' : `: krok ${O?.prog || 0} z 12`), W - 48, 58);
     const pickLine = dev === 'pad' ? [['stick', 'wybór'], ['A', 'wybierz'], ['B', 'wyjdź']] : [['←→', 'wybór'], ['Spacja', 'wybierz'], ['Esc', 'wyjdź']];
     if (D.ph === 'mode' || D.ph === 'mclass') {
       if (D.ph === 'mclass' || !D.host) { head('Draft', D.ph === 'mclass' ? 'Lustro: gospodarz wybiera postać dla was obu…' : 'Gospodarz wybiera tryb…');
@@ -610,7 +613,36 @@ export function createTVGame({ THREE }) {
     noteDraw();
   }
   function wrap(s, x, y, w, lh) { const words = s.split(' '); let line = ''; for (const wd of words) { const tl = line ? line + ' ' + wd : wd; if (g.measureText(tl).width > w && line) { g.fillText(line, x, y); y += lh; line = wd; } else line = tl; } if (line) g.fillText(line, x, y); }
-  function frame(dt, inp) { step(Math.min(dt, .05), inp); draw(); tex.needsUpdate = true; }
+  function frame(dt, inp) {
+    dt = Math.min(dt, .05); step(dt, inp);
+    if (BOT) { const B = BOT; B.toBot.splice(0).forEach(d => B.g.receive(d, 'me-local')); B.g.frame(dt, botInput(dt)); B.toMe.splice(0).forEach(d => receive(d, 'zz-bot')); }   // (the line to the bot: a frame's delay each way)
+    if (!bot) { draw(); tex.needsUpdate = true; }
+  }
+  // ---------- the training: a bot to duel ----------
+  let BOT = null;
+  function startTraining() {
+    const b = createTVGame({ THREE, bot: true }), B = { g: b, toBot: [], toMe: [], t: 0, side: 1, sideT: 0 };
+    const clone = d => JSON.parse(JSON.stringify(d));                 // (as the network would: no shared objects)
+    BOT = B; net = { id: 'me-local', send: d => B.toBot.push(clone(d)) }; b.setNet({ id: 'zz-bot', send: d => B.toMe.push(clone(d)) }); b.lobby();
+    state = 'lobby'; D.seekT = 0; D.msg = '';
+  }
+  function botInput(dt) {                                              // what the bot presses this frame
+    const B = BOT, b = B.g._dbg(), Db = b.D, p = b.pl, inp = { x: 0, y: 0, dev: 'pad' };
+    if (B.g.state !== 'duel' || !Db.o) return inp;
+    if (Db.ph !== 'fight') { if ((B.t -= dt) <= 0) { B.t = rnd(.4, .9); if (Math.random() < .55) inp.right = true; inp.tele = true; } return inp; }   // the draft: a moment's thought, a pick
+    if (!p.alive || Db.over) return inp;
+    const O = Db.o, dx = O.x - p.x, dy = O.y - p.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, knight = b.ST.cls === 'ryc', want = knight ? 2.2 : 6;
+    if ((B.sideT -= dt) <= 0) { B.sideT = rnd(1, 2.2); B.side = -B.side; }
+    let wx = -uy * B.side * .8, wy = ux * B.side * .8;                 // circling
+    if (d > want + 1.2) { wx += ux; wy += uy; } else if (d < want - 1.2) { wx -= ux; wy -= uy; }
+    const threat = b.fshots.some(s => { const rx = p.x - s.x, ry = p.y - s.y, dist = Math.hypot(rx, ry); return dist < 2.4 && rx * s.vx + ry * s.vy > 0; });
+    if (threat && Math.random() < .07) { wx = -uy * B.side; wy = ux * B.side; inp.tele = true; }   // a shot coming: out of its way
+    if (knight && d > 5 && Math.random() < .03) { wx = ux; wy = uy; inp.tele = true; }             // the knight charges in
+    const l = Math.hypot(wx, wy); if (l > .01) { inp.x = THREE.MathUtils.clamp((wx - wy) / l * .72, -1, 1); inp.y = THREE.MathUtils.clamp((wx + wy) / l * .72, -1, 1); }   // (the arena's axes to the screen's)
+    inp.cast = d < 11 && Math.random() < .8;
+    if (Math.random() < .012) inp.sk1 = true; if (Math.random() < .009) inp.sk2 = true;
+    return inp;
+  }
   // the screen's average colour, for the glow the TV throws into the room (read small, a few times a second)
   const small = document.createElement('canvas'); small.width = 8; small.height = 5; const sg = small.getContext('2d', { willReadFrequently: true }), avg = new THREE.Color();
   function glow() { sg.drawImage(cv, 0, 0, 8, 5); const d = sg.getImageData(0, 0, 8, 5).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; } const n = d.length / 4;
@@ -618,12 +650,13 @@ export function createTVGame({ THREE }) {
   // Esc / B: the inventory shut first, then out of the lobby or the duel (true: it was one of those; false: the caller leaves the TV)
   function closeOverlay() {
     if (INV.open) { INV.open = false; return true; }
-    if (state === 'lobby') { state = 'menu'; return true; }
-    if (state === 'duel') { if (net && D.opp) net.send({ t: 'bye' }, D.opp); D.opp = null; D.o = null; state = 'menu'; msg = null; recalc(); return true; }
+    if (state === 'lobby') { state = 'menu'; if (BOT) { BOT = null; net = null; } return true; }
+    if (state === 'duel') { if (net && D.opp) net.send({ t: 'bye' }, D.opp); D.opp = null; D.o = null; state = 'menu'; msg = null; recalc(); if (BOT) { BOT = null; net = null; } return true; }
     return false;
   }
   function home() { closeOverlay(); closeOverlay(); state = 'menu'; sel = 0; }
-  draw();
-  return { canvas: cv, texture: tex, frame, glow, home, closeOverlay, receive, setNet(n) { net = n; }, leave(id) { if (id === D.opp && state === 'duel') endDuel('Przeciwnik wyszedł'); },
-    get state() { return state; }, get inv() { return INV.open; }, SAVE, _dbg: () => ({ pl, loot, D, ST }) };   // (_dbg: for tests)
+  if (!bot) draw();
+  return { canvas: cv, texture: tex, frame, glow, home, closeOverlay, receive, setNet(n) { if (!BOT) net = n; }, lobby() { state = 'lobby'; D.seekT = 0; D.msg = ''; },   // (training: the page's connection waits)
+    get training() { return !!BOT; }, leave(id) { if (id === D.opp && state === 'duel') endDuel('Przeciwnik wyszedł'); },
+    get state() { return state; }, get inv() { return INV.open; }, SAVE, _dbg: () => ({ pl, loot, D, ST, fshots }) };   // (_dbg: for tests)
 }
