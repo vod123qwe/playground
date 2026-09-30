@@ -8,6 +8,8 @@ Stan: 2026-09-30, wersja 15. Dokument do decyzji; nic z tego nie jest jeszcze zb
 - progresja: na razie sam wynik; później może miejsca odbioru gazet i sklepy rowerowe (wydać kasę na ulepszenia i kupić jakiś prezent);
 - multiplayer: po rdzeniu gry.
 
+> **Kierunek gry i kolejność prac: `docs/wizja.md`** (roguelite, sklep na trasie, loteria po runie). Ten plik to zbiór szczegółowych pomysłów; gdy się różnią, wygrywa wizja.
+
 ## 1. Walka: dlaczego dziś jest nieczytelna i co zmienić
 
 **Co jest nie tak (z Twojej oceny i z testów botami):**
