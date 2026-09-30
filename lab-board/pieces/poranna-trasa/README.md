@@ -317,6 +317,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - powietrze: im dalej, tym bledsze i bardziej niebieskie kolory, a daleko obraz lekko miękki (od około 45 m, najwięcej przy 300 m); nakładane po palecie, żeby paleta go nie zjadała; bliskie plany zostają ostre
 - prześwit przy samym obiektywie szerszy (korona tuż przy kamerze nie zasłania pół ekranu)
 
+## Wersja 32: przystanki, autobus, pasy rowerowe, spokojne uliczki
+
+- trzy przystanki na pętli: wiata (słupki, dach, szyby z tyłu i po bokach, ławka, kosz, plakat), znak przystanku z rozkładem przy krawężniku, na jezdni zatoka z przerywaną linią i napisem BUS; przy przystanku nie stoi żaden dom
+- na ławce śpi lump z butelką (od czasu do czasu chrapie: „ZZZ... PIWKO...”); trafiony gazetą się budzi (+5 zł), a czekający obok klaszczą („BRAWO! TRZECI DZIEŃ TU ŚPI!”); po około 45 s zasypia znowu
+- autobus: czerwony, żółty albo zielony, rząd okien przedzielonych słupkami, drzwi z przodu i pośrodku, siedzenia w środku; jeździ po pętli, zwalnia przed przystankiem po swojej stronie i stoi na nim 6 s; auta za nim trzymają większy odstęp i go wyprzedzają
+- pasy rowerowe na trzech dłuższych odcinkach: czerwony pas przy krawężniku, biała linia, namalowany rower co 18 m; kto jedzie pasem rowerowym, tego auta nie uznają za przeszkodę na swoim pasie
+- spokojne uliczki: dwa odcinki bez linii na środku
+- buspasa nie ma: przy jednym pasie w każdą stronę zabrałby autom cały ich pas
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

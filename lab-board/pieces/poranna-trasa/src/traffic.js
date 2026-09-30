@@ -9,6 +9,8 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   const G = new THREE.Group(), list = [], { S, N, ds, len } = track, LANE = 1.75;
   for (let k = 0; k < n; k++) { const c = cars.random(rnd), dir = k % 2 ? 1 : -1; G.add(c.group);
     list.push({ car: c, dir, s: (k + .3) / n * len, v: 8 + rnd() * 3, cruise: 8.5 + rnd() * 2.5, lane: dir * LANE, laneV: 0, laneT: dir * LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0 }); }
+  // the bus: round the loop, stopping at the stops on its side (track.stops) a few seconds; the cars behind go round it
+  { const c = cars.makeCar('bus', cars.COLOURS.bus[rnd() * 3 | 0]); G.add(c.group); list.push({ car: c, dir: 1, s: len * .6, v: 7, cruise: 7.6, lane: LANE, laneV: 0, laneT: LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0, bus: true, extra: 3.2 }); }
   const wrap = x => ((x % len) + len) % len, ahead = (from, to, dir) => { let d = ((to - from) * dir % len + len) % len; return d > len / 2 ? d - len : d; };
   function place(t) {
     const f = wrap(t.s) / ds, i0 = Math.floor(f) % N, i1 = (i0 + 1) % N, k = f - Math.floor(f), A = S[i0], B = S[i1];
@@ -28,7 +30,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       t.stop = Math.max(0, t.stop - dt);
       const mine = t.dir * LANE, other = -mine;
       // what is ahead of it in a lane (d), and how near, and how fast it goes our way
-      const lead = d => { let best = null; for (const o of things) { if (o.t === t || Math.abs(o.d - d) > (o.rider ? 1 : 1.5)) continue; const g = ahead(t.s, o.s, t.dir); if (g > 0 && g < 40 && (!best || g < best.g)) best = { g, v: o.v * t.dir, o }; } return best; };
+      const lead = d => { let best = null; for (const o of things) { if (o.t === t || Math.abs(o.d - d) > (o.rider ? .8 : 1.5)) continue; const g = ahead(t.s, o.s, t.dir); if (g > 0 && g < 40 && (!best || g < best.g)) best = { g, v: o.v * t.dir, o }; } return best; };
       const coming = () => { let near = 1e9; for (const o of list) { if (o === t || o.dir === t.dir) continue; const g = ahead(t.s, o.s, t.dir); if (g > -2 && g < near) near = g; } return near; };   // (the nearest one coming the other way)
       const L = lead(t.lane), inMine = Math.abs(t.lane - mine) < .5;
       // the rider in its way: a driver waits a moment (slows, hoots) before going round him; a swerve over a moment's wobble is not how they drive
@@ -37,14 +39,17 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       const behind = L && L.o.rider && L.g < 14 && t.v < t.cruise * .75 && !t.pass; t.stuckT = behind ? (t.stuckT || 0) + dt : Math.max(0, (t.stuckT || 0) - dt * 2);
       t.shoutCool = Math.max(0, (t.shoutCool || 0) - dt); if (t.stuckT > 3.5 && t.shoutCool <= 0) { t.shoutNow = true; t.shoutCool = 7 + rnd() * 6; }
       let want = t.cruise;
-      if (L) want = Math.max(0, Math.min(t.cruise, (L.g - 6.5) * 1.3 + Math.max(0, L.v)));        // (keep behind it)
+      if (L) want = Math.max(0, Math.min(t.cruise, (L.g - 6.5 - (L.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, L.v)));        // (keep behind it; further behind a bus)
+      if (t.bus && track.stops) for (const q of track.stops) { if (q.sd !== t.dir) continue; const g = ahead(t.s, q.s, t.dir);   // (the bus: easing in to its stop, standing there a few seconds)
+        if (t.lastStop === q) { if (g < -40) t.lastStop = null; continue; }
+        if (g > 0 && g < 16) want = Math.min(want, Math.max(.8, g * .7)); if (g > -1 && g < 1.2 && t.stop <= 0) { t.stop = 6; t.lastStop = q; } }
       // go round something standing or crawling in its lane, if the other lane is clear far enough
       if (!t.pass && inMine && L && L.g < 22 && Math.max(0, L.v) < 2.2 && !L.o.t?.pass && (!L.o.rider || t.riderT > 1.3)) {
         const clear = coming() > 48 && !(lead(other) && lead(other).g < L.g + 12);
         if (clear) t.pass = { s: L.o.s, t: L.o.t || null, rider: !!L.o.rider }; }
       if (t.pass) { const past = -ahead(t.s, t.pass.t ? t.pass.t.s : t.pass.rider ? R.s : t.pass.s, t.dir), oc = coming();   // (how far past it we are)
         t.laneT = other;
-        want = Math.min(t.cruise * 1.05, want + 4); const Lo = lead(other); if (Lo) want = Math.min(want, (Lo.g - 6.5) * 1.3 + Math.max(0, Lo.v));   // (out there: mind what is ahead in that lane too)
+        want = Math.min(t.cruise * 1.05, want + 4); const Lo = lead(other); if (Lo) want = Math.min(want, (Lo.g - 6.5 - (Lo.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, Lo.v));   // (out there: mind what is ahead in that lane too)
         if (oc < 30) { want = Math.min(want, oc < 18 ? 1.5 : 4.5); if (past < -1) t.pass = null; }        // something coming: slow; not past yet: back in
         if (t.pass && (past > 7 || (oc < 25 && past > 4.6)) && !(lead(mine) && lead(mine).g < 3)) t.pass = null; }   // past it (with room): back in; sooner, if one is coming (else they meet nose to nose and both wait)
       if (!t.pass) t.laneT = mine;
