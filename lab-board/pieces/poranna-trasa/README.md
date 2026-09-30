@@ -257,6 +257,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - prześwit przez to, co zasłania postać, nie wycina już ziemi pod nią (jezdnia, trawa, krawężniki niżej niż około 40 cm nad jego stopami); wcześniej za rowerem pojawiała się jasna plama
 - prześwit jest szerszy (1,9 m zamiast 1,5 m) i mocniejszy (więcej pikseli znika w środku)
 
+## Wersja 25: pixel art, krok dalej; domy na zboczu
+
+- **linie w środku rzeczy i jasne krawędzie** (panel U, „Pixel art: nowe”, domyślnie 70%): tam, gdzie dwie ściany się spotykają, zostaje ciemna linia; wypukła krawędź (kalenica, krawężnik, dach auta) dostaje jasny piksel. Liczone z samej głębi obrazu, bez dodatkowego rysowania świata.
+- **stabilny obraz** (U, wł./wył.): kamera jest do rysowania przesuwana do pełnego piksela, a reszta ruchu oddawana przesunięciem gotowego obrazu, więc nieruchome rzeczy nie migoczą przy jeździe (najlepiej widać na prostej)
+- **animacja postaci klatkami** (U: płynna / 12 / 8 klatek na sekundę): ludzie ruszają się jak rysowani klatka po klatce; rower, kamera i gra zostają płynne
+- poprawka: torba w rogu czyściła głębię obrazu i świat tracił przez to kontur; teraz torba jest rysowana pomniejszona tuż przy obiektywie, głębia zostaje
+- domy na zboczu: dom stoi na najwyższym punkcie terenu pod nim (głębszy kamienny cokół zakrywa szparę), a wszystko na działce (auta, krzaki, huśtawki, kosze, krzesła z siedzącymi, tylny płot) stoi na gruncie tam, gdzie jest; auto przed garażem nie jest już zakopane
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

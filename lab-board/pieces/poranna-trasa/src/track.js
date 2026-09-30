@@ -161,11 +161,22 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const hedgeM = toon('#3f6b35', { map: (() => { const t = tex.leaves().clone(); t.repeat.set(5, 1.2); t.needsUpdate = true; return t; })() });
   const seats = [];                                                   // (chairs and loungers in the front gardens, for the people who sit out)
   const mailboxes = [], lots = [], CARS = createCars({ THREE, toon }), P = createProps({ THREE, toon, tex });
+  // the ground's height at a point off the road (the station nearest along the road, the distance across it), as the ground is made
+  function groundAt(x, z, i0) { let best = i0, bd = 1e9; for (let k = -70; k <= 70; k++) { const j = ((i0 + k) % N + N) % N, s = S[j], a = Math.abs((x - s.p.x) * s.f.x + (z - s.p.z) * s.f.z); if (a < bd) { bd = a; best = j; } }
+    const s = S[best], d = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z; return s.p.y + hAt(d, best); }
+  // a lot on a slope: the house up to the highest ground under it (a deeper plinth hides the gap on the low side), and each thing on
+  // the lot (a car, a bush, a swing, a bin, a chair, the fence at the back) set down on the ground where it stands, not buried, not hanging
+  function settle(h, i, W, D) { h.updateMatrixWorld(true); const v = new THREE.Vector3();
+    let top = -1e9; for (const [x, z] of [[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2], [0, 0]]) { h.localToWorld(v.set(x, 0, z)); top = Math.max(top, groundAt(v.x, v.z, i)); }
+    h.position.y = top; h.updateMatrixWorld(true);
+    for (const c of h.children) { if (!(c.isGroup || (c.isMesh && c.geometry.type === 'IcosahedronGeometry'))) continue;
+      c.getWorldPosition(v); c.userData.dy = groundAt(v.x, v.z, i) - top; c.position.y += c.userData.dy; }
+    for (const q of seats) if (q.h === h && q.chair) q.local.y += q.chair.userData.dy || 0; }
   function house(i, side) {                                          // side +1 right, -1 left; its front towards the road
     const h = new THREE.Group(), W = 8 + rnd() * 3, D = 7 + rnd() * 2, H = 2.9 + rnd() * .6, wallC = WALLS[rnd() * WALLS.length | 0], roof = ROOFS[rnd() * ROOFS.length | 0];
     const two = rnd() < .35, HH = two ? H * 1.9 : H, wall = wallM(wallC, W, HH);
     h.add(box(W, HH, D, wall, 0, HH / 2, 0));
-    h.add(box(W + .14, .36, D + .14, stoneM, 0, .18, 0));                                                   // the foundation
+    h.add(box(W + .14, .36, D + .14, stoneM, 0, .18, 0)); h.add(box(W + .1, 1.4, D + .1, stoneM, 0, -.7, 0));   // the foundation (and under it, for a lot on a slope)
     for (const x of [-W / 2, W / 2]) for (const z of [-D / 2, D / 2]) h.add(box(.18, HH, .18, trimM, x, HH / 2, z));   // corner boards
     if (two) h.add(box(W + .06, .12, D + .06, trimM, 0, H, 0));                                                // a band between the floors
     const tri = new THREE.Shape(); tri.moveTo(-D / 2 - .4, 0); tri.lineTo(D / 2 + .4, 0); tri.lineTo(0, 2.2); tri.closePath();
@@ -241,8 +252,9 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       if (lounger) { c.add(box(.62, .06, 1.7, cloth, 0, .3, .05)); const bk = box(.62, .06, .8, cloth, 0, .62, -.72); bk.rotation.x = -1.0; c.add(bk); for (const x of [-.3, .3]) for (const z of [-.7, .75]) c.add(box(.04, .3, .04, wd, x, .15, z)); }
       else { c.add(box(.5, .05, .48, wd, 0, .45, 0)); c.add(box(.5, .5, .05, wd, 0, .72, -.24)); for (const x of [-.22, .22]) for (const z of [-.2, .2]) c.add(box(.04, .45, .04, wd, x, .22, z)); for (const x of [-.26, .26]) c.add(box(.04, .04, .45, wd, x, .62, 0)); }
       c.position.set(sx, 0, sz); c.rotation.y = Math.PI; h.add(c);                                   // (the seat faces the road: -z here)
-      seats.push({ h, local: new THREE.Vector3(sx, lounger ? .06 : 0, sz + (lounger ? .15 : .02)), lounger, i }); hit(h, { hx: .4, hz: lounger ? .9 : .35, h: .8, kind: 'hard' }, i, sx, sz); }
+      seats.push({ h, chair: c, local: new THREE.Vector3(sx, lounger ? .06 : 0, sz + (lounger ? .15 : .02)), lounger, i }); hit(h, { hx: .4, hz: lounger ? .9 : .35, h: .8, kind: 'hard' }, i, sx, sz); }
     const nrm = new THREE.Vector3(0, 0, -1).transformDirection(h.matrixWorld);
+    settle(h, i, W + (annex ? 3.5 : 0), D);
     show.house.push({ o: h, label: [two ? 'piętrowy' : 'parterowy', garage ? 'z garażem' : annex ? 'z dobudówką' : ''].filter(Boolean).join(', '), note: `${W.toFixed(1)} × ${D.toFixed(1)} m`, kind: (two ? 2 : 1) + (garage ? 'g' : annex ? 'a' : '') });
     for (const [x, y] of wins) windows.push({ p: h.localToWorld(new THREE.Vector3(x, y, fz - .07)), n: nrm.clone(), hw: .56, hh: .5, broken: false, i, house: doors.length });   // (house: its door's number)
     doors.push({ p: h.localToWorld(new THREE.Vector3(dx, 0, fz - 2.6)), n: nrm.clone(), done: false, i });   // (n: the way the house faces)

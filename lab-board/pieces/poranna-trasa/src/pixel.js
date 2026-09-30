@@ -29,11 +29,11 @@ export function createPixel({ THREE, renderer, height = 240 }) {
   const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(4, 4) });
   const pal = PALETTE.map(h => new THREE.Color(h));                    // (as written: sRGB)
   const mat = new THREE.ShaderMaterial({
-    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(4, 4) }, near: { value: .1 }, far: { value: 500 },
+    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(4, 4) }, shift: { value: new THREE.Vector2() }, crease: { value: 0 }, cThr: { value: .012 }, near: { value: .1 }, far: { value: 500 },
       pal: { value: pal.map(c => new THREE.Vector3(c.r, c.g, c.b)) }, dither: { value: .02 }, skyDither: { value: .07 }, outline: { value: .85 }, oInk: { value: 0 }, oThr: { value: .12 }, oWide: { value: 0 }, aber: { value: 0 }, ss: { value: 1 }, palOn: { value: 1 }, hue: { value: 1 }, palMix: { value: 1 }, levels: { value: 0 }, sat: { value: 1 }, contrast: { value: 1 }, vig: { value: 0 }, hurt: { value: 0 }, crt: { value: 0 }, exposure: { value: 1.0 }, on: { value: 1 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
     fragmentShader: `
-      uniform sampler2D tColor, tDepth; uniform vec2 res; uniform float near, far, dither, skyDither, outline, oInk, oThr, oWide, aber, ss, palOn, hue, palMix, levels, sat, contrast, vig, hurt, crt, exposure, on; uniform vec3 pal[${PALETTE.length}];
+      uniform sampler2D tColor, tDepth; uniform vec2 res, shift; uniform float crease, cThr; uniform float near, far, dither, skyDither, outline, oInk, oThr, oWide, aber, ss, palOn, hue, palMix, levels, sat, contrast, vig, hurt, crt, exposure, on; uniform vec3 pal[${PALETTE.length}];
       varying vec2 vUv;
       float lin(float d){ float z = d * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
       vec3 aces(vec3 x){ return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
@@ -48,7 +48,7 @@ export function createPixel({ THREE, renderer, height = 240 }) {
         if (b < v) o = mix(o, vec3(.557, .18, .145), .85); if (b < v * v * .9) o = vec3(.369, .11, .09); return o; }
       void main(){
         vec2 q = vUv - .5, qa = q * vec2(res.x / res.y, 1.);
-        vec2 uvD = .5 + q * (1. + aber * .07 * dot(qa, qa));                // speed: a lens, the picture bulging a touch (still in whole pixels)
+        vec2 uvD = .5 + q * (1. + aber * .07 * dot(qa, qa)) + shift / res;   // (shift: the part of a pixel the camera was snapped by, given back smoothly)                // speed: a lens, the picture bulging a touch (still in whole pixels)
         vec2 px = floor(uvD * res), uv = (px + .5) / res;
         vec3 c = vec3(0.);                                                  // smoothing: the pixel as the average of a bigger picture's ss x ss block
         if (ss <= 3.) { for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) { if (float(i) >= ss || float(j) >= ss) continue; c += texture2D(tColor, (px * ss + vec2(float(i), float(j)) + .5) / (res * ss)).rgb; } c /= ss * ss; }
@@ -69,6 +69,14 @@ export function createPixel({ THREE, renderer, height = 240 }) {
           float n = lin(texture2D(tDepth, (px + o + .5) / res).r); e = max(e, (d - n) / d); }
         vec3 ink = mix(c * .3 + vec3(.1, .06, .12), vec3(.075, .07, .08), oInk);   // (a dark warm violet, or ink black)
         if (e > oThr && d < 120.) c = mix(c, ink, outline * smoothstep(oThr, oThr + .18, e));
+        // the lines inside a thing: where two faces meet, found from the depth alone (1/depth is flat across a flat face, so where its
+        // second difference is not nothing, the surface bends): a bend towards you (a ridge, a kerb's edge, a roof's) gets a lit pixel,
+        // a bend away (a wall meeting a roof, a corner inside) a dark one
+        else if (crease > .01 && d < 70.) { float wc = 1. / d, wl = 1. / lin(texture2D(tDepth, (px + vec2(-1., 0.) + .5) / res).r), wr = 1. / lin(texture2D(tDepth, (px + vec2(1., 0.) + .5) / res).r),
+            wu = 1. / lin(texture2D(tDepth, (px + vec2(0., 1.) + .5) / res).r), wd = 1. / lin(texture2D(tDepth, (px + vec2(0., -1.) + .5) / res).r);
+          float lap = max(abs(wl + wr - 2. * wc), abs(wu + wd - 2. * wc)) / wc * sign(wl + wr + wu + wd - 4. * wc), jump = max(max(abs(wl - wc), abs(wr - wc)), max(abs(wu - wc), abs(wd - wc))) / wc;
+          if (jump < .2) { if (lap < -cThr) c = mix(c, c * 1.3 + vec3(.07, .06, .03), crease * smoothstep(cThr, cThr * 2.5, -lap));
+            else if (lap > cThr) c = mix(c, ink, crease * .55 * smoothstep(cThr, cThr * 2.5, lap)); } }
         if (aber > .01) { float v = smoothstep(.3, .9, length((uv - .5) * vec2(res.x / res.y, 1.))) * aber; if (bayer(px) < v * 1.15) c = c * .42 + vec3(.02, .01, .05); }   // tunnel vision: the edges closing in, in a dither
         c = (c - .5) * contrast + .5; { float L = dot(c, vec3(.3, .59, .11)); c = mix(vec3(L), c, sat); }   // contrast, saturation
         if (vig > .01) { float v = smoothstep(.5, 1.25, length((uv - .5) * vec2(res.x / res.y, 1.)) * 1.5) * vig; if (bayer(px) < v) c = c * .62 + vec3(.01, .0, .03); }   // a vignette, dithered
@@ -91,13 +99,22 @@ export function createPixel({ THREE, renderer, height = 240 }) {
     rt.setSize(W * ss, H * ss); rt.depthTexture.image.width = W * ss; rt.depthTexture.image.height = H * ss; mat.uniforms.res.value.set(W, H);
     return { W, H, k };
   }
-  function render(scene, camera, over) {                              // (over: { scene, camera } drawn on top of the world, its depth cleared first: the bag in the corner)
+  // the snap: the camera moved, for the drawing, to the nearest whole pixel (as seen at the distance of what it follows) in its own
+  // plane, so still things fall on the same pixels frame after frame and do not shimmer; the rest of the move, under a pixel, is given
+  // back by shifting the finished picture (shift), so it still glides
+  const snap = { on: false, tgt: new THREE.Vector3() }, _r = new THREE.Vector3(), _u = new THREE.Vector3(), _p = new THREE.Vector3();
+  function render(scene, camera, over) {                              // (over: { scene, camera } drawn over the world into the same picture: the bag in the corner)
     mat.uniforms.near.value = camera.near; mat.uniforms.far.value = camera.far;
+    let moved = false; mat.uniforms.shift.value.set(0, 0);
+    if (snap.on && camera.isPerspectiveCamera) { camera.updateMatrixWorld(); _p.copy(camera.position); _r.setFromMatrixColumn(camera.matrixWorld, 0); _u.setFromMatrixColumn(camera.matrixWorld, 1);
+      const D = Math.max(1, camera.position.distanceTo(snap.tgt)), ps = 2 * D * Math.tan(camera.fov * Math.PI / 360) / H, cx = _p.dot(_r) / ps, cy = _p.dot(_u) / ps, fx = cx - Math.round(cx), fy = cy - Math.round(cy);
+      camera.position.addScaledVector(_r, -fx * ps).addScaledVector(_u, -fy * ps); camera.updateMatrixWorld(); mat.uniforms.shift.value.set(fx, fy); moved = true; }
     renderer.setRenderTarget(rt); renderer.render(scene, camera);
-    if (over) { const ac = renderer.autoClear; renderer.autoClear = false; renderer.clearDepth(); over.camera.near = camera.near; over.camera.far = camera.far; renderer.render(over.scene, over.camera); renderer.autoClear = ac; }
+    if (moved) { camera.position.copy(_p); camera.updateMatrixWorld(); }
+    if (over) { const ac = renderer.autoClear; renderer.autoClear = false; over.camera.near = camera.near; over.camera.far = camera.far; renderer.render(over.scene, over.camera); renderer.autoClear = ac; }   // (the depth kept: the world's outline needs it; the bag is drawn small, right by the lens, so it is in front anyway)
     renderer.setRenderTarget(null); renderer.render(qs, qc);
   }
   let want = 1;
   function setSmooth(n) { want = Math.max(1, Math.min(10, n | 0)); resize(...lastArgs); }
-  return { resize, render, setSmooth, uniforms: mat.uniforms, get size() { return [W, H]; } };
+  return { snap, resize, render, setSmooth, uniforms: mat.uniforms, get size() { return [W, H]; } };
 }

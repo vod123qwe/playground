@@ -3,13 +3,13 @@
 
 const DEFAULT = 'miekki';
 export const PRESETS = {
-  miekki: { name: 'Miękki', note: 'jak z rysunku: wygładzone piksele, 4 tony, delikatny kontur', pix: 280, smooth: 3, ink: 1, toon: 4, palette: true, hue: .85, dither: .012, sky: .028, exposure: 1.04, pixel: true, rim: .55 , oStr: .7, oThr: .12, palMix: 1, levels: 0, sat: 1, contrast: 1, vig: 0, crt: 0 },
-  klasyczny: { name: 'Klasyczny', note: 'ostre piksele, 3 tony, fioletowy kontur', pix: 240, smooth: 1, ink: 1, toon: 3, palette: true, hue: 1, dither: .02, sky: .07, exposure: 1, pixel: true, rim: .3 , oStr: .85, oThr: .12, palMix: 1, levels: 0, sat: 1, contrast: 1, vig: 0, crt: 0 },
-  komiks: { name: 'Komiks', note: 'gruby czarny kontur, płaskie tony', pix: 320, smooth: 2, ink: 3, toon: 3, palette: true, hue: .6, dither: 0, sky: .04, exposure: 1.06, pixel: true, rim: .35 , oStr: 1, oThr: .07, palMix: 1, levels: 0, sat: 1.15, contrast: 1.08, vig: 0, crt: 0 },
-  retro: { name: 'Stary ekran', note: 'duże piksele, mniej kolorów, linie jak na kineskopie', pix: 180, smooth: 1, ink: 2, toon: 3, palette: true, hue: .9, dither: .025, sky: .08, exposure: 1.08, pixel: true, rim: .3, oStr: .9, oThr: .1, palMix: 1, levels: 6, sat: 1.1, contrast: 1.1, vig: .45, crt: .6 },
-  pastel: { name: 'Pastelowy poranek', note: 'miękko jak akwarela: bez twardej palety, jasno, ledwie kontur', pix: 240, smooth: 5, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: true, rim: .35, oStr: .35, oThr: .14, palMix: .55, levels: 0, sat: .82, contrast: .94, vig: 0, crt: 0 },
-  zlota: { name: 'Złota godzina', note: 'niskie ciepłe słońce: mocny połysk krawędzi, ciepło, cienki czarny kontur', pix: 260, smooth: 3, ink: 2, toon: 4, palette: true, hue: 1.3, dither: .01, sky: .03, exposure: 1.03, pixel: true, rim: .95, oStr: .6, oThr: .09, palMix: 1, levels: 0, sat: 1.12, contrast: 1.07, vig: 0, crt: 0 },
-  ostry: { name: 'Wysoka rozdzielczość', note: 'drobne piksele, cienki czarny kontur, dużo tonów', pix: 540, smooth: 2, ink: 2, toon: 5, palette: true, hue: .8, dither: .008, sky: .04, exposure: 1.02, pixel: true, rim: .5 , oStr: 1, oThr: .07, palMix: .85, levels: 0, sat: 1.05, contrast: 1.02, vig: 0, crt: 0 },
+  miekki: { name: 'Miękki', note: 'jak z rysunku: wygładzone piksele, 4 tony, delikatny kontur', pix: 280, smooth: 3, ink: 1, toon: 4, palette: true, hue: .85, dither: .012, sky: .028, exposure: 1.04, pixel: true, rim: .55 , oStr: .7, oThr: .12, palMix: 1, levels: 0, sat: 1, contrast: 1, vig: 0, crt: 0 , crease: .7 },
+  klasyczny: { name: 'Klasyczny', note: 'ostre piksele, 3 tony, fioletowy kontur', pix: 240, smooth: 1, ink: 1, toon: 3, palette: true, hue: 1, dither: .02, sky: .07, exposure: 1, pixel: true, rim: .3 , oStr: .85, oThr: .12, palMix: 1, levels: 0, sat: 1, contrast: 1, vig: 0, crt: 0 , crease: .7 },
+  komiks: { name: 'Komiks', note: 'gruby czarny kontur, płaskie tony', pix: 320, smooth: 2, ink: 3, toon: 3, palette: true, hue: .6, dither: 0, sky: .04, exposure: 1.06, pixel: true, rim: .35 , oStr: 1, oThr: .07, palMix: 1, levels: 0, sat: 1.15, contrast: 1.08, vig: 0, crt: 0 , crease: .7 },
+  retro: { name: 'Stary ekran', note: 'duże piksele, mniej kolorów, linie jak na kineskopie', pix: 180, smooth: 1, ink: 2, toon: 3, palette: true, hue: .9, dither: .025, sky: .08, exposure: 1.08, pixel: true, rim: .3, oStr: .9, oThr: .1, palMix: 1, levels: 6, sat: 1.1, contrast: 1.1, vig: .45, crt: .6 , crease: .7 },
+  pastel: { name: 'Pastelowy poranek', note: 'miękko jak akwarela: bez twardej palety, jasno, ledwie kontur', pix: 240, smooth: 5, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: true, rim: .35, oStr: .35, oThr: .14, palMix: .55, levels: 0, sat: .82, contrast: .94, vig: 0, crt: 0 , crease: .7 },
+  zlota: { name: 'Złota godzina', note: 'niskie ciepłe słońce: mocny połysk krawędzi, ciepło, cienki czarny kontur', pix: 260, smooth: 3, ink: 2, toon: 4, palette: true, hue: 1.3, dither: .01, sky: .03, exposure: 1.03, pixel: true, rim: .95, oStr: .6, oThr: .09, palMix: 1, levels: 0, sat: 1.12, contrast: 1.07, vig: 0, crt: 0 , crease: .7 },
+  ostry: { name: 'Wysoka rozdzielczość', note: 'drobne piksele, cienki czarny kontur, dużo tonów', pix: 540, smooth: 2, ink: 2, toon: 5, palette: true, hue: .8, dither: .008, sky: .04, exposure: 1.02, pixel: true, rim: .5 , oStr: 1, oThr: .07, palMix: .85, levels: 0, sat: 1.05, contrast: 1.02, vig: 0, crt: 0 , crease: .7 },
 };
 // the four in the game's own menu (Esc), and the few settings each of them offers there: [label, key, min, max, step]
 export const MENU_STYLES = ['retro', 'miekki', 'pastel', 'zlota'];
@@ -85,6 +85,10 @@ export function createSettings({ apply }) {
     ${range('Ciepłe światła, chłodne cienie', 'hue', 0, 1.5, .05, 'pct')}
     ${range('Połysk krawędzi od słońca', 'rim', 0, 1.2, .05, 'pct')}
     ${range('Jasność', 'exposure', .7, 1.4, .02, 'pct')}
+    <h3 class="sec">Pixel art: nowe</h3>
+    ${seg('Stabilny obraz (piksele nie pływają przy jeździe)', 'snap', [['false', 'wył.'], ['true', 'wł.']])}
+    ${range('Linie w środku rzeczy i jasne krawędzie', 'crease', 0, 1, .05, 'pct')}
+    ${seg('Animacja postaci', 'stepAnim', [['0', 'płynna'], ['12', '12 klatek/s'], ['8', '8 klatek/s']])}
     <h3 class="sec">Dithering i efekty</h3>
     ${range('Dithering na przedmiotach', 'dither', 0, .06, .002, 'dither')}
     ${range('Dithering na niebie', 'sky', 0, .14, .005, 'dither')}
