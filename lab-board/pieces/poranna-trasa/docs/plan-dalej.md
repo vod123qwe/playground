@@ -127,6 +127,21 @@ Wspólny szkielet: zapowiedź z daleka (dźwięk, znak, ludzie się oglądają),
 - byk / dzik na osiedlu
 - bocian niesie coś ciężkiego nad drogą i to upuszcza
 
+## 3f. Kradzież rowerów i dzieciaki na hulajnogach (burza mózgów)
+
+**Kradzież roweru: po co?**
+- **Ratunek:** twój rower się rozwalił albo ci go ukradli (napad, gang), a do sklepu daleko. Zrzucasz kogoś i jedziesz dalej na jego rowerze.
+- **Inny rower, inna jazda:** damka z koszykiem (wolna, stabilna, mieści więcej gazet), góral (skoki, trawa), kolarzówka (szybka, krucha, źle na krawężnikach), składak, rower dziecięcy (śmiesznie mały, bardzo wolny), rower z przyczepką. Zanim kupisz część w sklepie, sprawdzasz, jak to jeździ.
+- **Szybka kasa:** skradziony rower sprzedajesz w skupie albo u chłopaków z baraków (mało, ale od ręki).
+- **Koszty:** właściciel zgłasza kradzież (obława +1), rower jest „znany” w tej dzielnicy (policja zatrzymuje, gdy cię z nim zobaczy), właściciel może cię gonić ze szwagrem; twój rower zostaje tam, gdzie go porzuciłeś (można wrócić, ale w międzyczasie ktoś go może zabrać).
+- **Humor:** okradziony mówi „TO ROWER PO DZIADKU!”, damka ma dzwonek, który sam dzwoni, rower dziecięcy ma frędzle.
+
+**Dzieciaki na elektrycznych hulajnogach**
+- Jeżdżą grupkami, szybko i bez ładu, środkiem jezdni i chodnikiem, zajeżdżają drogę, trąbią, nagrywają cię telefonem.
+- **Wkurzają:** wyprzedzają i hamują przed tobą, rzucają tekstami („OK BOOMER”, „ROWER? W TYCH CZASACH?”), zabierają gazetę spod drzwi, zanim wróci prenumerator.
+- **Co możesz:** zrzucić (upadają z hulajnogą, obława +1, rodzice w oknie), prześcignąć (za sprint o kasę jak z kolarzami), ukraść hulajnogę (szybka, ale bateria się kończy i nie da się z niej rzucać gazetami).
+- **Porzucone hulajnogi** leżą w poprzek chodnika jako przeszkoda.
+
 ## 4. Progresja (żeby chciało się wracać)
 
 **Propozycja: dni pracy (rekomendacja).**

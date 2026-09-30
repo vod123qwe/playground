@@ -664,15 +664,25 @@ function stepPeople(dt, inp, me) {
     else hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
   for (const p of peds.list) p.talkT = Math.max(0, (p.talkT || 0) - dt);
   const k = inp.atkL || (inp.lmb && Math.random() < .5) ? 'jab' : inp.atkR || inp.lmb ? 'cross' : null;
-  if (k && foot.swing(k)) pendingHit = { t: k === 'jab' ? .15 : .22, p: pedNear(me, 1.35) };
+  if (k && foot.swing(k)) pendingHit = { t: k === 'jab' ? .15 : .22, p: pedNear(me, 1.35), b: bikeNear(me, 2.2) };
+  if (pendingHit && !pendingHit.p && pendingHit.b) { pendingBike = { t: pendingHit.t, b: pendingHit.b }; pendingHit = null; }
   if (pendingHit && (pendingHit.t -= dt) <= 0) { const p = pendingHit.p; pendingHit = null;
     if (p && Math.hypot(p.x - me.x, p.z - me.z) < 1.5) { const key = p.P.key, at = p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)); hud.impact(at, 'ŁUP!'); shake = Math.max(shake, .15); p.stun = .7; p.faceT = 1.2;
       B.points = Math.max(0, B.points - 2); hud.pop(at.clone().add(new THREE.Vector3(0, .4, 0)), 'BRZYDKO! -2', '#cf5a3e');
       if (TOUGH.includes(key) && Math.random() < .6 && !foot.chasing) { hud.rant(mouthOf(p), pickOf(SZWAGIER)); p.flee = 3; p.fleeNew = true;   // (he goes for his brother-in-law: out of a house one comes)
         const q = track.probe(me.x, me.z, me.hint), S = track.S[(q.i + (Math.random() < .5 ? 14 : -14) + track.N) % track.N], sd = q.d >= 0 ? 1 : -1, at2 = new THREE.Vector3(S.p.x + S.r.x * sd * 12, S.p.y, S.p.z + S.r.z * sd * 12);
         setTimeout(() => foot.grudgeAt(at2, pickOf(SZWAGIER_COMES)), 2200); }
-      else { hud.rant(mouthOf(p), pickOf(HIT_PED[key] || HIT_ANY)); p.flee = 4.5; p.fleeNew = true; } } }
+      else { hud.rant(mouthOf(p), pickOf(HIT_PED[key] || HIT_ANY)); p.flee = 4.5; p.fleeNew = true; } }
+  }
+  // a cyclist going by, punched: off his bike he goes (and, as after a kick, often gets up for a fight)
+  if (pendingBike && (pendingBike.t -= dt) <= 0) { const b = pendingBike.b; pendingBike = null; const bp = b && b.r.root.position;
+    if (bp && Math.hypot(bp.x - me.x, bp.z - me.z) < 2.4 && !(b.ghostUntil > performance.now())) { const ax = bp.x - me.x, az = bp.z - me.z, al = Math.hypot(ax, az) || 1;
+      hud.impact(bp.clone().setY(bp.y + 1.4), 'ŁUP!'); shake = Math.max(shake, .2); traffic.knock(b, new THREE.Vector3(ax / al * 3, 0, az / al * 3), true); b.ghostUntil = performance.now() + 7000;
+      if (Math.random() < .8) foot.grudge(b); else hud.rant(bp.clone().setY(bp.y + 1.8), pickOf(['MÓJ ROWER!', 'ZA CO?!', 'WARIAT!', 'JA TYLKO PO BUŁKI!'])); } }
 }
+// the cyclist nearest him on foot, going by (for a punch)
+function bikeNear(me, r) { let best = null, bd = r; for (const b of traffic.bikes) { const p = b.r && b.r.root.position; if (!p || !b.on || b.fall) continue; const d = Math.hypot(p.x - me.x, p.z - me.z); if (d < bd) { bd = d; best = b; } } return best; }
+let pendingBike = null;
 function stepCarsVsWalker(me) {
   if (foot.down) return;
   for (const bx of traffic.boxes()) { const t = bx.t; if (!t.car || t.v < 2.2) continue; if (!boxHit(bx, me.x, me.z, .3)) continue;
