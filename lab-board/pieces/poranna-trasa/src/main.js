@@ -345,7 +345,7 @@ function rampAt(x, z) {                                              // how high
 
 // ---------- the ride ----------
 function crash(side, push, robbed) {                                 // push: what hit him (a car's velocity), if anything; robbed: the old woman got him
-  if (B.crash) return; B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; flash('Wywrotka!');
+  if (B.crash) return; B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
   // he comes off: a ragdoll, flung on the way he was going (over the bars), a little to the side he falls, and with whatever hit him
   const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)), vel = f.clone().multiplyScalar(B.v * .55).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), B.crash.side * .5);
   if (push) vel.addScaledVector(push, .45); vel.y += B.air ? B.vy : 0;
@@ -587,7 +587,7 @@ function follow(dt) {
     if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
     CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov; camera.updateProjectionMatrix();
     sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return; }
-  const ch = aim.on ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
+  const ch = aim.on && B.charge ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
   const [bk, upU] = userCam(back, CP.up), cy = C.yaw + camUser.yaw, want = new THREE.Vector3(B.x - Math.sin(cy) * bk - Math.cos(cy) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(cy) * bk + Math.sin(cy) * aside);   // (cy: turned round him as he set it)   // (far and high enough to see the houses, and a window go)
   const look = new THREE.Vector3(B.x + Math.sin(B.yaw) * CP.ahead - Math.cos(B.yaw) * mlook.x * 2.6, C.gy + CP.lookUp - mlook.y * 1.2, B.z + Math.cos(B.yaw) * CP.ahead + Math.sin(B.yaw) * mlook.x * 2.6);   // (the mouse turns it a little)
   if (tw > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(throwCam.at, .5), .2 * tw);
