@@ -84,6 +84,12 @@ Zasada: napad się opłaca od razu (drobne, fanty), ale kosztuje później. Każ
 - **Świadkowie i kamera:** monitoring na parkingu albo przy sklepie; zakapturzenie (kupiony kaptur) zmniejsza obławę.
 - **Dla ostrzejszego humoru:** okradziony mówi coś zaskakującego („NARESZCIE KTOŚ MNIE ZAUWAŻYŁ”, „WEŹ TEŻ TEŚCIOWĄ”), a czasem to on okrada ciebie.
 
+## 3d. Z klasyki gatunku (inspiracja, bez kopiowania nazw ani grafik)
+
+- **Akcje ratunkowe:** wózek z dzieckiem toczy się z górki (dogonić i zatrzymać), złodziej ucieka z torebką (trafić gazetą). Nagroda: renoma, napiwki, a przy obławie mniej gwiazdek. Równowaga dla napadów z 3c.
+- **Wyzwanie przy sklepie na trasie:** krótki tor za warsztatem rowerowym: skocznie, tarcze do trafiania gazetą, limit czasu; nagroda w kasie albo zniżka na części.
+- **Nagłówek na koniec runu:** podsumowanie runu jako pierwsza strona gazety, którą sam roznosisz, z nagłówkiem zależnym od tego, jak się skończył („GAZECIARZ POBITY PRZEZ BABKĘ Z PARASOLKĄ”, „TRZECI MANDAT: KONIEC KARIERY”, „REKORD: 4,2 KM BEZ WYWROTKI”) i zdjęciem z ostatniej chwili (zrzut klatki w pikselach).
+
 ## 4. Progresja (żeby chciało się wracać)
 
 **Propozycja: dni pracy (rekomendacja).**
