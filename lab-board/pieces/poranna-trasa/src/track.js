@@ -15,7 +15,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createCars } from './cars.js';
 import { createProps } from './props.js';
 
-export function createTrack({ THREE, toon, tex }) {
+export function createTrack({ THREE, toon, tex, showcase = false }) {   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
   const G = new THREE.Group();
   // ---------- the line of the road ----------
   const ctrl = [[0, 0, 0], [0, 1, 60], [18, 3, 120], [60, 5, 160], [115, 4, 170], [160, 2, 150], [185, 0, 105], [180, -1, 50], [150, -2, 5], [150, -1, -45],
@@ -110,6 +110,7 @@ export function createTrack({ THREE, toon, tex }) {
   const colliders = [], BK = 16, NB = Math.ceil(N / BK), buckets = Array.from({ length: NB }, () => []), windows = [], doors = [];
   // places a tree must not grow in: a drive, a path, a porch (kept here, not in the colliders: nothing stops a bike there)
   const keepOut = [];
+  const show = { house: [], tree: [], shacks: [], farm: [] };   // (what was built, one by one: for the workshop)
   function zone(o, hx, hz, ox = 0, oz = 0) { const yaw = o.rotation.y, c = Math.cos(yaw), sn = Math.sin(yaw); keepOut.push({ x: o.position.x + ox * c + oz * sn, z: o.position.z - ox * sn + oz * c, c, s: sn, hx, hz }); }
   function free(i, d, r) {                                             // (nothing there: a house, a car, a fence, a drive, a porch)
     const p = at(i, d), over = C => { const dx = p.x - C.x, dz = p.z - C.z, lx = dx * C.c - dz * C.s, lz = dx * C.s + dz * C.c; return Math.abs(lx) < C.hx + r && Math.abs(lz) < C.hz + r; };
@@ -238,6 +239,7 @@ export function createTrack({ THREE, toon, tex }) {
       c.position.set(sx, 0, sz); c.rotation.y = Math.PI; h.add(c);                                   // (the seat faces the road: -z here)
       seats.push({ h, local: new THREE.Vector3(sx, lounger ? .06 : 0, sz + (lounger ? .15 : .02)), lounger, i }); hit(h, { hx: .4, hz: lounger ? .9 : .35, h: .8, kind: 'hard' }, i, sx, sz); }
     const nrm = new THREE.Vector3(0, 0, -1).transformDirection(h.matrixWorld);
+    show.house.push({ o: h, label: [two ? 'piętrowy' : 'parterowy', garage ? 'z garażem' : annex ? 'z dobudówką' : ''].filter(Boolean).join(', '), note: `${W.toFixed(1)} × ${D.toFixed(1)} m`, kind: (two ? 2 : 1) + (garage ? 'g' : annex ? 'a' : '') });
     for (const [x, y] of wins) windows.push({ p: h.localToWorld(new THREE.Vector3(x, y, fz - .07)), n: nrm.clone(), hw: .56, hh: .5, broken: false, i, house: doors.length });   // (house: its door's number)
     doors.push({ p: h.localToWorld(new THREE.Vector3(dx, 0, fz - 2.6)), n: nrm.clone(), done: false, i });   // (n: the way the house faces)
     lots.push({ i, side, D, W, gap });
@@ -325,6 +327,7 @@ export function createTrack({ THREE, toon, tex }) {
     const t = new THREE.Group(), H = 2.6 + rnd() * 2.4, autumn = rnd() < .3, a = rnd() * 6.28;
     grow(t, H, { x: Math.cos(a), z: Math.sin(a) }, 1.7 + rnd() * .9 + H * .1, autumn ? autumnPal() : greenPal(), false);
     put(t, i, d, 0, rnd() * 6); hit(t, { hx: .28, hz: .28, h: H, kind: 'hard' }, i);
+    show.tree.push({ o: t, label: autumn ? 'drzewo jesienne' : 'drzewo liściaste', note: H.toFixed(1) + ' m' });
   }
   function pole(i) { const p = new THREE.Group(); p.add(box(.22, 8.5, .22, wood, 0, 4.25, 0)); p.add(box(1.8, .12, .12, wood, 0, 7.9, 0)); p.add(box(1.2, .1, .1, wood, 0, 7.3, 0)); put(p, i, -(VERGE - .6), 0, 0); hit(p, { hx: .14, hz: .14, h: 8, kind: 'hard' }, i); return p; }
   // ---------- the shacks: a plot of them now and then in place of a house: sheds of tin and boards, a fire in a drum, an old sofa,
@@ -353,7 +356,7 @@ export function createTrack({ THREE, toon, tex }) {
     { const fb = box(1.2, .9, .04, toon('#6b4a2e'), 1.2, .08, -5.2); fb.rotation.x = -1.45; h.add(fb); }
     put(h, i, side * (PAVE + 7), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true); zone(h, 7.5, 6, 0, 1);
     for (const [x, len] of [[-5, 4], [4.8, 4.4]]) hit(h, { hx: len / 2, hz: .08, h: 1.4, kind: 'hard' }, i, x, -5.4);
-    fires.push({ drum, flame, core });
+    fires.push({ drum, flame, core }); show.shacks.push({ o: h, label: 'baraki', note: '15 × 12 m' });
     // the lads, standing round the fire on its far side (their faces to the road), facing it
     for (let k = 0; k < 3; k++) { const a = -1.2 + k * 1.2, x = .5 + Math.sin(a) * 1.25, z = -1.2 + Math.cos(a) * 1.3; seats.push({ h, local: new THREE.Vector3(x, 0, z), stand: true, key: ['teen', 'brawler', 'dogman', 'gardener'][(rnd() * 4) | 0], face: Math.atan2(.5 - x, -1.2 - z), lines: 'shacks', i }); }
   }
@@ -417,7 +420,7 @@ export function createTrack({ THREE, toon, tex }) {
   for (let i = 0; i < N; i += Math.round((11 + rnd() * 10) / ds)) { const sd = rnd() < .5 ? -1 : 1, t = new THREE.Group(), H = 7 + rnd() * 6;
     const tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .22, H * .3, 6), wood); tr.position.y = H * .15; t.add(tr);
     for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry((1.9 - k * .38) * (H / 10), H * .34, 8), spruceM); c.position.y = H * (.3 + k * .19); t.add(c); }
-    put(t, i, sd * (PAVE + 22 + rnd() * 10), 0, rnd() * 6); if (rnd() < .4) tree(i + 9, sd * (PAVE + 19 + rnd() * 6)); }
+    show.tree.push({ o: t, label: 'świerk', note: H.toFixed(1) + ' m' }); put(t, i, sd * (PAVE + 22 + rnd() * 10), 0, rnd() * 6); if (rnd() < .4) tree(i + 9, sd * (PAVE + 19 + rnd() * 6)); }
   // ---------- between the houses: a side fence on the boundary, and what a garden has ----------
   for (let k = 0; k < lots.length; k++) { const a = lots[k], b = lots.slice(k + 1).find(o => o.side === a.side); if (!b || b.i - a.i > 70) continue;
     const mid = Math.round((a.i + b.i) / 2), sd = a.side, len = 14 + rnd() * 5, f = rnd() < .55 ? P.boardFence(len) : P.wireFence(len);
@@ -465,11 +468,12 @@ export function createTrack({ THREE, toon, tex }) {
       b.add(box(W, H, D, barnM, 0, H / 2, 0)); b.add(box(W * .2, H * .7, .1, white, 0, H * .35, -D / 2 - .03));
       const sh = new THREE.Shape(); sh.moveTo(-D / 2 - .3, 0); sh.lineTo(-D / 2 + .6, 1.6); sh.lineTo(0, 2.6); sh.lineTo(D / 2 - .6, 1.6); sh.lineTo(D / 2 + .3, 0); sh.closePath();   // (a gambrel roof)
       const rg = new THREE.ExtrudeGeometry(sh, { depth: W + .4, bevelEnabled: false }); rg.translate(0, 0, -(W + .4) / 2); const r = new THREE.Mesh(rg, barnRoof); r.rotation.y = Math.PI / 2; r.position.y = H; b.add(r);
+      show.farm.push({ o: b, label: 'stodoła', note: `${W.toFixed(1)} × ${D.toFixed(1)} m` });
       put(b, i, d, 0, (fr() - .5) * .6 + (d > 0 ? -Math.PI / 2 : Math.PI / 2)); }
     function farmhouse(i, d) { const h = new THREE.Group(), W = 8, D = 7, H = 5.4; h.add(box(W, H, D, farmWall, 0, H / 2, 0));
       const tri = new THREE.Shape(); tri.moveTo(-D / 2 - .4, 0); tri.lineTo(D / 2 + .4, 0); tri.lineTo(0, 2.6); tri.closePath(); const rg = new THREE.ExtrudeGeometry(tri, { depth: W + .6, bevelEnabled: false }); rg.translate(0, 0, -(W + .6) / 2);
       const r = new THREE.Mesh(rg, farmRoof); r.rotation.y = Math.PI / 2; r.position.y = H; h.add(r); for (const x of [-2.2, 0, 2.2]) for (const y of [1.5, 3.9]) h.add(box(1, 1, .08, WINS[0], x, y, -D / 2 - .04));
-      put(h, i, d, 0, (fr() - .5) * .4 + (d > 0 ? -Math.PI / 2 : Math.PI / 2)); }
+      put(h, i, d, 0, (fr() - .5) * .4 + (d > 0 ? -Math.PI / 2 : Math.PI / 2)); show.farm.push({ o: h, label: 'dom w gospodarstwie', note: '8 × 7 m' }); }
     // another estate out there: a street of its own running alongside, small houses both sides of it, a tree or two
     const asphaltM = toon('#4a4d52', { map: rep(tex.asphalt(), 1, 1) }), EST = ['#e8dcc0', '#b7c29a', '#a9bccb', '#d8b8a0', '#f0ece2', '#e3c77e'].map(c => toon(c, { map: rep(tex.siding(), 2, 1.5) }));
     const estRoof = ['#8e3b2c', '#5a5f66', '#6d4a3a'].map(c => toon(c, { map: tex.shingles() }));
@@ -503,12 +507,12 @@ export function createTrack({ THREE, toon, tex }) {
         if (h > 56) { const c = new THREE.Mesh(new THREE.ConeGeometry(1, 1, m.geometry.parameters.radialSegments), snowM); c.scale.set(w * .28, h * .28, w * .28); c.position.set(m.position.x, m.position.y + h * .36, m.position.z); c.rotation.y = m.rotation.y; G.add(c); } }
     } }
   // the crowns: every clump and every card of leaves, into one mesh each (the cards' shadows cut by their alpha)
-  { G.updateMatrixWorld(true); const by = new Map(), gone = [];
+  if (!showcase) { G.updateMatrixWorld(true); const by = new Map(), gone = [];
     G.traverse(o => { if (!o.isMesh || !o.userData.foliage) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(g); gone.push(o); });
     for (const o of gone) o.parent.remove(o);
     for (const [m, gs] of by) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = true; mm.receiveShadow = true; if (m === cardM) mm.customDepthMaterial = cardDepth; G.add(mm); } }
   // ---------- all the still things merged, material by material, into a few meshes (a mailbox stays itself: its flag moves) ----------
-  { G.updateMatrixWorld(true); const buckets = new Map(), gone = [];
+  if (!showcase) { G.updateMatrixWorld(true); const buckets = new Map(), gone = [];
     const kept = o => { for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return true; return false; };
     G.traverse(o => { if (!o.isMesh || Array.isArray(o.material) || o.material.vertexColors || o.material.transparent || kept(o)) return;   // (two materials on one mesh, a car's glasshouse: left as it is)
       let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
@@ -527,6 +531,6 @@ export function createTrack({ THREE, toon, tex }) {
     const cy = a.p.y + (b.p.y - a.p.y) * k, off = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z;
     return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
-  return { group: G, probe, S, N, ds, len, INNER, fires, annexes, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  return { group: G, probe, S, N, ds, len, INNER, fires, annexes, show, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

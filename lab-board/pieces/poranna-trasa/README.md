@@ -228,6 +228,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - komunikaty mówią teraz o złotówkach, nie o punktach
 - całość siedzi w prawym górnym rogu, bez półprzezroczystego tła: ikony i liczby mają własny ciemny obrys; ikona gazety to złożona gazeta (winieta, zdjęcie, szpalty); podpowiedź „H sterowanie · L pełny ekran” usunięta (sterowanie jest w menu i pod H)
 
+## Wersja 22: domy i drzewa w Warsztacie
+
+- nowe grupy w Warsztacie: **Domy** (po 3 z każdego rodzaju: parterowy, piętrowy, z garażem, z dobudówką), **Drzewa** (liściaste, jesienne, świerki) i **Baraki i gospodarstwa** (baraki, dom w gospodarstwie, stodoła)
+- Warsztat buduje w tym celu cały tor raz, bez scalania geometrii (tryb `showcase` w `createTrack`), i wyjmuje z niego pojedyncze budynki i drzewa; pierwsze otwarcie grupy trwa około 2 s
+- domy są obrócone frontem do kamery
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

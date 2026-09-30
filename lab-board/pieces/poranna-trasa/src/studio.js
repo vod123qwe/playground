@@ -11,6 +11,7 @@ import { createTextures } from './textures.js';
 import { createRider } from './rider.js';
 import { createDogs } from './dogs.js';
 import { makeBag } from './bag.js';
+import { createTrack } from './track.js';
 
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false }); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -41,9 +42,22 @@ const CATS = [
   { k: 'props', name: 'Rekwizyty', items: () => Object.keys(PROP_NAMES).map(k => ({ k, label: PROP_NAMES[k], note: k })) },
   { k: 'arena', name: 'Walka (test)', items: () => [['cherlak', 'cherlak', '70 HP'], ['kozak', 'kozak z osiedla', '100 HP'], ['szwagier', 'szwagier', '140 HP']].map(([k, label, note]) => ({ k, label, note })) },
   { k: 'bag', name: 'Torba', items: () => [{ k: 1, label: 'torba pełna', note: '20 gazet' }, { k: .5, label: 'torba w połowie', note: '10' }, { k: 0, label: 'torba pusta', note: '0' }] },
+  { k: 'houses', name: 'Domy', items: () => pieces('houses').map((x, k) => ({ k, label: x.label, note: x.note })) },
+  { k: 'trees', name: 'Drzewa', items: () => pieces('trees').map((x, k) => ({ k, label: x.label, note: x.note })) },
+  { k: 'lots', name: 'Baraki i gospodarstwa', items: () => pieces('lots').map((x, k) => ({ k, label: x.label, note: x.note })) },
   { k: 'ramps', name: 'Skocznie', items: () => [['plank', 'deskowa'], ['kicker', 'kicker (stroma)'], ['big', 'duża na ramie']].map(([k, label]) => ({ k, label, note: k })) }];
 let cat = CATS[0], item = null, colour = null;
 const $ = id => document.getElementById(id);
+
+// ---------- the world's buildings and trees: the track built once, nothing merged (showcase), and a few of each kind taken from it ----------
+let world = null; const got = {};
+function pieces(k) { if (got[k]) return got[k]; world = world || createTrack({ THREE, toon, tex, showcase: true }); const S = world.show;
+  const few = (arr, key, n) => { const seen = {}, out = []; for (const x of arr) { const c = seen[key(x)] = (seen[key(x)] || 0) + 1; if (c <= n) out.push(x); } return out; };
+  if (k === 'houses') got[k] = few(S.house, x => x.kind, 3).sort((a, b) => a.kind.localeCompare(b.kind));
+  if (k === 'trees') got[k] = few(S.tree, x => x.label, 4);
+  if (k === 'lots') got[k] = [...S.shacks.slice(0, 3), ...few(S.farm, x => x.label, 2)];
+  return got[k]; }
+const WORLD_DESC = { houses: 'Dom z ulicy: ściany z desek, dach dwuspadowy, okna (czasem okiennice, skrzynki z kwiatami), drzwi z lampą, czasem ganek, komin, garaż albo dobudówka z garażem; przed nim ogródek i auto na podjeździe (płot od ulicy stoi w grze osobno).', trees: 'Drzewa przy ulicy i za domami: korony z kęp i kart liści, jesienią rude; świerki za domami.', lots: 'Działka z barakami (blacha, deski, beczka z ogniem, graty) albo zabudowa gospodarstwa za miasteczkiem.' };
 
 // ---------- showing one ----------
 function clear() { for (const c of [...stand.children]) stand.remove(c); mixer = null; rider = null; $('extra').innerHTML = ''; }
@@ -83,6 +97,8 @@ async function show(it) {
     const ex = $('extra'); ex.innerHTML = `<h2>Test walki</h2><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" id="aGod" checked> nieśmiertelny</label><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" id="aTrain"> najpierw trening</label><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" id="aDbg" checked> podgląd faz</label><div class="row" style="margin-top:8px"><button id="aGo" type="button">otwórz arenę →</button></div><p class="hint">Gra od razu w bójce na łące; po każdej walce przychodzi następny. Esc: menu.</p>`;
     $('aGo').onclick = () => { const q = new URLSearchParams({ arena: it.k }); if ($('aGod').checked) q.set('god', ''); if ($('aTrain').checked) q.set('train', ''); if ($('aDbg').checked) q.set('debug', ''); location.href = 'index.html?' + q.toString().replace(/=(&|$)/g, '$1'); }; }
   if (cat.k === 'bag') { const b = makeBag({ THREE, toon }); b.setFill(it.k); b.group.position.y = .3; b.group.rotation.y = Math.PI / 2; place(b.group); frame(b.group, 'iso'); describe('torba z gazetami', 'Płócienna listonoszka: klapa z przeszyciem, dwa paski z klamrami, kieszeń, naszywka, kółka na pasek; gazety ubywają, gdy rzucasz.', b.group); }
+  if (cat.k === 'houses' || cat.k === 'trees' || cat.k === 'lots') { const x = pieces(cat.k)[it.k], o = x.o; o.position.set(0, 0, 0); o.rotation.set(0, cat.k === 'trees' ? 0 : Math.PI, 0);   // (its front, towards the street, to the camera)
+    place(o); frame(o); describe(x.label, WORLD_DESC[cat.k], o); }
   if (cat.k === 'ramps') { const o = props.ramp(Math.random, it.k); place(o.group); frame(o.group); describe('skocznia: ' + it.label, 'Wysokość krawędzi decyduje o locie.', o.group, [['krawędź', o.hit.h.toFixed(2) + ' m']]); }
   applyWire();
 }
