@@ -427,5 +427,5 @@ export async function buildLiving({ THREE, H, clip, renderer, base = 'assets/' }
   }
   setSofa('gala3');
   const drapeMeshes = () => [];                                     // (the drapes: rooms.js)
-  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes, seats, tv };
+  return { root, get foot() { return foot; }, setLamps, lamps, setSofa, setCurtains, FAC, drapeMeshes, seats, tv, dining: DT };
 }

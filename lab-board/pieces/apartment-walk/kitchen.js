@@ -351,12 +351,12 @@ export async function buildKitchen({ THREE, K, H, clip, renderer, base = 'assets
   };
   const decor = [
     model('ceramic_vase_02', 268, TOP, 24, 1, .4), model('ceramic_vase_01', 282, TOP, 15, .85, 1.2),
-    model('carved_wooden_plate', 12, TOP, -4, 1, .3, I),
+    model('carved_wooden_plate', 12, TOP, -4, 1, .3, I).then(g => { g.userData.islandBowl = true; return g; }),   // (the bowl and its limes: moved aside when a chess board comes on the island)
   ];
   { const r = rng(5);
     decor.push(gl.loadAsync(`${base}models/food_lime_01/food_lime_01.gltf`).then(({ scene: l }) => { clipIt(l);
       for (const [px_, pz_, py_] of [[-4, -3, .9], [3, -5, .9], [5, 2, .9], [-2, 4, .9], [0, -.5, 5.6], [-5, 1, 4.8], [3.5, -1.5, 5]]) {
-        const c = l.clone(); c.scale.setScalar(100); c.position.set(12 + px_, TOP + py_, -4 + pz_); c.rotation.set(r() * 3, r() * 6, r() * 3); I.add(c); } })); }
+        const c = l.clone(); c.scale.setScalar(100); c.position.set(12 + px_, TOP + py_, -4 + pz_); c.rotation.set(r() * 3, r() * 6, r() * 3); c.userData.islandBowl = true; I.add(c); } })); }
   await Promise.all(decor);
 
   // ---------- over the island, a Neona OLARA in walnut: two thin shallow discs 45 across on slender rods from an 80 cm ceiling bar, 69.5
