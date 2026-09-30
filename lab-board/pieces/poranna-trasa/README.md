@@ -265,6 +265,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - poprawka: torba w rogu czyściła głębię obrazu i świat tracił przez to kontur; teraz torba jest rysowana pomniejszona tuż przy obiektywie, głębia zostaje
 - domy na zboczu: dom stoi na najwyższym punkcie terenu pod nim (głębszy kamienny cokół zakrywa szparę), a wszystko na działce (auta, krzaki, huśtawki, kosze, krzesła z siedzącymi, tylny płot) stoi na gruncie tam, gdzie jest; auto przed garażem nie jest już zakopane
 
+## Poprawka: cios w rowerzystę
+
+- na nogach cios (LPM/PPM) trafia też przejeżdżającego rowerzystę: spada z roweru, a zwykle (80%) wstaje i przychodzi się bić, jak po kopniaku z roweru
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
