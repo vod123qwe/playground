@@ -10,15 +10,25 @@ export const PRESETS = {
   pastel: { name: 'Pastelowy poranek', note: 'miękko jak akwarela: bez twardej palety, jasno, ledwie kontur', pix: 240, smooth: 5, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: true, rim: .35, oStr: .35, oThr: .14, palMix: .55, levels: 0, sat: .82, contrast: .94, vig: 0, crt: 0 , crease: .7 },
   zlota: { name: 'Złota godzina', note: 'niskie ciepłe słońce: mocny połysk krawędzi, ciepło, cienki czarny kontur', pix: 260, smooth: 3, ink: 2, toon: 4, palette: true, hue: 1.3, dither: .01, sky: .03, exposure: 1.03, pixel: true, rim: .95, oStr: .6, oThr: .09, palMix: 1, levels: 0, sat: 1.12, contrast: 1.07, vig: 0, crt: 0 , crease: .7 },
   gladki: { name: 'Gładki', note: 'bez pikseli: gładko i miękko, pełne tony, kolory lekko przygaszone, ledwie kontur', pix: 280, smooth: 4, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: false, rim: .35, oStr: .1, oThr: .1, palMix: .9, levels: 2, sat: .82, contrast: .94, vig: 0, crt: 0, crease: .7 },
+  malowany: { name: 'Malowany', note: 'jak farbą: plamy koloru (filtr Kuwahary), faktura płótna, ciemniejszy pociągnięty kontur, lekko drżący', pix: 300, smooth: 2, ink: 1, toon: 5, palette: true, hue: .9, dither: 0, sky: .02, exposure: 1.06, pixel: true, rim: .5, oStr: .15, oThr: .12, palMix: .12, levels: 0, sat: 1.12, contrast: 1.06, vig: 0, crt: 0, crease: .3, mode: 1, wob: .45 },
+  komiks: { name: 'Komiks', note: 'gruby tusz, rastrowe kropki w cieniach, płaskie jasne kolory; kreska drży jak rysowana klatka po klatce', pix: 360, smooth: 2, ink: 3, toon: 3, palette: true, hue: .6, dither: 0, sky: .02, exposure: 1.08, pixel: true, rim: .3, oStr: 1, oThr: .07, palMix: .8, levels: 0, sat: 1.18, contrast: 1.1, vig: 0, crt: 0, crease: .8, mode: 2, wob: .8 },
+  akwarela: { name: 'Akwarela', note: 'papier, barwnik zebrany na brzegach plam, światła zostawione białe, miękko', pix: 320, smooth: 4, ink: 1, toon: 5, palette: true, hue: .7, dither: 0, sky: .02, exposure: 1.1, pixel: true, rim: .3, oStr: .1, oThr: .12, palMix: 0, levels: 0, sat: .9, contrast: .95, vig: 0, crt: 0, crease: .2, mode: 3, wob: .5 },
+  olowek: { name: 'Ołówek', note: 'szkic na papierze: kreskowanie wg cienia, grafitowe linie, ślad koloru', pix: 360, smooth: 2, ink: 1, toon: 4, palette: true, hue: .5, dither: 0, sky: .02, exposure: 1.05, pixel: true, rim: .2, oStr: .3, oThr: .1, palMix: 0, levels: 0, sat: 1, contrast: 1.1, vig: 0, crt: 0, crease: .6, mode: 4, wob: .6 },
+  riso: { name: 'Riso', note: 'druk risograficzny: różowa, niebieska i żółta farba w rastrach pod różnymi kątami, lekko nie w pasie', pix: 300, smooth: 2, ink: 1, toon: 4, palette: true, hue: .6, dither: 0, sky: .02, exposure: 1.08, pixel: true, rim: .3, oStr: .4, oThr: .1, palMix: 0, levels: 0, sat: 1.1, contrast: 1.12, vig: 0, crt: 0, crease: .4, mode: 5, wob: .25 },
+  bit1: { name: '1 bit', note: 'dwa kolory i porządny dithering, tusz na krawędziach', pix: 240, smooth: 2, ink: 1, toon: 4, palette: true, hue: .5, dither: 0, sky: .02, exposure: 1.05, pixel: true, rim: .3, oStr: .5, oThr: .1, palMix: 0, levels: 0, sat: 1, contrast: 1.15, vig: 0, crt: 0, crease: .5, mode: 6, wob: 0 },
   ostry: { name: 'Wysoka rozdzielczość', note: 'drobne piksele, cienki czarny kontur, dużo tonów', pix: 540, smooth: 2, ink: 2, toon: 5, palette: true, hue: .8, dither: .008, sky: .04, exposure: 1.02, pixel: true, rim: .5 , oStr: 1, oThr: .07, palMix: .85, levels: 0, sat: 1.05, contrast: 1.02, vig: 0, crt: 0 , crease: .7 },
 };
+for (const k in PRESETS) PRESETS[k] = { mode: 0, wob: 0, ...PRESETS[k] };   // (a style with no look laid over it says so: switching to it takes the last one off)
 // the four in the game's own menu (Esc), and the few settings each of them offers there: [label, key, min, max, step]
-export const MENU_STYLES = ['retro', 'miekki', 'pastel', 'zlota', 'gladki'];
+export const MENU_STYLES = ['retro', 'miekki', 'pastel', 'zlota', 'gladki', 'malowany', 'komiks', 'akwarela'];
 export const LIGHT = {
   retro: [['LINIE EKRANU', 'crt', 0, 1, .05], ['WINIETA', 'vig', 0, 1, .05], ['POZIOMY KOLORU', 'levels', 2, 16, 1]],
   miekki: [['KONTUR', 'oStr', 0, 1, .05], ['DITHERING', 'dither', 0, .04, .002], ['CIEPŁO ŚWIATŁA', 'hue', 0, 1.5, .05]],
   pastel: [['NASYCENIE', 'sat', .4, 1.4, .05], ['SIŁA PALETY', 'palMix', 0, 1, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02]],
   zlota: [['POŁYSK', 'rim', 0, 1.2, .05], ['CIEPŁO', 'hue', 0, 1.6, .05], ['KONTRAST', 'contrast', .8, 1.3, .02]],
+  malowany: [['DRŻENIE KRESKI', 'wob', 0, 1, .05], ['KONTUR', 'oStr', 0, 1, .05], ['NASYCENIE', 'sat', .4, 1.4, .05]],
+  komiks: [['DRŻENIE KRESKI', 'wob', 0, 1, .05], ['NASYCENIE', 'sat', .4, 1.4, .05], ['KONTRAST', 'contrast', .8, 1.3, .02]],
+  akwarela: [['DRŻENIE KRESKI', 'wob', 0, 1, .05], ['NASYCENIE', 'sat', .4, 1.4, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02]],
   gladki: [['NASYCENIE', 'sat', .4, 1.4, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02], ['KONTUR', 'oStr', 0, 1, .05]],
 };
 const KEY = 'poranna-trasa-styl', MINE = 'poranna-trasa-styl-moj';   // (now; and the one saved as your default)
@@ -89,6 +99,9 @@ export function createSettings({ apply }) {
     ${range('Ciepłe światła, chłodne cienie', 'hue', 0, 1.5, .05, 'pct')}
     ${range('Połysk krawędzi od słońca', 'rim', 0, 1.2, .05, 'pct')}
     ${range('Jasność', 'exposure', .7, 1.4, .02, 'pct')}
+    <h3 class="sec">Nakładka: styl rysunku</h3>
+    ${seg('Nakładka', 'mode', [['0', 'brak'], ['1', 'malowany'], ['2', 'komiks'], ['3', 'akwarela'], ['4', 'ołówek'], ['5', 'riso'], ['6', '1 bit']])}
+    ${range('Drżenie kreski', 'wob', 0, 1, .05, 'pct')}
     <h3 class="sec">Pixel art: nowe</h3>
     ${seg('Stabilny obraz (piksele nie pływają przy jeździe)', 'snap', [['false', 'wył.'], ['true', 'wł.']])}
     ${range('Linie w środku rzeczy i jasne krawędzie', 'crease', 0, 1, .05, 'pct')}

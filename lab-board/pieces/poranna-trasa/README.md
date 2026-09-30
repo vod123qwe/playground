@@ -361,6 +361,18 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - dach autobusu: ścięte krawędzie w kolorze lakieru, rynienki, żebra w poprzek, klimatyzator z dwoma wentylatorami i kratką, włazy z zawiasami, antena, skos nad przednią szybą
 - nowy gotowy styl **Gładki** (panel U i menu Esc): bez pikseli, gładko i miękko, pełne tony, przygaszone kolory, ledwie kontur
 
+## Wersja 38: nakładki stylu rysunku (eksperyment)
+
+- w panelu U nowa grupa **Nakładka: styl rysunku** (brak, malowany, komiks, akwarela, ołówek, riso, 1 bit) i suwak **Drżenie kreski** (rysunek przerysowany 8 razy na sekundę, kontury lekko się ruszają)
+- gotowe style z nakładkami (panel U, część też w menu Esc):
+  - **Malowany**: plamy farby (filtr Kuwahary na pikselach ekranu), faktura płótna, ciemniejszy kontur
+  - **Komiks**: gruby tusz, rastrowe kropki w cieniach, mocne kolory, drżąca kreska
+  - **Akwarela**: papier, miękki kolor, barwnik zebrany na brzegach plam i ziarnisty, białe światła
+  - **Ołówek**: szkic na papierze, kreskowanie według cienia (trzy kierunki), grafitowe linie
+  - **Riso**: różowa, niebieska i żółta farba w rastrach pod różnymi kątami, lekko przesunięte
+  - **1 bit**: dwa kolory i dithering, tusz na krawędziach
+- styl bez nakładki zdejmuje poprzednią (każdy gotowy styl mówi, że nakładki nie ma)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

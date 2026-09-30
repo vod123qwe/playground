@@ -86,7 +86,7 @@ Zasada: napad się opłaca od razu (drobne, fanty), ale kosztuje później. Każ
 
 ## 3d. Z klasyki gatunku (inspiracja, bez kopiowania nazw ani grafik)
 
-- **Akcje ratunkowe:** wózek z dzieckiem toczy się z górki (dogonić i zatrzymać), złodziej ucieka z torebką (trafić gazetą). Nagroda: renoma, napiwki, a przy obławie mniej gwiazdek. Równowaga dla napadów z 3c.
+- **Akcje ratunkowe:** wózek z dzieckiem toczy się z górki (dogonić i zatrzymać), złodziej ucieka z torebką (trafić gazetą albo dogonić i kopnąć z roweru; upada, rzuca łup, oddajesz go właścicielce: napiwek, renoma, czasem ciasto). Nagroda: renoma, napiwki, a przy obławie mniej gwiazdek. Równowaga dla napadów z 3c.
 - **Wyzwanie przy sklepie na trasie:** krótki tor za warsztatem rowerowym: skocznie, tarcze do trafiania gazetą, limit czasu; nagroda w kasie albo zniżka na części.
 - **Nagłówek na koniec runu:** podsumowanie runu jako pierwsza strona gazety, którą sam roznosisz, z nagłówkiem zależnym od tego, jak się skończył („GAZECIARZ POBITY PRZEZ BABKĘ Z PARASOLKĄ”, „TRZECI MANDAT: KONIEC KARIERY”, „REKORD: 4,2 KM BEZ WYWROTKI”) i zdjęciem z ostatniej chwili (zrzut klatki w pikselach).
 
