@@ -1,0 +1,211 @@
+# Poranna Trasa
+
+Gra w klimacie klasycznego roznosiciela gazet: rowerem przez przedmieście, widok zza pleców, gazety w lewo i w prawo do skrzynek.
+Własna nazwa i własne grafiki.
+
+## Uruchomienie
+
+```
+python serve.py        # (serwer bez pamięci podręcznej: zmiana widać po odświeżeniu)
+```
+
+i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otwartego wprost).
+
+## Sterowanie
+
+- klawiatura: W / ↑ pedałowanie, S / ↓ hamulec, A D / ← → skręt, Q / E rzut w lewo / w prawo
+- pad: lewa gałka skręt, RT (albo A) pedałowanie, LT (albo X) hamulec, LB / RB rzut w lewo / w prawo
+- P: wygląd pikselowy włącz / wyłącz (do porównania), 1 2 3: wielkość pikseli (180, 240, 320 pikseli wysokości)
+
+## Etap 1: sam rowerzysta (teraz)
+
+- `src/rider.js` · chłopak na rowerze z gładkich, zwężających się brył (czapka z daszkiem, włosy, koszulka z rękawkami, dżinsy, trampki, torba z paskiem i gazetami; rower z ramą z rurek, wygiętym widelcem i kierownicą, siodełkiem, kołami ze szprychami, korbą, pedałami, odblaskiem). Poza liczona co klatkę: koła i korba się kręcą, nogi idą za pedałami, ręce trzymają kierownicę (IK dwóch kości), cały rower przechyla się w zakręcie, na podjeździe i przy mocnym ruszaniu staje na pedałach, przy hamowaniu pochyla się, rzut: ręka do torby, zamach w bok, wypuszczenie gazety.
+- `src/track.js` · tor testowy: pętla ulicy (ok. 700 m) z zakrętami i górkami; asfalt, krawężniki, trawnik, chodnik, domy z gankami i skrzynkami, drzewa (część jesiennych), słupy z przewodami, płotki, żywopłoty, zaparkowane auta, liście na drodze, dalekie wzgórza.
+- `src/pixel.js` · wygląd pikselowy: scena rysowana w małej rozdzielczości (skala całkowita), obrys na skokach głębokości, dithering 4 × 4, paleta ok. 45 ciepłych kolorów.
+- `src/main.js` · jazda (pedałowanie słabnące z prędkością, hamulec, opór, górki, trawa, krawężniki), skręt (mniejszy przy dużej prędkości), przechył z prędkości i promienia skrętu (tan φ = v² / g r) na sprężynie, kamera za plecami z opóźnieniem, gazety z odbiciami i trafieniami w skrzynki.
+
+## Otoczenie i wygląd (etap 1b)
+
+- `src/textures.js` · małe pikselowe faktury z kodu: asfalt, płyty chodnika, krawężnik, trawa z kwiatkami, deski, gonty, liście, kwitnące krzewy, kratka ściekowa, plamki cienia liści, kora
+- `src/backdrop.js` · dalekie tło dookoła: wzgórza, jezioro z odblaskami, miasteczko na zboczu z kościołami, bliższe pagórki ze świerkami
+- domy: okna z ramą, szprosami, okiennicami i skrzynkami kwiatów, ganki z balustradą i schodkami, ścieżki albo podjazd z bramą garażową, krzewy i klomby, kosze
+- przy ulicy: drzewa na poboczu z koronami nad jezdnią i plamkami cienia na drodze, latarnie, kratki ściekowe, hydranty, świerki za domami
+- cały nieruchomy wystrój scalony materiałami w kilkadziesiąt siatek (mniej wywołań rysowania)
+- wielkość pikseli do podglądu: przyciski w lewym dolnym rogu albo klawisze 1–5 (180, 240, 320, 400, 540 pikseli wysokości)
+
+## Etap 2: pierwsze zasady gry
+
+- sterowanie: W / ↑ pedałowanie, Shift szybciej, S / ↓ hamulec, A D / ← → skręt, Q / E przytrzymaj i puść: rzut w lewo / w prawo z siłą, Spacja: kopniak, C: podskok, S na postoju: cofanie, O: kontur, R: od nowa (z pytaniem Y / N), V: następna kamera (oczami rowerzysty, blisko, średnio, daleko, wysoko); pad: gałka, RT, LT, A (kopniak), B (podskok), X (szybciej), LB / RB (przytrzymaj: rzut)
+- rzut z siłą: pikselowy pasek nad głową napełnia się, im dłużej trzymasz; od lobu do mocnego rzutu
+- punkty: gazeta koło drzwi +1, w skrzynce +5 (z okna domu dymek z podziękowaniem i serduszkami), wybita szyba +2 (pęknięta szyba, odłamki i pikselowy dymek z przekleństwem @#$%! nad domem); paczki gazet na chodniku +8 gazet
+- `src/cars.js` · auta: sedan, hatchback, kombi, pickup (profil z nadkolami, szyby, słupki, zderzaki, światła, tablice, lusterka, koła z felgami); zaparkowane przy krawężniku i na podjazdach
+- `src/traffic.js` · ruch uliczny w obie strony, zwalnia za rowerzystą; zderzenie to wywrotka
+- `src/props.js` · między domami: płoty z desek i siatki, szopy, pranie, drewno, piaskownice, poidełka; na drodze: pachołki, worki, wózek, roboty drogowe, dziury, skocznie, paczki gazet
+- `src/dogs.js` · psy przy domach: czasem gonią, szczekając obok spowalniają (chłopak nerwowo się ogląda), kopniak je odgania
+- `src/hud.js` · nakładka w pikselach gry: czcionka 3 × 5, pasek siły, HAU!, KOP!, +1, +2, gazety i punkty w rogu
+- fizyka: skok, skocznie (wylot w powietrze z krawędzi), lądowanie z szarpnięciem; przeszkody z obrysem (w locie przeskakujesz niskie); szybkie uderzenie w twarde to wywrotka: rower na bok, chwila, wstaje; worki i żywopłoty tylko spowalniają
+
+## Etap 3: wywrotki, babka, nerwy
+
+- wywrotka jako ragdoll (`src/rider.js`): chłopak to 15 punktów na patyczkach (Verlet), leci przez kierownicę, obraca się, ląduje, sunie po ziemi, może oprzeć się o przeszkodę albo auto; po chwili płynnie wraca na rower
+- `src/granny.js` · babka w chuście z laską: gdy wjedziesz daleko za domy, wybiega z najbliższych drzwi i krzyczy „NIE PO SIONYM!”; wrócisz na drogę, to odpuszcza; dogoni cię poza drogą, to przewraca, zabiera całą kasę (punkty), a ty migając wracasz na trasę
+- pies za długo przy tobie: nad głową rosną wykrzykniki i kropla potu, tuż przed progiem duże, drżące, czerwono-białe na czerwonym wybuchu; potem wywrotka, a pies ucieka
+- otwarte studzienki na jezdni: wjazd to wywrotka, podskok (C) przelatuje
+- Shift przy prędkości: aberracja kolorów na brzegach obrazu i lekko szerszy kadr
+- kontur: brak, fiolet, czarny albo gruby czarny (klawisz O albo panel stylu)
+- mocniejszy maksymalny rzut
+- kopniak w psa po komiksowemu: gwiazda „KOP!”, chwila zatrzymania, wstrząs kamery, pies odlatuje z obrotem; kopniak w babkę nic nie daje (krzyczy „JA CI DAM GNOJKU!” i goni dalej)
+- pies wpada na drzewo, słupek, hydrant albo pod auto: koziołkuje („AUU!”, „BUM!”) i ucieka do domu
+- kamera przy rzucie: łagodnie się cofa, podnosi i patrzy między rowerzystą a gazetą, chwilę trzyma miejsce trafienia
+- dymki (przekleństwa, pochwały) stoją między domem a rowerzystą, z dala od krawędzi ekranu
+
+## Telefon i stamina
+
+- `src/touch.js` · sterowanie dotykowe (włącza się samo na telefonie/tablecie, na komputerze z `?touch` w adresie): lewy kciuk to gałka tam, gdzie dotkniesz (na boki skręt, w górę pedałowanie, w dół hamulec i cofanie); prawy: RZUT w lewo i w prawo (przytrzymaj: siła), KOP, SKOK, SZYBCIEJ; u góry kamera, od nowa (Tak / Nie), pełny ekran
+- stamina: sprint (Shift / SZYBCIEJ) zużywa siły, ok. 5,5 s; przy końcu krople potu i obłoczki oddechu nad głową, po wyczerpaniu zadyszka (falki, opuszczona głowa, słabsze pedałowanie, bez sprintu), siły wracają po odpuszczeniu
+- psów mniej, ale są szybsze, bliżej, dłużej gonią i częściej szczekają
+
+## Styl obrazu i menu
+
+- `src/settings.js` · panel „Styl obrazu” (klawisz U albo przycisk „styl” w lewym dolnym rogu): gotowe style (Miękki, Klasyczny, Komiks, Wysoka rozdzielczość) i osobno: wielkość pikseli, wygładzanie krawędzi (obraz rysowany 2× albo 3× większy i uśredniany do dużych pikseli, mniej schodków), kontur, liczba tonów cieniowania, paleta ograniczona albo pełna, ciepłe światła i chłodne cienie, jasność, dithering; zapamiętane w przeglądarce
+- okno „Zacząć od nowa?” (R albo Esc) rysowane w pikselach gry: ditherowane przyciemnienie, ramka, TAK / NIE (strzałki, Enter, Y / N, myszka, dotyk); czcionka ma polskie litery
+- `src/cursor.js` · pikselowe kursory w menu: strzałka i rączka nad przyciskami
+- sprint: zamiast rozszczepienia kolorów efekt tunelu (lekka soczewka, obraz uciekający od środka, ditherowana winieta, kamera odjeżdża)
+- postać: fałdy koszulki, szwy i przetarcia dżinsów, panele czapki, większa torba ze sprzączką i gazetami na wierzchu, kremowe błotniki; przy cofaniu odpycha się nogami od drogi, na postoju podpiera się lewą nogą, tułów kołysze się z pedałowaniem
+- tekstu na stronie nie da się już zaznaczyć
+
+## Menu i sterowanie (wersja 5)
+
+- sterowanie: WSAD jazda (W pedałowanie, S hamulec i cofanie, A D skręt), strzałki ← → przytrzymaj i puść: rzut w lewo / w prawo z siłą (Q / E też), Spacja kopniak, C podskok, Shift szybciej
+- Esc: menu w pikselach gry (`src/menu.js`): pauza (wróć, grafika, zacznij od nowa) i grafika: 4 style (Stary ekran, Miękki 280 px, Pastelowy poranek, Złota godzina), piksele 120–300, wygładzanie 1–10×, wygląd pikselowy (P), a pod stylem jego 3 lekkie suwaki; strzałki, Enter, myszka, dotyk; gra stoi, gdy menu jest otwarte
+- wygładzanie do 10×: obraz rysowany do 10 razy większy (ograniczony do 4096 px) i uśredniany do dużych pikseli
+
+## Jazda i teren (wersja 5b)
+
+- toczenie bez pedałowania: przy małej prędkości opór rośnie i rower sam staje (z ok. 18 km/h w ok. 3,6 s); pod górę zwalnia szybciej, z górki rozpędza się mocniej
+- droga lekko faluje (wzniesienia rzędu pół metra), teren za ogrodami łagodnie faluje i wznosi się ku horyzontowi
+- za domami po zewnętrznej stronie pętli (do 200 m): pola w pasy (zboże, zaorane, zielone, ściernisko) w dwóch rzędach, żywopłoty na miedzach, zagajniki, gospodarstwa (dom i czerwona stodoła z dachem mansardowym), pojedyncze drzewa i ściana drzew na krańcu; po wewnętrznej stronie pętli teren tylko do 40 m (dalej jest już druga strona pętli)
+- menu Esc: własne płótno (nie rośnie ani nie maleje ze zmianą pikseli); strona grafiki jako panel po lewej, bez przyciemnienia, żeby było widać zmiany
+
+## Ludzie z MakeHuman (wersja 6)
+
+- `assets/vendor/` · MPFB 2.0.17 (w osobnym katalogu `assets/vendor/blender_user`, nie w ustawieniach Blendera użytkownika), zestawy MakeHuman, animacje Quaternius UAL 1 i 2 (Standard, CC0); autorzy i licencje: `assets/CREDITS.md` (bez AGPL)
+- `assets/source/mpfb_install_packs.py` · wgrywa zestawy do MPFB; `assets/source/mpfb_people.py` · składa 10 postaci (sylwetka i twarz z suwaków, skóra, brwi, rzęsy, fryzura, ubrania, lekka siatka ciała), szkielet `game_engine`, przenosi animacje UAL (kość po kości, z wyrównaniem pozy T do pozy A, kierunku i wysokości bioder), mierzy tempo chodu (`assets/export/people.json`), zmniejsza tekstury do 256 px, eksportuje `.glb` (razem ok. 18 MB)
+- przebudowa: `set BLENDER_USER_RESOURCES=<projekt>/assets/vendor/blender_user` i `blender -b -P assets/source/mpfb_people.py -- all` (albo jeden klucz)
+- klipy: emeryt i pan z psem, nastolatek, dziecko, ogrodnik: chód; biegaczka: trucht; mama: chód z rękami przed sobą (wózek); pan w garniturze i pani w sukience: chód elegancki; postoje: telefon, założone ręce, podlewanie
+
+## Auta, rowerzyści, zabawy (wersja 6)
+
+- `src/cars.js` · nadwozia z zaokrąglonych przekrojów (nadkola łukiem, burty zwężające się ku górze, zaokrąglone końce), kabina z szybami i słupkami; typy: liftback (jak z lat 80.), sedan, kanciaste kombi, stary pickup z paką, rzadko niska klinówka ze spojlerem; kolory z lat 80.
+- auta skręcają płynnie (kierunek z przejściem między punktami drogi i z bezwładnością), wymijają też rowerzystów
+- rowerzyści z naprzeciwka (`src/traffic.js`): od czasu do czasu, przy krawężniku, każdy w swoich kolorach
+- kopniak celuje sam w najbliższy cel (pies, pieszy, rowerzysta, auto, babka, hydrant) i kopie z tej strony; kopnięty klnie, a dymek leci za nim (także za odjeżdżającym autem)
+- hydrant (`src/water.js`): wjazd albo kopniak i tryska woda przez kilka sekund, rośnie kałuża
+- za domami: osiedla z własną uliczką i domami, pagórki dookoła i niskie góry za nimi (mgła dalej: 90–620 m)
+
+## Wersja 7
+
+- zderzenie z innym rowerzystą: mocne (liczone z prędkości obu) przewraca obu, on też robi ragdoll i po chwili wstaje; lekkie: odpycha, on się chwieje; w obu razach klnie
+- mieszkańcy (`src/residents.js`): przy części domów krzesła ogrodowe i leżaki w pasy; na leżakach brzuchacz z piwem, na krzesłach starsi; siedzą (animacje siedzenia UAL) i gdy przejeżdżasz, wołają coś do ciebie (dymek nad głową, animacja rozmowy)
+- psy: sześć ras (labrador, husky, jamnik, terier, dalmatyńczyk, kundel), gładki tułów, kufa, uszy i ogon wg rasy
+- drzewa nie rosną na autach, domach, podjazdach, ścieżkach ani gankach
+
+## Wersja 8
+
+- dymki: stoją prosto nad mówiącym (przesuwają się tylko tyle, żeby zmieścić się w kadrze), ogonek celuje w mówiącego; gdy mówiący jest poza kadrem, dymek stoi przy krawędzi od jego strony z mrugającą strzałką; dwa naraz nie zachodzą na siebie
+- postój na wzniesieniu: gdy przestajesz pedałować i zwalniasz, stawia nogę i stoi (nie stacza się); do tyłu tylko S na postoju
+- skocznie: deskowa, krótka stroma (kicker) i dwie duże na ramie z czerwoną krawędzią (na jezdni, auta je omijają); z krawędzi wyrzuca w górę, podskok C na krawędzi wyrzuca wyżej
+- tricki: Spacja w locie ze skoczni. Z A / D: 360 (+3), z W na dużej: salto (+6), sama Spacja: stół (+2). Trick kręci się, póki trzymasz Spację; puść, gdy jest obrócony (±18% wybaczone i domknięte, w punkt: CZYSTO +1). Puszczony za wcześnie, za późno albo trzymany do lądowania: wywrotka
+- kopniak w rowerzystę go przewraca
+- kolizja z tym samym rowerzystą po wstaniu: 7 s przenikania; gazeta rzucona w pieszego lub siedzącego: odpowiadają; świadek zderzenia komentuje, rowerzysta też
+
+## Wersja 9: pieszo i bójki (`src/onfoot.js`)
+
+- F: zsiadasz z roweru (rower staje na nóżce), F przy rowerze: wsiadasz. Pieszo: W S naprzód i w tył, A D obrót, Shift bieg; V: widok z oczu (widać ręce) albo zza pleców
+- nowe postacie z Blendera: gazeciarz pieszo (biały t-shirt, dżinsy, czerwona czapka i torba z gazetami jak na rowerze) i bójkarz w kraciastej koszuli; każdy ma chód, trucht, postawę, prosty, sierpowy, hak, trafienie w głowę i w brzuch, odrzut, nokaut, wstawanie, kiwanie palcem
+- rowerzysta skopany z roweru (zwykle) albo mocno potrącony (czasem) wstaje z pretensjami i idzie za tobą; jak ucieknie ci na rowerze dalej niż ~24 m, woła „TCHÓRZ!” i wraca; jak cię dopadnie, ściąga cię z roweru i zaczyna się bójka (sama przełącza na widok z oczu, V zmienia)
+- bójka: A D krążenie, W S doskok i odskok, Shift unik (nic cię wtedy nie trafia), ← prosty, → sierpowy, z ↑ hak, z ↓ na korpus; Spacja garda (z ↓ dolna), podniesiona tuż przed ciosem = KONTRA (on się chwieje, twój następny cios mocniejszy); zablokowane ciosy zjadają oddech, pusty oddech = garda pęka; prosty i sierpowy = RAZ-DWA, dwa proste i sierpowy = SERIA; G: prowokacja (trochę oddechu)
+- przeciwnik (ten sam zestaw zasad co ty): trzyma dystans, krąży, rzuca kombinacje z zamachem (wykrzyknik nad głową), częściej się zasłania, gdy go zasypujesz, kontruje po twoim ciosie, cofa się ranny
+- pasek zdrowia i oddechu na górze; przy niskim zdrowiu krawędzie ekranu czerwienieją i pulsują
+- wygrana: NOKAUT +15, on wstaje, gada głupoty i wraca do roweru; przegrana: zabiera ci całą kasę albo połowę gazet, albo kradnie rower i rzuca go dalej przy drodze, albo robi z tobą selfie na grupę osiedla
+- testy (boty grające za gracza, po dwie serie): gra z głową (blok na zamach, kontra, atak w otwarcie) wygrywa ~2 z 3, samo klepanie ledwo wygrywa albo przegrywa, stanie w miejscu zawsze przegrywa
+- plan multiplayera (kod zaproszenia, kto o czym decyduje, kroki): `docs/multiplayer.md`
+
+## Wersja 10: mysz, kierunki ciosów, droga do roweru
+
+- pieszo klik w grę łapie mysz: mysz obraca postać i patrzy w górę i w dół, A D wtedy chodzi bokiem; menu (Esc) i wsiadanie na rower oddają kursor
+- walka jak w grach rycerskich: na środku ekranu gwiazda z czterema strzałkami. Ruch myszy wybiera stronę ciosu (lewo: prosty, prawo: sierpowy, góra: hak, dół: na korpus, na zmianę lewą i prawą), LPM uderza, PPM trzyma gardę (z myszą w dół: niska), Shift lekki unik
+- cios przeciwnika mruga na gwieździe po stronie, z której leci (czerwony z żółtym); na zielono w chwili, gdy podniesiona garda da kontrę
+- bez myszy dalej działają ← → ↑ ↓ i Spacja; pada na razie nie ruszamy
+- pieszo: na dole ekranu strzałka do roweru z odległością (ROWER 11 M), nad rowerem mrugający znacznik, gdy jest w kadrze
+- torba: listonoszka na prawym biodrze z paskiem przez pierś (zamiast deski na plecach)
+- pieszo nikt nie gada o jeździe: mieszkańcy („CO, ROWER CI UKRADLI?”, „SPACERKIEM, DZIECKO?”), kierowcy trąbią inaczej („ZEJDŹ Z JEZDNI!”, „CHODNIK JEST OBOK, PIESZY!”), bójkarz też („NIE UCIEKNIESZ MI NA PIECHOTĘ!”)
+
+## Wersja 11: pieszo naprawdę (przechodnie, auta, wywrotka)
+
+- mysz działa też bez „łapania” kursora (panel przeglądarki go nie daje): ruch myszy obraca postać, kursor przy krawędzi ekranu obraca dalej, kliknięcia działają zawsze
+- wywrotka: po chwili wstajesz pieszo, rower zostaje na ziemi; podejdź do niego (strzałka pokazuje drogę) i F: podnosisz go i jedziesz
+- auta mogą cię potrącić, gdy wejdziesz im pod koła: lecisz, leżysz chwilę, wstajesz (−HP), kierowca ma coś do powiedzenia („PATRZ, JAK ŁAZISZ!”)
+- przechodnie: E zagaduje (staje, patrzy na ciebie i odpowiada po swojemu; zagadywany trzeci raz się wkurza); LPM uderza (−2 pkt „BRZYDKO!”): delikatni uciekają z krzykiem, twardziele czasem wołają szwagra, który wyskakuje zza domów i jest bójka
+- czapka gazeciarza dopasowana do jego głowy (mierzona z modelu): czerwona, z daszkiem, szwami i przyciskiem; krótsza fryzura spod niej; torba jak na rowerze: oliwkowa listonoszka nisko na plecach z gazetami, pasek po skosie
+- przeciwnik, który nie może do ciebie dojść (płot, żywopłot), obchodzi przeszkodę, a w końcu przez nią przechodzi
+
+## Na później
+
+- dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
+- multiplayer wg `docs/multiplayer.md`
+
+## Ludzie z Blendera (`assets/`)
+
+- `assets/source/people.py` · skrypt dla Blendera, który buduje 10 przechodniów od zera (nic nie jest pobierane): ciało z modyfikatora Skin na stawach (wygładzone), własny szkielet z nazwanymi kośćmi (`handL`, `handR`, `forearmL`…), skóra przypięta automatycznie (heat weights), głowa z twarzą, fryzurą i nakryciem, ubrania jako materiały i osobne części (koszula z krawatem, klapy, kaptur, ogrodniczki, pasek, poły płaszcza i sukienki); animacje `walk`, `run`, `idle` (ręce ułożone pod rekwizyt)
+- przebudowa wszystkich (albo jednej, np. `suit`):
+
+```
+"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --factory-startup -P assets/source/people.py -- all
+```
+
+- wynik: `assets/export/<klucz>.glb` (gra je wczytuje) i podglądy w `assets/preview/`
+- klucze: `oldman jogger mum dogman teen suit shopper kid gardener lady`
+- podgląd w ruchu: `http://localhost:8805/viewer.html` (`viewer.html`): wybór postaci albo wszyscy naraz, chód / bieg / postój, szybkość, pauza i klatka po klatce, styl gry albo zwykłe 3D, wielkość pikseli, szkielet, obrót; mysz obraca i przybliża
+- w grze (`src/pedestrians.js`): materiały podmienione na kreskówkowe, animacje w tempie marszu, rekwizyty przypięte do dłoni ze szkieletu
+
+## Wersja 4: ludzie, ruch, podwórka
+
+- `src/pedestrians.js` · 10 zaprojektowanych przechodniów: emeryt z laską, biegaczka, mama z wózkiem, pan z psem na smyczy, nastolatek w bluzie ze słuchawkami, pan w garniturze z teczką, pani z zakupami, dziecko z balonem, ogrodnik z grabiami, pani w kapeluszu z torebką; pełniejsze bryły (miednica, barki, twarz z nosem, uszami i oczami, łokcie, kolana, buty z podeszwą), fryzury i nakrycia głowy, chód z IK (biodra, ramiona, stopy z pięty na palce), bieg
+- rowerzysta: biodra i pośladki na siodełku, grubsze uda, kolana, łydki; kopniak z zamachem, wybiciem i powrotem, tułów odchyla się i skręca
+- `src/traffic.js` · auta wymijają stojące i wolne przeszkody (auta, zaparkowane przy krawężniku, rowerzystę): płynna zmiana pasa, powrót za przeszkodą, zwalnianie lub rezygnacja, gdy coś jedzie z naprzeciwka
+- podwórka: kupki grabionych liści z grabiami, piaskownice, huśtawki, rowerki, trampoliny, grille, krasnale, poidełka; czasem stare auto na klockach z plandeką obok domu
+- panel stylu: suwaki (wielkość pikseli 120–600, wygładzanie, tony), siła i czułość konturu, siła palety, posteryzacja, nasycenie, kontrast, winieta, linie starego ekranu; nowy styl „Stary ekran”
+- `serve.py` · serwer bez pamięci podręcznej przeglądarki (po zmianie wystarczy odświeżyć)
+
+## Wersja 3 wyglądu i zasad
+
+- punkty: gazeta na ganku przy drzwiach +2, w skrzynce +5, pod oknami +1, wybita szyba +2, obok domu nic (każdy dom liczy się raz)
+- panel stylu: „Zapisz jako domyślny” (styl „Mój”, do niego wraca „Domyślny”), suwak połysku krawędzi
+- połysk krawędzi od słońca: ciepły, twardy pas światła na obrysie stojących brył (nie na ziemi)
+- domy: listwa okapu i rynna, listwy szczytów, gąsior, lepsze dachówki, listwy narożne, podmurówka, pas między piętrami, okna z odblaskiem i firankami, drzwi z płycinami, okienkiem i lampką, komin z cegły
+- drzewa: wygięte pnie zwężające się ku górze, 2–4 konary, korony z kilku mas na końcach konarów
+- postać: kosmyki spod czapki, torba na plecach (idzie z tułowiem) z gazetami na wierzchu, bagażnik i czerwona lampka w rowerze, grubsze opony
+- `src/pedestrians.js` · przechodnie na chodnikach: idą, machają rękami, czasem zawracają, schodzą na trawnik przed rowerzystą; wjazd w kogoś to wywrotka („UWAŻAJ!”)
+- kamera: szósta (V), „bardzo daleko”; przy rzucie odjeżdża do panoramy zamiast się obracać
+- poprawka: psy i babka liczą grunt od swojego miejsca na trasie (nie wiszą w powietrzu)
+
+## Assety, wersja 2 (wg referencji)
+
+- drzewa: korony z wielu grudkowatych kęp (jasne u góry, ciemne pod spodem) i kart liści na obrysie (poszarpana sylwetka, cienie z dziurami)
+- krawężnik w metrowych blokach z fugami, ciemniejszy rynsztok, liście nawiane pod krawężnik i na nim, kępki trawy nad krawędzią i przy chodniku, kwiatki w kępach na poboczach i trawnikach
+- hydrant: stopa z kołnierzem, trzon, kołnierz ze śrubami, kopułka z nakrętką, trzy wyloty z zaślepkami, łańcuszek
+- skrzynka na listy: zaokrąglona, na słupku z ramieniem i zastrzałem, drzwiczki, zatrzask, czerwona chorągiewka na zawiasie
+- auta: szyby z odblaskami nieba, duże klosze tylnych lamp (czerwone, białe, pomarańczowe), chromowane listwy, grill, tablice z literami, progi, listwa boczna, drzwi tylne, ciemne wnęki kół, miękki cień pod autem
+
+## Dalej
+
+- rozgrywka: prenumeratorzy, lista dnia, przeszkody (psy, auta, studzienki), punkty, wywrotka
+- grafiki z GPT: fasady domów, tło z jeziorem i miasteczkiem, drobiazgi; ewentualnie klatki rowerzysty
+
+## Pomysły na później (od Jarka)
+
+- po wywrotce trzeba samemu podejść do roweru i go podnieść (chodzenie pieszo, podniesienie, wsiadanie)
+- rzadko spotykani inni rowerzyści: można im dać kopa, obaj schodzą z rowerów i jest bójka
+- bójka jako minigra w tym samym świecie, ale z widokiem z pierwszej osoby (widać swoje ręce): krótki pojedynek bokserski; garda góra lub dół, ciosy lewą i prawą, w górę lub w dół; lekkie krążenie na boki z kamerą skupioną na przeciwniku; do rozwinięcia (np. uniki, kontry, zmęczenie, zwycięstwo daje coś na trasie)
+

@@ -70,6 +70,8 @@ Od 2026-09-25 plansza jest wyczyszczona z placeholderów. Jest na niej jeden pra
 
 - **01 · Glass Button** (`pieces/glass-button/`): przycisk jako prawdziwa, śledzona promieniami bryła ze szkła (napis nadrukowany na wierzchu, przezroczysta kulka z holograficzną gwiazdką), z panelem „Tune” do zabawy kształtem, optyką, światłem, treścią i layoutem; środkowym przyciskiem myszy można go obracać w 3D. Miniatura to zrzut z tej strony (`thumbs/glass-button.jpg`) z mapą głębi, więc działają na nim też tryby `depth`, `topo`, `scan`, `dof`, `light` i `relief`.
 
+- **Poranna Trasa** (`pieces/poranna-trasa/`): gra w roznoszenie gazet w pikselowym 3D (three.js, postacie z MakeHuman i animacje Quaternius, licencje w `pieces/poranna-trasa/assets/CREDITS.md`). Jazda, rzuty gazet, skocznie z trickami, chodzenie pieszo i bójki z widoku z oczu. Miniatura `thumbs/poranna-trasa.jpg` z mapą głębi (liniowa, jasne = blisko).
+
 Pozostałe 17 prostokątów klastra to puste, nieklikalne sloty (`{ empty:true }` w PIECES, kolor `CFG.plainEmpty`) na kolejne eksperymenty. Nowy eksperyment: folder w `pieces/<slug>/`, zrzut `?still=1&bare=1`, wpis w PIECES w miejsce pustego slotu.
 
 Stan z 18 placeholderami, referencjami, mapami głębi i warstwami z Figmy jest w tagu gita `lab-board-placeholders-2026-09-25`.
