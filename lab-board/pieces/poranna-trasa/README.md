@@ -220,6 +220,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - licznik rowerowy jak dawniej: plastikowa obudowa z przyciskami, szarozielony LCD, prędkość cyframi siedmiosegmentowymi (niezapalone segmenty lekko widać), strzałka przyspieszania; dolny wiersz co 4 s: dystans (DST), prędkość maksymalna (MAX), czas jazdy (TM). Wszystko w pikselach.
 - mieszkańcy daleko od gracza nie są rysowani ani animowani (lżej przy wielu postaciach)
 
+## Wersja 21: babcina portmonetka
+
+- zamiast „PKT” pod licznikiem rowerowym jest portmonetka z mosiężnym zapięciem na dwie kulki, w kwiatki na śliwkowym gobelinie, obok gazety (rulonik i liczba) i suma w złotych
+- gdy wpadają pieniądze: portmonetka się otwiera, monety wpadają jedna po drugiej, przy każdej lekko podskakuje, suma rośnie razem z nimi, potem zatrzask się zamyka
+- gdy ktoś zabiera kasę (rowerzysta, babka, selfie): otwiera się i monety z niej wylatują
+- komunikaty mówią teraz o złotówkach, nie o punktach
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
