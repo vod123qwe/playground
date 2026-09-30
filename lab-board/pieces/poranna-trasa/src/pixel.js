@@ -54,8 +54,11 @@ export function createPixel({ THREE, renderer, height = 240 }) {
         if (ss <= 3.) { for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) { if (float(i) >= ss || float(j) >= ss) continue; c += texture2D(tColor, (px * ss + vec2(float(i), float(j)) + .5) / (res * ss)).rgb; } c /= ss * ss; }
         else { for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) c += texture2D(tColor, (px * ss + (vec2(float(i), float(j)) + .5) / 4. * ss) / (res * ss)).rgb; c /= 16.; }   // (bigger blocks: 16 filtered samples spread over it)
         vec2 dv = uv - .5;
-        if (aber > .01) { vec3 acc = c; for (int k = 1; k < 4; k++) acc += texture2D(tColor, uv - dv * float(k) * .02 * aber).rgb;   // and the world streaming out from the middle
-          c = mix(c, acc / 4., smoothstep(.06, .42, length(dv)) * aber); }
+        // speed: a radial blur (the world streaming out from the middle, the middle itself sharp): sampled along the line to the middle,
+        // from the screen's own point (not the pixel's block), so the streaks run smooth
+        if (aber > .01) { vec2 dvS = vUv - .5; float rr = length(dvS * vec2(res.x / res.y, 1.)), k0 = smoothstep(.1, .6, rr) * aber * step(1.5, lin(texture2D(tDepth, vUv).r));   // (not the bag by the lens)
+          if (k0 > .01) { vec3 acc = vec3(0.); float ws = 0.; for (int k = 0; k < 10; k++) { float t = float(k) / 9., w = 1. - t * .55; acc += texture2D(tColor, vUv - dvS * t * .1 * aber).rgb * w; ws += w; }
+            c = mix(c, acc / ws, min(1., k0 * 1.4)); } }
         // the air: the far land paler, bluer, a little soft (the more the farther: from about 45 m, most by 300 m); the sky left as it is
         float rawA = texture2D(tDepth, uv).r, hz = rawA > .9999 ? 0. : haze * smoothstep(45., 300., lin(rawA));
         if (hz > .02) { vec3 bl = (texture2D(tColor, (px + vec2(1., 0.) + .5) / res).rgb + texture2D(tColor, (px + vec2(-1., 0.) + .5) / res).rgb + texture2D(tColor, (px + vec2(0., 1.) + .5) / res).rgb + texture2D(tColor, (px + vec2(0., -1.) + .5) / res).rgb) * .25;
@@ -82,7 +85,7 @@ export function createPixel({ THREE, renderer, height = 240 }) {
           float lap = max(abs(wl + wr - 2. * wc), abs(wu + wd - 2. * wc)) / wc * sign(wl + wr + wu + wd - 4. * wc), jump = max(max(abs(wl - wc), abs(wr - wc)), max(abs(wu - wc), abs(wd - wc))) / wc;
           if (jump < .2) { if (lap < -cThr) c = mix(c, c * 1.3 + vec3(.07, .06, .03), crease * smoothstep(cThr, cThr * 2.5, -lap));
             else if (lap > cThr) c = mix(c, ink, crease * .55 * smoothstep(cThr, cThr * 2.5, lap)); } }
-        if (aber > .01) { float v = smoothstep(.3, .9, length((uv - .5) * vec2(res.x / res.y, 1.))) * aber; if (bayer(px) < v * 1.15) c = c * .42 + vec3(.02, .01, .05); }   // tunnel vision: the edges closing in, in a dither
+        if (aber > .01) { float v = smoothstep(.35, 1.05, length((vUv - .5) * vec2(res.x / res.y, 1.))) * aber; c *= 1. - v * .32; }   // the edges a little darker, smoothly (no dither)
         c = (c - .5) * contrast + .5; { float L = dot(c, vec3(.3, .59, .11)); c = mix(vec3(L), c, sat); }   // contrast, saturation
         if (vig > .01) { float v = smoothstep(.5, 1.25, length((uv - .5) * vec2(res.x / res.y, 1.)) * 1.5) * vig; if (bayer(px) < v) c = c * .62 + vec3(.01, .0, .03); }   // a vignette, dithered
         c += (bayer(px) - .47) * (raw > .9999 ? skyDither : dither);
