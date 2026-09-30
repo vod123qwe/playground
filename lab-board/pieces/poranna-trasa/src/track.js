@@ -54,7 +54,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     strip(s * ROAD, s * KERB, '#9c9a91', .05, .35, tex.kerbBlock(), [1, 4]); strip(s * KERB, s * (KERB + .18), '#cbc8bd', .05, .35, tex.kerbBlock(), [1, 4]);   // the kerb in metre blocks: its face in shade, its top lit
     strip(s * (KERB + .18), s * VERGE, '#6f8f3e', .14, .6, tex.grass(0), 1.3);   // the verge
     strip(s * VERGE, s * PAVE, '#bcb6a6', .05, .5, tex.slabs(), 3.2);        // the pavement, in slabs
-    strip(s * PAVE, s * 14, '#7c9a45', .16, .12, tex.grass(4), 1.6);         // the lawns (a few flowers)
+    strip(s * PAVE, s * 14, '#7c9a45', .16, .12, tex.grass(6), 1.6);         // the lawns (a few flowers)
     for (const [a, b] of (s === INNER ? [[14, 20], [20, 28], [28, 40]] : [[14, 20], [20, 28], [28, 38], [38, 52], [52, 72], [72, 84], [88, 100], [100, 135], [135, 170], [170, 200]])) strip(s * a, s * b, '#78963f', .2, .08, tex.grass(2), 2.2);
     if (s !== INNER) { strip(s * 84, s * 88, '#55595e', .06, .5, tex.asphalt(), 3); strip(s * 83.4, s * 84, '#a8a08a', .1, .5, null, 1); strip(s * 88, s * 88.6, '#a8a08a', .1, .5, null, 1); }   // (a country road out there, gravel edges)   // the land beyond, rolling (inside the loop: not so far, the other side of it is there)
   }
@@ -97,7 +97,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       tri([x - .008, y, z], [x + .008, y, z], t, STEM, STEM, STEM);
       const T = [x, y + h + e, z], Bm = [x, y + h - e * .5, z], P = [[x + e, y + h, z], [x, y + h, z + e], [x - e, y + h, z], [x, y + h, z - e]];
       for (let k = 0; k < 4; k++) { const a = P[k], b = P[(k + 1) % 4]; tri(a, b, T, col, col, col === HEAD[0] ? EYE : col); tri(b, a, Bm, col); } }
-    for (let k = 0; k < 520; k++) { const sd = r() < .5 ? -1 : 1, lawn = r() < .5, i = r() * N, d = sd * (lawn ? PAVE + .25 + r() * 1.4 : KERB + .45 + r() * (VERGE - KERB - .7)), col = HEAD[r() * HEAD.length | 0];
+    for (let k = 0; k < 900; k++) { const sd = r() < .5 ? -1 : 1, lawn = r() < .6, i = r() * N, d = sd * (lawn ? PAVE + .25 + Math.pow(r(), 1.6) * 3.5 : KERB + .45 + r() * (VERGE - KERB - .7)), col = HEAD[r() * HEAD.length | 0];   // (more of them, and into the lawns, thinning away from the pavement)
       const [cx, , cz, s] = g0(i, d); for (let f = 0; f < 5 + (r() * 9 | 0); f++) { const a = r() * 6.28, rr = Math.sqrt(r()) * .32, x = cx + Math.cos(a) * rr, z = cz + Math.sin(a) * rr;
         flower(x, s.p.y + hAt(d, i), z, .07 + r() * .13, r() < .8 ? col : HEAD[r() * HEAD.length | 0]); } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));

@@ -17,19 +17,40 @@ export function createTextures({ THREE }) {
   }
   const shade = (v) => { const k = Math.max(0, Math.min(255, v | 0)); return `rgb(${k},${k},${k})`; };
   return {
-    asphalt: () => make('asphalt', 64, (g, px, r, S) => { g.fillStyle = shade(200); g.fillRect(0, 0, S, S);
-      for (let i = 0; i < S * S * .09; i++) px(r() * S | 0, r() * S | 0, shade(r() < .5 ? 150 : 240));          // grain
-      for (let k = 0; k < 3; k++) { const x0 = r() * S, y0 = r() * S, w = 8 + r() * 14, h = 5 + r() * 8; g.fillStyle = shade(178); g.fillRect(x0 | 0, y0 | 0, w | 0, h | 0); }   // patches
-      for (let k = 0; k < 2; k++) { let x = r() * S, y = r() * S; for (let i = 0; i < 16; i++) { px(x | 0, y | 0, shade(110)); x += (r() - .3) * 2; y += (r() - .5) * 1.6; } } }),   // cracks
-    slabs: () => make('slabs', 64, (g, px, r, S) => { g.fillStyle = shade(225); g.fillRect(0, 0, S, S);
-      for (let i = 0; i < S * S * .05; i++) px(r() * S | 0, r() * S | 0, shade(r() < .5 ? 200 : 245));
-      g.fillStyle = shade(160); g.fillRect(0, 0, S, 1); g.fillRect(0, S / 2, S, 1); g.fillRect(0, 0, 1, S); g.fillRect(S / 2, 0, 1, S / 2); g.fillRect(S / 4, S / 2, 1, S / 2);   // the joints
-      g.fillStyle = shade(242); g.fillRect(0, 1, S, 1); g.fillRect(0, S / 2 + 1, S, 1); }),
+    // asphalt, as drawn: grain in two tones, small stones (a lit pixel with its shadow), a patch or two a shade apart with a darker
+    // rim, a seam of tar across, an oil stain, cracks that branch
+    asphalt: () => make('asphalt3', 64, (g, px, r, S) => { g.fillStyle = shade(200); g.fillRect(0, 0, S, S);
+      for (let i = 0; i < S * S * .12; i++) px(r() * S | 0, r() * S | 0, shade(r() < .55 ? 168 : 228));                        // grain
+      for (let i = 0; i < 70; i++) { const x = r() * S | 0, y = r() * S | 0; px(x, y, shade(250)); px(x + 1, y + 1, shade(140)); }   // stones
+      for (let k = 0; k < 2; k++) { const x0 = r() * S | 0, y0 = r() * S | 0, w = 10 + r() * 16 | 0, h = 6 + r() * 9 | 0, v = r() < .5 ? 184 : 214;
+        g.fillStyle = shade(v); g.fillRect(x0, y0, w, h); for (let i = 0; i < w * h * .1; i++) px(x0 + r() * w | 0, y0 + r() * h | 0, shade(v + (r() < .5 ? -22 : 22)));
+        g.fillStyle = shade(150); g.fillRect(x0, y0, w, 1); g.fillRect(x0, y0 + h, w + 1, 1); g.fillRect(x0, y0, 1, h); g.fillRect(x0 + w, y0, 1, h); }   // patches, their edges
+      { const y = r() * S | 0; for (let x = 0; x < S; x++) { const yy = y + Math.round(Math.sin(x * .3) * 1.2); px(x, yy, shade(118)); if (x % 3) px(x, yy + 1, shade(135)); } }   // a seam of tar
+      { const cx = r() * S, cy = r() * S; for (let i = 0; i < 26; i++) { const a = r() * 6.28, d = Math.sqrt(r()) * 5; px(cx + Math.cos(a) * d | 0, cy + Math.sin(a) * d * .6 | 0, shade(150)); } }   // oil
+      for (let k = 0; k < 3; k++) { let x = r() * S, y = r() * S; for (let i = 0; i < 20; i++) { px(x | 0, y | 0, shade(105)); if (r() < .15) { let bx = x, by = y; for (let q = 0; q < 5; q++) { bx += r() - .5; by += 1; px(bx | 0, by | 0, shade(125)); } } x += (r() - .3) * 2; y += (r() - .5) * 1.4; } } }),   // cracks, branching
+    // paving slabs, 2 x 2 to the tile: each its own tone, speckled, a lit edge at its top and left, a shadow at its bottom and right, the
+    // joints dark, moss in them here and there, a crack across one, a chip at a corner
+    slabs: () => make('slabs3', 64, (g, px, r, S) => { const B = S / 2;
+      for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) { const v = 214 + r() * 26 | 0, x0 = a * B, y0 = b * B; g.fillStyle = shade(v); g.fillRect(x0, y0, B, B);
+        for (let i = 0; i < B * B * .1; i++) px(x0 + r() * B | 0, y0 + r() * B | 0, shade(v + (r() < .5 ? -18 : 14)));
+        g.fillStyle = shade(Math.min(255, v + 22)); g.fillRect(x0 + 1, y0 + 1, B - 2, 1); g.fillRect(x0 + 1, y0 + 1, 1, B - 2);        // the lit edge
+        g.fillStyle = shade(v - 34); g.fillRect(x0 + 1, y0 + B - 2, B - 2, 1); g.fillRect(x0 + B - 2, y0 + 1, 1, B - 2);              // the shadowed one
+        if (r() < .5) { px(x0 + 1, y0 + 1, shade(150)); px(x0 + 2, y0 + 1, shade(170)); } }                                             // a chip
+      g.fillStyle = shade(128); g.fillRect(0, 0, S, 1); g.fillRect(0, B, S, 1); g.fillRect(0, 0, 1, S); g.fillRect(B, 0, 1, S);            // the joints
+      for (let i = 0; i < 14; i++) { const t = r() * S | 0, onRow = r() < .5, c = r() < .6 ? '#6f8a3c' : '#8aa04a'; if (onRow) px(t, (r() < .5 ? 0 : B), c); else px((r() < .5 ? 0 : B), t, c); }   // moss in the joints
+      { let x = 4 + r() * 20, y = B + 3; for (let i = 0; i < 18; i++) { px(x | 0, y | 0, shade(150)); x += 1; y += (r() - .45) * 1.3; } } }),   // a crack
     kerb: () => make('kerb', 32, (g, px, r, S) => { g.fillStyle = shade(230); g.fillRect(0, 0, S, S); for (let i = 0; i < S * S * .06; i++) px(r() * S | 0, r() * S | 0, shade(205));
       g.fillStyle = shade(170); g.fillRect(0, 0, 1, S); g.fillRect(S / 2, 0, 1, S); }),
-    grass: (flowers = 0) => make('grass' + flowers, 32, (g, px, r, S) => { g.fillStyle = shade(205); g.fillRect(0, 0, S, S);
-      for (let i = 0; i < S * S * .16; i++) { const x = r() * S | 0, y = r() * S | 0, l = r() < .5; px(x, y, shade(l ? 250 : 160)); px(x, y + 1, shade(l ? 225 : 175)); }   // tufts: a dark or a light blade over its root
-      for (let i = 0; i < flowers; i++) { const x = r() * S | 0, y = r() * S | 0; px(x, y, r() < .5 ? '#fff6d8' : '#ffe27a'); } }),
+    // grass: blades in tufts, three tones (the tip lit, the root dark), and in the lawns flowers placed as a pixel artist would: daisies
+    // (four white petals round a yellow eye), dandelions (a yellow blob), clover in violet
+    grass: (flowers = 0) => make('grass3_' + flowers, 32, (g, px, r, S) => { g.fillStyle = shade(196); g.fillRect(0, 0, S, S);
+      for (let i = 0; i < S * S * .05; i++) px(r() * S | 0, r() * S | 0, shade(r() < .5 ? 176 : 214));
+      for (let i = 0; i < S * S * .07; i++) { const x = r() * S | 0, y = r() * S | 0, h = 2 + (r() * 2 | 0), lean = r() < .5 ? 0 : (r() < .5 ? -1 : 1);
+        px(x, y + h, shade(150)); for (let k = 1; k < h; k++) px(x + (k === 1 ? 0 : lean), y + h - k, shade(205)); px(x + lean, y, shade(250)); }   // a blade: dark root, mid, lit tip
+      for (let i = 0; i < flowers; i++) { const x = r() * S | 0, y = r() * S | 0, k = r();
+        if (k < .5) { px(x, y - 1, '#fbf7ea'); px(x - 1, y, '#fbf7ea'); px(x + 1, y, '#fbf7ea'); px(x, y + 1, '#e9e3d1'); px(x, y, '#f2c33a'); }   // a daisy
+        else if (k < .8) { px(x, y, '#f7d23e'); px(x + 1, y, '#f2c33a'); px(x, y - 1, '#fbe27a'); px(x, y + 1, shade(150)); }                  // a dandelion
+        else { px(x, y, '#b48ad8'); px(x + 1, y, '#9a6fc4'); px(x, y + 1, shade(150)); } } }),                                           // clover
     siding: () => make('siding', 32, (g, px, r, S) => { g.fillStyle = shade(236); g.fillRect(0, 0, S, S);
       for (let y = 0; y < S; y += 4) { g.fillStyle = shade(190); g.fillRect(0, y + 3, S, 1); g.fillStyle = shade(250); g.fillRect(0, y, S, 1); }   // the boards: a lit edge, a shadow under
       for (let i = 0; i < 6; i++) { const y = (r() * 8 | 0) * 4, x = r() * S | 0; g.fillStyle = shade(205); g.fillRect(x, y, 1, 3); } }),
