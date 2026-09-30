@@ -1,7 +1,7 @@
 // Chess at a table: the set (chessset.js), the rules (chess.js), a little panel, and a game with someone else on the page.
 // The set lies folded on a shelf in the study; taken in the hand and put down on a table (or any level top) it opens as a real one
 // does (the lid up, the pieces out, the case turned over, the board on its outside up), white's side towards you, the pieces standing
-// by the board. Grabbed (anywhere on the board or the case, not a piece) and dragged, it turns with its pieces as far as you like,
+// by the board. Grabbed (anywhere on the board, the case or a piece) and dragged, it turns with its pieces as far as you like,
 // the point you hold following the pointer round its middle; the panel turns it a quarter at a time. At the board a single action shows ("Szachy", and how the game stands); a click on it opens the panel with the rest. Set them up by hand (a click on a piece, a click on a square; a click off the board
 // sends it back) or with one click; then play: a click on a piece shows where it may go, a click there moves it; the rules are all
 // there (check, mate, stalemate, castling, en passant, promotion, the draws). Alone you move both sides.
@@ -110,13 +110,11 @@ export function createChess({ THREE, scene, camera, M, clip, onChange = () => {}
     select(B, own && pc !== B.sel ? pc : null); onChange(); return true;
   }
 
-  // ---------- turning the board: grabbed anywhere on it or the case (not on a piece), the point held follows the pointer round the
+  // ---------- turning the board: grabbed anywhere on it (the case, a piece), the point held follows the pointer round the
   // board's middle, on the board's own level; let go, it stays as it is. A quarter turn from the panel ----------
   let turning = null, turnTo = null;
-  const mine = hit => { if (!hit || hit.distance > 3.2 || (L.shared && L.owner !== net?.id)) return false; const B = boardOf(hit.object); return B === L && L.set.isOpen && !hit.object.userData.chessPiece; };
-  function grabZone(hit) {                                             // (the frame and the case: where the pointer shows it can turn it)
-    if (!mine(hit)) return false; L.set.group.worldToLocal(_p.copy(hit.point)); return !(L.set.boardMeshes.includes(hit.object) && L.set.sqAt(_p.x, _p.z) >= 0);
-  }
+  const mine = hit => { if (!hit || hit.distance > 3.2 || (L.shared && L.owner !== net?.id)) return false; const B = boardOf(hit.object); return B === L && L.set.isOpen; };   // (anywhere on the set, a piece too: a click is still a click, a drag turns it)
+  const grabZone = mine;                                              // (where the pointer shows it can take hold)
   const plane = new THREE.Plane(), _c2 = new THREE.Vector3(), _h = new THREE.Vector3();
   function grab(hit) { if (!mine(hit)) return false; const g = L.set.group; g.getWorldPosition(_c2); plane.set(new THREE.Vector3(0, 1, 0), -hit.point.y); const dx = hit.point.x - _c2.x, dz = hit.point.z - _c2.z;
     turning = { yaw0: g.rotation.y, a0: Math.hypot(dx, dz) < .04 ? null : Math.atan2(dx, dz), c: _c2.clone() }; turnTo = null; return true; }   // (a0: where it was taken hold of, so that point follows the pointer)
