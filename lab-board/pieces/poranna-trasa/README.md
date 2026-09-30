@@ -349,6 +349,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - pnie świerków za domami zatrzymują teraz rower
 - poprawka: wywrotka przy trzymanym rzucie mogła zatrzymać grę (kamera czytała siłę rzutu, którego już nie było); celownik znika przy wywrotce
 
+## Wersja 36: rozmycie promieniste przy sprincie
+
+- efekt prędkości przy sprincie (Shift) to teraz rozmycie promieniste (radial blur, zoom blur): świat na krawędziach rozmazuje się w smugi uciekające od środka, liczone płynnie (10 próbek, z punktu ekranu, nie z bloku piksela), środek z rowerzystą zostaje ostry
+- zamiast kropkowanej winiety krawędzie ciemnieją łagodnie, bez ditheringu
+- torba w rogu nie rozmywa się razem ze światem
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
