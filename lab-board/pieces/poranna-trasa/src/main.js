@@ -762,7 +762,7 @@ addEventListener('keydown', e => { if (e.repeat) return;
   if (asking) { if (e.code === 'KeyY' || e.code === 'KeyT') answer(true); else if (e.code === 'KeyN' || e.code === 'Escape') answer(false);
     else if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Tab'].includes(e.code)) hud.askSel = 1 - hud.askSel; else if (e.code === 'Enter' || e.code === 'Space') answer(hud.askSel === 0); e.preventDefault(); } });
 function resetGame() {
-  if (foot.active) foot.stop(); B.parked = false; rider.boy.visible = true;
+  if (foot.active) foot.stop(); foot.reset(); B.parked = false; rider.boy.visible = true;
   granny.reset(); rider.root.visible = true; B.rattled = 0;
   rider.ragdollOff();
   const q = track.probe(track.start.x, track.start.z, 0);
