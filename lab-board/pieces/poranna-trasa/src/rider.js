@@ -276,6 +276,10 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
         for (let i = 0; i < 15; i++) { const p = RG.p[i], r = RAD[i]; if (p.y < gy + r) { p.y = gy + r; RG.touch[i] = 1; } if (list.length && RG.hit(list, p, r)) RG.touch[i] = 1; }
       }
       for (let i = 0; i < 15; i++) if (RG.touch[i]) { const p = RG.p[i], q = RG.q[i]; q.x = p.x - (p.x - q.x) * .9; q.z = p.z - (p.z - q.z) * .9; }   // (the ground rubs)
+      // pushed out of something (a car's roof, its side), the push must not turn into a throw: in this integration a point moved is a
+      // point given speed, so its speed is held to what a body flung off a bike can have (up: 4.5 m/s, along the ground: 10 m/s)
+      for (let i = 0; i < 15; i++) { const p = RG.p[i], q = RG.q[i], up = p.y - q.y, lim = 4.5 * h; if (up > lim) q.y = p.y - lim;
+        const hx = p.x - q.x, hz = p.z - q.z, hl = Math.hypot(hx, hz), hm = 10 * h; if (hl > hm) { q.x = p.x - hx / hl * hm; q.z = p.z - hz / hl * hm; } }
     }
   }
   function applyRagdoll(w) {                                          // w: 1 all ragdoll, 0 all the pose on the bike

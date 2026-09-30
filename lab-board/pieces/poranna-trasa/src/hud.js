@@ -160,13 +160,32 @@ export function createHud() {
     const X = 6, Y = cv.height - 12; g.fillStyle = 'rgba(23,24,27,.55)'; g.fillRect(X - 3, Y - 3, 74, 11);
     g.fillStyle = '#ece5d0'; g.fillRect(X, Y + 1, 6, 3); g.fillStyle = '#b3372c'; g.fillRect(X + 2, Y + 1, 1, 3);             // a rolled paper
     text(String(st.papers), X + 9, Y, '#f6f3ea'); text('PKT ' + st.points, X + 28, Y, '#efc970');
-    if (st.low > 0) lowEdge(dt, st.low);
+    if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
     if (st.bike) bikeArrow(st.bike, project, dt);
     if (st.star) aimStar(st.star, dt); else if (st.cross) { const cx = cv.width >> 1, cy = cv.height >> 1; g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = '#f6f3ea'; g.fillRect(cx, cy, 1, 1); }
     if (Q.open) drawAsk(dt);
     if (overlay) overlay(dt);
   }
+  // blood: splashed onto the picture's edges when he takes a hit (a blob with a dark rim, a lit heart, drops round it, a drip or two
+  // running down), each drawn once into its own little canvas; they stay while he is hurt and fade as he mends
+  const splats = [];
+  function bleed(n = 2, hard = false) { const W = cv.width, H = cv.height;
+    for (let k = 0; k < n; k++) { const side = Math.random() * 4 | 0, R = (hard ? 14 : 9) + Math.random() * (hard ? 16 : 10);
+      const x = side === 0 ? Math.random() * R : side === 1 ? W - Math.random() * R : Math.random() * W, y = side === 2 ? Math.random() * R * .8 : side === 3 ? H - Math.random() * R : Math.random() * H;
+      const c = document.createElement('canvas'), S = Math.ceil(R * 2 + 30); c.width = S; c.height = S + 24; const b = c.getContext('2d'), cx = S / 2, cy = S / 2;
+      const waves = [2, 3, 5, 8, 11].map(k => [k, .03 + Math.random() * (k < 4 ? .16 : .07), Math.random() * 6.28]), stretch = .75 + Math.random() * .5, tilt = Math.random() * 3.14;   // (an uneven blob, not a star)
+      const edge = a => R * (.74 + waves.reduce((s, [k, am, ph]) => s + am * Math.sin(a * k + ph), 0)) * (1 + (stretch - 1) * Math.cos(2 * (a - tilt)));
+      for (let yy = 0; yy < S; yy++) for (let xx = 0; xx < S; xx++) { const dx = xx - cx, dy = yy - cy, d = Math.hypot(dx, dy), e = edge(Math.atan2(dy, dx)); if (d > e) continue;
+        b.fillStyle = d > e - 1.5 ? '#3a0f0c' : d > e * .6 ? '#5e1c17' : ((xx + yy) & 1) && d < e * .35 ? '#a3322a' : '#8e2e25'; b.fillRect(xx, yy, 1, 1); }
+      for (let q = 0; q < 3 + (Math.random() * 3 | 0); q++) { const a = Math.random() * 6.28, dd = R * (1.05 + Math.random() * .45), rr = .8 + Math.random() * 1.8; b.fillStyle = '#5e1c17'; b.beginPath(); b.arc(cx + Math.cos(a) * dd, cy + Math.sin(a) * dd, rr, 0, 7); b.fill(); }   // (drops)
+      for (let q = 0; q < (side === 2 || Math.random() < .5 ? 2 : 1); q++) { const dx = (Math.random() - .5) * R, L = 6 + Math.random() * 18; b.fillStyle = '#5e1c17'; b.fillRect(Math.round(cx + dx), cy, 2, Math.round(R * .5 + L)); b.fillRect(Math.round(cx + dx) - 1, Math.round(cy + R * .5 + L), 4, 3); }   // (drips)
+      splats.push({ c, x: Math.round(x - cx), y: Math.round(y - cy), t: 0, life: hard ? 1 : .8 }); }
+    while (splats.length > 14) splats.shift(); }
+  function drawBlood(dt, low) { for (let k = splats.length - 1; k >= 0; k--) { const s = splats[k]; s.t += dt;
+      const keep = Math.max(low * 1.4, Math.max(0, 1 - Math.max(0, s.t - 2.5) / 2.5));   // (fresh ones a few seconds; while hurt, as long as it lasts)
+      if (s.t > 1.5 && keep < .02) { splats.splice(k, 1); continue; }
+      g.globalAlpha = Math.min(1, Math.max(0, keep)) * Math.min(1, s.t * 8); g.drawImage(s.c, s.x, s.y); } g.globalAlpha = 1; }
   // his health low: the edges of the picture go red (a dither, thicker and beating faster as it runs out)
   let beat = 0;
   function lowEdge(dt, k) { const W = cv.width, H = cv.height; beat += dt * (2 + k * 3); const pulse = .65 + .35 * Math.sin(beat * Math.PI * 2), depth = Math.round((14 + k * 40) * pulse);
@@ -207,6 +226,6 @@ export function createHud() {
     bar(rx, F.b.hp, 5, '#cf5a3e', '#3a2a26', true); bar(rx, F.b.st, 2, '#efc970', '#3a3526', true);
     text(F.a.name, lx, y - 8, '#f6f3ea'); text(F.b.name, rx + bw - width(F.b.name), y - 8, '#f6f3ea');
     if (F.a.guard) { g.fillStyle = '#9ccad8'; g.fillRect(lx + bw + 4, y, 5, 5); g.fillStyle = '#17181b'; g.fillRect(lx + bw + 6, y + 1, 1, 3); } }
-  return { resize, draw, pop, rant, praise, impact, ask, askAt, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
+  return { resize, draw, pop, rant, praise, impact, ask, askAt, bleed, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
     api: { get g() { return g; }, text, big, width, glyph, get W() { return cv.width; }, get H() { return cv.height; } }, get askSel() { return Q.sel; }, set askSel(v) { Q.sel = v; }, canvas: cv };
 }
