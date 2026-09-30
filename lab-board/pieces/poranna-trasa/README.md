@@ -197,6 +197,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - sedan i długa limuzyna: dłuższa, niższa maska, krótszy, wyższy bagażnik, przednia szyba bardziej pochylona (przód nie myli się z tyłem)
 - torba (`src/bag.js`, jedna dla roweru, pieszo i Warsztatu): płócienna listonoszka z klapą przez górę i przód (przeszycie), dwa skórzane paski z mosiężnymi klamrami, kieszeń z klapką i napą, naszywka z gazetą, mosiężne kółka na pasek, ciemniejsze boki; gazety (rolki z czerwonymi opaskami i złożone) wystają spod klapy i ubywa ich, gdy rzucasz; w Warsztacie grupa Torba
 - rower skręca mocniej (większy skręt, szybsze wejście w zakręt)
+- to, co zasłania postać (korona drzewa, róg dachu), przerzedza się ditherem wokół linii kamera–postać (nie w widoku z oczu)
 
 ## Na później
 
