@@ -90,6 +90,43 @@ Zasada: napad się opłaca od razu (drobne, fanty), ale kosztuje później. Każ
 - **Wyzwanie przy sklepie na trasie:** krótki tor za warsztatem rowerowym: skocznie, tarcze do trafiania gazetą, limit czasu; nagroda w kasie albo zniżka na części.
 - **Nagłówek na koniec runu:** podsumowanie runu jako pierwsza strona gazety, którą sam roznosisz, z nagłówkiem zależnym od tego, jak się skończył („GAZECIARZ POBITY PRZEZ BABKĘ Z PARASOLKĄ”, „TRZECI MANDAT: KONIEC KARIERY”, „REKORD: 4,2 KM BEZ WYWROTKI”) i zdjęciem z ostatniej chwili (zrzut klatki w pikselach).
 
+## 3e. Zdarzenia na drodze (burza mózgów)
+
+Wspólny szkielet: zapowiedź z daleka (dźwięk, znak, ludzie się oglądają), 5–15 s akcji, nagroda albo kara, śmieszna reakcja. Im dalej w runie, tym częściej, gęściej i w połączeniach (np. peleton w trakcie obławy).
+
+**Przemknąć się (slalom, wyczucie szczeliny)**
+- przejście dla pieszych: wycieczka przedszkolaków z paniami, trzeba się zmieścić między dziećmi albo poczekać (czekanie = spokój, przejazd na styk = bonus i wrzask pań)
+- wyjście z kościoła po mszy: tłum babek w poprzek jezdni
+- targ, stragany na poboczu, klienci z siatkami, skrzynki z jabłkami (rozsypane jabłka ślizgają koła)
+- kondukt albo wesele: jedzie się wolno za orszakiem, wyprzedzenie ma skutki
+- stado kaczek / krowy przepędzane przez drogę (wieś)
+
+**Przeskoczyć (skocznie, tricki, wyczucie czasu)**
+- roboty drogowe: wykop przez całą jezdnię, deska jako skocznia; robotnicy komentują styl
+- szlaban na przejeździe kolejowym i nadjeżdżający pociąg (nasze tory): zdążyć albo czekać; przeskok przez opuszczony szlaban
+- rozlana kałuża/plama oleju przed zakrętem, śmieciarka tarasująca drogę (wjechać po klapie)
+- rura z hydrantu tryska przez ulicę (przejazd = mokry, gazety w torbie namakają)
+
+**Uciec / przetrwać (pościg, spychanie)**
+- **kolarze w peletonie:** wyprzedzają w grupie, spychają, można się podczepić w ich cień (szybciej), wyzwać na sprint do skrzyżowania o kasę albo zrzucić jednego (reszta się mści)
+- **policja:** radiowóz z kogutem przy obławie; blokada z pachołkami (przejechać chodnikiem albo zatrzymać się i gadać); policjant na rowerze, który goni i ma lepszy rower od ciebie
+- gang gazeciarzy (już w planie): pasek równowagi, zrzucanie
+- pies uciekł z posesji i biegnie z właścicielem na smyczy wlokącym się za nim
+- samochód nauki jazdy: jedzie zygzakiem, gaśnie, cofa bez patrzenia
+
+**Pomóc albo skorzystać (wybór)**
+- wózek z dzieckiem toczy się z górki / złodziej z torebką (sekcja 3d)
+- rozsypane gazety konkurencji na drodze: zebrać (twoje) albo zostawić
+- ktoś wybiega z domu w szlafroku za tobą: „MOJA GAZETA!”, pościg odwrotny (dogoni cię i da napiwek albo w ucho, zależnie, czy trafiłeś w ganek)
+- autostopowicz na przystanku: podwieźć na bagażniku (wolniej, ale płaci; po drodze gada bzdury)
+- dostawca pizzy na skuterze ściga się z tobą o ten sam adres
+
+**Absurd (rzadko, do albumu odkryć)**
+- balon z helem porywa kota, trzeba zestrzelić gazetą
+- ktoś jedzie kosiarką samojezdną środkiem jezdni (dogonić, wyprzedzić, a on się ściga)
+- byk / dzik na osiedlu
+- bocian niesie coś ciężkiego nad drogą i to upuszcza
+
 ## 4. Progresja (żeby chciało się wracać)
 
 **Propozycja: dni pracy (rekomendacja).**
