@@ -100,14 +100,30 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const under = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .004, 16, 1, false, -Math.PI / 2, Math.PI), toon('#4a3a2c')); under.scale.copy(brim.scale).multiplyScalar(.97); under.scale.y = 1; under.position.set(0, -.002, hd * .38); under.rotation.x = .14; cap.add(under);   // (dark under the brim)
     const button = new THREE.Mesh(new THREE.SphereGeometry(.011, 6, 4), redD); button.position.y = crown; cap.add(button);
     cap.rotation.x = -.1; m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;   // (the front up on the forehead, the back down to the nape)
-    // the satchel: olive canvas, a darker flap, rolled papers standing out of it; low across his back, to the left
-    const pv = bones.pelvis.getWorldPosition(new V3()), sh = bones.upperarm_r.getWorldPosition(new V3()), satchel = makeBag({ THREE, toon }), bag = satchel.group;   // (the game's one bag: bag.js)
-    bag.rotation.y = -Math.PI / 2; m.userData.bagFill = satchel.setFill;                     // (its length across his back, its outer face out behind)
-    const at = new V3(pv.x + .08, pv.y + .1, pv.z - .16); bag.position.copy(at); bag.rotation.z = -.1; m.add(bag); bones.pelvis.attach(bag);
-    // the strap: from the bag, over his back and over his chest, to his right shoulder
-    const strapM = toon('#4d5530');
-    for (const s of [-1, 1]) { const a = s < 0 ? new V3(at.x + .15, at.y + .1, at.z + .03) : new V3(pv.x + .16, pv.y + .14, pv.z + .09), b = new V3(sh.x + .03, sh.y + .075, sh.z + s * .075), d = b.clone().sub(a);
-      const st = new THREE.Mesh(new THREE.BoxGeometry(.05, d.length(), .012), strapM); st.position.copy(a).add(b).multiplyScalar(.5); st.quaternion.setFromUnitVectors(UP, d.normalize()); m.add(st); bones.spine_03.attach(st); st.castShadow = true; }
+    // the satchel: low across his back, a touch right of his spine, close in; hung from a pivot at its top (it swings a little as he
+    // walks, see update); its strap lies on him: from the bag's end up across his back to his right shoulder, over it, down across his
+    // chest to his left hip, round his side back to the bag (the body's surface found from its vertices, in the rest pose)
+    const pv = bones.pelvis.getWorldPosition(new V3()), sh = bones.upperarm_r.getWorldPosition(new V3()), sp3 = bones.spine_03.getWorldPosition(new V3()), satchel = makeBag({ THREE, toon }), bag = satchel.group;   // (the game's one bag: bag.js)
+    m.userData.bagFill = satchel.setFill; const BH = satchel.size.H;
+    const at = new V3(pv.x + .01, pv.y + .1, pv.z - .135), pivot = new THREE.Group(); pivot.position.set(at.x, at.y + BH / 2, at.z); m.add(pivot); bones.pelvis.attach(pivot);
+    bag.rotation.set(0, -Math.PI / 2, -.08); bag.position.set(0, -BH / 2, 0); pivot.add(bag); m.userData.bagPivot = pivot; m.userData.bagQ0 = pivot.quaternion.clone();   // (its length across his back, its outer face out behind)
+    const cloud = []; m.traverse(o => { if (!o.isMesh || /short|hair|bob|long|ponytail|afro|braid|eye|brow|lash/i.test(o.name)) return; const pos = o.geometry.attributes.position;
+      for (let k = 0; k < pos.count; k += 2) { v.fromBufferAttribute(pos, k).applyMatrix4(o.matrixWorld); if (v.y > pv.y - .1 && v.y < sh.y + .2) cloud.push(v.x, v.y, v.z); } });
+    const axis = y => { const t = THREE.MathUtils.clamp((y - pv.y) / Math.max(.01, sp3.y - pv.y), 0, 1.4); return [pv.x + (sp3.x - pv.x) * t, pv.z + (sp3.z - pv.z) * t]; };
+    const out = (y, th) => { const [ax, az] = axis(y); let best = .09; for (let k = 0; k < cloud.length; k += 3) { const dy = cloud[k + 1] - y; if (dy > .03 || dy < -.03) continue;
+      const dx = cloud[k] - ax, dz = cloud[k + 2] - az, r = Math.hypot(dx, dz); if (r > .3) continue; const a = Math.atan2(dz, dx); if (Math.abs(Math.atan2(Math.sin(a - th), Math.cos(a - th))) < .2 && r > best) best = r; } return best; };
+    const onBody = (y, th, lift = .014) => { const [ax, az] = axis(y), r = out(y, th) + lift; return new V3(ax + Math.cos(th) * r, y, az + Math.sin(th) * r); };
+    const D = Math.PI / 180, lerp = (a, b, t) => a + (b - a) * t, route = [new V3(at.x + .18, at.y + .12, at.z + .02)];
+    for (let k = 1; k <= 8; k++) { const t = k / 8; route.push(onBody(lerp(at.y + .15, sh.y + .02, t), lerp(-62, -172, t) * D)); }        // up across his back
+    route.push(onBody(sh.y + .07, 180 * D, .022));                                                                                        // over his shoulder
+    for (let k = 0; k <= 8; k++) { const t = k / 8; route.push(onBody(lerp(sh.y + .02, pv.y + .15, t), lerp(172, 48, t) * D)); }          // down across his chest
+    for (const a of [22, -5, -32]) route.push(onBody(pv.y + .14, a * D));                                                                  // round his left side
+    route.push(new V3(at.x + .19, at.y + .1, at.z + .04));
+    const strapM = toon('#4d5530'), pos = [], idx = [], W2 = .026;
+    for (let k = 0; k < route.length; k++) { const p0 = route[Math.max(0, k - 1)], p1 = route[Math.min(route.length - 1, k + 1)], tg = p1.clone().sub(p0).normalize(), [ax, az] = axis(route[k].y), nrm = new V3(route[k].x - ax, 0, route[k].z - az).normalize(), sd = new V3().crossVectors(tg, nrm).normalize();
+      pos.push(route[k].x + sd.x * W2, route[k].y + sd.y * W2, route[k].z + sd.z * W2, route[k].x - sd.x * W2, route[k].y - sd.y * W2, route[k].z - sd.z * W2); if (k) { const q = k * 2; idx.push(q - 2, q - 1, q, q - 1, q + 1, q); } }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); sg.setIndex(idx); sg.computeVertexNormals();
+    const strap = new THREE.Mesh(sg, strapM.clone()); strap.material.side = THREE.DoubleSide; strap.castShadow = true; m.add(strap); bones.spine_03.attach(strap);
     bag.traverse(o => { if (o.isMesh) o.castShadow = true; });
   }
 
@@ -284,6 +300,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   }
 
   // ---------- the state: him on foot, the ones with a grudge, the fight ----------
+  const _bq = new THREE.Quaternion(), _be = new THREE.Euler();   // (the bag's swing)
   let ready = false, me = null, foe = null, active = false, view = 'third', fightNow = null, grudges = [], pitch = 0;
   const mAim = { x: 0, y: 0, dir: 'right' };                              // (the mouse's side for the next punch; it stays where last pointed)
   const ATK = { left: 'jab', right: 'cross', up: 'hook' };
@@ -379,6 +396,8 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     if (inp.locked) { me.yaw -= (inp.dx || 0) * .0026; pitch = clamp(pitch - (inp.dy || 0) * .0022, -1, .75); me.vs += ((inp.side || 0) * 1.25 - me.vs) * Math.min(1, dt * 8); }
     else { me.vs = 0; me.yaw -= (inp.side || 0) * dt * (2.6 - Math.min(1, Math.abs(me.vf) / 3.6) * .9); pitch += (0 - pitch) * Math.min(1, dt * 2); }
     const rt = new V3(-Math.cos(me.yaw), 0, Math.sin(me.yaw)); me.x += Math.sin(me.yaw) * me.vf * dt + rt.x * me.vs * dt; me.z += Math.cos(me.yaw) * me.vf * dt + rt.z * me.vs * dt; push(me);
+    { const u = me.P.m.userData; if (u.bagPivot) { const sp = Math.min(1, Math.hypot(me.vf, me.vs) / 3); me.bagT = (me.bagT || 0) + dt * (2.5 + Math.abs(me.vf) * 1.9); me.bagK = (me.bagK || 0) + (sp - (me.bagK || 0)) * Math.min(1, dt * 4);
+      _bq.setFromEuler(_be.set(Math.sin(me.bagT * 2) * .03 * me.bagK + Math.max(0, me.vf) * .012, 0, Math.sin(me.bagT) * .045 * me.bagK)); u.bagPivot.quaternion.copy(u.bagQ0).multiply(_bq); } }
     animate(me.P, dt, Math.abs(me.vs) > Math.abs(me.vf) ? Math.abs(me.vs) : me.vf, 'walk'); const b = me.P.body; b.rotation.x += (Math.max(0, me.vf - 2) * .05 - b.rotation.x) * Math.min(1, dt * 6); b.rotation.z += ((inp.side || 0) * me.vf * -.03 - b.rotation.z) * Math.min(1, dt * 6); b.position.y = 0;
     arms(me.P, me, dt); place(me);
   }
