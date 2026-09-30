@@ -288,6 +288,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - drzewa nad jezdnią widać teraz też w Warsztacie (grupa Drzewa)
 - kamera: kółko myszy przytrzymane i ruch myszą (góra/dół: kąt, lewo/prawo: odległość) albo samo kręcenie kółkiem (odległość); podwójne kliknięcie kółkiem wraca do ustawień; zapamiętywane w przeglądarce; działa też w widoku z góry (wysokość)
 
+## Wersja 28: obudowana ulica, celowanie myszą
+
+- więcej drzew przy jezdni (mniej więcej co 10–17 m), ich korony schodzą się nad drogą
+- przy krawędzi działki, obok podjazdu, pary pojemników na śmieci wystawione na rano (zwykły i żółty); pod oknami rabaty z kwiatami w kamiennym obrzeżu; na części domów biało-czerwona flaga na drążku ze ściany
+- domy z garażem też mają zwykle (70%) ścieżkę od ganku do chodnika, z przerwą w płocie
+- prześwit działa też przy samej kamerze: gdy kamera wejdzie w koronę drzewa, liście przed obiektywem znikają
+- rzut: trzymając go, mysz w górę kieruje gazetę bardziej do przodu, w dół do tyłu (do około 30°), ruch w stronę rzutu dodaje zasięgu (do 25%); w tym czasie mysz nie obraca widoku
+- podgląd rzutu subtelniejszy: 7 małych, gasnących kropek tylko na początku lotu, cieńszy i bledszy pierścień lądowania
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

@@ -63,7 +63,7 @@ function rimmed(m) { m.onBeforeCompile = sh => { sh.uniforms.rimK = RIM.k; sh.un
       #endif`);
     sh.fragmentShader = 'varying vec3 vFadeW; uniform vec3 fadeCam, fadeTgt; uniform float fadeR;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
       if (fadeR > 0.) { vec3 ab = fadeTgt - fadeCam; float t = clamp(dot(vFadeW - fadeCam, ab) / max(dot(ab, ab), 1e-4), 0., 1.);
-        float d = length(vFadeW - (fadeCam + ab * t)), rad = fadeR * smoothstep(0., .3, t);
+        float d = length(vFadeW - (fadeCam + ab * t)), rad = fadeR * max(smoothstep(0., .3, t), 1. - smoothstep(0., .12, t));   // (wide by him, and wide right at the lens too: a crown the camera is in)
         if (t < .92 && d < rad && vFadeW.y > fadeTgt.y - .75) { float k = 1. - d / rad, n = fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy / 2.), vec2(.06711056, .00583715)))); if (n < k * 2.2) discard; } }`);   // (not the ground under him: only what stands higher than his knees)
     sh.fragmentShader = 'uniform float rimK; uniform vec3 rimCol; uniform vec3 sunV; uniform vec3 upV;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `#include <opaque_fragment>
       { float fr = 1. - clamp(dot(normal, normalize(vViewPosition)), 0., 1.), lit = dot(normal, sunV);
@@ -246,18 +246,21 @@ function input() {
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
-const aim = (() => { const G = new THREE.Group(), dotM = new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .85, depthWrite: false }), dots = [];
-  for (let k = 0; k < 16; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.09, 6, 4), dotM); d.renderOrder = 3; G.add(d); dots.push(d); }
-  const ring = new THREE.Mesh(new THREE.RingGeometry(.55, .85, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .95, depthWrite: false })); ring.renderOrder = 3; G.add(ring);
-  const rim = new THREE.Mesh(new THREE.RingGeometry(.85, .98, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#17181b', transparent: true, opacity: .8, depthWrite: false })); rim.renderOrder = 3; ring.add(rim);   // (a dark rim: it shows on the grass)
+const aim = (() => { const G = new THREE.Group(), dots = [];   // (the dots: few and faint, fading out; the start of the flight, not all of it: a hint, the rest is a feel)
+  for (let k = 0; k < 7; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.055, 6, 4), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .5 * (1 - k / 7), depthWrite: false })); d.renderOrder = 3; G.add(d); dots.push(d); }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.62, .78, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .55, depthWrite: false })); ring.renderOrder = 3; G.add(ring);
+  const rim = new THREE.Mesh(new THREE.RingGeometry(.78, .86, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#17181b', transparent: true, opacity: .45, depthWrite: false })); rim.renderOrder = 3; ring.add(rim);   // (a dark rim: it shows on the grass)
   const arrowM = new THREE.MeshBasicMaterial({ color: '#efc970' }), arrow = new THREE.Group(); arrow.add(new THREE.Mesh(new THREE.ConeGeometry(.24, .42, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#17181b' })), new THREE.Mesh(new THREE.ConeGeometry(.18, .34, 4).rotateX(Math.PI), arrowM)); arrow.children[1].position.y = .03; ring.add(arrow);   // (an arrow over it: seen from low down too)
   G.traverse(o => { if (o.material) o.material.depthTest = false; });   // (an aid, not a thing: over the grass, always seen)
   G.visible = false; scene.add(G); return { G, dots, ring, at: new THREE.Vector3(), on: false }; })();
+function throwVel(p, side, c = {}) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, a = (c.ay || 0) * .52, sp = (2.6 + p * 9) * (1 + (c.ax || 0) * .25);
+  const dx = rx * out * Math.cos(a) + fx * Math.sin(a), dz = rz * out * Math.cos(a) + fz * Math.sin(a);
+  return new THREE.Vector3(fx * B.v * .9 + dx * sp, 1.9 + p * 3.3, fz * B.v * .9 + dz * sp); }
 function stepAim() {                                                    // (while a throw is held: where it would go)
   aim.on = !!B.charge && !foot.active && !B.crash; aim.G.visible = aim.on; if (!aim.on) return;
-  const side = B.charge.side, p = B.charge.p, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, sp = 2.6 + p * 9;
-  const pos = new THREE.Vector3(B.x - rx * out * -.3, B.y + 1.25, B.z - rz * out * -.3), v = new THREE.Vector3(fx * B.v * .9 + rx * out * sp, 1.9 + p * 3.3, fz * B.v * .9 + rz * out * sp), h = 1 / 30;
-  let k = 0, n = 0, land = null; for (; n < 90; n++) { v.y -= g * h; pos.addScaledVector(v, h); const gy = track.probe(pos.x, pos.z, B.hint).y; if (pos.y <= gy) { pos.y = gy; land = pos; break; } if (n % 2 === 0 && k < aim.dots.length) aim.dots[k++].position.copy(pos); }
+  const side = B.charge.side, p = B.charge.p, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side;
+  const pos = new THREE.Vector3(B.x - rx * out * -.3, B.y + 1.25, B.z - rz * out * -.3), v = throwVel(p, side, B.charge), h = 1 / 30;
+  let k = 0, n = 0, land = null; for (; n < 90; n++) { v.y -= g * h; pos.addScaledVector(v, h); const gy = track.probe(pos.x, pos.z, B.hint).y; if (pos.y <= gy) { pos.y = gy; land = pos; break; } if (n % 3 === 1 && k < aim.dots.length) aim.dots[k++].position.copy(pos); }
   for (let j = 0; j < aim.dots.length; j++) aim.dots[j].visible = j < k;
   if (land) { aim.ring.visible = true; aim.ring.position.copy(land).setY(land.y + .04); aim.at.copy(land); const good = track.mailboxes.some(mb => !mb.done && mb.o.position.distanceTo(land) < 1.6) || track.doors.some(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - land.x, d.p.z - d.n.z * 1.3 - land.z) < 1.6);
     const col = good ? '#7fae58' : '#efc970'; aim.ring.material.color.set(col); aim.ring.children[1].children[1].material.color.set(col); const k2 = (.9 + Math.sin(performance.now() / 120) * .1) * Math.max(1, camera.position.distanceTo(land) / 8); aim.ring.scale.setScalar(k2);   // (the farther, the bigger: about the same on the screen)
@@ -266,16 +269,16 @@ function throwing(dt, inp) {
   if (B.crash) { B.charge = null; return; }
   const held = inp.holdL ? 1 : inp.holdR ? -1 : 0;
   if (!B.charge && held && B.papers > 0 && !rider.throwing) B.charge = { side: held, p: 0 };
-  if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85);
-    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; if (rider.throwPaper(B.charge.side)) B.papers--; B.charge = null; } }
+  if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge;
+    c.ay = THREE.MathUtils.clamp((c.ay || 0) - (inp.dy || 0) * .005, -1, 1); c.ax = THREE.MathUtils.clamp((c.ax || 0) - (inp.dx || 0) * .005 * c.side, -1, 1);
+    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) B.papers--; B.charge = null; } }
 }
 const paperG = new THREE.CylinderGeometry(.035, .035, .26, 10), paperM = toon('#ece5d0'), bandM = toon('#b3372c');
 const dotG = new THREE.CircleGeometry(.16, 12).rotateX(-Math.PI / 2), dotM = new THREE.MeshBasicMaterial({ color: '#1b1510', transparent: true, opacity: .45, depthWrite: false });
 const papers = [];
 function release(at, side) {                                          // (from the rider, at the moment the hand lets go)
   const m = new THREE.Mesh(paperG, paperM); m.castShadow = true; m.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandM)); scene.add(m); m.position.copy(at);
-  const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, p = B.throwP, sp = 2.6 + p * 9;   // (from a lob to a hard throw)
-  const v = new THREE.Vector3(fx * B.v * .9 + rx * out * sp, 1.9 + p * 3.3, fz * B.v * .9 + rz * out * sp);
+  const v = throwVel(B.throwP, side, B.throwC || {});                   // (from a lob to a hard throw, turned as it was aimed)
   const dot = new THREE.Mesh(dotG, dotM); dot.renderOrder = 1; scene.add(dot);
   papers.push({ m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false });
 }
@@ -639,7 +642,7 @@ function stamina(dt, inp) {
 const world = { rider: B, pullOff: () => dismount('Ściągnął cię z roweru!') };
 const mlook = { x: 0, y: 0 };                                          // (on the bike: where the mouse turned the view)
 function step(dt, inp) {
-  if (!foot.active) { mlook.x = THREE.MathUtils.clamp(mlook.x + (inp.dx || 0) * .006, -1, 1); mlook.y = THREE.MathUtils.clamp(mlook.y + (inp.dy || 0) * .005, -1, 1); }
+  if (!foot.active && !B.charge) { mlook.x = THREE.MathUtils.clamp(mlook.x + (inp.dx || 0) * .006, -1, 1); mlook.y = THREE.MathUtils.clamp(mlook.y + (inp.dy || 0) * .005, -1, 1); }
   mlook.x *= Math.exp(-dt * 1.6); mlook.y *= Math.exp(-dt * 1.6);
   if (slowmo > 0) { slowmo -= dt; dt *= .12; }                        // (a hit: a beat of stillness)
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)

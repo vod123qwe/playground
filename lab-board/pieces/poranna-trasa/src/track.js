@@ -156,6 +156,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   // a bush of a few leafy balls, perhaps in flower (in its parent's space)
   function bush(parent, x, z, r, flowers) { for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r * (.7 + rnd() * .5), 1), flowers ? BLOOM[rnd() * BLOOM.length | 0] : bushM);
     b.position.set(x + (rnd() - .5) * r * 1.6, r * .7, z + (rnd() - .5) * r); b.scale.y = .8; parent.add(b); } }
+  const binMs = ['#3f6b35', '#44484c', '#2f4a3a', '#e3b83a'].map(c => toon(c)), soilM = toon('#4a3524'), flagW = toon('#f6f3ea'), flagR = toon('#c8323a');
   function bin() { const b = new THREE.Group(), m = toon(['#3f6b35', '#2f4a3a', '#44484c'][rnd() * 3 | 0]); b.add(box(.58, .95, .7, m, 0, .52, 0)); b.add(box(.64, .07, .76, m, 0, 1.02, .02));
     for (const x of [-.26, .26]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .06, 10), dark); w.rotation.z = Math.PI / 2; w.position.set(x, .1, .33); b.add(w); } return b; }
   const hedgeM = toon('#3f6b35', { map: (() => { const t = tex.leaves().clone(); t.repeat.set(5, 1.2); t.needsUpdate = true; return t; })() });
@@ -173,7 +174,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     for (const c of h.children) { if (!c.userData.slab) continue; const g = c.geometry.parameters, at = (x, z) => { h.localToWorld(v.set(c.position.x + x, 0, c.position.z + z)); return groundAt(v.x, v.z, i) - top; };
       const L = at(-g.width / 2, 0), R = at(g.width / 2, 0), B = at(0, -g.depth / 2), F = at(0, g.depth / 2);
       c.position.y = (L + R + B + F) / 4 + g.height / 2 - .01; c.rotation.z = Math.atan2(R - L, g.width); c.rotation.x = -Math.atan2(F - B, g.depth); }
-    for (const c of h.children) { if (!(c.isGroup || (c.isMesh && c.geometry.type === 'IcosahedronGeometry'))) continue;
+    for (const c of h.children) { if (!(c.isGroup || (c.isMesh && c.geometry.type === 'IcosahedronGeometry')) || c.userData.onHouse) continue;   // (onHouse: fixed to the house, as a flag on its wall)
       c.getWorldPosition(v); c.userData.dy = groundAt(v.x, v.z, i) - top; c.position.y += c.userData.dy; }
     for (const q of seats) if (q.h === h && q.chair) q.local.y += q.chair.userData.dy || 0; }
   function house(i, side) {                                          // side +1 right, -1 left; its front towards the road
@@ -210,7 +211,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     if (annex) { h.add(box(aw, ah, ad, wall, ax, ah / 2, azc)); h.add(box(aw + .1, 1.4, ad + .1, stoneM, ax, -.7, azc)); h.add(box(aw + .12, .3, ad + .12, stoneM, ax, .15, azc));
       const rf = box(aw + .3, .14, ad + .3, dark, ax, ah + .07, azc); rf.rotation.x = -.04; h.add(rf); h.add(box(aw + .34, .1, .1, trimM, ax, ah + .02, fz - .16));
       h.add(box(2.6, 2.1, .1, garA, ax, 1.05, fz - .02)); h.add(box(2.8, .12, .14, white, ax, 2.2, fz - .03)); for (const x of [-aw / 2, aw / 2]) h.add(box(.16, ah, .16, trimM, ax + x, ah / 2, fz + .02)); }
-    const drv = garage || annex, dvx = garage ? gx : ax;                                            // (a drive: to the garage, in the house or in the annex)
+    const drv = garage || annex, dvx = garage ? gx : ax, path = !garage || rr() < .7;   // (a path to the door: always without a garage, mostly with one too)                                            // (a drive: to the garage, in the house or in the annex)
     if (rnd() < .7) { const pz = fz - 1.1, pw = garage ? 2.6 : 3.4, px0 = dx;                                                          // a porch: its floor, steps, roof, posts, rails
       h.add(box(pw, .3, 2.2, white, px0, .15, fz - 1.1)); h.add(box(pw - .04, 1.2, 2.9, stoneM, px0, -.6, fz - 1.4)); for (const [k, y] of [[0, .1], [1, .2]]) h.add(box(1.2, .1 + y * 0, .32, white, px0, .05 + k * .1, fz - 2.3 + k * .3));
       h.add(box(pw + .4, .14, 2.4, roof, px0, 2.55, pz)); for (const x of [-pw / 2 + .1, pw / 2 - .1]) h.add(box(.16, 2.3, .16, white, px0 + x, 1.4, pz - 1));
@@ -219,9 +220,22 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     if (rnd() < .6) { h.add(box(.62, 1.6, .62, brickM, W * .3, HH + 1.5, D * .1)); h.add(box(.76, .12, .76, stoneM, W * .3, HH + 2.34, D * .1)); }   // a chimney, brick, capped
     // to the pavement: a drive to the garage, or a path of slabs to the door; bushes and beds along the front
     const gap = 6.5 + rnd() * 2;
-    if (drv) h.add(slab(box(3.0, .04, gap + .2, driveM, dvx, .02, -D / 2 - gap / 2))); if (!garage) h.add(slab(box(1.1, .04, gap, pathM, dx, .025, -D / 2 - gap / 2)));
+    if (drv) h.add(slab(box(3.0, .04, gap + .2, driveM, dvx, .02, -D / 2 - gap / 2))); if (path) h.add(slab(box(1.1, .04, gap, pathM, dx, .025, -D / 2 - gap / 2)));
     for (let k = 0; k < 3 + (rnd() * 3 | 0); k++) { const x = (rnd() - .5) * (W - 1.5); if (Math.abs(x - dx) < 1.2 || (drv && Math.abs(x - dvx) < 1.8)) continue; bush(h, x, fz - .6 - rnd() * .4, .45 + rnd() * .3, rnd() < .45); }
     if (rnd() < .5) { const bn = bin(); bn.position.set(garage ? gx + 2 : W / 2 - .6, 0, fz - 1.2 - rnd()); bn.rotation.y = (rnd() - .5) * .5; h.add(bn); }
+    // the street's furniture on the lot: the bins put out for the morning at its edge by the pavement (a mixed one and a yellow one),
+    // a bed of flowers under a window, and now and then a flag on the front, white and red, on a pole out from the wall
+    const extraHits = [];
+    if (rr() < .45) { const zE = -D / 2 - gap + .55, bx = drv ? dvx + (dvx > 0 ? -2.3 : 2.3) : dx + (rr() < .5 ? -1.5 : 1.5), m0 = binMs[rr() * 3 | 0];
+      for (const [k, m] of [[0, m0], [1, binMs[3]]]) { const b = new THREE.Group(); b.add(box(.58, .95, .7, m, 0, .52, 0)); b.add(box(.64, .07, .76, m, 0, 1.02, .02));
+        for (const x of [-.26, .26]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .06, 10), dark); w.rotation.z = Math.PI / 2; w.position.set(x, .1, .33); b.add(w); }
+        b.position.set(bx + k * .72, 0, zE); b.rotation.y = Math.PI + (rr() - .5) * .3; h.add(b); }
+      extraHits.push([{ hx: .7, hz: .4, h: 1.1, kind: 'hard' }, bx + .36, zE]); }
+    if (rr() < .45) for (const x of garage ? [-W * .3] : [-W * .32, W * .32]) { if (rr() < .3) continue; const bed = new THREE.Group(); bed.add(box(1.9, .14, .7, soilM, 0, .07, 0)); bed.add(box(1.75, .24, .55, BLOOM[rr() * BLOOM.length | 0], 0, .24, 0));
+      for (const bx2 of [-.95, .95]) bed.add(box(.08, .18, .74, stoneM, bx2, .09, 0)); bed.position.set(x, 0, fz - .75); h.add(bed); }
+    if (rr() < .22) { const fx = dx > 0 ? -W / 2 + .45 : W / 2 - .45, pole = new THREE.Group(); pole.position.set(fx, 2.45, fz - .05); pole.rotation.x = -.8; h.add(pole);
+      pole.add(box(.05, 1.8, .05, white, 0, .9, 0)); const sg = fx > 0 ? -1 : 1;
+      const wS = box(.95, .36, .02, flagW, sg * .5, 1.5, 0), rS = box(.95, .36, .02, flagR, sg * .5, 1.14, 0); wS.rotation.y = sg * .12; rS.rotation.y = sg * .16; pole.add(wS, rS); pole.userData.onHouse = true; }
     // the front garden, lived in: a few things about the lawn (not on the path, the drive or the porch); now and then an old car by the house
     const yard = [];
     { const spots = [], lawnZ0 = fz - 1, lawnZ1 = -D / 2 - gap + 1.4, pick = [['leafPile', 3], ['gnome', 2], ['sandbox', 1], ['swing', 1], ['kidBike', 1], ['trampoline', 1], ['grill', 1], ['birdbath', 1]], tot = pick.reduce((a, b) => a + b[1], 0);
@@ -248,8 +262,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     { const kb = rr(), zb = D / 2 + 3.2 + rr() * 1.5, x0 = -W / 2 - 1 - (annex && as < 0 ? 3.5 : 0), x1 = W / 2 + 1 + (annex && as > 0 ? 3.5 : 0), len = x1 - x0;
       if (kb < .85) { const f = kb < .5 ? P.boardFence(len) : P.wireFence(len); f.group.position.set((x0 + x1) / 2, 0, zb); f.group.rotation.y = Math.PI / 2; h.add(f.group); f.group.updateMatrixWorld(true);
         f.group.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } }); hit(h, { hx: len / 2, hz: .1, h: 1.5, kind: 'hard' }, i, (x0 + x1) / 2, zb); } }
-    for (const [spec, x, z] of yard) hit(h, spec, i, x, z);
-    if (drv) { zone(h, 1.9, (gap + .2) / 2 + .6, dvx, -D / 2 - gap / 2); zone(h, 1.9, 2.6, dvx, -D / 2 - gap - 2.6); } if (!garage) zone(h, .9, gap / 2, dx, -D / 2 - gap / 2); if (annex) zone(h, aw / 2 + .3, ad / 2, ax, azc);   // the drive (and across the pavement and the verge: no tree in the way out), or the path
+    for (const [spec, x, z] of [...yard, ...extraHits]) hit(h, spec, i, x, z);
+    if (drv) { zone(h, 1.9, (gap + .2) / 2 + .6, dvx, -D / 2 - gap / 2); zone(h, 1.9, 2.6, dvx, -D / 2 - gap - 2.6); } if (path) zone(h, .9, gap / 2, dx, -D / 2 - gap / 2); if (annex) zone(h, aw / 2 + .3, ad / 2, ax, azc);   // the drive (and across the pavement and the verge: no tree in the way out), or the path
     zone(h, 2.4, 1.7, dx, fz - 1.1);                                                                                             // the porch
     // now and then a garden chair (or a lounger, striped) out on the lawn, facing the road
     if (rnd() < .3) { const sx = (dx > 0 ? -1 : 1) * W * .28, sz = fz - 3.2, lounger = rnd() < .4, c = new THREE.Group(), wd = toon('#9e7a4f'), cloth = toon('#ffffff', { map: STRIPE });
@@ -278,7 +292,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     //   always open where the drive or the path meets the pavement (a car must get out, one must get in): a gate on the path (now and
     //   then left ajar), posts at the drive (now and then a double gate, swung wide open); a few lots fenced all round, back to the house
     const k = rnd(), gapO = drv ? [dvx, 3.4, 'drive'] : [dx, 1.3, 'path'], lo = gapO[0] - gapO[1] / 2, hi = gapO[0] + gapO[1] / 2, fL = -W / 2 - (annex && as < 0 ? 3.5 : 0), fR = W / 2 + (annex && as > 0 ? 3.5 : 0);
-    const holes = (annex ? [[lo, hi], [dx - .65, dx + .65]] : [[lo, hi]]).sort((a, b) => a[0] - b[0]), runs = [];   // (with an annex: open at its drive and at the path to the door)
+    const holes = (annex || (garage && path) ? [[lo, hi], [dx - .65, dx + .65]] : [[lo, hi]]).sort((a, b) => a[0] - b[0]), runs = [];   // (with an annex: open at its drive and at the path to the door)
     { let a = fL; for (const [h0, h1] of holes) { runs.push([a, h0]); a = h1; } runs.push([a, fR]); for (let q = runs.length - 1; q >= 0; q--) if (runs[q][1] - runs[q][0] < .3) runs.splice(q, 1); }
     if (k < .45) { const f = new THREE.Group(); put(f, i, side * (PAVE + .5), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2);   // (the fence's frame is the house's: across the lot along x, the lot at +z)
       const run = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / L, uz = (z1 - z0) / L, n = Math.max(1, Math.round(L / .28)), yaw = Math.atan2(-uz, ux);
@@ -429,7 +443,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i); show.tree.push({ o: t, label: 'drzewo nad jezdnią', note: H.toFixed(1) + ' m' });   // (turned with the road: its +x is the road's left, -x its right)
     dapple(i + Math.round((rnd() - .5) * 4 / ds), side * (VERGE - 3.2));
   }
-  for (let i = 60; i < N - 20; i += Math.round((15 + rnd() * 9) / ds)) { if (rnd() < .78) streetTree(i, rnd() < .5 ? 1 : -1); }
+  for (let i = 60; i < N - 20; i += Math.round((10 + rnd() * 7) / ds)) { if (rnd() < .82) streetTree(i, rnd() < .5 ? 1 : -1); }   // (thick along the road: the crowns close over it here and there)
   // street lamps on the right: a grey post, an arm out over the road, a lamp
   for (let i = 30; i < N; i += Math.round((46 + rnd() * 10) / ds)) { const l = new THREE.Group(), m = toon('#6a6e70'); l.add(box(.14, 6.2, .14, m, 0, 3.1, 0));
     const arm = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 6.0, 0), new THREE.Vector3(-.4, 6.5, 0), new THREE.Vector3(-1.4, 6.6, 0), new THREE.Vector3(-2.0, 6.45, 0)]), 12, .05, 6), m); l.add(arm);
