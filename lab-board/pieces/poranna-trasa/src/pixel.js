@@ -29,11 +29,11 @@ export function createPixel({ THREE, renderer, height = 240 }) {
   const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(4, 4) });
   const pal = PALETTE.map(h => new THREE.Color(h));                    // (as written: sRGB)
   const mat = new THREE.ShaderMaterial({
-    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(4, 4) }, shift: { value: new THREE.Vector2() }, mode: { value: 0 }, wobA: { value: 0 }, wobT: { value: 0 }, scr: { value: new THREE.Vector2(4, 4) }, haze: { value: 1.2 }, hazeCol: { value: new THREE.Vector3(.76, .83, .86) }, crease: { value: 0 }, cThr: { value: .012 }, near: { value: .1 }, far: { value: 500 },
+    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(4, 4) }, shift: { value: new THREE.Vector2() }, mode: { value: 0 }, fx: { value: 1 }, p1: { value: 0 }, p2: { value: 0 }, p3: { value: 0 }, p4: { value: 0 }, inkA: { value: new THREE.Vector3(1, 1, 1) }, inkB: { value: new THREE.Vector3(1, 1, 1) }, inkC: { value: new THREE.Vector3(1, 1, 1) }, wobA: { value: 0 }, wobT: { value: 0 }, scr: { value: new THREE.Vector2(4, 4) }, haze: { value: 1.2 }, hazeCol: { value: new THREE.Vector3(.76, .83, .86) }, crease: { value: 0 }, cThr: { value: .012 }, near: { value: .1 }, far: { value: 500 },
       pal: { value: pal.map(c => new THREE.Vector3(c.r, c.g, c.b)) }, dither: { value: .02 }, skyDither: { value: .07 }, outline: { value: .85 }, oInk: { value: 0 }, oThr: { value: .12 }, oWide: { value: 0 }, aber: { value: 0 }, ss: { value: 1 }, palOn: { value: 1 }, hue: { value: 1 }, palMix: { value: 1 }, levels: { value: 0 }, sat: { value: 1 }, contrast: { value: 1 }, vig: { value: 0 }, hurt: { value: 0 }, crt: { value: 0 }, exposure: { value: 1.0 }, on: { value: 1 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
     fragmentShader: `
-      uniform sampler2D tColor, tDepth; uniform vec2 res, shift, scr; uniform float mode, wobA, wobT, crease, cThr, haze; uniform vec3 hazeCol; uniform float near, far, dither, skyDither, outline, oInk, oThr, oWide, aber, ss, palOn, hue, palMix, levels, sat, contrast, vig, hurt, crt, exposure, on; uniform vec3 pal[${PALETTE.length}];
+      uniform sampler2D tColor, tDepth; uniform vec2 res, shift, scr; uniform vec3 inkA, inkB, inkC; uniform float mode, fx, p1, p2, p3, p4, wobA, wobT, crease, cThr, haze; uniform vec3 hazeCol; uniform float near, far, dither, skyDither, outline, oInk, oThr, oWide, aber, ss, palOn, hue, palMix, levels, sat, contrast, vig, hurt, crt, exposure, on; uniform vec3 pal[${PALETTE.length}];
       varying vec2 vUv;
       float lin(float d){ float z = d * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
       vec3 aces(vec3 x){ return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
@@ -61,22 +61,24 @@ export function createPixel({ THREE, renderer, height = 240 }) {
         return qb == q0 ? m0 : qb == q1 ? m1 : qb == q2 ? m2 : m3; }
       vec3 stylize(vec3 F, vec2 uv){
         if (mode < .5) return F;
-        vec2 sp = gl_FragCoord.xy; float L = dot(F, vec3(.3, .59, .11)), d0 = lin(texture2D(tDepth, vUv).r), e = 0.; vec2 o = 1.7 / scr, jit = (vec2(vnz(vUv * 40. + wobT), vnz(vUv * 40. - wobT + 7.)) - .5) * wobA * 4. / scr;
+        vec3 F0 = F; vec2 sp = gl_FragCoord.xy; float L = dot(F, vec3(.3, .59, .11)), d0 = lin(texture2D(tDepth, vUv).r), e = 0.; vec2 o = (mode > 1.5 && mode < 2.5 ? p3 : 1.7) / scr, jit = (vec2(vnz(vUv * 40. + wobT), vnz(vUv * 40. - wobT + 7.)) - .5) * wobA * 4. / scr;
         for (int k = 0; k < 4; k++) { vec2 dd = k == 0 ? vec2(o.x, 0.) : k == 1 ? vec2(-o.x, 0.) : k == 2 ? vec2(0., o.y) : vec2(0., -o.y); float dn = lin(texture2D(tDepth, vUv + dd + jit).r); e = max(e, (d0 - dn) / d0); }
         float edge = smoothstep(.05, .14, e) * step(d0, 150.);
-        if (mode < 1.5) { float gr = vnz(sp * .35) * .6 + vnz(sp * 1.3) * .4; F *= .9 + gr * .16; return mix(F, F * .5, edge * .65); }
-        if (mode < 2.5) { vec2 r2 = mat2(.707, -.707, .707, .707) * sp / 5.; float dr = sqrt(max(0., .62 - L)) * .72; if (L < .62 && length(fract(r2) - .5) < dr) F *= .5; return mix(F, vec3(.08, .07, .09), edge); }
-        if (mode < 3.5) { float gr = vnz(sp * .5) * .5 + vnz(sp * 2.1) * .5; vec3 paper = vec3(.96, .94, .88), c0 = texture2D(tColor, uv).rgb;
+        vec3 R = F;
+        if (mode < 1.5) { float gr = vnz(sp * .35) * .6 + vnz(sp * 1.3) * .4; R = F * (1. - p2 * .1 + gr * p2 * .2); R = mix(R, R * .5, edge * p3); }   // painted: p2 the canvas, p3 the stroke round things
+        else if (mode < 2.5) { float an = radians(p2), ca = cos(an), sa = sin(an); vec2 r2 = mat2(ca, -sa, sa, ca) * sp / p1; float dr = sqrt(max(0., p4 - L)) * .72; R = F; if (L < p4 && length(fract(r2) - .5) < dr) R *= .5; R = mix(R, vec3(.08, .07, .09), edge); }   // comic: p1 the dots' size, p2 their angle, p4 where the shade starts
+        else if (mode < 3.5) { float gr = vnz(sp * .5) * .5 + vnz(sp * 2.1) * .5; vec3 paper = vec3(.96, .94, .88), c0 = texture2D(tColor, uv).rgb;
           vec3 nb = (texture2D(tColor, uv + vec2(1.5, 0.) / res).rgb + texture2D(tColor, uv - vec2(1.5, 0.) / res).rgb + texture2D(tColor, uv + vec2(0., 1.5) / res).rgb + texture2D(tColor, uv - vec2(0., 1.5) / res).rgb) * .25;
-          float g = clamp(abs(dot(nb - c0, vec3(.3, .59, .11))) * 5., 0., 1.), gran = vnz(sp * .22); F = mix(F, paper, .24 + gr * .16); F = mix(F, F * .7, g * .7 + edge * .5); F *= .9 + gran * .18; F = mix(F, paper, smoothstep(.68, .9, L) * .8); return F * (.94 + gr * .1); }
-        if (mode < 4.5) { vec3 paper = vec3(.95, .93, .87), ink = vec3(.24, .22, .2); float h = 0.;
-          if (L < .78) h = max(h, step(fract((sp.x + sp.y) / 6.), .16)); if (L < .52) h = max(h, step(fract((sp.x - sp.y) / 6.), .16)); if (L < .3) h = max(h, step(fract(sp.y / 4.), .22));
-          vec3 o2 = mix(paper, F, .18); o2 = mix(o2, ink, h * .8); o2 = mix(o2, ink, edge); return o2 * (.96 + vnz(sp * .7) * .06); }
-        if (mode < 5.5) { vec3 o2 = vec3(.96, .94, .89); float pink = clamp((1. - F.g) * 1.1 - .1, 0., 1.), blue = clamp((1. - F.r) * 1.1 - .15, 0., 1.), yel = clamp((1. - F.b) * .9 - .2, 0., 1.);
-          vec2 a1 = mat2(.966, -.259, .259, .966) * (sp + vec2(1.5, .5)) / 4.5, a2 = mat2(.707, -.707, .707, .707) * (sp - vec2(1., 1.5)) / 4.5, a3 = sp / 4.5;
-          if (length(fract(a1) - .5) < sqrt(pink) * .6) o2 *= vec3(1., .42, .72); if (length(fract(a2) - .5) < sqrt(blue) * .6) o2 *= vec3(.25, .55, .85); if (length(fract(a3) - .5) < sqrt(yel) * .5) o2 *= vec3(1., .92, .35);
-          return mix(o2, o2 * .5, edge * .7) * (.95 + vnz(sp * .9) * .08); }
-        float b = bayer(floor(sp / 2.)); vec3 lo = vec3(.12, .11, .16), hi = vec3(.91, .88, .78); return mix(L + .08 > b ? hi : lo, lo, edge); }
+          float g = clamp(abs(dot(nb - c0, vec3(.3, .59, .11))) * 5., 0., 1.), gran = vnz(sp * .22); R = mix(F, paper, (.24 + gr * .16) * p1 * 1.6); R = mix(R, R * .7, (g * .7 + edge * .5) * p2 * 1.4); R *= 1. - p3 * .1 + gran * p3 * .3; R = mix(R, paper, smoothstep(.68, .9, L) * .8 * p1 * 1.6); R *= .94 + gr * .1; }   // watercolour: p1 the paper, p2 the pooling, p3 the grain
+        else if (mode < 4.5) { vec3 paper = inkA, ink = inkB; float h = 0.;   // pencil: p1 the lines' spacing, p2 their strength, p3 how much colour is left
+          if (L < .78) h = max(h, step(fract((sp.x + sp.y) / p1), .16)); if (L < .52) h = max(h, step(fract((sp.x - sp.y) / p1), .16)); if (L < .3) h = max(h, step(fract(sp.y / (p1 * .67)), .22));
+          R = mix(paper, F, p3); R = mix(R, ink, h * p2); R = mix(R, ink, edge); R *= .96 + vnz(sp * .7) * .06; }
+        else if (mode < 5.5) { vec3 o2 = vec3(.96, .94, .89); float d1 = clamp((1. - F.g) * 1.1 - .1, 0., 1.), d2 = clamp((1. - F.r) * 1.1 - .15, 0., 1.), d3 = clamp((1. - F.b) * .9 - .2, 0., 1.);   // riso: three inks (inkA..C), p1 how far off register, p2 the dots' size
+          vec2 a1 = mat2(.966, -.259, .259, .966) * (sp + vec2(p1, p1 * .33)) / p2, a2 = mat2(.707, -.707, .707, .707) * (sp - vec2(p1 * .66, p1)) / p2, a3 = sp / p2;
+          if (length(fract(a1) - .5) < sqrt(d1) * .6) o2 *= inkA; if (length(fract(a2) - .5) < sqrt(d2) * .6) o2 *= inkB; if (length(fract(a3) - .5) < sqrt(d3) * .5) o2 *= inkC;
+          R = mix(o2, o2 * .5, edge * .7) * (.95 + vnz(sp * .9) * .08); }
+        else { float b = bayer(floor(sp / p1)); R = mix(L + .08 > b ? inkB : inkA, inkA, edge); }   // one-bit: inkA the dark, inkB the light, p1 the dither's size
+        return mix(F0, R, fx); }
       void main(){
         vec2 q = vUv - .5, qa = q * vec2(res.x / res.y, 1.);
         vec2 uvD = .5 + q * (1. + aber * .07 * dot(qa, qa)) + shift / res;   // (shift: the part of a pixel the camera was snapped by, given back smoothly)                // speed: a lens, the picture bulging a touch (still in whole pixels)
@@ -85,8 +87,8 @@ export function createPixel({ THREE, renderer, height = 240 }) {
         vec3 c = vec3(0.);                                                  // smoothing: the pixel as the average of a bigger picture's ss x ss block
         if (ss <= 3.) { for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) { if (float(i) >= ss || float(j) >= ss) continue; c += texture2D(tColor, (px * ss + vec2(float(i), float(j)) + .5) / (res * ss)).rgb; } c /= ss * ss; }
         else { for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) c += texture2D(tColor, (px * ss + (vec2(float(i), float(j)) + .5) / 4. * ss) / (res * ss)).rgb; c /= 16.; }   // (bigger blocks: 16 filtered samples spread over it)
-        if (mode > .5 && mode < 1.5) c = kuwa(vUv, 2.2 / scr);                        // painted: the colour of the calmest patch round it (in the screen's own pixels: strokes, not blocks)
-        if (mode > 2.5 && mode < 3.5) { vec3 a = vec3(0.); for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) a += texture2D(tColor, vUv + vec2(float(i), float(j)) * 2.4 / scr).rgb; c = a / 9.; }   // watercolour: soft
+        if (mode > .5 && mode < 1.5) c = kuwa(vUv, (.8 + p1 * 1.4) / scr);                        // painted: the colour of the calmest patch round it (in the screen's own pixels: strokes, not blocks)
+        if (mode > 2.5 && mode < 3.5) { vec3 a = vec3(0.); for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) a += texture2D(tColor, vUv + vec2(float(i), float(j)) * (.5 + p4 * 4.) / scr).rgb; c = a / 9.; }   // watercolour: soft
         vec2 dv = uv - .5;
         // speed: a radial blur (the world streaming out from the middle, the middle itself sharp): sampled along the line to the middle,
         // from the screen's own point (not the pixel's block), so the streaks run smooth
@@ -99,7 +101,6 @@ export function createPixel({ THREE, renderer, height = 240 }) {
           c = mix(c, bl, min(1., hz * 1.4)); }
         c = toSRGB(aces(c * exposure));
         c = mix(c, hazeCol, hz * .35);                                  // (a little before the palette, so it picks paler colours far off; the rest after it)
-        if (on < .5) { gl_FragColor = vec4(hurtIt(stylize(c, uv), floor(gl_FragCoord.xy / 3.), vUv), 1.); return; }
         // the outline: this pixel is behind the one next to it by a good deal
         // shading as drawn: shadows cooler, lights warmer
         float Y = dot(c, vec3(.3, .59, .11));
@@ -122,10 +123,10 @@ export function createPixel({ THREE, renderer, height = 240 }) {
         if (aber > .01) { float v = smoothstep(.35, 1.05, length((vUv - .5) * vec2(res.x / res.y, 1.))) * aber; c *= 1. - v * .32; }   // the edges a little darker, smoothly (no dither)
         c = (c - .5) * contrast + .5; { float L = dot(c, vec3(.3, .59, .11)); c = mix(vec3(L), c, sat); }   // contrast, saturation
         if (vig > .01) { float v = smoothstep(.5, 1.25, length((uv - .5) * vec2(res.x / res.y, 1.)) * 1.5) * vig; if (bayer(px) < v) c = c * .62 + vec3(.01, .0, .03); }   // a vignette, dithered
-        c += (bayer(px) - .47) * (raw > .9999 ? skyDither : dither);
-        if (levels > 1.5) c = floor(c * levels + .5) / levels;                                                // posterize: fewer steps of each colour           // (the sky: the gradient dithered; things: barely)
+        c += (bayer(px) - .47) * (raw > .9999 ? skyDither : dither) * on;   // (the pixel look off: no dither)
+        if (levels > 1.5 && on > .5) c = floor(c * levels + .5) / levels;                                                // posterize: fewer steps of each colour           // (the sky: the gradient dithered; things: barely)
         float scan = crt > .01 ? 1. - crt * .3 * step(.5, fract(gl_FragCoord.y * .5)) : 1.;             // (scanlines, as an old screen)
-        if (palOn < .5) { gl_FragColor = vec4(hurtIt(stylize(mix(clamp(c, 0., 1.), hazeCol, hz * .5), uv) * scan, px, uv), 1.); return; }
+        if (palOn < .5 || on < .5) { gl_FragColor = vec4(hurtIt(stylize(mix(clamp(c, 0., 1.), hazeCol, hz * .5), uv) * scan, px, uv), 1.); return; }
         vec3 best = pal[0]; float bd = 1e9;
         for (int k = 0; k < ${PALETTE.length}; k++) { vec3 q = pal[k] - c; float w = dot(q * q, vec3(.3, .59, .11)); if (w < bd) { bd = w; best = pal[k]; } }
         gl_FragColor = vec4(hurtIt(stylize(mix(mix(clamp(c, 0., 1.), best, palMix), hazeCol, hz * .5), uv) * scan, px, uv), 1.);
