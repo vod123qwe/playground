@@ -202,6 +202,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 18: test walki w Warsztacie
 
 - Warsztat → Walka (test): wybierasz przeciwnika (cherlak, kozak z osiedla, szwagier), zaznaczasz nieśmiertelny / najpierw trening / podgląd faz i „otwórz arenę”: gra od razu w bójce na polu, po każdej walce przychodzi następny
+- Warsztat otwierasz z ekranu startowego albo z pauzy (Esc → WARSZTAT); z areny wracasz Esc → ← WRÓĆ DO WARSZTATU
 - adres areny: `index.html?arena=kozak&god&train&debug` (każdy dodatek opcjonalny); podgląd faz na górze: co robi przeciwnik (zamach z czasem i zwodem, cios i czas do trafienia, odsłonięcie, zatoczenie), jego i Twoje HP, oddech
 
 ## Na później

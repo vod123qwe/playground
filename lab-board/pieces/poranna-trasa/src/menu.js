@@ -25,11 +25,13 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } },
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
     if (page === 'pause') return [
+      ...(/[?&]arena=/.test(location.search) ? [{ type: 'button', label: '← WRÓĆ DO WARSZTATU', act: () => { location.href = 'studio.html'; } }] : []),
       { type: 'button', label: 'WRÓĆ DO GRY', act: () => close() },
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
       { type: 'button', label: document.fullscreenElement ? 'ZWYKŁE OKNO' : 'PEŁNY EKRAN', act: () => { onFull?.(); } },
       { type: 'button', label: 'STEROWANIE', act: () => controls ? show('keys') : (close(), onKeys?.()) },
       { type: 'button', label: 'ZACZNIJ OD NOWA', act: () => { close(); onRestart(); } },
+      ...(/[?&]arena=/.test(location.search) ? [] : [{ type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } }]),
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
     if (page === 'keys') { const r = sens ? [{ type: 'slider', label: 'CZUŁOŚĆ MYSZY', key: 'sens', min: .2, max: 2, step: .1, get: sens.get, set: sens.set }] : [];
       for (const sec of controls.sections()) { r.push({ type: 'head', label: sec.title });
