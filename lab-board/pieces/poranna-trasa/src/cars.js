@@ -18,7 +18,7 @@ export function createCars({ THREE, toon }) {
   const shadeT = canvasT(32, 32, g => { const gr = g.createRadialGradient(16, 16, 2, 16, 16, 16); gr.addColorStop(0, 'rgba(8,6,12,.75)'); gr.addColorStop(.7, 'rgba(8,6,12,.45)'); gr.addColorStop(1, 'rgba(8,6,12,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); });
   const shadeM = new THREE.MeshBasicMaterial({ map: shadeT, transparent: true, depthWrite: false });
   // the bus: its roof, its air unit, the destination sign (amber dots on black: a number and CENTRUM)
-  const busRoof = toon('#d9d6cc'), busUnit = toon('#9aa0a4'), busSign = new THREE.MeshBasicMaterial({ map: canvasT(40, 8, g => { g.fillStyle = '#17181b'; g.fillRect(0, 0, 40, 8); g.fillStyle = '#f2a33a';
+  const busRoof = toon('#d9d6cc'), busRib = toon('#b9b5aa'), busUnit = toon('#9aa0a4'), busSign = new THREE.MeshBasicMaterial({ map: canvasT(40, 8, g => { g.fillStyle = '#17181b'; g.fillRect(0, 0, 40, 8); g.fillStyle = '#f2a33a';
     const F = { 7: ['111', '001', '010', '010', '010'], C: ['011', '100', '100', '100', '011'], E: ['111', '100', '110', '100', '111'], N: ['101', '111', '111', '101', '101'], T: ['111', '010', '010', '010', '010'], R: ['110', '101', '110', '101', '101'], U: ['101', '101', '101', '101', '111'], M: ['101', '111', '111', '101', '101'] };
     let x = 2; for (const ch of '7 CENTRUM') { if (F[ch]) F[ch].forEach((row, y) => [...row].forEach((v, k) => { if (v === '1') g.fillRect(x + k, 1 + y, 1, 1); })); x += ch === ' ' ? 3 : 4; } }) });
   const shared = { glass: toon('#ffffff', { map: glassT, transparent: true, depthWrite: false }), seat: toon('#3a3430'), glassHi: toon('#6c8796'), dark: toon('#1f2023'), trim: toon('#3a3c40'), chrome: toon('#c9cbc8'), tyre: toon('#232427'),
@@ -142,8 +142,16 @@ export function createCars({ THREE, toon }) {
       // its roof, pale, with the air unit and two hatches; the windscreen and the back window (the box's ends are paint: glass laid on
       // them, dark behind it), the destination sign lit amber over the windscreen
       const gh = K.gh[4], top = base + .02 + gh, zf0 = fz - K.gh[0], zb0 = fz - K.gh[1];
-      G.add(box(W - .3, .05, L - .9, busRoof, 0, top + .02, 0)); G.add(box(1.5, .28, 1.3, busUnit, 0, top + .17, -.9)); G.add(box(1.54, .04, 1.34, shared.trim, 0, top + .32, -.9));
-      for (const zz of [2.6, -3.1]) G.add(box(.62, .07, .62, shared.dark, 0, top + .06, zz));
+      G.add(box(W - .42, .05, L - 1.1, busRoof, 0, top + .02, -.1));                                  // the roof panel, pale
+      for (const sd of [-1, 1]) { const ch = box(.2, .2, L - .5, paint, sd * (W / 2 - .09), top - .06, -.05); ch.rotation.z = sd * .78; G.add(ch);   // its edges chamfered in the paint, a gutter along each
+        G.add(box(.05, .05, L - .8, shared.trim, sd * (W / 2 - .21), top + .05, -.1)); }
+      for (let z = -L / 2 + 1; z < L / 2 - .8; z += 1.3) G.add(box(W - .5, .025, .06, busRib, 0, top + .055, z));   // ribs across it
+      { const u = new THREE.Group(); u.position.set(0, top + .05, -.9); G.add(u); u.add(box(1.5, .26, 1.4, busUnit, 0, .13, 0)); u.add(box(1.56, .04, 1.46, shared.trim, 0, .28, 0));   // the air unit: two fans, a grille
+        for (const zz of [-.35, .35]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(.26, .26, .04, 12), shared.dark); f.position.set(0, .3, zz); u.add(f); u.add(box(.5, .02, .04, shared.trim, 0, .325, zz)); }
+        for (let x = -.6; x <= .6; x += .15) u.add(box(.04, .12, .02, shared.dark, x, .13, .71)); }
+      for (const zz of [2.6, -3.3]) { G.add(box(.64, .07, .64, shared.dark, 0, top + .07, zz)); G.add(box(.66, .02, .08, shared.chrome, 0, top + .11, zz - .3)); }   // hatches, their hinges
+      G.add(box(.03, .5, .03, shared.dark, W * .3, top + .28, 3.4));                                   // an aerial
+      { const cap = box(W - .3, .14, .5, paint, 0, top - .02, zf0 - .2); cap.rotation.x = .35; G.add(cap); }   // over the windscreen, sloping
       for (const [z0, sg, hh, wd] of [[zf0, 1, gh * .7, W - .24], [zb0, -1, gh * .45, W - .5]]) { G.add(box(wd, hh, .02, shared.dark, 0, base + gh * (sg > 0 ? .45 : .62), z0 + sg * .012)); G.add(box(wd, hh, .03, shared.glass, 0, base + gh * (sg > 0 ? .45 : .62), z0 + sg * .03)); }
       G.add(box(W - .34, .24, .04, busSign, 0, top - .2, zf0 + .04)); }
     else { const a0 = K.gh[0], a1 = Math.min(K.gh[1], K.glassTo || 99), span = a1 - a0, xs = a0 + span * (K.glassTo ? .55 : .42);

@@ -355,18 +355,18 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const hash3 = (x, y, z) => { const v = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return v - Math.floor(v); };
   function crown(t, C, R, pal, nClump = 18, nCard = 44) {
     const P = PAL[pal], tone = (up, h, j) => P[Math.max(0, Math.min(P.length - 1, Math.round((up * .45 + h * .75 + j) * (P.length - 1))))];
-    for (let k = 0; k < nClump; k++) { const a = rnd() * 6.28, u = rnd() * 2 - 1, q = Math.sqrt(1 - u * u), rr = .35 + Math.sqrt(rnd()) * .55;
-      const cx = C.x + Math.cos(a) * q * R.x * rr, cy = C.y + u * R.y * rr * .85, cz = C.z + Math.sin(a) * q * R.z * rr, cr = (.45 + rnd() * .4) * Math.min(R.x, R.y, R.z) * .85;
+    for (let k = 0; k < nClump; k++) { const a = rnd() * 6.28, u = rnd() * 2 - 1, q = Math.sqrt(1 - u * u), rr = Math.sqrt(rnd()) * .5;   // (clumps: the crown's dark core only, kept inside the leaves)
+      const cx = C.x + Math.cos(a) * q * R.x * rr, cy = C.y + u * R.y * rr * .85, cz = C.z + Math.sin(a) * q * R.z * rr, cr = (.32 + rnd() * .22) * Math.min(R.x, R.y, R.z) * .85;
       const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position;
       for (let v = 0; v < p.count; v++) { const x = p.getX(v), y = p.getY(v), z = p.getZ(v), n = 1 + (hash3(x + k, y, z) - .5) * .5; p.setXYZ(v, cx + x * cr * n, cy + y * cr * n * .85, cz + z * cr * n); }
       g.computeVertexNormals(); const cols = new Float32Array(p.count * 3), e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), fn = new THREE.Vector3(), j0 = (rnd() - .5) * .2;
       for (let f = 0; f < p.count; f += 3) { const A = new THREE.Vector3().fromBufferAttribute(p, f), B2 = new THREE.Vector3().fromBufferAttribute(p, f + 1), C2 = new THREE.Vector3().fromBufferAttribute(p, f + 2);
-        fn.crossVectors(e1.subVectors(B2, A), e2.subVectors(C2, A)).normalize(); const h = ((A.y + B2.y + C2.y) / 3 - (C.y - R.y)) / (2 * R.y), c = tone(fn.y, h, j0 + (rnd() - .5) * .25);
+        fn.crossVectors(e1.subVectors(B2, A), e2.subVectors(C2, A)).normalize(); const h = ((A.y + B2.y + C2.y) / 3 - (C.y - R.y)) / (2 * R.y), c = tone(fn.y * .5, h * .7, j0 - .18 + (rnd() - .5) * .2);
         for (let v = 0; v < 3; v++) { cols[(f + v) * 3] = c.r; cols[(f + v) * 3 + 1] = c.g; cols[(f + v) * 3 + 2] = c.b; } }
       g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); const m = new THREE.Mesh(g, clumpM); m.userData.foliage = 'clump'; t.add(m); }
     const pos = [], nor = [], uv = [], col = [], d = new THREE.Vector3(), u1 = new THREE.Vector3(), u2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
-    for (let k = 0; k < nCard; k++) { const a = rnd() * 6.28, y = rnd() < .8 ? rnd() * .95 + .05 : -rnd() * .6, q = Math.sqrt(1 - y * y); d.set(Math.cos(a) * q, y, Math.sin(a) * q);
-      const c0 = new THREE.Vector3(C.x + d.x * R.x * .92, C.y + d.y * R.y * .88, C.z + d.z * R.z * .92), sz = (.6 + rnd() * .45) * Math.min(R.x, R.z) * .55, roll = rnd() * 6.28;
+    for (let k = 0; k < nCard * 2; k++) { const a = rnd() * 6.28, y = rnd() < .75 ? rnd() * .95 + .05 : -rnd() * .7, q = Math.sqrt(1 - y * y), sh = .74 + rnd() * .26; d.set(Math.cos(a) * q, y, Math.sin(a) * q);   // (twice the cards, in two layers: the leaves make the outline)
+      const c0 = new THREE.Vector3(C.x + d.x * R.x * sh, C.y + d.y * R.y * sh * .95, C.z + d.z * R.z * sh), sz = (.6 + rnd() * .45) * Math.min(R.x, R.z) * .55, roll = rnd() * 6.28;
       u1.crossVectors(Math.abs(d.y) > .95 ? new THREE.Vector3(1, 0, 0) : up, d).normalize(); u2.crossVectors(d, u1); const cu = u1.clone().multiplyScalar(Math.cos(roll)).addScaledVector(u2, Math.sin(roll)), cv = new THREE.Vector3().crossVectors(d, cu);
       const cs = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].map(([x, z, s0, t0]) => ({ p: c0.clone().addScaledVector(cu, x * sz).addScaledVector(cv, z * sz), s0, t0 }));
       const c = tone(d.y, (d.y + 1) / 2, (rnd() - .4) * .3); for (const i of [0, 1, 2, 0, 2, 3]) { const v = cs[i]; pos.push(v.p.x, v.p.y, v.p.z); nor.push(d.x, d.y, d.z); uv.push(v.s0, v.t0); col.push(c.r, c.g, c.b); } }
