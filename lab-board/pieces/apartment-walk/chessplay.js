@@ -1,8 +1,8 @@
 // Chess at a table: the set (chessset.js), the rules (chess.js), a little panel, and a game with someone else on the page.
 // The set lies folded on a shelf in the study; taken in the hand and put down on a table (or any level top) it opens as a real one
 // does (the lid up, the pieces out, the case turned over, the board on its outside up), white's side towards you, the pieces standing
-// by the board. Grabbed by its frame or the case's side, the board turns with its pieces on it (dragged; it settles square to the
-// table when near a quarter turn); the panel turns it a quarter at a time. At the board a single action shows ("Szachy", and how the game stands); a click on it opens the panel with the rest. Set them up by hand (a click on a piece, a click on a square; a click off the board
+// by the board. Grabbed (anywhere on the board or the case, not a piece) and dragged, it turns with its pieces as far as you like,
+// the point you hold following the pointer round its middle; the panel turns it a quarter at a time. At the board a single action shows ("Szachy", and how the game stands); a click on it opens the panel with the rest. Set them up by hand (a click on a piece, a click on a square; a click off the board
 // sends it back) or with one click; then play: a click on a piece shows where it may go, a click there moves it; the rules are all
 // there (check, mate, stalemate, castling, en passant, promotion, the draws). Alone you move both sides.
 // With someone: "Zagraj z kimś" shares the board: everyone else on the page sees it on the same table, and one of them can sit in as
@@ -110,16 +110,23 @@ export function createChess({ THREE, scene, camera, M, clip, onChange = () => {}
     select(B, own && pc !== B.sel ? pc : null); onChange(); return true;
   }
 
-  // ---------- turning the board: grabbed by its frame (off the squares) or the case's side, dragged sideways; it settles square
-  // when let go near a quarter turn; a quarter turn from the panel ----------
+  // ---------- turning the board: grabbed anywhere on it or the case (not on a piece), the point held follows the pointer round the
+  // board's middle, on the board's own level; let go, it stays as it is. A quarter turn from the panel ----------
   let turning = null, turnTo = null;
-  function grabZone(hit) {
-    if (!hit || hit.distance > 3.2 || L.shared && !L.owner) return false; const B = boardOf(hit.object); if (B !== L || !L.set.isOpen || hit.object.userData.chessPiece) return false;
-    L.set.group.worldToLocal(_p.copy(hit.point)); return !(L.set.boardMeshes.includes(hit.object) && L.set.sqAt(_p.x, _p.z) >= 0);
+  const mine = hit => { if (!hit || hit.distance > 3.2 || (L.shared && L.owner !== net?.id)) return false; const B = boardOf(hit.object); return B === L && L.set.isOpen && !hit.object.userData.chessPiece; };
+  function grabZone(hit) {                                             // (the frame and the case: where the pointer shows it can turn it)
+    if (!mine(hit)) return false; L.set.group.worldToLocal(_p.copy(hit.point)); return !(L.set.boardMeshes.includes(hit.object) && L.set.sqAt(_p.x, _p.z) >= 0);
   }
-  function grab(hit) { if (!grabZone(hit)) return false; turning = { yaw0: L.set.group.rotation.y }; turnTo = null; return true; }
-  function turn(dx) { if (!turning) return; L.set.group.rotation.y = turning.yaw0 - dx * .009; onChange(); }
-  function release() { if (!turning) return; turning = null; const y = L.set.group.rotation.y, q = Math.PI / 2, n = Math.round(y / q) * q; if (Math.abs(y - n) < .2) turnTo = n; else if (L.shared) share(); }
+  const plane = new THREE.Plane(), _c2 = new THREE.Vector3(), _h = new THREE.Vector3();
+  function grab(hit) { if (!mine(hit)) return false; const g = L.set.group; g.getWorldPosition(_c2); plane.set(new THREE.Vector3(0, 1, 0), -hit.point.y); const dx = hit.point.x - _c2.x, dz = hit.point.z - _c2.z;
+    turning = { yaw0: g.rotation.y, a0: Math.hypot(dx, dz) < .04 ? null : Math.atan2(dx, dz), c: _c2.clone() }; turnTo = null; return true; }   // (a0: where it was taken hold of, so that point follows the pointer)
+  function turnRay(ray) {
+    if (!turning || !ray.ray.intersectPlane(plane, _h)) return; const dx = _h.x - turning.c.x, dz = _h.z - turning.c.z; if (Math.hypot(dx, dz) < .04) return;   // (too near the middle to say which way)
+    const a = Math.atan2(dx, dz); if (turning.a0 === null) { turning.a0 = a; return; }
+    L.set.group.rotation.y = turning.yaw0 + Math.atan2(Math.sin(a - turning.a0), Math.cos(a - turning.a0)); onChange();
+    if (Math.abs(a - turning.a0) > 2.5) { turning.yaw0 = L.set.group.rotation.y; turning.a0 = a; }   // (round and round: start again from here)
+  }
+  function release() { if (!turning) return; turning = null; if (L.shared) share(); }
   function quarter() { const q = Math.PI / 2, y = turnTo ?? L.set.group.rotation.y; turnTo = Math.round(y / q) * q + q; }
 
   // ---------- with someone ----------
@@ -230,5 +237,5 @@ export function createChess({ THREE, scene, camera, M, clip, onChange = () => {}
     if (RB && performance.now() - RB.seen > 9000) dropRemote();
     return moved;
   }
-  return { set: L.set, group: L.set.group, click, put, step, grab, grabZone, turn, release, get turning() { return !!turning; }, receive, joined, left, takeable, setNet(n) { net = n; if (!n && L.shared) { L.shared = false; L.b = null; paint(); } }, get phase() { return L.phase; }, set phase(v) { L.phase = v; }, _L: L, get _RB() { return RB; } };
+  return { set: L.set, group: L.set.group, click, put, step, grab, grabZone, turnRay, release, get turning() { return !!turning; }, receive, joined, left, takeable, setNet(n) { net = n; if (!n && L.shared) { L.shared = false; L.b = null; paint(); } }, get phase() { return L.phase; }, set phase(v) { L.phase = v; }, _L: L, get _RB() { return RB; } };
 }

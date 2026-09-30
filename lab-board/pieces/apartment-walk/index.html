@@ -108,7 +108,7 @@
   .live.on{opacity:1; transform:translate(-50%, 0)}
   @media (max-width:760px){ .live{top:122px} }
 
-  body.walk.chessgrab #gl, body.walk.chessturn #gl{cursor:ew-resize}                /* (the chess board's frame: drag to turn it) */
+  body.walk.chessgrab #gl{cursor:grab} body.walk.chessturn #gl{cursor:grabbing}      /* (the chess board: grab it to turn it) */
   /* the minimap (walk) */
   .mini{position:fixed; top:72px; left:16px; z-index:4; width:196px; height:180px; border-radius:18px; background:#fff; opacity:0; visibility:hidden; transform:translateY(-6px);
         transition:opacity .35s ease, transform .45s var(--ease), visibility 0s linear .45s; cursor:crosshair}
@@ -270,7 +270,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
 import { buildKitchen } from './kitchen.js?v=19';
 import { makeBowl, makeCrisp } from './snacks.js?v=1';
-import { createChess } from './chessplay.js?v=5';
+import { createChess } from './chessplay.js?v=7';
 import { buildLiving } from './living.js?v=45';
 import { buildHall } from './hall.js?v=4';
 import { buildRooms } from './rooms.js?v=47';
@@ -1513,12 +1513,13 @@ let turnDrag = null;                                                // grabbing 
 canvas.addEventListener('pointerdown', e => {
   if (mode !== 'walk' || tween) return;
   if (CHESS && !HAND.can) { const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera);
-    if (CHESS.grab(ray.intersectObject(CHESS.group, true)[0])) { turnDrag = { id: e.pointerId, x0: e.clientX }; try { canvas.setPointerCapture(e.pointerId); } catch (err) {} document.body.classList.add('chessturn'); return; } }
+    if (CHESS.grab(ray.intersectObject(CHESS.group, true)[0])) { turnDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false }; try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; } }   // (a click stays a click: it turns once the pointer moves)
   look = { id: e.pointerId, x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   document.body.classList.add('looking');
 });
 canvas.addEventListener('pointermove', e => {
-  if (turnDrag && e.pointerId === turnDrag.id) { CHESS.turn(e.clientX - turnDrag.x0); return; }
+  if (turnDrag && e.pointerId === turnDrag.id) { if (!turnDrag.on && Math.hypot(e.clientX - turnDrag.x0, e.clientY - turnDrag.y0) > 6) { turnDrag.on = true; document.body.classList.add('chessturn'); }
+    if (turnDrag.on) { const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera); CHESS.turnRay(ray); } return; }
   if (!look || e.pointerId !== look.id) return;
   const k = e.pointerType === 'touch' ? .006 : .0038;
   P.yaw += (e.clientX - look.x) * k; P.pitch = THREE.MathUtils.clamp(P.pitch - (e.clientY - look.y) * k, -1.2, 1.2);
