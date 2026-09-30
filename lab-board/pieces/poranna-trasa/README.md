@@ -355,6 +355,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - zamiast kropkowanej winiety krawędzie ciemnieją łagodnie, bez ditheringu
 - torba w rogu nie rozmywa się razem ze światem
 
+## Wersja 37: korony z liści, dach autobusu, styl „Gładki”
+
+- korony drzew: kule (kępy) są teraz tylko ciemnym rdzeniem w środku, mniejsze; liści (kart) jest dwa razy więcej, w dwóch warstwach, i to one tworzą obrys korony
+- dach autobusu: ścięte krawędzie w kolorze lakieru, rynienki, żebra w poprzek, klimatyzator z dwoma wentylatorami i kratką, włazy z zawiasami, antena, skos nad przednią szybą
+- nowy gotowy styl **Gładki** (panel U i menu Esc): bez pikseli, gładko i miękko, pełne tony, przygaszone kolory, ledwie kontur
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

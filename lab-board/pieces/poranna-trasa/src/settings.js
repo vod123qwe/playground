@@ -9,15 +9,17 @@ export const PRESETS = {
   retro: { name: 'Stary ekran', note: 'duże piksele, mniej kolorów, linie jak na kineskopie', pix: 180, smooth: 1, ink: 2, toon: 3, palette: true, hue: .9, dither: .025, sky: .08, exposure: 1.08, pixel: true, rim: .3, oStr: .9, oThr: .1, palMix: 1, levels: 6, sat: 1.1, contrast: 1.1, vig: .45, crt: .6 , crease: .7 },
   pastel: { name: 'Pastelowy poranek', note: 'miękko jak akwarela: bez twardej palety, jasno, ledwie kontur', pix: 240, smooth: 5, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: true, rim: .35, oStr: .35, oThr: .14, palMix: .55, levels: 0, sat: .82, contrast: .94, vig: 0, crt: 0 , crease: .7 },
   zlota: { name: 'Złota godzina', note: 'niskie ciepłe słońce: mocny połysk krawędzi, ciepło, cienki czarny kontur', pix: 260, smooth: 3, ink: 2, toon: 4, palette: true, hue: 1.3, dither: .01, sky: .03, exposure: 1.03, pixel: true, rim: .95, oStr: .6, oThr: .09, palMix: 1, levels: 0, sat: 1.12, contrast: 1.07, vig: 0, crt: 0 , crease: .7 },
+  gladki: { name: 'Gładki', note: 'bez pikseli: gładko i miękko, pełne tony, kolory lekko przygaszone, ledwie kontur', pix: 280, smooth: 4, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: false, rim: .35, oStr: .1, oThr: .1, palMix: .9, levels: 2, sat: .82, contrast: .94, vig: 0, crt: 0, crease: .7 },
   ostry: { name: 'Wysoka rozdzielczość', note: 'drobne piksele, cienki czarny kontur, dużo tonów', pix: 540, smooth: 2, ink: 2, toon: 5, palette: true, hue: .8, dither: .008, sky: .04, exposure: 1.02, pixel: true, rim: .5 , oStr: 1, oThr: .07, palMix: .85, levels: 0, sat: 1.05, contrast: 1.02, vig: 0, crt: 0 , crease: .7 },
 };
 // the four in the game's own menu (Esc), and the few settings each of them offers there: [label, key, min, max, step]
-export const MENU_STYLES = ['retro', 'miekki', 'pastel', 'zlota'];
+export const MENU_STYLES = ['retro', 'miekki', 'pastel', 'zlota', 'gladki'];
 export const LIGHT = {
   retro: [['LINIE EKRANU', 'crt', 0, 1, .05], ['WINIETA', 'vig', 0, 1, .05], ['POZIOMY KOLORU', 'levels', 2, 16, 1]],
   miekki: [['KONTUR', 'oStr', 0, 1, .05], ['DITHERING', 'dither', 0, .04, .002], ['CIEPŁO ŚWIATŁA', 'hue', 0, 1.5, .05]],
   pastel: [['NASYCENIE', 'sat', .4, 1.4, .05], ['SIŁA PALETY', 'palMix', 0, 1, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02]],
   zlota: [['POŁYSK', 'rim', 0, 1.2, .05], ['CIEPŁO', 'hue', 0, 1.6, .05], ['KONTRAST', 'contrast', .8, 1.3, .02]],
+  gladki: [['NASYCENIE', 'sat', .4, 1.4, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02], ['KONTUR', 'oStr', 0, 1, .05]],
 };
 const KEY = 'poranna-trasa-styl', MINE = 'poranna-trasa-styl-moj';   // (now; and the one saved as your default)
 
