@@ -675,11 +675,13 @@ function toggleFull() { try { if (document.fullscreenElement) document.exitFulls
 document.addEventListener('fullscreenchange', () => { mouse.failed = false; });   // (full screen: the mouse may now be taken)
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
-const menu = createMenu({ hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls,
+const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
+const menu = createMenu({ hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (menu.open && !asking) { menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
   if (!asking && e.code === 'Escape') { menu.show('pause'); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+if (!new URLSearchParams(location.search).has('play')) menu.show('title');   // (the title screen first; ?play skips it)
 addEventListener('wheel', e => { if (menu.open) { menu.wheel(e.deltaY); e.preventDefault(); } }, { passive: false });   // (a long menu page: the wheel moves down it)
 for (const [ev, type] of [['pointerdown', 'down'], ['pointermove', 'move'], ['pointerup', 'up']]) addEventListener(ev, e => { if (!menu.open || asking) return; menu.pointer(type, e.clientX, e.clientY); e.preventDefault(); e.stopPropagation(); }, true);
 // asked: a touch or a click on TAK or NIE (the pointer mapped to the picture's pixels); the pointer over one picks it
@@ -705,11 +707,19 @@ function resetGame() {
   C.init = false; flash('Od nowa!');
 }
 let last = performance.now(), hudT = 0;
+const fly = { s: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false };
+function attract(dt) {                                                  // (the title: the street going by under a slow camera)
+  traffic.update(dt, { s: -9999, d: 99, v: 0, along: 1 }); peds.update(dt, { x: 1e5, z: 1e5, v: 0, d: 99, busy: true }); residents.update(dt, { x: 1e5, z: 1e5, v: 0 }); water.update(dt); stepBundles(dt, B.x, B.z);
+  fly.s += Math.max(0, dt) * 5.5; const ds = track.len / track.N, i = ((Math.floor(fly.s / ds) % track.N) + track.N) % track.N, S = track.S[i], A2 = track.S[(i + 26) % track.N], sw = Math.sin(fly.s * .02);
+  const want = new THREE.Vector3(S.p.x + S.r.x * (3.5 + sw * 3), S.p.y + 5.5 + Math.sin(fly.s * .013) * 1.2, S.p.z + S.r.z * (3.5 + sw * 3)), look = new THREE.Vector3(A2.p.x - A2.r.x * sw * 2, A2.p.y + 1.2, A2.p.z - A2.r.z * sw * 2);
+  if (!fly.init) { fly.pos.copy(want); fly.look.copy(look); fly.init = true; } fly.pos.lerp(want, 1 - Math.exp(-dt * 2)); fly.look.lerp(look, 1 - Math.exp(-dt * 2));
+  camera.position.copy(fly.pos); camera.up.set(0, 1, 0); camera.lookAt(fly.look); camera.fov = 58; camera.near = .1; camera.updateProjectionMatrix();
+  sun.position.copy(fly.pos).addScaledVector(SUN, 60); sun.target.position.copy(fly.pos); sun.target.updateMatrixWorld(); }
 function frame(now) {
-  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
   if ((menu.open || asking) && document.pointerLockElement) document.exitPointerLock();   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking);                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !window.PT?.hold) step(dt, input()); else input();   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if (!asking && !menu.open && !window.PT?.hold) step(dt, input()); else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   drift(dt); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.render(scene, camera); drawHud(dt);

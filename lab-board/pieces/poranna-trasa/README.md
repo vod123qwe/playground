@@ -162,6 +162,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - niskie zdrowie: czerwona winieta w ditherze zachodzi od krawędzi, pulsuje jak serce (szybciej, im gorzej), przy krytycznym miga; każde trafienie: błysk i plamy krwi na brzegach ekranu (zostają, póki jesteś ranny, bledną, gdy zdrowie wraca)
 - wywrotka na auto: ciało nie wylatuje już na kilkanaście metrów (to była korekta pozycji na dachu auta zamieniana w prędkość; teraz prędkość po zderzeniu ma limit)
 
+## Wersja 13: ekran startowy, powrót do labu
+
+- ekran startowy: tytuł nad ulicą, nad którą powoli leci kamera (auta i ludzie żyją), GRAJ, STEROWANIE, GRAFIKA (`?play` w adresie go pomija)
+- gra otwarta z planszy lab-board: WRÓĆ DO LABU na ekranie startowym i w pauzie (Esc)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
