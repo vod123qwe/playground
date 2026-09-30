@@ -249,7 +249,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 24: torba w rogu
 
 - w prawym dolnym rogu wystaje od dołu ta sama torba, którą gazeciarz ma na plecach (model 3D, rysowany tym samym pikselowym przejściem, z tą samą paletą i obrysem); gazety sterczą spod klapy i ubywa ich, gdy rzucasz
-- każdy rzut wyrzuca z torby w górę rolkę gazety i torbą lekko szarpie; paczka gazet sprawia, że podskakuje
+- przy rzucie gazeta chowa się w torbie (zsuwa się pod klapę i znika, torba lekko drgnie), nic z niej nie wylatuje, żeby nie mylić tego z prawdziwym rzutem; przy paczce gazety wysuwają się z powrotem, a torba podskakuje
 - obok torby liczba gazet (na czerwono, gdy pusto); ikona gazety z prawego górnego rogu zniknęła, zostaje sama portmonetka
 
 ## Na później

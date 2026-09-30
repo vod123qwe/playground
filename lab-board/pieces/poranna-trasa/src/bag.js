@@ -46,5 +46,5 @@ export function makeBag({ THREE, toon }) {
       add(new THREE.CylinderGeometry(.016, .016, .005, 8), toon('#d8d0b8'), 0, .111, 0, p); }                                           // (the roll's end)
     p.rotation.set((k % 2 ? .18 : -.12), 0, -.2 + (k % 3) * .12); papers.push(p); }
   function setFill(k) { const n = Math.round(Math.max(0, Math.min(1, k)) * papers.length); papers.forEach((p, i) => { p.visible = i < n; }); flapTop.position.y = H / 2 + .004 + (n ? .012 : 0); }
-  return { group: G, setFill, size: { T, H, L } };
+  return { group: G, setFill, papers, size: { T, H, L } };
 }
