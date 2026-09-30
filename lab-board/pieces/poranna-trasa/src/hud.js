@@ -156,10 +156,9 @@ export function createHud() {
       if (b.t > .25 && b.t < 1.6 && b.t - b.sent > .22) { b.sent = b.t; hearts.push({ x: x + 5 + Math.random() * (w - 10), y: y - 8, t: 0, ph: Math.random() * 6, v: 9 + Math.random() * 6 }); } }
     for (let k = hearts.length - 1; k >= 0; k--) { const q = hearts[k]; q.t += dt; if (q.t > 1.3) { hearts.splice(k, 1); continue; } if (q.t > 1 && ((q.t * 20) | 0) % 2) continue;
       heart(Math.round(q.x + Math.sin(q.t * 6 + q.ph) * 2.5), Math.round(q.y - q.t * q.v), q.t < .5 ? '#e08556' : '#cf5a3e', '#5e1c17'); }
-    // the corner: papers, points
-    const X = 6, Y = cv.height - 12; g.fillStyle = 'rgba(23,24,27,.55)'; g.fillRect(X - 3, Y - 3, 74, 11);
-    g.fillStyle = '#ece5d0'; g.fillRect(X, Y + 1, 6, 3); g.fillStyle = '#b3372c'; g.fillRect(X + 2, Y + 1, 1, 3);             // a rolled paper
-    text(String(st.papers), X + 9, Y, '#f6f3ea'); text('PKT ' + st.points, X + 28, Y, '#efc970');
+    // under the bike computer: the papers left, and the money in a purse (see purse())
+    { const k = cv.width / Math.max(1, innerWidth), X = Math.round(14 * k) + 2, Y = Math.round(128 * k);
+      purse(dt, st.points, X, Y, st.papers); }
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
     if (st.bike) bikeArrow(st.bike, project, dt);
@@ -168,6 +167,48 @@ export function createHud() {
     if (Q.open) drawAsk(dt);
     if (overlay) overlay(dt);
   }
+  // the money: a grandma's purse, the kind with a brass frame and two little balls that snap shut, in a flowered tapestry. When money
+  // comes in, it opens (its back jaw rising, the dark inside showing), coins drop into it one by one, it gives a little bounce at
+  // each, the sum counts up with them; then it snaps shut. Money taken (robbed, fined): it opens and coins fly out of it.
+  // Beside it the papers left (a roll, their number), and the sum in złoty.
+  const coins = []; let shown = null, openK = 0, openT = 0, bump = 0, glow = 0, pend = 0;
+  const BODY = [7, 7.5, 8, 8, 8, 8, 8, 7.5, 7, 6, 5, 3.5];                  // (half the body's width, row by row: a pouch, full low down)
+  function purse(dt, money, X, Y, papers) {
+    if (shown === null) shown = money;
+    const px = X + 26, cx = px + 8, fy = Y + 4;                            // (the purse's left, its middle, the frame's top)
+    if (money > shown + pend) { const n = money - shown - pend, m = Math.min(8, n); for (let q = 0; q < m; q++) coins.push({ x: cx + (Math.random() * 6 - 3), y: fy - 9, vx: 0, vy: 0, wait: q * .11, val: n / m, into: true }); pend += n; openT = .45; }
+    if (money < shown) { const n = shown - money, m = Math.min(10, n); for (let q = 0; q < m; q++) coins.push({ x: cx, y: fy, vx: (Math.random() - .5) * 60, vy: -40 - Math.random() * 40, wait: q * .05, into: false }); shown = money; pend = 0; openT = .6; }
+    const open = coins.length > 0 || openT > 0; openT = Math.max(0, openT - dt); openK += ((open ? 1 : 0) - openK) * Math.min(1, dt * (open ? 14 : 20));
+    bump = Math.max(0, bump - dt * 6); glow = Math.max(0, glow - dt * 2);
+    const o = Math.round(openK * 3), sq = bump > .5 ? 1 : 0;
+    // the panel behind it all
+    const label = shown + ' ZŁ', tw = width(label); g.fillStyle = 'rgba(23,24,27,.55)'; g.fillRect(X - 3, Y - 2, 26 + 20 + tw + 6, 22);
+    g.fillStyle = '#ece5d0'; g.fillRect(X, Y + 9, 6, 3); g.fillStyle = '#b3372c'; g.fillRect(X + 2, Y + 9, 1, 3);                   // a rolled paper
+    text(String(papers), X + 9, Y + 8, '#f6f3ea');
+    // the back jaw, when open: it rises, the inside dark between it and the front
+    const by = fy + 2 + sq;
+    if (o > 0) { g.fillStyle = '#17181b'; g.fillRect(px + 2, by - o, 12, o + 1); g.fillStyle = '#efc970'; if (o > 1) { g.fillRect(px + 5, by - 1, 1, 1); g.fillRect(px + 10, by, 1, 1); }
+      g.fillStyle = '#a8812f'; g.fillRect(px + 2, by - o - 1, 12, 1); g.fillStyle = '#efc970'; g.fillRect(px + 3, by - o - 2, 10, 1);
+      ball(cx - 2, by - o - 4); }
+    // the body: tapestry, plum with little flowers, a dark rim, shaded low down, lit along its left
+    for (let r = 0; r < BODY.length; r++) { const hw = BODY[r] + (sq && r > 6 ? .5 : 0), y = by + 2 + r, x0 = Math.round(cx - hw), x1 = Math.round(cx + hw) - 1;
+      for (let x = x0; x <= x1; x++) { const edge = x === x0 || x === x1 || r === BODY.length - 1;
+        let c = r > BODY.length - 4 ? '#5a1f38' : '#7a2a4a'; if (x === x0 + 1 && r < BODY.length - 2) c = '#9a3a62';
+        if (!edge && r > 0 && r < BODY.length - 2) { const u = (x - px + (r % 6 < 3 ? 0 : 2)) % 5, v = r % 3; if (u === 2 && v === 1) c = '#e0a060'; else if ((u === 1 || u === 3) && v === 1) c = '#4f7a3a'; }
+        g.fillStyle = edge ? '#2a0f1c' : c; g.fillRect(x, y, 1, 1); } }
+    // the front of the frame: brass, lit on top; its hinges at the ends; a ball of the clasp (both, when shut)
+    g.fillStyle = '#a8812f'; g.fillRect(px + 1, by + 1, 14, 1); g.fillStyle = '#efc970'; g.fillRect(px + 1, by, 14, 1); g.fillStyle = '#6b4a1e'; g.fillRect(px + 1, by + 2, 1, 1); g.fillRect(px + 14, by + 2, 1, 1);
+    ball(cx, by - 2); if (o === 0) ball(cx - 2, by - 2);
+    // the coins: dropping in (a bounce and the sum ticking up as each goes in), or flying out
+    for (let k = coins.length - 1; k >= 0; k--) { const c = coins[k]; if ((c.wait -= dt) > 0) continue;
+      c.vy += 260 * dt; c.x += c.vx * dt; c.y += c.vy * dt;
+      if (c.into && c.y >= by - 1) { coins.splice(k, 1); bump = 1; glow = 1; pend = Math.max(0, pend - c.val); shown = Math.round(Math.min(money, shown + c.val)); if (!coins.some(q => q.into)) { shown = money; pend = 0; openT = .25; } continue; }
+      if (!c.into && c.y > cv.height + 4) { coins.splice(k, 1); continue; }
+      const x = Math.round(c.x) - 1, y = Math.round(c.y) - 1, flip = ((c.y * .4) | 0) % 2;
+      g.fillStyle = '#6b4a1e'; g.fillRect(x, y + 1, 3, 2); g.fillStyle = '#efc970'; g.fillRect(x + (flip ? 1 : 0), y, flip ? 1 : 3, 2); g.fillStyle = '#fff4c8'; g.fillRect(x + 1, y, 1, 1); }
+    text(label, px + 20, Y + 8, glow > .5 ? '#fff4c8' : '#efc970');
+  }
+  function ball(x, y) { g.fillStyle = '#6b4a1e'; g.fillRect(x, y + 1, 2, 1); g.fillStyle = '#efc970'; g.fillRect(x, y, 2, 1); g.fillStyle = '#fff4c8'; g.fillRect(x, y, 1, 1); }
   // blood: splashed onto the picture's edges when he takes a hit (a blob with a dark rim, a lit heart, drops round it, a drip or two
   // running down), each drawn once into its own little canvas; they stay while he is hurt and fade as he mends
   const splats = [];
