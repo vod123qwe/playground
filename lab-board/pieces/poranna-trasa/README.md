@@ -240,6 +240,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - wsiadanie na rower w trakcie bójki też czyści jej stan na ekranie (przeciwnik dalej może gonić)
 - paski walki są pod licznikiem rowerowym i portmonetką, a nie na nich
 
+## Wersja 23: płoty za domami, laski, pociąg
+
+- za większością domów stoi tylny płot (deskowy albo z siatki) na całą szerokość działki, razem z dobudówką
+- po wewnętrznej stronie pętli, 32 do 52 m od drogi, rosną gęste laski: drzewa liściaste i świerki, pod nimi krzaki; między nimi dalej widać jezioro
+- po zewnętrznej stronie, między świerkami a polami, biegną tory: nasyp z tłucznia, podkłady, szyny (pętla około 1160 m); jeździ po nich pociąg, lokomotywa i pięć wagonów, osobowych albo towarowych (węglarki, kryte), około 15 m/s
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
