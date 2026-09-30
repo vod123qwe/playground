@@ -1,0 +1,51 @@
+// People sitting out in front of their houses (on the chairs and loungers the track put in the gardens): a big-bellied man on a
+// lounger with a bottle of beer, older folk on garden chairs. Made in Blender from MakeHuman (assets/export/belly|granma|grandpa.glb:
+// sitting clips 'idle' and 'talk'). As the rider goes by, one calls out to him (a bubble over their head, the talking clip a while):
+// the man on the lounger teases, the old ones greet or warn.
+// createResidents({ THREE, toon, track, hud, scene, max }) → { update(dt, R) }; R: { x, z, v }
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
+export function createResidents({ THREE, toon, track, hud, scene, max = 7 }) {
+  const LINES = {
+    belly: ['HEJ MŁODY!', 'SZYBCIEJ, SZYBCIEJ!', 'HEHE, SPÓŹNIONY!', 'GAZETA DO SKRZYNKI!', 'PEDAŁUJ, CHŁOPIE!', 'ZA MOICH CZASÓW...', 'UWAŻAJ NA PSA!'],
+    granma: ['DZIEŃ DOBRY!', 'OSTROŻNIE, DZIECKO!', 'A GAZETKA?', 'NIE TAK SZYBKO!'],
+    grandpa: ['HEJ, KOLEGO!', 'ZA MOICH CZASÓW...', 'DOBRZE JEDZIESZ!', 'A KASK GDZIE?'],
+  };
+  const WALKING = {                                                      // (him on foot: nothing about riding)
+    belly: ['HEJ MŁODY!', 'CO, ROWER CI UKRADLI?', 'HEHE, SPÓŹNIONY!', 'NA PIECHOTĘ? ZDROWO!', 'ZA MOICH CZASÓW...', 'PODAJ PIWO, JAK IDZIESZ!'],
+    granma: ['DZIEŃ DOBRY!', 'A GDZIE ROWEREK?', 'A GAZETKA?', 'SPACERKIEM, DZIECKO?'],
+    grandpa: ['HEJ, KOLEGO!', 'ZA MOICH CZASÓW...', 'SPACER DOBRY NA KOLANA!', 'A ROWER GDZIE ZOSTAWIŁEŚ?'],
+  };
+  const pick = a => a[Math.random() * a.length | 0], loader = new GLTFLoader(), cache = {}, list = [];
+  const load = key => cache[key] || (cache[key] = new Promise(ok => loader.load(`assets/export/${key}.glb`, ok, undefined, () => ok(null))));
+  const seats = track.seats.slice(0, max);
+  seats.forEach((seat, k) => {
+    const key = seat.lounger ? 'belly' : (k % 2 ? 'granma' : 'grandpa');
+    load(key).then(g => { if (!g) return;
+      const m = SkeletonUtils.clone(g.scene); seat.h.updateMatrixWorld(true);
+      const at = seat.h.localToWorld(seat.local.clone()), yaw = seat.h.rotation.y + Math.PI;            // (facing the road: the house's front)
+      const G = new THREE.Group(); G.position.copy(at); G.rotation.y = yaw; G.add(m); scene.add(G);
+      if (seat.lounger) { m.rotation.x = -.42; m.position.set(0, -.14, .2); }                          // (lying back on the lounger)
+      m.traverse(o => { if (o.isMesh) { const om = o.material, cut = om.transparent || om.alphaTest > 0; o.material = toon(om.color.clone(), { map: om.map || null, ...(cut ? { alphaTest: .5, side: THREE.DoubleSide } : {}) }); o.castShadow = true; o.frustumCulled = false; } });
+      const mixer = new THREE.AnimationMixer(m), clip = n => g.animations.find(c => c.name === n), acts = { idle: mixer.clipAction(clip('idle')), talk: clip('talk') ? mixer.clipAction(clip('talk')) : null };
+      acts.idle.play(); acts.idle.time = Math.random() * 2; if (acts.talk) { acts.talk.play(); acts.talk.setEffectiveWeight(0); }
+      let bottle = null; if (key === 'belly') { bottle = new THREE.Group(); G.add(bottle); const glass = toon('#6b4a2e'); const b = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .16, 8), glass); bottle.add(b); const n = new THREE.Mesh(new THREE.CylinderGeometry(.012, .03, .08, 8), glass); n.position.y = .12; bottle.add(n); const lb = new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .06, 8), toon('#efc970')); bottle.add(lb); }
+      list.push({ key, G, m, mixer, acts, bottle, hand: m.getObjectByName('hand_r'), head: m.getObjectByName('head'), cool: 3 + Math.random() * 6, talkT: 0, mouth: new THREE.Vector3() });
+    });
+  });
+  const _v = new THREE.Vector3();
+  function update(dt, R) {
+    for (const r of list) {
+      r.cool -= dt; r.talkT = Math.max(0, r.talkT - dt);
+      const d = Math.hypot(R.x - r.G.position.x, R.z - r.G.position.z);
+      if (d < 13 && r.cool <= 0 && Math.abs(R.v) > .5) { r.cool = 14 + Math.random() * 10; r.talkT = 2.6; r.head?.getWorldPosition(r.mouth); r.mouth.y += .35;
+        hud.rant(r.mouth, pick((R.foot ? WALKING : LINES)[r.key]), true); }                                                  // (a call to him as he goes by)
+      if (r.acts.talk) { const w = r.talkT > 0 ? 1 : 0, cur = r.acts.talk.getEffectiveWeight(), nw = cur + (w - cur) * Math.min(1, dt * 5); r.acts.talk.setEffectiveWeight(nw); r.acts.idle.setEffectiveWeight(1 - nw); }
+      r.mixer.update(dt);
+      if (r.bottle && r.hand) { r.G.updateMatrixWorld(true); r.hand.getWorldPosition(_v); r.bottle.position.copy(r.G.worldToLocal(_v)); r.bottle.position.y += .05; }   // (the beer in his hand)
+      if (r.talkT > 0 && r.head) { r.head.getWorldPosition(r.mouth); r.mouth.y += .35; }
+    }
+  }
+  return { update, list };
+}
