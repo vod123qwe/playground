@@ -175,6 +175,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - pieszo: skok (C, poza bójką też Spacja), przeskakuje niskie rzeczy; paczki gazet zbierasz też pieszo
 - kursor trzymany w oknie gry (klik w grę, pełny ekran); Esc go oddaje i otwiera pauzę (panel Claude na to nie pozwala, zwykła przeglądarka tak)
 
+## Wersja 15: Warsztat (przegląd assetów)
+
+- `studio.html` (ekran startowy → WARSZTAT): wszystkie assety gry na obrotowym talerzu, grupy: auta (każdy typ w każdym kolorze), ludzie (modele MakeHuman z listą klipów do odtworzenia), rowerzysta (pedałuje), psy (każda rasa), rekwizyty, skocznie; wymiary, trójkąty, siatki, materiały; widoki przód, bok, tył, góra, 3/4; włącz/wyłącz pixel, siatkę 1 m, druty, obrót
+- auta: przednia szyba na całą szerokość (wąskie słupki po bokach), tylna między słupkami C; wcześniej część przedniej szyby była blachą
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

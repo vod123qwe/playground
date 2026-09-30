@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warsztat · Poranna Trasa</title>
+<style>
+  :root{ --ink:#f6f3ea; --shade:#1d1e21; --line:#33363a; --acc:#efc970; --dim:#979a97; }
+  html, body{ margin:0; height:100%; overflow:hidden; background:#17181b; color:var(--ink); font:600 13px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace; -webkit-user-select:none; user-select:none; }
+  #gl{ position:fixed; inset:0; width:100%; height:100%; display:block; image-rendering:pixelated; }
+  aside{ position:fixed; top:12px; bottom:12px; overflow-y:auto; background:var(--shade); border:3px solid #0c0d0f; box-shadow:4px 4px 0 #0c0d0f; padding:12px; box-sizing:border-box; }
+  #side{ left:12px; width:260px; }
+  #opts{ right:12px; width:250px; }
+  h1{ font-size:14px; margin:0 0 4px; color:var(--acc); letter-spacing:.06em; text-transform:uppercase; }
+  .sub{ color:var(--dim); font-weight:500; margin:0 0 10px; }
+  h2{ font-size:12px; margin:14px 0 6px; color:#d3d0c3; letter-spacing:.06em; text-transform:uppercase; }
+  .row{ display:flex; flex-wrap:wrap; gap:4px; }
+  button{ font:inherit; color:var(--ink); background:#33363a; border:2px solid #0c0d0f; border-radius:3px; padding:5px 8px; cursor:pointer; box-shadow:0 2px 0 #0c0d0f; }
+  button[aria-pressed="true"]{ background:var(--acc); color:#17181b; }
+  button:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+  #items button{ width:100%; text-align:left; margin-bottom:4px; display:flex; justify-content:space-between; gap:8px; }
+  #items button small{ color:var(--dim); font-weight:500; }
+  #items button[aria-pressed="true"] small{ color:#44484c; }
+  .sw{ width:22px; height:22px; padding:0; }
+  dl{ display:grid; grid-template-columns:auto 1fr; gap:3px 10px; margin:0; }
+  dt{ color:var(--dim); font-weight:500; } dd{ margin:0; text-align:right; }
+  .hint{ color:var(--dim); font-weight:500; margin-top:12px; line-height:1.5; }
+  a{ color:var(--acc); }
+  @media (max-width:900px){ #opts{ top:auto; height:40vh; width:auto; left:12px; } #side{ bottom:calc(40vh + 24px); } }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<aside id="side" aria-label="Assety">
+  <h1>Warsztat</h1>
+  <p class="sub">Wszystkie assety gry w jednym miejscu: wybierz grupę i rzecz, obracaj myszą.</p>
+  <div class="row" id="cats" role="tablist"></div>
+  <h2 id="catName">—</h2>
+  <div id="items"></div>
+</aside>
+<aside id="opts" aria-label="Ustawienia podglądu">
+  <h1 id="title">—</h1>
+  <p class="sub" id="desc"></p>
+  <dl id="info"></dl>
+  <div id="extra"></div>
+  <h2>Podgląd</h2>
+  <div class="row">
+    <button id="spin" type="button" aria-pressed="true">obrót</button>
+    <button id="pix" type="button" aria-pressed="true">pixel</button>
+    <button id="grid" type="button" aria-pressed="true">siatka</button>
+    <button id="wire" type="button" aria-pressed="false">druty</button>
+  </div>
+  <h2>Widok</h2>
+  <div class="row"><button type="button" data-view="front">przód</button><button type="button" data-view="side">bok</button><button type="button" data-view="back">tył</button><button type="button" data-view="top">góra</button><button type="button" data-view="iso">3/4</button></div>
+  <p class="hint">Mysz: lewy obraca, prawy przesuwa, kółko przybliża. Siatka co 1 m.<br><a href="index.html?play">← do gry</a></p>
+</aside>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+} }
+</script>
+<script type="module" src="src/studio.js"></script>
+</body>
+</html>
