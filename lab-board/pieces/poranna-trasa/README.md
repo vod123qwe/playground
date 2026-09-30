@@ -167,6 +167,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - ekran startowy: tytuł nad ulicą, nad którą powoli leci kamera (auta i ludzie żyją), GRAJ, STEROWANIE, GRAFIKA (`?play` w adresie go pomija)
 - gra otwarta z planszy lab-board: WRÓĆ DO LABU na ekranie startowym i w pauzie (Esc)
 
+## Wersja 14: świat żyje dalej, celowanie, skok
+
+- chmury rysowane pikselowo (twarde brzegi, tony od góry, płaski spód), trzy warstwy: wysokie smugi, cumulusy, długie niskie przy horyzoncie
+- w średniej odległości: wiejska droga za polami (84–88 m od ulicy) z autami w obie strony i traktorem z kurzem, stada ptaków krążące nad okolicą (`src/life.js`)
+- rzut: póki trzymasz, łuk z kropek i krąg z mrugającą strzałką tam, gdzie gazeta spadnie (zielony nad skrzynką albo gankiem); kamera odjeżdża i patrzy w tamtą stronę
+- pieszo: skok (C, poza bójką też Spacja), przeskakuje niskie rzeczy; paczki gazet zbierasz też pieszo
+- kursor trzymany w oknie gry (klik w grę, pełny ekran); Esc go oddaje i otwiera pauzę (panel Claude na to nie pozwala, zwykła przeglądarka tak)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

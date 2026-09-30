@@ -170,8 +170,8 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   const say = (f, s) => fx.rant(f.mouth, s);                          // (a bubble over him, following him)
   const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   const facing = (a, b) => { const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 1; return (Math.sin(a.yaw) * dx + Math.cos(a.yaw) * dz) / d; };
-  function place(f) { const q = track.probe(f.x, f.z, f.hint); f.hint = q.i; f.y += (q.y - f.y) * .5; if (Math.abs(q.y - f.y) > .5) f.y = q.y; f.P.G.position.set(f.x, f.y, f.z); f.P.G.rotation.y = f.yaw; f.mouth.set(f.x, f.y + f.P.height + .22, f.z); }
-  function push(f) { if (f.ghost) return; const s = solid(f.x, f.z, .3, f.hint); if (s) { f.x += s.x; f.z += s.z; } }   // (ghost: the computer's one, stuck behind something, lets himself through)
+  function place(f) { const q = track.probe(f.x, f.z, f.hint); f.hint = q.i; if (f.air) { if (f.y <= q.y) { f.y = q.y; f.air = false; f.vy = 0; } } else { f.y += (q.y - f.y) * .5; if (Math.abs(q.y - f.y) > .5) f.y = q.y; } f.P.G.position.set(f.x, f.y, f.z); f.P.G.rotation.y = f.yaw; f.mouth.set(f.x, f.y + f.P.height + .22, f.z); }
+  function push(f) { if (f.ghost) return; const s = solid(f.x, f.z, .3, f.hint, f.air ? f.y : null); if (s) { f.x += s.x; f.z += s.z; } }   // (ghost: the computer's one, stuck behind something, lets himself through; in the air: over what is lower than his feet)
 
   function fight(f, o, inp, dt) {                                      // one step of a fighter against the other
     f.t += dt; f.parryT += dt; f.counterT = Math.max(0, f.counterT - dt); f.chainT += dt; f.tauntT = Math.max(0, f.tauntT - dt);
@@ -354,7 +354,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
         if (inp.lmb) atk = mAim.dir === 'down' ? (me.lastBody === 'bodyL' ? 'bodyR' : 'bodyL') : ATK[mAim.dir]; if (atk && atk.startsWith('body')) me.lastBody = atk; }
       fight(me, fightNow.f, { fwd: inp.fwd, side: inp.side, atk, guard: inp.guard || inp.rmb, low: inp.down || (inp.rmb && inp.locked && mAim.dir === 'down'), dodge: inp.dodge, taunt: inp.taunt }, dt); return; }
     me.hp = Math.min(100, me.hp + dt * 4); me.st = Math.min(100, me.st + dt * 25);
-    const top = inp.fwd > 0 ? (inp.run ? 3.6 : 1.5) : inp.fwd < 0 ? -.9 : 0; me.vf += (top - me.vf) * Math.min(1, dt * (top ? 5 : 8));
+    if (inp.jump && !me.air) { me.air = true; me.vy = 4.4; if (me.P.A.jump) shot(me.P, 'jump', .9); }     // (a jump: up about a metre)
+    if (me.air) { me.vy -= 9.8 * dt; me.y += me.vy * dt; }
+    const top = inp.fwd > 0 ? (inp.run ? 3.6 : 1.5) : inp.fwd < 0 ? -.9 : 0; me.vf += (top - me.vf) * Math.min(1, dt * (top ? 5 : me.air ? 1 : 8));
     if (inp.locked) { me.yaw -= (inp.dx || 0) * .0026; pitch = clamp(pitch - (inp.dy || 0) * .0022, -1, .75); me.vs += ((inp.side || 0) * 1.25 - me.vs) * Math.min(1, dt * 8); }
     else { me.vs = 0; me.yaw -= (inp.side || 0) * dt * (2.6 - Math.min(1, Math.abs(me.vf) / 3.6) * .9); pitch += (0 - pitch) * Math.min(1, dt * 2); }
     const rt = new V3(-Math.cos(me.yaw), 0, Math.sin(me.yaw)); me.x += Math.sin(me.yaw) * me.vf * dt + rt.x * me.vs * dt; me.z += Math.cos(me.yaw) * me.vf * dt + rt.z * me.vs * dt; push(me);

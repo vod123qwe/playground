@@ -89,6 +89,7 @@
   "deathClip": "Death01",
   "noClip": "Idle_No_Loop",
   "getupClip": "LayToIdle",
+  "jumpClip": "Jump_Loop",
   "height": 1.739
  },
  "brawler": {
