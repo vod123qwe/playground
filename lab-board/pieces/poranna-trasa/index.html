@@ -15,7 +15,7 @@
   .ui{ position:fixed; font:600 13px/1.3 ui-monospace, 'Cascadia Mono', Consolas, monospace; color:var(--ink); letter-spacing:.02em; text-shadow:0 1px 0 #17181b; pointer-events:none; }
   #hud{ left:12px; top:10px; filter:drop-shadow(0 2px 0 rgba(0,0,0,.35)); }   /* the bike computer (a canvas in it) */
   #hud b{ color:#efc970; }
-  #keys{ right:16px; top:14px; padding:6px 10px; background:var(--shade); border-radius:6px; text-align:right; opacity:.9; }
+  #keys{ right:16px; top:84px; padding:6px 10px; background:var(--shade); border-radius:6px; text-align:right; opacity:.9; }
   #note{ left:50%; top:22%; transform:translate(-50%, 6px); padding:6px 12px; background:var(--shade); border-radius:6px; color:#efc970; opacity:0; transition:opacity .2s, transform .25s; }
   #note.on{ opacity:1; transform:translate(-50%, 0); }
   #pix, #ink{ left:16px; bottom:14px; display:flex; align-items:center; gap:4px; padding:4px 6px 4px 10px; background:var(--shade); border-radius:6px; pointer-events:auto; }
@@ -40,7 +40,6 @@
 <br><b>PIESZO</b> WSAD · mysz obraca (przy krawędzi dalej) · Shift bieg · V widok z oczu · E zagadaj · LPM uderz · F przy rowerze: wsiądź / podnieś
 <br><b>BÓJKA</b> mysz: strona ciosu · LPM cios · PPM blok (mysz w dół: niski) · Shift unik · G prowokacja · bez myszy: ← → ↑ ↓ i Spacja
 <br><b>INNE</b> Esc menu · U styl · O kontur · P piksele · 1–5 wielkość · R od nowa · L pełny ekran · H chowa to okno</div>
-<div class="ui" id="keysHint">H sterowanie · L pełny ekran</div>
 <div class="ui" id="note"></div>
 <script type="importmap">
 { "imports": {
