@@ -269,6 +269,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - na nogach cios (LPM/PPM) trafia też przejeżdżającego rowerzystę: spada z roweru, a zwykle (80%) wstaje i przychodzi się bić, jak po kopniaku z roweru
 
+## Poprawka: działki na zboczu, drugie podejście
+
+- działki są płaskie: teren zaczyna się wznosić dopiero 30 m od drogi, za tylnymi płotami (wcześniej od 14 m, pod domami, więc dom podniesiony do najwyższego punktu wisiał od frontu)
+- podjazd i ścieżka leżą na gruncie i przechylają się razem z nim (auto nie stoi już „pod” podjazdem)
+- pod gankiem i dobudówką jest kamienna podmurówka, żeby na spadku drogi nie było widać szpary
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

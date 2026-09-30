@@ -28,8 +28,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   // the cross-section: [offset from the middle (+ right), height]
   const ROAD = 3.5, KERB = 3.65, VERGE = 5.0, PAVE = 6.6;
   function hAt(d, i = 0) { const a = Math.abs(d); return (a <= ROAD ? 0 : a <= KERB ? (a - ROAD) / (KERB - ROAD) * .14 : .14 + Math.min(.02, (a - KERB) * .01)) + terr(d, i); }
-  function terr(d, i) {                                                // (nothing near the road and the houses; then rolling land, rising the farther out)
-    const a = Math.abs(d); if (a < 14) return 0; const w = Math.min(1, (a - 14) / 28), sd = d < 0 ? 1.7 : 4.1, u = (((i % N) + N) % N) * ds, Lp = N * ds, t = u / Lp;
+  function terr(d, i) {                                                // (nothing near the road and the lots, to 30 m; then rolling land, rising the farther out)
+    const a = Math.abs(d); if (a < 30) return 0; const w = Math.min(1, (a - 30) / 28), sd = d < 0 ? 1.7 : 4.1, u = (((i % N) + N) % N) * ds, Lp = N * ds, t = u / Lp;
     const f = u => w * w * (3.2 * vnoise(u * .016, sd) + 1.4 * vnoise(u * .045 + a * .02, sd + 5) - 1.2) + Math.max(0, a - 42) * (.04 + .05 * vnoise(u * .01, sd + 9));
     return f(u) * (1 - t) + f(u - Lp) * t; }                            // (blended with itself a loop back: the same where the loop closes)
   const noise = (x, z) => { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); };
@@ -162,6 +162,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const seats = [];                                                   // (chairs and loungers in the front gardens, for the people who sit out)
   const mailboxes = [], lots = [], CARS = createCars({ THREE, toon }), P = createProps({ THREE, toon, tex });
   // the ground's height at a point off the road (the station nearest along the road, the distance across it), as the ground is made
+  const slab = o => { o.userData.slab = true; return o; };           // (a thing laid flat on the ground: a drive, a path)
   function groundAt(x, z, i0) { let best = i0, bd = 1e9; for (let k = -70; k <= 70; k++) { const j = ((i0 + k) % N + N) % N, s = S[j], a = Math.abs((x - s.p.x) * s.f.x + (z - s.p.z) * s.f.z); if (a < bd) { bd = a; best = j; } }
     const s = S[best], d = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z; return s.p.y + hAt(d, best); }
   // a lot on a slope: the house up to the highest ground under it (a deeper plinth hides the gap on the low side), and each thing on
@@ -169,6 +170,9 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   function settle(h, i, W, D) { h.updateMatrixWorld(true); const v = new THREE.Vector3();
     let top = -1e9; for (const [x, z] of [[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2], [0, 0]]) { h.localToWorld(v.set(x, 0, z)); top = Math.max(top, groundAt(v.x, v.z, i)); }
     h.position.y = top; h.updateMatrixWorld(true);
+    for (const c of h.children) { if (!c.userData.slab) continue; const g = c.geometry.parameters, at = (x, z) => { h.localToWorld(v.set(c.position.x + x, 0, c.position.z + z)); return groundAt(v.x, v.z, i) - top; };
+      const L = at(-g.width / 2, 0), R = at(g.width / 2, 0), B = at(0, -g.depth / 2), F = at(0, g.depth / 2);
+      c.position.y = (L + R + B + F) / 4 + g.height / 2 - .01; c.rotation.z = Math.atan2(R - L, g.width); c.rotation.x = -Math.atan2(F - B, g.depth); }
     for (const c of h.children) { if (!(c.isGroup || (c.isMesh && c.geometry.type === 'IcosahedronGeometry'))) continue;
       c.getWorldPosition(v); c.userData.dy = groundAt(v.x, v.z, i) - top; c.position.y += c.userData.dy; }
     for (const q of seats) if (q.h === h && q.chair) q.local.y += q.chair.userData.dy || 0; }
@@ -203,19 +207,19 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     if (garage) { const gd = box(2.8, 2.2, .1, garM, gx, 1.1, fz - .02); h.add(gd); h.add(box(3.0, .12, .14, white, gx, 2.27, fz - .03)); }
     // the annex: a single-storey garage built on at one side, its front flush with the house's; a flat roof with a fascia, its own door
     const aw = 3.3, ad = Math.min(D - .4, 6), ah = 2.7, azc = fz + .03 + ad / 2;
-    if (annex) { h.add(box(aw, ah, ad, wall, ax, ah / 2, azc)); h.add(box(aw + .12, .3, ad + .12, stoneM, ax, .15, azc));
+    if (annex) { h.add(box(aw, ah, ad, wall, ax, ah / 2, azc)); h.add(box(aw + .1, 1.4, ad + .1, stoneM, ax, -.7, azc)); h.add(box(aw + .12, .3, ad + .12, stoneM, ax, .15, azc));
       const rf = box(aw + .3, .14, ad + .3, dark, ax, ah + .07, azc); rf.rotation.x = -.04; h.add(rf); h.add(box(aw + .34, .1, .1, trimM, ax, ah + .02, fz - .16));
       h.add(box(2.6, 2.1, .1, garA, ax, 1.05, fz - .02)); h.add(box(2.8, .12, .14, white, ax, 2.2, fz - .03)); for (const x of [-aw / 2, aw / 2]) h.add(box(.16, ah, .16, trimM, ax + x, ah / 2, fz + .02)); }
     const drv = garage || annex, dvx = garage ? gx : ax;                                            // (a drive: to the garage, in the house or in the annex)
     if (rnd() < .7) { const pz = fz - 1.1, pw = garage ? 2.6 : 3.4, px0 = dx;                                                          // a porch: its floor, steps, roof, posts, rails
-      h.add(box(pw, .3, 2.2, white, px0, .15, fz - 1.1)); for (const [k, y] of [[0, .1], [1, .2]]) h.add(box(1.2, .1 + y * 0, .32, white, px0, .05 + k * .1, fz - 2.3 + k * .3));
+      h.add(box(pw, .3, 2.2, white, px0, .15, fz - 1.1)); h.add(box(pw - .04, 1.2, 2.9, stoneM, px0, -.6, fz - 1.4)); for (const [k, y] of [[0, .1], [1, .2]]) h.add(box(1.2, .1 + y * 0, .32, white, px0, .05 + k * .1, fz - 2.3 + k * .3));
       h.add(box(pw + .4, .14, 2.4, roof, px0, 2.55, pz)); for (const x of [-pw / 2 + .1, pw / 2 - .1]) h.add(box(.16, 2.3, .16, white, px0 + x, 1.4, pz - 1));
       for (const sgn of [-1, 1]) { const x0 = px0 + sgn * pw / 2 - sgn * .1, a = sgn < 0 ? x0 : px0 + .7, b = sgn < 0 ? px0 - .7 : x0;
         h.add(box(Math.abs(b - a), .06, .06, white, (a + b) / 2, 1.1, pz - 1)); for (let x = Math.min(a, b); x <= Math.max(a, b); x += .16) h.add(box(.04, .8, .04, white, x, .7, pz - 1)); } }
     if (rnd() < .6) { h.add(box(.62, 1.6, .62, brickM, W * .3, HH + 1.5, D * .1)); h.add(box(.76, .12, .76, stoneM, W * .3, HH + 2.34, D * .1)); }   // a chimney, brick, capped
     // to the pavement: a drive to the garage, or a path of slabs to the door; bushes and beds along the front
     const gap = 6.5 + rnd() * 2;
-    if (drv) h.add(box(3.0, .04, gap + .2, driveM, dvx, .02, -D / 2 - gap / 2)); if (!garage) h.add(box(1.1, .04, gap, pathM, dx, .025, -D / 2 - gap / 2));
+    if (drv) h.add(slab(box(3.0, .04, gap + .2, driveM, dvx, .02, -D / 2 - gap / 2))); if (!garage) h.add(slab(box(1.1, .04, gap, pathM, dx, .025, -D / 2 - gap / 2)));
     for (let k = 0; k < 3 + (rnd() * 3 | 0); k++) { const x = (rnd() - .5) * (W - 1.5); if (Math.abs(x - dx) < 1.2 || (drv && Math.abs(x - dvx) < 1.8)) continue; bush(h, x, fz - .6 - rnd() * .4, .45 + rnd() * .3, rnd() < .45); }
     if (rnd() < .5) { const bn = bin(); bn.position.set(garage ? gx + 2 : W / 2 - .6, 0, fz - 1.2 - rnd()); bn.rotation.y = (rnd() - .5) * .5; h.add(bn); }
     // the front garden, lived in: a few things about the lawn (not on the path, the drive or the porch); now and then an old car by the house
