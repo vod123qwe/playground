@@ -30,8 +30,8 @@ export function createDogs({ THREE, toon, probe }) {
     for (const [a, flip] of [[0, true], [st.length - 1, false]]) { const c0 = pos.length / 3, [z, , , y] = st[a]; pos.push(0, y, z); for (let v = 0; v < nv; v++) { const k = a * (nv + 1) + v; if (flip) idx.push(c0, k + 1, k); else idx.push(c0, k, k + 1); } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
   }
-  function makeDog(_coat, size, r = Math.random) {
-    const B = BREEDS[r() * BREEDS.length | 0], [c0, c1] = B.coat, back = new THREE.Color(c0), belly = new THREE.Color(c1), spot = B.spots ? new THREE.Color(B.spots) : null, patch = B.patch ? new THREE.Color(B.patch) : null;
+  function makeDog(_coat, size, r = Math.random, breed = null) {           // (breed: its index in BREEDS; else picked at random)
+    const B = BREEDS[breed ?? (r() * BREEDS.length | 0)], [c0, c1] = B.coat, back = new THREE.Color(c0), belly = new THREE.Color(c1), spot = B.spots ? new THREE.Color(B.spots) : null, patch = B.patch ? new THREE.Color(B.patch) : null;
     const fur = toon('#ffffff', { vertexColors: true }), furF = toon(c0), pale = toon(c1), G = new THREE.Group(), body = new THREE.Group(); G.add(body); body.scale.setScalar(size);
     const L = B.len, ht = B.ht, gw = B.girth, top = ht + .08;
     // the coat on the body: darker on the back, the belly and the chest paler; spots or a patch as the breed has them
@@ -119,5 +119,5 @@ export function createDogs({ THREE, toon, probe }) {
   // it ran into something (a car, a tree): thrown, rolling; then off home, yelping, and it keeps away a good while
   function tumble(d, push) { if (d.fly && d.fly.tumble) return; d.state = 'flee'; d.t = 1.2; d.bark = .8; d.cool = 25; d.keep = null;
     const vy = 2.4, T = 2 * vy / 9.8; d.fly = { t: 0, vx: push.x, vz: push.z, vy, T, spin: (Math.random() < .5 ? -1 : 1) * 6.283 * 1.5 / T, tumble: true }; }
-  return { dogs, add, update, kick, tumble };
+  return { dogs, add, update, kick, tumble, makeDog, BREEDS };
 }

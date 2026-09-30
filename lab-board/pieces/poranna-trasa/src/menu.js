@@ -22,6 +22,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'button', label: 'GRAJ', act: () => { close(); onPlay?.(); } },
       { type: 'button', label: 'STEROWANIE', act: () => show('keys') },
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
+      { type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } },
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
     if (page === 'pause') return [
       { type: 'button', label: 'WRÓĆ DO GRY', act: () => close() },

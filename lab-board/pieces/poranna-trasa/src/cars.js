@@ -80,7 +80,16 @@ export function createCars({ THREE, toon }) {
     const doors4 = kindName === 'saloon' || kindName === 'estate' || K.four, mB = (a0 + a1) / 2 - .05;
     loft(a0, a1, 30, (x, th) => { const r = ease(roofAt(x)), top = base + .02 + gh * r, hw = (W / 2 - .07) * (1 - (K.box ? .03 : .12) * r), y = Math.sin(th), gs = K.box ? 6 : 3;
       if (y < 0) return [hw * se(Math.cos(th), gs), base - .01]; return [hw * (1 - (K.box ? .02 : .1) * y) * se(Math.cos(th), gs), base + (top - base) * se(y, gs)]; },
-      (x, th) => { const y = Math.sin(th); if (y > .9 || y < 0 || (K.glassTo && x > K.glassTo)) return 0; if (Math.abs(x - (a0 + .06)) < .06 || (doors4 && Math.abs(x - mB) < .05) || (x > b1 - .02 && x < a1 - .08 && Math.abs(Math.cos(th)) > .5)) return 0; return 1; });
+      // what is glass: by where along it is (not by the angle round it, which made the windscreen's middle into roof): the windscreen
+      // across its whole width, thin pillars at its sides; the back window between thicker pillars; the side windows under the roof
+      (x, th) => { const y = Math.sin(th), c = Math.abs(Math.cos(th));
+        if (y < 0 || x < a0 + .05) return 0;                                            // (under; the seal at the windscreen's foot)
+        if (K.glassTo && x > K.glassTo) return 0;                                         // (a van: glass only in the cab)
+        if (x < b0) return c > .9 ? 0 : 1;                                                // the windscreen, the A-pillars
+        if (x > b1) return c > .62 || x > a1 - .06 ? 0 : 1;                               // the back window, the C-pillars
+        if (y > .9) return 0;                                                             // the roof
+        if ((doors4 && Math.abs(x - mB) < .05) || (Math.abs(x - b0) < .06 && c > .45) || (Math.abs(x - b1) < .06 && c > .45)) return 0;   // the pillars at the side windows' ends
+        return 1; });
     // front and back: bumpers, lights, grille, plates; wheels
     const fz = L / 2, bz = -L / 2, by = K.R + .1;
     const bumpM = K.chrome ? shared.chrome : shared.trim, bh = K.bigBumpers ? .26 : K.chrome ? .1 : .18, bd = K.bigBumpers ? .2 : .14;
@@ -120,5 +129,5 @@ export function createCars({ THREE, toon }) {
     micro: ['#e9e3d1', '#8e2e25', '#efc970', '#8fb0bd', '#355f31', '#c9b77a', '#cf5a3e'], twostroke: ['#b7c4a0', '#8fb0bd', '#e9e3d1', '#c9b77a', '#9aa0a4', '#d9c9a0'], van: ['#5f7a4e', '#8e2e25', '#9aa0a4', '#34465a', '#e9e3d1'], barge: ['#e9e3d1', '#34465a', '#7b5836', '#17181b', '#9aa0a4'] };
   const MIX = [['liftback', .18], ['pickup', .14], ['estate', .14], ['saloon', .11], ['fastback', .12], ['micro', .1], ['barge', .08], ['twostroke', .06], ['van', .05], ['hatch', .02], ['wedge', .03]];   // (how often each is on the street)
   const random = r => { let x = r() * MIX.reduce((a, [, w]) => a + w, 0), k = MIX[0][0]; for (const [n, w] of MIX) { if ((x -= w) < 0) { k = n; break; } } const pal = COLOURS[COLOURS[k] ? k : 'common']; return makeCar(k, pal[r() * pal.length | 0]); };
-  return { makeCar, random, spin, KINDS };
+  return { makeCar, random, spin, KINDS, COLOURS };
 }
