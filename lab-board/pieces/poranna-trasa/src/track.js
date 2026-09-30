@@ -351,16 +351,23 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const w = () => (rnd() - .5) * .35, V = (x, y, z) => new THREE.Vector3(x, y, z), r0 = big ? .3 : .21;
     const trunk = limb(t, [V(0, -.1, 0), V(dir.x * spread * .06 + w(), H * .35, dir.z * spread * .06 + w()), V(dir.x * spread * .16 + w(), H * .7, dir.z * spread * .16 + w()), V(dir.x * spread * .24, H, dir.z * spread * .24)], r0, r0 * .5);
     const top = trunk.getPointAt(1), n = 2 + (rnd() * 3 | 0), yaw = Math.atan2(dir.z, dir.x);
-    for (let k = 0; k < n; k++) { const s0 = trunk.getPointAt(.55 + rnd() * .4), a = yaw + (k - (n - 1) / 2) * (2.4 / n) + (rnd() - .5) * .5, reach = spread * (.55 + rnd() * .45), up = H * (.22 + rnd() * .25);
+    // its foot: roots spreading into the ground, so it stands, not sticks in
+    for (let k = 0; k < 4; k++) { const a = k * 1.57 + rnd() * .8, L = r0 * (2.2 + rnd() * 1.4); limb(t, [V(0, r0 * 1.6, 0), V(Math.cos(a) * L * .5, r0 * .5, Math.sin(a) * L * .5), V(Math.cos(a) * L, -.05, Math.sin(a) * L)], r0 * .55, r0 * .15); }
+    // the limbs: forking low off the trunk, each forking again into two, every end a mass of leaves of its own (a crown of many
+    // clumps, each with its lit and its shaded side, not one ball)
+    for (let k = 0; k < n; k++) { const s0 = trunk.getPointAt(.38 + rnd() * .4), a = yaw + (k - (n - 1) / 2) * (2.4 / n) + (rnd() - .5) * .5, reach = spread * (.55 + rnd() * .45), up = H * (.22 + rnd() * .25);
       const end = V(s0.x + Math.cos(a) * reach, s0.y + up, s0.z + Math.sin(a) * reach), mid = V(s0.x + Math.cos(a) * reach * .55, s0.y + up * .35, s0.z + Math.sin(a) * reach * .55);
-      limb(t, [s0, mid, end], r0 * .42, r0 * .16);
-      const R = spread * (.42 + rnd() * .16); crown(t, end.clone().add(V(0, R * .35, 0)), V(R, R * .72, R), pal, big ? 8 : 6, big ? 24 : 16); }
-    const R = spread * (.5 + rnd() * .12); crown(t, top.clone().add(V(0, R * .45, 0)), V(R, R * .75, R), pal, big ? 10 : 7, big ? 28 : 18);
+      const lc = limb(t, [s0, mid, end], r0 * .5, r0 * .16);
+      const R = spread * (.34 + rnd() * .12); crown(t, end.clone().add(V(0, R * .35, 0)), V(R, R * .72, R), pal, big ? 7 : 5, big ? 18 : 12);
+      for (const sg of [-1, 1]) { const f0 = lc.getPointAt(.55 + rnd() * .15), b2 = a + sg * (.6 + rnd() * .5), rr = reach * (.35 + rnd() * .2), e2 = V(f0.x + Math.cos(b2) * rr, f0.y + up * (.25 + rnd() * .3), f0.z + Math.sin(b2) * rr);
+        limb(t, [f0, f0.clone().lerp(e2, .5).add(V(0, .12, 0)), e2], r0 * .2, r0 * .07);
+        const r2 = R * (.55 + rnd() * .2); crown(t, e2.clone().add(V(0, r2 * .3, 0)), V(r2, r2 * .75, r2), pal, 4, big ? 10 : 7); } }
+    const R = spread * (.46 + rnd() * .12); crown(t, top.clone().add(V(0, R * .45, 0)), V(R, R * .75, R), pal, big ? 9 : 6, big ? 24 : 15);
   }
   function tree(i, d) {
     if (!free(i, d, 2)) return;                                          // (not out of a car, a house, a drive)
     const t = new THREE.Group(), H = 2.6 + rnd() * 2.4, autumn = rnd() < .3, a = rnd() * 6.28;
-    grow(t, H, { x: Math.cos(a), z: Math.sin(a) }, 1.7 + rnd() * .9 + H * .1, autumn ? autumnPal() : greenPal(), false);
+    grow(t, H, { x: Math.cos(a), z: Math.sin(a) }, 2.3 + rnd() * 1.1 + H * .22, autumn ? autumnPal() : greenPal(), false);
     put(t, i, d, 0, rnd() * 6); hit(t, { hx: .28, hz: .28, h: H, kind: 'hard' }, i);
     show.tree.push({ o: t, label: autumn ? 'drzewo jesienne' : 'drzewo liściaste', note: H.toFixed(1) + ' m' });
   }
@@ -419,7 +426,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     if (!free(i, side * (VERGE - .55), .6)) return;
     const t = new THREE.Group(), H = 3.6 + rnd() * 1.4, autumn = rnd() < .22;   // (its limbs reaching over the road: its +x, as it stands)
     grow(t, H, { x: side, z: (rnd() - .5) * .4 }, 3 + rnd() * .8, autumn ? autumnPal() : greenPal(), true);
-    put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i);   // (turned with the road: its +x is the road's left, -x its right)
+    put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i); show.tree.push({ o: t, label: 'drzewo nad jezdnią', note: H.toFixed(1) + ' m' });   // (turned with the road: its +x is the road's left, -x its right)
     dapple(i + Math.round((rnd() - .5) * 4 / ds), side * (VERGE - 3.2));
   }
   for (let i = 60; i < N - 20; i += Math.round((15 + rnd() * 9) / ds)) { if (rnd() < .78) streetTree(i, rnd() < .5 ? 1 : -1); }
