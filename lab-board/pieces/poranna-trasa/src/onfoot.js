@@ -21,6 +21,7 @@
 //   fx: { score(n, at, label, col), flash(s), shake(s), slow(s), rant(at, s), take(kind) → a line (what the winner takes off you) }
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { makeBag } from './bag.js';
 
 export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx }) {
   const V3 = THREE.Vector3, UP = new V3(0, 1, 0), pick = a => a[Math.random() * a.length | 0], clamp = THREE.MathUtils.clamp;
@@ -100,14 +101,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const button = new THREE.Mesh(new THREE.SphereGeometry(.011, 6, 4), redD); button.position.y = crown; cap.add(button);
     cap.rotation.x = -.1; m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;   // (the front up on the forehead, the back down to the nape)
     // the satchel: olive canvas, a darker flap, rolled papers standing out of it; low across his back, to the left
-    const pv = bones.pelvis.getWorldPosition(new V3()), sh = bones.upperarm_r.getWorldPosition(new V3()), bag = new THREE.Group(), olive = toon('#6f7a45'), oliveD = toon('#58613a');
-    const box = new THREE.Mesh(new THREE.BoxGeometry(.36, .25, .1), olive); bag.add(box);
-    const flap = new THREE.Mesh(new THREE.BoxGeometry(.364, .13, .106), oliveD); flap.position.set(0, .065, -.004); bag.add(flap);
-    const buckle = new THREE.Mesh(new THREE.BoxGeometry(.01, .04, .04), toon('#c9b77a')); buckle.position.set(0, .01, -.056); buckle.rotation.y = Math.PI / 2; bag.add(buckle);
-    const paperM = toon('#ece5d0'), bandM = toon('#b3372c');
-    for (let k = 0; k < 5; k++) { const p = new THREE.Group(); p.position.set(-.13 + k * .062, .16, .01 - (k % 2) * .018); p.rotation.set(.12 * (k % 3 - 1), 0, 0); bag.add(p);
-      p.add(new THREE.Mesh(new THREE.CylinderGeometry(.026, .026, .16, 8), paperM)); const bd = new THREE.Mesh(new THREE.CylinderGeometry(.027, .027, .025, 8), bandM); bd.position.y = .02; p.add(bd); }
-    const at = new V3(pv.x + .08, pv.y + .1, pv.z - .16); bag.position.copy(at); bag.rotation.set(0, 0, -.1); m.add(bag); bones.pelvis.attach(bag);
+    const pv = bones.pelvis.getWorldPosition(new V3()), sh = bones.upperarm_r.getWorldPosition(new V3()), satchel = makeBag({ THREE, toon }), bag = satchel.group;   // (the game's one bag: bag.js)
+    bag.rotation.y = -Math.PI / 2; m.userData.bagFill = satchel.setFill;                     // (its length across his back, its outer face out behind)
+    const at = new V3(pv.x + .08, pv.y + .1, pv.z - .16); bag.position.copy(at); bag.rotation.z = -.1; m.add(bag); bones.pelvis.attach(bag);
     // the strap: from the bag, over his back and over his chest, to his right shoulder
     const strapM = toon('#4d5530');
     for (const s of [-1, 1]) { const a = s < 0 ? new V3(at.x + .15, at.y + .1, at.z + .03) : new V3(pv.x + .16, pv.y + .14, pv.z + .09), b = new V3(sh.x + .03, sh.y + .075, sh.z + s * .075), d = b.clone().sub(a);
@@ -415,6 +411,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   function trainCount(step) { const T = fightNow && fightNow.train; if (!T || T.step !== step) return; T.n++; if (T.n < [2, 1, 2][step]) return;
     T.step++; T.n = 0; if (T.step < 3) { fx.tip(TIPS[T.step] + ' · ENTER: POMIŃ'); return; } endTraining(); }
   function endTraining() { const G = fightNow; if (!G || !G.train) return; G.train = null; trained = true; try { localStorage.setItem('pt.trained', '1'); } catch { } G.f.hp = G.f.max; me.hp = 100; fx.tip('DOBRA. TERAZ NA SERIO!'); setTimeout(() => fx.tip(null), 1800); }
-  return { get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
+  function bagFill(k) { me && me.P.m.userData.bagFill && me.P.m.userData.bagFill(k); }
+  return { bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
     start, stop, update, follow, grudge, nearBike, toggleView, status };
 }

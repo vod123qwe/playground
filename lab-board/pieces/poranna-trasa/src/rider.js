@@ -8,6 +8,8 @@
 // the saddle to climb or to sprint, leans forward to brake, and throws: a hand to the bag, a swing out to the side, the paper away.
 // Local frame: +z forward, +y up; his right is -x.
 
+import { makeBag } from './bag.js';
+
 const V3 = (x, y, z) => ({ x, y, z });
 
 export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
@@ -156,14 +158,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   }
   // the bag on his right hip, its flap, its strap across the chest to the left shoulder, papers in it
   const bag = new THREE.Group(); torso.add(bag);                       // (on his back, going with him)
-  { const b = mesh(new THREE.BoxGeometry(.125, .26, .36, 2, 2, 2), M.bag, bag); b.geometry.translate(0, 0, 0);
-    const bp = b.geometry.attributes.position; for (let i = 0; i < bp.count; i++) { const y = bp.getY(i), z = bp.getZ(i); bp.setX(i, bp.getX(i) * (1 - .25 * Math.abs(z) / .15) * (y < 0 ? .8 : 1)); } b.geometry.computeVertexNormals();
-    const flap = mesh(new THREE.BoxGeometry(.132, .13, .37), M.bagD, bag); flap.position.set(-.004, .075, 0);
-    const buckle = mesh(new THREE.BoxGeometry(.012, .05, .05), M.buckle, bag); buckle.position.set(-.072, .03, 0);     // on the flap's outer face
-    const tab = mesh(new THREE.BoxGeometry(.01, .07, .025), M.bagD, bag); tab.position.set(-.07, .065, 0);
-    for (let i = 0; i < 5; i++) { const p = mesh(new THREE.CylinderGeometry(.036, .036, .2, 12), M.paper, bag);   // papers: rolled, lying across the top, sticking out of it
-      p.rotation.set(0, 0, Math.PI / 2 + (i % 2 ? .12 : -.08)); p.position.set(.01 + (i % 2) * .012, .16 + (i % 2) * .03, -.13 + i * .065);
-      const band = mesh(new THREE.CylinderGeometry(.037, .037, .03, 12), M.band, p); band.position.y = .025; } }
+  const satchel = makeBag({ THREE, toon: sharedToon || ((c, o = {}) => new THREE.MeshToonMaterial({ color: c, gradientMap: ramp, ...o })) }); bag.add(satchel.group); satchel.group.rotation.y = Math.PI;   // (the game's one bag: bag.js; its good side out)
   const strap = mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-.21, .12, -.17), new THREE.Vector3(-.17, .25, .06), new THREE.Vector3(-.02, .38, .11), new THREE.Vector3(.12, .46, .03), new THREE.Vector3(.14, .44, -.08), new THREE.Vector3(.15, .28, -.17), new THREE.Vector3(.15, .13, -.2)]), 40, .012, 6, false), M.bagD, torso);
 
   // ---------- the pose, each frame ----------
@@ -299,5 +294,5 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   function ragdollOff() { RG.on = false; head.position.set(0, .6, 0); }
   function throwPaper(side) { if (st.throwT >= 0) return false; st.throwT = 0; st.side = side; st.released = false; return true; }
   root.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  return { root, head, boy, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
+  return { root, head, boy, bagFill: k => satchel.setFill(k), get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
 }
