@@ -45,6 +45,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'slider', label: 'WYGŁADZANIE', key: 'smooth', min: 1, max: 10, step: 1 },
       { type: 'toggle', label: 'WYGLĄD PIKSELOWY (P)', key: 'pixel' }];
     if (st) for (const [label, key, min, max, step] of light[st]) r.push({ type: 'slider', label, key, min, max, step, light: true });
+    r.push({ type: 'button', label: 'PANEL STYLU: WSZYSTKO', act: () => { close(); look.open(true); } });
     r.push({ type: 'button', label: 'WRÓĆ', act: () => show(parent) });
     return r;
   }
@@ -133,13 +134,13 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   // the title screen: the name big over the street going by, a line under it, the buttons, a hint
   function drawTitle(dt) { const W = A.W, H = A.H, k = Math.min(1, t / .5), e = 1 - Math.pow(1 - k, 3);
     g.fillStyle = 'rgba(12,13,15,.35)'; for (let y = 0; y < 70; y++) if (y % 2 === 0) g.fillRect(0, y, W, 1);                  // (a shade behind the name, dithered in lines)
-    const name = 'PORANNA TRASA', sc = 2, nw = A.width(name) * 2 * sc; g.save(); g.translate(Math.round(W / 2 - nw / 2), Math.round(22 - (1 - e) * 16)); g.scale(sc, sc);
+    const name = 'PORANNA TRASA', sc = Math.max(1, Math.min(2, (W - 8) / (A.width(name) * 2))), nw = A.width(name) * 2 * sc; g.save(); g.translate(Math.round(W / 2 - nw / 2), Math.round(22 - (1 - e) * 16)); g.scale(sc, sc);
     A.big(name, 0, 0, '#efc970', '#17181b'); g.restore();
     const sub = 'GAZETY SAME SIĘ NIE ROZNIOSĄ'; A.text(sub, Math.round(W / 2 - A.width(sub) / 2), 58, '#f6f3ea');
     const bw = 130, bx = Math.round(W / 2 - bw / 2); let y = Math.round(H - 26 - rows.length * 16 + (1 - e) * 20); hits = [];
     const panel = (x, yy, w, h, fill, edge) => { g.fillStyle = '#17181b'; g.fillRect(x + 1, yy - 1, w - 2, h + 2); g.fillRect(x - 1, yy + 1, w + 2, h - 2); g.fillRect(x, yy, w, h); g.fillStyle = edge; g.fillRect(x + 1, yy + 1, w - 2, h - 2); g.fillStyle = fill; g.fillRect(x + 2, yy + 2, w - 4, h - 4); };
     rows.forEach((r, i) => { const on = i === sel; panel(bx, y, bw, 12, on ? '#efc970' : '#25272b', on ? '#f6f3ea' : '#44484c'); A.text(r.label, Math.round(bx + bw / 2 - A.width(r.label) / 2), y + 3, on ? '#17181b' : '#d3d0c3', null); hits.push({ x: bx, y, w: bw, h: 12, i }); y += 16; });
-    const hint = '↑ ↓ WYBÓR · ENTER'; A.text(hint, Math.round(W / 2 - A.width(hint) / 2), H - 10, '#d3d0c3'); }
+    const hint = document.body.classList.contains('touch') ? 'DOTKNIJ, ŻEBY WYBRAĆ' : '↑ ↓ WYBÓR · ENTER'; A.text(hint, Math.round(W / 2 - A.width(hint) / 2), H - 10, '#d3d0c3'); }
   hud.setOverlay(draw);
   // the wheel scrolls a long page (the chosen row follows)
   function wheel(dy) { if (!page) return; const d = dy > 0 ? 1 : -1; let i = sel; for (let n = 0; n < 3; n++) { let j = i; do { j = (j + d + rows.length) % rows.length; } while (!pickable(rows[j]) && j !== i); i = j; } sel = i; }

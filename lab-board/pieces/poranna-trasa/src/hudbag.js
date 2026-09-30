@@ -10,7 +10,7 @@ export function createHudBag({ THREE, toon, makeBag }) {
   bag.group.rotation.set(0, Math.PI / 2 - .32, .06);                          // (its front, the -x face, to you; turned a little, leaning)
   const P = bag.papers.map(p => ({ p, y0: p.position.y, k: 1 }));           // (k: 1 standing out, 0 sunk into the bag)
   let last = null, jolt = 0, joltV = 0, bounce = 0; const K = .05;
-  function update(dt, papers, max, aspect, show) {
+  function update(dt, papers, max, aspect, show, up = false) {
     hold.visible = show; if (!show) return;
     if (last !== null && papers < last) joltV -= 1.2;
     if (last !== null && papers > last) bounce = 1;
@@ -23,8 +23,9 @@ export function createHudBag({ THREE, toon, makeBag }) {
     // where: the bottom right of the picture, the lower third of it under the edge
     camera.aspect = aspect; camera.updateProjectionMatrix();
     const z = -4, hh = -z * Math.tan(camera.fov * Math.PI / 360), hw = hh * aspect, H = bag.size.H;
-    hold.position.set(hw - .26, -hh + H * .5 + jolt * .02 + Math.sin(bounce * Math.PI) * .04, z).multiplyScalar(K); hold.scale.setScalar(K); hold.rotation.z = jolt * .08;   // (K: all of it scaled down towards the lens, the same on the screen, nearer than anything in the world)
-    api.left = (hw - .26 - .22) / hw * .5 + .5;                                  // (the bag's left edge, 0..1 across the picture: the count goes by it)
+    const sK = up ? .46 : Math.min(1, aspect / 1.15), yB = up ? hh * .6 : -hh + H * .5 * sK;   // (up: a phone, under the purse)
+    hold.position.set(hw - .26 * sK, yB + jolt * .02 + Math.sin(bounce * Math.PI) * .04, z).multiplyScalar(K); hold.scale.setScalar(K * sK); hold.rotation.z = jolt * .08;   // (K: all of it scaled down towards the lens, the same on the screen, nearer than anything in the world)
+    api.left = (hw - (.26 + .22) * sK) / hw * .5 + .5; api.top = up ? (1 - (yB / hh * .5 + .5)) : null;   // (0..1 down the picture, when up)                                  // (the bag's left edge, 0..1 across the picture: the count goes by it)
   }
-  const api = { scene, camera, update, left: .85 }; return api;
+  const api = { scene, camera, update, left: .85, top: null }; return api;
 }

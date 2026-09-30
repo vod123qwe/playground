@@ -158,7 +158,7 @@ export function createHud() {
       heart(Math.round(q.x + Math.sin(q.t * 6 + q.ph) * 2.5), Math.round(q.y - q.t * q.v), q.t < .5 ? '#e08556' : '#cf5a3e', '#5e1c17'); }
     // top right: the papers left, and the money in a purse (see purse())
     { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); }
-    if (st.bagX != null) { const s = String(st.papers); outlined(s, Math.round(st.bagX * cv.width) - width(s) - 4, cv.height - 11, st.papers ? '#f6f3ea' : '#cf5a3e'); }   // (how many papers, by the bag)
+    if (st.bagX != null) { const s = String(st.papers), y = st.bagY != null ? Math.round(st.bagY * cv.height) + 2 : cv.height - 11; outlined(s, Math.round(st.bagX * cv.width) - width(s) - 4, y, st.papers ? '#f6f3ea' : '#cf5a3e'); }   // (how many papers, by the bag)
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
     if (st.bike) bikeArrow(st.bike, project, dt);
