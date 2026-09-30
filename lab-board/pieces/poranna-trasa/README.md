@@ -226,6 +226,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - gdy wpadają pieniądze: portmonetka się otwiera, monety wpadają jedna po drugiej, przy każdej lekko podskakuje, suma rośnie razem z nimi, potem zatrzask się zamyka
 - gdy ktoś zabiera kasę (rowerzysta, babka, selfie): otwiera się i monety z niej wylatują
 - komunikaty mówią teraz o złotówkach, nie o punktach
+- całość siedzi w prawym górnym rogu, bez półprzezroczystego tła: ikony i liczby mają własny ciemny obrys; ikona gazety to złożona gazeta (winieta, zdjęcie, szpalty); podpowiedź „H sterowanie · L pełny ekran” usunięta (sterowanie jest w menu i pod H)
 
 ## Na później
 

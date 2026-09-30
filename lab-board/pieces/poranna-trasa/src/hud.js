@@ -156,9 +156,8 @@ export function createHud() {
       if (b.t > .25 && b.t < 1.6 && b.t - b.sent > .22) { b.sent = b.t; hearts.push({ x: x + 5 + Math.random() * (w - 10), y: y - 8, t: 0, ph: Math.random() * 6, v: 9 + Math.random() * 6 }); } }
     for (let k = hearts.length - 1; k >= 0; k--) { const q = hearts[k]; q.t += dt; if (q.t > 1.3) { hearts.splice(k, 1); continue; } if (q.t > 1 && ((q.t * 20) | 0) % 2) continue;
       heart(Math.round(q.x + Math.sin(q.t * 6 + q.ph) * 2.5), Math.round(q.y - q.t * q.v), q.t < .5 ? '#e08556' : '#cf5a3e', '#5e1c17'); }
-    // under the bike computer: the papers left, and the money in a purse (see purse())
-    { const k = cv.width / Math.max(1, innerWidth), X = Math.round(14 * k) + 2, Y = Math.round(128 * k);
-      purse(dt, st.points, X, Y, st.papers); }
+    // top right: the papers left, and the money in a purse (see purse())
+    { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); }
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
     if (st.bike) bikeArrow(st.bike, project, dt);
@@ -173,20 +172,20 @@ export function createHud() {
   // Beside it the papers left (a roll, their number), and the sum in złoty.
   const coins = []; let shown = null, openK = 0, openT = 0, bump = 0, glow = 0, pend = 0;
   const BODY = [7, 7.5, 8, 8, 8, 8, 8, 7.5, 7, 6, 5, 3.5];                  // (half the body's width, row by row: a pouch, full low down)
-  function purse(dt, money, X, Y, papers) {
+  function purse(dt, money, R, Y, papers) {                              // (R: the right edge; Y: the top)
     if (shown === null) shown = money;
-    const px = X + 26, cx = px + 8, fy = Y + 4;                            // (the purse's left, its middle, the frame's top)
+    const label = shown + ' ZŁ', tw = width(label), px = R - tw - 20, cx = px + 8, fy = Y + 4, pn = String(papers), X = px - 9 - width(pn) - 14;   // (the purse's left, its middle, the frame's top; the paper's left)
     if (money > shown + pend) { const n = money - shown - pend, m = Math.min(8, n); for (let q = 0; q < m; q++) coins.push({ x: cx + (Math.random() * 6 - 3), y: fy - 9, vx: 0, vy: 0, wait: q * .11, val: n / m, into: true }); pend += n; openT = .45; }
     if (money < shown) { const n = shown - money, m = Math.min(10, n); for (let q = 0; q < m; q++) coins.push({ x: cx, y: fy, vx: (Math.random() - .5) * 60, vy: -40 - Math.random() * 40, wait: q * .05, into: false }); shown = money; pend = 0; openT = .6; }
     const open = coins.length > 0 || openT > 0; openT = Math.max(0, openT - dt); openK += ((open ? 1 : 0) - openK) * Math.min(1, dt * (open ? 14 : 20));
     bump = Math.max(0, bump - dt * 6); glow = Math.max(0, glow - dt * 2);
     const o = Math.round(openK * 3), sq = bump > .5 ? 1 : 0;
-    // the panel behind it all
-    const label = shown + ' ZŁ', tw = width(label); g.fillStyle = 'rgba(23,24,27,.55)'; g.fillRect(X - 3, Y - 2, 26 + 20 + tw + 6, 22);
-    g.fillStyle = '#ece5d0'; g.fillRect(X, Y + 9, 6, 3); g.fillStyle = '#b3372c'; g.fillRect(X + 2, Y + 9, 1, 3);                   // a rolled paper
-    text(String(papers), X + 9, Y + 8, '#f6f3ea');
+    // no panel behind: each thing with a dark rim of its own
+    paper(X, Y + 6); outlined(pn, X + 14, Y + 8, '#f6f3ea');
     // the back jaw, when open: it rises, the inside dark between it and the front
     const by = fy + 2 + sq;
+    for (let r = -1; r <= BODY.length; r++) { const hw = BODY[Math.max(0, Math.min(BODY.length - 1, r))] + 1, y = by + 2 + r; g.fillStyle = '#17181b'; g.fillRect(Math.round(cx - hw), y, Math.round(cx + hw) - Math.round(cx - hw), 1); }   // (the dark rim round the body)
+    g.fillStyle = '#17181b'; g.fillRect(px, by - 1, 16, 4);
     if (o > 0) { g.fillStyle = '#17181b'; g.fillRect(px + 2, by - o, 12, o + 1); g.fillStyle = '#efc970'; if (o > 1) { g.fillRect(px + 5, by - 1, 1, 1); g.fillRect(px + 10, by, 1, 1); }
       g.fillStyle = '#a8812f'; g.fillRect(px + 2, by - o - 1, 12, 1); g.fillStyle = '#efc970'; g.fillRect(px + 3, by - o - 2, 10, 1);
       ball(cx - 2, by - o - 4); }
@@ -206,8 +205,16 @@ export function createHud() {
       if (!c.into && c.y > cv.height + 4) { coins.splice(k, 1); continue; }
       const x = Math.round(c.x) - 1, y = Math.round(c.y) - 1, flip = ((c.y * .4) | 0) % 2;
       g.fillStyle = '#6b4a1e'; g.fillRect(x, y + 1, 3, 2); g.fillStyle = '#efc970'; g.fillRect(x + (flip ? 1 : 0), y, flip ? 1 : 3, 2); g.fillStyle = '#fff4c8'; g.fillRect(x + 1, y, 1, 1); }
-    text(label, px + 20, Y + 8, glow > .5 ? '#fff4c8' : '#efc970');
+    outlined(label, px + 20, Y + 8, glow > .5 ? '#fff4c8' : '#efc970');
   }
+  // text with a dark rim all round (no panel under it)
+  function outlined(s, x, y, col) { for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) text(s, x + dx, y + dy, '#17181b', null); text(s, x, y, col, null); }
+  // a newspaper, folded: the masthead, a photo, columns of print, the fold's shade, a dark rim
+  const PAPER = ['..........', '.pppppppp..', '.pMMMMMMpp.', '.pppppppppd', '.pFFp--p-pd', '.pFFp--p-pd', '.pppp-----d', '.p-----p--d', '.pppppppppd', '..ddddddddd'];
+  function paper(x, y) { const C = { p: '#ece5d0', M: '#17181b', F: '#6e7478', '-': '#9a938a', d: '#b9b09a' };
+    for (let r = -1; r <= PAPER.length; r++) for (let c = -1; c <= 11; c++) { const on = (rr, cc) => PAPER[rr]?.[cc] && PAPER[rr][cc] !== '.'; if (!on(r, c) && [[0, 1], [0, -1], [1, 0], [-1, 0]].some(([a, b]) => on(r + a, c + b))) { g.fillStyle = '#17181b'; g.fillRect(x + c, y + r, 1, 1); } }
+    for (let r = 0; r < PAPER.length; r++) for (let c = 0; c < PAPER[r].length; c++) { const ch = PAPER[r][c]; if (ch === '.') continue; g.fillStyle = C[ch]; g.fillRect(x + c, y + r, 1, 1); }
+    g.fillStyle = '#b3372c'; g.fillRect(x + 1, y + 1, 8, 1); }
   function ball(x, y) { g.fillStyle = '#6b4a1e'; g.fillRect(x, y + 1, 2, 1); g.fillStyle = '#efc970'; g.fillRect(x, y, 2, 1); g.fillStyle = '#fff4c8'; g.fillRect(x, y, 1, 1); }
   // blood: splashed onto the picture's edges when he takes a hit (a blob with a dark rim, a lit heart, drops round it, a drip or two
   // running down), each drawn once into its own little canvas; they stay while he is hurt and fade as he mends
