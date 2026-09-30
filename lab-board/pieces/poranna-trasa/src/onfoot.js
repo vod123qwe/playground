@@ -311,9 +311,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   // a punch thrown when not fighting (at someone walking, or at the air): true if it was started
   function swing(k) { if (!active || fightNow || me.down || (me.P.shot && ['jab', 'cross', 'hook'].includes(me.P.shot.name))) return false; shot(me.P, k, MOVES[k].dur); return true; }
   // someone called for (a brother-in-law out of a house): he comes for you, fights, and goes off again
-  function grudgeAt(at, line) { if (!ready || fightNow) return false; const f = brawlers.find(b => !b.busy); if (!f) return false; f.busy = true;
+  function grudgeAt(at, line, kind = 'szwagier') { if (!ready || fightNow) return false; const f = brawlers.find(b => !b.busy); if (!f) return false; f.busy = true;
     Object.assign(f, { x: at.x, z: at.z, y: at.y, hint: -1, yaw: Math.atan2(me.x - at.x, me.z - at.z), hp: 100, st: 100, ko: false, move: null, mode: 'walk', vf: 0, vs: 0, stagger: 0, dodge: null, wind: null });
-    setKind(f, 'szwagier'); f.P.G.visible = true; place(f); grudges.push({ bike: null, f, t: 0, state: 'after', home: new V3(at.x, at.y, at.z) }); if (line) setTimeout(() => say(f, line), 300); return true; }
+    setKind(f, kind); f.P.G.visible = true; place(f); grudges.push({ bike: null, f, t: 0, state: 'after', home: new V3(at.x, at.y, at.z) }); if (line) setTimeout(() => say(f, line), 300); return true; }
   function stop() { active = false; me.P.G.visible = false; setHead(true); camera.near = .1; camera.updateProjectionMatrix(); cam.init = false; }
   function setHead(show) { if (!me) return; me.P.bones.head.scale.setScalar(show ? 1 : .001); me.P.m.userData.cap.visible = show; }
   function toggleView() { view = view === 'first' ? 'third' : 'first'; fx.flash(view === 'first' ? 'Widok: z oczu' : 'Widok: zza pleców'); }
@@ -356,6 +356,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
         const want = Math.atan2(p.x - f.x, p.z - f.z); f.yaw += Math.atan2(Math.sin(want - f.yaw), Math.cos(want - f.yaw)) * Math.min(1, dt * 5); f.mode = 'walk'; f.ko = false;
         f.x += Math.sin(f.yaw) * 1.3 * dt; f.z += Math.cos(f.yaw) * 1.3 * dt; animate(f.P, dt, 1.3, 'walk'); arms(f.P, f, dt); f.P.body.rotation.set(0, 0, 0); place(f); } }
     if (!active) return;
+    if (god) me.hp = Math.max(me.hp, 35);
     // him: in a fight, a fighter; else walking
     if (me.down) { const D = me.down; D.t += dt; const k = Math.max(0, 1 - D.t / .6); me.x += D.vx * k * dt; me.z += D.vz * k * dt; push(me);
       if (D.t > 2.2 && !D.up) { D.up = true; shot(me.P, 'getup', 1.1); } if (D.t > 3.3) me.down = null;
@@ -411,7 +412,15 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   function trainCount(step) { const T = fightNow && fightNow.train; if (!T || T.step !== step) return; T.n++; if (T.n < [2, 1, 2][step]) return;
     T.step++; T.n = 0; if (T.step < 3) { fx.tip(TIPS[T.step] + ' · ENTER: POMIŃ'); return; } endTraining(); }
   function endTraining() { const G = fightNow; if (!G || !G.train) return; G.train = null; trained = true; try { localStorage.setItem('pt.trained', '1'); } catch { } G.f.hp = G.f.max; me.hp = 100; fx.tip('DOBRA. TERAZ NA SERIO!'); setTimeout(() => fx.tip(null), 1800); }
+  // the arena (the workshop's fight test): one of a chosen kind comes at him from a few metres; the training on demand; he can not
+  // be beaten if asked (god); phase(): what the opponent is doing, for the test's readout
+  let god = false;
+  function arena(kind, o = {}) { god = !!o.god; if (o.train) trained = false; const a = me.yaw + (Math.random() - .5) * 1.2;
+    return grudgeAt({ x: me.x + Math.sin(a) * 5, y: me.y, z: me.z + Math.cos(a) * 5 }, pick(SAY.start), kind); }
+  function phase() { const G = fightNow; if (!G) return null; const o = G.f, K = o.kind || KINDS.kozak;
+    const ph = o.ko ? 'nokaut' : o.wind ? `zamach ${o.wind.t.toFixed(2)}/${o.wind.dur.toFixed(2)} s${o.wind.feint ? ' (zwód)' : ''}` : o.move && !o.move.done ? `cios ${o.move.k}, do trafienia ${(o.move.dur * o.move.imp - o.move.t).toFixed(2)} s` : o.move ? `cios ${o.move.k} (po)` : o.recover > 0 ? `odsłonięty ${o.recover.toFixed(2)} s` : o.stagger > 0 ? `zatacza się ${o.stagger.toFixed(2)} s` : o.guard ? 'garda' : (o.ai && o.ai.plan) || '—';
+    return { kind: K.name, phase: ph, hp: Math.round(o.hp), max: o.max, myHp: Math.round(me.hp), mySt: Math.round(me.st), train: G.train ? G.train.step + 1 : 0 }; }
   function bagFill(k) { me && me.P.m.userData.bagFill && me.P.m.userData.bagFill(k); }
-  return { bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
+  return { arena, phase, get god() { return god; }, bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
     start, stop, update, follow, grudge, nearBike, toggleView, status };
 }
