@@ -14,6 +14,7 @@
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createCars } from './cars.js';
 import { createProps } from './props.js';
+import { createNature } from './nature.js';
 
 export function createTrack({ THREE, toon, tex, showcase = false }) {   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
   const G = new THREE.Group();
@@ -180,7 +181,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     for (const x of [-.26, .26]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .06, 10), dark); w.rotation.z = Math.PI / 2; w.position.set(x, .1, .33); b.add(w); } return b; }
   const hedgeM = toon('#3f6b35', { map: (() => { const t = tex.leaves().clone(); t.repeat.set(5, 1.2); t.needsUpdate = true; return t; })() });
   const seats = [];                                                   // (chairs and loungers in the front gardens, for the people who sit out)
-  const mailboxes = [], lots = [], CARS = createCars({ THREE, toon }), P = createProps({ THREE, toon, tex });
+  const mailboxes = [], lots = [], CARS = createCars({ THREE, toon }), P = createProps({ THREE, toon, tex }), NAT = createNature({ THREE, toon, tex }), nr = mulberry(83);   // (nr: the nature's own random)
+  const NATK = { natBush: r => NAT.bush(r, ['round', 'round', 'box', 'flower', 'fern', 'tall'][r() * 6 | 0]), natFlowers: r => NAT.flowers(r, ['tulip', 'daisy', 'lupin', 'sunflower'][r() * 4 | 0]), natRocks: r => NAT.rocks(r), natLeaves: r => NAT.leaves(r) };
   // the ground's height at a point off the road (the station nearest along the road, the distance across it), as the ground is made
   const slab = o => { o.userData.slab = true; return o; };           // (a thing laid flat on the ground: a drive, a path)
   function groundAt(x, z, i0) { let best = i0, bd = 1e9; for (let k = -70; k <= 70; k++) { const j = ((i0 + k) % N + N) % N, s = S[j], a = Math.abs((x - s.p.x) * s.f.x + (z - s.p.z) * s.f.z); if (a < bd) { bd = a; best = j; } }
@@ -257,12 +259,12 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       const wS = box(.95, .36, .02, flagW, sg * .5, 1.5, 0), rS = box(.95, .36, .02, flagR, sg * .5, 1.14, 0); wS.rotation.y = sg * .12; rS.rotation.y = sg * .16; pole.add(wS, rS); pole.userData.onHouse = true; }
     // the front garden, lived in: a few things about the lawn (not on the path, the drive or the porch); now and then an old car by the house
     const yard = [];
-    { const spots = [], lawnZ0 = fz - 1, lawnZ1 = -D / 2 - gap + 1.4, pick = [['leafPile', 3], ['gnome', 2], ['sandbox', 1], ['swing', 1], ['kidBike', 1], ['trampoline', 1], ['grill', 1], ['birdbath', 1]], tot = pick.reduce((a, b) => a + b[1], 0);
+    { const spots = [], lawnZ0 = fz - 1, lawnZ1 = -D / 2 - gap + 1.4, pick = [['natLeaves', 2], ['natBush', 3], ['natFlowers', 3], ['natRocks', 1], ['leafPile', 1], ['gnome', 2], ['sandbox', 1], ['swing', 1], ['kidBike', 1], ['trampoline', 1], ['grill', 1], ['birdbath', 1]], tot = pick.reduce((a, b) => a + b[1], 0);
       for (let n = 0; n < 2 + (rnd() * 3 | 0); n++) { let r = rnd() * tot, kind = pick[0][0]; for (const [k, wgt] of pick) { if ((r -= wgt) < 0) { kind = k; break; } }
         const big = kind === 'swing' || kind === 'trampoline' || kind === 'sandbox';
         for (let tries = 0; tries < 8; tries++) { const rr = big ? 2 : .8, x = (rnd() - .5) * Math.max(0, W - 2 * (rr + .35)), z = lawnZ1 + (lawnZ0 - lawnZ1) * rnd();
           if (Math.abs(x - dx) < 1.2 + rr * .5 || (drv && Math.abs(x - dvx) < 1.8 + rr * .5) || (z > fz - 2.6 && Math.abs(x - dx) < 2.2 + rr) || spots.some(([a, b, c]) => Math.hypot(a - x, b - z) < c + rr)) continue;
-          const o = (kind === 'sandbox' ? P.sandbox(rnd) : P[kind](rnd)); if (kind === 'sandbox') o.group.scale.setScalar(.8); o.group.position.set(x, 0, z); o.group.rotation.y = o.group.rotation.y || (rnd() - .5) * .6; h.add(o.group);
+          const o = kind === 'sandbox' ? P.sandbox(rnd) : P[kind] ? P[kind](rnd) : NATK[kind](nr); if (kind === 'sandbox') o.group.scale.setScalar(.8); o.group.position.set(x, 0, z); o.group.rotation.y = o.group.rotation.y || (rnd() - .5) * .6; h.add(o.group);
           if (o.hit) yard.push([o.hit, x, z]); spots.push([x, z, rr]); break; } } }
     if (!annex && rnd() < .18) { const old = CARS.makeCar(rnd() < .5 ? 'saloon' : 'estate', ['#8a9a8c', '#b39b7a', '#7a6a5a', '#9aa0a4'][rnd() * 4 | 0]), sx = (rnd() < .5 ? -1 : 1) * (W / 2 + 1.9);
       old.group.position.set(sx, .06, -.5); old.group.rotation.set(0, rnd() < .5 ? 0 : Math.PI, .03); h.add(old.group); old.wheels[0].visible = false;             // on blocks, a wheel off
@@ -522,6 +524,11 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const extras = [P.shed, P.washing, P.logs, P.sandbox, P.birdbath]; for (let n = 0; n < 1 + (rnd() * 2 | 0); n++) { const e = extras[rnd() * extras.length | 0](rnd), off = (rnd() < .5 ? -1 : 1) * (2.5 + rnd() * 2);
       const ii = mid + Math.round(off / ds), dd = sd * (PAVE + 8 + rnd() * 9); put(e.group, ii, dd, 0, rnd() < .5 ? 0 : Math.PI / 2); hit(e.group, e.hit, ii); }
     if (rnd() < .35) tree(mid + Math.round((rnd() - .5) * 6 / ds), sd * (PAVE + 12 + rnd() * 6)); }
+  // ---------- grass and flowers along it: tufts at the verge's edge by the kerb and the pavement, and along the lawns' edge; a clump of
+  //   flowers now and then (never on a drive, a path, a porch) ----------
+  for (let i = 0; i < N; i += Math.max(1, Math.round((1.6 + nr() * 2.2) / ds))) for (const sd of [-1, 1]) { if (nr() < .35) continue;
+    const d = sd * (nr() < .5 ? KERB + .3 + nr() * .25 : nr() < .5 ? VERGE - .18 : PAVE + .15 + nr() * .4); if (!free(i, d, .25)) continue;
+    const o = nr() < .12 && Math.abs(d) > PAVE ? NAT.flowers(nr, ['tulip', 'daisy', 'lupin', 'daisy'][nr() * 4 | 0]) : NAT.grassTuft(nr, nr() < .08 ? 'tall' : 'lawn'); put(o.group, i, d, 0, nr() * 6); }
   // ---------- on the road and the pavement: things to ride round, over or into ----------
   const bundles = [], ramps = [];
   const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)
@@ -591,12 +598,16 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       for (let k = 0; k < 150; k++) { const i = fr() * N | 0, dd = 45 + fr() * 130, sc = .9 + fr() * .6; if (dd > 81 && dd < 91) continue; farTree(i, sd * dd, sc); }                                   // trees about the land
       for (let k = 0; k < 220; k++) farTree(fr() * N | 0, sd * (178 + fr() * 18), 1.6 + fr() * .8);                                  // and a wall of them at the far edge
     }
+    // small ponds on the meadows inside the loop, by the woods (the woods keep off them)
+    for (let k = 0; k < 5; k++) { const i = Math.round((k + .3 + nr() * .4) / 5 * N), dd = INNER * (36 + nr() * 10); if (!free(i, dd, 3)) continue;
+      const o = NAT.pond(nr); put(o.group, i, dd, 0, nr() * 6); o.group.updateMatrixWorld(true); zone(o.group, o.radius, o.radius * .8); show.farm.push({ o: o.group, label: 'staw', note: 'z trzcinami' }); }
     // inside the loop, behind the houses: woods, thick ones, here and there (leafy trees and spruces, bushes under them)
     { const wr = mulberry(47); let i = Math.round(wr() * 40 / ds);
       while (i < N - 10) { const lenM = 25 + wr() * 25, i1 = Math.min(N - 1, i + Math.round(lenM / ds));
         for (let n = 0; n < 16 + (wr() * 16 | 0); n++) { const ii = i + Math.round(wr() * (i1 - i)), dd = INNER * (32 + wr() * 20); if (!free(ii, dd, 1.6)) continue;
           if (wr() < .35) { const t = new THREE.Group(), H = 6 + wr() * 5; t.add(box(.22, H * .3, .22, wood, 0, H * .15, 0)); for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry((1.7 - k * .34) * (H / 10), H * .34, 7), spruceM); c.position.y = H * (.3 + k * .19); t.add(c); } put(t, ii, dd, 0, wr() * 6); }
           else farTree(ii, dd, .9 + wr() * .5);
+          if (wr() < .45) { const u = wr() < .5 ? NAT.bush(nr, 'fern') : NAT.grassTuft(nr, wr() < .3 ? 'tall' : 'lawn'); put(u.group, ii + Math.round((wr() - .5) * 4 / ds), dd + (wr() - .5) * 3, 0, wr() * 6); }   // (under them: ferns, grass)
           if (wr() < .5) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.8 + wr() * .6, 0), bushM); b.scale.y = .7; put(b, ii + Math.round((wr() - .5) * 3 / ds), dd + (wr() - .5) * 3, .4); } }
         i = i1 + Math.round((30 + wr() * 50) / ds); } }
     // the railway, round the outside of the loop between the spruces and the fields: an embankment of ballast, sleepers, two rails
@@ -644,6 +655,13 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     G.traverse(o => { if (!o.isMesh || !o.userData.foliage) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(g); gone.push(o); });
     for (const o of gone) o.parent.remove(o);
     for (const [m, gs] of by) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = true; mm.receiveShadow = true; mm.customDepthMaterial = m === cardM ? cardDepth : clumpDepth; G.add(mm); } }
+  // the grass, the bushes' clumps, the stones (their colours in their points): merged by material, keeping the colours
+  if (!showcase) { G.updateMatrixWorld(true); const by = new Map(), gone = [];
+    G.traverse(o => { if (!o.isMesh || !NAT.mats.includes(o.material)) return; for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return;
+      const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'color'].includes(k)) g.deleteAttribute(k);
+      if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(g); gone.push(o); });
+    for (const o of gone) o.parent.remove(o);
+    for (const [m, gs] of by) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = mm.receiveShadow = true; G.add(mm); } }
   // ---------- all the still things merged, material by material, into a few meshes (a mailbox stays itself: its flag moves) ----------
   if (!showcase) { G.updateMatrixWorld(true); const buckets = new Map(), gone = [];
     const kept = o => { for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return true; return false; };

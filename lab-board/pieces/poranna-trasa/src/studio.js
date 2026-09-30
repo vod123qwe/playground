@@ -12,6 +12,7 @@ import { createRider } from './rider.js';
 import { createDogs } from './dogs.js';
 import { makeBag } from './bag.js';
 import { createTrack } from './track.js';
+import { createNature } from './nature.js';
 
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false }); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -27,7 +28,7 @@ const floor = new THREE.Mesh(new THREE.CircleGeometry(9, 48).rotateX(-Math.PI / 
 const grid = new THREE.GridHelper(16, 16, '#44484c', '#5d6a4a'); grid.position.y = .005; scene.add(grid);
 const stand = new THREE.Group(); scene.add(stand);
 
-const tex = createTextures({ THREE }), cars = createCars({ THREE, toon }), props = createProps({ THREE, toon, tex }), dogs = createDogs({ THREE, toon, probe: () => ({ y: 0, i: 0 }) });
+const tex = createTextures({ THREE }), nature = createNature({ THREE, toon, tex: createTextures({ THREE }) }), cars = createCars({ THREE, toon }), props = createProps({ THREE, toon, tex }), dogs = createDogs({ THREE, toon, probe: () => ({ y: 0, i: 0 }) });
 let mixer = null, rider = null, current = null, clipBtns = null;
 
 // ---------- the groups and what is in them ----------
@@ -42,6 +43,7 @@ const CATS = [
   { k: 'props', name: 'Rekwizyty', items: () => Object.keys(PROP_NAMES).map(k => ({ k, label: PROP_NAMES[k], note: k })) },
   { k: 'arena', name: 'Walka (test)', items: () => [['cherlak', 'cherlak', '70 HP'], ['kozak', 'kozak z osiedla', '100 HP'], ['szwagier', 'szwagier', '140 HP']].map(([k, label, note]) => ({ k, label, note })) },
   { k: 'bag', name: 'Torba', items: () => [{ k: 1, label: 'torba pełna', note: '20 gazet' }, { k: .5, label: 'torba w połowie', note: '10' }, { k: 0, label: 'torba pusta', note: '0' }] },
+  { k: 'nature', name: 'Przyroda', items: () => Object.keys(nature.KINDS).map(k => ({ k, label: k, note: '' })) },
   { k: 'houses', name: 'Domy', items: () => pieces('houses').map((x, k) => ({ k, label: x.label, note: x.note })) },
   { k: 'trees', name: 'Drzewa', items: () => pieces('trees').map((x, k) => ({ k, label: x.label, note: x.note })) },
   { k: 'lots', name: 'Baraki i gospodarstwa', items: () => pieces('lots').map((x, k) => ({ k, label: x.label, note: x.note })) },
@@ -97,6 +99,7 @@ async function show(it) {
     const ex = $('extra'); ex.innerHTML = `<h2>Test walki</h2><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" id="aGod" checked> nieśmiertelny</label><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" id="aTrain"> najpierw trening</label><label style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" id="aDbg" checked> podgląd faz</label><div class="row" style="margin-top:8px"><button id="aGo" type="button">otwórz arenę →</button></div><p class="hint">Gra od razu w bójce na łące; po każdej walce przychodzi następny. Esc: menu.</p>`;
     $('aGo').onclick = () => { const q = new URLSearchParams({ arena: it.k }); if ($('aGod').checked) q.set('god', ''); if ($('aTrain').checked) q.set('train', ''); if ($('aDbg').checked) q.set('debug', ''); location.href = 'index.html?' + q.toString().replace(/=(&|$)/g, '$1'); }; }
   if (cat.k === 'bag') { const b = makeBag({ THREE, toon }); b.setFill(it.k); b.group.position.y = .3; b.group.rotation.y = Math.PI / 2; place(b.group); frame(b.group, 'iso'); describe('torba z gazetami', 'Płócienna listonoszka: klapa z przeszyciem, dwa paski z klamrami, kieszeń, naszywka, kółka na pasek; gazety ubywają, gdy rzucasz.', b.group); }
+  if (cat.k === 'nature') { const o = nature.KINDS[it.k](Math.random); place(o.group); frame(o.group); describe(it.k, 'Przyroda przy drodze, w ogródkach i w laskach: modelowana w detalu (źdźbła, kępy liści, fasetki kamieni, pojedyncze liście).', o.group); }
   if (cat.k === 'houses' || cat.k === 'trees' || cat.k === 'lots') { const x = pieces(cat.k)[it.k], o = x.o; o.position.set(0, 0, 0); o.rotation.set(0, cat.k === 'trees' ? 0 : Math.PI, 0);   // (its front, towards the street, to the camera)
     place(o); frame(o); describe(x.label, WORLD_DESC[cat.k], o); }
   if (cat.k === 'ramps') { const o = props.ramp(Math.random, it.k); place(o.group); frame(o.group); describe('skocznia: ' + it.label, 'Wysokość krawędzi decyduje o locie.', o.group, [['krawędź', o.hit.h.toFixed(2) + ' m']]); }

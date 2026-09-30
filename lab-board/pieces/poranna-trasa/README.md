@@ -326,6 +326,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - spokojne uliczki: dwa odcinki bez linii na środku
 - buspasa nie ma: przy jednym pasie w każdą stronę zabrałby autom cały ich pas
 
+## Wersja 33: przyroda w detalu
+
+- nowy moduł `src/nature.js` i grupa **Przyroda** w Warsztacie (15 rzeczy): kępa trawy, trawa ozdobna, trzcina (z pałkami), krzak kulisty (wiele małych kęp, liście na brzegach), bukszpan (przycięty), krzak kwitnący, paproć (liście wzdłuż łodyg, wygięte), tulipany, stokrotki, łubiny, słoneczniki, kamienie i głaz (fasetki, mech od góry), sterta liści (pojedyncze listki, czasem grabie), staw (błotny brzeg, woda z błyskami, kamienie, trzciny, liście lilii, kwiat)
+- w świecie: w ogródkach losują się krzaki, kwiaty, kamienie i sterty liści; wzdłuż drogi kępy traw na brzegu pasa zieleni i trawników, co jakiś czas kępka kwiatów (nigdy na podjeździe ani ścieżce); w laskach paprocie i trawy; 5 stawów na łąkach wewnątrz pętli
+- źdźbła i kępy mają kolory w samych punktach, więc scalane są osobno, a każdy kolor to jeden wspólny materiał: siatek w świecie jest mniej niż przedtem (około 1750)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
