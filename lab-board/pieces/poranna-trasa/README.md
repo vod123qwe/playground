@@ -252,6 +252,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - przy rzucie gazeta chowa się w torbie (zsuwa się pod klapę i znika, torba lekko drgnie), nic z niej nie wylatuje, żeby nie mylić tego z prawdziwym rzutem; przy paczce gazety wysuwają się z powrotem, a torba podskakuje
 - obok torby liczba gazet (na czerwono, gdy pusto); ikona gazety z prawego górnego rogu zniknęła, zostaje sama portmonetka
 
+## Poprawka: prześwit
+
+- prześwit przez to, co zasłania postać, nie wycina już ziemi pod nią (jezdnia, trawa, krawężniki niżej niż około 40 cm nad jego stopami); wcześniej za rowerem pojawiała się jasna plama
+- prześwit jest szerszy (1,9 m zamiast 1,5 m) i mocniejszy (więcej pikseli znika w środku)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
