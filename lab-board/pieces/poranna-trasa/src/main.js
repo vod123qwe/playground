@@ -60,7 +60,7 @@ function rimmed(m) { m.onBeforeCompile = sh => { sh.uniforms.rimK = RIM.k; sh.un
     sh.fragmentShader = 'varying vec3 vFadeW; uniform vec3 fadeCam, fadeTgt; uniform float fadeR;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
       if (fadeR > 0.) { vec3 ab = fadeTgt - fadeCam; float t = clamp(dot(vFadeW - fadeCam, ab) / max(dot(ab, ab), 1e-4), 0., 1.);
         float d = length(vFadeW - (fadeCam + ab * t)), rad = fadeR * smoothstep(0., .3, t);
-        if (t < .9 && d < rad) { float k = 1. - d / rad, n = fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy / 2.), vec2(.06711056, .00583715)))); if (n < k * 1.5) discard; } }`);
+        if (t < .92 && d < rad && vFadeW.y > fadeTgt.y - .75) { float k = 1. - d / rad, n = fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy / 2.), vec2(.06711056, .00583715)))); if (n < k * 2.2) discard; } }`);   // (not the ground under him: only what stands higher than his knees)
     sh.fragmentShader = 'uniform float rimK; uniform vec3 rimCol; uniform vec3 sunV; uniform vec3 upV;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `#include <opaque_fragment>
       { float fr = 1. - clamp(dot(normal, normalize(vViewPosition)), 0., 1.), lit = dot(normal, sunV);
         float lying = smoothstep(.5, .8, dot(normal, upV));             // (not the ground, nor anything lying flat: only things that stand)
@@ -795,7 +795,7 @@ function frame(now) {
   if (!asking && !menu.open && !window.PT?.hold) { step(dt, input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
-  { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.5; }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
+  { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
   drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   hudBag.update(dt, B.papers, 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title'); px.render(scene, camera, hudBag); drawHud(dt);
   requestAnimationFrame(frame);
