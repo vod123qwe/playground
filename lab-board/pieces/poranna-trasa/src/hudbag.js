@@ -1,7 +1,7 @@
 // The bag in the corner: the same canvas satchel he carries (bag.js), drawn over the picture, sticking up from the bottom right edge,
 // its front to you. As papers go, fewer stand out of it: each one thrown slides down into the bag and is gone (nothing flies out, so it
-// is not taken for the throw itself), the bag giving a small jolt; papers coming in rise up out of it and it bounces. Drawn by the pixel pass after the world (its own scene and camera, the depth cleared
-// between), so it gets the same palette and outline as everything else.
+// is not taken for the throw itself), the bag giving a small jolt; papers coming in rise up out of it and it bounces. Drawn by the pixel pass after the world (its own scene and camera, drawn small by the lens so it is in
+// front), so it gets the same palette and outline as everything else.
 // createHudBag({ THREE, toon, makeBag }) → { scene, camera, update(dt, papers, max, aspect, show) }
 export function createHudBag({ THREE, toon, makeBag }) {
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(28, 1, .1, 400);
@@ -9,7 +9,7 @@ export function createHudBag({ THREE, toon, makeBag }) {
   const bag = makeBag({ THREE, toon }), hold = new THREE.Group(); hold.add(bag.group); scene.add(hold);
   bag.group.rotation.set(0, Math.PI / 2 - .32, .06);                          // (its front, the -x face, to you; turned a little, leaning)
   const P = bag.papers.map(p => ({ p, y0: p.position.y, k: 1 }));           // (k: 1 standing out, 0 sunk into the bag)
-  let last = null, jolt = 0, joltV = 0, bounce = 0;
+  let last = null, jolt = 0, joltV = 0, bounce = 0; const K = .05;
   function update(dt, papers, max, aspect, show) {
     hold.visible = show; if (!show) return;
     if (last !== null && papers < last) joltV -= 1.2;
@@ -23,7 +23,7 @@ export function createHudBag({ THREE, toon, makeBag }) {
     // where: the bottom right of the picture, the lower third of it under the edge
     camera.aspect = aspect; camera.updateProjectionMatrix();
     const z = -4, hh = -z * Math.tan(camera.fov * Math.PI / 360), hw = hh * aspect, H = bag.size.H;
-    hold.position.set(hw - .26, -hh + H * .5 + jolt * .02 + Math.sin(bounce * Math.PI) * .04, z); hold.rotation.z = jolt * .08;
+    hold.position.set(hw - .26, -hh + H * .5 + jolt * .02 + Math.sin(bounce * Math.PI) * .04, z).multiplyScalar(K); hold.scale.setScalar(K); hold.rotation.z = jolt * .08;   // (K: all of it scaled down towards the lens, the same on the screen, nearer than anything in the world)
     api.left = (hw - .26 - .22) / hw * .5 + .5;                                  // (the bag's left edge, 0..1 across the picture: the count goes by it)
   }
   const api = { scene, camera, update, left: .85 }; return api;
