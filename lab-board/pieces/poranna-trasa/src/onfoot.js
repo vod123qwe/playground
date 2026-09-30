@@ -315,6 +315,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     Object.assign(f, { x: at.x, z: at.z, y: at.y, hint: -1, yaw: Math.atan2(me.x - at.x, me.z - at.z), hp: 100, st: 100, ko: false, move: null, mode: 'walk', vf: 0, vs: 0, stagger: 0, dodge: null, wind: null });
     setKind(f, kind); f.P.G.visible = true; place(f); grudges.push({ bike: null, f, t: 0, state: 'after', home: new V3(at.x, at.y, at.z) }); if (line) setTimeout(() => say(f, line), 300); return true; }
   function stop() { active = false; me.P.G.visible = false; setHead(true); camera.near = .1; camera.updateProjectionMatrix(); cam.init = false; }
+  // the game from the start: every grudge dropped (the cyclists back on their bikes), no fight, him whole again
+  function reset() { for (const G of grudges) { const f = G.f, b = G.bike; f.P.G.visible = false; f.busy = false; f.ko = false; f.mode = 'walk'; if (b) { b.r.boy.visible = true; b.hold = false; } }
+    grudges.length = 0; fightNow = null; if (me) Object.assign(me, { mode: 'walk', hp: 100, st: 100, ko: false, down: null, move: null, guard: false }); fx.tip(null); }
   function setHead(show) { if (!me) return; me.P.bones.head.scale.setScalar(show ? 1 : .001); me.P.m.userData.cap.visible = show; }
   function toggleView() { view = view === 'first' ? 'third' : 'first'; fx.flash(view === 'first' ? 'Widok: z oczu' : 'Widok: zza pleców'); }
 
@@ -344,7 +347,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
         else if (d < 1.9 && (active || Math.abs(world.rider.v) < 3.5)) { if (!active) world.pullOff(); fightNow = G; G.state = 'fight'; me.mode = 'fight'; f.mode = 'fight'; say(f, pick(SAY.start)); startTraining(G); fx.flash(me.lockedHint ? 'Bójka! Mysz: strona ciosu, LPM cios, PPM blok, Shift unik' : 'Bójka! Kliknij: mysz (LPM cios, PPM blok) albo ← → ↑ ↓ i Spacja'); }
         else { const want = Math.atan2(tx - f.x, tz - f.z); f.yaw += Math.atan2(Math.sin(want - f.yaw), Math.cos(want - f.yaw)) * Math.min(1, dt * 5); const v = G.t < .9 ? 0 : d > 6 ? 3.2 : 1.5;
           f.x += Math.sin(f.yaw) * v * dt; f.z += Math.cos(f.yaw) * v * dt; push(f); animate(f.P, dt, v, 'walk'); f.P.body.rotation.set(0, 0, 0); place(f); } }
-      else if (G.state === 'fight') { if (!active) { G.state = 'after'; continue; }
+      else if (G.state === 'fight') { if (!active) { G.state = 'after'; if (fightNow === G) { fightNow = null; me.mode = 'walk'; fx.tip(null); } continue; }
         if (d > 9) { fightNow = null; G.state = 'after'; me.mode = 'walk'; }   // (he got away: after him again)
         else { fight(f, me, ai(f, me, dt), dt); if (me.ko && !G.endT) G.endT = 1.4; if (f.ko && !G.endT) G.endT = 1.6;
           if (G.endT && (G.endT -= dt) <= 0) { G.endT = 0; end(me.ko ? f : me, me.ko ? me : f); } } }
@@ -421,6 +424,6 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const ph = o.ko ? 'nokaut' : o.wind ? `zamach ${o.wind.t.toFixed(2)}/${o.wind.dur.toFixed(2)} s${o.wind.feint ? ' (zwód)' : ''}` : o.move && !o.move.done ? `cios ${o.move.k}, do trafienia ${(o.move.dur * o.move.imp - o.move.t).toFixed(2)} s` : o.move ? `cios ${o.move.k} (po)` : o.recover > 0 ? `odsłonięty ${o.recover.toFixed(2)} s` : o.stagger > 0 ? `zatacza się ${o.stagger.toFixed(2)} s` : o.guard ? 'garda' : (o.ai && o.ai.plan) || '—';
     return { kind: K.name, phase: ph, hp: Math.round(o.hp), max: o.max, myHp: Math.round(me.hp), mySt: Math.round(me.st), train: G.train ? G.train.step + 1 : 0 }; }
   function bagFill(k) { me && me.P.m.userData.bagFill && me.P.m.userData.bagFill(k); }
-  return { arena, phase, get god() { return god; }, bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
+  return { reset, arena, phase, get god() { return god; }, bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
     start, stop, update, follow, grudge, nearBike, toggleView, status };
 }

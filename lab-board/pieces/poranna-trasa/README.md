@@ -234,6 +234,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - Warsztat buduje w tym celu cały tor raz, bez scalania geometrii (tryb `showcase` w `createTrack`), i wyjmuje z niego pojedyncze budynki i drzewa; pierwsze otwarcie grupy trwa około 2 s
 - domy są obrócone frontem do kamery
 
+## Poprawka: bójka po „Zacznij od nowa”
+
+- „Zacznij od nowa” czyści wszystkie bójki i pościgi (rowerzyści wracają na rowery, HP i oddech do pełna); wcześniej zostawały paski walki i celownik
+- wsiadanie na rower w trakcie bójki też czyści jej stan na ekranie (przeciwnik dalej może gonić)
+- paski walki są pod licznikiem rowerowym i portmonetką, a nie na nich
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

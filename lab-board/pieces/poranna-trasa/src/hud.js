@@ -275,7 +275,7 @@ export function createHud() {
     g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = A.green ? '#7fae58' : '#f6f3ea'; g.fillRect(cx, cy, 1, 1);
     if (A.guard) { const y = A.low ? cy + R + len + 2 : cy - R - len - 3; g.fillStyle = '#17181b'; g.fillRect(cx - 7, y - 1, 15, 3); g.fillStyle = '#9ccad8'; g.fillRect(cx - 6, y, 13, 1); } }
   // the fight: his bars on the left, the other's on the right (health, and under it breath); a shield when his guard is up
-  function fightBars(F) { const W = cv.width, bw = Math.min(90, Math.round(W * .3)), y = 16;
+  function fightBars(F) { const W = cv.width, bw = Math.min(90, Math.round(W * .3)), y = Math.round(126 * W / Math.max(1, innerWidth)) + 10;   // (under the bike computer and the purse)
     const bar = (x, v, h, col, back, right) => { g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1 + (h === 2 ? 7 : 0), bw + 2, h + 2); g.fillStyle = back; g.fillRect(x, y + (h === 2 ? 7 : 0), bw, h);
       const w = Math.round(bw * Math.max(0, Math.min(100, v)) / 100); g.fillStyle = col; g.fillRect(right ? x + bw - w : x, y + (h === 2 ? 7 : 0), w, h); };
     const lx = 6, rx = W - 6 - bw;
