@@ -282,6 +282,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - nowa kamera **z góry (jak GTA 2)** pod klawiszem przełączania widoku: pionowo w dół, obrócona z kierunkiem jazdy, wyżej przy większej prędkości i przy rzucie
 - `?style=<nazwa>` w adresie (np. `?style=zlota`): ten styl tylko na tę wizytę, bez zapisywania (do porównań i testów)
 
+## Wersja 27: nowe drzewa, kamera z kółka myszy
+
+- drzewa rosną jak drzewa: korzenie rozchodzą się przy ziemi, pień rozwidla się nisko, każdy konar dzieli się jeszcze na dwie gałęzie, a każda kończy się własną kępą liści (korona z wielu kęp z jasną i ciemną stroną zamiast kilku kul); korony szersze (drzewo przy domu ma około 7–8 m szerokości)
+- drzewa nad jezdnią widać teraz też w Warsztacie (grupa Drzewa)
+- kamera: kółko myszy przytrzymane i ruch myszą (góra/dół: kąt, lewo/prawo: odległość) albo samo kręcenie kółkiem (odległość); podwójne kliknięcie kółkiem wraca do ustawień; zapamiętywane w przeglądarce; działa też w widoku z góry (wysokość)
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
