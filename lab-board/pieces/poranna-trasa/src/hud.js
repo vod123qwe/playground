@@ -163,6 +163,7 @@ export function createHud() {
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
     if (st.bike) bikeArrow(st.bike, project, dt);
+    if (tipText) drawTip();
     if (st.star) aimStar(st.star, dt); else if (st.cross) { const cx = cv.width >> 1, cy = cv.height >> 1; g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = '#f6f3ea'; g.fillRect(cx, cy, 1, 1); }
     if (Q.open) drawAsk(dt);
     if (overlay) overlay(dt);
@@ -206,15 +207,23 @@ export function createHud() {
     const lab = 'ROWER ' + Math.round(Bk.dist) + ' M'; text(lab, cx - (width(lab) >> 1), cy + 11, '#efc970');
     const p = project(Bk.at); if (p && p.x > 0 && p.x < W && p.y > 0 && p.y < cv.height) { const bob = Math.round(Math.sin(bikeT * 5) * 1.5), x = Math.round(p.x), y = Math.round(p.y) - 6 + bob;
       for (let r = 0; r < 4; r++) { g.fillStyle = '#17181b'; g.fillRect(x - 4 + r, y + r - 1, 9 - r * 2, 1); g.fillStyle = '#efc970'; g.fillRect(x - 3 + r, y + r, 7 - r * 2, 1); } } }
+  // a tip: words in a box over the bottom of the picture, broken into lines that fit
+  let tipText = null; const tip = s => { tipText = s; };
+  function drawTip() { const W = cv.width, H = cv.height, maxW = Math.min(W - 20, 260), words = tipText.split(' '), lines = []; let ln = '';
+    for (const w of words) { const t = ln ? ln + ' ' + w : w; if (width(t) > maxW && ln) { lines.push(ln); ln = w; } else ln = t; } if (ln) lines.push(ln);
+    const bw = Math.max(...lines.map(width)) + 12, bh = lines.length * 8 + 8, x = Math.round(W / 2 - bw / 2), y = H - 40 - bh;
+    g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1, bw + 2, bh + 2); g.fillStyle = '#25272b'; g.fillRect(x, y, bw, bh); g.fillStyle = '#efc970'; g.fillRect(x, y, bw, 1);
+    lines.forEach((l, i) => text(l, Math.round(W / 2 - width(l) / 2), y + 5 + i * 8, i === 0 && l.startsWith('TRENING') ? '#efc970' : '#f6f3ea')); }
   // the fight's star (as in the knightly games): four arrows round the middle of the picture; the side your mouse picks, lit; his
   // punch coming, red and blinking on its side, green in the moment a guard raised is a parry; your guard, a bar under the star
   let starT = 0;
-  function aimStar(A, dt) { starT += dt; const cx = cv.width >> 1, cy = (cv.height >> 1) + 4, R = 9, len = 9;
+  function aimStar(A, dt) { starT += dt; const cx = cv.width >> 1, cy = A.high ? Math.round(cv.height * .3) : (cv.height >> 1) + 4, R = 9, len = 9;   // (from behind him: up over the two, not on his back)
     const arrow = (dir, fill, edge) => { for (let q = 0; q < len; q++) { const half = len - 1 - q; for (let r = -half; r <= half; r++) { const on = Math.abs(r) === half || q === 0 ? edge : fill; if (!on) continue; g.fillStyle = on;
       const a = R + q, x = dir === 'left' ? cx - a : dir === 'right' ? cx + a : cx + r, y = dir === 'up' ? cy - a : dir === 'down' ? cy + a : cy + r; g.fillRect(x, y, 1, 1); } } };
     for (const d of ['left', 'right', 'up', 'down']) {
       if (d === A.foe) { if (A.green) arrow(d, '#9be36a', '#f6f3ea'); else if (((starT * 10) | 0) % 2) arrow(d, '#ff5b3a', '#f6f3ea'); else arrow(d, '#efc970', '#17181b'); }
       else arrow(d, d === A.dir ? '#f6f3ea' : 'rgba(23,24,27,.35)', d === A.dir ? '#17181b' : 'rgba(246,243,234,.6)'); }
+    if (A.open && ((starT * 8) | 0) % 2) { g.fillStyle = '#17181b'; g.fillRect(cx - 4, cy - 4, 9, 9); g.fillStyle = '#fff8e3'; g.fillRect(cx - 3, cy - 3, 7, 7); }   // (he is open: hit now)
     g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = A.green ? '#7fae58' : '#f6f3ea'; g.fillRect(cx, cy, 1, 1);
     if (A.guard) { const y = A.low ? cy + R + len + 2 : cy - R - len - 3; g.fillStyle = '#17181b'; g.fillRect(cx - 7, y - 1, 15, 3); g.fillStyle = '#9ccad8'; g.fillRect(cx - 6, y, 13, 1); } }
   // the fight: his bars on the left, the other's on the right (health, and under it breath); a shield when his guard is up
@@ -226,6 +235,6 @@ export function createHud() {
     bar(rx, F.b.hp, 5, '#cf5a3e', '#3a2a26', true); bar(rx, F.b.st, 2, '#efc970', '#3a3526', true);
     text(F.a.name, lx, y - 8, '#f6f3ea'); text(F.b.name, rx + bw - width(F.b.name), y - 8, '#f6f3ea');
     if (F.a.guard) { g.fillStyle = '#9ccad8'; g.fillRect(lx + bw + 4, y, 5, 5); g.fillStyle = '#17181b'; g.fillRect(lx + bw + 6, y + 1, 1, 3); } }
-  return { resize, draw, pop, rant, praise, impact, ask, askAt, bleed, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
+  return { resize, draw, pop, rant, praise, impact, ask, askAt, bleed, tip, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
     api: { get g() { return g; }, text, big, width, glyph, get W() { return cv.width; }, get H() { return cv.height; } }, get askSel() { return Q.sel; }, set askSel(v) { Q.sel = v; }, canvas: cv };
 }

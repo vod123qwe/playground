@@ -119,7 +119,7 @@ function loseFight() {
   B.points = Math.max(0, B.points - 3); flash('Zrobił sobie z tobą selfie. -3 pkt dla ego.'); return pickOf(['FOTKA NA GRUPĘ OSIEDLA!', 'UŚMIECH! DO RELACJI!', 'MAMA BĘDZIE DUMNA!']);
 }
 const foot = createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx: { score: (n, at, l, c) => score(n, at, l, c), flash: t => flash(t), shake: v => { shake = Math.max(shake, v); }, slow: v => { slowmo = Math.max(slowmo, v); },
-  rant: (at, t) => hud.rant(at, t, true), pop: (at, t, c) => hud.pop(at, t, c), impact: (at, t) => hud.impact(at, t || undefined), take: () => loseFight() } });
+  rant: (at, t) => hud.rant(at, t, true), pop: (at, t, c) => hud.pop(at, t, c), tip: t => hud.tip(t), impact: (at, t) => hud.impact(at, t || undefined), take: () => loseFight() } });
 function parkBike() { rider.root.position.set(B.x, B.y, B.z); rider.root.rotation.set(0, B.yaw, .2, 'YXZ'); }   // (the bike on its stand, leaning a little)
 function dismount(why) {
   const lf = { x: Math.cos(B.yaw), z: -Math.sin(B.yaw) };
@@ -214,7 +214,7 @@ function input() {
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
-    atkL: hit0('punchL'), atkR: hit0('punchR'), up: !!held('high'), down: !!held('low'), mount: hit0('mount'), guard: !!held('guard'), dx: m0.dx, dy: m0.dy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk'), dodge: hit0('dodge'), taunt: hit0('taunt') };
+    atkL: hit0('punchL'), atkR: hit0('punchR'), up: !!held('high'), down: !!held('low'), mount: hit0('mount'), guard: !!held('guard'), dx: m0.dx, dy: m0.dy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk'), skip: edge0.has('Enter'), dodge: hit0('dodge'), taunt: hit0('taunt') };
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
@@ -599,6 +599,7 @@ function step(dt, inp) {
   if (!foot.active) { mlook.x = THREE.MathUtils.clamp(mlook.x + (inp.dx || 0) * .006, -1, 1); mlook.y = THREE.MathUtils.clamp(mlook.y + (inp.dy || 0) * .005, -1, 1); }
   mlook.x *= Math.exp(-dt * 1.6); mlook.y *= Math.exp(-dt * 1.6);
   if (slowmo > 0) { slowmo -= dt; dt *= .12; }                        // (a hit: a beat of stillness)
+  if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
   if (foot.active) return stepFoot(dt, inp);

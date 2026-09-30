@@ -180,6 +180,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - `studio.html` (ekran startowy → WARSZTAT): wszystkie assety gry na obrotowym talerzu, grupy: auta (każdy typ w każdym kolorze), ludzie (modele MakeHuman z listą klipów do odtworzenia), rowerzysta (pedałuje), psy (każda rasa), rekwizyty, skocznie; wymiary, trójkąty, siatki, materiały; widoki przód, bok, tył, góra, 3/4; włącz/wyłącz pixel, siatkę 1 m, druty, obrót
 - auta: przednia szyba na całą szerokość (wąskie słupki po bokach), tylna między słupkami C; wcześniej część przedniej szyby była blachą
 
+## Wersja 16: walka w rytmie
+
+- przeciwnicy trzech rodzajów: CHERLAK (70 HP, słaby, długi zamach), KOZAK Z OSIEDLA (100 HP, szybszy, zwody, czasem dwa ciosy), SZWAGIER (140 HP, mocny, zamachu nie przerwiesz)
+- każdy atak ma fazy: zamach (żółta strzałka po jego stronie, odchyla się), okno kontry (zielona, czas zwalnia: PPM / Spacja = KONTRA), cios, a potem chwila odsłonięcia (środek gwiazdy miga: cios wtedy 1,4×, poza nią 0,8×)
+- unik (Shift + kierunek) w jego zamachu albo ciosie: ten atak chybia i przeciwnik zostaje odsłonięty; garda na złą wysokość łapie połowę
+- oddech: przy zadyszce nie uderzysz; odbity od gardy cios kosztuje; zasypywany przeciwnik zasłania się i cofa, po bloku i kontrze od razu odpowiada, gdy brak Ci tchu, atakuje
+- pierwsza bójka to trening w trzech krokach (kontra, unik, cios w odsłonięcie), przeciwnik wtedy nie bije; Enter pomija
+- bójka nie przełącza już na widok z oczu (zza pleców widać obu, V dalej przełącza); gwiazda w tym widoku nad walczącymi
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
