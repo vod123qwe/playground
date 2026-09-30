@@ -244,9 +244,20 @@ export function createTrack({ THREE, toon, tex }) {
     const flag = new THREE.Group(); flag.position.set(.15, 1.1, -.05); flag.add(box(.015, .24, .025, red, 0, .12, 0)); flag.add(box(.018, .09, .13, red, 0, .21, .065)); mb.add(flag);   // (pivots at its foot)
     mb.userData.keep = true; put(mb, i + 4, side * (VERGE - .25), 0, 0); hit(mb, { hx: .1, hz: .1, h: 1.3, kind: 'hard' }, i + 4); mailboxes.push({ o: mb, i: i + 4, side, flag });   // (keep: its flag moves)
     // a fence or a hedge along its front, now and then
-    const k = rnd();
-    if (k < .35) { const f = new THREE.Group(); for (let x = -W / 2; x <= W / 2; x += .28) f.add(box(.08, .85, .03, white, x, .43, 0)); f.add(box(W, .06, .05, white, 0, .62, .02)); f.add(box(W, .06, .05, white, 0, .3, .02)); put(f, i, side * (PAVE + .5), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2); hit(f, { hx: W / 2, hz: .06, h: .9, kind: 'hard' }, i); }
-    else if (k < .6) { const hg = put(box(W * .8, 1.1, .9, hedgeM), i - 6, side * (PAVE + .8), .55, side > 0 ? -Math.PI / 2 : Math.PI / 2); hit(hg, { hx: W * .4, hz: .45, h: 1.1, kind: 'soft' }, i - 6); }
+    //   always open where the drive or the path meets the pavement (a car must get out, one must get in): a gate on the path (now and
+    //   then left ajar), posts at the drive (now and then a double gate, swung wide open); a few lots fenced all round, back to the house
+    const k = rnd(), gapO = garage ? [gx, 3.4, 'drive'] : [dx, 1.3, 'path'], lo = gapO[0] - gapO[1] / 2, hi = gapO[0] + gapO[1] / 2, runs = [[-W / 2, lo], [hi, W / 2]].filter(([a, b]) => b - a > .3);
+    if (k < .45) { const f = new THREE.Group(); put(f, i, side * (PAVE + .5), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2);   // (the fence's frame is the house's: across the lot along x, the lot at +z)
+      const run = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / L, uz = (z1 - z0) / L, n = Math.max(1, Math.round(L / .28)), yaw = Math.atan2(-uz, ux);
+        for (let q = 0; q <= n; q++) { const t = q / n, pk = box(.08, .85, .03, white, x0 + ux * L * t, .43, z0 + uz * L * t); pk.rotation.y = yaw; f.add(pk); }
+        for (const y of [.62, .3]) { const r = box(L, .06, .05, white, (x0 + x1) / 2, y, (z0 + z1) / 2 + .02); r.rotation.y = Math.atan2(-uz, ux); f.add(r); }
+        hit(f, Math.abs(ux) > .5 ? { hx: L / 2, hz: .06, h: .9, kind: 'hard' } : { hx: .06, hz: L / 2, h: .9, kind: 'hard' }, i, (x0 + x1) / 2, (z0 + z1) / 2); };
+      for (const [a, b] of runs) run(a, 0, b, 0);
+      for (const x of [lo, hi]) f.add(box(.12, 1.05, .12, white, x, .52, 0));                                                     // (posts at the opening)
+      if (gapO[2] === 'path' && rnd() < .8) { const gt = new THREE.Group(); gt.position.set(lo + .06, 0, 0); f.add(gt); for (let x = .12; x < gapO[1] - .1; x += .2) gt.add(box(.07, .8, .03, white, x, .45, 0)); for (const y of [.62, .3]) gt.add(box(gapO[1] - .14, .05, .04, white, (gapO[1] - .12) / 2 + .02, y, .02)); gt.rotation.y = -(.15 + rnd() * 1.1); }   // a gate, ajar
+      if (gapO[2] === 'drive' && rnd() < .35) for (const [x, sg] of [[lo + .06, 1], [hi - .06, -1]]) { const gt = new THREE.Group(); gt.position.set(x, 0, 0); f.add(gt); const w = gapO[1] / 2 - .1; for (let q = .1; q < w; q += .2) gt.add(box(.07, .9, .03, white, sg * q, .5, 0)); for (const y of [.7, .32]) gt.add(box(w, .05, .04, white, sg * w / 2, y, .02)); gt.rotation.y = -sg * (1.35 + rnd() * .2); }   // a double gate, wide open
+      if (rnd() < .35) { const back = gap - .7; run(-W / 2, 0, -W / 2, back); run(W / 2, 0, W / 2, back); } }                      // fenced all round, to the house's front
+    else if (k < .7) { for (const [a, b] of runs) { const hg = put(box(b - a, 1.1, .9, hedgeM), i, side * (PAVE + .8), .55, side > 0 ? -Math.PI / 2 : Math.PI / 2); hg.translateX((a + b) / 2); hit(hg, { hx: (b - a) / 2, hz: .45, h: 1.1, kind: 'soft' }, i); } }   // a hedge, open at the drive or the path
   }
   const leafT = (() => { const t = tex.leaves().clone(); t.repeat.set(2, 2); t.needsUpdate = true; return t; })();
   // a crown: clumps (lumpy balls, flat-faced, each face one of the palette's tones: lighter up top and facing up, darker beneath) and,
