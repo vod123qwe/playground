@@ -111,8 +111,12 @@
   /* the minimap (walk) */
   .mini{position:fixed; top:72px; left:16px; z-index:4; width:196px; height:180px; border-radius:18px; background:#fff; opacity:0; visibility:hidden; transform:translateY(-6px);
         transition:opacity .35s ease, transform .45s var(--ease), visibility 0s linear .45s; cursor:crosshair}
-  body.walk .mini{opacity:1; visibility:visible; transform:none; transition:opacity .35s ease, transform .45s var(--ease), visibility 0s}
-  @media (max-width:760px){ .mini{width:132px; height:122px; top:auto; bottom:calc(128px + env(safe-area-inset-bottom)); left:auto; right:16px} }
+  /* folded while you walk: small and faint in its corner; under the pointer it opens to its full size (and folds back a moment after
+     the pointer leaves). Where there is no hover (a touch screen) it stays open */
+  body.walk .mini{opacity:.55; visibility:visible; transform:scale(.4); transform-origin:0 0; transition:opacity .3s ease .45s, transform .45s var(--ease) .45s, visibility 0s}
+  body.walk .mini:hover{opacity:1; transform:none; transition-delay:0s, 0s, 0s}
+  @media (hover:none){ body.walk .mini{opacity:1; transform:none} }
+  @media (max-width:760px){ .mini{width:132px; height:122px; top:auto; bottom:calc(128px + env(safe-area-inset-bottom)); left:auto; right:16px; transform-origin:100% 100%} }
 
   /* the stick on touch screens (walk) */
   .stick{position:fixed; left:28px; bottom:calc(128px + env(safe-area-inset-bottom)); z-index:4; width:116px; height:116px; border-radius:50%; background:rgba(255,255,255,.55);
