@@ -51,6 +51,19 @@ Stan: 2026-09-30, wersja 15. Dokument do decyzji; nic z tego nie jest jeszcze zb
 - Śmieciarka i mleczarz: wolne pojazdy do wyprzedzenia albo do wykorzystania (jedziesz za nimi w cieniu).
 - Pogoda i pora: mgła o świcie, deszcz (śliska droga, kałuże chlapią), wschód słońca w trakcie trasy.
 
+## 3b. Miejsca specjalne i eventy (burza mózgów, do rozkminki)
+
+Pomysł Jarka: kilka wyjątkowych budynków na trasie, każdy z własną sytuacją, zabawną i z kilkoma zakończeniami. Wspólny szkielet: miejsce ma wyzwalacz (podjeżdżasz, rzucasz gazetą, ktoś cię widzi), krótką scenkę z wyborem (2–3 odpowiedzi klawiszami 1/2/3) i losowane zakończenie zależne od wyboru i stanu gracza (kasa, HP, reputacja).
+
+- **Magazyn gazet (hurtownia):** miejsce doładowania torby. Magazynier z humorami: raz daje ekstra paczkę, raz każe czekać, aż skończy kawę (mini-czekanie albo przekupstwo drożdżówką). Może tu wisieć tablica z „zleceniem dnia”.
+- **Policja na parkingu:** radiowóz stoi przy sklepie. Jeśli zobaczą bójkę albo rozbitą szybę, zatrzymują cię. Rozmowa z wyborami: tłumaczysz się („to on zaczął”), zagadujesz („panie władzo, gazetka gratis?”), uciekasz. Zakończenia: mandat, pouczenie, konfiskata paczki, każą ci dowieźć gazetę do komisariatu, pościg (radiowóz jedzie za tobą, trzeba zgubić go w bocznej uliczce), albo policjant okazuje się szwagrem i puszcza wolno. Im więcej wpadek, tym mniej cierpliwi.
+- **Kościół:** rano msza, przed wejściem babcie. Trafisz gazetą w drzwi w trakcie: ksiądz wychodzi z kazaniem na temat młodzieży. Delikatny ton, żarty o sytuacji, nie o wierze. Zakończenia: pokuta (dowieź gazety za darmo trzem babciom), błogosławieństwo (tarcza na jedną wywrotkę), albo babcie z parasolkami.
+- **Szkoła:** dzwonek, tłum dzieci na pasach, pani woźna z miotłą. Event „wagary”: jeden uczeń prosi o podwiezienie i ucieka ze szkoły, a za tobą rusza dyrektor. Albo gazeta w okno pokoju nauczycielskiego: kartkówka dla gazeciarza (quiz z trzema absurdalnymi pytaniami).
+- **Nawiedzony dom:** zarośnięty, ciemne okna, skrzypiąca furtka. Rzucisz gazetą: w oknie zapala się światło, drzwi same się otwierają. Dłuższy event: wchodzisz na nogach (krótki korytarz, gasnąca latarka, odgłosy), kilka zakończeń: duch prenumerator zamawia gazetę na wieczność (stały bonus), okazuje się, że to dziadek w prześcieradle straszący dla zabawy, gonią cię nietoperze, albo znajdujesz skrzynię z kasą. Rzadko, w nocy albo o świcie we mgle.
+- **Dalsze pomysły tej samej rodziny:** sklep rowerowy (ulepszenia), kiosk z plotkami (podpowiedzi o eventach), budowa z dźwigiem, weselna sala z orkiestrą rano po imprezie.
+
+Do decyzji: ile tych miejsc na pętlę (propozycja 3–4, losowane z puli), czy scenki mają dialogi z wyborem czy tylko z reakcją na akcję, i czy zakończenia wpływają na progresję (reputacja, kasa).
+
 ## 4. Progresja (żeby chciało się wracać)
 
 **Propozycja: dni pracy (rekomendacja).**
