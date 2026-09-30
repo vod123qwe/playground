@@ -17,6 +17,10 @@ export function createCars({ THREE, toon }) {
   // the soft dark under a car
   const shadeT = canvasT(32, 32, g => { const gr = g.createRadialGradient(16, 16, 2, 16, 16, 16); gr.addColorStop(0, 'rgba(8,6,12,.75)'); gr.addColorStop(.7, 'rgba(8,6,12,.45)'); gr.addColorStop(1, 'rgba(8,6,12,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); });
   const shadeM = new THREE.MeshBasicMaterial({ map: shadeT, transparent: true, depthWrite: false });
+  // the bus: its roof, its air unit, the destination sign (amber dots on black: a number and CENTRUM)
+  const busRoof = toon('#d9d6cc'), busUnit = toon('#9aa0a4'), busSign = new THREE.MeshBasicMaterial({ map: canvasT(40, 8, g => { g.fillStyle = '#17181b'; g.fillRect(0, 0, 40, 8); g.fillStyle = '#f2a33a';
+    const F = { 7: ['111', '001', '010', '010', '010'], C: ['011', '100', '100', '100', '011'], E: ['111', '100', '110', '100', '111'], N: ['101', '111', '111', '101', '101'], T: ['111', '010', '010', '010', '010'], R: ['110', '101', '110', '101', '101'], U: ['101', '101', '101', '101', '111'], M: ['101', '111', '111', '101', '101'] };
+    let x = 2; for (const ch of '7 CENTRUM') { if (F[ch]) F[ch].forEach((row, y) => [...row].forEach((v, k) => { if (v === '1') g.fillRect(x + k, 1 + y, 1, 1); })); x += ch === ' ' ? 3 : 4; } }) });
   const shared = { glass: toon('#ffffff', { map: glassT, transparent: true, depthWrite: false }), seat: toon('#3a3430'), glassHi: toon('#6c8796'), dark: toon('#1f2023'), trim: toon('#3a3c40'), chrome: toon('#c9cbc8'), tyre: toon('#232427'),
     head: new THREE.MeshBasicMaterial({ color: '#fff3cf' }), tail: toon('#b3261e'), tailHi: new THREE.MeshBasicMaterial({ color: '#e0503f' }), reverse: toon('#e9e3d1'), amber: toon('#e0913a'), plate: toon('#ffffff', { map: plateT }), rim: toon('#aeb2b4'), well: toon('#17181b') };
   const KINDS = {
@@ -134,7 +138,14 @@ export function createCars({ THREE, toon }) {
       G.add(box(W - .06, .46, .07, paint, 0, base + .21, fz - bx0)); G.add(box(W - .06, .38, .07, paint, 0, base + .17, fz - (L - .04))); G.add(box(W * .5, .04, .08, shared.chrome, 0, base + .28, fz - L)); }
     // inside, seen through the glass: the dashboard, the two front seats, a bench at the back (not in a van's or a pickup's cab)
     if (K.bus) { for (let x = 2.4; x < K.L - 1; x += 1.25) for (const sd of [-1, 1]) G.add(box(W * .34, .7, .14, shared.seat, sd * W * .24, base + .12, fz - x));   // rows of seats
-      for (const zz of [fz - 1.1, fz - 5.6]) for (const sd of [-1, 1]) G.add(box(.04, 1.95, 1.05, shared.dark, sd * (W / 2 + .005), base + .55, zz)); }   // the doors
+      for (const zz of [fz - 1.1, fz - 5.6]) for (const sd of [-1, 1]) G.add(box(.04, 1.95, 1.05, shared.dark, sd * (W / 2 + .005), base + .55, zz));   // the doors
+      // its roof, pale, with the air unit and two hatches; the windscreen and the back window (the box's ends are paint: glass laid on
+      // them, dark behind it), the destination sign lit amber over the windscreen
+      const gh = K.gh[4], top = base + .02 + gh, zf0 = fz - K.gh[0], zb0 = fz - K.gh[1];
+      G.add(box(W - .3, .05, L - .9, busRoof, 0, top + .02, 0)); G.add(box(1.5, .28, 1.3, busUnit, 0, top + .17, -.9)); G.add(box(1.54, .04, 1.34, shared.trim, 0, top + .32, -.9));
+      for (const zz of [2.6, -3.1]) G.add(box(.62, .07, .62, shared.dark, 0, top + .06, zz));
+      for (const [z0, sg, hh, wd] of [[zf0, 1, gh * .7, W - .24], [zb0, -1, gh * .45, W - .5]]) { G.add(box(wd, hh, .02, shared.dark, 0, base + gh * (sg > 0 ? .45 : .62), z0 + sg * .012)); G.add(box(wd, hh, .03, shared.glass, 0, base + gh * (sg > 0 ? .45 : .62), z0 + sg * .03)); }
+      G.add(box(W - .34, .24, .04, busSign, 0, top - .2, zf0 + .04)); }
     else { const a0 = K.gh[0], a1 = Math.min(K.gh[1], K.glassTo || 99), span = a1 - a0, xs = a0 + span * (K.glassTo ? .55 : .42);
       G.add(box(W * .84, .14, .34, shared.dark, 0, base + .02, fz - (a0 + .38)));
       const hS = K.gh[4];                                                  // (the cabin's height over the waist: the seats kept well under the roof)
