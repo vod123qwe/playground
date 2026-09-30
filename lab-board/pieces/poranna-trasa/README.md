@@ -286,7 +286,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - drzewa rosną jak drzewa: korzenie rozchodzą się przy ziemi, pień rozwidla się nisko, każdy konar dzieli się jeszcze na dwie gałęzie, a każda kończy się własną kępą liści (korona z wielu kęp z jasną i ciemną stroną zamiast kilku kul); korony szersze (drzewo przy domu ma około 7–8 m szerokości)
 - drzewa nad jezdnią widać teraz też w Warsztacie (grupa Drzewa)
-- kamera: kółko myszy przytrzymane i ruch myszą (góra/dół: kąt, lewo/prawo: odległość) albo samo kręcenie kółkiem (odległość); podwójne kliknięcie kółkiem wraca do ustawień; zapamiętywane w przeglądarce; działa też w widoku z góry (wysokość)
+- kamera: kręcenie kółkiem przybliża i oddala; kółko przytrzymane i ruch myszą zmienia kąt (góra/dół: wyżej, niżej; lewo/prawo: dookoła rowerzysty, aż do widoku z boku); podwójne kliknięcie kółkiem wraca do ustawień; zapamiętywane w przeglądarce; działa też w widoku z góry
 
 ## Wersja 28: obudowana ulica, celowanie myszą
 
