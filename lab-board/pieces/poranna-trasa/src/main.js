@@ -206,7 +206,7 @@ addEventListener('keydown', e => { if (e.repeat) return; keys.add(e.code); edge.
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code) || ACTIONS.some(a => BIND[a.id].includes(e.code))) e.preventDefault(); });
 addEventListener('keyup', e => { keys.delete(e.code); }); addEventListener('blur', () => keys.clear());
 const padPrev = {};
-function lockPointer() { if (document.pointerLockElement || mouse.failed || menu.open || asking) return;   // (the cursor kept in the game's window; refused: not asked again)
+function lockPointer() { if (document.pointerLockElement || mouse.failed || menu.open || asking || touch.on) return;   // (the cursor kept in the game's window; refused: not asked again)
   try { const pr = canvas.requestPointerLock?.(); pr?.catch?.(() => { mouse.failed = true; }); } catch { mouse.failed = true; } }
 const mouse = { dx: 0, dy: 0, l: false, r: false, lh: false, rh: false, locked: false, used: false, nx: 0, ny: 0, inside: false, failed: false };   // (l, r: pressed this frame; lh, rh: held)
 // the camera as he likes it: the wheel turned brings it nearer or farther; the wheel held down and the mouse moved turns it (up and
@@ -227,7 +227,11 @@ addEventListener('mouseup', e => { if (e.button === 0) mouse.lh = false; if (e.b
 addEventListener('contextmenu', e => { if (!menu.open) e.preventDefault(); });
 addEventListener('blur', () => { mouse.lh = mouse.rh = mouse.r = false; });
 document.addEventListener('pointerlockchange', () => { mouse.locked = !!document.pointerLockElement; if (!mouse.locked) mouse.r = false; });
-const touch = createTouch({ onCam: () => setCam((camI + 1) % CAMS.length), onReset: () => menu.show('pause') });   // (the top button: the menu)
+const touch = createTouch({ onCam: () => setCam((camI + 1) % CAMS.length), onMenu: () => menu.show('pause') });   // (the top button: the menu)
+// on a phone: lighter (the picture's last pass at one pixel to a pixel, a smaller shadow map)
+if (touch.on) { renderer.setPixelRatio(1); sun.shadow.mapSize.set(1024, 1024); dispatchEvent(new Event('resize')); }
+// a phone held upright: a taller view, so the road is not a slit
+const PK = () => Math.max(1, Math.min(1.55, .75 * innerHeight / Math.max(1, innerWidth)));
 function input() {
   const held = id => BIND[id].some(c => keys.has(c)) ? 1 : 0, hit = id => BIND[id].some(c => edge.has(c));   // (through the bindings)
   let steer = held('right') - held('left'), pedal = held('pedal'), brake = held('brake');
@@ -236,13 +240,16 @@ function input() {
   if (gp) { const ax = gp.axes[0] || 0; if (Math.abs(ax) > .12) steer = Math.sign(ax) * (Math.abs(ax) - .12) / .88; const b = i => gp.buttons[i];
     pedal = Math.max(pedal, b(7)?.value || 0); brake = Math.max(brake, b(6)?.value || 0); sprint = sprint || !!b(2)?.pressed;
     if (b(0)?.pressed && !padPrev.a) kickK = true; kickHold = kickHold || !!b(0)?.pressed; padPrev.a = !!b(0)?.pressed; if (b(1)?.pressed && !padPrev.b) hop = true; padPrev.b = !!b(1)?.pressed; holdL = holdL || !!b(4)?.pressed; holdR = holdR || !!b(5)?.pressed; }
-  if (touch.on) { const t = touch.state, e = touch.take(); if (t.stick) steer = t.steer; pedal = Math.max(pedal, t.pedal); brake = Math.max(brake, t.brake);
-    sprint = sprint || t.sprint; holdL = holdL || t.holdL; holdR = holdR || t.holdR; kickK = kickK || e.kick; kickHold = kickHold || !!t.kickHeld; hop = hop || e.hop; }
+  let tE = null, tDx = 0, tDy = 0;
+  if (touch.on) { const t = touch.state, e = tE = touch.take(); if (t.stick) steer = t.steer; pedal = Math.max(pedal, t.pedal); brake = Math.max(brake, t.brake);
+    sprint = sprint || t.sprint; holdL = holdL || t.holdL; holdR = holdR || t.holdR; kickK = kickK || e.kick; kickHold = kickHold || !!t.kickHeld; hop = hop || e.hop;
+    tDx = e.lookDx * .9; tDy = e.lookDy * .6;
+    if (foot.active && !foot.fighting && t.stick) { tDx += t.steer * 9; steer = 0; } }   // (on foot, the stick's side to side turns him; in a fight it steps round)
   if (!foot.active) { holdL = holdL || mouse.lh; holdR = holdR || mouse.rh; }   // (on the bike: the left button throws left, the right one right)
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
-    atkL: hit0('punchL'), atkR: hit0('punchR'), up: !!held('high'), down: !!held('low'), mount: hit0('mount'), guard: !!held('guard'), dx: m0.dx, dy: m0.dy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk'), skip: edge0.has('Enter'), dodge: hit0('dodge'), taunt: hit0('taunt') };
+    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt') };
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
@@ -585,7 +592,7 @@ function follow(dt) {
     if (!C.init) { C.gy = B.y; C.pos.copy(want); C.init = true; }
     C.pos.lerp(want, 1 - Math.exp(-dt * 6)); camera.position.copy(C.pos); camera.up.set(fx, 0, fz); camera.lookAt(C.pos.x, C.gy, C.pos.z);
     if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
-    CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov; camera.updateProjectionMatrix();
+    CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov * PK(); camera.updateProjectionMatrix();
     sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return; }
   const ch = aim.on && B.charge ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
   const [bk, upU] = userCam(back, CP.up), cy = C.yaw + camUser.yaw, want = new THREE.Vector3(B.x - Math.sin(cy) * bk - Math.cos(cy) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(cy) * bk + Math.sin(cy) * aside);   // (cy: turned round him as he set it)   // (far and high enough to see the houses, and a window go)
@@ -597,7 +604,7 @@ function follow(dt) {
   const q = track.probe(C.pos.x, C.pos.z, B.hint); C.pos.y = Math.max(C.pos.y, q.y + .6);
   camera.position.copy(C.pos); camera.up.set(0, 1, 0); camera.lookAt(C.look); camera.rotateZ(-B.lean * .12 * (B.crash ? .3 : 1) - mlook.x * .04);
   if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.y += (Math.random() - .5) * a; }
-  camera.fov = CP.fov + Math.max(0, B.v) * .45 + rush * 7 + THREE.MathUtils.smootherstep(throwCam.w, 0, 1) * 8; camera.updateProjectionMatrix();
+  camera.fov = (CP.fov + Math.max(0, B.v) * .45 + rush * 7 + THREE.MathUtils.smootherstep(throwCam.w, 0, 1) * 8) * PK(); camera.updateProjectionMatrix();
   sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld();
 }
 
@@ -777,7 +784,8 @@ function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : n
 function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
-  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen);
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -860,9 +868,9 @@ function frame(now) {
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
   drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
-  hudBag.update(dt, B.papers, 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title'); px.render(scene, camera, hudBag); drawHud(dt);
+  hudBag.update(dt, B.papers, 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); px.render(scene, camera, hudBag); drawHud(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, scene, camera, hudBag, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };

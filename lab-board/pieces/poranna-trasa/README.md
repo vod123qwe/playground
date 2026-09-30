@@ -446,3 +446,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - rzadko spotykani inni rowerzyści: można im dać kopa, obaj schodzą z rowerów i jest bójka
 - bójka jako minigra w tym samym świecie, ale z widokiem z pierwszej osoby (widać swoje ręce): krótki pojedynek bokserski; garda góra lub dół, ciosy lewą i prawą, w górę lub w dół; lekkie krążenie na boki z kamerą skupioną na przeciwniku; do rozwinięcia (np. uniki, kontry, zmęczenie, zwycięstwo daje coś na trasie)
 
+
+## Wersja 41: telefon
+
+- sterowanie dotykowe od nowa: okrągłe, półprzezroczyste przyciski z ikonami i małym podpisem, zestaw zależny od sytuacji (rower: kop, rzut w lewo i w prawo, skok, szybciej, zsiądź; pieszo i w bójce: cios lewy i prawy, blok, unik, skok, a pieszo też rower i gadaj)
+- lewy kciuk: gałka tam, gdzie dotkniesz; prawa strona ekranu: przeciąganie palcem rozgląda się (pieszo obraca postać)
+- swipe nic nie przełącza: przeglądarka nie przewija, nie cofa strony, nie przybliża i nie odświeża (poza przewijaniem panelu stylu)
+- ekran responsywny: tytuł mieści się w szerokości, licznik rowerowy mniejszy, pod nim rząd małych przycisków (kamera, menu, pełny ekran), torba z gazetami w prawym górnym rogu pod portmonetką, szerszy kąt kamery przy telefonie trzymanym pionowo
+- lżejsze renderowanie na telefonie (piksel do piksela, mniejsza mapa cieni); w Grafice przycisk „Panel stylu: wszystko”

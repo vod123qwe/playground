@@ -5,7 +5,7 @@
 // createCyclo(el) → { update({ v, dist, max, time, on }) }   (v, max: m/s; dist: m; time: s; on: riding)
 export function createCyclo(el) {
   const W = 62, H = 36, c = document.createElement('canvas'); c.width = W; c.height = H; el.innerHTML = ''; el.appendChild(c);
-  Object.assign(c.style, { width: W * 3 + 'px', height: H * 3 + 'px', imageRendering: 'pixelated', display: 'block' });
+  const fit = () => { const k = innerWidth < 640 ? 2 : 3; Object.assign(c.style, { width: W * k + 'px', height: H * k + 'px', imageRendering: 'pixelated', display: 'block' }); }; fit(); addEventListener('resize', fit);   // (a phone: two to a pixel)
   const g = c.getContext('2d');
   // seven segments: a b c d e f g (top, top right, bottom right, bottom, bottom left, top left, middle)
   const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg', '-': 'g', ' ': '' };

@@ -1,38 +1,72 @@
-// Touch controls, for a phone or a tablet (on when the pointer is coarse, or with ?touch in the address):
-// the left thumb: a stick that appears where it touches (side to side steers, up pedals, the harder the further; down brakes, and
-// held at a stop walks him back); the right thumb: throw left, throw right (hold: the power builds; let go: it flies), kick, hop,
-// and faster (held). At the top: the camera, start again, full screen.
-// createTouch({ onCam, onReset }) → { on, state: { stick, steer, pedal, brake, sprint, holdL, holdR }, take() → { kick, hop } (once each) }
-
-export function createTouch({ onCam, onReset }) {
+// Touch controls, for a phone or a tablet (on when the pointer is coarse, or with ?touch in the address). Icons, not words; round,
+// see-through, a thin light ring, lit while held. What is on the right changes with what he is doing:
+//   on the bike: throw left, throw right (held: the power builds; let go: it flies), kick, hop, faster (held), get off;
+//   on foot: punch left, punch right, guard (held), dodge, hop, get on the bike, talk; in a fight: the same but talk.
+// The left thumb: a stick where it touches (on the bike: side to side steers, up pedals, down brakes; on foot: up and down walk, side
+// to side turns him). A finger dragged on the free right side looks about (on foot: turns him). At the top, small, in the middle: the
+// camera, the menu, full screen. Nothing a swipe could do to the page (scroll, pull to refresh, pinch, double tap, a long press) is let
+// through: the game keeps the fingers.
+// createTouch({ onCam, onMenu }) → { on, state, take() → edges once each, setMode(mode), show(bool) }
+export function createTouch({ onCam, onMenu }) {
   const on = matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.search);
-  const state = { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, kickHeld: false }, edges = { kick: false, hop: false };
-  const take = () => { const e = { ...edges }; edges.kick = edges.hop = false; return e; };
-  if (!on) return { on, state, take };
+  const state = { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, kickHeld: false, guard: false, lookDx: 0, lookDy: 0 };
+  const edges = { kick: false, hop: false, punchL: false, punchR: false, dodge: false, mount: false, talk: false };
+  const take = () => { const e = { ...edges }; for (const k in edges) edges[k] = false; e.lookDx = state.lookDx; e.lookDy = state.lookDy; state.lookDx = state.lookDy = 0; return e; };
+  if (!on) return { on, state, take, setMode() { }, show() { } };
   document.body.classList.add('touch');
 
+  // the page keeps still under the fingers: no scroll, no pull to refresh, no pinch, no double-tap zoom, no long-press menu
+  const keep = e => { if (e.target.closest?.('#styl .body')) return; e.preventDefault(); };
+  document.addEventListener('touchmove', keep, { passive: false });
+  document.addEventListener('touchstart', e => { if (e.touches.length > 1 && !e.target.closest?.('#styl')) e.preventDefault(); }, { passive: false });
+  for (const ev of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+
   const css = document.createElement('style'); css.textContent = `
-    body.touch { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    html, body { overscroll-behavior: none; }
+    body.touch, body.touch canvas { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     body.touch #keys, body.touch #pix, body.touch #ink { display: none; }
-    #tc { position: fixed; inset: 0; z-index: 4; pointer-events: none; font: 700 13px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; color: #f6f3ea; letter-spacing: .04em; }
-    #tc .zone { position: absolute; left: 0; top: 56px; bottom: 0; width: 46%; pointer-events: auto; }
-    #tc .base, #tc .knob { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); display: none; }
-    #tc .base { width: 124px; height: 124px; background: rgba(23,24,27,.35); border: 2px solid rgba(246,243,234,.35); }
-    #tc .knob { width: 56px; height: 56px; background: rgba(239,201,112,.85); border: 2px solid #17181b; box-shadow: 0 2px 0 #17181b; }
-    #tc .hint { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 56px); opacity: .55; font-weight: 600; }
-    #tc .btn { position: absolute; display: grid; place-items: center; text-align: center; pointer-events: auto; border-radius: 14px; background: rgba(23,24,27,.55);
-      border: 2px solid rgba(246,243,234,.4); box-shadow: 0 3px 0 rgba(12,13,15,.8); }
-    #tc .btn.down { background: rgba(239,201,112,.9); color: #17181b; border-color: #17181b; transform: translateY(2px); box-shadow: 0 1px 0 rgba(12,13,15,.8); }
-    #tc .small { width: 44px; height: 38px; border-radius: 10px; font-size: 16px; }
-    #tc .right { right: max(14px, env(safe-area-inset-right)); }
+    #tc { position: fixed; inset: 0; z-index: 4; pointer-events: none; color: #f6f3ea; font: 700 10px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: .04em; }
+    #tc.hide { display: none; }
+    #tc .zone { position: absolute; left: 0; top: 64px; bottom: 0; width: 44%; pointer-events: auto; }
+    #tc .look { position: absolute; right: 0; top: 64px; bottom: 0; width: 56%; pointer-events: auto; }
+    #tc .base, #tc .knob { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none; }
+    #tc .base { width: 116px; height: 116px; background: rgba(23,24,27,.28); border: 1.5px solid rgba(246,243,234,.35); }
+    #tc .knob { width: 50px; height: 50px; background: rgba(239,201,112,.9); border: 2px solid rgba(23,24,27,.9); }
+    #tc .hint { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(max(20px, env(safe-area-inset-bottom)) + 8px); opacity: .5; font-size: 11px; }
+    #tc .btn { position: absolute; display: grid; place-items: center; pointer-events: auto; border-radius: 50%; background: rgba(23,24,27,.42); border: 1.5px solid rgba(246,243,234,.42);
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); transition: transform .06s, background .06s; }
+    #tc .btn svg { width: 55%; height: 55%; }
+    #tc .btn i { position: absolute; bottom: -13px; font-style: normal; opacity: .75; white-space: nowrap; text-shadow: 0 1px 0 #17181b; }
+    #tc .btn.down { background: rgba(239,201,112,.92); color: #17181b; border-color: rgba(23,24,27,.9); transform: scale(.93); }
+    #tc .btn.off { display: none; }
+    #tc .top { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: none; }
+    #tc .top .btn { position: relative; width: 38px; height: 38px; border-radius: 11px; }
+    @media (max-width: 639px) { #tc .top { left: max(14px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 76px); transform: none; gap: 6px; } #tc .top .btn { width: 34px; height: 34px; border-radius: 10px; } }   /* (narrow: a row under the bike computer) */
   `; document.head.appendChild(css);
 
   const root = document.createElement('div'); root.id = 'tc'; document.body.appendChild(root);
-  const el = (cls, html, style) => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; Object.assign(d.style, style || {}); root.appendChild(d); return d; };
+  const el = (cls, html, parent = root) => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; parent.appendChild(d); return d; };
+  const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const IC = {
+    throwL: svg('<rect x="9" y="8" width="10" height="7" rx="3.5"/><path d="M13 8v7"/><path d="M6 11.5H2m0 0 2.5-2.5M2 11.5 4.5 14"/>'),
+    throwR: svg('<rect x="5" y="8" width="10" height="7" rx="3.5"/><path d="M11 8v7"/><path d="M18 11.5h4m0 0-2.5-2.5m2.5 2.5L19.5 14"/>'),
+    kick: svg('<path d="M7 3v8l-3 5v2h9l5-3 3-1v-3l-6 1-3-2V3z"/>'),
+    hop: svg('<path d="M6 15l6-6 6 6"/><path d="M6 20h12"/>'),
+    fast: svg('<path d="M4 7l6 5-6 5M12 7l6 5-6 5"/>'),
+    off: svg('<circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l4-7h5l3 7M10 10 8 6h3"/><path d="M15 3v4" /><path d="M13 5h4"/>'),
+    punchL: svg('<rect x="7" y="7" width="11" height="9" rx="2.5"/><path d="M11 7v3M14 7v3M7 12h3"/><path d="M4 11.5H1"/>'),
+    punchR: svg('<rect x="6" y="7" width="11" height="9" rx="2.5"/><path d="M10 7v3M13 7v3M17 12h-3"/><path d="M20 11.5h3"/>'),
+    guard: svg('<path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/>'),
+    dodge: svg('<path d="M14 5l-5 7 5 7"/><path d="M20 5l-5 7 5 7" opacity=".5"/>'),
+    bike: svg('<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9 8.5 6H11M14 9l1.5-3h2"/>'),
+    talk: svg('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8"/>'),
+    cam: svg('<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3"/>'),
+    menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+    full: svg('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>') };
 
-  // the stick
-  const zone = el('zone'), base = el('base'), knob = el('knob'), hint = el('hint', 'tu: jazda i skręt');
-  let sid = null, ox = 0, oy = 0; const R = 56;
+  // the stick: where the left thumb first touches
+  const zone = el('zone'), look = el('look'), base = el('base'), knob = el('knob'), hint = el('hint', 'kciuk tutaj: jazda');
+  let sid = null, ox = 0, oy = 0; const R = 52;
   const setStick = (x, y) => { let dx = x - ox, dy = y - oy; const l = Math.hypot(dx, dy); if (l > R) { dx *= R / l; dy *= R / l; }
     knob.style.left = ox + dx + 'px'; knob.style.top = oy + dy + 'px';
     const sx = dx / R, sy = dy / R, dz = v => Math.abs(v) < .12 ? 0 : (Math.abs(v) - .12) / .88 * Math.sign(v);
@@ -42,27 +76,45 @@ export function createTouch({ onCam, onReset }) {
   zone.addEventListener('pointermove', e => { if (e.pointerId === sid) { setStick(e.clientX, e.clientY); e.preventDefault(); } });
   const stickUp = e => { if (e.pointerId !== sid) return; sid = null; base.style.display = knob.style.display = 'none'; Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0 }); };
   zone.addEventListener('pointerup', stickUp); zone.addEventListener('pointercancel', stickUp);
+  // looking about: a finger dragged over the free right side
+  let lid = null, lx = 0, ly = 0;
+  look.addEventListener('pointerdown', e => { if (lid !== null) return; lid = e.pointerId; try { look.setPointerCapture(lid); } catch { } lx = e.clientX; ly = e.clientY; e.preventDefault(); });
+  look.addEventListener('pointermove', e => { if (e.pointerId !== lid) return; state.lookDx += e.clientX - lx; state.lookDy += e.clientY - ly; lx = e.clientX; ly = e.clientY; e.preventDefault(); });
+  const lookUp = e => { if (e.pointerId === lid) lid = null; }; look.addEventListener('pointerup', lookUp); look.addEventListener('pointercancel', lookUp);
 
-  // the buttons: each held by its own finger
-  function button(html, style, down, up, cls = 'btn') {
-    const b = el(cls, html, style); let pid = null;
+  // the buttons: each held by its own finger; placed from the bottom right corner (size, right, bottom), shown for the modes they belong to
+  const all = [];
+  function button(icon, label, pos, modes, down, up, parent = root) {
+    const b = el('btn', icon + (label ? `<i>${label}</i>` : ''), parent); let pid = null; b.setAttribute('role', 'button'); b.setAttribute('aria-label', label || '');
+    if (pos) Object.assign(b.style, { width: pos[0] + 'px', height: pos[0] + 'px', right: `calc(max(12px, env(safe-area-inset-right)) + ${pos[1]}px)`, bottom: `calc(max(16px, env(safe-area-inset-bottom)) + ${pos[2]}px)` });
     b.addEventListener('pointerdown', e => { if (pid !== null) return; pid = e.pointerId; try { b.setPointerCapture(pid); } catch { } b.classList.add('down'); down?.(); e.preventDefault(); e.stopPropagation(); });
     const end = e => { if (e.pointerId !== pid) return; pid = null; b.classList.remove('down'); up?.(); };
-    b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end); b.addEventListener('contextmenu', e => e.preventDefault());
-    return b;
-  }
-  const B = (w, h, right, bottom) => ({ width: w + 'px', height: h + 'px', right: `calc(max(14px, env(safe-area-inset-right)) + ${right}px)`, bottom: `calc(max(14px, env(safe-area-inset-bottom)) + ${bottom}px)` });
-  button('KOP', { ...B(92, 92, 64, 20), borderRadius: '50%', fontSize: '17px' }, () => { edges.kick = true; state.kickHeld = true; }, () => { state.kickHeld = false; });   // (held: a trick in the air goes on)
-  button('← RZUT', B(84, 58, 176, 116), () => { state.holdL = true; }, () => { state.holdL = false; });
-  button('RZUT →', B(84, 58, 0, 116), () => { state.holdR = true; }, () => { state.holdR = false; });
-  button('SKOK', B(68, 50, 176, 26), () => { edges.hop = true; });
-  button('SZYB-<br>CIEJ', { ...B(56, 56, 0, 190), fontSize: '11px', lineHeight: '1.15' }, () => { state.sprint = true; }, () => { state.sprint = false; });
-  // the top: camera, start again, full screen
-  const top = (html, right, fn) => button(html, { right: `calc(max(14px, env(safe-area-inset-right)) + ${right}px)`, top: 'max(12px, env(safe-area-inset-top))' }, fn, null, 'btn small');
-  const svg = d => `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">${d}</svg>`;
-  top(svg('<rect x="2" y="6" width="11" height="9"/><path d="M13 9l5-3v9l-5-3"/>'), 0, onCam).setAttribute('aria-label', 'kamera');
-  top(svg('<path d="M4 10a6 6 0 1 0 2-4.5"/><path d="M3 3v4h4"/>'), 52, onReset).setAttribute('aria-label', 'od nowa');
-  if (document.fullscreenEnabled) top(svg('<path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4"/>'), 104, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {}); }).setAttribute('aria-label', 'pełny ekran');
-  addEventListener('blur', () => Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false }));
-  return { on, state, take };
+    b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+    all.push({ b, modes }); return b; }
+  const BIKE = ['bike'], FOOT = ['foot', 'fight'];
+  // on the bike: throws either side of the big kick, hop and faster above, off at the top of the column
+  button(IC.kick, 'kop', [78, 58, 14], BIKE, () => { edges.kick = true; state.kickHeld = true; }, () => { state.kickHeld = false; });
+  button(IC.throwL, 'rzut', [62, 150, 30], BIKE, () => { state.holdL = true; }, () => { state.holdL = false; });
+  button(IC.throwR, 'rzut', [62, 0, 104], BIKE, () => { state.holdR = true; }, () => { state.holdR = false; });
+  button(IC.hop, 'skok', [52, 118, 108], BIKE, () => { edges.hop = true; });
+  button(IC.fast, 'szybciej', [52, 4, 190], BIKE, () => { state.sprint = true; }, () => { state.sprint = false; });
+  button(IC.off, 'zsiądź', [44, 76, 190], BIKE, () => { edges.mount = true; });
+  // on foot and fighting: the two fists, guard between them, dodge, hop; the bike and talk above
+  button(IC.punchR, 'cios', [70, 0, 70], FOOT, () => { edges.punchR = true; });
+  button(IC.punchL, 'cios', [70, 136, 14], FOOT, () => { edges.punchL = true; });
+  button(IC.guard, 'blok', [58, 74, 96], FOOT, () => { state.guard = true; }, () => { state.guard = false; });
+  button(IC.dodge, 'unik', [52, 0, 0], FOOT, () => { edges.dodge = true; });
+  button(IC.hop, 'skok', [48, 150, 104], FOOT, () => { edges.hop = true; });
+  button(IC.bike, 'rower', [44, 4, 170], ['foot'], () => { edges.mount = true; });
+  button(IC.talk, 'gadaj', [44, 62, 176], ['foot'], () => { edges.talk = true; });
+  // at the top, small, in the middle
+  const top = el('top');
+  for (const [ic, fn, name] of [[IC.cam, onCam, 'kamera'], [IC.menu, onMenu, 'menu'], ...(document.fullscreenEnabled ? [[IC.full, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); }, 'pełny ekran']] : [])])
+    button(ic, '', null, ['bike', 'foot', 'fight'], fn, null, top).setAttribute('aria-label', name);
+  let mode = null;
+  function setMode(m) { if (m === mode) return; mode = m; for (const o of all) o.b.classList.toggle('off', !o.modes.includes(m)); hint.textContent = m === 'bike' ? 'kciuk tutaj: jazda' : 'kciuk tutaj: chodzenie'; }
+  function show(v) { root.classList.toggle('hide', !v); if (!v) Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false, kickHeld: false }); }
+  setMode('bike');
+  addEventListener('blur', () => Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false }));
+  return { on, state, take, setMode, show };
 }
