@@ -55,7 +55,8 @@ export function createTrack({ THREE, toon, tex }) {
     strip(s * (KERB + .18), s * VERGE, '#6f8f3e', .14, .6, tex.grass(0), 1.3);   // the verge
     strip(s * VERGE, s * PAVE, '#bcb6a6', .05, .5, tex.slabs(), 3.2);        // the pavement, in slabs
     strip(s * PAVE, s * 14, '#7c9a45', .16, .12, tex.grass(4), 1.6);         // the lawns (a few flowers)
-    for (const [a, b] of (s === INNER ? [[14, 20], [20, 28], [28, 40]] : [[14, 20], [20, 28], [28, 38], [38, 52], [52, 72], [72, 100], [100, 135], [135, 170], [170, 200]])) strip(s * a, s * b, '#78963f', .2, .08, tex.grass(2), 2.2);   // the land beyond, rolling (inside the loop: not so far, the other side of it is there)
+    for (const [a, b] of (s === INNER ? [[14, 20], [20, 28], [28, 40]] : [[14, 20], [20, 28], [28, 38], [38, 52], [52, 72], [72, 84], [88, 100], [100, 135], [135, 170], [170, 200]])) strip(s * a, s * b, '#78963f', .2, .08, tex.grass(2), 2.2);
+    if (s !== INNER) { strip(s * 84, s * 88, '#55595e', .06, .5, tex.asphalt(), 3); strip(s * 83.4, s * 84, '#a8a08a', .1, .5, null, 1); strip(s * 88, s * 88.6, '#a8a08a', .1, .5, null, 1); }   // (a country road out there, gravel edges)   // the land beyond, rolling (inside the loop: not so far, the other side of it is there)
   }
   // the lines: a dashed one down the middle, a solid one near each edge
   { const pos = [], idx = []; let n = 0; const quad = (i0, i1, d0, d1) => { for (const [i, d] of [[i0, d0], [i0, d1], [i1, d0], [i1, d1]]) { const s = S[i % N]; pos.push(s.p.x + s.r.x * d, s.p.y + .012, s.p.z + s.r.z * d); } idx.push(n, n + 1, n + 2, n + 1, n + 3, n + 2); n += 4; };
@@ -429,14 +430,14 @@ export function createTrack({ THREE, toon, tex }) {
         smallHouse(i, dr + side * 9.5 * sgn, side * sgn > 0 ? -Math.PI / 2 : Math.PI / 2); if (fr() < .35) farTree(i + Math.round(5 / ds), dr + side * 5.5 * sgn, .8); } }
     for (const sd of [-INNER]) {                                        // (the outside of the loop only)
       for (const [r0, r1] of [[46, 54], [100, 110]]) { let i = Math.round(fr() * 60 / ds);        // (two rows of them: near, and far)
-      while (i < N - 20) { const lenM = 30 + fr() * 40, i1 = Math.min(N - 1, i + Math.round(lenM / ds)), d0 = r0 + fr() * (r1 - r0), d1 = d0 + 28 + fr() * (r0 > 60 ? 50 : 38), kind = fr();
+      while (i < N - 20) { const lenM = 30 + fr() * 40, i1 = Math.min(N - 1, i + Math.round(lenM / ds)), d0 = r0 + fr() * (r1 - r0), d1r = d0 + 28 + fr() * (r0 > 60 ? 50 : 38), d1 = r0 < 60 ? Math.min(d1r, 82) : d1r, kind = fr();   // (the near row stops short of the country road)
         if (kind < .5) { field(i, i1, sd * d0, sd * d1, FIELDS[fr() * FIELDS.length | 0], fr() < .5);                            // a field, a hedge along its near edge now and then
           if (fr() < .55) for (let j = i; j < i1; j += Math.round(3.2 / ds)) { const hg = new THREE.Mesh(new THREE.IcosahedronGeometry(1 + fr() * .5, 0), bushM); hg.scale.set(1.2, .8, 1.2); hg.position.copy(at(j, sd * (d0 - 1.2), .6)); G.add(hg); } }
         else if (kind < .76 && r0 < 60) estate(i, i1, sd * (d0 + 6));                                                  // another estate
         else if (kind < .88) { for (let n = 0; n < 7 + (fr() * 10 | 0); n++) farTree(i + Math.round(fr() * (i1 - i)), sd * (d0 + fr() * (d1 - d0)), 1 + fr() * .5); }   // a grove
         else { const im = Math.round((i + i1) / 2); farmhouse(im, sd * (d0 + 8)); barn(im + Math.round(16 / ds), sd * (d0 + 14)); field(i, i1, sd * (d0 + 22), sd * d1, FIELDS[fr() * 3 | 0], true); }   // a farm
         i = i1 + Math.round((3 + fr() * 8) / ds); } }
-      for (let k = 0; k < 150; k++) farTree(fr() * N | 0, sd * (45 + fr() * 130), .9 + fr() * .6);                                   // trees about the land
+      for (let k = 0; k < 150; k++) { const i = fr() * N | 0, dd = 45 + fr() * 130, sc = .9 + fr() * .6; if (dd > 81 && dd < 91) continue; farTree(i, sd * dd, sc); }                                   // trees about the land
       for (let k = 0; k < 220; k++) farTree(fr() * N | 0, sd * (178 + fr() * 18), 1.6 + fr() * .8);                                  // and a wall of them at the far edge
     }
     // hills round it all, and mountains behind them, bluer the farther (low enough not to hide the lake and the town beyond)
@@ -473,6 +474,6 @@ export function createTrack({ THREE, toon, tex }) {
     const cy = a.p.y + (b.p.y - a.p.y) * k, off = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z;
     return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
-  return { group: G, probe, S, N, ds, len, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  return { group: G, probe, S, N, ds, len, INNER, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

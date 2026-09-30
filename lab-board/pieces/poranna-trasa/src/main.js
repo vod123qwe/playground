@@ -28,6 +28,7 @@ import { createWater } from './water.js';
 import { createResidents } from './residents.js';
 import { installCursors } from './cursor.js';
 import { createOnFoot } from './onfoot.js';
+import { createLife } from './life.js';
 installCursors();
 
 const canvas = document.getElementById('gl');
@@ -65,16 +66,26 @@ const SUN = new THREE.Vector3(-.55, .62, -.35).normalize();             // low, 
 // clouds: three shapes, lit on top and shaded under; two layers (nearer and higher, farther and lower) drifting with the wind at
 // different speeds, so the sky has depth
 const clouds = [];
-{ const shape = (seed) => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d'); let a = seed; const r = () => (a = (a * 16807) % 2147483647) / 2147483647;
-    const puffs = Array.from({ length: 6 + (r() * 4 | 0) }, () => [18 + r() * 92, 30 + r() * 16, 10 + r() * 16]);
-    g.fillStyle = '#d8d2c0'; for (const [x, y, rr] of puffs) { g.beginPath(); g.arc(x, y + 4, rr, 0, 7); g.fill(); }                       // (the shade under)
-    g.fillStyle = '#fff8e3'; for (const [x, y, rr] of puffs) { g.beginPath(); g.arc(x, y, rr * .92, 0, 7); g.fill(); }
-    g.fillStyle = '#e8e0c8'; g.fillRect(8, 52, 112, 12); g.clearRect(0, 58, 128, 6);
+{ const B4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];   // (a 4x4 order, for the dithered steps between tones)
+  // a cumulus: puffs along a line, bumpy on top, flat under; each pixel toned by how high in the cloud it sits and how near the lit
+  // (upper left) edge of its puff: bright cream on top, warm white, a grey-blue shade low down, a darker line at the base
+  const cumulus = (seed, W = 72, H = 30) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); let a = seed; const r = () => (a = (a * 16807) % 2147483647) / 2147483647;
+    const base = H - 4, n = 5 + (r() * 4 | 0), puffs = Array.from({ length: n }, (_, k) => { const u = (k + .5) / n, rr = 5 + Math.sin(u * Math.PI) * (7 + r() * 5) + r() * 2; return [6 + u * (W - 12) + (r() - .5) * 4, base - rr * (.55 + r() * .25), rr]; });
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (y > base) continue; let inside = false, lit = -9;
+      for (const [px, py, pr] of puffs) { const dx = x - px, dy = y - py, d = Math.hypot(dx, dy); if (d < pr) { inside = true; lit = Math.max(lit, (-dx * .45 - dy) / pr - d / pr * .35); } }
+      if (!inside) continue; const hgt = (base - y) / 14, th = B4[y & 3][x & 3] / 16, v = lit * .6 + hgt * .5 + (th - .5) * .25;
+      g.fillStyle = y >= base - 1 ? '#aebcc2' : v > .62 ? '#fff8e3' : v > .3 ? '#f3eed2' : v > .05 ? '#dde2da' : '#c3ced0'; g.fillRect(x, y, 1, 1); }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
-  const TEX = [7, 19, 31].map(shape);
-  for (let k = 0; k < 20; k++) { const near = k < 9, s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX[k % 3], fog: false, transparent: true, depthWrite: false, alphaTest: .4 }));
-    const R = near ? 290 + (k * 17 % 40) : 400 + (k * 13 % 30), y = near ? 85 + (k * 29 % 40) : 55 + (k * 31 % 30), w = near ? 90 + (k * 23 % 50) : 120 + (k * 19 % 60);
-    s.scale.set(w, w * .45, 1); scene.add(s); clouds.push({ s, a: k / 20 * 6.283 + k * .7, R, y, speed: near ? .006 + (k % 3) * .002 : .0025 + (k % 2) * .001 }); } }
+  // a streak high up: a few thin wisps, pale, broken by the order
+  const streak = (seed, W = 96, H = 10) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); let a = seed; const r = () => (a = (a * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 4; k++) { const cx = 10 + r() * (W - 20), cy = 2 + r() * (H - 4), rx = 12 + r() * 26, ry = .8 + r() * 1.4;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const q = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2; if (q < 1 && B4[y & 3][x & 3] / 16 < 1.15 - q) { g.fillStyle = q < .35 ? '#fff8e3' : '#e8eed6'; g.fillRect(x, y, 1, 1); } } }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
+  const CU = [7, 19, 31, 43, 57, 71].map(sd => cumulus(sd)), LOW = [11, 23, 37].map(sd => cumulus(sd, 96, 22)), HI = [5, 17, 29].map(sd => streak(sd));
+  const add = (tex, R, y, w, h, speed, a, op = 1) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, fog: false, transparent: true, opacity: op, depthWrite: false, alphaTest: .4 })); s.scale.set(w, h, 1); scene.add(s); clouds.push({ s, a, R, y, speed }); };
+  for (let k = 0; k < 12; k++) { const w = 80 + (k * 23 % 50); add(CU[k % CU.length], 280 + (k * 17 % 50), 82 + (k * 29 % 36), w, w * 30 / 72, .006 + (k % 3) * .002, k / 12 * 6.283 + k * .7); }   // (the big ones, over the town)
+  for (let k = 0; k < 9; k++) { const w = 140 + (k * 19 % 60); add(LOW[k % LOW.length], 430 + (k * 13 % 30), 46 + (k * 31 % 22), w, w * 22 / 96, .0025 + (k % 2) * .001, k / 9 * 6.283 + 2.1); }   // (low, far, long)
+  for (let k = 0; k < 7; k++) { const w = 170 + (k * 29 % 80); add(HI[k % HI.length], 360 + (k * 11 % 40), 140 + (k * 17 % 30), w, w * 10 / 96, .004 + (k % 2) * .0015, k / 7 * 6.283 + .5, .75); } }   // (high streaks)
 function drift(dt) { for (const c of clouds) { c.a += c.speed * dt; c.s.position.set(90 + Math.cos(c.a) * c.R, c.y, Math.sin(c.a) * c.R); } }
 drift(0);
 
@@ -86,14 +97,15 @@ const dogs = createDogs({ THREE, toon, probe: track.probe });
 const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });   // (people sitting out in their gardens)                         // (a hydrant knocked or kicked)
 const peds = createPedestrians({ THREE, toon, track }); scene.add(peds.group);
+const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
   for (const d of track.doors) if (r() < .2) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
 const rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
 // ---------- on foot (F: off the bike, and back on by it) and the fights (onfoot.js) ----------
-function solid(x, z, r, hint) {                                        // (what a walker is pushed out of: the hard things near)
+function solid(x, z, r, hint, feet = null) {                           // (what a walker is pushed out of: the hard things near; feet: in the air, over the lower ones)
   let sx = 0, sz = 0, any = false;
-  for (const C of track.near(hint < 0 ? B.hint : hint)) { if (C.used || ['ramp', 'hole', 'manhole', 'bundle'].includes(C.kind) || C.h < .3) continue; const h = boxHit(C, x, z, r); if (h) { sx += h.nx * h.pen; sz += h.nz * h.pen; any = true; } }
+  for (const C of track.near(hint < 0 ? B.hint : hint)) { if (C.used || ['ramp', 'hole', 'manhole', 'bundle'].includes(C.kind) || C.h < .3 || (feet != null && (C.y0 || 0) + C.h < feet + .05)) continue; const h = boxHit(C, x, z, r); if (h) { sx += h.nx * h.pen; sz += h.nz * h.pen; any = true; } }
   return any ? { x: sx, z: sz } : null;
 }
 // beaten: the winner takes something off him (and says so)
@@ -173,13 +185,15 @@ addEventListener('keydown', e => { if (e.repeat) return; keys.add(e.code); edge.
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code) || ACTIONS.some(a => BIND[a.id].includes(e.code))) e.preventDefault(); });
 addEventListener('keyup', e => { keys.delete(e.code); }); addEventListener('blur', () => keys.clear());
 const padPrev = {};
+function lockPointer() { if (document.pointerLockElement || mouse.failed || menu.open || asking) return;   // (the cursor kept in the game's window; refused: not asked again)
+  try { const pr = canvas.requestPointerLock?.(); pr?.catch?.(() => { mouse.failed = true; }); } catch { mouse.failed = true; } }
 const mouse = { dx: 0, dy: 0, l: false, r: false, lh: false, rh: false, locked: false, used: false, nx: 0, ny: 0, inside: false, failed: false };   // (l, r: pressed this frame; lh, rh: held)
 addEventListener('mousemove', e => { mouse.nx = e.clientX / innerWidth * 2 - 1; mouse.ny = e.clientY / innerHeight * 2 - 1; mouse.inside = true;
   if (document.pointerLockElement || (!menu.open && !asking)) { mouse.dx += e.movementX; mouse.dy += e.movementY; if (foot.active) mouse.used = true; } });
 document.addEventListener('mouseleave', () => { mouse.inside = false; });
 document.addEventListener('pointerlockerror', () => { if (!mouse.failed) { mouse.failed = true; flash('Mysz: ruszaj nią, a przy krawędzi ekranu obracasz się dalej'); } });
 addEventListener('mousedown', e => { if (menu.open || asking || e.target.closest?.('#styl, #stylBtn, #pix, #ink, button')) return;
-  if (foot.active) { if (!document.pointerLockElement && !mouse.failed) { try { const pr = canvas.requestPointerLock?.(); pr?.catch?.(() => { mouse.failed = true; }); } catch { mouse.failed = true; } } mouse.used = true; }   // (refused: not asked again)
+  lockPointer(); if (foot.active) mouse.used = true;
   if (e.button === 0) { mouse.l = true; mouse.lh = true; } if (e.button === 2) { mouse.r = true; mouse.rh = true; } });
 addEventListener('mouseup', e => { if (e.button === 0) mouse.lh = false; if (e.button === 2) { mouse.r = false; mouse.rh = false; } });
 addEventListener('contextmenu', e => { if (!menu.open) e.preventDefault(); });
@@ -204,6 +218,22 @@ function input() {
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
+const aim = (() => { const G = new THREE.Group(), dotM = new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .85, depthWrite: false }), dots = [];
+  for (let k = 0; k < 16; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.09, 6, 4), dotM); d.renderOrder = 3; G.add(d); dots.push(d); }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.55, .85, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .95, depthWrite: false })); ring.renderOrder = 3; G.add(ring);
+  const rim = new THREE.Mesh(new THREE.RingGeometry(.85, .98, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#17181b', transparent: true, opacity: .8, depthWrite: false })); rim.renderOrder = 3; ring.add(rim);   // (a dark rim: it shows on the grass)
+  const arrowM = new THREE.MeshBasicMaterial({ color: '#efc970' }), arrow = new THREE.Group(); arrow.add(new THREE.Mesh(new THREE.ConeGeometry(.24, .42, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#17181b' })), new THREE.Mesh(new THREE.ConeGeometry(.18, .34, 4).rotateX(Math.PI), arrowM)); arrow.children[1].position.y = .03; ring.add(arrow);   // (an arrow over it: seen from low down too)
+  G.traverse(o => { if (o.material) o.material.depthTest = false; });   // (an aid, not a thing: over the grass, always seen)
+  G.visible = false; scene.add(G); return { G, dots, ring, at: new THREE.Vector3(), on: false }; })();
+function stepAim() {                                                    // (while a throw is held: where it would go)
+  aim.on = !!B.charge && !foot.active && !B.crash; aim.G.visible = aim.on; if (!aim.on) return;
+  const side = B.charge.side, p = B.charge.p, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, sp = 2.6 + p * 9;
+  const pos = new THREE.Vector3(B.x - rx * out * -.3, B.y + 1.25, B.z - rz * out * -.3), v = new THREE.Vector3(fx * B.v * .9 + rx * out * sp, 1.9 + p * 3.3, fz * B.v * .9 + rz * out * sp), h = 1 / 30;
+  let k = 0, n = 0, land = null; for (; n < 90; n++) { v.y -= g * h; pos.addScaledVector(v, h); const gy = track.probe(pos.x, pos.z, B.hint).y; if (pos.y <= gy) { pos.y = gy; land = pos; break; } if (n % 2 === 0 && k < aim.dots.length) aim.dots[k++].position.copy(pos); }
+  for (let j = 0; j < aim.dots.length; j++) aim.dots[j].visible = j < k;
+  if (land) { aim.ring.visible = true; aim.ring.position.copy(land).setY(land.y + .04); aim.at.copy(land); const good = track.mailboxes.some(mb => !mb.done && mb.o.position.distanceTo(land) < 1.6) || track.doors.some(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - land.x, d.p.z - d.n.z * 1.3 - land.z) < 1.6);
+    const col = good ? '#7fae58' : '#efc970'; aim.ring.material.color.set(col); aim.ring.children[1].children[1].material.color.set(col); const k2 = (.9 + Math.sin(performance.now() / 120) * .1) * Math.max(1, camera.position.distanceTo(land) / 8); aim.ring.scale.setScalar(k2);   // (the farther, the bigger: about the same on the screen)
+    const ar = aim.ring.children[1]; ar.position.y = 1.1 + Math.sin(performance.now() / 160) * .15; ar.rotation.y += .05; } else aim.ring.visible = false; }
 function throwing(dt, inp) {
   if (B.crash) { B.charge = null; return; }
   const held = inp.holdL ? 1 : inp.holdR ? -1 : 0;
@@ -366,7 +396,7 @@ function ride(dt, inp) {
     const fwd = Math.sign(B.v) || 1, h = boxHit(C, nx, nz, .34) || boxHit(C, nx + Math.sin(B.yaw) * .5 * fwd, nz + Math.cos(B.yaw) * .5 * fwd, .22); if (!h) continue;
     if (C.kind === 'manhole') { if (!B.air && Math.abs(B.v) > .8 && Math.hypot(nx - C.x, nz - C.z) < .34) { B.x = nx; B.z = nz; B.jolt = .15; crash(); return; } continue; }   // (the front wheel into it: over the bars; hopped, it is nothing)
     if (C.kind === 'hole') { if (!B.air && !C.cool) { B.jolt = .12; B.v *= .82; C.cool = true; setTimeout(() => { C.cool = false; }, 900); } continue; }
-    if (C.kind === 'bundle') { C.used = true; C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); continue; }
+    if (C.kind === 'bundle') { pickBundle(C); continue; }
     if (clear(C)) continue;
     if (C.kind === 'soft') { B.v *= Math.pow(.08, dt); continue; }
     if (C.hyd && Math.abs(B.v) > .8 && water.spray(new THREE.Vector3(C.x, C.y0 || 0, C.z), 4.5)) hud.pop(new THREE.Vector3(C.x, (C.y0 || 0) + 1.6, C.z), 'PSSS!', '#9ccad8');   // a hydrant knocked: it gushes
@@ -448,7 +478,7 @@ function stepDogs(dt, inp) {
   // a dog into a car or a tree (running at him, or kicked through the air): it goes over, and home
   const cars = traffic.boxes();
   for (const d of dogs.dogs) { if (!(d.state === 'chase' && d.v > 2.5) && !(d.fly && !d.fly.tumble)) continue;
-    for (const C of [...cars, ...track.near(d.hint)]) { if (C.kind !== 'car' && !(C.kind === 'hard' && ((C.hx < .4 && C.hz < .4) || C.h === 1.5))) continue;   // (trees, posts, hydrants, parked cars; not houses or fences) if (Math.abs(C.x - d.x) + Math.abs(C.z - d.z) > 7) continue;
+    for (const C of [...cars, ...track.near(d.hint)]) { if (C.kind !== 'car' && !(C.kind === 'hard' && ((C.hx < .4 && C.hz < .4) || C.h === 1.5))) continue; if (Math.abs(C.x - d.x) + Math.abs(C.z - d.z) > 7) continue;   // (trees, posts, hydrants, parked cars; not houses or fences)
       const h = boxHit(C, d.x, d.z, .32); if (!h) continue;
       const moving = C.kind === 'car' && C.t.v > 1.5, cv = moving ? { x: Math.sin(C.t.yaw) * C.t.v, z: Math.cos(C.t.yaw) * C.t.v } : { x: 0, z: 0 };
       d.x += h.nx * h.pen; d.z += h.nz * h.pen; dogs.tumble(d, { x: h.nx * 2.6 + cv.x * .7, z: h.nz * 2.6 + cv.z * .7 }); if (moving) C.t.stop = 1.5;
@@ -513,10 +543,11 @@ function follow(dt) {
     camera.up.set(0, 1, 0); camera.lookAt(lk); camera.rotateZ(-B.lean * .9); camera.fov = CP.fov + Math.max(0, B.v) * .6; camera.updateProjectionMatrix();
     C.init = false; sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return;
   }
-  const back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
-  const want = new THREE.Vector3(B.x - Math.sin(C.yaw) * back - Math.cos(C.yaw) * aside, C.gy + CP.up + tw * 1.4, B.z - Math.cos(C.yaw) * back + Math.sin(C.yaw) * aside);   // (far and high enough to see the houses, and a window go)
+  const ch = aim.on ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
+  const want = new THREE.Vector3(B.x - Math.sin(C.yaw) * back - Math.cos(C.yaw) * aside, C.gy + CP.up + tw * 1.4 + ch * 1.8, B.z - Math.cos(C.yaw) * back + Math.sin(C.yaw) * aside);   // (far and high enough to see the houses, and a window go)
   const look = new THREE.Vector3(B.x + Math.sin(B.yaw) * CP.ahead - Math.cos(B.yaw) * mlook.x * 2.6, C.gy + CP.lookUp - mlook.y * 1.2, B.z + Math.cos(B.yaw) * CP.ahead + Math.sin(B.yaw) * mlook.x * 2.6);   // (the mouse turns it a little)
-  if (tw > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(throwCam.at, .5), .2 * tw);   // (between him and the paper)
+  if (tw > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(throwCam.at, .5), .2 * tw);
+  if (ch > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(aim.at, .5), .35 * ch);   // (holding a throw: wider, higher, turned a little to where it will come down)   // (between him and the paper)
   if (!C.init) { C.gy = B.y; C.pos.copy(camI === 0 ? want : camera.position.lengthSq() ? camera.position : want); C.look.copy(look); C.init = true; }
   C.pos.lerp(want, 1 - Math.exp(-dt * 6)); C.look.lerp(look, 1 - Math.exp(-dt * 8));
   const q = track.probe(C.pos.x, C.pos.z, B.hint); C.pos.y = Math.max(C.pos.y, q.y + .6);
@@ -572,7 +603,7 @@ function step(dt, inp) {
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
   if (foot.active) return stepFoot(dt, inp);
   stamina(dt, inp);
-  throwing(dt, inp); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v });
+  throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v });
   { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
   { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16, road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
@@ -634,8 +665,9 @@ function stepBundles(dt, px_, pz_) { const t = performance.now() / 1000;
   for (const m of bundleMarks) { const on = !m.C.used && Math.hypot(m.g.position.x - px_, m.g.position.z - pz_) < 90; m.g.visible = on; if (!on) continue;
     const k = .5 + .5 * Math.sin(t * 4 + m.ph); m.ring.scale.setScalar(.85 + k * .35); m.ring.material.opacity = .35 + k * .45;
     m.arrow.position.y = 1.15 + Math.sin(t * 3 + m.ph) * .12; m.arrow.rotation.y = t * 2 + m.ph; m.C.o.rotation.y += dt * .8; } }
+function pickBundle(C) { C.used = true; C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); }
 function stepFoot(dt, inp) {                                           // (on foot: him walking or fighting; the world goes on round him)
-  foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked }, world);
+  foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
   if (!foot.active) return;
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true });
@@ -643,6 +675,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   traffic.update(dt, { s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
+  for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
   if (!foot.fighting && foot.nearBike(B) && !B.hintShown) { B.hintShown = true; flash('F: wsiądź na rower'); } if (!foot.nearBike(B)) B.hintShown = false;
   foot.follow(dt); sun.position.set(me.x, me.y, me.z).addScaledVector(SUN, 60); sun.target.position.set(me.x, me.y, me.z); sun.target.updateMatrixWorld();
 }
@@ -672,7 +705,8 @@ const keysEl = document.getElementById('keys');
 function toggleKeys(v) { const on = v ?? keysEl.classList.contains('shut'); keysEl.classList.toggle('shut', !on); try { localStorage.setItem('pt.keys', on ? '1' : '0'); } catch { } }
 try { if (localStorage.getItem('pt.keys') === '1') toggleKeys(true); } catch { }
 function toggleFull() { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.().catch(() => flash('Pełny ekran niedostępny w tym oknie')); } catch { flash('Pełny ekran niedostępny w tym oknie'); } }
-document.addEventListener('fullscreenchange', () => { mouse.failed = false; });   // (full screen: the mouse may now be taken)
+document.addEventListener('fullscreenchange', () => { mouse.failed = false; if (document.fullscreenElement) lockPointer(); });   // (full screen: the mouse kept in it)
+document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && mouse.hadLock && !menu.open && !asking) menu.show('pause'); mouse.hadLock = !!document.pointerLockElement; });   // (Esc let the pointer go: the game pauses, as games do)
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
 const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
@@ -717,14 +751,14 @@ function attract(dt) {                                                  // (the 
   sun.position.copy(fly.pos).addScaledVector(SUN, 60); sun.target.position.copy(fly.pos); sun.target.updateMatrixWorld(); }
 function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
-  if ((menu.open || asking) && document.pointerLockElement) document.exitPointerLock();   // (the menu wants the pointer)
+  if ((menu.open || asking) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking);                          // (in the game: no cursor; the menu and the question have one)
   if (!asking && !menu.open && !window.PT?.hold) step(dt, input()); else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
-  drift(dt); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
+  drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.render(scene, camera); drawHud(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, breakWindow, setCam, crash, setInk,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, scene, camera, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };
