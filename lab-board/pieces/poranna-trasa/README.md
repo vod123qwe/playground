@@ -246,6 +246,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - po wewnętrznej stronie pętli, 32 do 52 m od drogi, rosną gęste laski: drzewa liściaste i świerki, pod nimi krzaki; między nimi dalej widać jezioro
 - po zewnętrznej stronie, między świerkami a polami, biegną tory: nasyp z tłucznia, podkłady, szyny (pętla około 1160 m); jeździ po nich pociąg, lokomotywa i pięć wagonów, osobowych albo towarowych (węglarki, kryte), około 15 m/s
 
+## Wersja 24: torba w rogu
+
+- w prawym dolnym rogu wystaje od dołu ta sama torba, którą gazeciarz ma na plecach (model 3D, rysowany tym samym pikselowym przejściem, z tą samą paletą i obrysem); gazety sterczą spod klapy i ubywa ich, gdy rzucasz
+- każdy rzut wyrzuca z torby w górę rolkę gazety i torbą lekko szarpie; paczka gazet sprawia, że podskakuje
+- obok torby liczba gazet (na czerwono, gdy pusto); ikona gazety z prawego górnego rogu zniknęła, zostaje sama portmonetka
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem

@@ -158,6 +158,7 @@ export function createHud() {
       heart(Math.round(q.x + Math.sin(q.t * 6 + q.ph) * 2.5), Math.round(q.y - q.t * q.v), q.t < .5 ? '#e08556' : '#cf5a3e', '#5e1c17'); }
     // top right: the papers left, and the money in a purse (see purse())
     { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); }
+    if (st.bagX != null) { const s = String(st.papers); outlined(s, Math.round(st.bagX * cv.width) - width(s) - 4, cv.height - 11, st.papers ? '#f6f3ea' : '#cf5a3e'); }   // (how many papers, by the bag)
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
     if (st.bike) bikeArrow(st.bike, project, dt);
@@ -180,8 +181,7 @@ export function createHud() {
     const open = coins.length > 0 || openT > 0; openT = Math.max(0, openT - dt); openK += ((open ? 1 : 0) - openK) * Math.min(1, dt * (open ? 14 : 20));
     bump = Math.max(0, bump - dt * 6); glow = Math.max(0, glow - dt * 2);
     const o = Math.round(openK * 3), sq = bump > .5 ? 1 : 0;
-    // no panel behind: each thing with a dark rim of its own
-    paper(X, Y + 6); outlined(pn, X + 14, Y + 8, '#f6f3ea');
+    // no panel behind: each thing with a dark rim of its own (the papers: the bag in the bottom right corner, hudbag.js)
     // the back jaw, when open: it rises, the inside dark between it and the front
     const by = fy + 2 + sq;
     for (let r = -1; r <= BODY.length; r++) { const hw = BODY[Math.max(0, Math.min(BODY.length - 1, r))] + 1, y = by + 2 + r; g.fillStyle = '#17181b'; g.fillRect(Math.round(cx - hw), y, Math.round(cx + hw) - Math.round(cx - hw), 1); }   // (the dark rim round the body)

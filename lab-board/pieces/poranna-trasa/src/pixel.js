@@ -91,9 +91,11 @@ export function createPixel({ THREE, renderer, height = 240 }) {
     rt.setSize(W * ss, H * ss); rt.depthTexture.image.width = W * ss; rt.depthTexture.image.height = H * ss; mat.uniforms.res.value.set(W, H);
     return { W, H, k };
   }
-  function render(scene, camera) {
+  function render(scene, camera, over) {                              // (over: { scene, camera } drawn on top of the world, its depth cleared first: the bag in the corner)
     mat.uniforms.near.value = camera.near; mat.uniforms.far.value = camera.far;
-    renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(qs, qc);
+    renderer.setRenderTarget(rt); renderer.render(scene, camera);
+    if (over) { const ac = renderer.autoClear; renderer.autoClear = false; renderer.clearDepth(); over.camera.near = camera.near; over.camera.far = camera.far; renderer.render(over.scene, over.camera); renderer.autoClear = ac; }
+    renderer.setRenderTarget(null); renderer.render(qs, qc);
   }
   let want = 1;
   function setSmooth(n) { want = Math.max(1, Math.min(10, n | 0)); resize(...lastArgs); }

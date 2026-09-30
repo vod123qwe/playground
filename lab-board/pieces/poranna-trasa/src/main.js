@@ -30,6 +30,8 @@ import { installCursors } from './cursor.js';
 import { createOnFoot } from './onfoot.js';
 import { createLife } from './life.js';
 import { createCyclo } from './cyclo.js';
+import { createHudBag } from './hudbag.js';
+import { makeBag } from './bag.js';
 installCursors();
 
 const canvas = document.getElementById('gl');
@@ -576,6 +578,8 @@ function follow(dt) {
 const hudEl = document.getElementById('hud'), note = document.getElementById('note');
 let noteT = 0; function flash(s) { note.textContent = s; note.classList.add('on'); noteT = 1.6; }
 // the bike computer: the speed, and the trip, the top speed and the time ridden (counted only while he rides)
+// the bag in the corner (hudbag.js): plain toon, none of the world's rim or fading
+const hudBag = createHudBag({ THREE, toon: (c, o = {}) => new THREE.MeshToonMaterial({ color: c, gradientMap: ramp, ...o }), makeBag });
 const cyclo = createCyclo(hudEl), trip = { dist: 0, max: 0, time: 0 };
 function paintHud() { cyclo.update({ v: B.v, ...trip, on: !foot.active }); }
 const _v = new THREE.Vector3();
@@ -711,7 +715,7 @@ function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : n
 function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
-  hud.draw(dt, project, { power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -793,7 +797,7 @@ function frame(now) {
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.5; }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
   drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
-  px.render(scene, camera); drawHud(dt);
+  hudBag.update(dt, B.papers, 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title'); px.render(scene, camera, hudBag); drawHud(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
