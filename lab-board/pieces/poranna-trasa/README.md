@@ -303,6 +303,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - w środku widać wnętrze: deskę rozdzielczą, dwa fotele z zagłówkami i tylną kanapę (w pikapie i dostawczaku bez kanapy), wszystko poniżej dachu
 - nadwozie i szkło to teraz dwie osobne siatki (jedna z dwoma materiałami, z których jeden przezroczysty, sprawiała kłopoty)
 
+## Wersja 30: tekstury w skali piksela
+
+- asfalt: ziarno w dwóch tonach, kamyczki (jasny piksel z cieniem), łaty z ciemniejszym brzegiem, szew smoły w poprzek, plama oleju, pęknięcia z odnogami
+- płyty chodnika: każda w swoim odcieniu, z jasnym brzegiem u góry i z lewej i cieniem po przeciwnej stronie, mech w szczelinach, odprysk w rogu, pęknięcie
+- trawa: źdźbła w kępkach (ciemny korzeń, środek, jasny czubek), w trawnikach więcej kwiatków w teksturze
+- prawdziwych, ostrych kwiatków (osobnych, nie w teksturze) jest więcej i rosną też w głąb trawników
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
