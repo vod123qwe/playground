@@ -205,6 +205,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - Warsztat otwierasz z ekranu startowego albo z pauzy (Esc → WARSZTAT); z areny wracasz Esc → ← WRÓĆ DO WARSZTATU
 - adres areny: `index.html?arena=kozak&god&train&debug` (każdy dodatek opcjonalny); podgląd faz na górze: co robi przeciwnik (zamach z czasem i zwodem, cios i czas do trafienia, odsłonięcie, zatoczenie), jego i Twoje HP, oddech
 
+## Wersja 19: płoty z furtkami
+
+- płot od ulicy (45% domów) albo żywopłot (25%) ma zawsze przerwę tam, gdzie podjazd albo ścieżka dochodzą do chodnika: auto z podjazdu wyjedzie, do drzwi się dojdzie (rowerem też, kolizje są liczone odcinkami)
+- na ścieżce furtka (czasem uchylona), przy podjeździe słupki, czasem dwuskrzydłowa brama otwarta na oścież
+- co trzeci ogrodzony dom ma płot dookoła: boczne odcinki od ulicy do frontu domu
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
