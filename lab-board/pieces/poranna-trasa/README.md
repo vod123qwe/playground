@@ -382,6 +382,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - nowe suwaki: siła rozmycia przy sprincie (Ruch), mgiełka w oddali (Powietrze)
 - poprawka: wygląd „gładki” (bez pikseli) wyłączał też kontur, linie, nasycenie, kontrast i winietę; teraz wyłącza tylko paletę, dithering i posteryzację
 
+## Wersja 40: torba na piechurze
+
+- torba bliżej pleców i odrobinę bardziej z prawej (przy kręgosłupie), zawieszona u góry: przy chodzie delikatnie się kołysze w rytm kroków (na boki, a przy szybszym chodzie lekko do tyłu), na stojąco nieruchoma
+- pasek leży na ciele, a nie przechodzi przez nie: jego droga jest liczona z kształtu ciała (z wierzchołków modelu, w kilkunastu punktach): od torby na skos przez plecy do prawego ramienia, przez ramię, na skos przez klatkę do lewego biodra i bokiem z powrotem do torby
+
 ## Na później
 
 - dodatkowe uliczki między ulicami, zabudowa między domami a dalekim tłem
