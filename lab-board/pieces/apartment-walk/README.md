@@ -61,6 +61,16 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Lampy klikalne:** kliknij lampę (kursor-dłoń jak przy drzwiach), żeby ją zapalić albo zgasić: trzy kule nad wyspą mają jeden włącznik, lampa nad stołem swój. **Lamps on** (panel, Light) zapala wszystkie; domyślnie wyłączone (dzień).
 - Meble blokują chodzenie (obrysy w cm, jak kuchnia). Kto utknie (róg, mebel, który pojawił się pod nogami), może zawsze wyjść: w zaklinowaniu dozwolony jest każdy krok, który nie wchodzi głębiej; kliknięcie w minimapę albo wejście do pokoju stawia w najbliższym wolnym miejscu.
 
+## Szachy (chess.js, chessset.js, chessplay.js)
+
+- Kaseta leży na dolnej półce nad biurkiem w gabinecie. Pola szachownicy są na zewnątrz, w środku zielona wyściółka i figury. Klik bierze ją do ręki.
+- Położona na stole w jadalni ląduje na środku, białymi do krzesła najbliżej ciebie. Na wyspie ląduje na środku, w poprzek, białymi do strony, po której stoisz (jedna osoba na hokerze, druga stoi w kuchni); miska z limonkami odsuwa się wtedy na koniec wyspy. Na innym blacie staje przodem do najbliższego krzesła.
+- Otwiera się jak prawdziwa: wieko w górę, figury wychodzą i stają obok, kaseta obraca się polami do góry. Składanie idzie w odwrotnej kolejności.
+- Figury ustawiasz ręcznie (klik w figurę, potem w pole; klik obok planszy odsyła ją na bok) albo przyciskiem „Ułóż figury”. „Graj sam” to obie strony na zmianę, z cofaniem ruchu. Da się też zacząć z własnego ustawienia, jeśli jest poprawne.
+- Zasady w `chess.js`: legalne ruchy, szach, mat, pat, roszady, bicie w przelocie, promocja (wybór figury), remis po 50 ruchach, przy trzykrotnym powtórzeniu i przy zbyt małym materiale. Zapis ruchów po polsku (K, H, W, G, S). Sprawdzone testem perft na 5 standardowych pozycjach.
+- Przy szachach pojawia się jedna akcja „Szachy” (gdy podejdziesz na 1,6 m albo najedziesz kursorem na zestaw); znika, gdy odejdziesz. Klik rozwija panel z opcjami.
+- „Zagraj z kimś” udostępnia planszę innym odwiedzającym przez połączenie duchów (kanał `chess`): widzą ją na tym samym stole i jedna osoba może dołączyć jako czarne. Właściciel planszy prowadzi partię i sprawdza każdy ruch czarnych.
+
 ## Przekąski (snacks.js)
 
 - W górnej szafce nad zlewem leżą dwie paczki chipsów. Klik w paczkę bierze ją do ręki. `F` albo klik w nią to jeden chips.
@@ -175,6 +185,7 @@ Punkty zdjęciowe to rendery z Blendera Cycles w **kafelkach 16K**: sześcian 6 
 - `living.js` · salon (w cm planu)
 - `tvgame.js` · gra na telewizorze (canvas jako tekstura ekranu)
 - `snacks.js` · paczka chipsów, miska, chips
+- `chess.js` · zasady szachów; `chessset.js` · model kasety i figur; `chessplay.js` · gra przy stole, panel, gra z kimś
 - `hall.js` · szafa PAX w przedpokoju (w cm planu)
 - `assets/oak_*.jpg` · Oak Veneer 01, Poly Haven (CC0)
 - `assets/tex/teddy_*.jpg` · Curly Teddy Natural, Poly Haven (CC0)

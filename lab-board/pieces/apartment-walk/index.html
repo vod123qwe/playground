@@ -44,7 +44,7 @@
   @media (min-width:761px){ body.tuning .hint{left:calc(50% - 192px); max-width:calc(100vw - 416px)} }
   /* the light while you walk: preview, or traced at low or high resolution when you stop (under the minimap) */
   .qbox{position:fixed; top:264px; left:16px; z-index:4; display:none; flex-direction:column; align-items:flex-start; gap:8px}
-  body.walk .qbox{display:flex}
+  body.walk .qbox{display:flex} .qbox .qseg{display:none}                       /* (the light-quality choice: hidden; the walk stays on the preview) */
   @media (pointer:coarse){ body.walk .qbox{display:none} }
   .qseg{display:flex; padding:4px; border-radius:999px; background:#fff}
   .qseg button{height:30px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:rgba(20,20,20,.62); font-size:12.5px; font-weight:600; cursor:pointer;
@@ -60,18 +60,21 @@
      blurred, so it does not get in the way of walking round (the hit area stays the same size, so it does not jitter) */
   .spot{position:absolute; left:0; top:0; width:36px; height:36px; padding:0; border:0; background:transparent; display:grid; place-items:center; cursor:pointer; pointer-events:auto;
         transition:opacity .45s ease, filter .45s ease}
-  .spot::before{content:''; position:absolute; width:24px; height:24px; border-radius:50%; box-shadow:0 0 0 1px rgba(255,255,255,.5); transition:opacity .2s, transform .25s cubic-bezier(.2,.8,.2,1)}
-  .spot .dot{position:relative; width:17px; height:17px; border-radius:50%; background:#fff; color:var(--ink); display:grid; place-items:center;
-        box-shadow:0 0 0 1px rgba(20,20,20,.14), 0 1px 6px rgba(0,0,0,.28); transition:transform .25s cubic-bezier(.2,.8,.2,1)}
-  .spot svg{width:11px; height:11px; opacity:0; transition:opacity .18s}
-  .spot .nm{position:absolute; top:calc(100% + 2px); left:50%; transform:translate(-50%, -3px); padding:4px 9px; border-radius:999px; background:rgba(255,255,255,.94); color:var(--ink);
-        font:600 11.5px/1 Inter, sans-serif; white-space:nowrap; box-shadow:0 0 0 1px var(--line); opacity:0; pointer-events:none; transition:opacity .18s, transform .25s cubic-bezier(.2,.8,.2,1)}
+  .spot::before, .spot::after{content:''; position:absolute; left:50%; top:50%; width:24px; height:24px; margin:-12px 0 0 -12px; border-radius:50%; pointer-events:none}
+  .spot::before{box-shadow:0 0 0 1px rgba(255,255,255,.55); transition:opacity .2s, transform .3s cubic-bezier(.2,.8,.2,1)}
+  .spot::after{border:1.5px solid rgba(255,255,255,.9); opacity:0}
+  .spot .dot{position:relative; width:18px; height:18px; border-radius:50%; background:#fff; color:var(--ink); display:grid; place-items:center; transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+  .spot svg{display:block; width:10px; height:10px; opacity:0; transform:scale(.6); transition:opacity .18s, transform .3s cubic-bezier(.34,1.56,.64,1)}
+  .spot .nm{position:absolute; top:calc(100% + 3px); left:50%; transform:translate(-50%, -3px); padding:4px 9px; border-radius:999px; background:rgba(255,255,255,.94); color:var(--ink);
+        font:600 11.5px/1 Inter, sans-serif; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .18s, transform .25s cubic-bezier(.2,.8,.2,1)}
   .spot:hover .dot, .spot:focus-visible .dot{transform:scale(1.3)} .spot:hover::before, .spot:focus-visible::before{opacity:0; transform:scale(1.3)}
-  .spot:hover svg, .spot:focus-visible svg{opacity:1} .spot:hover .nm, .spot:focus-visible .nm{opacity:1; transform:translate(-50%, 0)}
-  .spot:focus-visible{outline:none} .spot:focus-visible .dot{box-shadow:0 0 0 2px rgba(20,20,20,.45)}
+  .spot:hover::after, .spot:focus-visible::after{animation:spotping .7s cubic-bezier(.2,.8,.2,1) 1}
+  .spot:hover svg, .spot:focus-visible svg{opacity:1; transform:none} .spot:hover .nm, .spot:focus-visible .nm{opacity:1; transform:translate(-50%, 0)}
+  .spot:focus-visible{outline:none} .spot:focus-visible .dot{outline:2px solid rgba(20,20,20,.45); outline-offset:2px}
   .spot.far{opacity:.3; filter:blur(1.6px)} .spot.far .dot{transform:scale(.7)} .spot.far::before{opacity:0}
   .spot.far:hover, .spot.far:focus-visible{opacity:1; filter:none} .spot.far:hover .dot, .spot.far:focus-visible .dot{transform:scale(1.3)}
-  @media (prefers-reduced-motion: reduce){ .spot, .spot *, .spot::before{transition:none} }
+  @keyframes spotping{0%{opacity:.9; transform:scale(.75)} 100%{opacity:0; transform:scale(2.1)}}
+  @media (prefers-reduced-motion: reduce){ .spot, .spot *, .spot::before{transition:none} .spot:hover::after{animation:none} }
   body:not(.walk) .spot, body.in-spot .spot{display:none}
   .spotbar{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); z-index:6; transform:translateX(-50%); display:none; align-items:center; gap:6px; padding:5px; border-radius:999px; background:#fff; box-shadow:0 0 0 1px var(--line)}
   body.in-spot .spotbar{display:flex} body.in-spot .dock, body.in-spot .hint, body.in-spot .qbox, body.in-spot .mini{display:none}
@@ -259,12 +262,13 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { herringbone, stoneTiles } from './floors.js?v=3';
-import { buildKitchen } from './kitchen.js?v=18';
+import { buildKitchen } from './kitchen.js?v=19';
 import { makeBowl, makeCrisp } from './snacks.js?v=1';
-import { buildLiving } from './living.js?v=44';
+import { createChess } from './chessplay.js?v=4';
+import { buildLiving } from './living.js?v=45';
 import { buildHall } from './hall.js?v=4';
-import { buildRooms } from './rooms.js?v=46';
-import { startGhosts } from './ghosts.js?v=4';
+import { buildRooms } from './rooms.js?v=47';
+import { startGhosts } from './ghosts.js?v=5';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { WebGLPathTracer, DenoiseMaterial, EquirectCamera } from 'three-gpu-pathtracer';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -438,7 +442,7 @@ const SPOTS = [
   { id: 'bath-a', name: 'Bathroom', at: [535, -150], eye: 150 },                // where the architect's tour stands: the vanity, the bath, the WC; rendered at dusk, its lamps on                 // by the door: the desk and its screens, the sofa bed, the window
 ];
 const SPOT = { cur: null, tex: {}, els: [] };
-const spotIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>';
+const spotIconSolid = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9 5 7.8 6.5H5a2 2 0 0 0-2 2V17a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a2 2 0 0 0-2-2h-2.8L15 5H9Zm3 4.25a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z"/></svg>';   // (the dot's camera: solid, its middle the lens)
 for (const sp of SPOTS) {                                            // the files there are, the photo before the render
   sp.file = null;
   (async () => {
@@ -449,7 +453,7 @@ for (const sp of SPOTS) {                                            // the file
       if (r && r.ok && r.headers.get('content-type')?.startsWith('image')) { sp.file = f; break; }
     }
     if (!sp.file) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'spot'; b.innerHTML = `<span class="dot">${spotIcon}</span><span class="nm">${sp.name}${sp.file === 'render.jpg' ? ' · render' : ''}</span>`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'spot'; b.innerHTML = `<span class="dot">${spotIconSolid}</span><span class="nm">${sp.name}${sp.file === 'render.jpg' ? ' · render' : ''}</span>`;
     b.setAttribute('aria-label', `${sp.name}: a 360 view from here`);
     b.addEventListener('click', () => enterSpot(sp));                  // (no title: the name shows on hover already)
     document.getElementById('overlay').appendChild(b); SPOT.els.push({ el: b, sp, v: new THREE.Vector3(wx(sp.at[0]), sp.eye * M * .8, wz(sp.at[1])) });
@@ -1326,7 +1330,7 @@ function nearestDoor() {                                           // the closes
 // your hand, to carry). A click on a bin under the sink throws away what you hold. What you hold hangs off the camera ----------
 scene.add(camera);
 const HAND = { can: null, sips: 0, t: 0 }, handPos = new THREE.Vector3(.24, -.31, -.66), mouthPos = new THREE.Vector3(.02, -.075, -.2), CANY = Math.PI - .45;   // (its label towards you)
-const HOLD = { can: { pos: handPos, rot: [0, CANY, .05] }, chips: { pos: new THREE.Vector3(.27, -.3, -.85), rot: [.05, -.4, .1] }, bowl: { pos: new THREE.Vector3(.1, -.25, -.5), rot: [.35, 0, 0] } };
+const HOLD = { can: { pos: handPos, rot: [0, CANY, .05] }, chips: { pos: new THREE.Vector3(.27, -.3, -.85), rot: [.05, -.4, .1] }, bowl: { pos: new THREE.Vector3(.1, -.25, -.5), rot: [.35, 0, 0] }, chess: { pos: new THREE.Vector3(.14, -.44, -.72), rot: [.55, Math.PI, 0] } };
 const kindOf = m => m?.userData.kind || 'can';
 const leftOf = m => kindOf(m) === 'can' ? 5 - (m === HAND.can ? HAND.sips : m.userData.sips || 0) : m.userData.n || 0;
 const snackOf = o => { for (let q = o; q; q = q.parent) { if (q.userData.snack) return q.userData.snack; if (q.userData.can) return q; } return null; };
@@ -1335,9 +1339,25 @@ function takeCan(m) {
   if (HAND.can) return; m.removeFromParent(); camera.add(m); m.scale.setScalar(M); const h = HOLD[kindOf(m)]; m.position.copy(h.pos); m.rotation.set(...h.rot);
   noTrace(m, true); HAND.can = m; HAND.sips = m.userData.sips || 0; HAND.t = 0; paintHint(); moved(); ptScene();
 }
-function putCan(point) {
+// where a chess set goes down: on the dining table, in its middle, white towards the chair nearest you (the other player sits opposite);
+// on the island, in its middle, across it, white towards the side you stand on (one can sit at a stool, the other stand in the
+// kitchen); on any other top where you click, facing the chair nearest to it (at the desk: the desk chair), or you
+function chessPlace(point, obj) {
+  const under = (o, root) => { for (let q = o; q; q = q.parent) if (q === root) return true; return false; }, cam = camera.position, yawTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
+  const seatsAt = () => [...(LIV?.seats || []), ...(KIT?.seats || []), ...(FURN?.seats || [])].flatMap(st => st.anchors.map(a => a.getWorldPosition(new THREE.Vector3())));
+  if (LIV?.dining && under(obj, LIV.dining)) { const c = LIV.dining.getWorldPosition(new THREE.Vector3()); c.y = point.y;
+    const ch = seatsAt().filter(a => Math.hypot(a.x - c.x, a.z - c.z) < 1.1).sort((a, b) => a.distanceTo(cam) - b.distanceTo(cam))[0]; return { pos: c, yaw: yawTo(c, ch || cam) }; }
+  if (KIT?.island && under(obj, KIT.island)) { const I = KIT.island, c = I.getWorldPosition(new THREE.Vector3()); c.y = point.y;
+    const n = new THREE.Vector3(0, 0, 1).transformDirection(I.matrixWorld).setY(0).normalize(), side = Math.sign((cam.x - c.x) * n.x + (cam.z - c.z) * n.z) || 1;
+    for (const o of I.children) if (o.userData.islandBowl && !o.userData.aside) { o.position.x += 52; o.userData.aside = true; }   // the bowl of limes to the island's end, out of the way
+    return { pos: c, yaw: Math.atan2(n.x * side, n.z * side) }; }
+  const ch = seatsAt().filter(a => Math.hypot(a.x - point.x, a.z - point.z) < 1.2).sort((a, b) => Math.hypot(a.x - point.x, a.z - point.z) - Math.hypot(b.x - point.x, b.z - point.z))[0];
+  return { pos: point.clone(), yaw: yawTo(point, ch || cam) };
+}
+function putCan(point, obj) {
   const m = HAND.can; if (!m) return; m.removeFromParent(); HAND.can = null;
-  if (kindOf(m) === 'chips') { const b = makeBowl(THREE, m.userData.n, clip); b.scale.setScalar(M); b.position.copy(point); b.rotation.y = Math.random() * 6.28; scene.add(b); }   // poured into a bowl there; the bag goes
+  if (kindOf(m) === 'chess') { const at = chessPlace(point, obj); scene.add(m); m.scale.setScalar(M); m.position.copy(at.pos); m.rotation.set(0, at.yaw, 0); noTrace(m, false); CHESS?.put(); }   // the set: where it sits best; it opens
+  else if (kindOf(m) === 'chips') { const b = makeBowl(THREE, m.userData.n, clip); b.scale.setScalar(M); b.position.copy(point); b.rotation.y = Math.random() * 6.28; scene.add(b); }   // poured into a bowl there; the bag goes
   else { scene.add(m); m.scale.setScalar(M); m.position.copy(point); m.rotation.set(0, Math.random() * 6.28, 0); noTrace(m, false); if (kindOf(m) === 'can') m.userData.sips = HAND.sips; }
   paintHint(); moved(); ptScene();
 }
@@ -1381,6 +1401,7 @@ const _cn = new THREE.Vector3();
 function beerClick(e) {                                               // (the ray already set); true when the click was for what you hold or can take
   const hits = ray.intersectObjects(scene.children, true).filter(h => h.object.visible && !h.object.userData.noRay && h.object.material && !(h.object.material.transparent && h.object.material.opacity < .6 && !h.object.userData.can));
   const h = hits[0]; if (!h) return false;
+  if (CHESS && CHESS.click(h)) return true;                          // a piece, a square, the board (an open set)
   const sn = snackOf(h.object), held = HAND.can;
   if (held && sn === held) { sip(); return true; }
   if (h.distance > 3.2) return false;
@@ -1391,7 +1412,7 @@ function beerClick(e) {                                               // (the ra
   }
   if (held) {
     if (h.object.userData.bin) { binCan(); return true; }
-    if (h.face) { _cn.copy(h.face.normal).transformDirection(h.object.matrixWorld); if (_cn.y > .85) { putCan(h.point); return true; } }
+    if (h.face) { _cn.copy(h.face.normal).transformDirection(h.object.matrixWorld); if (_cn.y > .85) { putCan(h.point, h.object); return true; } }
     return false;
   }
   if (sn) { takeCan(sn); return true; }
@@ -1578,8 +1599,8 @@ mOver.addEventListener('click', () => setMode('over')); mWalk.addEventListener('
 const hint = document.getElementById('hint');
 function paintHint() {
   const hk = kindOf(HAND.can), left = HAND.can ? leftOf(HAND.can) : 0, what = { can: 'the can', chips: 'the bag', bowl: 'the bowl' }[hk];
-  const beer = HAND.can ? (left > 0 ? ` · <kbd>F</kbd> or tap ${what}: ${hk === 'can' ? 'a sip' : 'a crisp'} (${left} left)` : ` · ${what} is empty`)
-    + (hk === 'chips' ? ' · tap a top: into a bowl there' : ' · tap a top to put it down') + ', the bin under the sink to throw it away' : '';
+  const beer = HAND.can ? hk === 'chess' ? ' · tap a table or a desk to put the chess set down: it opens there, white towards you' : ((left > 0 ? ` · <kbd>F</kbd> or tap ${what}: ${hk === 'can' ? 'a sip' : 'a crisp'} (${left} left)` : ` · ${what} is empty`)
+    + (hk === 'chips' ? ' · tap a top: into a bowl there' : ' · tap a top to put it down') + ', the bin under the sink to throw it away') : '';
   const seated = LIE && LIE.seat ? ' · <kbd>Esc</kbd> or a step key: stand up' + (LIE.seat.name === 'sofa' && LIV?.tv ? ' · <kbd>T</kbd>, a pad or a click on the TV: play' : '') : '';
   if (mode === 'walk' && TVF.on) { hint.innerHTML = '<span class="keys">Playing (the controls are on the screen) · <kbd>Esc</kbd> or B on the pad: leave the TV</span><span class="touch">Playing · a pad plays</span>'; return; }   // (the game shows the keys or the pad's buttons, whichever you use)
   hint.innerHTML = mode === 'walk'
@@ -1974,7 +1995,10 @@ function resize() {
 }
 addEventListener('resize', resize);
 const v = new THREE.Vector3();
-let last = performance.now();
+let last = performance.now(), chessMoving = false;
+const PTR = { on: false, ndc: new THREE.Vector2(), ray: new THREE.Raycaster() };      // where the pointer is over the view (the chess set shows its action under it)
+canvas.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; const r = canvas.getBoundingClientRect(); PTR.ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); PTR.on = true; });
+canvas.addEventListener('pointerleave', () => { PTR.on = false; });
 function frame(now) {
   if (photoing) { requestAnimationFrame(frame); last = now; return; }
   const dt = Math.min(.05, (now - last) / 1000); last = now;
@@ -1991,6 +2015,12 @@ function frame(now) {
     const up = OV_Y - controls.target.y, dist = camera.position.distanceTo(controls.target);
     controls.minDistance = up; controls.maxPolarAngle = Math.min(1.35, Math.acos(Math.min(1, up / Math.max(dist, up))));
     controls.update();
+  }
+  if (CHESS) {                                                       // the chess set: its pieces in motion, its panel; the shared board's line
+    if (GH?.chess && !GH.chess.onMessage) { GH.chess.onMessage = (d, id) => CHESS.receive(d, id); GH.chess.onJoin = id => CHESS.joined(id); GH.chess.onLeave = id => CHESS.left(id); }
+    CHESS.setNet(GH?.chess ? { send: GH.chess.send, id: GH.selfId } : null);
+    if (PTR.on) PTR.ray.setFromCamera(PTR.ndc, camera);
+    const cm = CHESS.step(dt, mode === 'walk' && !SPOT.cur && !tween, PTR.on ? PTR.ray : null); if (cm) moved(); else if (chessMoving) ptScene(); chessMoving = cm;
   }
   if (archDirty) archCut();
   { // the cutaway comes in between 13 m and 7 m up (the whole flat at a glance keeps its walls); in the walk the walls stand whole
@@ -2104,9 +2134,11 @@ function applySofa() {                                              // the sofa 
   if (!LIV) return; LIV.setSofa(S.sofa); livingFoot = [...HALL.foot, ...LIV.foot, ...(FURN ? FURN.foot : [])]; lensList = null; ptScene(); if (mode === 'walk') unstick();
 }
 let FURN = null;                                                    // the bedroom, the study, the child's room (rooms.js)
+let CHESS = null;                                                   // the chess set (chessplay.js)
 const livingReady = kitchenReady.then(async () => {
   loadStep(3, 'Furnishing the rooms…');
-  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats, openings: A.openings, balconies: A.balconies }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); OPEN.push(...(FURN.openers || [])); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r); }
+  try { FURN = await buildRooms({ THREE, H, clip, renderer, hallMats: HALL.mats, openings: A.openings, balconies: A.balconies }); FURN.update(doors); FURN.setLamps(S.lamps); paxOpeners(FURN.paxDoors); OPEN.push(...(FURN.openers || [])); const r = FURN.root; r.scale.setScalar(M); r.position.set(wx(0), 0, wz(0)); world.add(r);
+    CHESS = createChess({ THREE, scene, camera, M, clip, onChange: moved }); if (FURN.chessSpot) FURN.chessSpot.add(CHESS.group); }
   catch (err) { console.warn('rooms', err); }
   LIV = await buildLiving({ THREE, H, clip, renderer });
   const g = LIV.root; g.scale.setScalar(M); g.position.set(wx(0), 0, wz(0)); world.add(g);
@@ -2124,7 +2156,7 @@ function setAisle(v) {                                              // move the 
   S.aisle = v; if (!KIT) return;
   const off = 62 + v + A.kitchen.island.d / 2; KIT.island.position.z = off; kitchenFoot = [KIT.foot[0], KIT.islandFoot(off)]; lensList = null; if (mode === 'walk') unstick();
 }
-window.AW = { PANO, get FURN() { return FURN; }, lieDown, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; }, HAND, takeCan, putCan, sip, binCan, eatFrom, pour, sitDown, getUp, get LIE() { return LIE; }, TVF, tvFocus, tvSwitch };
+window.AW = { PANO, get FURN() { return FURN; }, lieDown, exportScene, traceSpot, traceStop: () => { traceStop = true; }, SPOTS, captureSpot, enterSpot, leaveSpot, CUT, archCut, stuck, unstick, nearestClear, setQ, saveLiveTrace, developTrace, THREE, tracerScene, loadSky, DenoiseMaterial, OutputPass, takeTracedPhoto, takePhoto, pt, buildPT, get KIT() { return KIT; }, get LIV() { return LIV; }, livingReady, kitchenReady, setAisle, Z, stepLens, composer, floorsReady, A, P, S, wx, wz, step: stepWalk, keys, free, pickLeaf, camera, controls, renderer, scene, doors, nearestDoor, toggleDoor, setMode, clear, roomAt, get mode() { return mode; }, get GH() { return GH; }, HAND, takeCan, putCan, sip, binCan, eatFrom, pour, sitDown, getUp, get LIE() { return LIE; }, TVF, tvFocus, tvSwitch, get CHESS() { return CHESS; } };
 </script>
 </body>
 </html>

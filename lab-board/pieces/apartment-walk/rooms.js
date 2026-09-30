@@ -351,6 +351,7 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   // 6 cm off it (172 x 60: A.04 draws it 120, but it runs on to the window wall), the chair pulled out before it; a sofa bed on the wall to the bedroom, to the corner by the radiator, that pulls
   // out 80 cm into a bed; a PAX (100 + 50) right of the door; a Beni Ourain style rug before the sofa ----------
   const movers = [];                                                  // things in motion (the sofa bed): run by step()
+  let chessSpot = null;                                              // where the chess box lies (on a study shelf; chessplay.js puts it there)
   const seats = [];                                                   // places to sit: anchors (+z the way the sitter faces) and the meshes that take the click
   const cover = ['#8a6f5a', '#c9b79c', '#5f6b62', '#e2d7c5', '#9a8c7a', '#3f4a52', '#b8a48a', '#d9cdb8', '#7a4e3c'].map(color => std({ name: 'book', color, roughness: .8 }));
   // a photo in a frame, standing on a shelf and leaning back a little, or hung on the wall: an oak or black frame, a white mat, the picture (drawn)
@@ -517,9 +518,8 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
     const Y1 = 146, Y2 = 184, sh1 = [96, 176], sh2 = [48, 136], q = rng(55);
     b(sh1[0], sh1[1], Y1, Y1 + 2.4, -22, 0, oak, { r: .3 });
     b(sh2[0], sh2[1], Y2, Y2 + 2.4, -22, 0, oak, { r: .3 });
-    bookRow(S, q, sh1[1] - 3, Y1 + 2.4, 0, 9, -1);
-    { const vase = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [4.4, 0], [5.2, 4], [5, 10], [3, 15], [2.2, 17.5], [2.6, 19], [0, 18.6]].map(([a, c]) => new THREE.Vector2(a, c)), 40), ceramic);
-      vase.position.set(sh1[0] + 30, Y1 + 2.4, -11); vase.castShadow = vase.receiveShadow = true; S.add(vase); }
+    bookRow(S, q, sh1[1] - 3, Y1 + 2.4, 0, 4, -1);
+    { chessSpot = new THREE.Object3D(); chessSpot.position.set(sh1[0] + 43, Y1 + 2.4, -1); chessSpot.rotation.y = Math.PI; S.add(chessSpot); }   // the chess box, lying flat, its hinge to the wall
     photo(S, sh1[0] + 13, Y1 + 2.4, 0, 18, 24, PICS.forest);
     bookPile(S, q, sh2[1] - 48, Y2 + 2.4, 0, 3);
     bookRow(S, q, sh2[1] - 4, Y2 + 2.4, 0, 5, -1);
@@ -603,5 +603,5 @@ export async function buildRooms({ THREE, H, clip, renderer, base = 'assets/', h
   const setLamps = on => lamps.forEach(l => l.set(on));
   // lying on it: the head on the pillows, the eyes 80 cm up, looking down the bed at the TV; where you stand up beside it
   const bed = { x0: BX0, x1: BX1, headZ: WZ - 50, standZ: WZ - 125, eye: 80, yaw: -Math.PI / 2, pitch: .19, meshes: bedParts };
-  return { root, foot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: [...run.doors, ...paxE.doors, ...kid.paxDoors], seats, openers: bath.openers, bed, setClosed, closure, trackOf, inside };
+  return { root, foot, chessSpot, lamps: [...lamps, ...switches], setLamps, update, step, paxDoors: [...run.doors, ...paxE.doors, ...kid.paxDoors], seats, openers: bath.openers, bed, setClosed, closure, trackOf, inside };
 }
