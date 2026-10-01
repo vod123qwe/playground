@@ -23,6 +23,13 @@ export const PERSONAS = {
 
 // Janusz on the earpiece, while you ride: the turbo when you sprint (his pep gives you speed), a car behind, a fall, a checkpoint, the
 // finish near, and his talk now and then (the woman from his past, never named)
+// Janusz calls you and thinks you called him: little scenes, his line, yours, his (then the click)
+export const MIXUP = [
+  ['Halo? No słucham, młody, po co dzwonisz?', 'Ale to pan dzwoni, panie Januszu.', 'Co ty gadasz? Ale ty głupi, młody. Nie zajmuj linii. *klik*'],
+  ['Tak? Kto mówi? Czego chcesz o tej porze?', 'To pan do mnie zadzwonił...', 'Ja? Ja nie dzwonię do ludzi, ludzie dzwonią do mnie. Głupi jesteś, młody. *klik*'],
+  ['No co tam, młody? Coś się stało, że dzwonisz?', 'Nic, to pan zadzwonił.', 'Aha. No to dobrze, że nic. Ale nie dzwoń bez powodu, bo mi klej zasycha. *klik*'],
+  ['Halo, warsztat! Mów szybko, bo mam klienta.', 'Panie Januszu, to ja, jadę. Pan dzwonił.', 'Młody, ja nie mam czasu na twoje telefony! Mietek, kto mu dał mój numer? *klik*'],
+  ['Halo? Halo! Słyszysz mnie? Bo ja ciebie nie.', 'Słyszę. Pan dzwoni?', 'Nie słyszę, młody, nie słyszę! Zadzwoń później! *klik*'] ];
 export const RADIO = {
   turbo: ['Dawaj, młody! Teraz albo nigdy! Pedał w podłogę!', 'Jak ja w osiemdziesiątym trzecim na wyścigu dookoła Polski pod Maciejowicami! Kręć!', 'Ty to młody głupi jednak. Ale szybki głupi! Jedź!', 'Wyobraź sobie, że goni cię Mietek z rachunkiem! Szybciej!', 'Turbo, młody, turbo! Jak w kolarzówce z dopalaczem!', 'Nie myśl, kręć! Myślenie spowalnia, mówię z doświadczenia!'],
   behind: ['Uważaj, młody, za tobą!', 'Auto na ogonie! Nie oglądaj się, tylko zjedź!', 'Coś ci siedzi na plecach, młody. I to nie ja.'],

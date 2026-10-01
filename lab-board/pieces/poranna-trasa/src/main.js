@@ -1267,7 +1267,7 @@ function liveTake() { const o = LV2.offer; if (!o) return false; LV2.offer = nul
 function liveEnd(ok) { const J = LV2.cur; if (!J) return; LV2.cur = null; if (J.box) scene.remove(J.box); logEv('live', B.x, B.z, { who: J.who, ok, what: J.kind, pay: ok ? J.pay : 0 });
   if (ok) { B.points += J.pay; audio.play('coin'); radioSay('', pickOf(JB.LIVE_OK) + ` +${J.pay} zł`, J.who); } else radioSay('', pickOf(JB.LIVE_LATE), J.who); }
 function stepLive(dt) { if (!LV || RUN.done || !LVM.load().owned?.sluchawka) { if (LV2.cur) liveEnd(false); return; } const me = foot.active ? foot.me : B, sp = Math.abs(foot.active ? foot.me.vf || 0 : B.v);
-  if (LV2.offer && (LV2.offer.until -= dt) <= 0) { LV2.offer = null; RAD.el?.classList.remove('on'); }
+  if (LV2.offer) { if ((LV2.offer.until -= dt) <= 0) { LV2.offer = null; RAD.el?.classList.remove('on'); } else { const em = RAD.el?.querySelector('em.take'); if (em) em.textContent = `${keysOf('chat')}: BIORĘ · ${Math.ceil(LV2.offer.until)} S`; } }
   if (!LV2.offer && !LV2.cur && RUN.go && (LV2.next -= dt) <= 0 && RAD.t <= 0) { LV2.next = 45 + Math.random() * 40; liveOffer(); }
   const J = LV2.cur; if (!J) return; if ((J.left -= dt) <= 0) { liveEnd(false); return; } const evs = (RUN.log || []).slice(J.log0);
   if (J.kind === 'door' && Math.hypot(me.x - J.door.p.x, me.z - J.door.p.z) < 5 && sp < 2.2) liveEnd(true);
@@ -1276,11 +1276,13 @@ function stepLive(dt) { if (!LV || RUN.done || !LVM.load().owned?.sluchawka) { i
   if (J.kind === 'trick' && evs.some(e => e.kind === 'trick')) liveEnd(true);
   if (J.kind === 'rush' && RUN.cp > J.cp) liveEnd(true);
   if (J.kind === 'dog' && J.snapped) liveEnd(true); }
+// a scene on the earpiece: Janusz, you, Janusz (each in turn, the box his or yours)
+function radioScene(lines) { let k = 0; const next = () => { if (k >= lines.length) return; const mine = k % 2 === 1; radioSay('', lines[k], mine ? 'ty' : 'janusz'); if (mine) RAD.el.querySelector('b').innerHTML = '<i></i>TY'; k++; setTimeout(next, 900 + lines[k - 1].length * 45); }; next(); }
 function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.classList.remove('on'); RAD.turbo = Math.max(0, RAD.turbo - dt); RAD.cool -= dt; RAD.behind -= dt; RAD.fall -= dt;
   if (!LVM.load().owned?.sluchawka || foot.active || menu.open) { RAD.sprint = !!inp.sprint; return; }
   if (inp.sprint && !RAD.sprint && RAD.cool <= 0 && B.v > 3) { RAD.turbo = 3.5; RAD.cool = 22; radioSay('turbo'); audio.play('trick', { vol: .4 }); } RAD.sprint = !!inp.sprint;
   if (RAD.behind <= 0) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw); for (const t of traffic.list || []) { const p = t.car?.group?.position; if (!p) continue; const dx = p.x - B.x, dz = p.z - B.z, l = Math.hypot(dx, dz); if (l < 9 && (dx * fx + dz * fz) / l < -.6) { RAD.behind = 30; radioSay('behind'); break; } } }
-  if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; radioSay('idle'); } }
+  if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; if (Math.random() < .3) { audio.play('ui'); radioScene(pickOf(JB.MIXUP)); } else radioSay('idle'); } }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
@@ -1338,7 +1340,9 @@ function faceOf(who) { if (who === 'janusz') { if (!JIMG.complete || !JIMG.natur
   const G = SkeletonUtils.clone(R.G); G.position.set(0, 0, 0); G.rotation.set(0, 0, 0); G.visible = true; G.traverse(o => { o.visible = true; o.frustumCulled = false; }); STUDIO.add(G); G.updateMatrixWorld(true);
   const hd = G.getObjectByName(R.head.name) || G, hp = hd.getWorldPosition(new THREE.Vector3()), cam = new THREE.PerspectiveCamera(24, camera.aspect, .1, 30);
   cam.position.set(hp.x + .3, hp.y + .1, hp.z + 1.45); cam.lookAt(hp.x, hp.y - .1, hp.z); const ph = photo(cam, photoStyle, STUDIO); STUDIO.remove(G);
-  const sq = Math.min(ph.width, ph.height), c = document.createElement('canvas'); c.width = c.height = sq; c.getContext('2d').drawImage(ph, (ph.width - sq) / 2, (ph.height - sq) / 2, sq, sq, 0, 0, sq, sq); return c; }
+  const sq = Math.min(ph.width, ph.height), c = document.createElement('canvas'); c.width = c.height = sq; const cg = c.getContext('2d'); cg.drawImage(ph, (ph.width - sq) / 2, (ph.height - sq) / 2, sq, sq, 0, 0, sq, sq);
+  { const d = cg.getImageData(0, 0, sq, sq).data; let m = 0, m2 = 0, n = 0; for (let i = 0; i < d.length; i += 16) { const l = d[i] + d[i + 1] + d[i + 2]; m += l; m2 += l * l; n++; } m /= n; if (m2 / n - m * m < 900) return null; }
+  return c; }
 function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, dir = L.finish.dir, span = Math.round(N * L.finish.to);
   const along = i => ((((i - iJ) * dir) % N) + N) % N, onWay = i => along(i) <= span + 4, S = track.S, st = track.start;
   const route = { loop: [], home: [], way: [], cps: RUN.cps.map(i => [S[i].p.x, S[i].p.z]), doors: [], wins: [], falls: (B.fallsAt || []).slice(), homeAt: [st.x, st.z], len: span * track.ds, subs: 0 };
@@ -1500,5 +1504,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };
