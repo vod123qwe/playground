@@ -243,13 +243,12 @@ function input() {
   let tE = null, tDx = 0, tDy = 0;
   if (touch.on) { const t = touch.state, e = tE = touch.take(); if (t.stick) steer = t.steer; pedal = Math.max(pedal, t.pedal); brake = Math.max(brake, t.brake);
     sprint = sprint || t.sprint; holdL = holdL || t.holdL; holdR = holdR || t.holdR; kickK = kickK || e.kick; kickHold = kickHold || !!t.kickHeld; hop = hop || e.hop;
-    tDx = e.lookDx * .9; tDy = e.lookDy * .6;
-    if (foot.active && !foot.fighting && t.stick) { tDx += t.steer * 9; steer = 0; } }   // (on foot, the stick's side to side turns him; in a fight it steps round)
+    tDx = e.lookDx * .9; tDy = e.lookDy * .9; }   // (on foot: the stick walks him, the right finger turns the camera, see onfoot)
   if (!foot.active) { holdL = holdL || mouse.lh; holdR = holdR || mouse.rh; }   // (on the bike: the left button throws left, the right one right)
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
-    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt') };
+    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
@@ -690,6 +689,9 @@ function pedNear(me, reach) { const fx_ = Math.sin(me.yaw), fz_ = Math.cos(me.ya
 const mouthOf = p => p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0));
 function stepPeople(dt, inp, me) {
   if (foot.fighting || foot.down) return;
+  // a phone: a punch or a word turns him to whoever is nearest (no mouse to face them with)
+  if (inp.touch && (inp.talk || inp.atkL || inp.atkR)) { let t = null, bd = 2.6; for (const p of peds.list) { const d = Math.hypot(p.x - me.x, p.z - me.z); if (d < bd) { bd = d; t = p; } }
+    const b = !inp.talk && bikeNear(me, 2.4), bp = b && b.r.root.position; if (bp && Math.hypot(bp.x - me.x, bp.z - me.z) < bd) t = bp; if (t) me.yaw = Math.atan2(t.x - me.x, t.z - me.z); }
   if (inp.talk) { const p = pedNear(me, 2.4); if (p) { p.talks = (p.talkT > 0 ? (p.talks || 0) : 0) + 1; p.talkT = 20; p.stun = Math.max(p.stun || 0, 2.2); p.faceT = 2.4; hud.rant(me.mouth, pickOf(TALK), true);
       const key = p.P.key; setTimeout(() => { hud.rant(mouthOf(p), p.talks >= 3 ? pickOf(ANNOYED) : pickOf(REPLY[key] || ANNOYED)); if (p.talks >= 3 && !TOUGH.includes(key)) { p.flee = 3; p.fleeNew = true; } }, 800); }
     else hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
@@ -758,7 +760,7 @@ function stepDrops(dt) { const me = foot.active ? foot.me : null, px_ = me ? me.
     if (near || d.t > 60) { scene.remove(d.g); drops.splice(k, 1); } } }
 function pickBundle(C) { C.used = true; C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); }
 function stepFoot(dt, inp) {                                           // (on foot: him walking or fighting; the world goes on round him)
-  foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
+  foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, touch: inp.touch, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
   if (!foot.active) return;
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true });
@@ -767,7 +769,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
-  if (!foot.fighting && foot.nearBike(B) && !B.hintShown) { B.hintShown = true; flash('F: wsiądź na rower'); } if (!foot.nearBike(B)) B.hintShown = false;
+  if (!foot.fighting && foot.nearBike(B) && !B.hintShown) { B.hintShown = true; flash(touch.on ? 'ROWER: wsiądź' : 'F: wsiądź na rower'); } if (!foot.nearBike(B)) B.hintShown = false;
   foot.follow(dt); sun.position.set(me.x, me.y, me.z).addScaledVector(SUN, 60); sun.target.position.set(me.x, me.y, me.z); sun.target.updateMatrixWorld();
 }
 // on foot: where the bike is (an arrow at the top, turned the way it is from where you look; its distance; a mark over it when seen)

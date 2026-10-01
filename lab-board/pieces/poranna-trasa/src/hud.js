@@ -259,7 +259,7 @@ export function createHud() {
   let tipText = null; const tip = s => { tipText = s; };
   function drawTip() { const W = cv.width, H = cv.height, maxW = Math.min(W - 20, 260), words = tipText.split(' '), lines = []; let ln = '';
     for (const w of words) { const t = ln ? ln + ' ' + w : w; if (width(t) > maxW && ln) { lines.push(ln); ln = w; } else ln = t; } if (ln) lines.push(ln);
-    const bw = Math.max(...lines.map(width)) + 12, bh = lines.length * 8 + 8, x = Math.round(W / 2 - bw / 2), y = H - 40 - bh;
+    const bw = Math.max(...lines.map(width)) + 12, bh = lines.length * 8 + 8, x = Math.round(W / 2 - bw / 2), y = document.body.classList.contains('touch') ? Math.round(H * .76) - bh : H - 40 - bh;   // (a phone: above the buttons)
     g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1, bw + 2, bh + 2); g.fillStyle = '#25272b'; g.fillRect(x, y, bw, bh); g.fillStyle = '#efc970'; g.fillRect(x, y, bw, 1);
     lines.forEach((l, i) => text(l, Math.round(W / 2 - width(l) / 2), y + 5 + i * 8, i === 0 && l.startsWith('TRENING') ? '#efc970' : '#f6f3ea')); }
   // the fight's star (as in the knightly games): four arrows round the middle of the picture; the side your mouse picks, lit; his

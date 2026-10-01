@@ -99,20 +99,23 @@ export function createTouch({ onCam, onMenu }) {
   button(IC.hop, 'skok', [52, 118, 108], BIKE, () => { edges.hop = true; });
   button(IC.fast, 'szybciej', [52, 4, 190], BIKE, () => { state.sprint = true; }, () => { state.sprint = false; });
   button(IC.off, 'zsiądź', [44, 76, 190], BIKE, () => { edges.mount = true; });
-  // on foot and fighting: the two fists, guard between them, dodge, hop; the bike and talk above
-  button(IC.punchR, 'cios', [70, 0, 70], FOOT, () => { edges.punchR = true; });
-  button(IC.punchL, 'cios', [70, 136, 14], FOOT, () => { edges.punchL = true; });
-  button(IC.guard, 'blok', [58, 74, 96], FOOT, () => { state.guard = true; }, () => { state.guard = false; });
-  button(IC.dodge, 'unik', [52, 0, 0], FOOT, () => { edges.dodge = true; });
-  button(IC.hop, 'skok', [48, 150, 104], FOOT, () => { edges.hop = true; });
-  button(IC.bike, 'rower', [44, 4, 170], ['foot'], () => { edges.mount = true; });
-  button(IC.talk, 'gadaj', [44, 62, 176], ['foot'], () => { edges.talk = true; });
+  // on foot: one punch (left and right by turns), hop, talk, back on the bike (a run: the stick pushed all the way)
+  let fist = 0;
+  button(IC.punchR, 'cios', [78, 58, 14], ['foot'], () => { edges[(fist ^= 1) ? 'punchL' : 'punchR'] = true; });
+  button(IC.hop, 'skok', [58, 150, 30], ['foot'], () => { edges.hop = true; });
+  button(IC.talk, 'gadaj', [56, 0, 104], ['foot'], () => { edges.talk = true; });
+  button(IC.bike, 'rower', [48, 112, 116], ['foot'], () => { edges.mount = true; });
+  // in a fight: the two fists, guard between them, dodge (the stick: which way)
+  button(IC.punchR, 'prawy', [70, 0, 70], ['fight'], () => { edges.punchR = true; });
+  button(IC.punchL, 'lewy', [70, 136, 14], ['fight'], () => { edges.punchL = true; });
+  button(IC.guard, 'blok', [58, 74, 96], ['fight'], () => { state.guard = true; }, () => { state.guard = false; });
+  button(IC.dodge, 'unik', [52, 0, 0], ['fight'], () => { edges.dodge = true; });
   // at the top, small, in the middle
   const top = el('top');
   for (const [ic, fn, name] of [[IC.cam, onCam, 'kamera'], [IC.menu, onMenu, 'menu'], ...(document.fullscreenEnabled ? [[IC.full, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); }, 'pełny ekran']] : [])])
     button(ic, '', null, ['bike', 'foot', 'fight'], fn, null, top).setAttribute('aria-label', name);
   let mode = null;
-  function setMode(m) { if (m === mode) return; mode = m; for (const o of all) o.b.classList.toggle('off', !o.modes.includes(m)); hint.textContent = m === 'bike' ? 'kciuk tutaj: jazda' : 'kciuk tutaj: chodzenie'; }
+  function setMode(m) { if (m === mode) return; mode = m; for (const o of all) o.b.classList.toggle('off', !o.modes.includes(m)); hint.innerHTML = m === 'bike' ? 'kciuk tutaj: jazda' : m === 'foot' ? 'kciuk tutaj: chodzenie<br>prawa strona: kamera' : 'kciuk tutaj: krok i unik'; }
   function show(v) { root.classList.toggle('hide', !v); if (!v) Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false, kickHeld: false }); }
   setMode('bike');
   addEventListener('blur', () => Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false }));
