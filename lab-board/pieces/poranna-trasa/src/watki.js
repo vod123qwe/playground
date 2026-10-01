@@ -55,7 +55,7 @@ const HEAT = [
 const CALM = T('KRONIKA POLICYJNA', 'Wandal przycichł?', 'Od kilku poranków spokój: żadnej szyby, żadnej skrzynki. Dzielnicowy ostrożnie mówi o sukcesie patroli. Mieszkańcy mówią, że wandal może po prostu dostał szlaban.', {});
 
 // the misdeeds a run counts for (by kind of what was logged)
-export const MISDEED = { window: 1, kick_mailbox: 1, kick_ped: 2, kick_bike: 1, kick_granny: 3, kick_police: 3, kick_car: 1, chase: 2, kick_goose: 1 };
+export const MISDEED = { window: 1, kick_mailbox: 1, kick_ped: 2, kick_bike: 1, kick_granny: 3, kick_police: 3, kick_car: 1, chase: 2, kick_goose: 1, barrier: 1, train: 1 };
 
 export function advance(st0, { region, misdeeds = 0, clean = false, rnd = Math.random }) {
   const st = { active: [], done: [], heat: 0, heatStage: -1, calm: 0, ...(st0 || {}) }, stories = [];

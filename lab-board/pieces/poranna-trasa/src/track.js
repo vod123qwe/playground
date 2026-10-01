@@ -861,6 +861,12 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     for (let i = 20; i < N; i += Math.round((24 + pr() * 30) / ds)) { if (pr() > .5) continue; const sd = pr() < .5 ? -1 : 1, r = .45 + pr() * .5, d = sd * (ROAD - .25 - r - pr() * .6);
       const g = new THREE.CircleGeometry(r, 14); g.scale(1, 1.9, 1); g.rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, waterM); m.userData.noShadow = true; m.renderOrder = 1; put(m, i, d, .014, 0); m.receiveShadow = true;
       puddles.push({ x: m.position.x, z: m.position.z, r: r * 1.5, mud: false }); } }
+  // the village's mud on the road itself (a field's gate, a tractor's tracks): brown patches across a lane or most of the road, a darker
+  // rim; a wheel through one is held back (and splashed), hopped over it is nothing
+  if (RG.farms) { const mudM = toon('#6b4f33'), rimM = toon('#54402a'), mr = mulberry(131);
+    for (let i = 40; i < N - 20; i += Math.round((45 + mr() * 40) / ds)) { if (mr() > .62) continue; const r = 1.1 + mr() * .8, d = (mr() - .5) * (ROAD * 1.2);
+      for (const [rr, m, y] of [[r * 1.12, rimM, .012], [r, mudM, .018]]) { const g = new THREE.CircleGeometry(rr, 16); g.scale(1, 1.5 + mr() * .4, 1); g.rotateX(-Math.PI / 2); const o = new THREE.Mesh(g, m); o.userData.noShadow = true; o.renderOrder = 1; put(o, i, d, y, mr() * .6 - .3); o.receiveShadow = true; }
+      const q = at(i, d, 0); puddles.push({ x: q.x, z: q.z, r: r * 1.15, mud: true, road: true }); } }
   // ---------- on the road and the pavement: things to ride round, over or into ----------
 
   const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)

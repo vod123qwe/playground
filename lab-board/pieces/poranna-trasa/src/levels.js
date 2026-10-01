@@ -28,11 +28,11 @@ export const LEVELS = [
     goal: { time: 125, acc: .7, papers: 15 }, after: ['w1'] },
   { id: 'w1', region: 'wies', name: 'POLNA DROGA', note: 'Pół wsi, od przystanku. Bez chodników, za to z górkami.', finish: { to: .5, dir: 1 }, cars: 1, pace: .9, heat: .75, papers: 18, seed: 501,
     goal: { time: 95, acc: .6, papers: 4 }, after: ['w2', 'w3'], tease: { head: 'Na wsi czekają na gazetę', text: 'Sołtys mówi, że ostatni gazeciarz zgubił się w zbożu. Nowego wypatrują od świtu.', spot: 'działki' } },
-  { id: 'w2', region: 'wies', name: 'PRZEZ SADY', note: 'Cała wieś w drugą stronę, między sadami. Spokojnie, ale psy z łańcuchów.', finish: { to: 1, dir: -1 }, cars: 1, pace: .95, heat: .95, papers: 24, seed: 502,
+  { id: 'w2', region: 'wies', name: 'PRZEZ SADY', note: 'Cała wieś w drugą stronę, między sadami. Spokojnie, ale psy z łańcuchów.', finish: { to: 1, dir: -1 }, cars: 1, pace: .95, heat: .95, papers: 24, seed: 502, cross: [.3],
     goal: { time: 175, acc: .65, papers: 8 }, after: ['w4'], tease: { head: 'W sadach pachnie jabłkami', text: 'Gospodynie zapowiadają szarlotki dla gazeciarza, który dowiezie prasę przed dojeniem.', spot: 'kapliczka' } },
-  { id: 'w3', region: 'wies', name: 'ZA TRAKTOREM', note: 'Cała wieś, gdy rusza robota w polu. Więcej maszyn na drodze.', finish: { to: 1, dir: 1 }, cars: 3, pace: 1, heat: .85, papers: 26, seed: 503,
+  { id: 'w3', region: 'wies', name: 'ZA TRAKTOREM', note: 'Cała wieś, gdy rusza robota w polu. Więcej maszyn na drodze.', finish: { to: 1, dir: 1 }, cars: 3, pace: 1, heat: .85, papers: 26, seed: 503, cross: [.22],
     goal: { time: 165, acc: .65, papers: 9 }, after: ['w4'], tease: { head: 'Żniwa na całego', text: 'Na drogach maszyny, w polu kurz. Kto jedzie rowerem, niech trzyma się pobocza.', spot: 'przystanek' } },
-  { id: 'w4', region: 'wies', name: 'TARGOWY PORANEK', note: 'Dzień targowy: wszyscy jadą do miasteczka. Ruch, psy i pośpiech.', finish: { to: 1, dir: 1 }, cars: 4, pace: 1.15, heat: 1.15, papers: 28, seed: 504,
+  { id: 'w4', region: 'wies', name: 'TARGOWY PORANEK', note: 'Dzień targowy: wszyscy jadą do miasteczka. Ruch, psy i pośpiech.', finish: { to: 1, dir: 1 }, cars: 4, pace: 1.15, heat: 1.15, papers: 28, seed: 504, cross: [.18, .42],
     goal: { time: 155, acc: .7, papers: 10 }, after: ['d1'], tease: { head: 'Targ w miasteczku', text: 'Od rana kolejka furmanek i aut. Gazeciarz musi zdążyć, zanim wszyscy odjadą na targ.', spot: 'przystanek' } },
   { id: 'd1', region: 'peryferia2', name: 'NOWE OSIEDLE', note: 'Wkrótce.', soon: true, after: [] }];
 export const LEVEL = id => LEVELS.find(l => l.id === id);
