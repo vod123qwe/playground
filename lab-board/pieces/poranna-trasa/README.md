@@ -550,3 +550,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - rozmowa z nim: przyjmij mandat, odmów (wtedy bójka „w imieniu prawa”), dogadaj się (łapówka, udaje się częściej, gdy policja cię lubi) albo zapytaj, czemu taki nerwowy (anegdota)
 - anegdoty policjantów (kura, mandat dla samego siebie, babcia na chodziku, kot z własną szafką...) także przy zatrzymaniu przez patrol i na posterunku („co słychać na komisariacie?”)
 - opinia u policji: rośnie za donosy, oddaną torebkę, zadania z tablicy, przyjęty mandat; spada za ucieczkę, kopanie radiowozu, łapówki i bójkę; przy świetnej opinii policja przymyka oko (przy kopaniu i przy zatrzymaniu: „PANIE WŁADZO, TO JA, GAZECIARZ”), ale opinia na tym traci
+
+## Wersja 54: anegdoty
+
+- nowy plik `src/stories.js`: pule anegdot dla każdej grupy (policja 18, brzuchacze, babcie i dziadkowie, ekipa spod beczki, przystanek, lump), losowane bez powtórek, aż pula się wyczerpie
+- zagadany ktoś bez sprawy (i nie obrażony) często opowiada anegdotę: lekkie okienko u góry, jedziesz dalej, znika samo po 10 s; każdy raz na jakiś czas
+- policjanci losują anegdoty z większej puli (przy zatrzymaniu, po kopnięciu radiowozu, na posterunku)
