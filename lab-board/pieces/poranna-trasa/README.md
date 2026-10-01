@@ -908,3 +908,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - cztery scenki, w których Janusz dzwoni niechcący i gada do kogoś innego (Krysia i schab, Paryż „prawie”, zakupy z Mietkiem, doktor i kolano), a na koniec: „O kurwa, do młodego mi się wykręciło” i się rozłącza
 - takie scenki i „to ty dzwonisz?” zastępują część zwykłego gadania Janusza w słuchawce
+
+## Wersja 101: gagi bez przepalania
+
+- kwestie Janusza (słuchawka i telefon) i telefonów na trasie losowane jak z talii: żadna nie wraca, dopóki nie padną wszystkie, i nie dwa razy z rzędu (pamiętane między uruchomieniami)
+- scenki „to ty dzwonisz?” i „wykręciło mi się” najwyżej raz na odcinek i nie w dwóch odcinkach z rzędu
+- dzwonienie przez przypadek kończy się różnie: czasem „do młodego mi się wykręciło”, częściej zwykły klik, bateria w pół słowa, „nie znamy się”, długi sygnał
