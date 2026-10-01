@@ -903,3 +903,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - w trakcie jazdy (ze słuchawką) Janusz czasem sam dzwoni, pyta, po co dzwonisz, Ty mówisz, że to on, a on: „Co ty gadasz? Ale ty głupi, młody” i się rozłącza; pięć wariantów takiej scenki
 - odliczanie przy ofercie telefonu na trasie odlicza sekundy; pusty portret (kamera trafiła w ścianę) nie jest pokazywany
+
+## Wersja 100: Janusz dzwoni przez przypadek
+
+- cztery scenki, w których Janusz dzwoni niechcący i gada do kogoś innego (Krysia i schab, Paryż „prawie”, zakupy z Mietkiem, doktor i kolano), a na koniec: „O kurwa, do młodego mi się wykręciło” i się rozłącza
+- takie scenki i „to ty dzwonisz?” zastępują część zwykłego gadania Janusza w słuchawce

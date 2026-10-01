@@ -30,6 +30,12 @@ export const MIXUP = [
   ['No co tam, młody? Coś się stało, że dzwonisz?', 'Nic, to pan zadzwonił.', 'Aha. No to dobrze, że nic. Ale nie dzwoń bez powodu, bo mi klej zasycha. *klik*'],
   ['Halo, warsztat! Mów szybko, bo mam klienta.', 'Panie Januszu, to ja, jadę. Pan dzwonił.', 'Młody, ja nie mam czasu na twoje telefony! Mietek, kto mu dał mój numer? *klik*'],
   ['Halo? Halo! Słyszysz mnie? Bo ja ciebie nie.', 'Słyszę. Pan dzwoni?', 'Nie słyszę, młody, nie słyszę! Zadzwoń później! *klik*'] ];
+// Janusz rings by mistake: he talks on (to someone else, about nothing), then sees who he got, and is gone
+export const POCKET = [
+  ['Krysiu, słuchaj, ten schab to musi być z kością, bo bez kości to nie schab, tylko kotlet...', '...i powiedz szwagrowi, że pompkę mi odda, bo ja wiem, że to on ją ma...', 'Halo? Krysia? A... o kurwa, do młodego mi się wykręciło. *klik*'],
+  ['No więc mówię mu, panie, ja mam w nogach tyle kilometrów, że do Paryża i z powrotem. Dwa razy. Pod wiatr.', 'A on mi na to, że to niemożliwe. To ja mu na to, że możliwe, bo byłem. W Paryżu. Prawie.', 'Mietek, czemu ten telefon świeci? Kto to... o kurwa, do młodego mi się wykręciło. *klik*'],
+  ['...dwa kilo ziemniaków, cebula, masło, i te, no, takie żółte...', '...nie banany, Mietek, banany są żółte, ale ja mówię o tych drugich żółtych...', 'Czekaj, ja z kim rozmawiam? Młody? O kurwa, do młodego mi się wykręciło. Nic nie słyszałeś! *klik*'],
+  ['Panie doktorze, kolano mnie boli tylko jak chodzę, jak jadę rowerem, to nie boli, więc ja będę tylko jeździł.', 'Do sklepu rowerem, do łóżka rowerem, do kościoła... no, do kościoła piechotą, ale szybko.', 'Panie doktorze? Halo? To nie doktor... O kurwa, do młodego mi się wykręciło. *klik*'] ];
 export const RADIO = {
   turbo: ['Dawaj, młody! Teraz albo nigdy! Pedał w podłogę!', 'Jak ja w osiemdziesiątym trzecim na wyścigu dookoła Polski pod Maciejowicami! Kręć!', 'Ty to młody głupi jednak. Ale szybki głupi! Jedź!', 'Wyobraź sobie, że goni cię Mietek z rachunkiem! Szybciej!', 'Turbo, młody, turbo! Jak w kolarzówce z dopalaczem!', 'Nie myśl, kręć! Myślenie spowalnia, mówię z doświadczenia!'],
   behind: ['Uważaj, młody, za tobą!', 'Auto na ogonie! Nie oglądaj się, tylko zjedź!', 'Coś ci siedzi na plecach, młody. I to nie ja.'],
