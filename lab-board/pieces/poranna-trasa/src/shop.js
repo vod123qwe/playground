@@ -1,10 +1,13 @@
 // The bike shop by the road (a stop on the way: the game waits while you are in). The bike on a turntable on the left, the parts on
 // the right: wheels, saddle, handlebar, gears, paint, bell, lamp, bag; each with its tiers (a price, what it does, how it looks: you see
 // it on the bike at once), bars of what the bike can do and what a part would change; your finds sold (or, a bell or a lamp, put on);
-// the bag filled with papers. What you bought stays for the run.
+// the bag filled with papers. What you bought stays for the run: put on the bike you ride (what was on it goes to your spare parts,
+// bikes.js / the inventory page); a paint, once bought, yours to use again on any bike.
 // createShop({ THREE, createRider, game }) → { open(), close(), key(e), isOpen, mods(), look(), reset() }
-// game: { money (get/set), papers (get/set), items (array), onChange(mods, look), flash(s) }
+// game: { money (get/set), papers (get/set), items (array), bike (the one ridden: { type, parts }), inv (spare parts: [{ k, tier }]),
+//   paints (Set of the paint tiers bought), onChange(), flash(s) }
 import { JANUSZ, bag } from './stories.js';
+import { bikeMods, bikeLook } from './bikes.js';
 export const PARTS = {
   kola: { name: 'KOŁA', tiers: [
     { name: 'ZWYKŁE', price: 0, look: { tyre: '#26272a', rim: '#c9cbc8', tyreW: 1 }, mods: {}, note: 'JEŻDŻĄ. TYLE DOBREGO.' },
@@ -24,11 +27,12 @@ export const PARTS = {
     { name: '3 BIEGI', price: 25, look: { gears: 1 }, mods: { acc: .08, hill: .25 }, note: 'RUSZASZ ŻWAWIEJ, GÓRKA MNIEJ BOLI.' },
     { name: '7 BIEGÓW', price: 55, look: { gears: 2 }, mods: { acc: .15, top: .04, hill: .45 }, note: 'POD GÓRKĘ JAK Z GÓRKI. PRAWIE.' }] },
   lakier: { name: 'LAKIER', tiers: [
-    { name: 'CZERWONY', price: 0, look: { paint: '#c23a2e' }, mods: {}, note: 'FABRYCZNY. KLASYKA.' },
+    { name: 'FABRYCZNY', price: 0, look: {}, mods: {}, note: 'KOLOR, W JAKIM GO ZROBILI.' },
     { name: 'MIĘTOWY', price: 8, look: { paint: '#7fc8a9' }, mods: {}, note: 'ŚWIEŻO. JAK GUMA DO ŻUCIA.' },
     { name: 'GRANATOWY', price: 8, look: { paint: '#2f4a6e' }, mods: {}, note: 'POWAŻNY ROWER DLA POWAŻNEGO CZŁOWIEKA.' },
     { name: 'CYTRYNOWY', price: 8, look: { paint: '#e3c43a' }, mods: {}, note: 'WIDAĆ CIĘ Z KOSMOSU.' },
-    { name: 'CZARNY MAT', price: 12, look: { paint: '#2a2c30' }, mods: {}, note: 'JAK Z FILMU. TYLKO ROWER.' }] },
+    { name: 'CZARNY MAT', price: 12, look: { paint: '#2a2c30' }, mods: {}, note: 'JAK Z FILMU. TYLKO ROWER.' },
+    { name: 'CZERWONY', price: 8, look: { paint: '#c23a2e' }, mods: {}, note: 'KLASYKA. JAK STRAŻ POŻARNA.' }] },
   dzwonek: { name: 'DZWONEK', tiers: [
     { name: 'BRAK', price: 0, look: { bell: false }, mods: {}, note: 'KRZYCZYSZ SAM.' },
     { name: 'DZWONEK', price: 6, look: { bell: true }, mods: { bell: 1 }, note: 'DRYŃ! PIESI SCHODZĄ Z DROGI WCZEŚNIEJ.' }] },
@@ -113,11 +117,14 @@ export function createShop({ THREE, createRider, game }) {
     if (open) { P(14, 21, 4, 2, '#5e1c17'); P(15, 22, 2, 1, '#cf5a3e'); } else P(14, 21, 4, 1, '#5e1c17');                                       // the mouth
     for (const [x, y] of [[12, 22], [19, 22], [16, 23], [13, 18], [20, 18]]) P(x, y, 1, 1, '#c98a6a'); }                                          // stubble
   face(false); setInterval(() => { if (!open_) return; const talking = talkT > 0; mouthT += .12; face(talking && Math.sin(mouthT * 9) > 0); }, 110);
-  // what you have: per part, the tiers owned and the one on
-  const owned = {}, on = {}; const reset = () => { for (const k in PARTS) { owned[k] = new Set([0]); on[k] = 0; } }; reset();
+  // what you have: per part, the tiers you could put on (the plain one, the one on, your spares; for the paint the ones bought) and the one on
+  const on = new Proxy({}, { get: (_, k) => game.bike.parts[k], set: (_, k, v) => { game.bike.parts[k] = v; return true; } });
+  const owned = new Proxy({}, { get: (_, k) => new Set([0, game.bike.parts[k], ...(k === 'lakier' ? [...game.paints] : game.inv.filter(p => p.k === k).map(p => p.tier))]) });
+  const reset = () => { };
   let cat = 'kola', hover = null, open_ = false;
-  const mods = (alt) => { const m = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 }; for (const k in PARTS) { const t = PARTS[k].tiers[alt && alt[0] === k ? alt[1] : on[k]]; for (const s in t.mods) m[s] += t.mods[s]; } return m; };
-  const look = (alt) => { const o = {}; for (const k in PARTS) Object.assign(o, PARTS[k].tiers[alt && alt[0] === k ? alt[1] : on[k]].look); return o; };
+  const mods = alt => bikeMods(game.bike, alt), look = alt => bikeLook(game.bike, alt);
+  // (a part put on: the one it takes the place of to the spares, the paint only painted over; one of the spares: out of them)
+  function mount(k, i) { const P = game.bike.parts; if (P[k] === i) return; if (k !== 'lakier') { const j = game.inv.findIndex(p => p.k === k && p.tier === i); if (j >= 0) game.inv.splice(j, 1); if (P[k] > 0) game.inv.push({ k, tier: P[k] }); } P[k] = i; }
   // the turntable: its own little picture, the bike without the boy
   let R = null, ren = null, sc = null, cam = null, raf = 0, last = 0;
   function preview() {
@@ -155,16 +162,18 @@ export function createShop({ THREE, createRider, game }) {
     right.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { cat = b.dataset.cat; hover = null; R && R.setParts(look()); say(pick(JANUSZ.cats[cat] || JANUSZ.buy)); draw(); });
     right.querySelector('[data-fill]')?.addEventListener('click', () => { if (!need || game.money < cost) { if (need) say(pick(JANUSZ.broke)); return; } game.money -= cost; game.papers += need; say(pick(JANUSZ.fill)); changed(); });
     right.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { const i = +b.dataset.sell, it = items[i]; game.money += (FINDS[it] || { sell: 3 }).sell; items.splice(i, 1); say(pick(JANUSZ.sell)); changed(); });
-    right.querySelectorAll('[data-fit]').forEach(b => b.onclick = () => { const i = +b.dataset.fit, F = FINDS[items[i]]; owned[F.fit[0]].add(F.fit[1]); on[F.fit[0]] = F.fit[1]; items.splice(i, 1); game.flash('Zamontowane: ' + PARTS[F.fit[0]].tiers[F.fit[1]].name.toLowerCase()); changed(); });
+    right.querySelectorAll('[data-fit]').forEach(b => b.onclick = () => { const i = +b.dataset.fit, F = FINDS[items[i]]; mount(F.fit[0], F.fit[1]); items.splice(i, 1); game.flash('Zamontowane: ' + PARTS[F.fit[0]].tiers[F.fit[1]].name.toLowerCase()); changed(); });
   }
   const fx = m => Object.entries(m).filter(([k]) => !['bell', 'lamp'].includes(k)).map(([k, v]) => (k === 'bag' ? `+${v} GAZET` : `${(k === 'grass' ? -v : v) > 0 ? '+' : ''}${Math.round((k === 'grass' ? -v : v) * 100)}% ${(STATS.find(s => s[0] === k) || [0, k])[1]}`)).join(', ');
-  function buy(k, i) { const t = PARTS[k].tiers[i]; if (!owned[k].has(i)) { if (game.money < t.price) { say(pick(JANUSZ.broke)); return; } game.money -= t.price; owned[k].add(i); if (i > 0) say(pick(JANUSZ.buy)); } on[k] = i; hover = null; changed(); }
-  function changed() { game.onChange(mods(), look()); R && R.setParts(look()); draw(); }
+  function buy(k, i) { const t = PARTS[k].tiers[i]; if (!owned[k].has(i)) { if (game.money < t.price) { say(pick(JANUSZ.broke)); return; } game.money -= t.price; if (k === 'lakier') game.paints.add(i); else if (i > 0) game.inv.push({ k, tier: i }); if (i > 0) say(pick(JANUSZ.buy)); } mount(k, i); hover = null; changed(); }
+  function changed() { game.onChange(); R && R.setParts(look()); draw(); }
   function open() { if (open_) return; open_ = true; el.classList.add('on'); say(pick(JANUSZ.hello)); preview(); draw(); last = performance.now(); raf = requestAnimationFrame(spin); }
-  function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); game.onChange(mods(), look()); game.bye?.(pick(JANUSZ.bye)); }
+  function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); game.onChange(); game.bye?.(pick(JANUSZ.bye)); }
   function key(e) { if (!open_) return false; if (e.code === 'Escape' || e.code === 'Enter') close(); e.preventDefault(); return true; }
-  const ownedList = () => { const out = []; for (const k in PARTS) for (const i of owned[k]) if (i > 0) out.push({ label: PARTS[k].name + ': ' + PARTS[k].tiers[i].name, keep: { part: k, tier: i } }); return out; };
-  function grant(k, i) { if (!PARTS[k] || !PARTS[k].tiers[i]) return; owned[k].add(i); if (i > on[k]) on[k] = i; game.onChange(mods(), look()); }
+  // (for the run's end: what you have, on the bike and spare; and back from the account at a run's start: spare, on if better)
+  const ownedList = () => { const out = [], add = (k, i) => out.push({ label: PARTS[k].name + ': ' + PARTS[k].tiers[i].name, keep: { part: k, tier: i } });
+    for (const k in PARTS) if (game.bike.parts[k] > 0) add(k, game.bike.parts[k]); for (const p of game.inv) add(p.k, p.tier); for (const i of game.paints) if (i > 0 && i !== game.bike.parts.lakier) add('lakier', i); return out; };
+  function grant(k, i) { if (!PARTS[k] || !PARTS[k].tiers[i]) return; if (k === 'lakier') game.paints.add(i); else game.inv.push({ k, tier: i }); if (i > game.bike.parts[k]) mount(k, i); game.onChange(); }
   const equipped = () => Object.keys(PARTS).map(k => ({ cat: PARTS[k].name, name: PARTS[k].tiers[on[k]].name }));
-  return { open, close, key, get isOpen() { return open_; }, mods, look, ownedList, grant, equipped, PARTS, reset: () => { reset(); game.onChange(mods(), look()); } };
+  return { open, close, key, get isOpen() { return open_; }, mods, look, ownedList, grant, equipped, PARTS, reset: () => { reset(); game.onChange(); } };
 }

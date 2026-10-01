@@ -43,6 +43,9 @@ import { createWorld } from './world.js';
 import { createModes, MODES } from './modes.js';
 import { createMp } from './mp.js';
 import { createNet } from './net.js';
+import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, strangerBike } from './bikes.js';
+import { createGarage } from './garage.js';
+import { PARTS } from './shop.js';
 { const m = location.hash.match(/^#odpowiedz=([^&]+)/); if (m) { const ch = new BroadcastChannel('pt-answer'), say = (t, sub) => { document.body.innerHTML = `<div style="position:fixed;inset:0;display:grid;place-items:center;background:#0c0d0f;color:#f6f3ea;font:700 15px/1.5 ui-monospace,Consolas,monospace;text-align:center;padding:20px"><div><div style="color:#efc970;font-size:22px;letter-spacing:.1em">${t}</div><div style="opacity:.75;margin-top:8px">${sub}</div></div></div>`; };
   let ok = false; ch.onmessage = e => { if (e.data?.ok) { ok = true; say('PRZEKAZANE!', 'Wróć do karty z grą, zaraz się połączycie. Tę kartę możesz zamknąć.'); setTimeout(() => window.close(), 1200); } };
   ch.postMessage({ code: m[1] }); say('PRZEKAZUJĘ...', 'Szukam otwartej gry w tej przeglądarce.');
@@ -163,9 +166,12 @@ hud.hooks.onSay = (text, at) => { const k = speakerAt(at); audio.say(text, k, { 
 hud.hooks.onHit = (word, at) => aud(word === 'BUM!' || word === 'BACH!' || word === 'ŁUBUDU!' || word === 'KOP!' ? 'kick' : 'punch', at);
 const VOICE_OF = n => /ŁAWKI/.test(n) ? 'lump' : /EKIPA/.test(n) ? 'lads' : /POSTERUNKOWY|SIERŻANT|ASPIRANT|DYŻURNY/.test(n) ? 'police' : /JANUSZ/.test(n) ? 'janusz' : /GŁOS Z OKNA|^PANI/.test(n) ? 'granma' : /TOREBKA/.test(n) ? null : /MIREK|RYSIEK|JANEK/.test(n) ? 'belly' : 'grandpa';
 const talk = createTalk({ label: (i, light, sel) => !pad.active ? String(i + 1) : light ? ['←', '→', '↑', '↓'][i] || String(i + 1) : sel ? pad.name(BTN.A, true) : '·', onSay: (who, text) => { const k = VOICE_OF(who || ''); if (k) audio.say(text, k, { id: 'talk' }); }, onPick: () => audio.play('ui') });
-let MOD = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 };   // (what the bike's parts do: shop.js)
+let MOD = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 };   // (what the bike does: its frame and its parts, bikes.js)
+// the bike he rides (its kind and its parts), his spare parts, the paints he has bought (bikes.js, shop.js, the inventory page)
+let myBike = { type: 'moj', parts: newParts() }; const INV = [], PAINTS = new Set([0]);
+function applyBike() { MOD = bikeMods(myBike); B.bagMax = 30 + MOD.bag; rider.setParts(bikeLook(myBike)); }
 const shop = createShop({ THREE, createRider: () => createRider({ THREE, ramp, toon }), game: { get money() { return B.points; }, set money(v) { B.points = Math.max(0, v); }, get papers() { return B.papers; }, set papers(v) { B.papers = v; }, get hp() { return B.hp ?? 100; }, set hp(v) { B.hp = v; },
-  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, onChange: (m, look) => { MOD = m; B.bagMax = 30 + m.bag; rider.setParts(look); } } });
+  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, get bike() { return myBike; }, inv: INV, paints: PAINTS, onChange: () => applyBike() } });
 const money = (n, at, label) => { B.points = Math.max(0, B.points + n); hud.pop(at, label, n >= 0 ? '#efc970' : '#cf5a3e'); }; money.has = n => B.points >= n;
 const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   rider: () => foot.active ? { x: foot.me.x, z: foot.me.z, y: foot.me.y, yaw: foot.me.yaw, v: Math.hypot(foot.me.vf, foot.me.vs), foot: true } : { x: B.x, z: B.z, y: B.y, yaw: B.yaw, v: Math.abs(B.v), foot: false },
@@ -183,7 +189,11 @@ const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.door
   for (const d of track.doors) if (r() < .2) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
 let rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
 // his other bikes, by the garage at home: one leant there, one upside down, its front wheel off (being mended)
-for (const b of track.home?.bikes || []) { const r = createRider({ THREE, ramp, toon }); r.boy.visible = false; scene.add(r.root); const y = track.probe(b.p.x, b.p.z, track.home.iJ).y;
+const wbikes = createBikes({ THREE, scene, track, createRider, ramp, toon });
+function spawnBikes() { wbikes.clear(); let a = 77; wbikes.spawn(() => { a = (a * 16807) % 2147483647; return a / 2147483647; });   // (the same gardens each time)
+  for (const b of track.home?.bikes || []) if (!b.up) wbikes.add({ type: 'bmx', parts: newParts({ kierownica: 2 }) }, b.p.x, b.p.z, b.yaw, false, { kind: 'brat' }); }
+spawnBikes();
+for (const b of track.home?.bikes || []) { if (!b.up) continue; const r = createRider({ THREE, ramp, toon }); r.boy.visible = false; scene.add(r.root); const y = track.probe(b.p.x, b.p.z, track.home.iJ).y;
   r.update({ dt: 0, speed: 0, steer: 0, lean: 0, pedalling: 0, braking: 0, climbing: 0 }); r.root.position.set(b.p.x, y, b.p.z); r.root.rotation.set(0, b.yaw, 0);
   if (b.up) { r.root.rotation.z = Math.PI; r.root.position.y = y + 1.02; if (r.frontWheel) r.frontWheel.visible = false; r.setParts({ paint: '#2f4a6e' }); } else { r.lean.rotation.z = .12; r.setParts({ paint: '#3f8a4a' }); } }
 // ---------- on foot (F: off the bike, and back on by it) and the fights (onfoot.js) ----------
@@ -205,6 +215,42 @@ function loseFight() {
 const foot = createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx: { score: (n, at, l, c) => score(n, at, l, c), flash: t => flash(t), shake: v => { shake = Math.max(shake, v); }, slow: v => { slowmo = Math.max(slowmo, v); },
   rant: (at, t) => hud.rant(at, t, true), pop: (at, t, c) => hud.pop(at, t, c), tip: t => hud.tip(t), impact: (at, t) => hud.impact(at, t || undefined), take: () => loseFight(), drop: at => dropLoot(at) } });
 const bikeSpot = () => { const me = foot.me, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), t = THREE.MathUtils.clamp((me.x - B.x) * fx + (me.z - B.z) * fz, -.9, .9); return { x: B.x + fx * t, z: B.z + fz * t }; };   // (the nearest of the bike, front wheel to back)
+let garage = null;   // (the inventory page: made below, once what it needs is there)
+// the bikes he could get on, near him on foot: his own (in reach to get on), one in a garden, a cyclist's knocked down
+function bikeChoices(me) { const out = []; if (foot.active) { const sp = bikeSpot(); out.push({ kind: 'mine', d: Math.hypot(me.x - sp.x, me.z - sp.z) }); }
+  const w = wbikes.nearest(me.x, me.z, 6); if (w) { const fx = Math.sin(w.yaw), fz = Math.cos(w.yaw), t = THREE.MathUtils.clamp((me.x - w.x) * fx + (me.z - w.z) * fz, -.9, .9); out.push({ kind: 'world', ref: w, bike: w.bike, x: w.x, z: w.z, yaw: w.yaw, lying: w.lying, side: w.side, owner: w.owner, d: Math.hypot(me.x - w.x - fx * t, me.z - w.z - fz * t) }); }
+  for (const b of traffic.bikes) if (b.on && b.fall) { b.bike ||= { ...strangerBike(['kolarzowka', 'skladak', 'trekking', 'ostre', 'bmx'][Math.random() * 5 | 0]), paint: '#' + b.r.materials.frame.color.getHexString() };
+    out.push({ kind: 'traffic', ref: b, bike: b.bike, x: b.x, z: b.z, yaw: b.yaw, lying: true, side: b.fall.side, owner: { kind: 'cyclist' }, d: Math.hypot(me.x - b.x, me.z - b.z) - .6 }); }
+  return out.sort((a, b) => a.d - b.d); }
+function takeBike() { const c = bikeChoices(foot.me)[0]; if (!c || c.d > 1.7) return false; if (c.kind === 'mine') { mount(); return true; } swapTo(c); return true; }
+// on someone else's: yours left where it stood (yours to come back for), you on that one, as it lies; and they notice
+const TAKEN = { house: ['EJ! TO MÓJ ROWER!', 'ZŁODZIEJ! POLICJA!', 'ODDAWAJ ROWER, GÓWNIARZU!', 'MAMO! ON MI KRADNIE ROWER!'], cyclist: ['MÓJ ROWER!!!', 'ZŁODZIEJ! ODDAWAJ!', 'ZAPAMIĘTAM TWOJĄ GĘBĘ!'], brat: ['ODDAJ MÓJ ROWER! POWIEM MAMIE!', 'TYLKO GO NIE PORYSUJ!', 'TO MOJE BMX, NIE TWOJE!'] };
+function swapTo(c) { const old = myBike; wbikes.add(old, B.x, B.z, B.yaw, !!B.bikeDown, { kind: 'left' });
+  myBike = c.bike; if (c.kind === 'world') wbikes.remove(c.ref); else { const b = c.ref; b.on = false; b.r.root.visible = false; b.fall = null; b.hold = false; b.heldByMe = false; b.wait = 25 + Math.random() * 20; b.bike = null; b.r.ragdollOff?.(); }
+  const q = track.probe(c.x, c.z, B.hint); Object.assign(B, { x: c.x, z: c.z, yaw: c.yaw, hint: q.i, y: q.y, gPrev: q.y, v: 0 }); B.bikeDown = c.lying ? { lean: c.side * 1.38 } : null;
+  applyBike(); parkBike(); const T = BIKE_TYPES[myBike.type] || BIKE_TYPES.moj, o = c.owner || {}, L = TAKEN[o.kind];
+  if (L) { const at = o.at ? o.at.clone().setY(o.at.y + 1.6) : new THREE.Vector3(c.x, B.y + 1.8, c.z); hud.rant(at, pickOf(L), false); B.fame = (B.fame || 0) + (o.kind === 'brat' ? 0 : o.kind === 'cyclist' ? .8 : .6); }
+  mount(); flash(o.kind === 'left' ? `Znów na: ${T.name.toLowerCase()}` : `Zabrany rower: ${T.name.toLowerCase()}. Twój został tam, gdzie stał`); }
+// a cyclist knocked down, him on foot near: he stays down (the bike there to take); and the card of a bike under the mouse (or, the
+// pointer held by the game, the nearest by him)
+const _rc = new THREE.Raycaster(), _nd = new THREE.Vector2(); let cardT = 0;
+function stepBikeCards(dt) { const me = foot.active ? foot.me : null;
+  for (const b of traffic.bikes) { const near = me && b.on && b.fall && Math.hypot(me.x - b.x, me.z - b.z) < 9; if (near && !b.hold) { b.hold = true; b.heldByMe = true; } else if (!near && b.heldByMe) { b.hold = false; b.heldByMe = false; } }
+  if ((cardT -= dt) > 0) return; cardT = .08; const busy = menu.open || asking || shop.isOpen || talk.isOpen || runUI.isOpen || modes.isOpen || mp.isOpen || book.isOpen || garage?.isOpen;
+  if (busy) return wbikes.card.hide(); const P = me || B, cands = bikeChoices(P).filter(c => c.kind !== 'mine' && c.d < 30);
+  let pick = null; if (!document.pointerLockElement && mouse.inside) { _nd.set(mouse.nx, -mouse.ny); _rc.setFromCamera(_nd, camera); let bd = 1e9;
+      for (const c of cands) { const root = c.kind === 'world' ? c.ref.r.root : c.ref.r.root, h = _rc.intersectObject(root, true)[0]; if (h && h.distance < bd) { bd = h.distance; pick = c; } } }
+  if (!pick && me) pick = cands.find(c => c.d < 2.6) || null;
+  if (!pick) return wbikes.card.hide(); const at = new THREE.Vector3(pick.x, (track.probe(pick.x, pick.z, B.hint).y) + 1.25, pick.z), sc = project(at); if (!sc) return wbikes.card.hide();
+  const [W, H] = px.size, hint = !me ? keysOf('mount') + ': ZSIĄDŹ, PODEJDŹ I ZABIERZ' : pick.d <= 1.7 ? keysOf('mount') + ': ZABIERZ I JEDŹ' : 'PODEJDŹ BLIŻEJ, ŻEBY ZABRAĆ';
+  wbikes.card.show(pick.bike, myBike, sc.x * innerWidth / W, sc.y * innerHeight / H - 8, hint); }
+// the inventory page (garage.js): the bike ridden, the spares, a bike stood by him (within 3 m, his on foot or standing still)
+const nearWorld = () => { const P = foot.active ? foot.me : B; if (!foot.active && Math.abs(B.v) > .3) return null; return wbikes.nearest(P.x, P.z, 3); };
+garage = createGarage({ THREE, createRider: () => createRider({ THREE, ramp, toon }), PARTS, SLOTS, TYPES: BIKE_TYPES, bikeMods, bikeLook, game: {
+  get bike() { return myBike; }, inv: INV, paints: PAINTS, near: nearWorld, stopped: () => foot.active || Math.abs(B.v) < .3, onChange: () => applyBike(), flash: s => flash(s), sound: n => audio.play(n),
+  keyCode: () => BIND.inv?.[0], takeNear: w => swapTo({ kind: 'world', ref: w, bike: w.bike, x: w.x, z: w.z, yaw: w.yaw, lying: w.lying, side: w.side, owner: w.owner }),
+  stripped: w => { if (w.stripped) return; w.stripped = true; const o = w.owner || {}; if (o.kind === 'house') { hud.rant(o.at.clone().setY(o.at.y + 1.6), pickOf(['EJ! ZOSTAW MÓJ ROWER!', 'CO TY ROZKRĘCASZ?!', 'POLICJA! ROWER MI ROZBIERAJĄ!']), false); B.fame = (B.fame || 0) + .3; }
+    else if (o.kind === 'brat') hud.rant(new THREE.Vector3(w.x, w.r.root.position.y + 1.8, w.z), 'MOJE CZĘŚCI! MAMOOO!', false); } } });
 function parkBike() { rider.root.position.set(B.x, B.y, B.z); rider.root.rotation.set(0, B.yaw, .2, 'YXZ'); }   // (the bike on its stand, leaning a little)
 function dismount(why) {
   const lf = { x: Math.cos(B.yaw), z: -Math.sin(B.yaw) };
@@ -232,7 +278,7 @@ const ACTIONS = [
   { id: 'sprint', keys: ['ShiftLeft', 'ShiftRight'], modes: ['bike', 'walk'] },
   { id: 'throwL', keys: ['ArrowLeft', 'KeyQ'], modes: ['bike'] }, { id: 'throwR', keys: ['ArrowRight', 'KeyE'], modes: ['bike'] },
   { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyC'], modes: ['bike'] },
-  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
+  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'inv', keys: ['KeyI'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
   { id: 'punchL', keys: ['ArrowLeft'], modes: ['fight'] }, { id: 'punchR', keys: ['ArrowRight'], modes: ['fight'] }, { id: 'high', keys: ['ArrowUp'], modes: ['fight'] },
   { id: 'low', keys: ['ArrowDown'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
   { id: 'taunt', keys: ['KeyG'], modes: ['fight'] },
@@ -248,14 +294,14 @@ const keyName = c => ({ Space: 'SPACJA', ShiftLeft: 'SHIFT', ShiftRight: 'P.SHIF
 // the pad: which button does what (the same for both makes: A/✕ hop and jump, X/□ kick and hit, Y/△ talk, B/○ on and off the bike,
 // the triggers pedal and brake, the bumpers throw, the left stick steers and walks, the right one aims and turns the camera)
 const PADB = { pedal: BTN.RT, brake: BTN.LT, left: 'LS', right: 'LS', sprint: BTN.LS, throwL: BTN.LB, throwR: BTN.RB, kick: BTN.X, hop: BTN.A, mount: BTN.B, view: BTN.RS, talk: BTN.Y, chat: BTN.Y,
-  title: BTN.UP, bell: BTN.DOWN, punchL: BTN.X, punchR: BTN.Y, high: BTN.UP, low: BTN.DOWN, guard: BTN.RB, dodge: BTN.LB, taunt: BTN.LEFT };
+  title: BTN.UP, bell: BTN.DOWN, inv: BTN.LEFT, punchL: BTN.X, punchR: BTN.Y, high: BTN.UP, low: BTN.DOWN, guard: BTN.RB, dodge: BTN.LB, taunt: BTN.LEFT };
 const padKey = id => PADB[id] == null ? '—' : PADB[id] === 'LS' ? 'LEWA GAŁKA' : pad.name(PADB[id]);
 const keysOf = id => pad.active ? padKey(id) : BIND[id].filter((c, i, a) => !(c === 'ShiftRight' && a.includes('ShiftLeft'))).map(keyName).join(' / ') || '—';
 const clashes = (id, code) => { const A = ACTIONS.find(a => a.id === id); return ACTIONS.filter(b => b.id !== id && BIND[b.id].includes(code) && (A.modes.includes('all') || b.modes.includes('all') || b.modes.some(m => A.modes.includes(m)))).map(b => b.id); };
 // what each is, where (the menu's page and the help window list them so)
 const SECTIONS = [
   { title: 'NA ROWERZE', items: [['pedal', 'PEDAŁUJ'], ['brake', 'HAMUJ (NA POSTOJU: COFAJ)'], ['left', 'SKRĘĆ W LEWO'], ['right', 'SKRĘĆ W PRAWO'], ['sprint', 'SZYBCIEJ'],
-    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
+    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['inv', 'EKWIPUNEK ROWERU: CZĘŚCI, SLOTY, ROWER OBOK'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
     ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['bell', 'DZWONEK (GDY GO MASZ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
@@ -277,6 +323,7 @@ addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') &&
   if (on('view', e.code)) { if (foot.active) foot.toggleView(); else setCam((camI + 1) % CAMS.length); }
   if (on('ink', e.code)) look.set({ ink: (look.S.ink + 1) % INKS.length });
   if (on('help', e.code)) toggleKeys();
+  if (on('inv', e.code) && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !foot.fighting) garage.toggle();
   if (on('full', e.code)) toggleFull();
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code) || ACTIONS.some(a => BIND[a.id].includes(e.code))) e.preventDefault(); });
 addEventListener('keyup', e => { keys.delete(e.code); }); addEventListener('blur', () => keys.clear());
@@ -293,7 +340,7 @@ addEventListener('mousemove', e => { if (mouse.mh) return; mouse.nx = e.clientX 
   if (document.pointerLockElement || (!menu.open && !asking)) { mouse.dx += e.movementX; mouse.dy += e.movementY; if (foot.active) mouse.used = true; } });
 document.addEventListener('mouseleave', () => { mouse.inside = false; });
 document.addEventListener('pointerlockerror', () => { if (!mouse.failed) { mouse.failed = true; flash('Mysz: ruszaj nią, a przy krawędzi ekranu obracasz się dalej'); } });
-addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || shop.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button, .mppage')) return;
+addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || shop.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button, .mppage, #gar')) return;
   lockPointer(); if (foot.active) mouse.used = true;
   if (e.button === 0) { mouse.l = true; mouse.lh = true; } if (e.button === 2) { mouse.r = true; mouse.rh = true; }
   if (e.button === 1) { e.preventDefault(); if (e.detail >= 2) { camUser.dist = 1; camUser.tilt = 0; camUser.yaw = 0; saveCam(); flash('Kamera: jak była'); } else mouse.mh = true; } });
@@ -892,8 +939,9 @@ function step(dt, inp) {
   modes.update(dt); if (modes.counting) inp = still(inp);   // (a mode's count of three: feet down)
   mp.update(dt); if (mp.counting) inp = still(inp); stepNet(dt, inp);
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
+  stepBikeCards(dt);
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
-    else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(bikeSpot())) mount(); else { const d = Math.round(Math.hypot(foot.me.x - B.x, foot.me.z - B.z)); flash(`Twój rower jest ${d} m stąd: idź za strzałką na dole`); } }
+    else if (foot.fighting) flash('Najpierw bójka!'); else if (!takeBike()) { const d = Math.round(Math.hypot(foot.me.x - B.x, foot.me.z - B.z)); flash(`Twój rower jest ${d} m stąd: idź za strzałką na dole`); } }
   if (inp.bell && !foot.active) { if (MOD.bell > 0) { audio.play('bell'); B.bellT = 2.5; } else flash('Dzwonek kupisz u Janusza'); }
   syncMix(); if (inp.title) { const A = ACT(); if (A.length < 2) flash('Na razie wozisz jedną gazetę: ' + TITLES[A[0]].name.toLowerCase());
     else { for (let k = 1; k <= A.length; k++) { const t = A[(B.sel + k) % A.length]; if (B.mix[t] > 0 || k === A.length) { B.sel = (B.sel + k) % A.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); } }
@@ -1061,6 +1109,7 @@ addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') &&
   if (modes.isOpen && modes.key(e)) { keys.clear(); e.stopImmediatePropagation(); e.preventDefault(); return; }
   if (mp.isOpen && mp.key(e)) { keys.clear(); e.stopImmediatePropagation(); e.preventDefault(); return; }
   if (shop.isOpen && shop.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
+  if (garage.isOpen && garage.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (talk.isOpen && talk.key(e)) { if (!talk.isLight) keys.clear(); e.stopImmediatePropagation(); return; }   // (a talk open: its keys (a light one: just the numbers))
   if (menu.open && !asking) { audio.play('ui'); menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
   if (!asking && e.code === 'Escape') { menu.show('pause'); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
@@ -1094,6 +1143,7 @@ addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') &&
     else if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Tab'].includes(e.code)) hud.askSel = 1 - hud.askSel; else if (e.code === 'Enter' || e.code === 'Space') answer(hud.askSel === 0); e.preventDefault(); } });
 function resetGame() {
   if (foot.active) foot.stop(); foot.reset(); B.parked = false; rider.boy.visible = true;
+  myBike = { type: 'moj', parts: newParts() }; INV.length = 0; PAINTS.clear(); PAINTS.add(0); spawnBikes();
   granny.reset(); quests.reset(); shop.reset(); rider.root.visible = true; B.rattled = 0;
   rider.ragdollOff();
   const q = track.probe(track.start.x, track.start.z, 0); C.iy = Math.PI; C.iyGo = false;
@@ -1134,7 +1184,7 @@ const mp = createMp({ net, api: { me: meId, B: Bof, begin: mpBegin, end: mpEnd, 
   pop: (k, t, c) => { const b = Bof(k); hud.pop(new THREE.Vector3(b.x, (b.y || 0) + 2.4, b.z), t, c); } } });
 // what comes from the other: where he is, a house served, a paper thrown, a window, a kick
 function netMsg(m) {
-  if (m.k === 'me') { MP.R = m; MP.rT = performance.now(); Object.assign(P2.B, { papers: m.papers, points: m.points, delivered: m.delivered, streak: m.streak, crash: m.crash ? (P2.B.crash || { t: 0 }) : null }); return; }
+  if (m.k === 'me') { if (m.paint && m.paint !== MP.R?.paint) P2.rider.setParts({ paint: m.paint }); MP.R = m; MP.rT = performance.now(); Object.assign(P2.B, { papers: m.papers, points: m.points, delivered: m.delivered, streak: m.streak, crash: m.crash ? (P2.B.crash || { t: 0 }) : null }); return; }
   if (m.k === 'done') { const d = track.doors[m.d]; if (d) d.done = true; const mb = track.mailboxes[m.mb]; if (mb) { mb.done = true; mb.flag.rotation.x = -Math.PI / 2; } return; }
   if (m.k === 'paper') { const T = TITLES[m.title] ? m.title : 'trabka', o = new THREE.Mesh(paperG, paperM); o.castShadow = true; o.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandOf[T])); o.position.set(m.x, m.y, m.z); scene.add(o);
     papers.push({ m: o, v: new THREE.Vector3(...m.v), dot: new THREE.Mesh(dotG, dotM), prev: o.position.clone(), spin: new THREE.Vector3(9, 0, 3), hint: P2.B.hint || 0, t: 0, rest: false, landed: false, title: T, ghost: true }); scene.add(papers[papers.length - 1].dot); return; }
@@ -1147,7 +1197,7 @@ function served(door, mb) { if (!net.on) return; net.send({ k: 'done', d: door ?
 // each frame: what I am sent (15 a second); the ghost moved, posed; a bump against him
 function stepNet(dt, inp) { if (!net.on) { P2.rider.root.visible = false; return; }
   if ((MP.sendT -= dt) <= 0) { MP.sendT = 1 / 15; net.send({ k: 'me', x: +B.x.toFixed(2), y: +B.y.toFixed(2), z: +B.z.toFixed(2), yaw: +B.yaw.toFixed(3), v: +B.v.toFixed(2), lean: +B.lean.toFixed(3), steer: +B.steer.toFixed(3), pitch: +(B.pitch || 0).toFixed(3),
-    air: !!B.air, crash: !!B.crash, ped: +(inp.pedal || 0).toFixed(2), kick: B.kick ? { side: B.kick.side, t: +B.kick.t.toFixed(2) } : null, papers: B.papers, points: B.points, delivered: B.delivered || 0, streak: B.streak || 0, foot: foot.active }); }
+    air: !!B.air, crash: !!B.crash, ped: +(inp.pedal || 0).toFixed(2), kick: B.kick ? { side: B.kick.side, t: +B.kick.t.toFixed(2) } : null, papers: B.papers, points: B.points, delivered: B.delivered || 0, streak: B.streak || 0, foot: foot.active, paint: bikeLook(myBike).paint }); }
   const R = MP.R, age = (performance.now() - MP.rT) / 1000; P2.rider.root.visible = !!R && age < 4 && !R.foot; if (!R) return;
   const G = P2.B, k = Math.min(1, dt * 12), ex = Math.min(age, .25), tx = R.x + Math.sin(R.yaw) * R.v * ex, tz = R.z + Math.cos(R.yaw) * R.v * ex;   // (carried on by his speed, a quarter second at most)
   if (Math.hypot(tx - G.x, tz - G.z) > 6) { G.x = tx; G.z = tz; } else { G.x += (tx - G.x) * k; G.z += (tz - G.z) * k; }
@@ -1175,6 +1225,7 @@ function padUI(dt) {
   if (!pad.on) return; const x = pad.hit, d = pad.nav(dt), arrow = d && { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }[d];
   const key = code => { const o = { code, key: code, bubbles: true, cancelable: true }; dispatchEvent(new KeyboardEvent('keydown', o)); dispatchEvent(new KeyboardEvent('keyup', o)); };
   const page = sel => { pad.focus(sel, d); if (x(BTN.A)) pad.press(); };
+  if (garage.isOpen) { page('#gar .stage'); if (x(BTN.B) || x(BTN.MENU) || x(BTN.LEFT) && !d) key('Escape'); return; }
   if (shop.isOpen) { page('#shop .win'); if (x(BTN.Y)) document.querySelector('#shop .chat')?.click(); if (x(BTN.B) || x(BTN.MENU)) key('Escape'); return; }
   pad.forget();
   if (runUI.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); return; }
@@ -1185,15 +1236,15 @@ function padUI(dt) {
   if (menu.open) { if (arrow) key(arrow); if (x(BTN.A)) key('Enter'); if (x(BTN.B) || (x(BTN.MENU) && menu.page === 'pause')) key('Escape'); return; }
   if (talk.isOpen && !talk.isLight) { if (arrow === 'ArrowUp' || arrow === 'ArrowDown') key(arrow); if (x(BTN.A)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
   if (talk.isOpen && talk.isLight) [BTN.LEFT, BTN.RIGHT, BTN.UP, BTN.DOWN].forEach((b, i) => { if (x(b)) key('Digit' + (i + 1)); });   // (on the move: the cross picks)
-  if (x(BTN.MENU)) key('Escape'); if (x(BTN.VIEW)) key('Tab');
+  if (x(BTN.MENU)) key('Escape'); if (x(BTN.VIEW)) key('Tab'); if (x(BTN.LEFT) && !talk.isOpen && !foot.fighting) garage.toggle();
 }
 function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
   pad.poll(); padUI(dt);
   if (!rider.person && foot.riderPerson) rider.setPerson(foot.riderPerson);   // (the boy who walks, put on the bike once he is loaded)
-  if ((menu.open || asking || shop.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
-  document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !shop.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if ((menu.open || asking || shop.isOpen || garage.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
+  document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !garage.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
+  if (!asking && !menu.open && !shop.isOpen && !garage.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
@@ -1208,4 +1259,4 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 window.PT = { THREE, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
-  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net };
+  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; } };

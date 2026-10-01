@@ -772,3 +772,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - poprawka: przy leżącym rowerze była martwa strefa (wsiadało się tylko do 1,7 m od jednego punktu roweru, a strzałka do roweru znikała już od 2,2 m), więc stojąc przy przednim kole nie dało się wsiąść i nie było strzałki; teraz liczy się odległość do całego roweru, od koła do koła, i strzałka znika dopiero, gdy da się wsiąść
 - gdy rower jest dalej (np. po przegranej bójce przeciwnik rzucił go przy drodze), komunikat mówi, ile metrów i żeby iść za strzałką na dole
+
+## Wersja 84: cudze rowery i ekwipunek roweru
+
+- **rowery mają typy** z własnymi statystykami (prędkość, przyspieszenie, skręt, teren, pod górkę, triki, torba): TWÓJ GÓRAL, SKŁADAK, KOLARZÓWKA, BMX, DAMKA Z KOSZYKIEM, OSTRE KOŁO, TREKKING Z BŁOTNIKAMI, ROWER Z SILNICZKIEM. Statystyki roweru = jego rama + jego części
+- **cudze rowery**: kilka stoi albo leży w ogródkach, BMX brata stoi przy garażu, a przewrócony rowerzysta zostaje na ziemi, dopóki jesteś blisko. Pieszo przy rowerze F: zabierasz go i jedziesz, a Twój zostaje tam, gdzie stał (można po niego wrócić). Właściciel krzyczy, policja trochę bardziej się Tobą interesuje
+- **karta roweru**: kursor nad rowerem (albo stanie obok, gdy kursor jest schowany) pokazuje jego nazwę, opis, statystyki w kratkach w porównaniu z Twoim (zielone lepiej, czerwone gorzej), torbę i części, jakie ma
+- **każdy rower ma swoje części** w 8 slotach (koła, siodełko, kierownica, przerzutki, lakier, dzwonek, lampka, torba); części nie przechodzą same na nowy rower. Kupione u Janusza zakładają się na rower, którym jedziesz, a to, co było, trafia do zapasowych; kupiony lakier jest Twój do użycia na każdym rowerze
+- **ekwipunek (I, na padzie krzyżak w lewo)** na wykropkowanej nakładce jak sklep: Twój rower z boku na tle tablicy narzędziowej, sloty przy prawdziwych częściach, połączone pikselowymi liniami; zielona kropka przy slocie, gdy masz coś lepszego. Klik w slot: co może w nim być (zapasowe, część z roweru obok, zdjęcie do zapasowych, lakiery); najechanie od razu pokazuje część na rowerze i zmianę w paskach statystyk. Siatka części zapasowych (klik: załóż). Rower stojący obok: pasek na dole z jego częściami do zdjęcia i przyciskiem PRZESIĄDŹ SIĘ. Przekładanie tylko na postoju; w jeździe ekran jest do podglądu. Gra czeka, gdy ekran jest otwarty
+- lakier „zerowy” nazywa się teraz FABRYCZNY (kolor ramy danego typu); czerwony doszedł jako puszka do kupienia
