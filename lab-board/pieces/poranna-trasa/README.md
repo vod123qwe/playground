@@ -937,3 +937,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - traktory na wiejskiej drodze: dwa, po jednym w każdą stronę, jadą wolno, auta za nimi czekają i wyprzedzają
 - topole: rzędy wysokich, smukłych drzew wzdłuż odcinków drogi na Wsi
 - kluczowe postacie i ich wątki jadą z Tobą do każdego regionu (Janusz i koszulka, Kurier, Hela), lokalne wątki zostają w swoim regionie
+
+## Wersja 105: finałowa prosta
+
+- ostatnie ~130 m każdego odcinka to finałowa prosta: brama FINAŁOWA PROSTA nad drogą, slalom pięciu pachołków, skocznia i cztery tarcze przy drodze do trafienia gazetą
+- przewrócony pachołek hamuje; trafiona tarcza kręci się i daje +5 zł; czysty slalom +5 zł
+- przejazd przez metę: chwila zwolnienia i błysk flesza, potem gazeta; w „Twojej trasie” w wypłacie wiersz „Finał: tarcze x/4, czysty slalom”

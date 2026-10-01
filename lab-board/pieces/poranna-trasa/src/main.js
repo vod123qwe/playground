@@ -1224,9 +1224,9 @@ function goRegion(region, poziom) { saveCampaign(); const q = new URLSearchParam
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if ((L0.region === 'peryferia' ? 'peryferia' : L0.region) !== track.region) { goRegion(L0.region, id); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
-  bindJobs(); { const S1 = LVM.load(); LVM.save({ runs: (S1.runs || 0) + 1 }); } Object.assign(RAD, { fin: false, cool: 6, idle: 40, gag: false }); if (LV2.cur?.box) scene.remove(LV2.cur.box); Object.assign(LV2, { offer: null, cur: null, next: 30 + Math.random() * 20 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
+  buildFinale(); bindJobs(); { const S1 = LVM.load(); LVM.save({ runs: (S1.runs || 0) + 1 }); } Object.assign(RAD, { fin: false, cool: 6, idle: 40, gag: false }); if (LV2.cur?.box) scene.remove(LV2.cur.box); Object.assign(LV2, { offer: null, cur: null, next: 30 + Math.random() * 20 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
   flash(`${L.name}: ${track.home?.homeH ? 'wyjedź z domu' : 'ruszaj'} i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
-function goHome() { if (fin.isOpen) fin.close(); if (track.region !== 'peryferia') { goRegion('peryferia', null); return; } LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
+function goHome() { if (fin.isOpen) fin.close(); clearFinale(); if (track.region !== 'peryferia') { goRegion('peryferia', null); return; } LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
 // how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
 const ahead = (i, cp) => ((((cp - i) * LV.finish.dir) % track.N) + track.N) % track.N * track.ds;
@@ -1294,6 +1294,37 @@ function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.class
   if (inp.sprint && !RAD.sprint && RAD.cool <= 0 && B.v > 3) { RAD.turbo = 3.5; RAD.cool = 22; radioSay('turbo'); audio.play('trick', { vol: .4 }); } RAD.sprint = !!inp.sprint;
   if (RAD.behind <= 0) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw); for (const t of traffic.list || []) { const p = t.car?.group?.position; if (!p) continue; const dx = p.x - B.x, dz = p.z - B.z, l = Math.hypot(dx, dz); if (l < 9 && (dx * fx + dz * fz) / l < -.6) { RAD.behind = 30; radioSay('behind'); break; } } }
   if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; const S0 = LVM.load(), gagOk = !RAD.gag && S0.gagRun !== (S0.runs || 0) - 1; if (gagOk && Math.random() < .3) { RAD.gag = true; LVM.save({ gagRun: S0.runs || 0 }); audio.play('ui'); if (Math.random() < .5) radioScene(draw('mixup', JB.MIXUP)); else radioScene([...draw('pocket', JB.POCKET), draw('pocketEnd', JB.POCKET_END)], true); } else radioSay('idle'); } }
+// ---------- the final straight (the last 130 m before a stretch's finish): a banner over the road, a slalom of cones, a kicker, four
+// targets by the road to hit with a paper; at the finish a beat of slow motion and a flash. What it came to: a bonus, and in the paper ----------
+const FIN = { G: new THREE.Group(), cones: [], targets: [], hits: [], on: false, entered: false, res: null };
+scene.add(FIN.G);
+function clearFinale() { for (const h of FIN.hits) track.dropHit(h); while (FIN.G.children.length) FIN.G.remove(FIN.G.children[0]); FIN.cones = []; FIN.targets = []; FIN.hits = []; FIN.on = false; }
+function buildFinale() { clearFinale(); const N = track.N, ds = track.ds, dir = LV.finish.dir, iF = RUN.cps[RUN.cps.length - 1], S = track.S;
+  const at = (m, d) => { const i = ((iF - dir * Math.round(m / ds)) % N + N) % N, A = S[i], x = A.p.x + A.r.x * d * dir, z = A.p.z + A.r.z * d * dir; return { i, x, z, y: track.probe(x, z, i).y, yaw: Math.atan2(A.f.x * dir, A.f.z * dir) }; };
+  const M = c => toon(c), coneM = M('#e8692c'), bandM = M('#f6f3ea'), postM = M('#f6f3ea'), wood = M('#9e7a4f');
+  const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
+  // the banner: FINAŁOWA PROSTA in the pixel letters, chequered ends
+  { const p = at(132, 0), w = track.ROAD + .6, tx = cv(96, 12, g => { for (let x = 0; x < 96; x += 4) for (let y = 0; y < 12; y += 4) { g.fillStyle = ((x + y) / 4) % 2 ? '#17181b' : '#f6f3ea'; g.fillRect(x, y, 4, 4); } g.fillStyle = '#cf5a3e'; g.fillRect(12, 1, 72, 10); g.fillStyle = '#f6f3ea'; g.font = '8px PTPix'; g.textBaseline = 'top'; g.textAlign = 'center'; g.fillText('FINAŁOWA PROSTA', 48, 2); });
+    for (const sd of [-1, 1]) { const q = at(132, sd * w), post = new THREE.Mesh(new THREE.BoxGeometry(.16, 4.6, .16).translate(0, 2.3, 0), postM); post.position.set(q.x, q.y, q.z); FIN.G.add(post); }
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w * 2, .7, .06), new THREE.MeshBasicMaterial({ map: tx })); b.position.set(p.x, p.y + 4.3, p.z); b.rotation.y = p.yaw; FIN.G.add(b); }
+  // the slalom: five cones, left and right of the middle in turn
+  for (let k = 0; k < 5; k++) { const q = at(118 - k * 8, (k % 2 ? 1 : -1) * 1.1), m = new THREE.Mesh(new THREE.ConeGeometry(.22, .6, 8).translate(0, .3, 0), coneM), band = new THREE.Mesh(new THREE.CylinderGeometry(.13, .16, .08, 8).translate(0, .33, 0), bandM);
+    m.add(band); m.position.set(q.x, q.y, q.z); FIN.G.add(m); FIN.cones.push({ m, x: q.x, z: q.z, down: false, t: 0, ax: 0, az: 0 }); }
+  // the kicker
+  { const q = at(62, 0), o = track.props.ramp(Math.random, 'kicker'); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = q.yaw; FIN.G.add(o.group); FIN.hits.push(track.addHit(o.group, o.hit, q.i)); }
+  // the targets: a round board on a post, red and white rings, by the road, sides in turn
+  const ring = cv(16, 16, g => { const C = [['#cf5a3e', 8], ['#f6f3ea', 6.2], ['#cf5a3e', 4.4], ['#f6f3ea', 2.6], ['#17181b', 1.2]]; for (const [c, r] of C) { g.fillStyle = c; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot(x - 7.5, y - 7.5) < r) g.fillRect(x, y, 1, 1); } });
+  [[104, 1], [80, -1], [44, 1], [26, -1]].forEach(([m, sd]) => { const q = at(m, sd * (track.KERB + 1.6)), t = new THREE.Group(); t.add(new THREE.Mesh(new THREE.BoxGeometry(.1, 1.3, .1).translate(0, .65, 0), wood));
+    const board = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .06, 18).rotateX(Math.PI / 2), [M('#9e7a4f'), new THREE.MeshBasicMaterial({ map: ring }), new THREE.MeshBasicMaterial({ map: ring })]); board.position.y = 1.6; t.add(board);
+    t.position.set(q.x, q.y, q.z); t.rotation.y = q.yaw + sd * Math.PI / 2 * -1; FIN.G.add(t); FIN.targets.push({ t, board, c: new THREE.Vector3(q.x, q.y + 1.6, q.z), hit: false, spin: 0 }); });
+  FIN.on = true; FIN.entered = false; FIN.res = { targets: 0, of: FIN.targets.length, cones: 0, jump: 0 }; }
+function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? foot.me : B;
+  // the straight entered: a word
+  if (!FIN.entered && FIN.targets[0] && Math.hypot(me.x - FIN.targets[0].c.x, me.z - FIN.targets[0].c.z) < 40) { FIN.entered = true; flash('Finałowa prosta! Slalom, skocznia i tarcze: celuj gazetą!'); }
+  for (const c of FIN.cones) { if (c.down) { c.t = Math.min(1, c.t + dt * 4); c.m.rotation.x = c.ax * c.t * 1.5; c.m.rotation.z = c.az * c.t * 1.5; continue; } if (Math.hypot(me.x - c.x, me.z - c.z) < .55) { c.down = true; c.ax = Math.cos(B.yaw); c.az = -Math.sin(B.yaw); FIN.res.cones++; audio.play('pick', { vol: .5 }); B.v *= .85; } }
+  for (const T of FIN.targets) { if (T.hit) { T.spin += dt * 8; T.board.rotation.y = T.spin; continue; }
+    for (const p of papers) if (!p.landed && p.m.position.distanceTo(T.c) < .75) { T.hit = true; FIN.res.targets++; audio.play('coin'); hud.pop(T.c.clone().setY(T.c.y + .8), 'TARCZA! +5', '#9fd27a'); break; } }
+  if (B.air && FIN.entered) FIN.res.jump = Math.max(FIN.res.jump, (FIN.res.jump || 0) + dt); }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
@@ -1301,7 +1332,7 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   { const g = !!quests.gang?.chase, sr = !!quests.siren; if (g && !RUN.gangOn) logEv('gang', B.x, B.z); if (sr && !RUN.sirenOn) logEv('chase', B.x, B.z); RUN.gangOn = g; RUN.sirenOn = sr; }
   { const st = quests.police?.stops || 0; if (st > (RUN.stops ?? st)) logEv('police', B.x, B.z); RUN.stops = st; RUN.maxStreak = Math.max(RUN.maxStreak || 0, B.streak || 0); }
   if (RUN.snaps?.length && RUN.t >= RUN.snaps[0].at) { const q = RUN.snaps.shift(); try { q.e.img = photo(camera); } catch { } }
-  stepLive(dt);
+  stepLive(dt); stepFinale(dt);
   if ((RUN.chk -= dt) > 0) return; RUN.chk = .1; stepJobs();
   const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
   const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;
@@ -1315,11 +1346,13 @@ function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LE
   const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
   const got = LVM.rewardsFor(L.id, before, rec.best.stars), bonus = Math.round((B.earned || 0) * LVM.modBonus(RUN.mods || [])), inc = LVM.income();
   for (const g of got) { if (g.cash) B.points += g.cash; if (g.part) shop.grant(g.part[0], g.part[1]); g.name = g.cash ? `${g.cash} ZŁ` : partLabel(g.part[0], g.part[1]); }
-  B.points += bonus + inc; const pay = { earned: B.earned || 0, bonus, mods: (RUN.mods || []).map(id => LVM.MODS.find(m => m.id === id)?.t).filter(Boolean), income: inc, regulars: LVM.regulars(), got };
+  const FR = FIN.res || { targets: 0, of: 0, cones: 0 }, finB = FR.targets * 5 + (FR.of && !FR.cones ? 5 : 0); B.points += bonus + inc + finB; const pay = { finale: { ...FR, bonus: finB }, earned: B.earned || 0, bonus, mods: (RUN.mods || []).map(id => LVM.MODS.find(m => m.id === id)?.t).filter(Boolean), income: inc, regulars: LVM.regulars(), got };
   for (const R of JOBRUN) if (!R.done && R.j.kind === 'szarlotka' && (R.j.runs = (R.j.runs || 0) + 1) >= 2) jobEnd(R, false);
   { const S = LVM.load(); for (const j of S.jobs || []) { const R = JOBRUN.find(q => q.j.id === j.id); if (R) j.runs = R.j.runs; } LVM.save(); }
   LVM.save({ mods: [] }); saveCampaign();
-  audio.play('trick'); B.v *= .3; const data = paperData(L, r, rec, opened); data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); fin.open(data); }
+  audio.play('trick'); slowmo = .9; shutter(); const data = paperData(L, r, rec, opened); data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); setTimeout(() => { B.v *= .3; clearFinale(); fin.open(data); }, 1100); }
+// the finish's flash: the screen white a blink, the shutter's click
+function shutter() { const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;z-index:8;background:#fff;pointer-events:none;opacity:.9;transition:opacity .5s steps(4)'; document.body.appendChild(f); audio.play('ui'); requestAnimationFrame(() => requestAnimationFrame(() => { f.style.opacity = '0'; })); setTimeout(() => f.remove(), 700); }
 // the paper's look for its photos: one of the game's own overlays (the look panel's: comic dots, pencil, riso, 1 bit), put on for the
 // shot only, then the look as it was
 const PHOTO_LOOK = { komiks: { mode: 2, fxAmt: 1, comicDot: 4, comicAngle: 45, comicInk: 1.3, comicShade: .55 }, olowek: { mode: 4, fxAmt: 1, pencilGap: 4, pencilStr: .9, pencilColor: 0, pencilPaper: 0 },
@@ -1517,5 +1550,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, FIN, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };
