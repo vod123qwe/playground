@@ -44,7 +44,7 @@ export function createResidents({ THREE, toon, track, hud, scene, max = 7 }) {
       const d = Math.hypot(R.x - r.G.position.x, R.z - r.G.position.z);
       r.G.visible = d < 90; if (d > 90) continue;                                                        // (far off: not drawn, not moved)
       if (d < 13 && r.cool <= 0 && Math.abs(R.v) > .5) { r.cool = 14 + Math.random() * 10; r.talkT = 2.6; r.head?.getWorldPosition(r.mouth); r.mouth.y += .35;
-        hud.rant(r.mouth, pick(r.lines === 'shacks' ? SHACKS : r.lines === 'lump' ? (r.awakeT > 0 ? LUMP_AWAKE : LUMP) : r.lines === 'stop' ? STOP : (R.foot ? WALKING : LINES)[r.key]), true); }                                                  // (a call to him as he goes by)
+        hud.rant(r.mouth, R.line?.(r) || pick(r.lines === 'shacks' ? SHACKS : r.lines === 'lump' ? (r.awakeT > 0 ? LUMP_AWAKE : LUMP) : r.lines === 'stop' ? STOP : (R.foot ? WALKING : LINES)[r.key]), true); }                                                  // (a call to him as he goes by)
       if (r.acts.talk) { const w = r.talkT > 0 ? 1 : 0, cur = r.acts.talk.getEffectiveWeight(), nw = cur + (w - cur) * Math.min(1, dt * 5); r.acts.talk.setEffectiveWeight(nw); r.acts.idle.setEffectiveWeight(1 - nw); }
       r.mixer.update(dt);
       if (r.bottle && r.hand) { r.G.updateMatrixWorld(true); r.hand.getWorldPosition(_v); r.bottle.position.copy(r.G.worldToLocal(_v)); r.bottle.position.y += .05; }   // (the beer in his hand)

@@ -535,3 +535,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - posterunek: zawsze ktoś na dyżurce (pogadaj przy drzwiach): zgłoś, co wiesz (kto zamawia szyby, kto skupuje kradzione rowery) za kasę i dobrą opinię; skutek widać: radiowóz pod domem, obrażona postać („KABEL!”, butelki), ekipa spod beczki raz się mści (wybiega do bójki)
 - tablica na posterunku: list gończy (pierwszy rowerzysta na drodze dostaje czerwoną strzałkę; zrzuć go, zapłata przez radio, bez wracania), wezwania do rozniesienia (trzy domy, każdy reaguje po swojemu)
 - plan grup i gangu rowerowego: docs/rozmowy-i-zadania.md
+
+## Wersja 52: nastroje słychać
+
+- zaczepki z ogródków zależą od tego, jak kogoś potraktowałeś: od „O, NASZ BOHATER JEDZIE!” po „WYNOCHA Z MOJEJ ULICY!”; osobne dla kabli („KAPUŚ JEDZIE!”), kłamczuchów („ŁGARZ!”) i dla ekipy spod beczki
+- rozmowy o sprawy zaczynają się inaczej przy dobrym i złym nastroju; ktoś wściekły nie da żadnej sprawy
+- ktoś obrażony: można przeprosić (raz na jakiś czas), dać gazetę na zgodę albo dolać oliwy do ognia
+- ktoś bardzo zadowolony raz coś podaruje (szarlotka, „sok”, dzwonek, bilet)
+- policja płaci „z funduszu konfidenta. Znaczy... prawowitego obywatela”
