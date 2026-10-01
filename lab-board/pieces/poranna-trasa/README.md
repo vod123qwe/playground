@@ -627,3 +627,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - naprawione: F przy podnoszeniu roweru czasem otwierało pauzę (puszczenie myszy brane było za Esc)
 - menu Dźwięk: przycisk całkowitego wyciszenia
 - menu Grafika: usunięte style Gładki, Malowany, Komiks i Akwarela
+
+## Wersja 63: przewidywalny ruch
+
+- auta wymijają już tylko to, co stoi w miejscu: zaparkowane przy krawężniku, rampę, autobus na przystanku i rowerzystę, który stoi dłużej niż 4 sekundy; za wolnym autem i za jadącym rowerzystą grzecznie czekają (i trąbią)
+- przed wymijaniem kierunkowskaz: najpierw chwilę miga lewy (auto jeszcze na swoim pasie), potem zjazd; w drodze powrotnej miga prawy

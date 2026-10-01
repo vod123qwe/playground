@@ -1,6 +1,7 @@
 // Traffic: cars driving round the loop in both directions, each in its lane (1.75 m right of the middle, as it goes), at 30-40 km/h.
-// Each keeps behind what is ahead of it in its lane (a car, one parked at the kerb, the rider), and when that is standing or crawling
-// it goes round it: over into the other lane, if nothing is coming that way, past it, and back. A lane change is a steer, not a jump
+// Each keeps behind what is ahead of it in its lane (a car, one parked at the kerb, the rider). It goes round only what will not move
+// (a parked car, a ramp, the bus at its stop, the rider stood still a while), the indicator blinking first: over into the other lane,
+// if nothing is coming that way, past it, and back. Behind a slow car or the rider riding it waits (and hoots). A lane change is a steer, not a jump
 // (the car turns a little into it). Something coming while it is out there: it slows, and if it has not got past yet, it goes back.
 // One he runs into (or that runs into him) stops a while. boxes() gives where each is, as the rider's colliders are.
 
@@ -22,7 +23,8 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     if (!t.car) return;
     t.car.group.position.set(t.x, py, t.z); t.car.group.rotation.set(-Math.atan((B.p.y - A.p.y) / ds) * t.dir, t.yaw - steer, 0, 'YXZ');
   }
-  function update(dt, R) {                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
+  let clock = 0;
+  function update(dt, R) { clock += dt;                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
     stepBikes(dt, R);
     // everything that can be in a lane: the cars, the parked ones, the rider
     const things = [...list.map(t => ({ s: t.s, d: t.lane, v: t.v * t.dir, t })), ...bikes.map(b => ({ s: b.s, d: b.lane, v: b.v * b.dir })), ...track.parked.map(p => ({ s: p.s, d: p.d, v: 0 })), { s: R.s, d: R.d, v: R.v * R.along, rider: true }];
@@ -43,16 +45,22 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       if (t.bus && track.stops) for (const q of track.stops) { if (q.sd !== t.dir) continue; const g = ahead(t.s, q.s, t.dir);   // (the bus: easing in to its stop, standing there a few seconds)
         if (t.lastStop === q) { if (g < -40) t.lastStop = null; continue; }
         if (g > 0 && g < 16) want = Math.min(want, Math.max(.8, g * .7)); if (g > -1 && g < 1.2 && t.stop <= 0) { t.stop = 6; t.lastStop = q; } }
-      // go round something standing or crawling in its lane, if the other lane is clear far enough
-      if (!t.pass && inMine && L && L.g < 22 && Math.max(0, L.v) < 2.2 && !L.o.t?.pass && (!L.o.rider || t.riderT > 1.3)) {
+      // go round only what will not move: a car parked at the kerb, a ramp, the bus at its stop, the rider stood still a good while; never
+      // a car that is only slow or in a queue, never the rider riding (behind him they wait and hoot). The indicator first, a moment, then over
+      t.riderStill = L && L.o.rider && L.g < 30 && Math.abs(R.v) < .6 ? (t.riderStill || 0) + dt : 0;
+      const fixed = L && (L.o.rider ? t.riderStill > 4 : L.o.t ? L.o.t.stop > 0 : Math.abs(L.v) < .3);
+      if (!t.pass && inMine && L && L.g < 22 && fixed && !L.o.t?.pass) {
         const clear = coming() > 48 && !(lead(other) && lead(other).g < L.g + 12);
-        if (clear) t.pass = { s: L.o.s, t: L.o.t || null, rider: !!L.o.rider }; }
+        if (clear) t.pass = { s: L.o.s, t: L.o.t || null, rider: !!L.o.rider, go: .9 }; }
       if (t.pass) { const past = -ahead(t.s, t.pass.t ? t.pass.t.s : t.pass.rider ? R.s : t.pass.s, t.dir), oc = coming();   // (how far past it we are)
-        t.laneT = other;
-        want = Math.min(t.cruise * 1.05, want + 4); const Lo = lead(other); if (Lo) want = Math.min(want, (Lo.g - 6.5 - (Lo.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, Lo.v));   // (out there: mind what is ahead in that lane too)
+        if (t.pass.go > 0) { t.pass.go -= dt; t.laneT = mine; } else t.laneT = other;   // (signalling first: still in its lane)
+        if (t.pass.go <= 0) want = Math.min(t.cruise * 1.05, want + 4); const Lo = lead(other); if (Lo) want = Math.min(want, (Lo.g - 6.5 - (Lo.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, Lo.v));   // (out there: mind what is ahead in that lane too)
         if (oc < 30) { want = Math.min(want, oc < 18 ? 1.5 : 4.5); if (past < -1) t.pass = null; }        // something coming: slow; not past yet: back in
         if (t.pass && (past > 7 || (oc < 25 && past > 4.6)) && !(lead(mine) && lead(mine).g < 3)) t.pass = null; }   // past it (with room): back in; sooner, if one is coming (else they meet nose to nose and both wait)
       if (!t.pass) t.laneT = mine;
+      // the indicators: left while it waits to pull out and on the way over, right on the way back in
+      const side = t.pass && (t.pass.go > 0 || Math.abs(t.lane - other) > .3) ? 1 : !t.pass && Math.abs(t.lane - mine) > .3 ? -1 : 0;
+      t.car?.blink?.(side, (clock * 2.6) % 1 < .55);
       // the steering over: a spring, the quicker the faster it goes
       const kk = 2.2 + Math.min(1.5, t.v * .15); t.laneV += ((t.laneT - t.lane) * kk * kk - 2 * kk * t.laneV) * dt; t.laneV = THREE.MathUtils.clamp(t.laneV, -2.2, 2.2); t.lane += t.laneV * dt;
       if (t.stop > 0) want = 0;
