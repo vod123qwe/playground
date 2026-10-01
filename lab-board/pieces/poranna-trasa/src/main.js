@@ -43,6 +43,11 @@ import { createWorld } from './world.js';
 import { createModes, MODES } from './modes.js';
 import { createMp } from './mp.js';
 import { createNet } from './net.js';
+{ const m = location.hash.match(/^#odpowiedz=([^&]+)/); if (m) { const ch = new BroadcastChannel('pt-answer'), say = (t, sub) => { document.body.innerHTML = `<div style="position:fixed;inset:0;display:grid;place-items:center;background:#0c0d0f;color:#f6f3ea;font:700 15px/1.5 ui-monospace,Consolas,monospace;text-align:center;padding:20px"><div><div style="color:#efc970;font-size:22px;letter-spacing:.1em">${t}</div><div style="opacity:.75;margin-top:8px">${sub}</div></div></div>`; };
+  let ok = false; ch.onmessage = e => { if (e.data?.ok) { ok = true; say('PRZEKAZANE!', 'Wróć do karty z grą, zaraz się połączycie. Tę kartę możesz zamknąć.'); setTimeout(() => window.close(), 1200); } };
+  ch.postMessage({ code: m[1] }); say('PRZEKAZUJĘ...', 'Szukam otwartej gry w tej przeglądarce.');
+  setTimeout(() => { if (!ok) say('NIE ZNALAZŁEM GRY', 'Karta z zaproszeniem musi być otwarta w tej samej przeglądarce. Możesz też skopiować ten adres i wkleić go w okno gry.'); }, 1800);
+  await new Promise(() => { }); } }
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
 const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
@@ -629,8 +634,9 @@ function ride(dt, inp) {
       if (hard) { crash(0, bv.multiplyScalar(.5)); return; } B.x = nx + h.nx * (h.pen + .02); B.z = nz + h.nz * (h.pen + .02); B.v *= .55; B.jolt = .12; return pose(dt, 0, 0, slope, 0); }
     if (h) { C.t.stop = 2.5; if (Math.abs(B.v) > 2.2 || C.t.v > 2.5) { crash(0, new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.v)); return; } B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01); B.v *= .4; return pose(dt, 0, 0, slope, 0); } }
   B.x = nx; B.z = nz;
-  // (round the home's circle the yards go further out than the loop's 28 m: there the edge is a ring round the circle)
-  const q2 = track.probe(B.x, B.z, B.hint), H0 = track.home; if (H0?.yard(B.x, B.z)) { const dx = B.x - H0.C0.x, dz = B.z - H0.C0.z, r = Math.hypot(dx, dz); if (r > H0.C0R) { B.x = H0.C0.x + dx / r * H0.C0R; B.z = H0.C0.z + dz / r * H0.C0R; B.v *= .95; } }
+  // (round the home's circle the yards go further out than the loop's 28 m: there the edge is a ring round the circle; on the loop
+  // itself, within 28 m, nothing holds him)
+  const q2 = track.probe(B.x, B.z, B.hint), H0 = track.home; if (Math.abs(q2.d) <= 28) { } else if (H0?.yard(B.x, B.z)) { const dx = B.x - H0.C0.x, dz = B.z - H0.C0.z, r = Math.hypot(dx, dz); if (r > H0.C0R) { B.x = H0.C0.x + dx / r * H0.C0R; B.z = H0.C0.z + dz / r * H0.C0R; B.v *= .95; } }
   else if (Math.abs(q2.d) > 28) { B.x -= q2.d > 0 ? -q2.f.z * (Math.abs(q2.d) - 28) : q2.f.z * (Math.abs(q2.d) - 28); B.v *= .95; }
   pose(dt, inp.pedal, inp.brake, slope, 0);
 }
@@ -1119,7 +1125,7 @@ const net = createNet({ onMsg: m => netMsg(m), onState: s => { if (s === 'on') f
 // the houses' subscribers as the host has them (the guest takes them at a round's start), so the same houses wait for both
 const subsNow = () => track.doors.map(d => d.sub || null);
 function applySubs(a) { if (!a) return; track.doors.forEach((d, i) => { d.sub = a[i] ?? null; }); assignSubs(false, true); }
-function mpBegin(subs) { use(P1); resetGame(); C.iy = 0; if (subs) applySubs(subs);
+function mpBegin(subs) { use(P1); if (menu.open) menu.close(); resetGame(); C.iy = 0; if (subs) applySubs(subs);
   const i0 = (track.home.iJ + 12) % track.N, S0 = track.S[i0], yaw0 = Math.atan2(S0.f.x, S0.f.z), d = meId() === 1 ? .95 : 2.55;   // (just out of the home street, side by side in the lane)
   const x = S0.p.x + S0.r.x * d, z = S0.p.z + S0.r.z * d, q = track.probe(x, z, i0); Object.assign(B, { x, z, yaw: yaw0, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); C.yaw = yaw0; C.init = false; MP.on = true; }
 function mpEnd() { MP.on = false; use(P1); resetGame(); }
@@ -1152,6 +1158,7 @@ function stepNet(dt, inp) { if (!net.on) { P2.rider.root.visible = false; return
 function mpMarks() { if (!net.on || !P2.rider.root.visible) return []; const G = P2.B, o = otherId(), it = mp.it === o, dist = Math.round(Math.hypot(G.x - B.x, G.z - B.z));
   const col = it ? '#cf5a3e' : o === 1 ? '#efc970' : '#8fc3f0', lab = (it ? 'BEREK ' : '') + 'G' + o;
   return [{ p: new THREE.Vector3(G.x, (G.y || 0) + 2.5, G.z), s: 'v', col, label: dist > 12 ? lab + ' ' + dist + ' M' : lab, edge: true, edgeLabel: lab + ' ' + dist + ' M' }]; }
+{ const m = location.hash.match(/^#dolacz=([^&]+)(?:&do=([^&]+))?/); if (m) { history.replaceState(null, '', location.pathname + location.search); if (menu.open) menu.close(); mp.joinFlow(m[1], m[2] ? decodeURIComponent(m[2]) : null); } }
 let last = performance.now(), hudT = 0;
 const fly = { s: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false };
 function attract(dt) {                                                  // (the title: the street going by under a slow camera)
