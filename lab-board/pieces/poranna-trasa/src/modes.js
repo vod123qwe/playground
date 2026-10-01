@@ -12,7 +12,7 @@
 const BEST = 'pt.modes';
 const bestOf = () => { try { return JSON.parse(localStorage.getItem(BEST) || '{}'); } catch { return {}; } };
 const keepBest = o => { try { localStorage.setItem(BEST, JSON.stringify(o)); } catch { } };
-export const MODES = { sprint: { name: 'PORANNY SPRINT', info: 'MINUTA NA ZEGARZE, GAZETY DOKŁADAJĄ CZAS' }, course: { name: 'TOR PRZESZKÓD', info: 'SLALOM, SKOCZNIE I BRAMKI NA CZAS' } };
+export const MODES = { kosz: { name: 'RZUTY POD DOMEM', info: 'MINUTA, PUNKTY RZUTOWE, TRAFIENIE +2 S' }, sprint: { name: 'PORANNY SPRINT', info: 'MINUTA NA ZEGARZE, GAZETY DOKŁADAJĄ CZAS' }, course: { name: 'TOR PRZESZKÓD', info: 'SLALOM, SKOCZNIE I BRAMKI NA CZAS' } };
 
 export function createModes({ THREE, scene, track, audio, game }) {
   const css = document.createElement('style'); css.textContent = `
@@ -73,22 +73,25 @@ export function createModes({ THREE, scene, track, audio, game }) {
     game.restart(); Object.assign(flags, { cars: id === 'course' ? 0 : 2, bus: id !== 'course', calm: id === 'course' });
     if (id === 'sprint') { M.t = 60; M.d0 = game.B.delivered || 0; M.p0 = game.B.points || 0; M.del = 0; }
     if (id === 'course') { const C = buildCourse(), p = C.at(-7, 1.2); game.place(p.x, p.z, p.yaw, p.i); M.gate = 0; M.s = -7; }
+    if (id === 'kosz') { const H = game.hoops; flags.calm = true; flags.cars = 1; game.onFootAt(H.start, H.facing); M.t = 60; M.h0 = { made: H.made, shots: H.shots }; M.best = 0; }   // (on the court, the ball given at the start)
     nameE.textContent = MODES[id].name; bar.classList.add('on'); draw(); }
-  function stop() { M = null; open = false; end.classList.remove('on'); bar.classList.remove('on'); cd.classList.remove('on'); clearCourse(); Object.assign(flags, { cars: null, bus: true, calm: false }); game.restart(); }
+  function stop() { if (M?.id === 'kosz') game.hoops.challenge.stop(); M = null; open = false; end.classList.remove('on'); bar.classList.remove('on'); cd.classList.remove('on'); clearCourse(); Object.assign(flags, { cars: null, bus: true, calm: false }); game.restart(); }
   function again() { if (M) start(M.id); }
-  function finish(why, stats, bestKey, better, val, show) { M.phase = 'end'; open = true; const all = bestOf(), had = all[bestKey], nb = had == null || better(val, had); if (nb) { all[bestKey] = val; keepBest(all); }
+  function finish(why, stats, bestKey, better, val, show) { if (M.id === 'kosz') game.hoops.challenge.stop(); M.phase = 'end'; open = true; const all = bestOf(), had = all[bestKey], nb = had == null || better(val, had); if (nb) { all[bestKey] = val; keepBest(all); }
     end.querySelector('h2').textContent = MODES[M.id].name; end.querySelector('.why').textContent = why;
     end.querySelector('.st').innerHTML = stats.map(([k, v]) => `<span>${k}</span><b>${v}</b>`).join('');
     const b = end.querySelector('.best'); b.className = 'best' + (nb && had != null ? ' new' : ''); b.textContent = nb && had != null ? 'NOWY REKORD!' : had == null ? 'PIERWSZY WYNIK ZAPISANY' : 'REKORD: ' + show(had);
     end.classList.add('on'); bar.classList.remove('on'); audio.play(nb ? 'trick' : 'coin'); }
-  function draw() { if (!M) return; const low = M.id === 'sprint' && M.t < 10;
-    clockE.textContent = M.phase === 'count' ? (M.id === 'sprint' ? fmt(M.t) : '0.0') : fmt(M.t); clockE.className = 'clock' + (low ? ' low' : '');
-    subE.textContent = M.id === 'sprint' ? `DORĘCZONE ${M.del || 0} · KAŻDA GAZETA +5 S` : `${M.gate < course.gates.length ? (M.gate === 0 ? 'JEDŹ NA START!' : 'NASTĘPNA: ' + course.gates[M.gate].label) : ''}${M.pen ? ' · KARA +' + M.pen + ' S' : ''}`; }
+  function draw() { if (!M) return; const low = (M.id === 'sprint' || M.id === 'kosz') && M.t < 10;
+    clockE.textContent = M.phase === 'count' ? (M.id === 'sprint' || M.id === 'kosz' ? fmt(M.t) : '0.0') : fmt(M.t); clockE.className = 'clock' + (low ? ' low' : '');
+    subE.textContent = M.id === 'kosz' ? `PUNKTY ${game.hoops.challenge.pts} · RZUCAJ Z ZIELONEGO KÓŁKA${game.hoops.streak >= 3 ? ' · W GAZIE!' : game.hoops.streak > 1 ? ' · SERIA ' + game.hoops.streak : ''}` : M.id === 'sprint' ? `DORĘCZONE ${M.del || 0} · KAŻDA GAZETA +5 S` : `${M.gate < course.gates.length ? (M.gate === 0 ? 'JEDŹ NA START!' : 'NASTĘPNA: ' + course.gates[M.gate].label) : ''}${M.pen ? ' · KARA +' + M.pen + ' S' : ''}`; }
 
   // ---------- each frame ----------
   function update(dt) { if (!M || M.phase === 'end') return; const B = game.B;
     if (M.phase === 'count') { M.cd -= dt; B.v = 0; const n = Math.ceil(M.cd - .2); cd.textContent = n > 0 ? n : 'START!'; cd.classList.add('on'); if (n !== M.lastN) { M.lastN = n; audio.play(n > 0 ? 'coin' : 'trick', { vol: .6 }); }
-      if (M.cd <= 0) { M.phase = 'run'; cd.classList.remove('on'); } draw(); return; }
+      if (M.cd <= 0) { M.phase = 'run'; cd.classList.remove('on'); if (M.id === 'kosz') game.hoops.challenge.start(); } draw(); return; }
+    if (M.id === 'kosz') { const H = game.hoops, C = H.challenge; C.update(dt); M.t = Math.max(0, C.t); M.best = Math.max(M.best, H.streak);
+      if (C.t <= 0) { const pts = C.pts; finish('Czas minął', [['Punkty', pts], ['Trafione', (H.made - M.h0.made) + ' / ' + (H.shots - M.h0.shots)], ['Najdłuższa seria', M.best]], 'kosz', (a, b) => a > b, pts, v => v + ' pkt'); } draw(); return; }
     if (M.id === 'sprint') { const del = (B.delivered || 0) - M.d0; if (del > M.del) { const add = (del - M.del) * (4 + Math.min(4, 1 + Math.floor((B.streak || 0) / 3))); M.t += add; game.pop(new THREE.Vector3(B.x, B.y + 2.4, B.z), '+' + add + ' S', '#9fd27a'); M.del = del; }
       M.t -= dt; if (M.t <= 0) { M.t = 0; const pts = (B.points || 0) - M.p0; finish('Czas minął', [['Doręczone', M.del], ['Zarobione', pts + ' zł'], ['Najdłuższa seria', M.maxS || 0]], 'sprint', (a, b) => a > b, M.del, v => v + ' gazet'); }
       M.maxS = Math.max(M.maxS || 0, B.streak || 0); draw(); return; }

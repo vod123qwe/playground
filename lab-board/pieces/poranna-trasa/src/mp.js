@@ -15,7 +15,8 @@ export const MP_MODES = {
   free: { name: 'WSPÓLNA JAZDA', info: 'BEZ ZEGARA, PO PROSTU RAZEM', T: 0 },
   race: { name: 'WYŚCIG GAZECIARZY', info: 'KTO WIĘCEJ ZAROBI W 4 MINUTY', T: 240 },
   coop: { name: 'RAZEM', info: '20 GAZET WE DWÓCH W 5 MINUT', T: 300, goal: 20 },
-  tag: { name: 'BEREK NA ROWERACH', info: 'KOPNIJ, ŻEBY ODDAĆ BERKA', T: 180 } };
+  tag: { name: 'BEREK NA ROWERACH', info: 'KOPNIJ, ŻEBY ODDAĆ BERKA', T: 180 },
+  kosz: { name: 'RZUTY POD DOMEM', info: 'MINUTA NA BOISKU: KTO WIĘCEJ PUNKTÓW', T: 60 } };
 
 export function createMp({ api, net }) {
   const css = document.createElement('style'); css.textContent = `
@@ -88,7 +89,7 @@ export function createMp({ api, net }) {
   function start(id) { begin(id); if (net.role === 'host') net.send({ k: 'start', id, subs: api.subs() }); }   // (after the reset here: the houses as they are now)
   function begin(id, subs) { closeLobby(); end.classList.remove('on'); page = null; const D = MP_MODES[id];
     M = { id, phase: 'count', cd: 3.2, t: D.T, it: id === 'tag' ? 1 : 0, itT: [0, 0, 0], safe: 0, d0: [0, 0, 0], p0: [0, 0, 0], kicks: [0, 0, 0], falls: [0, 0, 0] };
-    api.begin(subs); for (const k of [1, 2]) { M.d0[k] = st(k).delivered || 0; M.p0[k] = st(k).points || 0; }
+    api.begin(subs, id); for (const k of [1, 2]) { M.d0[k] = st(k).delivered || 0; M.p0[k] = st(k).points || 0; }
     nameE.textContent = D.name + ' · ' + D.info; bar.classList.add('on'); draw(); }
   function stopLocal() { if (!M) return; M = null; end.classList.remove('on'); bar.classList.remove('on'); cd.classList.remove('on'); if (page === 'end') page = null; api.end(); }
   function again() { if (!M) return; if (net.role === 'host') start(M.id); else api.flash('Nową rundę zaczyna gospodarz'); }
@@ -98,23 +99,25 @@ export function createMp({ api, net }) {
     clockE.textContent = D.T ? fmt(Math.max(0, M.t)) : 'RAZEM'; clockE.className = 'clock' + (D.T && M.t < 20 && M.phase === 'run' ? ' low' : '');
     if (M.id === 'race' || M.id === 'free') { s1.textContent = 'G1 ' + got(1) + ' ZŁ'; s2.textContent = 'G2 ' + got(2) + ' ZŁ'; }
     if (M.id === 'coop') { s1.textContent = 'RAZEM ' + (del(1) + del(2)) + '/' + D.goal; s2.textContent = 'G1 ' + del(1) + ' · G2 ' + del(2); }
+    if (M.id === 'kosz') { s1.textContent = 'G1 ' + (st(1).hoop || 0) + ' PKT'; s2.textContent = 'G2 ' + (st(2).hoop || 0) + ' PKT'; }
     if (M.id === 'tag') { s1.textContent = (M.it === 1 ? 'BEREK ' : '') + 'G1 ' + fmt(M.itT[1]); s2.textContent = (M.it === 2 ? 'BEREK ' : '') + 'G2 ' + fmt(M.itT[2]); } }
-  function finish(why) { M.phase = 'end'; page = 'end'; const D = MP_MODES[M.id];
+  function finish(why) { M.phase = 'end'; page = 'end'; api.onEnd?.(); const D = MP_MODES[M.id];
     end.querySelector('h2').textContent = D.name; end.querySelector('.why').innerHTML = why; end.querySelector('.again').style.display = net.role === 'host' ? '' : 'none';
-    const rows = [['', 'GRACZ 1', 'GRACZ 2'], ['ZAROBIONE', got(1) + ' ZŁ', got(2) + ' ZŁ'], ['DORĘCZONE', del(1), del(2)], ['KOPNIAKI', M.kicks[1], M.kicks[2]], ['UPADKI', M.falls[1], M.falls[2]], ...(M.id === 'tag' ? [['CZAS BERKA', fmt(M.itT[1]), fmt(M.itT[2])]] : [])];
+    const rows = [['', 'GRACZ 1', 'GRACZ 2'], ['ZAROBIONE', got(1) + ' ZŁ', got(2) + ' ZŁ'], ['DORĘCZONE', del(1), del(2)], ['KOPNIAKI', M.kicks[1], M.kicks[2]], ['UPADKI', M.falls[1], M.falls[2]], ...(M.id === 'tag' ? [['CZAS BERKA', fmt(M.itT[1]), fmt(M.itT[2])]] : []), ...(M.id === 'kosz' ? [['PUNKTY Z RZUTÓW', st(1).hoop || 0, st(2).hoop || 0]] : [])];
     end.querySelector('.st').innerHTML = rows.map((r, i) => r.map((c, j) => `<span class="${i === 0 ? 'h' : ''} ${j === 1 ? 'p1' : j === 2 ? 'p2' : ''}">${c}</span>`).join('')).join('');
     end.classList.add('on'); bar.classList.remove('on'); api.audio?.play('trick'); }
   const win = (a, b, more) => a === b ? 'Remis!' : `Wygrywa <b class="${(more ? a > b : a < b) ? 'p1' : 'p2'}">GRACZ ${(more ? a > b : a < b) ? 1 : 2}</b>!` + ((more ? a > b : a < b) === (me() === 1) ? ' To Ty!' : '');
   function update(dt) { if (!M || M.phase === 'end') return; const D = MP_MODES[M.id];
     if (M.phase === 'count') { M.cd -= dt; st(me()).v = 0; const n = Math.ceil(M.cd - .2); cd.textContent = n > 0 ? n : 'START!'; cd.classList.add('on'); if (n !== M.lastN) { M.lastN = n; api.audio?.play(n > 0 ? 'coin' : 'trick', { vol: .6 }); }
-      if (M.cd <= 0) { M.phase = 'run'; cd.classList.remove('on'); api.flash(M.id === 'tag' ? `Berek: gracz ${M.it}${M.it === me() ? ' (Ty)' : ''}! Kopnij drugiego, żeby oddać` : M.id === 'coop' ? 'Razem: 20 gazet, dzielcie się domami!' : M.id === 'race' ? 'Wyścig: kto więcej zarobi!' : 'Jedziecie razem. Znacznik pokazuje, gdzie jest drugi'); } draw(); return; }
+      if (M.cd <= 0) { M.phase = 'run'; cd.classList.remove('on'); api.onRun?.(M.id); api.flash(M.id === 'tag' ? `Berek: gracz ${M.it}${M.it === me() ? ' (Ty)' : ''}! Kopnij drugiego, żeby oddać` : M.id === 'coop' ? 'Razem: 20 gazet, dzielcie się domami!' : M.id === 'race' ? 'Wyścig: kto więcej zarobi!' : 'Jedziecie razem. Znacznik pokazuje, gdzie jest drugi'); } draw(); return; }
     if (D.T) M.t -= dt; M.safe = Math.max(0, M.safe - dt); if (M.it) M.itT[M.it] += dt;
     for (const k of [1, 2]) { const c = !!st(k).crash; if (c && !M['c' + k]) M.falls[k]++; M['c' + k] = c; }
     if (M.id === 'coop' && del(1) + del(2) >= D.goal) return finish(`Udało się! 20 gazet w <b>${fmt(D.T - M.t)}</b>.`);
     if (D.T && M.t <= 0) { M.t = 0;
       if (M.id === 'race') return finish(win(got(1), got(2), true));
       if (M.id === 'coop') return finish(`Zabrakło ${D.goal - del(1) - del(2)} gazet. Jeszcze raz?`);
-      if (M.id === 'tag') return finish(win(M.itT[1], M.itT[2], false) + ' (krócej berkiem)'); }
+      if (M.id === 'tag') return finish(win(M.itT[1], M.itT[2], false) + ' (krócej berkiem)');
+      if (M.id === 'kosz') return finish(win(st(1).hoop || 0, st(2).hoop || 0, true)); }
     draw(); }
   // a kick that reached the other: what it does here (and the other told)
   function kick(a, b) { if (!M || M.phase !== 'run') return 'jostle'; M.kicks[a]++; net.send({ k: 'kicks', a, n: M.kicks[a] });
