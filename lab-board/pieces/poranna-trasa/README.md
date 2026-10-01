@@ -814,3 +814,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - naprawione: najechanie myszką przebudowywało całą listę, więc przycisk znikał pod kursorem w trakcie kliknięcia (zakup „nie działał”) i lista skakała do góry; teraz najechanie zmienia tylko podgląd roweru i paski
 - dymek pana Janusza obok jego głowy, nie na oknie
 - garaż (I) w tym samym stylu: litery, ramki, przyciski
+
+## Wersja 89: mapa trasy, odcinki z metą, gazeta z wynikami, zapis postępu
+
+- mapa trasy (M, albo z menu): widok z góry w pikselach, podzielony na regiony (Peryferie, Wieś, Druga strona, Miasto, Leśna droga i dalej); otwarte są na razie Peryferie, reszta pod kratką z napisem WKRÓTCE
+- dom jako punkt na mapie: jazda swobodna jak dotąd, bez mety i zegara
+- 4 odcinki w Peryferiach: Pierwszy poranek (pół okrążenia), potem rozwidlenie: Okrążenie od tyłu (w drugą stronę, spokojniej) albo Główną ulicą (więcej aut), dalej Godzina szczytu; każdy z tymi samymi prenumeratorami za każdym razem, auta i psy losowo
+- start z domu, punkty kontrolne co ćwierć okrążenia, brama META nad drogą, pasek u góry: czas, metry do mety, gazety; jazda w złą stronę: ZAWRÓĆ
+- na mecie gazeta „Wieści z trasy”: nagłówek z Twojej jazdy, 3 gwiazdki (czas, gazety i celność, bez wywrotki), dziś i najlepsze wyniki z rekordami, co się otworzyło na mapie
+- przy każdym punkcie na mapie: gwiazdki, cele, najlepsze wyniki i liczba przejazdów
+- zapis postępu w przeglądarce po każdym odcinku (i przyciskiem ZAPISZ): kasa, rower, części, lakiery, wyniki
+- warsztat dostępny z mapy, żeby zrobić zakupy między odcinkami
+- plan dalszych etapów: docs/progresja.md

@@ -45,6 +45,9 @@ import { createMp } from './mp.js';
 import { createNet } from './net.js';
 import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, strangerBike } from './bikes.js';
 import { createGarage } from './garage.js';
+import * as LVM from './levels.js';
+import { createMap } from './map.js';
+import { createFinish } from './finish.js';
 import { createHoops } from './hoops.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { PARTS } from './shop.js';
@@ -171,9 +174,10 @@ const talk = createTalk({ label: (i, light, sel) => !pad.active ? String(i + 1) 
 let MOD = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 };   // (what the bike does: its frame and its parts, bikes.js)
 // the bike he rides (its kind and its parts), his spare parts, the paints he has bought (bikes.js, shop.js, the inventory page)
 let myBike = { type: 'moj', parts: newParts() }; const INV = [], PAINTS = new Set([0]);
+let LV = null, SUBR = Math.random, reMap = false;
 function applyBike() { MOD = bikeMods(myBike); B.bagMax = 30 + MOD.bag; rider.setParts(bikeLook(myBike)); }
 const shop = createShop({ THREE, createRider: () => createRider({ THREE, ramp, toon }), game: { get money() { return B.points; }, set money(v) { B.points = Math.max(0, v); }, get papers() { return B.papers; }, set papers(v) { B.papers = v; }, get hp() { return B.hp ?? 100; }, set hp(v) { B.hp = v; },
-  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, get bike() { return myBike; }, inv: INV, paints: PAINTS, onChange: () => applyBike() } });
+  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { saveCampaign(); if (reMap) { reMap = false; setTimeout(() => openMap(), 0); return; } const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, get bike() { return myBike; }, inv: INV, paints: PAINTS, onChange: () => applyBike() } });
 const money = (n, at, label) => { B.points = Math.max(0, B.points + n); hud.pop(at, label, n >= 0 ? '#efc970' : '#cf5a3e'); }; money.has = n => B.points >= n;
 const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   rider: () => foot.active ? { x: foot.me.x, z: foot.me.z, y: foot.me.y, yaw: foot.me.yaw, v: Math.hypot(foot.me.vf, foot.me.vs), foot: true } : { x: B.x, z: B.z, y: B.y, yaw: B.yaw, v: Math.abs(B.v), foot: false },
@@ -239,7 +243,7 @@ function swapTo(c) { const old = myBike; wbikes.add(old, B.x, B.z, B.yaw, !!B.bi
 const _rc = new THREE.Raycaster(), _nd = new THREE.Vector2(); let cardT = 0;
 function stepBikeCards(dt) { const me = foot.active ? foot.me : null;
   for (const b of traffic.bikes) { const near = me && b.on && b.fall && Math.hypot(me.x - b.x, me.z - b.z) < 9; if (near && !b.hold) { b.hold = true; b.heldByMe = true; } else if (!near && b.heldByMe) { b.hold = false; b.heldByMe = false; } }
-  if ((cardT -= dt) > 0) return; cardT = .08; const busy = menu.open || asking || shop.isOpen || talk.isOpen || runUI.isOpen || modes.isOpen || mp.isOpen || book.isOpen || garage?.isOpen;
+  if ((cardT -= dt) > 0) return; cardT = .08; const busy = map.isOpen || fin.isOpen || menu.open || asking || shop.isOpen || talk.isOpen || runUI.isOpen || modes.isOpen || mp.isOpen || book.isOpen || garage?.isOpen;
   if (busy) return wbikes.card.hide(); const P = me || B, cands = bikeChoices(P).filter(c => c.kind !== 'mine' && c.d < 30);
   let pick = null; if (!document.pointerLockElement && mouse.inside) { _nd.set(mouse.nx, -mouse.ny); _rc.setFromCamera(_nd, camera); let bd = 1e9;
       for (const c of cands) { const root = c.kind === 'world' ? c.ref.r.root : c.ref.r.root, h = _rc.intersectObject(root, true)[0]; if (h && h.distance < bd) { bd = h.distance; pick = c; } } }
@@ -281,7 +285,7 @@ const ACTIONS = [
   { id: 'sprint', keys: ['ShiftLeft', 'ShiftRight'], modes: ['bike', 'walk'] },
   { id: 'throwL', keys: ['ArrowLeft', 'KeyQ'], modes: ['bike'] }, { id: 'throwR', keys: ['ArrowRight', 'KeyE'], modes: ['bike'] },
   { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyC'], modes: ['bike'] },
-  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'inv', keys: ['KeyI'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
+  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'inv', keys: ['KeyI'], modes: ['bike', 'walk'] }, { id: 'map', keys: ['KeyM'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
   { id: 'punchL', keys: ['ArrowLeft'], modes: ['fight'] }, { id: 'punchR', keys: ['ArrowRight'], modes: ['fight'] }, { id: 'high', keys: ['ArrowUp'], modes: ['fight'] },
   { id: 'low', keys: ['ArrowDown'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
   { id: 'taunt', keys: ['KeyG'], modes: ['fight'] },
@@ -304,7 +308,7 @@ const clashes = (id, code) => { const A = ACTIONS.find(a => a.id === id); return
 // what each is, where (the menu's page and the help window list them so)
 const SECTIONS = [
   { title: 'NA ROWERZE', items: [['pedal', 'PEDAŁUJ'], ['brake', 'HAMUJ (NA POSTOJU: COFAJ)'], ['left', 'SKRĘĆ W LEWO'], ['right', 'SKRĘĆ W PRAWO'], ['sprint', 'SZYBCIEJ'],
-    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['inv', 'EKWIPUNEK ROWERU: CZĘŚCI, SLOTY, ROWER OBOK'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
+    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['inv', 'EKWIPUNEK ROWERU: CZĘŚCI, SLOTY, ROWER OBOK'], ['map', 'MAPA TRASY: ODCINKI, WYNIKI, WARSZTAT, ZAPIS'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
     ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['bell', 'DZWONEK (GDY GO MASZ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
@@ -326,6 +330,7 @@ addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') &&
   if (on('view', e.code)) { if (foot.active) foot.toggleView(); else setCam((camI + 1) % CAMS.length); }
   if (on('ink', e.code)) look.set({ ink: (look.S.ink + 1) % INKS.length });
   if (on('help', e.code)) toggleKeys();
+  if (on('map', e.code) && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !garage.isOpen && !foot.fighting) openMap();
   if (on('inv', e.code) && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !foot.fighting) garage.toggle();
   if (on('full', e.code)) toggleFull();
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code) || ACTIONS.some(a => BIND[a.id].includes(e.code))) e.preventDefault(); });
@@ -343,7 +348,7 @@ addEventListener('mousemove', e => { if (mouse.mh) return; mouse.nx = e.clientX 
   if (document.pointerLockElement || (!menu.open && !asking)) { mouse.dx += e.movementX; mouse.dy += e.movementY; if (foot.active) mouse.used = true; } });
 document.addEventListener('mouseleave', () => { mouse.inside = false; });
 document.addEventListener('pointerlockerror', () => { if (!mouse.failed) { mouse.failed = true; flash('Mysz: ruszaj nią, a przy krawędzi ekranu obracasz się dalej'); } });
-addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || shop.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button, .mppage, #gar')) return;
+addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || shop.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button, .mppage, #gar, #map, #fin')) return;
   lockPointer(); if (foot.active) mouse.used = true;
   if (e.button === 0) { mouse.l = true; mouse.lh = true; } if (e.button === 2) { mouse.r = true; mouse.rh = true; }
   if (e.button === 1) { e.preventDefault(); if (e.detail >= 2) { camUser.dist = 1; camUser.tilt = 0; camUser.yaw = 0; saveCam(); flash('Kamera: jak była'); } else mouse.mh = true; } });
@@ -447,7 +452,7 @@ const plaques = [];
 function assignSubs(keepNear, fixed) { const A = ACT();   // (fixed: the subscribers as they are, given by the other player; only their plaques made anew)
   for (const d of track.doors) { if (keepNear && (d.done || Math.hypot(d.p.x - B.x, d.p.z - B.z) < 70)) continue;
     if (d.plaque) { scene.remove(d.plaque); plaques.splice(plaques.indexOf(d.plaque), 1); d.plaque = null; }
-    if (!fixed) d.sub = Math.random() < .55 ? A[Math.random() * A.length | 0] : null; if (!d.sub) continue;
+    if (!fixed) d.sub = SUBR() < .55 ? A[SUBR() * A.length | 0] : null; if (!d.sub) continue;
     const n = d.n, fa = d.p.clone().addScaledVector(n, -2.6), side = new THREE.Vector3(-n.z, 0, n.x), pl = new THREE.Group();
     const b = new THREE.Mesh(new THREE.BoxGeometry(.34, .24, .03), toon('#f6f3ea')); pl.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(.28, .08, .035), bandOf[d.sub]); c.position.y = .04; pl.add(c);
     pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; } }
@@ -481,6 +486,7 @@ function release(at, side) {                                          // (from t
   const A = B.throwAt; B.throwAt = null; if (A && B.throwDoor) B.throwDoor.pending = performance.now(); if (A) {   // (a paper on its way to it: not sent another)
     const dx = A.x - at.x, dz = A.z - at.z, l = Math.hypot(dx, dz), T = THREE.MathUtils.clamp(.5 + l * .04, .6, 1.05); v = new THREE.Vector3(dx / T, (A.y + .05 - at.y) / T + .5 * g * T, dz / T); }   // (sent to a target: the arc that comes down on it)
   const dot = new THREE.Mesh(dotG, dotM); dot.renderOrder = 1; scene.add(dot);
+  B.thrown = (B.thrown || 0) + 1;
   papers.push({ m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false, title, guided: !!A });
   net.send({ k: 'paper', x: +at.x.toFixed(2), y: +at.y.toFixed(2), z: +at.z.toFixed(2), v: [v.x, v.y, v.z].map(n => +n.toFixed(2)), title });   // (the other sees it fly)
 }
@@ -561,21 +567,22 @@ function rampAt(x, z) {                                              // how high
 
 // ---------- the ride ----------
 // the run: how hard it is by now (0..1 over 8 km), hurt (a run ends at nothing), its end (the summary, the lottery), its start (what the lottery kept)
-const difficulty = () => Math.min(1, trip.dist / 8000);
+const difficulty = () => LV ? (LV.pace - 1) / .35 : Math.min(1, trip.dist / 8000);
 // the run's level: up one every kilometre (to 6): more cars out and a little quicker, dogs keener; said when it goes up
 const level = () => Math.min(6, 1 + Math.floor(trip.dist / 1000)), carsAt = l => Math.min(6, l + 1), heat = l => .55 + (l - 1) * .13;
 const LVL_SAY = ['', '', 'Więcej aut na drodze', 'Psy coraz bardziej czujne', 'Ruch jak w godzinach szczytu', 'Kierowcy się spieszą', 'Pełny poranek! Trzymaj się'];
-function stepLevel() { const l = level(); if (l === B.lvl) return; if (B.lvl) { flash(`POZIOM ${l}: ${LVL_SAY[l]}`); audio.play('trick'); } B.lvl = l; }
+const carsNow = () => LV ? LV.cars : carsAt(level()), heatNow = () => LV ? LV.heat : heat(level());
+function stepLevel() { if (LV) return; const l = level(); if (l === B.lvl) return; if (B.lvl) { flash(`POZIOM ${l}: ${LVL_SAY[l]}`); audio.play('trick'); } B.lvl = l; }
 function hurt(n, why) { if (endT > 0) return; audio.play('hurt', { vol: .6 }); B.hp = Math.max(0, (B.hp ?? 100) - n); if (B.hp <= 0) { endT = 2.4; endWhy = why || 'Zdrowie się skończyło.'; } }
 let endT = 0, endWhy = '';
-const runUI = createRun({ onAgain: () => { resetGame(); fromAccount(); } });
+const runUI = createRun({ onAgain: () => { if (LV) startLevel(LV.id); else { resetGame(); fromAccount(); } } });
 // the notebook (Tab): who thinks what of you, the bike, what you carry, how you are
 const book = createBook({ data: () => ({ reps: quests.reps(), parts: shop.equipped(), items: B.items || [], kept: kept(), hp: B.hp ?? 100, money: B.points, fame: B.fame || 0, papers: ACT().map(k => ({ name: TITLES[k].name, n: B.mix[k], col: TITLES[k].col })), dist: trip.dist }) });
 function endRun(why) { if (runUI.isOpen) return; endT = 0; runUI.open({ reason: why, dist: trip.dist, delivered: B.delivered || 0, earned: B.earned || 0, windows: B.windows || 0, stops: quests.police?.stops || 0 }, [...shop.ownedList(), ...(B.items || []).map(n => ({ label: 'FANT: ' + n, keep: { item: n } }))]); }
 function fromAccount() { const all = kept(); for (const k of all) { if (k.keep.part) shop.grant(k.keep.part, k.keep.tier); else if (k.keep.item) (B.items ||= []).push(k.keep.item); } if (all.length) flash('Z konta: ' + all.map(k => k.label.toLowerCase()).join(', ')); }
 setTimeout(() => fromAccount(), 0);   // (the first run too)
 function crash(side, push, robbed) {                                 // push: what hit him (a car's velocity), if anything; robbed: the old woman got him
-  if (B.crash) return; audio.play('crash'); hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
+  if (B.crash) return; B.falls = (B.falls || 0) + 1; audio.play('crash'); hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
   // he comes off: a ragdoll, flung on the way he was going (over the bars), a little to the side he falls, and with whatever hit him
   const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)), vel = f.clone().multiplyScalar(B.v * .55).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), B.crash.side * .5);
   if (push) vel.addScaledVector(push, .45); vel.y += B.air ? B.vy : 0;
@@ -765,7 +772,7 @@ function stepPuddles(me) { let P0 = null; for (const P of track.puddles || []) i
 let barkers = [];
 const nearDog = () => barkers.find(n => n.dist < 2.9);
 function stepDogs(dt, inp) {
-  barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw, heat: modes.flags.calm ? 0 : heat(level()) }); stepLevel();
+  barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw, heat: modes.flags.calm ? 0 : heatNow() }); stepLevel(); stepRun(dt);
   for (const n of barkers) { const d = n.dog; d.sndT = (d.sndT || 0) - dt; if (d.sndT <= 0) { d.sndT = 1 + Math.random() * 1.4; aud('bark', d); } }   // (a dog at him: a bark now and then)
   // a dog into a car or a tree (running at him, or kicked through the air): it goes over, and home
   const cars = traffic.boxes();
@@ -966,7 +973,7 @@ function step(dt, inp) {
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
   rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsAt(level()), bus: modes.flags.bus, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
+  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
@@ -1068,7 +1075,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsAt(level()), bus: modes.flags.bus, s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
+  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
@@ -1108,12 +1115,14 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
 const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
-const menu = createMenu({ modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
+const menu = createMenu({ onMap: () => openMap(), onPlay: () => flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'), modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (book.isOpen && book.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (e.code === 'Tab' && !menu.open && !asking && !talk.isOpen && !shop.isOpen && !runUI.isOpen) { book.toggle(); keys.clear(); e.preventDefault(); e.stopImmediatePropagation(); return; }
   if (runUI.isOpen && runUI.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
+  if (fin.isOpen && fin.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
+  if (map.isOpen && map.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (modes.isOpen && modes.key(e)) { keys.clear(); e.stopImmediatePropagation(); e.preventDefault(); return; }
   if (mp.isOpen && mp.key(e)) { keys.clear(); e.stopImmediatePropagation(); e.preventDefault(); return; }
   if (shop.isOpen && shop.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
@@ -1156,7 +1165,7 @@ function resetGame() {
   rider.ragdollOff();
   const q = track.probe(track.start.x, track.start.z, 0); C.iy = Math.PI; C.iyGo = false;
   Object.assign(B, { x: track.start.x, z: track.start.z, y: q.y, vy: 0, air: false, gPrev: q.y, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
-    stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, lvl: 0, streak: 0 }); drawStreak();
+    stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, lvl: 0, streak: 0, thrown: 0, falls: 0 }); drawStreak();
   for (const p of papers) scene.remove(p.m, p.dot); papers.length = 0; for (const s of shards) scene.remove(s.m); shards.length = 0; for (const m of cracks) scene.remove(m); cracks.length = 0;
   for (const w of track.windows) w.broken = false; for (const d of track.doors) d.done = false;
   for (const mb of track.mailboxes) { mb.done = false; mb.flag.rotation.x = 0; }
@@ -1172,6 +1181,57 @@ function onFootAt(p, yaw) { if (foot.active) foot.stop(); const side = hoops.at(
 // the modes (modes.js): the sprint against the clock, the obstacle course; they thin the traffic (modes.flags) and pause on their end page
 const modes = createModes({ THREE, scene, track, audio, game: { get B() { return B; }, get hoops() { return hoops; }, onFootAt, restart: () => { resetGame(); C.iy = 0; }, flash: s => flash(s), pop: (at, t, c) => hud.pop(at, t, c),
   place: (x, z, yaw, i = 0) => { const q = track.probe(x, z, i); Object.assign(B, { x, z, yaw, hint: q.i, y: q.y, gPrev: q.y, v: 0, steer: 0, lean: 0, leanV: 0 }); C.yaw = yaw; C.init = false; C.iy = 0; } } });
+// ---------- the way forward (levels.js, docs/progresja.md): home, the map, the stretches. A stretch: from home out onto the loop, its
+// checkpoints passed in turn (a quarter of the lap each, the way it goes), the last one its finish under a gate; the clock from the first
+// push; at the finish the paper (finish.js), the stars, the best kept, the save. At home: no gate, no clock (riding free, as before).
+const lvHud = document.createElement('div'); lvHud.id = 'lvhud'; document.body.appendChild(lvHud);
+{ const st = document.createElement('style'); st.textContent = `#lvhud { position: fixed; z-index: 4; left: 50%; top: 10px; transform: translateX(-50%); display: none; gap: 12px; align-items: center; white-space: nowrap; font: 16px/1.2 PTPix, ui-monospace, monospace; color: #f6f3ea;
+  border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 2px 8px; pointer-events: none; } #lvhud.on { display: flex; } #lvhud b { color: #efc970; font-weight: normal; } #lvhud .w { color: #cf5a3e; animation: lvw .5s steps(1) infinite; } @keyframes lvw { 50% { opacity: .3; } }`; document.head.appendChild(st); }
+const RUN = { t: 0, go: false, cp: 0, cps: [], done: false, gate: [], hits: [], chk: 0 };
+const seeded = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function saveCampaign() { LVM.save({ money: B.points, bike: myBike, inv: INV.map(p => ({ ...p })), paints: [...PAINTS], at: LV?.id || 'dom' }); }
+function applySave() { if (!LVM.hasSave()) return; const S = LVM.load(); if (S.bike?.type) { myBike = { type: S.bike.type, parts: { ...newParts(), ...(S.bike.parts || {}) }, ...(S.bike.paint ? { paint: S.bike.paint } : {}) }; }
+  INV.splice(0, INV.length, ...(S.inv || [])); PAINTS.clear(); for (const k of [0, ...(S.paints || [])]) PAINTS.add(k); B.points = S.money || 0; applyBike(); }
+setTimeout(applySave, 0);
+// the gate over the loop road: two striped posts at the kerbs, a chequered banner with META
+function clearGate() { for (const o of RUN.gate) scene.remove(o); for (const C of RUN.hits) track.dropHit(C); RUN.gate = []; RUN.hits = []; }
+function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55, yaw = Math.atan2(S0.f.x, S0.f.z);
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 12; const g = cv.getContext('2d');
+  for (let y = 0; y < 12; y += 3) for (let x = 0; x < 64; x += 3) { g.fillStyle = ((x + y) / 3) % 2 ? '#17181b' : '#f6f3ea'; g.fillRect(x, y, 3, 3); }
+  g.fillStyle = '#efc970'; g.fillRect(17, 1, 30, 10); g.fillStyle = '#17181b'; g.font = '8px PTPix'; g.textBaseline = 'top'; g.fillText('META', 22, 2);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.magFilter = tx.minFilter = THREE.NearestFilter;
+  const sc = document.createElement('canvas'); sc.width = 2; sc.height = 8; const sg = sc.getContext('2d'); for (let y = 0; y < 8; y++) { sg.fillStyle = y % 2 ? '#c23a2e' : '#f6f3ea'; sg.fillRect(0, y, 2, 1); }
+  const stx = new THREE.CanvasTexture(sc); stx.colorSpace = THREE.SRGBColorSpace; stx.magFilter = stx.minFilter = THREE.NearestFilter;
+  const postM = toon('#ffffff', { map: stx }), banM = toon('#ffffff', { map: tx }), H = 3.6;
+  for (const sd of [-1, 1]) { const x = S0.p.x + S0.r.x * w * sd, z = S0.p.z + S0.r.z * w * sd, y = track.probe(x, z, i).y, post = new THREE.Mesh(new THREE.BoxGeometry(.2, H, .2), postM);
+    post.position.set(x, y + H / 2, z); post.rotation.y = yaw; scene.add(post); RUN.gate.push(post);
+    const foot = new THREE.Object3D(); foot.position.set(x, y, z); foot.rotation.y = yaw; RUN.hits.push(track.addHit(foot, { hx: .12, hz: .12, h: H, kind: 'hard' }, i)); }
+  const yM = track.probe(S0.p.x, S0.p.z, i).y, ban = new THREE.Mesh(new THREE.BoxGeometry(w * 2 + .2, .75, .06), banM); ban.position.set(S0.p.x, yM + H - .25, S0.p.z); ban.rotation.y = yaw; scene.add(ban); RUN.gate.push(ban); }
+function startLevel(id) { const L = LVM.LEVEL(id); if (!L || L.soon) return; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
+  LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
+  const iJ = track.home.iJ, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
+  Object.assign(RUN, { t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
+  flash(`${L.name}: wyjedź z domu i dojedź do mety`); }
+function goHome() { if (fin.isOpen) fin.close(); LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
+function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
+// how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
+const ahead = (i, cp) => ((((cp - i) * LV.finish.dir) % track.N) + track.N) % track.N * track.ds;
+function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
+  if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
+  if ((RUN.chk -= dt) > 0) return; RUN.chk = .1;
+  const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
+  const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;
+  if (passed) { RUN.cp++; RUN.minA = Infinity; RUN.prevA = 1e9; if (RUN.cp >= RUN.cps.length) { finishLevel(); return; } audio.play('pick'); flash(last ? 'Meta!' : `Punkt ${RUN.cp} z ${RUN.cps.length - 1} zaliczony`); }
+  let rest = ahead(q.i, RUN.cps[RUN.cp]); for (let k = RUN.cp + 1; k < RUN.cps.length; k++) rest += ahead(RUN.cps[k - 1], RUN.cps[k]);
+  const aNow = ahead(q.i, RUN.cps[RUN.cp]); if (onRoad) RUN.minA = Math.min(RUN.minA, aNow); const wrong = onRoad && aNow > RUN.minA + 25;
+  lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>`; }
+function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
+  const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0 };
+  const rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
+  audio.play('trick'); B.v *= .3; fin.open(L, r, rec, opened); }
+const fin = createFinish({ game: { map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), sound: n => audio.play(n) } });
+const map = createMap({ levels: LVM, game: { go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
 // ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
 // ghost here: his bike and him as he rides at home, moved to where he says he is (15 times a second), between the messages carried on
 // by his speed. Each player's own (his state, his bike, his camera, his aim, ...) is in a context; use(ctx) puts one in the game's
@@ -1271,9 +1331,9 @@ function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
   pad.poll(); padUI(dt);
   if (!rider.person && foot.riderPerson) rider.setPerson(foot.riderPerson);   // (the boy who walks, put on the bike once he is loaded)
-  if ((menu.open || asking || shop.isOpen || garage.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
-  document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !garage.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !shop.isOpen && !garage.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if ((menu.open || map.isOpen || fin.isOpen || asking || shop.isOpen || garage.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
+  document.body.classList.toggle('walk', !menu.open && !map.isOpen && !fin.isOpen && !asking && !shop.isOpen && !garage.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
+  if (!asking && !menu.open && !map.isOpen && !fin.isOpen && !shop.isOpen && !garage.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
@@ -1287,5 +1347,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };
