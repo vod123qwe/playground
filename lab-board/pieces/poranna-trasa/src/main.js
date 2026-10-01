@@ -119,7 +119,8 @@ function drift(dt) { for (const c of clouds) { c.a += c.speed * dt; c.s.position
 drift(0);
 
 // ---------- the street, the traffic, the dogs, the rider ----------
-const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit') });   // (?audit: nothing merged, for the ground check) track.dapSun.value.copy(SUN); scene.add(track.group);
+// (?audit: nothing merged, for the ground check, see track.audit)
+const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit') }); track.dapSun.value.copy(SUN); scene.add(track.group);
 const backdrop = createBackdrop({ THREE }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
 const traffic = createTraffic({ THREE, track, cars: track.cars, n: 6, makeRider: () => createRider({ THREE, ramp, toon }), bikes: 2 }); scene.add(traffic.group);   // (cars, and now and then a cyclist coming the other way)
 const dogs = createDogs({ THREE, toon, probe: track.probe });

@@ -76,7 +76,7 @@ function frame(o, view = 'iso') { const b = new THREE.Box3().setFromObject(o), s
 function describe(title, desc, o, extra = []) {
   let tris = 0, meshes = 0; const mats = new Set(); o.traverse(m => { if (m.isMesh) { meshes++; const g = m.geometry; tris += (g.index ? g.index.count : g.attributes.position.count) / 3; (Array.isArray(m.material) ? m.material : [m.material]).forEach(x => mats.add(x)); } });
   const ry = stand.rotation.y; stand.rotation.y = 0; stand.updateMatrixWorld(true);   // (measured unturned)
-  const bx = new THREE.Box3(); o.updateMatrixWorld(true); o.traverse(m => { if (m.isMesh && !m.userData.noShadow) bx.expandByObject(m, true); }); const s = bx.getSize(new THREE.Vector3());   // (without the shade under a car) stand.rotation.y = ry;
+  const bx = new THREE.Box3(); o.updateMatrixWorld(true); o.traverse(m => { if (m.isMesh && !m.userData.noShadow) bx.expandByObject(m, true); }); const s = bx.getSize(new THREE.Vector3()); stand.rotation.y = ry;   // (without the shade under a car)
   $('title').textContent = title; $('desc').textContent = desc;
   $('info').innerHTML = [['szer. × wys. × dł.', [s.x, s.y, s.z].every(Number.isFinite) ? `${s.x.toFixed(2)} × ${s.y.toFixed(2)} × ${s.z.toFixed(2)} m` : '—'], ['trójkąty', Math.round(tris).toLocaleString('pl')], ['siatki', meshes], ['materiały', mats.size], ...extra].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join(''); }
 const place = o => { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); stand.add(o); };
