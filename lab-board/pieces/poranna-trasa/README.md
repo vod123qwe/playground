@@ -521,3 +521,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - znak rozmowy: dyndająca chmurka dymka nad głową (kropki: ma sprawę; „?”: czeka na ciebie); strzałka zostaje dla celów
 - rzucanie: okno odrobinę łatwiej trafić (ramka liczy się szerzej), a gazeta lecąca tuż obok szyby w ostatniej chwili jest lekko do niej przyciągana
 - ogródki: krzesło i leżak nie stają już na ozdobach, podjeździe ani ścieżce (wcześniej grill albo poidełko potrafiło stać na leżaku); ozdoby omijają też klomby, kosz przy ganku i pojemniki przy chodniku
+
+## Wersja 50: zadań znacznie mniej
+
+- sprawy rozdaje „reżyser”: na starcie nikt nie ma sprawy, pierwsza pojawia się po chwili jazdy, potem mniej więcej co minutę, zawsze u kogoś przed tobą (50–220 m), naraz najwyżej dwie
+- sprawa minięta (ktoś został za tobą) przepada; później pojawi się inna, dalej na trasie
