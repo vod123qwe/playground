@@ -470,3 +470,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - kombo: trick skończony, a dalej w locie? klik jeszcze raz, następny (+2 za każdy kolejny); punkty liczone razem przy lądowaniu, np. „360 + STÓŁ CZYSTO”
 - koniec wywrotek za złe puszczenie albo trzymanie przy lądowaniu; za późno jest tylko wtedy, gdy do ziemi zostało mniej niż ułamek sekundy (wtedy trick się po prostu nie zaczyna)
 - kierunki bez zmian: z A albo D 360, z W na dużej skoczni salto, sam klik stół
+
+## Wersja 44: przyciski na telefonie się nie zacinają
+
+- naprawione: po wejściu w menu przycisk menu zostawał podświetlony i nie dało się go nacisnąć drugi raz (menu zasłaniało sterowanie, zanim palec się podniósł, więc przycisk nie dostawał puszczenia)
+- gdy sterowanie się chowa (menu, rozmowa), wszystkie palce są puszczane: przyciski, gałka i przeciąganie kamery; nic nie zostaje „trzymane”
+- górny rząd (kamera, menu, pełny ekran) działa po puszczeniu palca, więc dotyk nie przebija się na przycisk w otwartym menu
