@@ -104,14 +104,14 @@ export function createCars({ THREE, toon }) {
         else if (!K.glassTo) { const xb = doors4 ? mB : xf + (xr - xf) * .68, lean = (yn - .5) * .08; if (Math.abs(x - xb - lean) < .045) return 0; }   // the B-pillar, leaning a touch
         return 1; });
     // front and back: bumpers, lights, grille, plates; wheels
-    const fz = L / 2, bz = -L / 2, by = K.R + .1;
+    const fz = L / 2, bz = -L / 2, by = K.R + .1, amb = { [-1]: shared.amber.clone(), [1]: shared.amber.clone() };   // (its own indicators: -1 right, +1 left)
     const nose = topAt(.1), hy = Math.min(by + .22, nose - .08), gy = Math.min(by + .22, nose - .1);   // (how high the nose is: what is on it stays under its top)
     const bumpM = K.chrome ? shared.chrome : shared.trim, bh = K.bigBumpers ? .26 : K.chrome ? .1 : .18, bd = K.bigBumpers ? .2 : .14;
     G.add(box(W - .02, bh, bd, bumpM, 0, by, fz + .02)); G.add(box(W - .02, bh, bd, bumpM, 0, by, bz - .02));
-    for (const sd of [-1, 1]) { if (K.round) { const hl = new THREE.Mesh(new THREE.CylinderGeometry(.085, .085, .05, 12), shared.head); hl.rotation.x = Math.PI / 2; hl.position.set(sd * (W / 2 - .22), Math.min(by + .24, nose - .1), fz + .03); G.add(hl); const rimL = new THREE.Mesh(new THREE.TorusGeometry(.088, .016, 5, 12), shared.chrome); rimL.position.copy(hl.position); rimL.position.z += .02; G.add(rimL); } else if (K.slit) G.add(box(.42, .045, .06, shared.head, sd * (W / 2 - .3), nose - .06, fz + .01)); else G.add(box(.34, .12, .06, shared.head, sd * (W / 2 - .27), hy, fz + .03)); G.add(box(.1, .08, .06, shared.amber, sd * (W / 2 - .06), Math.min(by + .2, nose - .08), fz + .01));
+    for (const sd of [-1, 1]) { if (K.round) { const hl = new THREE.Mesh(new THREE.CylinderGeometry(.085, .085, .05, 12), shared.head); hl.rotation.x = Math.PI / 2; hl.position.set(sd * (W / 2 - .22), Math.min(by + .24, nose - .1), fz + .03); G.add(hl); const rimL = new THREE.Mesh(new THREE.TorusGeometry(.088, .016, 5, 12), shared.chrome); rimL.position.copy(hl.position); rimL.position.z += .02; G.add(rimL); } else if (K.slit) G.add(box(.42, .045, .06, shared.head, sd * (W / 2 - .3), nose - .06, fz + .01)); else G.add(box(.34, .12, .06, shared.head, sd * (W / 2 - .27), hy, fz + .03)); G.add(box(.1, .08, .06, amb[sd], sd * (W / 2 - .06), Math.min(by + .2, nose - .08), fz + .01));
       // the rear light cluster: the red lamp with its bright heart, a white reversing lamp, an amber indicator, a dark rim
       const lx = sd * (W / 2 - .26); G.add(box(.46, .2, .05, shared.dark, lx, by + .25, bz - .025)); G.add(box(.3, .15, .06, shared.tail, lx + sd * .06, by + .25, bz - .035));
-      G.add(box(.14, .06, .065, shared.tailHi, lx + sd * .08, by + .27, bz - .04)); G.add(box(.08, .15, .06, shared.reverse, lx - sd * .14, by + .25, bz - .035)); G.add(box(.06, .15, .06, shared.amber, lx + sd * .2, by + .25, bz - .035)); }
+      G.add(box(.14, .06, .065, shared.tailHi, lx + sd * .08, by + .27, bz - .04)); G.add(box(.08, .15, .06, shared.reverse, lx - sd * .14, by + .25, bz - .035)); G.add(box(.06, .15, .06, amb[sd], lx + sd * .2, by + .25, bz - .035)); }
     G.add(box(W - .5, .035, .05, shared.chrome, 0, by + .37, bz - .03));                                            // a chrome strip across the boot
     for (const z of [fz + .1, bz - .1]) G.add(box(W - .06, .03, .03, shared.chrome, 0, by + .1, z));                   // chrome on the bumpers
     if (K.tallGrille) { G.add(box(.46, .3, .06, shared.chrome, 0, by + .28, fz + .03)); G.add(box(.38, .24, .07, shared.dark, 0, by + .28, fz + .035)); for (let k = 0; k < 5; k++) G.add(box(.012, .22, .08, shared.chrome, -.14 + k * .07, by + .28, fz + .04)); }   // (tall, framed in chrome)
@@ -162,7 +162,9 @@ export function createCars({ THREE, toon }) {
     const wheels = [];
     for (const [x, zz] of [[1, frontX], [-1, frontX], [1, rearX], [-1, rearX]]) { const w = wheel(K.R, paint); w.position.set(x * (W / 2 - .1), K.R, fz - zz); G.add(w); wheels.push(w); }
     G.traverse(o => { if (o.isMesh && !o.userData.noShadow) { o.castShadow = true; o.receiveShadow = true; } });
-    return { group: G, wheels, half: [W / 2, L / 2], kind: kindName, R: K.R };
+    // blink(side, on): side +1 left, -1 right, 0 none
+    const blink = (side, on) => { for (const k of [-1, 1]) amb[k].emissive.set(k === side && on ? '#ff9a1f' : '#000000'); };
+    return { group: G, wheels, half: [W / 2, L / 2], kind: kindName, R: K.R, blink };
   }
   function spin(car, metres) { for (const w of car.wheels) w.rotation.x += metres / car.R; }
   const COLOURS = { bus: ['#c8323a', '#e3b83a', '#3f6b35', '#e9e3d1'], common: ['#c9b77a', '#7b5836', '#8e2e25', '#34465a', '#9aa0a4', '#e9e3d1', '#355f31', '#8fb0bd', '#a3322a', '#5a5f66'], wedge: ['#cf5a3e', '#efc970', '#f6f3ea', '#17181b'],
