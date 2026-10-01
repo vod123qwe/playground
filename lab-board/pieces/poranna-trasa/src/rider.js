@@ -236,6 +236,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
     torso.updateMatrix(); cur.pelvis = pelvis.clone(); cur.chest = new THREE.Vector3(0, .42, 0).applyMatrix4(torso.matrix); head.position.set(0, .6, 0); cur.head = head.position.clone().applyMatrix4(torso.matrix);
     if (RG.on) { if (RG.up > 0) RG.up += dt / RG.upT; else stepRagdoll(dt);
       const w = 1 - THREE.MathUtils.smootherstep(RG.up, 0, 1); if (RG.up >= 1) RG.on = false; else applyRagdoll(w); }
+    drive();
   }
 
   // ---------- the ragdoll: thrown off, he is fifteen points held apart by sticks (Verlet): tumbling over the bars, landing, sliding,
@@ -297,6 +298,50 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
     }
   }
   function ragdollOff() { RG.on = false; head.position.set(0, .6, 0); }
+
+  // ---------- the boy who walks, on the bike (setPerson): the figure above stays as the rig (hidden), and each frame his bones are
+  // posed from it: the model stood where the torso is, turned as it is; each thigh, shin, upper arm, forearm turned to the figure's
+  // knee, foot, elbow, hand (his own lengths: the knee and the elbow found again for them, bent the figure's way); his head as its
+  // head; his feet flat on the pedals. A fall, a kick, a throw, a trick: the figure does them, he follows.
+  let PR = null; const _w = new THREE.Vector3(), _w2 = new THREE.Vector3(), _qq = new THREE.Quaternion(), _qp = new THREE.Quaternion(), _qw = new THREE.Quaternion(), _bq = new THREE.Quaternion();
+  function setPerson(P) {
+    if (!P || PR) return; const B = P.bones, G = P.G; boy.add(G); G.position.set(0, 0, 0); G.rotation.set(0, 0, 0); G.scale.setScalar(1); G.visible = true; P.mixer.stopAllAction();
+    const rest = new Map(); P.m.traverse(o => { if (o.isBone) rest.set(o, o.quaternion.clone()); });
+    G.updateMatrixWorld(true); const wp = b => b.getWorldPosition(new THREE.Vector3()), gi = G.matrixWorld.clone().invert(), inG = b => wp(b).applyMatrix4(gi);
+    const len = (a, b) => inG(a).distanceTo(inG(b)), legs = len(B.thigh_l, B.calf_l) + len(B.calf_l, B.foot_l), k = (L.th + L.sh) * .97 / legs;   // (sized so his legs are the figure's: they reach the pedals)
+    const pel = inG(B.pelvis), headW = {}, footW = {}; G.updateMatrixWorld(true); const gq = G.getWorldQuaternion(new THREE.Quaternion()).invert();
+    for (const sd of ['l', 'r']) footW[sd] = gq.clone().multiply(B['foot_' + sd].getWorldQuaternion(new THREE.Quaternion()));
+    headW.q = gq.clone().multiply(B.head.getWorldQuaternion(new THREE.Quaternion()));
+    PR = { P, B, G, rest, k, pel, footW, headW, L: { th: len(B.thigh_l, B.calf_l) * k, sh: len(B.calf_l, B.foot_l) * k, up: len(B.upperarm_l, B.lowerarm_l) * k, lo: len(B.lowerarm_l, B.hand_l) * k } };
+    G.scale.setScalar(k);
+    torso.traverse(o => { if (o.isMesh && !bag.getObjectById(o.id)) o.visible = false; }); bag.visible = false; strap.visible = false;
+    for (const lb of limbs) for (const o of [lb.sleeve, lb.upper, lb.fore, lb.hand, lb.thigh, lb.shin, lb.kneeCap, lb.shoe]) o.visible = false;
+    head.traverse(o => { if (o.isMesh) o.visible = false; });
+  }
+  // a bone turned (in the world) so the way to its child points at a target; its local turn set to give that
+  function aim(bone, child, target) {
+    bone.getWorldPosition(_w); child.getWorldPosition(_w2); const cur = _w2.sub(_w).normalize(), want = target.clone().sub(_w).normalize();
+    _qq.setFromUnitVectors(cur, want); bone.getWorldQuaternion(_qw); _qw.premultiply(_qq); bone.parent.getWorldQuaternion(_qp); bone.quaternion.copy(_qp.invert().multiply(_qw)); bone.updateMatrixWorld(true); }
+  function setWorldQ(bone, qBoy) { boy.getWorldQuaternion(_bq); _qw.copy(_bq).multiply(qBoy); bone.parent.getWorldQuaternion(_qp); bone.quaternion.copy(_qp.invert().multiply(_qw)); bone.updateMatrixWorld(true); }
+  function drive() {
+    if (!PR) return; const { B, G, rest, k, pel } = PR; for (const [b, q] of rest) b.quaternion.copy(q);
+    // the model where the torso is, turned as it is (its pelvis on the figure's)
+    G.quaternion.copy(torso.quaternion); G.position.copy(torso.position).sub(pel.clone().multiplyScalar(k).applyQuaternion(torso.quaternion)); G.updateMatrixWorld(true);
+    const toW = v => boy.localToWorld(v.clone());
+    // the head: as the figure's (the turn to look, to throw), over the shoulders it has; out of sight in the eyes' view
+    head.updateWorldMatrix(true, false); boy.getWorldQuaternion(_bq); const hq = head.getWorldQuaternion(new THREE.Quaternion()).premultiply(_bq.clone().invert()).multiply(PR.headW.q);
+    setWorldQ(B.head, hq); B.head.scale.setScalar(head.visible ? PR.P.headS || 1 : .001); if (PR.P.m.userData.cap) PR.P.m.userData.cap.visible = head.visible;
+    for (const lb of limbs) { const sd = lb.s < 0 ? 'r' : 'l';
+      // the leg: from his hip to the figure's foot, the knee bent its way
+      const hip = boy.worldToLocal(B['thigh_' + sd].getWorldPosition(new THREE.Vector3())), foot = lb.shoe.position.clone(), pole = lb.shin.position.clone().sub(hip).normalize();
+      const kn = new THREE.Vector3(); ik(hip, foot, PR.L.th, PR.L.sh, pole, kn);
+      aim(B['thigh_' + sd], B['calf_' + sd], toW(kn)); aim(B['calf_' + sd], B['foot_' + sd], toW(foot));
+      setWorldQ(B['foot_' + sd], _qq.setFromEuler(new THREE.Euler(lb.shoe.rotation.x, 0, 0)).clone().multiply(PR.footW[sd]));
+      // the arm: from his shoulder to the figure's hand, the elbow its way
+      const sh = boy.worldToLocal(B['upperarm_' + sd].getWorldPosition(new THREE.Vector3())), hand = lb.hand.position.clone(), epole = lb.fore.position.clone().sub(sh).normalize();
+      const el = new THREE.Vector3(); ik(sh, hand, PR.L.up, PR.L.lo, epole, el);
+      aim(B['upperarm_' + sd], B['lowerarm_' + sd], toW(el)); aim(B['lowerarm_' + sd], B['hand_' + sd], toW(hand)); }
+  }
   function throwPaper(side) { if (st.throwT >= 0) return false; st.throwT = 0; st.side = side; st.released = false; return true; }
   root.traverse(o => { if (o.isMesh) o.castShadow = true; });
   // ---------- the parts (the bike shop): paint, tyres and rims, the saddle, the grips; a bell, a lamp, gears; a bigger bag ----------
@@ -314,5 +359,5 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   }
   // the clothes' colours (a gang: black tees, black caps)
   function setLook(o) { if (o.shirt) M.shirt.color.set(o.shirt); if (o.cap) M.cap.color.set(o.cap); if (o.jeans) { M.jeans.color.set(o.jeans); M.jeansD.color.set(o.jeans); } }
-  return { root, head, boy, bike, setParts, setLook, bagFill: k => satchel.setFill(k), get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
+  return { root, head, boy, bike, setParts, setLook, bagFill: k => PR && PR.P.m.userData.bagFill ? PR.P.m.userData.bagFill(k) : satchel.setFill(k), setPerson, get person() { return PR && PR.P; }, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
 }

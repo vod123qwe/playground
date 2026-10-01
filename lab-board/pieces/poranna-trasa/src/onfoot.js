@@ -80,7 +80,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     for (const n of ['idle', 'walk', 'jog', 'stance']) if (A[n]) { A[n].play(); A[n].setEffectiveWeight(n === 'idle' ? 1 : 0); }
     m.updateMatrixWorld(true);
     if (extras) extras(m, bones);
-    return { key, G, body, m, mixer, A, clips, bones, fingers, shot: null, w: { idle: 1, walk: 0, jog: 0, stance: 0 }, ik: 0, fist: 0, height: (PACE[key] || {}).height || 1.7 };
+    // the paper boy younger than the model as made: a bigger head for his body (as a lad of thirteen or so)
+    const headS = key === 'boy' ? 1.1 : 1; if (key === 'boy') { bones.head.scale.setScalar(headS); m.updateMatrixWorld(true); }
+    return { key, G, body, m, mixer, A, clips, bones, fingers, headS, shot: null, w: { idle: 1, walk: 0, jog: 0, stance: 0 }, ik: 0, fist: 0, height: (PACE[key] || {}).height || 1.7 };
   }
   // his cap and his bag, as on the bike (a red cap snug on his head, the hair out under it; an olive satchel of papers on his left hip,
   // its strap across his back and chest to his right shoulder): fitted to his head in the rest pose, then carried by his bones
@@ -320,8 +322,10 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     if (!src.boy || !src.brawler) return;
     me = fighter(person('boy', kit), 'TY'); me.P.G.visible = false;
     for (let k = 0; k < 2; k++) { const f = fighter(person('brawler'), 'ROWERZYSTA'); f.P.G.visible = false; brawlers.push(f); }
-    measure(me.P); ready = true;
+    measure(me.P); riderP = person('boy', kit); ready = true;
   });
+  // (the same boy, a second of him, for the bike: rider.js poses his bones from its own figure, so on the bike he is who walks)
+  let riderP = null;
   function measure(P) {                                               // when, in each punch clip, the fist is out furthest
     P.G.position.set(0, 0, 0); P.G.rotation.set(0, 0, 0); P.G.updateMatrixWorld(true);
     for (const n of ['jab', 'cross', 'hook']) { const a = P.A[n]; if (!a) continue; P.mixer.stopAllAction(); a.reset().play(); let best = -9, bt = .45;
@@ -368,7 +372,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   // the game from the start: every grudge dropped (the cyclists back on their bikes), no fight, him whole again
   function reset() { for (const G of grudges) { const f = G.f, b = G.bike; f.P.G.visible = false; f.busy = false; f.ko = false; f.mode = 'walk'; if (b) { b.r.boy.visible = true; b.hold = false; } }
     grudges.length = 0; fightNow = null; if (me) Object.assign(me, { mode: 'walk', hp: 100, st: 100, ko: false, down: null, move: null, guard: false }); fx.tip(null); }
-  function setHead(show) { if (!me) return; me.P.bones.head.scale.setScalar(show ? 1 : .001); me.P.m.userData.cap.visible = show; }
+  function setHead(show) { if (!me) return; me.P.bones.head.scale.setScalar(show ? me.P.headS || 1 : .001); me.P.m.userData.cap.visible = show; }
   function toggleView() { view = view === 'first' ? 'third' : 'first'; fx.flash(view === 'first' ? 'Widok: z oczu' : 'Widok: zza pleców'); }
 
   // a cyclist knocked off by a kick: gets up, and comes for him
@@ -493,6 +497,6 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const ph = o.ko ? 'nokaut' : o.wind ? `zamach ${o.wind.t.toFixed(2)}/${o.wind.dur.toFixed(2)} s${o.wind.feint ? ' (zwód)' : ''}` : o.move && !o.move.done ? `cios ${o.move.k}, do trafienia ${(o.move.dur * o.move.imp - o.move.t).toFixed(2)} s` : o.move ? `cios ${o.move.k} (po)` : o.recover > 0 ? `odsłonięty ${o.recover.toFixed(2)} s` : o.stagger > 0 ? `zatacza się ${o.stagger.toFixed(2)} s` : o.guard ? 'garda' : (o.ai && o.ai.plan) || '—';
     return { kind: K.name, phase: ph, hp: Math.round(o.hp), max: o.max, myHp: Math.round(me.hp), mySt: Math.round(me.st), train: G.train ? G.train.step + 1 : 0 }; }
   function bagFill(k) { me && me.P.m.userData.bagFill && me.P.m.userData.bagFill(k); }
-  return { KICKS, fired: () => { const f = fired; fired = null; return f; }, reset, arena, phase, get god() { return god; }, bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
+  return { get riderPerson() { return riderP; }, KICKS, fired: () => { const f = fired; fired = null; return f; }, reset, arena, phase, get god() { return god; }, bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
     start, stop, update, follow, grudge, nearBike, toggleView, status };
 }

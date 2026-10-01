@@ -1063,6 +1063,7 @@ function padUI(dt) {
 function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
   pad.poll(); padUI(dt);
+  if (!rider.person && foot.riderPerson) rider.setPerson(foot.riderPerson);   // (the boy who walks, put on the bike once he is loaded)
   if ((menu.open || asking || shop.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
   if (!asking && !menu.open && !shop.isOpen && !runUI.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
