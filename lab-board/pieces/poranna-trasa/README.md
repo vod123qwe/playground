@@ -892,3 +892,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - słuchaweczka z Zachodu (80 zł): w jeździe Janusz jest na linii; sprint po chwili przerwy to jego tekst i turbo (mocniejsze pedałowanie, mniej zadyszki przez kilka sekund); ostrzega przed autem za plecami, podnosi po wywrotce, chwali na punktach, krzyczy przed metą, gada od czasu do czasu
 - liczniki do zmiany: ze Wschodu (czerwona obudowa, bursztynowy ekran) i z Zachodu (niebieskie podświetlenie); zostają w zapisie
 - Janusz i Żaneta subtelnie o sobie: on o „pani w czerwonej chustce” i dziewczynie, która załatwiała części zza granicy; ona pyta, czy „ten od rowerów jeszcze żyje”
+
+## Wersja 98: telefony na trasie (słuchawka)
+
+- ze słuchawką od Żanety co jakiś czas w trakcie odcinka dzwoni ktoś ze sprawą na teraz; T przyjmuje (8 sekund na decyzję), potem zegar w pasku u góry
+- sprawy: Babcia Stasia (zatrzymaj się pod domem ze znacznikiem, 50 s), Pan Redaktor (zdjęcie psa w minutę; albo dojedź do najbliższego punktu w 40 s, bo zamykają numer), Szef spod beczki (zrzuć kolarza z roweru), Pani Żaneta (podnieś paczuszkę z drogi i dowieź pod drzwi, nie otwieraj), brat (trik na skoczni do nagrania)
+- za wykonanie od razu pieniądze; w gazecie w „W skrócie”: kto dzwonił i jak poszło
