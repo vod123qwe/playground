@@ -40,7 +40,8 @@ export const LEVELS = [
     goal: { time: 175, acc: .65, papers: 9 }, after: ['d4'], tease: { head: 'Roboty drogowe na Nowej', text: 'Koparka stoi na pasie od tygodnia. Kierownik budowy mówi, że „jeszcze trochę”. Mieszkańcy mówią co innego.', spot: 'budowa' } },
   { id: 'd3', region: 'peryferia2', name: 'MAGAZYNY', note: 'Długie proste wzdłuż hal, dużo ruchu o świcie. Szybko, ale uważaj na rampy i wózki.', finish: { to: 1, dir: 1 }, cars: 5, pace: 1.15, heat: 1.05, papers: 26, seed: 603,
     goal: { time: 160, acc: .7, papers: 9 }, after: ['d4'], tease: { head: 'Hale przy bocznicy', text: 'Magazynierzy czytają gazetę na przerwie. Kto dowiezie przed szóstą, ten ma u nich kawę.', spot: 'przystanek' } },
-  { id: 'd4', region: 'peryferia2', name: 'WOJNA GAZET', note: 'Wkrótce: kurierzy Kuriera Osiedlowego na Twojej trasie.', soon: true, after: [] }];
+  { id: 'd4', region: 'peryferia2', name: 'WOJNA GAZET', note: 'Całe osiedle, a na nim kurierzy Kuriera Osiedlowego: podbierają skrzynki. Wyprzedź, kopnij, trafiaj.', finish: { to: 1, dir: 1 }, cars: 3, pace: 1.1, heat: 1.1, papers: 30, seed: 604, rivals: 2, cross: [.4],
+    goal: { time: 165, acc: .7, papers: 10 }, after: [], tease: { head: 'Kurier wypowiada wojnę', text: 'Szef Kuriera Osiedlowego zapowiada, że od jutra „każda skrzynka będzie nasza”. Redakcja Trąbki odpowiada krótko: zobaczymy.', spot: 'budowa' } }];
 export const LEVEL = id => LEVELS.find(l => l.id === id);
 
 // ---------- the save ----------
