@@ -11,7 +11,7 @@ export function makeBag({ THREE, toon }) {
   // canvas: a weave of lighter and darker threads, a few flecks
   const weave = tex(16, 16, g => { g.fillStyle = '#ececec'; g.fillRect(0, 0, 16, 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const v = ((x + (y >> 1)) % 2 ? 236 : 248) - ((x * 7 + y * 13) % 17 === 0 ? 14 : 0); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 1, 1); } });
   weave.repeat.set(2, 2);
-  const olive = toon('#6f7a45', { map: weave }), oliveD = toon('#5a6337', { map: weave }), gusset = toon('#4f5730', { map: weave }), leather = toon('#6b4a2e'), leatherD = toon('#4a3120'), brass = toon('#c9a44a'), thread = toon('#d8d2b0');
+  const olive = toon('#6f7a45', { map: weave }), oliveD = toon('#5a6337', { map: weave }), gusset = toon('#4f5730', { map: weave }), leather = toon('#5a3a22'), leatherD = toon('#3a2616'), brass = toon('#e3be5a'), thread = toon('#ece6c4'), piping = toon('#3f4626');
   const paperM = toon('#ece5d0'), bandM = toon('#b3372c'), print = toon('#ffffff', { map: tex(16, 16, g => { g.fillStyle = '#ece5d0'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#9a938a'; for (let y = 2; y < 15; y += 2) g.fillRect(1 + (y % 4 ? 0 : 7), y, y % 4 ? 14 : 6, 1); g.fillStyle = '#44484c'; g.fillRect(1, 1, 14, 1); }) });
   const patchM = toon('#ffffff', { map: tex(12, 8, g => { g.fillStyle = '#b3372c'; g.fillRect(0, 0, 12, 8); g.fillStyle = '#f6f3ea'; g.fillRect(3, 2, 6, 4); g.fillStyle = '#9a938a'; g.fillRect(4, 3, 4, 1); g.fillRect(4, 5, 3, 1); g.fillStyle = '#e8c070'; g.fillRect(0, 0, 12, 1); g.fillRect(0, 7, 12, 1); }) });
   const G = new THREE.Group(), T = .13, H = .28, L = .4;
@@ -23,10 +23,12 @@ export function makeBag({ THREE, toon }) {
   // the flap: over the top and down the front, a hem of stitching along its edge
   const flapTop = add(new RoundedBoxGeometry(T + .018, .014, L + .014, 2, .006), oliveD, 0, H / 2 + .004, 0);
   const flapFront = add(new RoundedBoxGeometry(.014, H * .58, L + .014, 2, .006), oliveD, -T / 2 - .006, H / 2 - H * .29, 0);
-  add(new THREE.BoxGeometry(.004, .004, L - .02), thread, -T / 2 - .014, H / 2 - H * .58 + .018, 0);
-  for (const zz of [-L / 2 + .012, L / 2 - .012]) add(new THREE.BoxGeometry(.004, H * .5, .004), thread, -T / 2 - .014, H / 2 - H * .3, zz);
+  add(new THREE.BoxGeometry(.006, .007, L - .02), thread, -T / 2 - .015, H / 2 - H * .58 + .02, 0);
+  for (const zz of [-L / 2 + .013, L / 2 - .013]) add(new THREE.BoxGeometry(.006, H * .5, .006), thread, -T / 2 - .015, H / 2 - H * .3, zz);
+  add(new THREE.BoxGeometry(.018, .012, L + .018), piping, -T / 2 - .006, H / 2 - H * .58 + .002, 0);   // (the flap's edge, piped dark)
+  for (const zz of [-1, 1]) for (const yy of [-1]) add(new RoundedBoxGeometry(T + .012, .05, .05, 2, .01), leatherD, 0, yy * (H / 2 - .02), zz * (L / 2 - .02));   // (leather corners at its foot)
   // two leather straps down the flap and past it, each with a brass buckle
-  for (const zz of [-.1, .1]) { add(new THREE.BoxGeometry(.008, H * .78, .036), leather, -T / 2 - .016, H / 2 - H * .39, zz);
+  for (const zz of [-.1, .1]) { add(new THREE.BoxGeometry(.01, H * .78, .046), leather, -T / 2 - .016, H / 2 - H * .39, zz);
     const bk = new THREE.Group(); bk.position.set(-T / 2 - .022, H / 2 - H * .62, zz); G.add(bk);
     add(new THREE.BoxGeometry(.006, .036, .006), brass, 0, 0, -.022, bk); add(new THREE.BoxGeometry(.006, .036, .006), brass, 0, 0, .022, bk); add(new THREE.BoxGeometry(.006, .006, .05), brass, 0, .016, 0, bk); add(new THREE.BoxGeometry(.006, .006, .05), brass, 0, -.016, 0, bk);
     add(new THREE.BoxGeometry(.008, .016, .004), brass, -.002, 0, 0, bk); add(new THREE.BoxGeometry(.01, .02, .04), leatherD, .004, -.03, 0, bk); }

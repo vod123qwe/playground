@@ -726,8 +726,8 @@ function follow(dt) {
   const T = CAMS[camI], ke = 1 - Math.exp(-dt * 4); if (T.top) { } else if (!T.fpv) for (const k of ['back', 'up', 'ahead', 'lookUp', 'fov']) CP[k] = (CP[k] ?? T[k]) + (T[k] - (CP[k] ?? T[k])) * ke; else CP.fov += (T.fov - CP.fov) * ke;
   rider.head.visible = !T.fpv;
   if (T.fpv) {                                                         // through his eyes: from his head, looking where he rides, rolling with him
-    rider.head.updateMatrixWorld(true); rider.head.getWorldPosition(_eye); const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw));
-    camera.position.copy(_eye).addScaledVector(f, -.04).add(new THREE.Vector3(0, .04, 0)); const lk = _eye.clone().addScaledVector(f, 5).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), mlook.x * 2.4); lk.y -= 1.35 + B.pitch * 3 + mlook.y * 1.4;   // (looking a little down: the bar and his hands at the bottom of the view)
+    rider.eye(_eye); const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw));
+    camera.position.copy(_eye); const lk = _eye.clone().addScaledVector(f, 5).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), mlook.x * 2.4); lk.y -= 1.9 + B.pitch * 3 + mlook.y * 1.4;   // (looking a little down: the bar and his hands at the bottom of the view)
     if (tw > 0) lk.lerp(throwCam.at, .3 * tw);
     camera.up.set(0, 1, 0); camera.lookAt(lk); camera.rotateZ(-B.lean * .9); camera.fov = CP.fov + Math.max(0, B.v) * .6; camera.updateProjectionMatrix();
     C.init = false; sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return;
