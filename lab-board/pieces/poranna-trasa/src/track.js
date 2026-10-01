@@ -133,6 +133,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   // ---------- the things along it ----------
   const rnd = mulberry(11);
   // ---------- what stops a bike, and what a paper can hit ----------
+  const things = [];   // (what a kick or a bike reaches: { kind: tree | bush | pole | mailbox | swing | cone, o, ... })
   const colliders = [], BK = 16, NB = Math.ceil(N / BK), buckets = Array.from({ length: NB }, () => []), windows = [], doors = [];
   // places a tree must not grow in: a drive, a path, a porch (kept here, not in the colliders: nothing stops a bike there)
   const keepOut = [];
@@ -180,8 +181,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const garA = toon('#8e969c', { map: rep(tex.siding(), 2, 2.4) });   // (the annex's door, of grey tin)
   const driveM = toon('#9d9a92', { map: rep(tex.slabs(), 1, 3) }), pathM = toon('#c9c3b3', { map: rep(tex.slabs(), .6, 3) });
   // a bush of a few leafy balls, perhaps in flower (in its parent's space)
-  function bush(parent, x, z, r, flowers) { for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r * (.7 + rnd() * .5), 1), flowers ? BLOOM[rnd() * BLOOM.length | 0] : bushM);
-    b.position.set(x + (rnd() - .5) * r * 1.6, r * .7, z + (rnd() - .5) * r); b.scale.y = .8; parent.add(b); } }
+  function bush(parent, x, z, r, flowers) { const parts = []; for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r * (.7 + rnd() * .5), 1), flowers ? BLOOM[rnd() * BLOOM.length | 0] : bushM);
+    b.position.set(x + (rnd() - .5) * r * 1.6, r * .7, z + (rnd() - .5) * r); b.scale.y = .8; parent.add(b); parts.push(b); } things.push({ kind: 'bush', o: parts[0], parts, r: r * 1.1, top: r * 1.3, flowers: !!flowers }); }
   const binMs = ['#3f6b35', '#44484c', '#2f4a3a', '#e3b83a'].map(c => toon(c)), soilM = toon('#4a3524'), flagW = toon('#f6f3ea'), flagR = toon('#c8323a');
   function bin() { const b = new THREE.Group(), m = toon(['#3f6b35', '#2f4a3a', '#44484c'][rnd() * 3 | 0]); b.add(box(.58, .95, .7, m, 0, .52, 0)); b.add(box(.64, .07, .76, m, 0, 1.02, .02));
     for (const x of [-.26, .26]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .06, 10), dark); w.rotation.z = Math.PI / 2; w.position.set(x, .1, .33); b.add(w); } return b; }
@@ -280,6 +281,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
         for (let tries = 0; tries < 8; tries++) { const rr = big ? 2 : .8, x = (rnd() - .5) * Math.max(0, W - 2 * (rr + .35)), z = lawnZ1 + (lawnZ0 - lawnZ1) * rnd();
           if (Math.abs(x - dx) < 1.2 + rr * .5 || (drv && Math.abs(x - dvx) < 1.8 + rr * .5) || (z > fz - 2.6 && Math.abs(x - dx) < 2.2 + rr) || spots.some(([a, b, c]) => Math.hypot(a - x, b - z) < c + rr)) continue;
           const o = kind === 'sandbox' ? P.sandbox(rnd) : P[kind] ? P[kind](rnd) : NATK[kind](nr); if (kind === 'sandbox') o.group.scale.setScalar(.8); o.group.position.set(x, 0, z); o.group.rotation.y = o.group.rotation.y || (rnd() - .5) * .6; h.add(o.group);
+          if (kind === 'swing') things.push({ kind: 'swing', o: o.group, pivot: o.group.userData.pivot, r: 1.1 }); else if (kind === 'natBush') things.push({ kind: 'bush', o: o.group, parts: [o.group], r: .6, top: 1 });
           if (o.hit) yard.push([o.hit, x, z]); spots.push([x, z, rr]); break; } } }
     if (!annex && rnd() < .18) { const old = CARS.makeCar(rnd() < .5 ? 'saloon' : 'estate', ['#8a9a8c', '#b39b7a', '#7a6a5a', '#9aa0a4'][rnd() * 4 | 0]), sx = (rnd() < .5 ? -1 : 1) * (W / 2 + 1.9);
       old.group.position.set(sx, .06, -.5); old.group.rotation.set(0, rnd() < .5 ? 0 : Math.PI, .03); h.add(old.group); old.wheels[0].visible = false;             // on blocks, a wheel off
@@ -317,7 +319,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       mb.add(box(.05, .025, .03, toon('#44484c'), 0, 1.2, .27));                                    // its latch
       for (const z of [-.12, .06]) mb.add(box(.27, .012, .015, toon('#b8b8ae'), 0, 1.03, z)); }       // bands round its foot
     const flag = new THREE.Group(); flag.position.set(.15, 1.1, -.05); flag.add(box(.015, .24, .025, red, 0, .12, 0)); flag.add(box(.018, .09, .13, red, 0, .21, .065)); mb.add(flag);   // (pivots at its foot)
-    mb.userData.keep = true; put(mb, i + 4, side * (VERGE - .25), 0, 0); hit(mb, { hx: .1, hz: .1, h: 1.3, kind: 'hard' }, i + 4); mailboxes.push({ o: mb, i: i + 4, side, flag });   // (keep: its flag moves)
+    mb.userData.keep = true; put(mb, i + 4, side * (VERGE - .25), 0, 0); hit(mb, { hx: .1, hz: .1, h: 1.3, kind: 'hard' }, i + 4); { const M = { o: mb, i: i + 4, side, flag }; mailboxes.push(M); things.push({ kind: 'mailbox', o: mb, mb: M, C: colliders[colliders.length - 1], side }); }   // (keep: its flag moves)
     // a fence or a hedge along its front, now and then
     //   always open where the drive or the path meets the pavement (a car must get out, one must get in): a gate on the path (now and
     //   then left ajar), posts at the drive (now and then a double gate, swung wide open); a few lots fenced all round, back to the house
@@ -334,7 +336,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       if (gapO[2] === 'path' && rnd() < .8) { const gt = new THREE.Group(); gt.position.set(lo + .06, 0, 0); f.add(gt); for (let x = .12; x < gapO[1] - .1; x += .2) gt.add(box(.07, .8, .03, white, x, .45, 0)); for (const y of [.62, .3]) gt.add(box(gapO[1] - .14, .05, .04, white, (gapO[1] - .12) / 2 + .02, y, .02)); gt.rotation.y = -(.15 + rnd() * 1.1); }   // a gate, ajar
       if (gapO[2] === 'drive' && rnd() < .35) for (const [x, sg] of [[lo + .06, 1], [hi - .06, -1]]) { const gt = new THREE.Group(); gt.position.set(x, 0, 0); f.add(gt); const w = gapO[1] / 2 - .1; for (let q = .1; q < w; q += .2) gt.add(box(.07, .9, .03, white, sg * q, .5, 0)); for (const y of [.7, .32]) gt.add(box(w, .05, .04, white, sg * w / 2, y, .02)); gt.rotation.y = -sg * (1.35 + rnd() * .2); }   // a double gate, wide open
       if (rnd() < .35) { const back = gap - .7; run(fL, 0, fL, back); run(fR, 0, fR, back); } }                      // fenced all round, to the house's front
-    else if (k < .7) { for (const [a, b] of runs) { const hg = put(box(b - a, 1.1, .9, hedgeM), i, side * (PAVE + .8), .55, side > 0 ? -Math.PI / 2 : Math.PI / 2); hg.translateX((a + b) / 2); hit(hg, { hx: (b - a) / 2, hz: .45, h: 1.1, kind: 'soft' }, i); } }   // a hedge, open at the drive or the path
+    else if (k < .7) { for (const [a, b] of runs) { const hg = put(box(b - a, 1.1, .9, hedgeM), i, side * (PAVE + .8), .55, side > 0 ? -Math.PI / 2 : Math.PI / 2); hg.translateX((a + b) / 2); hit(hg, { hx: (b - a) / 2, hz: .45, h: 1.1, kind: 'soft' }, i); things.push({ kind: 'bush', o: hg, parts: [], r: (b - a) / 2, top: 1.1, hedge: true }); } }   // a hedge, open at the drive or the path
   }
   const leafT = (() => { const t = tex.leaves().clone(); t.repeat.set(2, 2); t.needsUpdate = true; return t; })();
   // a crown: clumps (lumpy balls, flat-faced, each face one of the palette's tones: lighter up top and facing up, darker beneath) and,
@@ -412,10 +414,10 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     if (!free(i, d, 2)) return;                                          // (not out of a car, a house, a drive)
     const t = new THREE.Group(), H = 2.6 + rnd() * 2.4, autumn = rnd() < .3, a = rnd() * 6.28;
     grow(t, H, { x: Math.cos(a), z: Math.sin(a) }, 2.3 + rnd() * 1.1 + H * .22, autumn ? autumnPal() : greenPal(), false);
-    put(t, i, d, 0, rnd() * 6); hit(t, { hx: .28, hz: .28, h: H, kind: 'hard' }, i);
+    put(t, i, d, 0, rnd() * 6); hit(t, { hx: .28, hz: .28, h: H, kind: 'hard' }, i); things.push({ kind: 'tree', o: t, H, autumn, crown: 1.4 + H * .25 });
     show.tree.push({ o: t, label: autumn ? 'drzewo jesienne' : 'drzewo liściaste', note: H.toFixed(1) + ' m' });
   }
-  function pole(i) { const p = new THREE.Group(); p.add(box(.22, 8.5, .22, wood, 0, 4.25, 0)); p.add(box(1.8, .12, .12, wood, 0, 7.9, 0)); p.add(box(1.2, .1, .1, wood, 0, 7.3, 0)); put(p, i, -(VERGE - .6), 0, 0); hit(p, { hx: .14, hz: .14, h: 8, kind: 'hard' }, i); return p; }
+  function pole(i) { const p = new THREE.Group(); p.add(box(.22, 8.5, .22, wood, 0, 4.25, 0)); p.add(box(1.8, .12, .12, wood, 0, 7.9, 0)); p.add(box(1.2, .1, .1, wood, 0, 7.3, 0)); put(p, i, -(VERGE - .6), 0, 0); hit(p, { hx: .14, hz: .14, h: 8, kind: 'hard' }, i); things.push({ kind: 'pole', o: p, r: .14 }); return p; }
   // ---------- the shacks: a plot of them now and then in place of a house: sheds of tin and boards, a fire in a drum, an old sofa,
   //   tyres, pallets, washing, a car on blocks, a broken fence, and the lads standing round the fire (they have something to say) ----------
   const fires = [], annexes = [], train = { update() { } };   // (the fires by the shacks, to flicker; where the annexes are, for a look in the tests)
@@ -541,7 +543,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     if (!free(i, side * (VERGE - .55), .6)) return;
     const t = new THREE.Group(), H = 3.6 + rnd() * 1.4, autumn = rnd() < .22;   // (its limbs reaching over the road: its +x, as it stands)
     grow(t, H, { x: side, z: (rnd() - .5) * .4 }, 3 + rnd() * .8, autumn ? autumnPal() : greenPal(), true);
-    put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i); show.tree.push({ o: t, label: 'drzewo nad jezdnią', note: H.toFixed(1) + ' m' });   // (turned with the road: its +x is the road's left, -x its right)
+    put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i); things.push({ kind: 'tree', o: t, H, autumn, crown: 1.8 + H * .2, reach: side }); show.tree.push({ o: t, label: 'drzewo nad jezdnią', note: H.toFixed(1) + ' m' });   // (turned with the road: its +x is the road's left, -x its right)
     dapple(i + Math.round((rnd() - .5) * 4 / ds), side * (VERGE - 3.2));
   }
   for (let i = 60; i < N - 20; i += Math.round((10 + rnd() * 7) / ds)) { if (rnd() < .82) streetTree(i, rnd() < .5 ? 1 : -1); }   // (thick along the road: the crowns close over it here and there)
@@ -577,7 +579,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   for (let i = 0; i < N; i += Math.round((11 + rnd() * 10) / ds)) { const sd = rnd() < .5 ? -1 : 1, t = new THREE.Group(), H = 7 + rnd() * 6;
     const tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .22, H * .3, 6), wood); tr.position.y = H * .15; t.add(tr);
     for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry((1.9 - k * .38) * (H / 10), H * .34, 8), spruceM); c.position.y = H * (.3 + k * .19); t.add(c); }
-    const dS = sd * (PAVE + 22 + rnd() * 10); if (free(i, dS, 1.6)) { show.tree.push({ o: t, label: 'świerk', note: H.toFixed(1) + ' m' }); put(t, i, dS, 0, rnd() * 6); hit(t, { hx: .25, hz: .25, h: H, kind: 'hard' }, i); } if (rnd() < .4) tree(i + 9, sd * (PAVE + 19 + rnd() * 6)); }
+    const dS = sd * (PAVE + 22 + rnd() * 10); if (free(i, dS, 1.6)) { show.tree.push({ o: t, label: 'świerk', note: H.toFixed(1) + ' m' }); put(t, i, dS, 0, rnd() * 6); hit(t, { hx: .25, hz: .25, h: H, kind: 'hard' }, i); things.push({ kind: 'tree', o: t, H, spruce: true, crown: H * .16 }); } if (rnd() < .4) tree(i + 9, sd * (PAVE + 19 + rnd() * 6)); }
   // ---------- between the houses: a side fence on the boundary, and what a garden has ----------
   for (let k = 0; k < lots.length; k++) { const a = lots[k], b = lots.slice(k + 1).find(o => o.side === a.side); if (!b || b.i - a.i > 70 || trailPlans.some(t => t.sd === a.side && t.i0 > a.i && t.i0 < b.i)) continue;
     const mid = Math.round((a.i + b.i) / 2), sd = a.side, len = 14 + rnd() * 5, f = rnd() < .55 ? P.boardFence(len) : P.wireFence(len);
@@ -662,10 +664,10 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const r = rnd(), sd = rnd() < .5 ? -1 : 1;
     if (bigAt.some(b => Math.abs(b - i) * ds < 14)) continue;             // (the big ones' run up and landing kept clear)
     if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride
-    else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); hit(o.group, o.hit, ii); } }
+    else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); const C = hit(o.group, o.hit, ii); C.thing = { kind: 'cone', o: o.group, C, r: .18 }; things.push(C.thing); } }
     else if (r < .48) { const o = P.bags(rnd), d = sd * (VERGE - .3 + rnd() * 1.4); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); }
     else if (r < .56) { const o = P.wagon(), d = sd * (VERGE + .8); put(o.group, i, d, 0, rnd() * 6); hit(o.group, o.hit, i); }
-    else if (r < .64) { const o = P.barrier(), d = sd * (1.7 + rnd()); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); for (const dz of [-3, 3]) { const c = P.cone(), ii = i + Math.round(dz / ds); put(c.group, ii, d, 0, 0); hit(c.group, c.hit, ii); } }
+    else if (r < .64) { const o = P.barrier(), d = sd * (1.7 + rnd()); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); for (const dz of [-3, 3]) { const c = P.cone(), ii = i + Math.round(dz / ds); put(c.group, ii, d, 0, 0); const C = hit(c.group, c.hit, ii); C.thing = { kind: 'cone', o: c.group, C, r: .18 }; things.push(C.thing); } }
     else if (r < .74) { const o = P.pothole(rnd), d = (rnd() - .5) * 5; put(o.group, i, d, 0, rnd() * 3); hit(o.group, o.hit, i); }
     else if (r < .84) { const o = P.manhole(rnd), d = sd * (.8 + rnd() * 1.6); put(o.group, i, d, 0, rnd() * 6); hit(o.group, o.hit, i); }   // an open manhole
     else { const o = P.bundle(), d = sd * (VERGE + .6); o.group.userData.keep = true; put(o.group, i, d, 0, 0); bundles.push(hit(o.group, o.hit, i)); }   // (kept whole: it goes when picked up)
@@ -808,6 +810,6 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
   const bins = binsO.map(b => b.getWorldPosition(new THREE.Vector3()));
-  return { group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  return { things, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
