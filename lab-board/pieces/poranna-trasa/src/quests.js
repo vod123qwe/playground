@@ -12,7 +12,7 @@
 // createQuests({ THREE, track, residents, peds, hud, talk, game }) → { update(dt, inp), marks(), tracker(), onLand(p), onWindow(w),
 //   onHitPed(p) → true if it was the errand's, get canChat, reset() }
 // game: { rider(), money(n, at, label), papers (get/set), item(name, at), flash(s), jolt(), grudgeAt(at, line, kind), dropBag(at, onPick), talkKey() }
-import { bag } from './stories.js';
+import { bag, JANUSZ } from './stories.js';
 export function createQuests({ THREE, track, residents, peds, hud, talk, game }) {
   const pick = a => a[Math.random() * a.length | 0], rnd = Math.random, _v = new THREE.Vector3(), V = (x, y, z) => new THREE.Vector3(x, y, z);
   const NAMES = { granma: ['PANI HALINA', 'PANI KRYSIA', 'PANI ZOSIA', 'PANI WIESIA'], grandpa: ['PAN HENIO', 'PAN STEFAN', 'PAN ZBYSZEK', 'PAN TADEK'], belly: ['PAN MIREK', 'PAN RYSIEK', 'PAN JANEK'] };
@@ -533,6 +533,40 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
       bribeNo: { bye: 'PARAGRAF, MŁODY. PARAGRAF!', say: 'ŁAPÓWKA?! FUNKCJONARIUSZOWI?! TO JUŻ JEST PODWÓJNY MANDAT. I ZAPISUJĘ W NOTESIKU. MAM CAŁY NOTESIK TAKICH JAK TY.' },
       fight: { say: 'NO TO ZOBACZYMY, KTO TU JEST TWARDY. CZAPKĘ ZDEJMUJĘ. CZAPKA JEST NOWA, NA NIĄ NIE MA FUNDUSZU.' } });
   }
+  // ---------- the bike gang: cyclists in black. Knock cyclists off and they hold it against you (their rep); clean tricks they respect.
+  // At its worst, now and then (minutes apart; sooner on their turf, the bike lanes) two or three come up behind you: kick them off one by
+  // one, or get away; caught, you are shoved off your bike ----------
+  const GA = { rep: 0, cool: 200 + rnd() * 120, chase: null };
+  const onTurf = R => { const q = track.probe(R.x, R.z, -1); return (track.bikeZones || []).some(z => q.i >= z.i0 && q.i <= z.i1); };
+  const still0 = { dt: 0, speed: 0, steer: 0, lean: 0, pedalling: 0, braking: 0, climbing: 0, look: null, nervous: 0, kick: null, air: false, fallen: 0, charge: null };
+  function startGang(R) {
+    const q = track.probe(R.x, R.z, -1), dir = Math.sign(Math.sin(R.yaw) * q.f.x + Math.cos(R.yaw) * q.f.z) || 1, n = GA.rep <= -5 ? 3 : 2, m = [];
+    for (let k = 0; k < n; k++) { const r = game.makeRider(); r.setLook({ shirt: '#2a2c30', cap: '#17181b', jeans: '#26272a' }); r.setParts({ paint: '#17181b', rim: '#cf5a3e' }); scene().add(r.root);
+      m.push({ r, s: q.s - dir * (32 + k * 5), d: q.d, off: (k % 2 ? .9 : -.9), v: R.v + 2, x: 0, z: 0, down: false, downT: 0 }); }
+    GA.chase = { m, dir, t: 0, far: 0, done: null }; game.flash(onTurf(R) ? 'Gang rowerowy na swoim rewirze! Kopnij ich z rowerów albo uciekaj.' : 'Gang rowerowy za tobą! Kopnij ich z rowerów albo uciekaj.');
+    setTimeout(() => { const a = m[0]; if (a && GA.chase) hud.rant(V(a.x, (a.r.root.position.y || 0) + 1.9, a.z), pick(['TO TEN, CO KOPIE NASZYCH!', 'BIERZEMY GO!', 'MASZ PRZEJAZD PŁATNY, MŁODY!']), false); }, 900);
+  }
+  function endGang(how) { const C = GA.chase; if (!C) return; GA.chase = null; GA.cool = 240 + rnd() * 180;
+    game.flash(how === 'down' ? 'Gang leży na asfalcie. Na jakiś czas spokój.' : how === 'caught' ? 'Gang cię dopadł. Na razie wyrównane.' : 'Zgubiłeś gang.');
+    if (how === 'down') GA.rep += 1.5; if (how === 'caught') GA.rep += 1;   // (all of them down: a grudging respect; caught: square for now)
+    setTimeout(() => { for (const g of C.m) g.r.root.parent?.remove(g.r.root); }, 4000); }
+  function stepGang(dt, R) {
+    GA.cool -= dt * (onTurf(R) ? 2 : 1);
+    if (!GA.chase) { if (GA.rep <= -3 && GA.cool <= 0 && !R.foot && R.v > 3 && !talk.isOpen) startGang(R); return; }
+    const C = GA.chase, q = track.probe(R.x, R.z, -1); C.t += dt; let left = 0, near = 1e9; C.hitT = (C.hitT || 0) - dt;
+    for (const g of C.m) {
+      if (g.down) { g.v = Math.max(0, g.v - dt * 8); g.s += C.dir * g.v * dt; g.r.update({ ...still0, dt, fallen: 1 }); continue; } left++;
+      const gap = wrapD(q.s - g.s, 0) * C.dir, want = Math.min(12.5, Math.max(0, R.v + (gap - 1.2) * 1.3)); g.v += (want - g.v) * Math.min(1, dt * 2); g.d += ((THREE.MathUtils.clamp(q.d, -2, 2) + g.off * Math.min(1, gap / 6)) - g.d) * Math.min(1, dt * 1.4);
+      g.s += C.dir * g.v * dt; const a = along(g.s, g.d), y = track.probe(a.x, a.z, a.i).y; g.r.root.position.set(a.x, y, a.z); g.r.root.rotation.set(0, Math.atan2(a.f.x * C.dir, a.f.z * C.dir), 0, 'YXZ');
+      g.r.update({ ...still0, dt, speed: g.v, pedalling: 1 }); g.x = a.x; g.z = a.z; const dist = Math.hypot(a.x - R.x, a.z - R.z); near = Math.min(near, dist);
+      if (dist < 1.3 && !R.foot && C.t > 2 && !(C.hitT > 0) && !C.done) { C.hitT = 3; C.done = 'caught'; game.shove(V(R.x - a.x, 0, R.z - a.z)); hud.rant(V(a.x, y + 1.9, a.z), pick(['NA NASZYM REWIRZE?!', 'POZDRÓW ASFALT!', 'TO ZA KOLEGĘ!']), false); setTimeout(() => endGang('caught'), 2000); } }
+    if (C.done) return; C.far = near > 60 ? C.far + dt : 0;
+    if (!left) endGang('down'); else if (C.far > 8 || C.t > 75 || R.foot) endGang('away');
+  }
+  function onKickGang(g) { if (g.down) return; g.down = true; GA.rep -= .5; hud.rant(V(g.x, g.r.root.position.y + 1.7, g.z), pick(['AŁA! ZAPAMIĘTAMY CIĘ!', 'MOJE KOŁO!', 'TY...!']), false); }
+  // the groups' standing with you, -6..6: the police, the lads by the drums, the gang, the neighbours, the bus-stop lot
+  function reps() { const sum = kinds => { let s = 0; for (const o of new Set(P.values())) if (kinds.includes(o.kind)) s += o.mood; return s; }, cl = v => Math.max(-6, Math.min(6, v));
+    return { policja: cl(PO.rep), ekipa: cl(sum(['shacks'])), gang: cl(GA.rep), sasiedzi: cl(sum(['belly', 'granma', 'grandpa']) / 2), przystanek: cl(sum(['stop', 'lump']) / 1.5) }; }
   // what you know: who could be told on (set as stories go)
   function know(key, what, o) { if (!PO.dirt.some(d => d.key === key)) PO.dirt.push({ key, what, o, told: false }); }
   function snitch(d) {
@@ -570,9 +604,21 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     PO.job = e; active.push(e); game.flash('Wezwania: rzuć pod drzwi domów ze strzałką.');
   }
 
+  // pan Janusz outside each bike shop: sat on a stool by the door, a cap on, calling out to you as you go by
+  const JAN = [];
+  for (const sh of track.shops || []) { if (!sh.door) continue; const S = { sh, who: null, cap: null, cool: 4 }; JAN.push(S);
+    residents.spawn?.('belly').then(p => { if (!p) return; S.who = p; const d = sh.door, q = track.probe(d.x, d.z, -1), A = track.S[q.i], at = V(d.x + A.f.x * 1.4, track.probe(d.x + A.f.x * 1.4, d.z + A.f.z * 1.4, q.i).y, d.z + A.f.z * 1.4);
+      p.G.position.copy(at); p.G.rotation.y = Math.atan2(A.p.x - at.x, A.p.z - at.z); p.acts.idle?.play(); if (p.acts.talk) { p.acts.talk.play(); p.acts.talk.setEffectiveWeight(0); }
+      const stool = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .44, 10), new THREE.MeshToonMaterial({ color: '#7a4a2a' })); stool.position.y = .22; p.G.add(stool);
+      const cap = new THREE.Group(), cm = new THREE.MeshToonMaterial({ color: '#c23a2e' }); cap.add(new THREE.Mesh(new THREE.SphereGeometry(.105, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cm)); const vz = new THREE.Mesh(new THREE.BoxGeometry(.17, .015, .12), cm); vz.position.set(0, .005, .1); cap.add(vz); scene().add(cap); S.cap = cap; S.talkT = 0; }); }
+  function stepJanusz(dt, R) {
+    for (const S of JAN) { const p = S.who; if (!p) continue; const d = Math.hypot(p.G.position.x - R.x, p.G.position.z - R.z); S.cool -= dt; S.talkT = Math.max(0, S.talkT - dt); p.G.visible = S.cap.visible = d < 110; if (d > 110) continue;
+      if (d < 16 && S.cool <= 0) { S.cool = 22 + rnd() * 14; S.talkT = 2.6; const h = p.head ? p.head.getWorldPosition(new THREE.Vector3()) : p.G.position.clone().setY(p.G.position.y + 1.2); hud.rant(h.setY(h.y + .6), pick(JANUSZ.bark), false); }
+      if (p.acts.talk) { const cw = p.acts.talk.getEffectiveWeight(), nw = cw + ((S.talkT > 0 ? 1 : 0) - cw) * Math.min(1, dt * 5); p.acts.talk.setEffectiveWeight(nw); p.acts.idle?.setEffectiveWeight(1 - nw); }
+      p.mixer.update(dt); if (p.head) { p.G.updateMatrixWorld(true); p.head.getWorldPosition(S.cap.position); S.cap.position.y += .1; S.cap.rotation.y = p.G.rotation.y; } } }
   // ---------- each frame ----------
   function update(dt, inp) {
-    const R = R0(); flashT -= dt; byeT = Math.max(0, byeT - dt); for (const r of residents.list) person(r); stepStage(dt); stepPolice(dt, R);
+    const R = R0(); flashT -= dt; byeT = Math.max(0, byeT - dt); for (const r of residents.list) person(r); stepStage(dt); stepPolice(dt, R); stepGang(dt, R); stepJanusz(dt, R);
     for (const o of new Set(P.values())) { o.cool -= dt; if (o.flag.lied) o.flag.lieT -= dt; if (o.flag.sorryT > 0) o.flag.sorryT -= dt; if (o.taleT > 0) o.taleT -= dt; o.redo = false; }
     // passing by: moods acted on (a bottle, a coin, a lie found out)
     for (const [r, o] of P) { if (o.lead !== r) continue; o.passT -= dt; const d = Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z); if (d > 11 || o.passT > 0) continue;
@@ -617,11 +663,12 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     for (const [r, o] of P) { if (o.lead !== r || !o.offer || o.cool > 0 || busy(o.offer)) continue; if (Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z) > 110) continue; out.push({ p: head(r), s: '!', col: '#efc970' }); }
     for (const e of active) { const p = e.target?.(); if (!p) continue; const s = typeof e.mark === 'function' ? e.mark() : e.mark || 'v', col = typeof e.col === 'function' ? e.col() : e.col || '#efc970', dist = Math.round(Math.hypot(p.x - R.x, p.z - R.z));
       out.push({ p, s, col, edge: true, dist, label: e.label ? e.label() + ' ' + dist + ' M' : null }); }
+    if (GA.chase) for (const g of GA.chase.m) if (!g.down) out.push({ p: V(g.x, g.r.root.position.y + 2.3, g.z), s: 'v', col: '#9a9c9e', edge: true, label: 'GANG' });
     if (PO.car && PO.car.stage === 'chase') { const g = PO.car.car.g.position; out.push({ p: V(g.x, g.y + 2.4, g.z), s: 'v', col: '#3d7be0', edge: true, label: 'POLICJA', dist: 0 }); }
     if (near && !talk.isOpen) { const p = near.p.clone ? near.p.clone() : V(near.p.x, near.p.y, near.p.z); p.y += 2.6; out.push({ p, s: '', label: near.slow ? (near.label ? game.talkKey().replace('GADAJ', 'SKLEP') : game.talkKey()) : 'ZWOLNIJ', col: '#f6f3ea' }); }
     return out;
   }
-  function tracker() { const R = R0(); return (PO.car && PO.car.stage === 'chase' ? ['POLICJA! ZWOLNIJ I STAŃ' + (PO.car.run > 4 ? ` (UCIEKASZ ${Math.max(0, Math.ceil(14 - PO.car.run))} S)` : '')] : []).concat(active.map(e => { const p = e.target?.(); return e.text() + (p ? ' ' + Math.round(Math.hypot(p.x - R.x, p.z - R.z)) + ' M' : ''); })); }
+  function tracker() { const R = R0(); return (GA.chase ? [`GANG ZA TOBĄ: ${GA.chase.m.filter(g => !g.down).length} · KOPNIJ ALBO UCIEKAJ`] : []).concat(PO.car && PO.car.stage === 'chase' ? ['POLICJA! ZWOLNIJ I STAŃ' + (PO.car.run > 4 ? ` (UCIEKASZ ${Math.max(0, Math.ceil(14 - PO.car.run))} S)` : '')] : []).concat(active.map(e => { const p = e.target?.(); return e.text() + (p ? ' ' + Math.round(Math.hypot(p.x - R.x, p.z - R.z)) + ' M' : ''); })); }
 
   // ---------- what happened in the world ----------
   function onLand(P0) {
@@ -639,6 +686,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   function onKnockBike(b) {                                            // (a cyclist off his bike: the wanted one, or for the lads, if they asked)
     if (b && b.wanted) { b.wanted = false; PO.rep += 2; const j = active.find(q => q.kind === 'gonczy'); if (j) remove(j); PO.job = null; game.money(15, V(R0().x, R0().y + 2, R0().z), '+15 ZŁ'); game.fame(-2); game.flash('Dyżurny przez radio: mamy go! +15 zł'); }
     else game.fame(1);
+    GA.rep -= 1;
     const e = active.find(q => q.kind === 'rowery'); if (!e) return; e.n++; game.flash(`Rower dla ekipy: ${e.n}/${e.need}`);
     if (e.n >= e.need) { e.kind = 'rowery-back'; e.from = 'rowery'; e.text = () => 'WRÓĆ DO: EKIPA SPOD BECZKI'; e.target = () => head(e.r); e.mark = '?'; e.at = e.r;
       e.talk = () => run({ who: e.o.name, start: { say: 'WIDZIELIŚMY! ŁADNIE ICH POZBIERAŁEŚ. MASZ, MAKULATURA, JAK OBIECALIŚMY. KASY I TAK NIE MAMY.', enter: () => { remove(e); const n = 6 * e.need; game.papers += n; game.flash('Makulatura od ekipy: +' + n + ' gazet'); mood(e.o, 2); game.fame(1); e.o.cool = 70; } } }); }
@@ -648,6 +696,6 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     e.stage = 'bag'; p.flee = 5; p.fleeNew = true; p.stun = .9; e.loot.parent?.remove(e.loot); e.glow.parent?.remove(e.glow); hud.rant(V(p.x, p.G.position.y + 1.9, p.z), pick(['AŁA! DOBRA, DOBRA!', 'MOJA NOGA!', 'TO NIE JA!']), false);
     e.drop = game.dropBag(V(p.x, p.G.position.y, p.z), () => bagPicked(e)); game.flash('Torebka na chodniku. Podnieś ją.'); return true;
   }
-  function reset() { AN.reset(); for (const k in VLEFT) delete VLEFT[k]; for (const S of stage) for (const h of S.hens || []) h.g.parent?.remove(h.g); PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null, rep: 0 }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
-  return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, policeCars, policeNear, onKickPolice, lineFor, get siren() { return !!PO.car && PO.car.stage === 'chase'; }, police: PO, people: P, get focus() { return talk.isOpen && !talk.isLight && focusAt ? focusAt() : byeT > 0 && byeAt ? byeAt() : null; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
+  function reset() { if (GA.chase) { for (const g of GA.chase.m) g.r.root.parent?.remove(g.r.root); GA.chase = null; } Object.assign(GA, { rep: 0, cool: 200 + rnd() * 120 }); AN.reset(); for (const k in VLEFT) delete VLEFT[k]; for (const S of stage) for (const h of S.hens || []) h.g.parent?.remove(h.g); PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null, rep: 0 }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
+  return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, gang: GA, reps, onKickGang, gangRep: n => { GA.rep = Math.max(-6, Math.min(6, GA.rep + n)); }, get gangTargets() { return GA.chase ? GA.chase.m.filter(g => !g.down) : []; }, policeCars, policeNear, onKickPolice, lineFor, get siren() { return !!PO.car && PO.car.stage === 'chase'; }, police: PO, people: P, get focus() { return talk.isOpen && !talk.isLight && focusAt ? focusAt() : byeT > 0 && byeAt ? byeAt() : null; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
 }

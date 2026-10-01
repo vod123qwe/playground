@@ -297,7 +297,7 @@ export function createHud() {
     g.fillStyle = '#17181b'; g.fillRect(x0 - 10, y - 1, w + 11, 7); heart(x0 - 9, y - (beat ? 1 : 0), low ? '#ff5a4a' : '#cf5a3e', '#5e1c17');
     g.fillStyle = '#3a3c40'; g.fillRect(x0, y + 1, w, 3); g.fillStyle = low ? '#e0473a' : h < 60 ? '#efc970' : '#9fd27a'; g.fillRect(x0, y + 1, Math.round(w * Math.max(0, h) / 100), 3); }
   function questList(L) { const W = cv.width, y0 = document.body.classList.contains('touch') ? Math.round(cv.height * .17) : 5;
-    L.slice(0, 3).forEach((s, i) => { const w = width(s) + 9, x = Math.round(W / 2 - w / 2), y = y0 + i * 11; g.fillStyle = 'rgba(23,24,27,.74)'; g.fillRect(x, y, w, 10); g.fillStyle = '#efc970'; g.fillRect(x, y, 1, 10); text(s, x + 5, y + 2, i ? '#f6f3ea' : '#efc970', null); }); }
+    let y = y0; L.slice(0, 3).forEach((s0, i) => { for (const s of wrapTo(s0, Math.max(10, Math.floor((W - 16) / 4)))) { const w = width(s) + 9, x = Math.round(W / 2 - w / 2); g.fillStyle = 'rgba(23,24,27,.74)'; g.fillRect(x, y, w, 10); g.fillStyle = '#efc970'; g.fillRect(x, y, 1, 10); text(s, x + 5, y + 2, i ? '#f6f3ea' : '#efc970', null); y += 10; } y += 1; }); }   // (a line too wide for the picture: broken)
   // a tip: words in a box over the bottom of the picture, broken into lines that fit
   let tipText = null; const tip = s => { tipText = s; };
   function drawTip() { const W = cv.width, H = cv.height, maxW = Math.min(W - 20, 260), words = tipText.split(' '), lines = []; let ln = '';
