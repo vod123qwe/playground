@@ -10,7 +10,7 @@
 export function createTouch({ onCam, onMenu }) {
   const on = matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.search);
   const state = { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, kickHeld: false, guard: false, lookDx: 0, lookDy: 0 };
-  const edges = { kick: false, hop: false, punchL: false, punchR: false, dodge: false, mount: false, talk: false };
+  const edges = { kick: false, hop: false, punchL: false, punchR: false, dodge: false, mount: false, talk: false, title: false };
   const take = () => { const e = { ...edges }; for (const k in edges) edges[k] = false; e.lookDx = state.lookDx; e.lookDy = state.lookDy; state.lookDx = state.lookDy = 0; return e; };
   if (!on) return { on, state, take, setMode() { }, show() { }, trick() { }, chat() { } };
   document.body.classList.add('touch');
@@ -103,6 +103,7 @@ export function createTouch({ onCam, onMenu }) {
   button(IC.fast, 'szybciej', [52, 4, 190], BIKE, () => { state.sprint = true; }, () => { state.sprint = false; });
   button(IC.off, 'zsiądź', [44, 76, 190], BIKE, () => { edges.mount = true; });
   const chatB = button(IC.talk, 'gadaj', [50, 190, 118], BIKE, () => { edges.talk = true; }); chatB.classList.add('hid');   // (only by someone to talk to)
+  button(svg('<rect x="5" y="6" width="14" height="12" rx="1"/><path d="M5 10h14M8 14h8"/>'), 'tytuł', [42, 10, 256], BIKE, () => { edges.title = true; });   // (which paper is thrown: the next title)
   // on foot: one punch (left and right by turns), hop, talk, back on the bike (a run: the stick pushed all the way)
   let fist = 0;
   button(IC.punchR, 'cios', [78, 58, 14], ['foot'], () => { edges[(fist ^= 1) ? 'punchL' : 'punchR'] = true; });

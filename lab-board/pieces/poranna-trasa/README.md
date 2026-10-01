@@ -582,3 +582,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - trudność rośnie z dystansem (pełna po 8 km): auta jeżdżą szybciej, patrole i złodzieje zdarzają się częściej
 - ekran końca trasy (`src/run.js`): powód, dystans, dostarczone gazety, zarobek, zbite szyby, zatrzymania; rekord zapamiętany w przeglądarce
 - loteria: z kupionych części i fantów jedna rzecz zostaje na koncie na zawsze; każdy kolejny przejazd zaczyna się z tym, co już na koncie („Z konta: ...”)
+
+## Wersja 58: prenumeratorzy i tytuły
+
+- trzy tytuły (wymyślone): Trąbka Poranna (czerwona), Wieści zza Płotu (zielone), Sport i Działka (niebieski); w torbie po trochę każdego (na start po 10), pasek tytułu na rzucanej gazecie w jego kolorze
+- X (na telefonie przycisk „tytuł”) zmienia rzucany tytuł; przy torbie trzy kolorowe liczniki, wybrany obwiedziony, nad nimi jego nazwa
+- około połowy domów prenumeruje jeden tytuł: tabliczka w jego kolorze przy drzwiach, a z bliska (do ~40 m przed tobą) mała gazeta w jego kolorze nad domem
+- właściwy tytuł: pełna zapłata i liczy się do dostarczonych; zły: połowa i „JA CZYTAM SPORT!”; dom bez prenumeraty: nic („NIE ZAMAWIAŁEM!”)
+- wybita szyba u prenumeratora: „REZYGNUJĘ Z PRENUMERATY!” (tabliczka znika)
+- gazety dochodzące skądkolwiek (paczki, sklep, łupy, ekipa) rozkładają się po tytułach (najpierw tam, gdzie najmniej); każdy przejazd: nowi prenumeratorzy
