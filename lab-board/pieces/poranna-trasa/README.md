@@ -898,3 +898,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - ze słuchawką od Żanety co jakiś czas w trakcie odcinka dzwoni ktoś ze sprawą na teraz; T przyjmuje (8 sekund na decyzję), potem zegar w pasku u góry
 - sprawy: Babcia Stasia (zatrzymaj się pod domem ze znacznikiem, 50 s), Pan Redaktor (zdjęcie psa w minutę; albo dojedź do najbliższego punktu w 40 s, bo zamykają numer), Szef spod beczki (zrzuć kolarza z roweru), Pani Żaneta (podnieś paczuszkę z drogi i dowieź pod drzwi, nie otwieraj), brat (trik na skoczni do nagrania)
 - za wykonanie od razu pieniądze; w gazecie w „W skrócie”: kto dzwonił i jak poszło
+
+## Wersja 99: Janusz dzwoni i myśli, że to Ty
+
+- w trakcie jazdy (ze słuchawką) Janusz czasem sam dzwoni, pyta, po co dzwonisz, Ty mówisz, że to on, a on: „Co ty gadasz? Ale ty głupi, młody” i się rozłącza; pięć wariantów takiej scenki
+- odliczanie przy ofercie telefonu na trasie odlicza sekundy; pusty portret (kamera trafiła w ścianę) nie jest pokazywany
