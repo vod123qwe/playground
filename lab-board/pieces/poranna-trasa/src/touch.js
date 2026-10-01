@@ -7,7 +7,7 @@
 // camera, the menu, full screen. Nothing a swipe could do to the page (scroll, pull to refresh, pinch, double tap, a long press) is let
 // through: the game keeps the fingers.
 // createTouch({ onCam, onMenu }) → { on, state, take() → edges once each, setMode(mode), show(bool) }
-export function createTouch({ onCam, onMenu }) {
+export function createTouch({ onCam, onMenu, onBook }) {
   const on = matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.search);
   const state = { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, kickHeld: false, guard: false, lookDx: 0, lookDy: 0 };
   const edges = { kick: false, hop: false, punchL: false, punchR: false, dodge: false, mount: false, talk: false, title: false };
@@ -63,7 +63,7 @@ export function createTouch({ onCam, onMenu }) {
     bike: svg('<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9 8.5 6H11M14 9l1.5-3h2"/>'),
     talk: svg('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8"/>'),
     cam: svg('<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3"/>'),
-    menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+    menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'), book: svg('<path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M9 8h6M9 12h6"/>'),
     full: svg('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>') };
 
   // the stick: where the left thumb first touches
@@ -117,7 +117,7 @@ export function createTouch({ onCam, onMenu }) {
   button(IC.dodge, 'unik', [52, 0, 0], ['fight'], () => { edges.dodge = true; });
   // at the top, small, in the middle
   const top = el('top');
-  for (const [ic, fn, name] of [[IC.cam, onCam, 'kamera'], [IC.menu, onMenu, 'menu'], ...(document.fullscreenEnabled ? [[IC.full, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); }, 'pełny ekran']] : [])])
+  for (const [ic, fn, name] of [[IC.cam, onCam, 'kamera'], [IC.menu, onMenu, 'menu'], ...(onBook ? [[IC.book, onBook, 'notes']] : []), ...(document.fullscreenEnabled ? [[IC.full, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); }, 'pełny ekran']] : [])])
     button(ic, '', null, ['bike', 'foot', 'fight'], null, ok => { if (ok) fn(); }, top).setAttribute('aria-label', name);   // (on letting go: the finger is off before the menu is there)
   let mode = null;
   function setMode(m) { if (m === mode) return; mode = m; for (const o of all) o.b.classList.toggle('off', !o.modes.includes(m)); hint.innerHTML = m === 'bike' ? 'kciuk tutaj: jazda' : m === 'foot' ? 'kciuk tutaj: chodzenie<br>prawa strona: kamera' : 'kciuk tutaj: krok i unik'; }

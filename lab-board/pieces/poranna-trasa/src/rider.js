@@ -309,5 +309,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
     for (const k of ['bell', 'lamp']) if (k in o) extra[k].visible = !!o[k]; if ('gears' in o) { extra.cogs.visible = o.gears > 0; extra.cogs.children.forEach((c, i) => { c.visible = i < (o.gears > 1 ? 5 : 3); }); }
     if (o.bagS) satchel.group.scale.setScalar(o.bagS);
   }
-  return { root, head, boy, bike, setParts, bagFill: k => satchel.setFill(k), get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
+  // the clothes' colours (a gang: black tees, black caps)
+  function setLook(o) { if (o.shirt) M.shirt.color.set(o.shirt); if (o.cap) M.cap.color.set(o.cap); if (o.jeans) { M.jeans.color.set(o.jeans); M.jeansD.color.set(o.jeans); } }
+  return { root, head, boy, bike, setParts, setLook, bagFill: k => satchel.setFill(k), get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
 }

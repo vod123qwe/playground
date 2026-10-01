@@ -592,3 +592,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - wybita szyba u prenumeratora: „REZYGNUJĘ Z PRENUMERATY!” (tabliczka znika)
 - gazety dochodzące skądkolwiek (paczki, sklep, łupy, ekipa) rozkładają się po tytułach (najpierw tam, gdzie najmniej); każdy przejazd: nowi prenumeratorzy
 - w sklepie także konkretny tytuł: +5 wybranej gazety za 3 zł (obok „dopełnij” po równo)
+
+## Wersja 59: reputacja grup, gang rowerowy, notes, pan Janusz
+
+- reputacja pięciu grup (od wroga do szacunku): policja, ekipa spod beczki, gang rowerowy, sąsiedzi, przystanek i ławki; grupy mają zgrzyty (rowery dla ekipy i list gończy dla policji psują stosunki z gangiem, donos na ekipę cieszy policję)
+- gang rowerowy (czarne koszulki, czarne ramy): każdy strącony rowerzysta to minus u gangu, czysty trick to plus (cenią styl); przy złej reputacji rzadko (co kilka minut, dwa razy częściej na ich rewirze: ścieżkach rowerowych) dojeżdża dwóch albo trzech z tyłu; kopnij ich z rowerów albo uciekaj; dopadną: zrzucają z roweru („TO ZA KOLEGĘ!”); wszystkich na asfalt: niechętny respekt
+- notes gazeciarza pod Tabem (telefon: przycisk z notesem u góry), gra czeka: co o tobie mówią poszczególne grupy (pasek i jedno, dwa zdania), stan (zdrowie, kasa, sława, dystans), torba po tytułach, części roweru, fanty, rzeczy na koncie z loterii
+- pan Janusz, właściciel warsztatów: w kąpielówkach, klapkach, za małej koszulce i czapeczce; siedzi na taborecie przed warsztatem i zaczepia („JAPOŃSKI OSPRZĘT, MŁODY!”), a w sklepie siedzi obok roweru i komentuje każdą kategorię, zakup, brak kasy i sprzedaż; „Pogadaj z Januszem”: anegdoty z wypraw z Mietkiem (nad morze w klapkach, guma załatana kanapką z serem, zlot tydzień po zlocie...)
+- długie linijki zadań u góry ekranu łamią się na wąskim ekranie

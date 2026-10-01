@@ -4,6 +4,8 @@
 // the bag filled with papers. What you bought stays for the run.
 // createShop({ THREE, createRider, game }) → { open(), close(), key(e), isOpen, mods(), look(), reset() }
 // game: { money (get/set), papers (get/set), items (array), onChange(mods, look), flash(s) }
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { JANUSZ, bag } from './stories.js';
 export const PARTS = {
   kola: { name: 'KOŁA', tiers: [
     { name: 'ZWYKŁE', price: 0, look: { tyre: '#26272a', rim: '#c9cbc8', tyreW: 1 }, mods: {}, note: 'JEŻDŻĄ. TYLE DOBREGO.' },
@@ -41,14 +43,17 @@ export const PARTS = {
 const FINDS = { 'DZWONEK ROWEROWY': { fit: ['dzwonek', 1], sell: 4 }, 'STARA LAMPKA': { fit: ['lampka', 1], sell: 5 }, 'ŁYŻKA DO OPON': { sell: 4 }, 'ŁATKI DO DĘTEK': { sell: 3 }, 'KLUCZ DO SZPRYCH': { sell: 5 },
   'KLUCZ PŁASKI 15': { sell: 4 }, 'DAMSKA TOREBKA': { sell: 8 }, 'MEDALIK NA DROGĘ': { sell: 6 }, 'SOK (CHYBA)': { sell: 2 }, 'SZARLOTKA': { sell: 3 }, 'BILET AUTOBUSOWY': { sell: 2 }, 'ODZNAKA "PRZYJACIEL POSTERUNKU"': { sell: 10 } };
 const STATS = [['top', 'PRĘDKOŚĆ'], ['acc', 'PRZYSPIESZENIE'], ['steer', 'SKRĘT'], ['grass', 'NA TRAWIE', -1], ['hill', 'POD GÓRKĘ'], ['stam', 'KONDYCJA'], ['bag', 'TORBA', 0, 12]];
-const HELLO = ['ROMAN, WARSZTAT: CO DLA CIEBIE? TYLKO NIE PYTAJ O RATY.', 'ROMAN, WARSZTAT: ROWER JAK KOŃ. TRZEBA GO KARMIĆ. CZĘŚCIAMI.', 'ROMAN, WARSZTAT: ZNOWU TY? DOBRZE, KASA SIĘ ZGADZA.', 'ROMAN, WARSZTAT: W TYM TYGODNIU PROMOCJA: NIC NIE JEST TAŃSZE, ALE JEST PROMOCJA.'];
+const HELLO_OLD = ['ROMAN, WARSZTAT: CO DLA CIEBIE? TYLKO NIE PYTAJ O RATY.', 'ROMAN, WARSZTAT: ROWER JAK KOŃ. TRZEBA GO KARMIĆ. CZĘŚCIAMI.', 'ROMAN, WARSZTAT: ZNOWU TY? DOBRZE, KASA SIĘ ZGADZA.', 'ROMAN, WARSZTAT: W TYM TYGODNIU PROMOCJA: NIC NIE JEST TAŃSZE, ALE JEST PROMOCJA.'];
 
 export function createShop({ THREE, createRider, game }) {
   const css = document.createElement('style'); css.textContent = `
     #shop { position: fixed; inset: 0; z-index: 8; display: none; background: rgba(14,15,17,.94); color: #f6f3ea; font: 700 12px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: uppercase; letter-spacing: .02em; }
     #shop.on { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px 14px; padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); box-sizing: border-box; }
     #shop .top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 2px solid #efc970; padding-bottom: 7px; }
-    #shop .top b { color: #efc970; font-size: 15px; letter-spacing: .1em; } #shop .hello { opacity: .75; font-size: 11px; flex: 1; } #shop .cash { color: #efc970; font-size: 15px; white-space: nowrap; }
+    #shop .top b { color: #efc970; font-size: 15px; letter-spacing: .1em; } #shop .cash { color: #efc970; font-size: 15px; white-space: nowrap; }
+    #shop .jan { grid-column: 1 / -1; background: #f6f3ea; color: #17181b; padding: 8px 11px; border: 2px solid #17181b; box-shadow: 0 0 0 2px #efc970; position: relative; min-height: 2.8em; } #shop .jan b { color: #8e2e25; margin-right: 6px; }
+    #shop .jan:after { content: ''; position: absolute; left: 22%; bottom: -10px; border: 8px solid transparent; border-top-color: #f6f3ea; border-bottom: 0; }
+    #shop.on { grid-template-rows: auto auto minmax(0, 1fr) auto; } #shop .chat { margin-right: auto; }
     #shop .left { display: flex; flex-direction: column; gap: 8px; min-height: 0; } #shop canvas { width: 100%; aspect-ratio: 4 / 3; max-height: 46vh; background: radial-gradient(#3a3d42, #1d1e21 70%); border: 1.5px solid #44484c; image-rendering: pixelated; }
     #shop .stats { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 11px; align-items: center; } #shop .bar { height: 8px; background: #2a2c30; position: relative; } #shop .bar i { position: absolute; inset: 0 auto 0 0; background: #efc970; } #shop .bar s { position: absolute; top: 0; bottom: 0; text-decoration: none; }
     #shop .right { overflow-y: auto; min-height: 0; padding-right: 4px; } #shop .cats { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
@@ -57,11 +62,15 @@ export function createShop({ THREE, createRider, game }) {
     #shop .tier { display: block; width: 100%; margin-bottom: 6px; } #shop .tier .n { display: flex; justify-content: space-between; gap: 8px; } #shop .tier .d { font-size: 10px; opacity: .7; margin-top: 3px; text-transform: none; } #shop .tier em { font-style: normal; color: #9fd27a; }
     #shop h4 { margin: 12px 0 6px; color: #efc970; font-size: 11px; letter-spacing: .12em; } #shop .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 5px; } #shop .row button { padding: 5px 8px; font-size: 11px; }
     #shop .bottom { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; } #shop .go { border-color: #efc970; color: #efc970; padding: 9px 16px; }
-    @media (max-width: 720px) { #shop.on { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(0, 1fr) auto; } #shop canvas { max-height: 30vh; } #shop .hello { display: none; } }
+    @media (max-width: 720px) { #shop.on { grid-template-columns: 1fr; grid-template-rows: auto auto auto minmax(0, 1fr) auto; } #shop canvas { max-height: 26vh; } #shop .jan { font-size: 11px; } }
   `; document.head.appendChild(css);
-  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="top"><b>WARSZTAT ROWEROWY</b><span class="hello"></span><span class="cash"></span></div><div class="left"><canvas></canvas><div class="stats"></div></div><div class="right"></div><div class="bottom"><button class="go">JEDŹ DALEJ (ESC)</button></div>';
+  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="top"><b>WARSZTAT U JANUSZA</b><span class="cash"></span></div><div class="jan"><b>PAN JANUSZ:</b><span class="say"></span></div><div class="left"><canvas></canvas><div class="stats"></div></div><div class="right"></div><div class="bottom"><button class="chat">POGADAJ Z JANUSZEM</button><button class="go">JEDŹ DALEJ (ESC)</button></div>';
   document.body.appendChild(el);
   const cv = el.querySelector('canvas'), right = el.querySelector('.right'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
+  // pan Janusz: what he says (a line at the top; his talking clip while he says it), his trips with Mietek on asking
+  const AN = bag(), pick = a => a[Math.random() * a.length | 0]; let talkT = 0;
+  const say = s => { el.querySelector('.jan .say').textContent = s; talkT = Math.min(5, 1.2 + s.length * .035); };
+  el.querySelector('.chat').onclick = () => say(AN.draw('janusz'));
   // what you have: per part, the tiers owned and the one on
   const owned = {}, on = {}; const reset = () => { for (const k in PARTS) { owned[k] = new Set([0]); on[k] = 0; } }; reset();
   let cat = 'kola', hover = null, open_ = false;
@@ -70,13 +79,23 @@ export function createShop({ THREE, createRider, game }) {
   // the turntable: its own little picture, the bike without the boy
   let R = null, ren = null, sc = null, cam = null, raf = 0, last = 0;
   function preview() {
-    if (!ren) { ren = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: true }); ren.setPixelRatio(1); sc = new THREE.Scene(); cam = new THREE.PerspectiveCamera(30, 4 / 3, .1, 50); cam.position.set(2.6, 1.2, 0); cam.lookAt(0, .5, 0);
+    if (!ren) { ren = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: true }); ren.setPixelRatio(1); sc = new THREE.Scene(); cam = new THREE.PerspectiveCamera(32, 4 / 3, .1, 50); cam.position.set(3.1, 1.25, -.45); cam.lookAt(0, .58, -.45);   // (the bike, and him by it)
       sc.add(new THREE.HemisphereLight('#fff3dc', '#3a3d42', 1.6)); const d = new THREE.DirectionalLight('#ffffff', 1.4); d.position.set(2, 3, 1.5); sc.add(d);
-      R = createRider(); R.boy.visible = false; sc.add(R.root); }
+      R = createRider(); R.boy.visible = false; sc.add(R.root);
+      new GLTFLoader().load('assets/export/belly.glb', gl => { const m = gl.scene; m.traverse(o => { if (o.isMesh) { const om = o.material; o.material = new THREE.MeshToonMaterial({ color: om.color, map: om.map || null, alphaTest: om.alphaTest || (om.transparent ? .5 : 0), side: om.transparent ? THREE.DoubleSide : THREE.FrontSide }); } });
+        const J = new THREE.Group(); J.add(m); J.position.set(-.2, 0, -1.25); J.rotation.y = Math.PI * .42; sc.add(J);
+        const stool = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .44, 10), new THREE.MeshToonMaterial({ color: '#7a4a2a' })); stool.position.set(0, .22, 0); J.add(stool);
+        const cap = new THREE.Group(), cm = new THREE.MeshToonMaterial({ color: '#c23a2e' }); const crown = new THREE.Mesh(new THREE.SphereGeometry(.105, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cm); cap.add(crown); const visor = new THREE.Mesh(new THREE.BoxGeometry(.17, .015, .12), cm); visor.position.set(0, .005, .1); cap.add(visor); sc.add(cap);
+        const mixer = new THREE.AnimationMixer(m), A = n => { const c = gl.animations.find(q => q.name === n); return c ? mixer.clipAction(c) : null; }, idle = A('idle'), talk = A('talk'); idle?.play(); if (talk) { talk.play(); talk.setEffectiveWeight(0); }
+        JAN = { J, m, mixer, idle, talk, cap, head: m.getObjectByName('head') }; }); }
     const w = cv.clientWidth || 400, h = cv.clientHeight || 300; ren.setSize(Math.round(w / 2), Math.round(h / 2), false); cam.aspect = w / h; cam.updateProjectionMatrix();   // (half resolution: pixels like the game's)
     R.setParts(look(hover));
   }
-  function spin(t) { if (!open_) return; const dt = Math.min(.05, (t - last) / 1000 || 0); last = t; R.root.rotation.y += dt * .55; ren.render(sc, cam); raf = requestAnimationFrame(spin); }
+  let JAN = null; const _hp = new THREE.Vector3();
+  function spin(t) { if (!open_) return; const dt = Math.min(.05, (t - last) / 1000 || 0); last = t; R.root.rotation.y += dt * .55;
+    if (JAN) { talkT = Math.max(0, talkT - dt); const w = talkT > 0 ? 1 : 0; if (JAN.talk) { const cw = JAN.talk.getEffectiveWeight(), nw = cw + (w - cw) * Math.min(1, dt * 5); JAN.talk.setEffectiveWeight(nw); JAN.idle?.setEffectiveWeight(1 - nw); } JAN.mixer.update(dt);
+      if (JAN.head) { JAN.J.updateMatrixWorld(true); JAN.head.getWorldPosition(_hp); JAN.cap.position.copy(_hp).add(new THREE.Vector3(0, .1, 0)); JAN.cap.rotation.y = JAN.J.rotation.y; } }   // (the cap where his head is)
+    ren.render(sc, cam); raf = requestAnimationFrame(spin); }
   // the lists
   function draw() {
     el.querySelector('.cash').textContent = game.money + ' ZŁ';
@@ -99,18 +118,19 @@ export function createShop({ THREE, createRider, game }) {
     right.querySelector('[data-bun]').addEventListener('click', () => { if (game.money < 5 || game.hp >= 100) return; game.money -= 5; game.hp = Math.min(100, game.hp + 40); changed(); });
     const items = game.items; if (items.length) { right.insertAdjacentHTML('beforeend', '<h4>FANTY</h4>'); items.forEach((it, i) => { const F = FINDS[it] || { sell: 3 }, fit = F.fit && !owned[F.fit[0]].has(F.fit[1]);
       right.insertAdjacentHTML('beforeend', `<div class="row"><span>${it}</span><span>${fit ? `<button data-fit="${i}">ZAMONTUJ</button> ` : ''}<button data-sell="${i}">SPRZEDAJ +${F.sell} ZŁ</button></span></div>`); }); }
-    right.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { cat = b.dataset.cat; hover = null; R && R.setParts(look()); draw(); });
-    right.querySelector('[data-fill]')?.addEventListener('click', () => { if (!need || game.money < cost) return; game.money -= cost; game.papers += need; changed(); });
-    right.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { const i = +b.dataset.sell, it = items[i]; game.money += (FINDS[it] || { sell: 3 }).sell; items.splice(i, 1); changed(); });
+    right.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { cat = b.dataset.cat; hover = null; R && R.setParts(look()); say(pick(JANUSZ.cats[cat] || JANUSZ.buy)); draw(); });
+    right.querySelector('[data-fill]')?.addEventListener('click', () => { if (!need || game.money < cost) { if (need) say(pick(JANUSZ.broke)); return; } game.money -= cost; game.papers += need; say(pick(JANUSZ.fill)); changed(); });
+    right.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { const i = +b.dataset.sell, it = items[i]; game.money += (FINDS[it] || { sell: 3 }).sell; items.splice(i, 1); say(pick(JANUSZ.sell)); changed(); });
     right.querySelectorAll('[data-fit]').forEach(b => b.onclick = () => { const i = +b.dataset.fit, F = FINDS[items[i]]; owned[F.fit[0]].add(F.fit[1]); on[F.fit[0]] = F.fit[1]; items.splice(i, 1); game.flash('Zamontowane: ' + PARTS[F.fit[0]].tiers[F.fit[1]].name.toLowerCase()); changed(); });
   }
   const fx = m => Object.entries(m).filter(([k]) => !['bell', 'lamp'].includes(k)).map(([k, v]) => (k === 'bag' ? `+${v} GAZET` : `${(k === 'grass' ? -v : v) > 0 ? '+' : ''}${Math.round((k === 'grass' ? -v : v) * 100)}% ${(STATS.find(s => s[0] === k) || [0, k])[1]}`)).join(', ');
-  function buy(k, i) { const t = PARTS[k].tiers[i]; if (!owned[k].has(i)) { if (game.money < t.price) return; game.money -= t.price; owned[k].add(i); } on[k] = i; hover = null; changed(); }
+  function buy(k, i) { const t = PARTS[k].tiers[i]; if (!owned[k].has(i)) { if (game.money < t.price) { say(pick(JANUSZ.broke)); return; } game.money -= t.price; owned[k].add(i); if (i > 0) say(pick(JANUSZ.buy)); } on[k] = i; hover = null; changed(); }
   function changed() { game.onChange(mods(), look()); R && R.setParts(look()); draw(); }
-  function open() { if (open_) return; open_ = true; el.classList.add('on'); el.querySelector('.hello').textContent = HELLO[Math.random() * HELLO.length | 0]; preview(); draw(); last = performance.now(); raf = requestAnimationFrame(spin); }
-  function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); game.onChange(mods(), look()); }
+  function open() { if (open_) return; open_ = true; el.classList.add('on'); say(pick(JANUSZ.hello)); preview(); draw(); last = performance.now(); raf = requestAnimationFrame(spin); }
+  function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); game.onChange(mods(), look()); game.bye?.(pick(JANUSZ.bye)); }
   function key(e) { if (!open_) return false; if (e.code === 'Escape' || e.code === 'Enter') close(); e.preventDefault(); return true; }
   const ownedList = () => { const out = []; for (const k in PARTS) for (const i of owned[k]) if (i > 0) out.push({ label: PARTS[k].name + ': ' + PARTS[k].tiers[i].name, keep: { part: k, tier: i } }); return out; };
   function grant(k, i) { if (!PARTS[k] || !PARTS[k].tiers[i]) return; owned[k].add(i); if (i > on[k]) on[k] = i; game.onChange(mods(), look()); }
-  return { open, close, key, get isOpen() { return open_; }, mods, look, ownedList, grant, PARTS, reset: () => { reset(); game.onChange(mods(), look()); } };
+  const equipped = () => Object.keys(PARTS).map(k => ({ cat: PARTS[k].name, name: PARTS[k].tiers[on[k]].name }));
+  return { open, close, key, get isOpen() { return open_; }, mods, look, ownedList, grant, equipped, PARTS, reset: () => { reset(); game.onChange(mods(), look()); } };
 }
