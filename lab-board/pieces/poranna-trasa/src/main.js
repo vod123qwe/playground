@@ -40,6 +40,9 @@ import { createBook } from './book.js';
 import { createAudio } from './audio.js';
 import { createPad, BTN } from './pad.js';
 import { createWorld } from './world.js';
+import { createModes, MODES } from './modes.js';
+import { createMp } from './mp.js';
+import { createNet } from './net.js';
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
 const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
@@ -50,7 +53,7 @@ const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(58, 1, .1, 950);
+let camera = new THREE.PerspectiveCamera(58, 1, .1, 950);
 const px = createPixel({ THREE, renderer, height: 240 });
 const hud = createHud();
 
@@ -173,7 +176,7 @@ const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
   for (const d of track.doors) if (r() < .2) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
-const rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
+let rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
 // his other bikes, by the garage at home: one leant there, one upside down, its front wheel off (being mended)
 for (const b of track.home?.bikes || []) { const r = createRider({ THREE, ramp, toon }); r.boy.visible = false; scene.add(r.root); const y = track.probe(b.p.x, b.p.z, track.home.iJ).y;
   r.update({ dt: 0, speed: 0, steer: 0, lean: 0, pedalling: 0, braking: 0, climbing: 0 }); r.root.position.set(b.p.x, y, b.p.z); r.root.rotation.set(0, b.yaw, 0);
@@ -205,7 +208,7 @@ function dismount(why) {
 function mount() { if (document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (let go on purpose: not the Esc that pauses)
   mouse.used = false; foot.stop();
   if (B.bikeDown) { B.lift = { t: 0, from: B.bikeDown.lean }; B.lean = B.bikeDown.lean; B.bikeDown = null; flash('Podnosisz rower'); } B.parked = false; rider.boy.visible = true; C.init = false; flash('Na rowerze!'); }
-const B = { x: track.start.x, z: track.start.z, y: 0, vy: 0, air: false, gPrev: 0, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
+let B = { x: track.start.x, z: track.start.z, y: 0, vy: 0, air: false, gPrev: 0, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
   stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, throwP: .6 };
 const L = rider.wheelbase, g = 9.81;
 
@@ -262,7 +265,7 @@ function renderHelp() { const el = document.getElementById('keys'); if (!el) ret
   el.innerHTML = SECTIONS.map(s => `<b>${s.title}</b> ` + s.items.map(([id, label, value]) => id ? `${keysOf(id)} ${label.toLowerCase()}` : `${label.toLowerCase()} ${value.toLowerCase()}`).join(' · ')).join('<br>'); }
 renderHelp(); window.PT_styleKeys = () => BIND.style;
 const keys = new Set(), edge = new Set();
-addEventListener('keydown', e => { if (e.repeat) return; keys.add(e.code); edge.add(e.code);
+addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat) return; keys.add(e.code); edge.add(e.code);
   if (on('pixel', e.code)) look.set({ pixel: !look.S.pixel });
   const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].indexOf(e.code); if (n >= 0) look.set({ pix: SIZES[n] });
   if (on('view', e.code)) { if (foot.active) foot.toggleView(); else setCam((camI + 1) % CAMS.length); }
@@ -284,7 +287,7 @@ addEventListener('mousemove', e => { if (mouse.mh) return; mouse.nx = e.clientX 
   if (document.pointerLockElement || (!menu.open && !asking)) { mouse.dx += e.movementX; mouse.dy += e.movementY; if (foot.active) mouse.used = true; } });
 document.addEventListener('mouseleave', () => { mouse.inside = false; });
 document.addEventListener('pointerlockerror', () => { if (!mouse.failed) { mouse.failed = true; flash('Mysz: ruszaj nią, a przy krawędzi ekranu obracasz się dalej'); } });
-addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || shop.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button')) return;
+addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || shop.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button, .mppage')) return;
   lockPointer(); if (foot.active) mouse.used = true;
   if (e.button === 0) { mouse.l = true; mouse.lh = true; } if (e.button === 2) { mouse.r = true; mouse.rh = true; }
   if (e.button === 1) { e.preventDefault(); if (e.detail >= 2) { camUser.dist = 1; camUser.tilt = 0; camUser.yaw = 0; saveCam(); flash('Kamera: jak była'); } else mouse.mh = true; } });
@@ -325,13 +328,14 @@ function input() {
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
-const aim = (() => { const G = new THREE.Group(), dots = [];   // (the dots: few and faint, fading out; the start of the flight, not all of it: a hint, the rest is a feel)
+const makeAim = () => { const G = new THREE.Group(), dots = [];   // (the dots: few and faint, fading out; the start of the flight, not all of it: a hint, the rest is a feel)
   for (let k = 0; k < 7; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.055, 6, 4), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .5 * (1 - k / 7), depthWrite: false })); d.renderOrder = 3; G.add(d); dots.push(d); }
   const ring = new THREE.Mesh(new THREE.RingGeometry(.62, .78, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .55, depthWrite: false })); ring.renderOrder = 3; G.add(ring);
   const rim = new THREE.Mesh(new THREE.RingGeometry(.78, .86, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#17181b', transparent: true, opacity: .45, depthWrite: false })); rim.renderOrder = 3; ring.add(rim);   // (a dark rim: it shows on the grass)
   const arrowM = new THREE.MeshBasicMaterial({ color: '#efc970' }), arrow = new THREE.Group(); arrow.add(new THREE.Mesh(new THREE.ConeGeometry(.24, .42, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#17181b' })), new THREE.Mesh(new THREE.ConeGeometry(.18, .34, 4).rotateX(Math.PI), arrowM)); arrow.children[1].position.y = .03; ring.add(arrow);   // (an arrow over it: seen from low down too)
   G.traverse(o => { if (o.material) o.material.depthTest = false; });   // (an aid, not a thing: over the grass, always seen)
-  G.visible = false; scene.add(G); return { G, dots, ring, at: new THREE.Vector3(), on: false }; })();
+  G.visible = false; scene.add(G); return { G, dots, ring, at: new THREE.Vector3(), on: false }; };
+let aim = makeAim();
 function throwVel(p, side, c = {}) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, a = (c.ay || 0) * .52, sp = (2.6 + p * 9) * (1 + (c.ax || 0) * .25);
   const dx = rx * out * Math.cos(a) + fx * Math.sin(a), dz = rz * out * Math.cos(a) + fz * Math.sin(a);
   return new THREE.Vector3(fx * B.v * .9 + dx * sp, 1.9 + p * 3.3, fz * B.v * .9 + dz * sp); }
@@ -344,7 +348,7 @@ function throwTargets(side) { const now = performance.now(), fx = Math.sin(B.yaw
     const l = Math.hypot(B.x - w.x, B.z - w.z) || 1; consider(w.x + (B.x - w.x) / l * .45, w.z + (B.z - w.z) / l * .45, 3, d); }   // (just before it, on his side: it drops in)
   for (const d of track.doors) { if (!d.sub || d.done || now - (d.pending || -9e9) < 2500 || Math.abs(d.p.x - B.x) + Math.abs(d.p.z - B.z) > 24) continue; consider(d.p.x - d.n.x * 1.3, d.p.z - d.n.z * 1.3, 0, d); }
   return list.sort((a, b) => a.score - b.score); }
-const hot = { L: null, R: null };   // (where a tap would send it, each side: shown over the house)
+let hot = { L: null, R: null };   // (where a tap would send it, each side: shown over the house)
 function stepHot() { hot.L = hot.R = null; if (foot.active || B.crash || !B.papers) return; hot.L = throwTargets(1)[0] || null; hot.R = throwTargets(-1)[0] || null; }
 function stepAim() {                                                    // (while a throw is held: where it would go)
   aim.on = !!B.charge && !foot.active && !B.crash; aim.G.visible = aim.on; if (!aim.on) return;
@@ -384,10 +388,10 @@ function unlockTitle(n) { B.nt = n; const A = ACT(), tot = TK.reduce((a, t) => a
   assignSubs(true); const T = TITLES[A[n - 1]]; flash(`Nowa gazeta w torbie: ${T.name.toLowerCase()}! Tabliczki w jej kolorze przy drzwiach. Zmiana gazety: ${keysOf('title')}`); audio.play('coin', { vol: .7 }); }
 // the subscribers: about half the houses, each its title; a plaque by the door in its colour (and a mark over it as you come)
 const plaques = [];
-function assignSubs(keepNear) { const A = ACT();
+function assignSubs(keepNear, fixed) { const A = ACT();   // (fixed: the subscribers as they are, given by the other player; only their plaques made anew)
   for (const d of track.doors) { if (keepNear && (d.done || Math.hypot(d.p.x - B.x, d.p.z - B.z) < 70)) continue;
     if (d.plaque) { scene.remove(d.plaque); plaques.splice(plaques.indexOf(d.plaque), 1); d.plaque = null; }
-    d.sub = Math.random() < .55 ? A[Math.random() * A.length | 0] : null; if (!d.sub) continue;
+    if (!fixed) d.sub = Math.random() < .55 ? A[Math.random() * A.length | 0] : null; if (!d.sub) continue;
     const n = d.n, fa = d.p.clone().addScaledVector(n, -2.6), side = new THREE.Vector3(-n.z, 0, n.x), pl = new THREE.Group();
     const b = new THREE.Mesh(new THREE.BoxGeometry(.34, .24, .03), toon('#f6f3ea')); pl.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(.28, .08, .035), bandOf[d.sub]); c.position.y = .04; pl.add(c);
     pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; } }
@@ -395,11 +399,11 @@ assignSubs();
 // the streak: subscribers served one after another (no wrong ones, none passed by, no paper thrown wide of one): every 3 more, the points
 // count once more (to x4); shown under the speed
 const streakMult = () => Math.min(4, 1 + Math.floor((B.streak || 0) / 3));
-const streakEl = document.createElement('div'); streakEl.id = 'streak'; document.body.appendChild(streakEl);
-{ const st = document.createElement('style'); st.textContent = `#streak { position: fixed; left: 16px; top: 128px; z-index: 3; pointer-events: none; font: 700 11px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: .08em; color: #17181b; background: #9fd27a; padding: 4px 6px; box-shadow: 0 0 0 2px #17181b; opacity: 0; transition: opacity .25s; }
-  #streak.on { opacity: 1; } #streak.x1 { background: #efc970; } #streak.lost { background: #cf5a3e; color: #f6f3ea; } @media (max-width: 639px) { #streak { top: 92px; } }`; document.head.appendChild(st); }
-function drawStreak(lost) { const n = B.streak || 0; streakEl.className = lost ? 'on lost' : n ? 'on' + (streakMult() > 1 ? '' : ' x1') : ''; streakEl.textContent = lost ? 'SERIA PRZERWANA' : `SERIA ${n}` + (streakMult() > 1 ? ` · x${streakMult()}` : ` · x2 ZA ${3 - n % 3}`); if (lost) setTimeout(() => { if (!(B.streak > 0)) streakEl.className = ''; }, 1400); }
-function breakStreak() { const had = (B.streak || 0) >= 2; B.streak = 0; if (had) { drawStreak(true); audio.play('miss', { vol: .6 }); } else if (!streakEl.classList.contains('lost')) streakEl.className = ''; }
+let streakEl = document.createElement('div'); streakEl.id = 'streak'; streakEl.className = 'streak'; document.body.appendChild(streakEl);
+{ const st = document.createElement('style'); st.textContent = `.streak { position: fixed; left: 16px; top: 128px; z-index: 3; pointer-events: none; font: 700 11px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: .08em; color: #17181b; background: #9fd27a; padding: 4px 6px; box-shadow: 0 0 0 2px #17181b; opacity: 0; transition: opacity .25s; }
+  .streak.on { opacity: 1; } .streak.x1 { background: #efc970; } .streak.lost { background: #cf5a3e; color: #f6f3ea; } @media (max-width: 639px) { #streak { top: 92px; } }`; document.head.appendChild(st); }
+function drawStreak(lost) { const n = B.streak || 0; streakEl.className = 'streak ' + (lost ? 'on lost' : n ? 'on' + (streakMult() > 1 ? '' : ' x1') : ''); streakEl.textContent = lost ? 'SERIA PRZERWANA' : `SERIA ${n}` + (streakMult() > 1 ? ` · x${streakMult()}` : ` · x2 ZA ${3 - n % 3}`); if (lost) { const e0 = streakEl, b0 = B; setTimeout(() => { if (!(b0.streak > 0)) e0.className = 'streak'; }, 1400); } }
+function breakStreak() { const had = (B.streak || 0) >= 2; B.streak = 0; if (had) { drawStreak(true); audio.play('miss', { vol: .6 }); } else if (!streakEl.classList.contains('lost')) streakEl.className = 'streak'; }
 // a subscriber ridden past without a paper: the streak goes (counted once each time by)
 function stepPassed() { if (foot.active) return; const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw);
   for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - B.x, dz = d.p.z - B.z; if (Math.abs(dx) + Math.abs(dz) > 40) { d.seen = false; continue; } const fw = dx * fx + dz * fz, l = Math.hypot(dx, dz);
@@ -422,6 +426,7 @@ function release(at, side) {                                          // (from t
     const dx = A.x - at.x, dz = A.z - at.z, l = Math.hypot(dx, dz), T = THREE.MathUtils.clamp(.5 + l * .04, .6, 1.05); v = new THREE.Vector3(dx / T, (A.y + .05 - at.y) / T + .5 * g * T, dz / T); }   // (sent to a target: the arc that comes down on it)
   const dot = new THREE.Mesh(dotG, dotM); dot.renderOrder = 1; scene.add(dot);
   papers.push({ m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false, title, guided: !!A });
+  net.send({ k: 'paper', x: +at.x.toFixed(2), y: +at.y.toFixed(2), z: +at.z.toFixed(2), v: [v.x, v.y, v.z].map(n => +n.toFixed(2)), title });   // (the other sees it fly)
 }
 // a broken window: a pane of cracks over it, a spray of glass
 const crackT = (() => { const c = document.createElement('canvas'); c.width = 48; c.height = 44; const x = c.getContext('2d'); x.fillStyle = '#1b2a33'; x.fillRect(0, 0, 48, 44);
@@ -431,8 +436,9 @@ const crackT = (() => { const c = document.createElement('canvas'); c.width = 48
 const crackM = new THREE.MeshBasicMaterial({ map: crackT, transparent: true, alphaTest: .5 }), shardM = new THREE.MeshBasicMaterial({ color: '#bcdcdf', side: THREE.DoubleSide });
 const shards = [];
 const cracks = [];
-function breakWindow(w) {
-  w.broken = true; aud('glass', w.p); B.windows = (B.windows || 0) + 1; { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
+function breakWindow(w, remote) {
+  if (!remote) net.send({ k: 'win', i: track.windows.indexOf(w) });
+  w.broken = true; aud('glass', w.p); if (!remote) B.windows = (B.windows || 0) + 1; { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
   for (let k = 0; k < 12; k++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.07, .06), shardM); s.position.copy(w.p).add(new THREE.Vector3((Math.random() - .5) * .8, (Math.random() - .5) * .6, (Math.random() - .5) * .8)); scene.add(s);
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
@@ -450,6 +456,7 @@ function score(n, at, label, col) { if (n > 0 && performance.now() - coinT > 120
 function stepPapers(dt) {
   for (const p of papers) {
     p.t += dt; if (p.rest) continue;
+    if (p.ghost) { p.v.y -= g * dt; p.m.position.addScaledVector(p.v, dt); p.m.rotation.x += p.spin.x * dt; const gq = track.probe(p.m.position.x, p.m.position.z, p.hint); p.hint = gq.i; p.dot.position.set(p.m.position.x, gq.y + .02, p.m.position.z); if (p.m.position.y < gq.y + .035) { p.m.position.y = gq.y + .035; p.v.multiplyScalar(.2); if (p.v.length() < .3) { p.rest = true; scene.remove(p.dot); } } continue; }   // (the other player's: only seen)
     p.prev.copy(p.m.position); p.v.y -= g * dt; p.m.position.addScaledVector(p.v, dt); p.m.rotation.x += p.spin.x * dt; p.m.rotation.z += p.spin.z * dt;
     if (!p.landed && !p.personHit && paperHits(p)) { p.personHit = true; p.v.multiplyScalar(.15); }   // (caught, or bounced off someone)
     const q = track.probe(p.m.position.x, p.m.position.z, p.hint); p.hint = q.i;
@@ -469,11 +476,11 @@ function stepPapers(dt) {
         const P = p.m.position, at = P.clone().setY(q.y + .5), door = track.doors.find(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - P.x, d.p.z - d.n.z * 1.3 - P.z) < 1.6);
         const under = () => track.windows.find(w => { if (track.doors[w.house]?.done) return false; const dx = P.x - w.p.x, dz = P.z - w.p.z, out = dx * w.n.x + dz * w.n.z, side = Math.abs(dx * -w.n.z + dz * w.n.x); return out > -.3 && out < 2.2 && side < 1.3; });
         let w0 = null, boxed = false;
-        if (door) { door.done = true; aud('porch', at); deliver(track.doors.indexOf(door), 2, at, 'Na ganek', p.title); }
-        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; boxed = true; mb.flag.rotation.x = -Math.PI / 2; aud('mailbox', w); const hi = mb.house ?? (mb.house = nearestDoor(w)); if (track.doors[hi]) track.doors[hi].done = true; if (!deliver(hi, 5, w.clone().setY(w.y + 1.5), 'Do skrzynki', p.title)) break;
+        if (door) { door.done = true; served(door); aud('porch', at); deliver(track.doors.indexOf(door), 2, at, 'Na ganek', p.title); }
+        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; boxed = true; mb.flag.rotation.x = -Math.PI / 2; aud('mailbox', w); const hi = mb.house ?? (mb.house = nearestDoor(w)); if (track.doors[hi]) track.doors[hi].done = true; served(track.doors[hi], mb); if (!deliver(hi, 5, w.clone().setY(w.y + 1.5), 'Do skrzynki', p.title)) break;
             const win = track.windows.filter(o => !o.broken).sort((a, b) => a.p.distanceToSquared(w) - b.p.distanceToSquared(w))[0];   // (thanks from the nearest window of the house)
             hud.praise(win && win.p.distanceTo(w) < 16 ? win.p.clone().add(new THREE.Vector3(0, .9, 0)) : w.clone().setY(w.y + 2.6)); break; } }
-        if (!door && !boxed && (w0 = under())) { track.doors[w0.house].done = true; deliver(w0.house, 1, at, 'Pod okno', p.title); }
+        if (!door && !boxed && (w0 = under())) { track.doors[w0.house].done = true; served(track.doors[w0.house]); deliver(w0.house, 1, at, 'Pod okno', p.title); }
         else if (!door && !boxed && track.doors.some(d => d.sub && !d.done && Math.hypot(d.p.x - P.x, d.p.z - P.z) < 9)) breakStreak(); }   // (wide of one waiting for it)
       if (Math.abs(p.v.y) < 1.2) { p.v.multiplyScalar(Math.pow(.02, dt)); p.v.y = 0; p.spin.multiplyScalar(Math.pow(.05, dt)); if (p.v.length() < .15) { p.rest = true; scene.remove(p.dot); } }
       else { p.v.y *= -.3; p.v.x *= .6; p.v.z *= .6; } }
@@ -672,10 +679,11 @@ function kickTargets() {
   if (granny.state === 'out') add('granny', granny.group.position.x, granny.group.position.z, granny, 2.6);
   for (const C of track.near(B.hint)) if (C.hyd) add('hyd', C.x, C.z, C, 1.9);
   for (const T of stuff.near(B.x, B.z, 2.2)) if (!T.broken && !T.down) add('thing', T.x, T.z, T, 2.2 + T.r);
+  if (net.on && P2.rider.root.visible && !P2.B.crash) add('rider', P2.B.x, P2.B.z, P2, 2.7);   // (over the network: the other player)
   return out.sort((a, b) => a.d - b.d);
 }
 function landKick(tg) {
-  const at = { dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
+  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
   if (tg.kind === 'dog') { dogs.kick(tg.ref, { x: ax / al * 4.5 + Math.sin(B.yaw) * B.v * .5, z: az / al * 4.5 + Math.cos(B.yaw) * B.v * .5 }); hud.impact(mid); slowmo = .09; shake = .3; }   // it flies off
@@ -685,6 +693,7 @@ function landKick(tg) {
   if (tg.kind === 'car') { hud.impact(mid, 'BUM!'); tg.ref.stop = Math.max(tg.ref.stop, .7); hud.rant(tg.ref.car.group.position, pickOf(DRIVERS), true, 1.7); shake = .28; }   // the driver: the bubble goes with the car
   if (tg.kind === 'gangm') { hud.impact(mid); quests.onKickGang(tg.ref); slowmo = .06; shake = .22; }   // (one of the gang: off his bike)
   if (tg.kind === 'police') { hud.impact(mid, 'BUM!'); shake = .28; quests.onKickPolice(tg.ref); }   // (a police car: see quests)
+  if (tg.kind === 'rider') { const how = mp.kick(meId(), otherId()); hud.impact(mid, how === 'tag' ? 'BEREK!' : 'ŁUP!'); shake = .25; audio.play('kick', { vol: .7 }); net.send({ k: 'kick', how, dx: ax / al, dz: az / al }); }   // (the other player: off his bike in the race, a shove otherwise)
   if (tg.kind === 'granny') { tg.ref.kicked(); hud.rant(tg.ref.mouth, 'JA CI DAM GNOJKU!', true); shake = .12; }   // (the old woman: a kick does nothing, bar make her crosser)
   if (tg.kind === 'thing') { stuff.hit(tg.ref, ax, az, 1); shake = Math.max(shake, tg.ref.kind === 'mailbox' ? .08 : .03); }   // (from the bike: as on foot)
   if (tg.kind === 'hyd' && water.spray(new THREE.Vector3(tg.ref.x, tg.ref.y0 || 0, tg.ref.z), 4.5)) { hud.impact(new THREE.Vector3(tg.ref.x, (tg.ref.y0 || 0) + .5, tg.ref.z), 'PSSS!'); shake = .15; }
@@ -699,7 +708,7 @@ function stepPuddles(me) { let P0 = null; for (const P of track.puddles || []) i
 let barkers = [];
 const nearDog = () => barkers.find(n => n.dist < 2.9);
 function stepDogs(dt, inp) {
-  barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw, heat: heat(level()) }); stepLevel();
+  barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw, heat: modes.flags.calm ? 0 : heat(level()) }); stepLevel();
   for (const n of barkers) { const d = n.dog; d.sndT = (d.sndT || 0) - dt; if (d.sndT <= 0) { d.sndT = 1 + Math.random() * 1.4; aud('bark', d); } }   // (a dog at him: a bark now and then)
   // a dog into a car or a tree (running at him, or kicked through the air): it goes over, and home
   const cars = traffic.boxes();
@@ -713,6 +722,9 @@ function stepDogs(dt, inp) {
   B.dogSlow += (Math.min(1, slow) - B.dogSlow) * Math.min(1, dt * 4); B.look = look;
   B.rattled = B.crash ? 0 : slow > .25 ? (B.rattled || 0) + dt : Math.max(0, (B.rattled || 0) - dt * .7);
   if (B.rattled > 6.5 && !B.crash) { B.rattled = 0; for (const n of barkers) dogs.kick(n.dog); crash(); flash('Pies Cię dopadł!'); }
+  stepKick(dt, inp);
+}
+function stepKick(dt, inp) {
   // the kick: at whatever is nearest by him (a dog, someone walking, a cyclist, a car, the old woman, a hydrant), with the leg on its side
   // off a ramp, in the air: Space (a phone: the kick button) does a trick. A or D held: a 360 that way; W held on the big ramp: a backflip; else a tabletop.
   //   One press: it goes round by itself, at a pace fitted to the time left in the air, and is pulled in faster if it must be, to be round
@@ -751,11 +763,11 @@ const CAMS = [
 ];
 let camI = 3; const CP = { ...CAMS[3] };
 function setCam(i) { camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
-const C = { yaw: B.yaw, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: Math.PI, iyGo: false };   // (iy: the opening shot, from in front of him, the house behind him; it swings round behind him as he sets off)
+let C = { yaw: B.yaw, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: Math.PI, iyGo: false };   // (iy: the opening shot, from in front of him, the house behind him; it swings round behind him as he sets off)
 const _eye = new THREE.Vector3();
 // a paper thrown: the camera eases into a wider view of it (back, up, a little aside from the throw's side), looking between him and
 // the paper, so he stays in the picture; it holds where the paper came down a moment (the +1, the glass), then eases back
-const throwCam = { w: 0, at: new THREE.Vector3(), side: 0 };
+let throwCam = { w: 0, at: new THREE.Vector3(), side: 0 };
 function watchPaper(dt) {
   const p = papers.filter(p => (!p.landed && p.t < 1.6) || (p.landed && p.t - p.landT < 1.1)).pop();
   if (p) { throwCam.at.lerp(p.m.position, throwCam.w < .05 ? 1 : 1 - Math.exp(-dt * 10)); const rx = -Math.cos(B.yaw), rz = Math.sin(B.yaw); throwCam.side = Math.sign((p.m.position.x - B.x) * rx + (p.m.position.z - B.z) * rz) || 1; }
@@ -784,7 +796,7 @@ function follow(dt) {
     C.pos.lerp(want, 1 - Math.exp(-dt * 6)); camera.position.copy(C.pos); camera.up.set(fx, 0, fz); camera.lookAt(C.pos.x, C.gy, C.pos.z);
     if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
     CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov * PK(); camera.updateProjectionMatrix();
-    sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return; }
+    if (CUR === P1) { sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); } return; }
   const ch = aim.on && B.charge ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .13 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
   if (C.iy) { if (B.v > .4 || Math.abs(B.steer) > .05 || B.crash || foot.active) C.iyGo = true; if (C.iyGo) { C.iy *= Math.exp(-dt * 1.9); if (C.iy < .01) C.iy = 0; } }
   const ik = C.iy / Math.PI, [bk0, upU0] = userCam(back, CP.up), bk = bk0 * (1 - ik * .2), upU = upU0 * (1 - ik * .45), cy = C.yaw + camUser.yaw + C.iy, want = new THREE.Vector3(B.x - Math.sin(cy) * bk - Math.cos(cy) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(cy) * bk + Math.sin(cy) * aside);   // (cy: turned round him as he set it)   // (far and high enough to see the houses, and a window go)
@@ -800,7 +812,7 @@ function follow(dt) {
   { const sp = Math.min(1, Math.max(0, B.v) / 9), rum = (Math.abs(gq.d) > track.PAVE && !track.home?.paved(B.x, B.z) ? .035 : Math.abs(gq.d) > track.KERB ? .014 : .006) * sp * (B.air || B.crash ? 0 : 1), t = performance.now() / 1000;
     camera.position.y += (Math.sin(t * 47) * .6 + Math.sin(t * 71) * .4) * rum; camera.position.x += Math.sin(t * 39) * rum * .5; }   // (the ground under the wheels: asphalt, the kerb, the grass)
   camera.fov = (CP.fov + Math.max(0, B.v) * .75 + rush * 7 + THREE.MathUtils.smootherstep(throwCam.w, 0, 1) * 8) * PK(); camera.updateProjectionMatrix();
-  sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld();
+  if (CUR === P1) { sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); }
 }
 
 // ---------- on the screen ----------
@@ -865,18 +877,20 @@ function stamina(dt, inp) {
   B.tired += (tired - B.tired) * Math.min(1, dt * 5);
 }
 const world = { rider: B, pullOff: () => dismount('Ściągnął cię z roweru!') };
-const mlook = { x: 0, y: 0 };                                          // (on the bike: where the mouse turned the view)
+let mlook = { x: 0, y: 0 };                                          // (on the bike: where the mouse turned the view)
 function step(dt, inp) {
   if (!foot.active && !B.charge) { mlook.x = THREE.MathUtils.clamp(mlook.x + (inp.dx || 0) * .006, -1, 1); mlook.y = THREE.MathUtils.clamp(mlook.y + (inp.dy || 0) * .005, -1, 1); }
   mlook.x *= Math.exp(-dt * 1.6); mlook.y *= Math.exp(-dt * 1.6);
   if (slowmo > 0) { slowmo -= dt; dt *= .12; }                        // (a hit: a beat of stillness)
+  modes.update(dt); if (modes.counting) inp = still(inp);   // (a mode's count of three: feet down)
+  mp.update(dt); if (mp.counting) inp = still(inp); stepNet(dt, inp);
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
   if (inp.bell && !foot.active) { if (MOD.bell > 0) { audio.play('bell'); B.bellT = 2.5; } else flash('Dzwonek kupisz u Janusza'); }
   syncMix(); if (inp.title) { const A = ACT(); if (A.length < 2) flash('Na razie wozisz jedną gazetę: ' + TITLES[A[0]].name.toLowerCase());
     else { for (let k = 1; k <= A.length; k++) { const t = A[(B.sel + k) % A.length]; if (B.mix[t] > 0 || k === A.length) { B.sel = (B.sel + k) % A.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); } }
-  if (B.nt < TK.length && trip.dist >= TITLE_AT[B.nt] && menu.page !== 'title') unlockTitle(B.nt + 1);
+  if (B.nt < TK.length && trip.dist >= TITLE_AT[B.nt] && menu.page !== 'title' && !MP.on) unlockTitle(B.nt + 1);   // (two players: one title each, the same)
   if (endT > 0 && (endT -= dt) <= 0) endRun(endWhy); B.hp = Math.min(100, (B.hp ?? 100) + dt / 12); if (B.points > (B.lastPts ?? 0)) B.earned = (B.earned || 0) + B.points - B.lastPts; B.lastPts = B.points;
   quests.update(dt, inp);                                               // (who is near to talk to; the errands; the thief)
   if (foot.active) return stepFoot(dt, inp);
@@ -884,13 +898,13 @@ function step(dt, inp) {
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor });
   { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 && (B.bellT = (B.bellT || 0) - dt) > -4 });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
-  { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16 && !track.home?.yard(B.x, B.z), road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
+  { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16 && !track.home?.yard(B.x, B.z) && !modes.flags.calm, road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
     if (ev === 'shout') hud.rant(granny.mouth, 'NIE PO SIONYM!', true);
     if (ev === 'caught') { const n = B.points; B.points = 0; hud.rant(granny.mouth, 'MAM CIE!', true);
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
   rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: carsAt(level()), s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
+  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsAt(level()), bus: modes.flags.bus, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
@@ -992,7 +1006,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: carsAt(level()), s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
+  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsAt(level()), bus: modes.flags.bus, s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
@@ -1014,7 +1028,7 @@ function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
   touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !runUI.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
-  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks(), mpMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -1031,12 +1045,14 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
 const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
-const menu = createMenu({ sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
+const menu = createMenu({ modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
-addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
+addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (book.isOpen && book.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (e.code === 'Tab' && !menu.open && !asking && !talk.isOpen && !shop.isOpen && !runUI.isOpen) { book.toggle(); keys.clear(); e.preventDefault(); e.stopImmediatePropagation(); return; }
   if (runUI.isOpen && runUI.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
+  if (modes.isOpen && modes.key(e)) { keys.clear(); e.stopImmediatePropagation(); e.preventDefault(); return; }
+  if (mp.isOpen && mp.key(e)) { keys.clear(); e.stopImmediatePropagation(); e.preventDefault(); return; }
   if (shop.isOpen && shop.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (talk.isOpen && talk.key(e)) { if (!talk.isLight) keys.clear(); e.stopImmediatePropagation(); return; }   // (a talk open: its keys (a light one: just the numbers))
   if (menu.open && !asking) { audio.play('ui'); menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
@@ -1065,7 +1081,7 @@ for (const [ev, type] of [['pointerdown', 'down'], ['pointermove', 'move'], ['po
 const toPx = e => [e.clientX / innerWidth * hud.canvas.width, e.clientY / innerHeight * hud.canvas.height];
 addEventListener('pointerdown', e => { if (!asking) return; const i = hud.askAt(...toPx(e)); if (i >= 0) answer(i === 0); e.preventDefault(); e.stopPropagation(); }, true);
 addEventListener('pointermove', e => { if (!asking || e.pointerType === 'touch') return; const i = hud.askAt(...toPx(e)); if (i >= 0) hud.askSel = i; document.body.classList.toggle('over', i >= 0); }, true);   // (a hand over a button)
-addEventListener('keydown', e => { if (e.repeat) return;
+addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat) return;
   if (!asking && on('reset', e.code)) { askReset(true); e.preventDefault(); return; }
   if (asking) { if (e.code === 'KeyY' || e.code === 'KeyT') answer(true); else if (e.code === 'KeyN' || e.code === 'Escape') answer(false);
     else if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Tab'].includes(e.code)) hud.askSel = 1 - hud.askSel; else if (e.code === 'Enter' || e.code === 'Space') answer(hud.askSel === 0); e.preventDefault(); } });
@@ -1083,6 +1099,59 @@ function resetGame() {
   for (const d of dogs.dogs) { Object.assign(d, { x: d.home.x, z: d.home.z, v: 0, state: 'home', cool: 4, bark: 0, hint: -1, fly: null }); }
   trip.dist = trip.max = trip.time = 0; endT = 0; B.nt = 1; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; B.sel = 0; assignSubs(); C.init = false; flash('Od nowa!');
 }
+// the modes (modes.js): the sprint against the clock, the obstacle course; they thin the traffic (modes.flags) and pause on their end page
+const modes = createModes({ THREE, scene, track, audio, game: { get B() { return B; }, restart: () => { resetGame(); C.iy = 0; }, flash: s => flash(s), pop: (at, t, c) => hud.pop(at, t, c),
+  place: (x, z, yaw, i = 0) => { const q = track.probe(x, z, i); Object.assign(B, { x, z, yaw, hint: q.i, y: q.y, gPrev: q.y, v: 0, steer: 0, lean: 0, leanV: 0 }); C.yaw = yaw; C.init = false; C.iy = 0; } } });
+// ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
+// ghost here: his bike and him as he rides at home, moved to where he says he is (15 times a second), between the messages carried on
+// by his speed. Each player's own (his state, his bike, his camera, his aim, ...) is in a context; use(ctx) puts one in the game's
+// variables, so the same pose and kick code serves the ghost ----------
+const P1 = { B, rider, C, camera, aim, hot, streakEl, mlook, throwCam, rush: 0, shake: 0, id: 1 };
+let CUR = P1, P2 = null; const MP = { on: false, R: null, rT: -1e9, sendT: 0 };
+function use(ctx) { const prev = CUR; if (ctx === CUR) return prev; CUR.rush = rush; CUR.shake = shake;
+  ({ B, rider, C, camera, aim, hot, streakEl, mlook, throwCam } = ctx); rush = ctx.rush; shake = ctx.shake; CUR = ctx; return prev; }
+function makeGhost() { const r = createRider({ THREE, ramp, toon }); scene.add(r.root); r.setParts({ paint: '#2f6fb0' }); r.root.visible = false;
+  return { B: { x: 0, z: 0, y: 0, yaw: 0, v: 0, steer: 0, lean: 0, pitch: 0, jolt: 0, air: false, vy: 0, crash: null, kick: null, look: null, charge: null, dogSlow: 0, tired: 0, papers: 30, points: 0, delivered: 0, streak: 0 },
+    rider: r, C: { yaw: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: 0, iyGo: true }, camera, aim, hot: { L: null, R: null }, streakEl, mlook: { x: 0, y: 0 }, throwCam, rush: 0, shake: 0, id: 2 }; }
+P2 = makeGhost();
+const meId = () => net.role === 'guest' ? 2 : 1, otherId = () => 3 - meId(), Bof = k => k === meId() ? P1.B : P2.B;
+const net = createNet({ onMsg: m => netMsg(m), onState: s => { if (s === 'on') flash('Połączono z drugim graczem!'); if (['lost', 'closed', 'failed', 'off'].includes(s) && mp.on) { mp.leaveRound(); flash('Połączenie zerwane: koniec rundy'); } } });
+// the houses' subscribers as the host has them (the guest takes them at a round's start), so the same houses wait for both
+const subsNow = () => track.doors.map(d => d.sub || null);
+function applySubs(a) { if (!a) return; track.doors.forEach((d, i) => { d.sub = a[i] ?? null; }); assignSubs(false, true); }
+function mpBegin(subs) { use(P1); resetGame(); C.iy = 0; if (subs) applySubs(subs);
+  const i0 = (track.home.iJ + 12) % track.N, S0 = track.S[i0], yaw0 = Math.atan2(S0.f.x, S0.f.z), d = meId() === 1 ? .95 : 2.55;   // (just out of the home street, side by side in the lane)
+  const x = S0.p.x + S0.r.x * d, z = S0.p.z + S0.r.z * d, q = track.probe(x, z, i0); Object.assign(B, { x, z, yaw: yaw0, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); C.yaw = yaw0; C.init = false; MP.on = true; }
+function mpEnd() { MP.on = false; use(P1); resetGame(); }
+const mp = createMp({ net, api: { me: meId, B: Bof, begin: mpBegin, end: mpEnd, flash: s => flash(s), audio, subs: subsNow, applySubs,
+  pop: (k, t, c) => { const b = Bof(k); hud.pop(new THREE.Vector3(b.x, (b.y || 0) + 2.4, b.z), t, c); } } });
+// what comes from the other: where he is, a house served, a paper thrown, a window, a kick
+function netMsg(m) {
+  if (m.k === 'me') { MP.R = m; MP.rT = performance.now(); Object.assign(P2.B, { papers: m.papers, points: m.points, delivered: m.delivered, streak: m.streak, crash: m.crash ? (P2.B.crash || { t: 0 }) : null }); return; }
+  if (m.k === 'done') { const d = track.doors[m.d]; if (d) d.done = true; const mb = track.mailboxes[m.mb]; if (mb) { mb.done = true; mb.flag.rotation.x = -Math.PI / 2; } return; }
+  if (m.k === 'paper') { const T = TITLES[m.title] ? m.title : 'trabka', o = new THREE.Mesh(paperG, paperM); o.castShadow = true; o.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandOf[T])); o.position.set(m.x, m.y, m.z); scene.add(o);
+    papers.push({ m: o, v: new THREE.Vector3(...m.v), dot: new THREE.Mesh(dotG, dotM), prev: o.position.clone(), spin: new THREE.Vector3(9, 0, 3), hint: P2.B.hint || 0, t: 0, rest: false, landed: false, title: T, ghost: true }); scene.add(papers[papers.length - 1].dot); return; }
+  if (m.k === 'win') { const w = track.windows[m.i]; if (w && !w.broken) breakWindow(w, true); return; }
+  if (m.k === 'kick') { if (B.crash || foot.active) return; const dir = new THREE.Vector3(m.dx, 0, m.dz); hud.impact(rider.root.position.clone().setY(rider.root.position.y + 1), m.how === 'tag' ? 'BEREK!' : 'ŁUP!'); shake = .3; audio.play('kick', { vol: .8 });
+    if (m.how === 'crash' && !B.air) crash(0, dir.setLength(3)); else { B.v *= .8; B.jolt = .16; B.x += m.dx * .35; B.z += m.dz * .35; } flash('Kopniak od gracza ' + otherId() + '!'); return; }
+  mp.onMsg(m); }
+// a house served here: told to the other
+function served(door, mb) { if (!net.on) return; net.send({ k: 'done', d: door ? track.doors.indexOf(door) : -1, mb: mb ? track.mailboxes.indexOf(mb) : -1 }); }
+// each frame: what I am sent (15 a second); the ghost moved, posed; a bump against him
+function stepNet(dt, inp) { if (!net.on) { P2.rider.root.visible = false; return; }
+  if ((MP.sendT -= dt) <= 0) { MP.sendT = 1 / 15; net.send({ k: 'me', x: +B.x.toFixed(2), y: +B.y.toFixed(2), z: +B.z.toFixed(2), yaw: +B.yaw.toFixed(3), v: +B.v.toFixed(2), lean: +B.lean.toFixed(3), steer: +B.steer.toFixed(3), pitch: +(B.pitch || 0).toFixed(3),
+    air: !!B.air, crash: !!B.crash, ped: +(inp.pedal || 0).toFixed(2), kick: B.kick ? { side: B.kick.side, t: +B.kick.t.toFixed(2) } : null, papers: B.papers, points: B.points, delivered: B.delivered || 0, streak: B.streak || 0, foot: foot.active }); }
+  const R = MP.R, age = (performance.now() - MP.rT) / 1000; P2.rider.root.visible = !!R && age < 4 && !R.foot; if (!R) return;
+  const G = P2.B, k = Math.min(1, dt * 12), ex = Math.min(age, .25), tx = R.x + Math.sin(R.yaw) * R.v * ex, tz = R.z + Math.cos(R.yaw) * R.v * ex;   // (carried on by his speed, a quarter second at most)
+  if (Math.hypot(tx - G.x, tz - G.z) > 6) { G.x = tx; G.z = tz; } else { G.x += (tx - G.x) * k; G.z += (tz - G.z) * k; }
+  G.y += (R.y - G.y) * k; G.yaw += Math.atan2(Math.sin(R.yaw - G.yaw), Math.cos(R.yaw - G.yaw)) * k; G.v = R.v; G.lean += (R.lean - G.lean) * k; G.steer += (R.steer - G.steer) * k; G.pitch = R.pitch; G.air = R.air; G.kick = R.kick; G.hint = track.probe(G.x, G.z, G.hint || 0).i;
+  const prev = use(P2); pose(dt, R.ped, 0, 0, R.crash ? 1 : 0); use(prev);
+  // (bumped into him: pushed off, a little slower; he gets the same at his end)
+  const dx = B.x - G.x, dz = B.z - G.z, d = Math.hypot(dx, dz); if (P2.rider.root.visible && d < .8 && d > 1e-3 && !B.crash && !foot.active) { B.x += dx / d * (.8 - d); B.z += dz / d * (.8 - d); const now = performance.now(); if (!(B.bumpT > now)) { B.bumpT = now + 450; B.v *= .9; B.jolt = .08; audio.play('kick', { vol: .3 }); } } }
+// the marks: the other player (and who is "it"), at the picture's edge with how far when he is out of sight
+function mpMarks() { if (!net.on || !P2.rider.root.visible) return []; const G = P2.B, o = otherId(), it = mp.it === o, dist = Math.round(Math.hypot(G.x - B.x, G.z - B.z));
+  const col = it ? '#cf5a3e' : o === 1 ? '#efc970' : '#8fc3f0', lab = (it ? 'BEREK ' : '') + 'G' + o;
+  return [{ p: new THREE.Vector3(G.x, (G.y || 0) + 2.5, G.z), s: 'v', col, label: dist > 12 ? lab + ' ' + dist + ' M' : lab, edge: true, edgeLabel: lab + ' ' + dist + ' M' }]; }
 let last = performance.now(), hudT = 0;
 const fly = { s: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false };
 function attract(dt) {                                                  // (the title: the street going by under a slow camera)
@@ -1101,6 +1170,8 @@ function padUI(dt) {
   if (shop.isOpen) { page('#shop .win'); if (x(BTN.Y)) document.querySelector('#shop .chat')?.click(); if (x(BTN.B) || x(BTN.MENU)) key('Escape'); return; }
   pad.forget();
   if (runUI.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); return; }
+  if (modes.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
+  if (mp.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
   if (book.isOpen) { const el = document.getElementById('book'); if (el) el.scrollTop += pad.ax[1] * 14 + pad.ax[3] * 14; if (x(BTN.B) || x(BTN.VIEW) || x(BTN.A) || x(BTN.MENU)) key('Escape'); return; }
   if (asking) { if (arrow === 'ArrowLeft' || arrow === 'ArrowRight') key(arrow); if (x(BTN.A)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
   if (menu.open) { if (arrow) key(arrow); if (x(BTN.A)) key('Enter'); if (x(BTN.B) || (x(BTN.MENU) && menu.page === 'pause')) key('Escape'); return; }
@@ -1114,7 +1185,7 @@ function frame(now) {
   if (!rider.person && foot.riderPerson) rider.setPerson(foot.riderPerson);   // (the boy who walks, put on the bike once he is loaded)
   if ((menu.open || asking || shop.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !shop.isOpen && !runUI.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if (!asking && !menu.open && !shop.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
@@ -1129,4 +1200,4 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 window.PT = { THREE, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
-  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers };
+  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net };

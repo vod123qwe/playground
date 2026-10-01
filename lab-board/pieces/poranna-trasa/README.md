@@ -747,3 +747,17 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - mniej zaczepek: mieszkańcy wołają z bliska, rzadziej, nie wszyscy i nie jeden po drugim
 - jeden salon rowerowy na pętli zamiast dwóch
 - okolice domu: kosz do koszykówki nad garażem, klasy kredą na podjeździe, żywopłoty między ogrodami, ławka i kosz na rondku, tabliczka „UL. PORANNA”
+
+## Wersja 81: tryby gry i gra przez sieć
+
+- **TRYBY GRY** w menu (na ekranie tytułowym i w pauzie):
+  - **Poranny sprint**: minuta na zegarze, każda doręczona gazeta dokłada 5 s (w serii więcej). Ile zdążysz? Rekord zapisany w przeglądarce
+  - **Tor przeszkód**: na najspokojniejszym odcinku pętli staje tor: brama START, rzędy pachołków do slalomu (przejazd raz z lewej, raz z prawej), skocznia i deska, bramki, META w szachownicę. Czas od bramy startowej, przewrócony pachołek +2 s, ominięta bramka +5 s. Bez aut i psów
+  - każdy tryb zaczyna się odliczaniem 3-2-1 i kończy ekranem wyniku: JESZCZE RAZ (Enter) albo KLASYCZNA TRASA (Esc)
+- **GRA PRZEZ SIEĆ (2 graczy)**: każdy gra u siebie, na swoim komputerze; połączenie idzie prosto między przeglądarkami (WebRTC), bez serwera gry
+  - łączenie: gospodarz klika ZAŁÓŻ GRĘ i dostaje KOD 1, wysyła go znajomemu (np. na czacie); znajomy klika DOŁĄCZ, wkleja, dostaje KOD 2 i go odsyła; gospodarz wkleja KOD 2 i POŁĄCZ
+  - drugiego gracza widać na trasie (niebieski rower), nad nim znacznik G1/G2; gdy jest poza kadrem, na krawędzi ekranu strzałka z odległością („G2 60 M”)
+  - te same domy prenumeratorów u obu; dom obsłużony przez jednego jest obsłużony dla obu; widać gazety rzucane przez drugiego, zbite przez niego szyby
+  - tryby (wybiera gospodarz): WSPÓLNA JAZDA (bez zegara), WYŚCIG GAZECIARZY (4 min, kto więcej zarobi; kopnięcie zrzuca drugiego z roweru), RAZEM (20 gazet we dwóch w 5 min; kopnięcie tylko popycha), BEREK NA ROWERACH (3 min, kopnięcie oddaje berka, potem 3 s ochrony; wygrywa ten, kto był berkiem krócej)
+  - wspólny start obok siebie na trasie przy wyjeździe z uliczki, odliczanie u obu naraz, tablica wyników na górze, ekran końca z porównaniem (zarobione, doręczone, kopniaki, upadki)
+  - zerwane połączenie kończy rundę; do testów na jednym komputerze: dwie karty z `?bc=KOD` w adresie

@@ -1,6 +1,15 @@
 # Multiplayer: plan
 
-Stan: **plan, nic jeszcze nie zbudowane**. Cel: obok mnie jedzie druga osoba (znajomy), dołącza kodem zaproszenia, widzimy się nawzajem, rozwozimy gazety na tej samej trasie, możemy się pobić.
+Stan (v81): **działa wersja bez serwera**: WebRTC z ręczną wymianą dwóch kodów (src/net.js), lobby i tryby (src/mp.js), duch drugiego gracza i synchronizacja domów (src/main.js, „two players over the network”). Niżej pierwotny plan; droga A (serwer pokojów z krótkim kodem) zostaje jako ulepszenie do decyzji.
+
+## Co jest zrobione (v81)
+
+- łączenie: KOD 1 (oferta) i KOD 2 (odpowiedź), ok. 650 znaków każdy, przez czat; STUN Google tylko do ustalenia adresów, dane gry idą bezpośrednio
+- `me` 15/s (pozycja, prędkość, pochylenie, kopnięcie, upadek, gazety, punkty, seria), `done` (dom/skrzynka obsłużone), `paper` (rzut do zobaczenia), `win` (szyba), `kick`, `start` (tryb + prenumeratorzy gospodarza), `it` (berek), `bye`
+- każdy liczy swoją fizykę i swój świat (auta, psy, przechodnie są u każdego swoje); wspólne są domy i gracze
+- czego brak: krótkiego kodu (wymaga serwera pokojów, droga A), wspólnych aut i psów (krok 3), gry z telefonu przez sieć komórkową nie zawsze się połączy (brak TURN)
+
+Pierwotny plan: Cel: obok mnie jedzie druga osoba (znajomy), dołącza kodem zaproszenia, widzimy się nawzajem, rozwozimy gazety na tej samej trasie, możemy się pobić.
 
 ## Decyzja do podjęcia
 

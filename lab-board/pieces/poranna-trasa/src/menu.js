@@ -6,7 +6,7 @@
 // what it does and its key; Enter or a click on one waits for a new key (Esc: leave it). It scrolls when longer than the picture.
 // createMenu({ hud, look, styles, light, presets, onRestart, onClose }) → { get open, show(page), close(), key(e), pointer(type, x, y) }
 
-export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys, sens, controls, lab, onPlay, sound }) {
+export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys, sens, controls, lab, onPlay, sound, modes }) {
   // its own canvas, the same size whatever the game's pixels are (so the menu does not grow or shrink as they change)
   const cv = document.createElement('canvas'); Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', imageRendering: 'pixelated', pointerEvents: 'none', zIndex: 5 });
   document.body.appendChild(cv); const g = cv.getContext('2d'), wr = hud.writer(g), MH = 270;
@@ -21,6 +21,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     const S = look.S;
     if (page === 'title') return [
       { type: 'button', label: 'GRAJ', act: () => { close(); onPlay?.(); } },
+      ...(modes ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
       { type: 'button', label: 'STEROWANIE', act: () => show('keys') },
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
       ...(sound ? [{ type: 'button', label: 'DŹWIĘK', act: () => show('snd') }] : []),
@@ -29,6 +30,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     if (page === 'pause') return [
       ...(/[?&]arena=/.test(location.search) ? [{ type: 'button', label: '← WRÓĆ DO WARSZTATU', act: () => { location.href = 'studio.html'; } }] : []),
       { type: 'button', label: 'WRÓĆ DO GRY', act: () => close() },
+      ...(modes ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
       ...(sound ? [{ type: 'button', label: 'DŹWIĘK', act: () => show('snd') }] : []),
       { type: 'button', label: document.fullscreenElement ? 'ZWYKŁE OKNO' : 'PEŁNY EKRAN', act: () => { onFull?.(); } },
@@ -36,6 +38,8 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'button', label: 'ZACZNIJ OD NOWA', act: () => { close(); onRestart(); } },
       ...(/[?&]arena=/.test(location.search) ? [] : [{ type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } }]),
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
+    if (page === 'modes') return [...modes().flatMap(m => [{ type: 'button', label: m.label, act: () => { const wasTitle = parent === 'title'; close(); if (wasTitle) onPlay?.(); m.act(); } }, ...(m.info ? [{ type: 'info', label: m.info, value: '' }] : [])]),
+      { type: 'button', label: 'WRÓĆ', act: () => show(parent) }];
     if (page === 'snd') return [{ type: 'button', label: sound.get('mute') ? 'DŹWIĘK: WYCISZONY' : 'DŹWIĘK: WŁĄCZONY', act: () => { sound.set('mute', !sound.get('mute')); show('snd'); } }, ...SND.map(([label, k]) => ({ type: 'slider', label, key: 'snd_' + k, min: 0, max: 1, step: .05, get: () => sound.get(k), set: v => sound.set(k, v) })),
       { type: 'button', label: 'WRÓĆ', act: () => show(parent) }];
     if (page === 'keys') { const r = sens ? [{ type: 'slider', label: 'CZUŁOŚĆ MYSZY', key: 'sens', min: .2, max: 2, step: .1, get: sens.get, set: sens.set }] : [];
@@ -54,7 +58,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     r.push({ type: 'button', label: 'WRÓĆ', act: () => show(parent) });
     return r;
   }
-  function show(p) { if ((p === 'keys' || p === 'gfx' || p === 'snd') && (page === 'title' || page === 'pause')) parent = page; page = p; t = 0; capture = null; window.PT_capturing = false; scroll = scrollT = 0; rows = build(); sel = Math.max(0, rows.findIndex(pickable)); }
+  function show(p) { if ((p === 'keys' || p === 'gfx' || p === 'snd' || p === 'modes') && (page === 'title' || page === 'pause')) parent = page; page = p; t = 0; capture = null; window.PT_capturing = false; scroll = scrollT = 0; rows = build(); sel = Math.max(0, rows.findIndex(pickable)); }
   function close() { page = null; drag = null; capture = null; window.PT_capturing = false; onClose && onClose(); }
   const valOf = row => row.get ? row.get() : look.S[row.key];                    // (a slider's value: in the look, or kept by its own get / set)
   const setVal = (row, v) => { v = clamp(snap(v, row.step), row.min, row.max); v = +v.toFixed(4); if (valOf(row) !== v) { if (row.set) row.set(v); else look.set({ [row.key]: v }, true); } rows = build(); };
@@ -70,7 +74,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     if (capture) { if (performance.now() - capture.t0 < 150) { e.preventDefault(); return; }   // (the key that opened it, not a new one)
       if (c !== 'Escape') { controls.set(capture.act, c); rows = build(); } capture = null; window.PT_capturing = false; e.preventDefault(); return; }   // (waiting for a key: this is it)
     const step = d => { let i = sel; for (let n = 0; n < rows.length; n++) { i = (i + d + rows.length) % rows.length; if (pickable(rows[i])) break; } sel = i; };
-    if (c === 'Escape') { page === 'gfx' || page === 'keys' || page === 'snd' ? show(parent) : page === 'title' ? null : close(); }
+    if (c === 'Escape') { page === 'gfx' || page === 'keys' || page === 'snd' || page === 'modes' ? show(parent) : page === 'title' ? null : close(); }
     else if (c === 'ArrowUp' || c === 'KeyW') step(-1);
     else if (c === 'ArrowDown' || c === 'KeyS' || c === 'Tab') step(1);
     else if (c === 'ArrowLeft' || c === 'KeyA') change(row, -1);
@@ -97,8 +101,8 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     g.clearRect(0, 0, A.W, A.H); if (!page) return; t += dt; const W = A.W, H = A.H, k = Math.min(1, t / .14), e = 1 - Math.pow(1 - k, 3), side = page === 'gfx', keysPage = page === 'keys';
     if (page === 'title') { drawTitle(dt); return; }
     g.fillStyle = '#0c0d0f'; if (!side) for (let y = 0; y < H; y++) for (let x = (y % 2); x < W; x += 2) g.fillRect(x, y, 1, 1);   // (pause: a dither over the picture; graphics: none, so the change shows)
-    const rowH = r => r.type === 'styles' ? 11 + Math.ceil(r.options.length / 2) * 12 : r.type === 'button' ? 16 : r.type === 'head' ? 15 : r.type === 'bind' || r.type === 'info' ? 10 : 13, title = page === 'pause' ? 'PAUZA' : page === 'snd' ? 'DŹWIĘK' : keysPage ? 'STEROWANIE' : 'GRAFIKA';
-    const full = rows.reduce((a, r) => a + rowH(r), 0), view = Math.min(full, H - 60), pw = Math.min(W - 8, page === 'pause' ? 196 : keysPage ? 340 : 236), ph = 34 + view + 8;
+    const rowH = r => r.type === 'styles' ? 11 + Math.ceil(r.options.length / 2) * 12 : r.type === 'button' ? 16 : r.type === 'head' ? 15 : r.type === 'bind' || r.type === 'info' ? 10 : 13, title = page === 'pause' ? 'PAUZA' : page === 'modes' ? 'TRYBY GRY' : page === 'snd' ? 'DŹWIĘK' : keysPage ? 'STEROWANIE' : 'GRAFIKA';
+    const full = rows.reduce((a, r) => a + rowH(r), 0), view = Math.min(full, H - 60), pw = Math.min(W - 8, page === 'pause' ? 196 : keysPage ? 340 : page === 'modes' ? 300 : 236), ph = 34 + view + 8;
     // scrolled so the chosen row is in view
     { let yy = 0; for (let i = 0; i < sel; i++) yy += rowH(rows[i]); const hh = rowH(rows[sel] || {}); if (yy - scrollT < 10) scrollT = Math.max(0, yy - 10); if (yy + hh - scrollT > view - 10) scrollT = Math.min(full - view, yy + hh - view + 10); scrollT = Math.max(0, Math.min(full - view, scrollT)); scroll += (scrollT - scroll) * Math.min(1, dt * 14); }
     const x0 = side ? Math.round(10 - (1 - e) * 20) : Math.round((W - pw) / 2), y0 = side ? Math.max(6, Math.round((H - ph) / 2)) : Math.max(4, Math.round((H - ph) / 2 - (1 - e) * 14));

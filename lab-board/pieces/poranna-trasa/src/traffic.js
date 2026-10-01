@@ -29,7 +29,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   let clock = 0;
   function update(dt, R) { clock += dt;
     // how many cars are out (R.cars: few at first, more as the run goes on); one coming out starts on the far side of the loop
-    { let k = 0; for (const t of list) { if (t.bus) continue; const on = k++ < (R.cars ?? 99); if (on && t.off) { t.s = wrap(R.s + len / 2 + k * 41); t.v = t.cruise; t.lane = t.laneT = t.dir * LANE; t.pass = null; t.stop = 0; t.snap = true; } t.off = !on; t.car.group.visible = on; } }
+    { let k = 0; for (const t of list) { if (t.bus) { const on = R.bus !== false; if (on && t.off) { t.s = wrap(R.s + len / 2); t.snap = true; t.stop = 0; } t.off = !on; t.car.group.visible = on; continue; } const on = k++ < (R.cars ?? 99); if (on && t.off) { t.s = wrap(R.s + len / 2 + k * 41); t.v = t.cruise; t.lane = t.laneT = t.dir * LANE; t.pass = null; t.stop = 0; t.snap = true; } t.off = !on; t.car.group.visible = on; } }
     const live = list.filter(t => !t.off);                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
     stepBikes(dt, R);
     // everything that can be in a lane: the cars, the parked ones, the rider
