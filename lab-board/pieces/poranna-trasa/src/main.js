@@ -169,7 +169,7 @@ function dismount(why) {
 function mount() { if (document.pointerLockElement) document.exitPointerLock(); mouse.used = false; foot.stop();
   if (B.bikeDown) { B.lift = { t: 0, from: B.bikeDown.lean }; B.lean = B.bikeDown.lean; B.bikeDown = null; flash('Podnosisz rower'); } B.parked = false; rider.boy.visible = true; C.init = false; flash('Na rowerze!'); }
 const B = { x: track.start.x, z: track.start.z, y: 0, vy: 0, air: false, gPrev: 0, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
-  stam: 1, spent: false, tired: 0, papers: 20, points: 0, lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, throwP: .6 };
+  stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, throwP: .6 };
 const L = rider.wheelbase, g = 9.81;
 
 // ---------- input: keys and a pad ----------
@@ -923,7 +923,7 @@ function resetGame() {
   rider.ragdollOff();
   const q = track.probe(track.start.x, track.start.z, 0);
   Object.assign(B, { x: track.start.x, z: track.start.z, y: q.y, vy: 0, air: false, gPrev: q.y, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
-    stam: 1, spent: false, tired: 0, papers: 20, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null });
+    stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null });
   for (const p of papers) scene.remove(p.m, p.dot); papers.length = 0; for (const s of shards) scene.remove(s.m); shards.length = 0; for (const m of cracks) scene.remove(m); cracks.length = 0;
   for (const w of track.windows) w.broken = false; for (const d of track.doors) d.done = false;
   for (const mb of track.mailboxes) { mb.done = false; mb.flag.rotation.x = 0; }
