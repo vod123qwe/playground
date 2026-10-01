@@ -18,6 +18,12 @@ export const PERSONAS = {
     hello: ['No słucham. Tylko szybko, bo mi kawa stygnie.', 'Czego, kochaniutki? Ja tu interesy prowadzę, a nie poczekalnię.', 'Halo. Jak w sprawie długu, to mnie nie ma. A jak w interesach, to jestem.', 'Mówi Żaneta. Słucham, ale nie obiecuję, że usłyszę.',
       'No i co się tak gapisz w tę słuchawkę? Gadaj, czego trzeba.', 'Ten od rowerów jeszcze żyje? Nieważne. Nie mów mu, że pytałam. Czego chcesz?'] },
   brat: { name: 'Brat', role: 'spod kosza', tel: 'domowy', face: 'brat' },
+  soltys: { name: 'Pan Sołtys', role: 'tablica przy przystanku PKS', tel: '3-12', face: 'key:belly', region: 'wies',
+    hello: ['Sołtys, słucham. Tylko szybko, bo zebranie wiejskie o dziesiątej, a ja jeszcze nie wiem, o czym.', 'Halo? A, to ten od gazet z miasta. Dobrze, że jesteś. Gmina ma sprawę.', 'Słucham. Jak w sprawie gęsi, to nie moje. Jak w sprawie gminy, to moje.'] },
+  gospodyni: { name: 'Pani Krysia', role: 'gospodarstwo pod lasem', tel: '5-40', face: 'key:lady', region: 'wies',
+    hello: ['Halo, halo! Krysia przy telefonie. Kury znowu się niosą jak szalone, nie mam gdzie jajek dawać.', 'Słucham, synku. Mów głośniej, bo krowa mi ryczy nad uchem.'] },
+  traktorzysta: { name: 'Zdzichu z traktora', role: 'pole za przejazdem', tel: '7-77', face: 'key:gardener', region: 'wies',
+    hello: ['Zdzichu. Słyszę, że jakiś miastowy na rowerze szybki. No, to zobaczymy.', 'Halo, ja z traktora dzwonię, więc krzyczę. CZEGO?!'] },
   hela: { name: 'Pani Hela', role: 'papierniczy na rogu', tel: '20-20', face: 'key:shopper',
     hello: ['Papierniczy, Hela przy telefonie. Zeszyty, długopisy, znaczki. I plotki, ale te za darmo.', 'Słucham, kochanieńki. Notesik się skończył? Mam takie, że się ich nie da zapisać do końca.'] } };
 
@@ -76,6 +82,16 @@ export const JOBS = {
     pitch: 'Licznik ze Wschodu. Czerwony jak sztandar. Czołg po nim przejechał i dalej liczy. Trzydzieści pięć, kochaniutki.', shop: true, done: 'Nowy licznik na kierownicy.' },
   licznik_zachodni: { giver: 'zaneta', pay: 0, cost: 55, item: 'licznik', skin: 'zachodni', title: 'LICZNIK Z ZACHODU', ad: 'Licznik podświetlany na niebiesko. Jak w taksówce u szwagra.',
     pitch: 'Z Zachodu. Świeci na niebiesko, jak w taksówce u szwagra. Pięćdziesiąt pięć. Taniej nie będzie, bo cło.', shop: true, done: 'Nowy licznik na kierownicy.' },
+  // the village's (taken anywhere, done on a village route; till then they wait in the notebook)
+  ogloszenia: { giver: 'soltys', pay: 30, region: 'wies', title: 'OGŁOSZENIA GMINY', ad: 'Gmina szuka kogoś, kto roześle ogłoszenia po skrzynkach. Płaci sołtys, od ręki.',
+    pitch: 'Mam ogłoszenie o zebraniu wiejskim. Wsadź je razem z gazetą do czterech skrzynek we wsi. Tylko do skrzynek, nie na wycieraczki, bo krowy zjedzą.',
+    hint: 'na wsi: cztery gazety do skrzynek pocztowych', fail: 'Ogłoszenia nie dotarły.', done: 'Ogłoszenia w skrzynkach. Na zebranie przyszło aż sześć osób, rekord.' },
+  jajka: { giver: 'gospodyni', pay: 30, region: 'wies', title: 'JAJKA DLA SĄSIADKI', ad: 'Jajka świeże, od szczęśliwych kur. Kto dowiezie sąsiadce? Ostrożnie!',
+    pitch: 'Zawieziesz sąsiadce dwie mendle jajek? Tylko ostrożnie, synku. Wywrotka albo skok z tych waszych skoczni i będzie jajecznica w torbie.',
+    hint: 'na wsi: dowieź do domu z gwiazdką; wywrotka albo długi skok tłucze jajka', fail: 'Jajka zrobiły się jajecznicą.', done: 'Jajka całe. Sąsiadka zrobiła z nich ciasto i podzieliła się z gospodynią.' },
+  wyscig: { giver: 'traktorzysta', pay: 40, region: 'wies', title: 'WYŚCIG Z TRAKTORZYSTĄ', ad: 'Zdzichu z traktora mówi, że żaden rower go nie przegoni. Zakład stoi.',
+    pitch: 'Ja do młyna jadę codziennie i jeszcze nikt mnie nie przegonił. Przejedź trasę przez wieś szybciej niż ja, to postawię. Nie dasz rady, to stawiasz ty.',
+    hint: 'na wsi: dojedź do mety w czasie lepszym niż traktorzysta', fail: 'Traktorzysta był pierwszy przy młynie i śmiał się do obiadu.', done: 'Wygrany zakład. Zdzichu płaci i mówi, że jutro rewanż.' },
   notes: { giver: 'hela', pay: 0, cost: 60, title: 'WIĘKSZY NOTES', ad: 'Notesy z twardą okładką. Więcej miejsca na sprawy do załatwienia.',
     pitch: 'Mam notes, w którym zmieścisz jedną sprawę więcej. Sześćdziesiąt złotych, ale okładka twarda jak życie.', shop: true } };
 const FOTO = [{ k: 'dog', what: 'pies, który goni rowery', aim: 'psa' }, { k: 'kapliczka', what: 'odnowiona kapliczka', aim: 'kapliczkę' }, { k: 'budowa', what: 'budowa na rogu, co stoi', aim: 'budowę' }, { k: 'przystanek', what: 'przystanek, na którym nikt się nie doczekał autobusu', aim: 'przystanek' }];
@@ -83,6 +99,7 @@ const FOTO = [{ k: 'dog', what: 'pies, który goni rowery', aim: 'psa' }, { k: '
 // the ads of an issue: the jobs not in the notebook, one of each, Hela's notebook while there is room to grow
 export function offers(S) { const have = new Set((S.jobs || []).map(j => j.kind)), own = S.owned || {}, out = [];
   for (const k of ['szarlotka', 'foto', 'skrzynki']) if (!have.has(k)) out.push(k);
+  if (S.done && (S.done.p4 || Object.keys(S.done).some(id => id[0] === 'w'))) for (const k of ['ogloszenia', 'jajka', 'wyscig']) if (!have.has(k)) out.push(k);   // (the village's, once it is open)
   if (!own.sluchawka) out.push('sluchawka'); else for (const k of ['licznik_ruski', 'licznik_zachodni']) if (own.licznik !== JOBS[k].skin) { out.push(k); break; }
   if ((S.slots || 2) < 4) out.push('notes'); return out; }
 // a job as taken: its own details (what to photograph)

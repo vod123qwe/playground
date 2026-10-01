@@ -361,7 +361,7 @@ export function createPaper({ game }) {
       B(`<p class="kick">DROBNE I ROZMAITOŚCI</p><h2>Ogłoszenia</h2>`, 'span');
       B(`<div class="jad">${portrait(D.janusz, 'pt')}<b class="jt">WARSZTAT U JANUSZA</b><p class="js">przy głównej · otwarte od świtu · tel. 23-45</p>${jp.map(p => `<p class="li">${p.name}: <span class="pr">${p.price} ZŁ</span></p>`).join('')}
         <p class="jc">${D.coupon ? `TWÓJ KUPON: ${D.coupon.name} -${Math.round(D.coupon.pct * 100)}%` : 'ZADZWOŃ, A MOŻE COŚ UTARGUJESZ!'}</p><div class="keys2">${pxKey('ZADZWOŃ', { icon: 'phone', kind: 'gold', attrs: 'data-act="call"', nudge: true })}${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}</div></div>`, 'ad j');
-      { const JB = game.JB, S = { jobs: game.jobs(), slots: game.slots() }; for (const k of JB.offers(S)) { const J = JB.JOBS[k], P = JB.PERSONAS[J.giver];
+      { const JB = game.JB, S = { jobs: game.jobs(), slots: game.slots(), done: game.done?.(), owned: game.owned?.() }; for (const k of JB.offers(S)) { const J = JB.JOBS[k], P = JB.PERSONAS[J.giver];
           B(`${portrait(D.faces?.[J.giver], 'pt xs')}<b>${J.title}</b>${J.ad}<p class="js">${P.name.toUpperCase()} · TEL. ${P.tel}${J.cost ? ` · ${J.cost} ZŁ` : J.pay ? ` · PŁACI ${J.pay} ZŁ` : ''}</p><div class="keys2">${pxKey('ZADZWOŃ', { icon: 'phone', attrs: `data-job="${k}"` })}</div>`, 'ad job'); } }
       for (const a of D.ads.filter(a => !a.j).slice(0, 3)) B(`<b>${a.t}</b>${a.d}`, 'ad');
       for (const c of corners(D)) B(`<p class="kick">${c.k}</p>${c.h}`, 'corner');
