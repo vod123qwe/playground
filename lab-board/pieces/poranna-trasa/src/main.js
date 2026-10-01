@@ -274,7 +274,7 @@ function dismount(why) {
 }
 function mount() { if (document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (let go on purpose: not the Esc that pauses)
   mouse.used = false; foot.stop();
-  if (B.bikeDown) { B.lift = { t: 0, from: B.bikeDown.lean }; B.lean = B.bikeDown.lean; B.bikeDown = null; flash('Podnosisz rower'); } B.parked = false; rider.boy.visible = true; C.init = false; flash('Na rowerze!'); }
+  if (B.bikeDown) { B.lift = { t: 0, from: B.bikeDown.lean }; B.lean = B.bikeDown.lean; B.bikeDown = null; flash('Podnosisz rower'); } B.parked = false; B.safe = 2.5; B.rattled = 0; rider.boy.visible = true; C.init = false; flash('Na rowerze!'); }
 let B = { x: track.start.x, z: track.start.z, y: 0, vy: 0, air: false, gPrev: 0, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
   stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, throwP: .6 };
 const L = rider.wheelbase, g = 9.81;
@@ -591,8 +591,9 @@ const book = createBook({ data: () => ({ reps: quests.reps(), parts: shop.equipp
 function endRun(why) { if (runUI.isOpen) return; endT = 0; runUI.open({ reason: why, dist: trip.dist, delivered: B.delivered || 0, earned: B.earned || 0, windows: B.windows || 0, stops: quests.police?.stops || 0 }, [...shop.ownedList(), ...(B.items || []).map(n => ({ label: 'FANT: ' + n, keep: { item: n } }))]); }
 function fromAccount() { const all = kept(); for (const k of all) { if (k.keep.part) shop.grant(k.keep.part, k.keep.tier); else if (k.keep.item) (B.items ||= []).push(k.keep.item); } if (all.length) flash('Z konta: ' + all.map(k => k.label.toLowerCase()).join(', ')); }
 setTimeout(() => fromAccount(), 0);   // (the first run too)
+// (B.safe: just up or back on the bike, a knock holds him back, he does not go over again straight off)
 function crash(side, push, robbed) {                                 // push: what hit him (a car's velocity), if anything; robbed: the old woman got him
-  if (B.crash) return; B.falls = (B.falls || 0) + 1; (B.fallsAt ||= []).push({ x: B.x, z: B.z }); logEv(push ? 'car' : robbed ? 'granny' : 'fall', B.x, B.z); if (RAD.fall <= 0) { RAD.fall = 10; setTimeout(() => radioSay('fall'), 900); } audio.play('crash'); hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
+  if (B.crash) return; if (B.safe > 0 && !robbed) { B.v *= .25; B.jolt = .15; return; } B.falls = (B.falls || 0) + 1; (B.fallsAt ||= []).push({ x: B.x, z: B.z }); logEv(push ? 'car' : robbed ? 'granny' : 'fall', B.x, B.z); if (RAD.fall <= 0) { RAD.fall = 10; setTimeout(() => radioSay('fall'), 900); } audio.play('crash'); hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
   // he comes off: a ragdoll, flung on the way he was going (over the bars), a little to the side he falls, and with whatever hit him
   const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)), vel = f.clone().multiplyScalar(B.v * .55).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), B.crash.side * .5);
   if (push) vel.addScaledVector(push, .45); vel.y += B.air ? B.vy : 0;
@@ -618,6 +619,7 @@ function bodyHit(list, p, r) {
   return hit;
 }
 function ride(dt, inp) {
+  if (B.safe > 0) B.safe -= dt;
   if (B.lift) { const L = B.lift; L.t += dt; B.lean = L.from * (1 - THREE.MathUtils.smootherstep(L.t, 0, .8)); B.leanV = 0; B.v = 0; pose(dt, 0, 0, 0, 0); if (L.t >= .8) { B.lift = null; B.lean = 0; } return; }   // (picked up off the ground)
   const q = track.probe(B.x, B.z, B.hint); B.hint = q.i;
   const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), along = fx * q.f.x + fz * q.f.z, slope = q.slope * along;
@@ -628,12 +630,12 @@ function ride(dt, inp) {
     if (c.robbed) {                                                    // robbed: he lies a moment, then (blinking) he is back on the road, on his bike
       if (c.t > 2.2 && !c.moved) { c.moved = true; backToRoad(); flash(`Babka zwędziła Ci całą kasę! (−${c.robbed} zł)`); }
       rider.root.visible = !(c.t > 2.2 && ((c.t * 12) | 0) % 2);
-      if (c.t > 3.3) { B.crash = null; B.v = 0; B.lean = 0; B.leanV = 0; rider.root.visible = true; }
+      if (c.t > 3.3) { B.crash = null; B.v = 0; B.lean = 0; B.leanV = 0; rider.root.visible = true; B.safe = 2.5; B.rattled = 0; }
     } else {
       if (c.t > 2.3 && !c.up) { c.up = true; const p = rider.pelvisAt ? rider.pelvisAt.clone() : new THREE.Vector3(B.x, B.y, B.z);   // (up on his feet; the bike stays down)
         if (foot.ready && foot.start({ x: p.x, z: p.z, yaw: B.yaw, hint: B.hint, getUp: true })) { rider.ragdollOff(); rider.boy.visible = false; B.crash = null; B.v = 0; B.parked = true; B.bikeDown = { lean: B.lean }; flash('Wstań i podnieś rower: F przy rowerze'); return; }
         rider.getUp(1); }                                                // (the models not there yet: back onto the bike as before)
-      if (c.t > 3.4) { B.crash = null; B.v = 0; B.lean = 0; B.leanV = 0; }
+      if (c.t > 3.4) { B.crash = null; B.v = 0; B.lean = 0; B.leanV = 0; B.safe = 2.5; B.rattled = 0; }
     }
     if (c.moved) { B.lean = 0; B.leanV = 0; B.v = 0; }
     B.y += (q.y - B.y) * Math.min(1, dt * 12); pose(dt, 0, 0, slope, Math.min(1, Math.abs(B.lean) / 1.3)); return;
@@ -751,13 +753,14 @@ function kickTargets() {
   for (const gm of quests.gangTargets) add('gangm', gm.x, gm.z, gm, 2.9);
   for (const pc of quests.policeCars()) add('police', pc.g.position.x, pc.g.position.z, pc, 3.2);
   if (granny.state === 'out') add('granny', granny.group.position.x, granny.group.position.z, granny, 2.6);
+  if (geese) for (const q of geese.list) if (!q.fly) add('goose', q.g.position.x, q.g.position.z, q, 2.4);
   for (const C of track.near(B.hint)) if (C.hyd) add('hyd', C.x, C.z, C, 1.9);
   for (const T of stuff.near(B.x, B.z, 2.2)) if (!T.broken && !T.down) add('thing', T.x, T.z, T, 2.2 + T.r);
   if (net.on && P2.rider.root.visible && !P2.B.crash) add('rider', P2.B.x, P2.B.z, P2, 2.7);   // (over the network: the other player)
   return out.sort((a, b) => a.d - b.d);
 }
 function landKick(tg) {
-  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
+  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], goose: () => [tg.ref.g.position.x, tg.ref.g.position.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
   logEv('kick_' + (tg.kind === 'thing' ? (tg.ref.kind === 'mailbox' ? 'mailbox' : 'thing') : tg.kind), B.x, B.z);
@@ -769,6 +772,7 @@ function landKick(tg) {
   if (tg.kind === 'gangm') { hud.impact(mid); quests.onKickGang(tg.ref); slowmo = .06; shake = .22; }   // (one of the gang: off his bike)
   if (tg.kind === 'police') { hud.impact(mid, 'BUM!'); shake = .28; quests.onKickPolice(tg.ref); }   // (a police car: see quests)
   if (tg.kind === 'rider') { const how = mp.kick(meId(), otherId()); hud.impact(mid, how === 'tag' ? 'BEREK!' : 'ŁUP!'); shake = .25; audio.play('kick', { vol: .7 }); net.send({ k: 'kick', how, dx: ax / al, dz: az / al }); }   // (the other player: off his bike in the race, a shove otherwise)
+  if (tg.kind === 'goose') { geese.kick(tg.ref, ax / al, az / al); gooseKicked(tg.ref, mid); }
   if (tg.kind === 'granny') { tg.ref.kicked(); hud.rant(tg.ref.mouth, 'JA CI DAM GNOJKU!', true); shake = .12; }   // (the old woman: a kick does nothing, bar make her crosser)
   if (tg.kind === 'thing') { stuff.hit(tg.ref, ax, az, 1); shake = Math.max(shake, tg.ref.kind === 'mailbox' ? .08 : .03); }   // (from the bike: as on foot)
   if (tg.kind === 'hyd' && water.spray(new THREE.Vector3(tg.ref.x, tg.ref.y0 || 0, tg.ref.z), 4.5)) { hud.impact(new THREE.Vector3(tg.ref.x, (tg.ref.y0 || 0) + .5, tg.ref.z), 'PSSS!'); shake = .15; }
@@ -784,7 +788,11 @@ let barkers = [];
 const nearDog = () => barkers.find(n => n.dist < 2.9);
 function stepDogs(dt, inp) {
   barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw, heat: modes.flags.calm ? 0 : heatNow() }); stepLevel(); stepRun(dt);
-  if (geese) { const g = geese.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw, onFoot: foot.active }); if (g?.hit === 'fall') { logEv('goose', B.x, B.z); crash(null); flash('Gęś!'); hud.rant(g.at.clone().setY(g.at.y + 1), 'GĘĘĘ!', true); } else if (g?.hit === 'hiss') { B.v *= .45; hud.rant(g.at.clone().setY(g.at.y + 1), 'SSSSS!', true); } }
+  if (geese) { const M0 = foot.active ? foot.me : B;
+    if (!foot.active && inp?.chat && Math.abs(B.v) < 3.2) gooseTalk(B);
+    const g = geese.update(dt, { x: M0.x, z: M0.z, v: foot.active ? 0 : B.v, yaw: M0.yaw, onFoot: foot.active }); if (g?.hit === 'peck') { hurt(4, 'Zadziobany przez gęsi.'); shake = Math.max(shake, .12); audio.play('kick', { vol: .3 }); gooseSay(g.at.clone().setY(g.at.y + 1), draw('gPeck', GOOSE.peck)); }
+    else if (g?.hit === 'calm') { if (Math.random() < .5) gooseSay(g.at.clone().setY(g.at.y + 1), draw('gCalm', GOOSE.calm)); }
+    else if (g?.hit === 'fall') { logEv('goose', B.x, B.z); crash(null); flash('Gęś!'); hud.rant(g.at.clone().setY(g.at.y + 1), 'GĘĘĘ!', true); } else if (g?.hit === 'hiss') { B.v *= .45; gooseSay(g.at.clone().setY(g.at.y + 1), 'SSSSS!'); } }
   for (const n of barkers) { const d = n.dog; d.sndT = (d.sndT || 0) - dt; if (d.sndT <= 0) { d.sndT = 1 + Math.random() * 1.4; aud('bark', d); } }   // (a dog at him: a bark now and then)
   // a dog into a car or a tree (running at him, or kicked through the air): it goes over, and home
   const cars = traffic.boxes();
@@ -990,6 +998,18 @@ function step(dt, inp) {
   stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
+// the geese: what they say back (decks: none twice running), and what you say to them
+const GOOSE = { kick: ['GĘĘĘĘ!!!', 'GĘ! GĘ! GĘĘĘ!', 'SSSSSS!!!', 'GĘĘ?! GĘĘĘĘ!'], peck: ['DZIOB!', 'AŁA! GĘŚ!', 'SSSS! DZIOB!', 'GĘĘ! DZIOB DZIOB!', 'W ŁYDKĘ!'],
+  calm: ['gę.', 'gęę...', 'sss...', '(gęś udaje, że nic się nie stało)'], ask: ['DZIEŃ DOBRY PANI GĘSI!', 'GAZETKĘ?', 'GĘ?', 'CO TAM, GĘSI?', 'PRZEPUŚCICIE?', 'TYLKO SPOKOJNIE...', 'KTO TU RZĄDZI?'],
+  stare: ['(gęś patrzy na Ciebie z politowaniem)', '(gęś mierzy Cię wzrokiem)', '(gęś odwraca się tyłem)', '(gęś skubie trawę, jakby Cię nie było)'], honk: ['GĘ.', 'GĘĘĘ!', 'GĘ GĘ.', 'GĘĘ? GĘ.'],
+  angry: ['SSSSSS!!!', 'GĘĘĘĘ!!! (szarża)', 'SSS! GĘĘ!'], friend: ['gę? (gęś idzie za Tobą)', 'gę gę (masz nową przyjaciółkę)', '(gęś drepcze za Tobą)'] };
+// one goose's word at a time (a flock hissing all at once: one bubble, not seven); force: a kick's honk always
+let gooseSaid = 0; function gooseSay(at, text, force) { const t = performance.now(); if (!force && t - gooseSaid < 1100) return; gooseSaid = t; hud.rant(at, text, true); }
+function gooseKicked(q, mid) { hud.impact(mid, 'GĘĘ!'); shake = Math.max(shake, .14); slowmo = .06; audio.play('kick', { vol: .5 }); gooseSay(q.g.position.clone().setY(q.g.position.y + 1.2), draw('gKick', GOOSE.kick), true);
+  if (!RUN.gooseMad || RUN.t - RUN.gooseMad > 20) { RUN.gooseMad = RUN.t || 1; logEv('goose_chase', q.g.position.x, q.g.position.z); flash('Gęsi się wściekły! Uciekaj albo zwiewaj rowerem'); } }
+function gooseTalk(me) { const r = geese.talk(me); if (!r) return false; const mouth = me.mouth || new THREE.Vector3(me.x, (me.y || 0) + 1.8, me.z), gp = r.q.g.position.clone().setY(r.q.g.position.y + 1);
+  hud.rant(mouth, draw('gAsk', GOOSE.ask), true); setTimeout(() => gooseSay(gp, draw('g_' + r.how, GOOSE[r.how]), true), 700);
+  if (r.how === 'friend') { logEv('goose_friend', me.x, me.z); } if (r.how === 'angry') { logEv('goose_chase', me.x, me.z); } return true; }
 const TALK = ['DZIEŃ DOBRY! GAZETKA?', 'ŁADNA POGODA, CO?', 'MASZ MOŻE DYCHĘ?', 'WIDZIAŁ PAN MÓJ ROWER?', 'PAN TU CZĘSTO SPACERUJE?', 'KUPI PAN GAZETĘ? ŚWIEŻA!', 'CO TAK SMUTNO?', 'PAN WIE, KTÓRA GODZINA?'];
 const REPLY = { oldman: ['ZA MOICH CZASÓW GAZETY BYŁY GRUBSZE!', 'SŁUCHAM? GŁOŚNIEJ!', 'IDŹ DO ROBOTY!'], jogger: ['NIE MAM CZASU, MAM TĘTNO!', 'BIEGAM, NIE GADAM!', 'SIEMA!'],
   mum: ['CIII, DZIECKO ŚPI!', 'NIE TERAZ!', 'DZIĘKUJĘ, NIE TRZEBA'], dogman: ['NIE GRYZIE. CHYBA.', 'BURKU, ZOSTAW PANA!', 'NO I CO?'], teen: ['CO SIĘ PATRZYSZ?', 'ELO!', 'SPADAJ, BOOMERZE'],
@@ -1011,7 +1031,7 @@ function stepPeople(dt, inp, me) {
     const b = !inp.talk && bikeNear(me, 2.4), bp = b && b.r.root.position; if (bp && Math.hypot(bp.x - me.x, bp.z - me.z) < bd) t = bp; if (t) me.yaw = Math.atan2(t.x - me.x, t.z - me.z); }
   if (inp.talk) { const p = pedNear(me, 2.4); if (p) { p.talks = (p.talkT > 0 ? (p.talks || 0) : 0) + 1; p.talkT = 20; p.stun = Math.max(p.stun || 0, 2.2); p.faceT = 2.4; hud.rant(me.mouth, pickOf(TALK), true);
       const key = p.P.key; setTimeout(() => { hud.rant(mouthOf(p), p.talks >= 3 ? pickOf(ANNOYED) : pickOf(REPLY[key] || ANNOYED)); if (p.talks >= 3 && !TOUGH.includes(key)) { p.flee = 3; p.fleeNew = true; } }, 800); }
-    else hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
+    else if (!(geese && gooseTalk(me))) hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
   for (const p of peds.list) p.talkT = Math.max(0, (p.talkT || 0) - dt);
   const k = inp.atkL || (inp.lmb && Math.random() < .5) ? 'jab' : inp.atkR || inp.lmb ? 'cross' : null;
   const mv = (k && foot.swing(k)) || foot.fired();                         // (a punch, or a kick in a run of them; a kept press thrown now)
@@ -1027,6 +1047,7 @@ function stepPeople(dt, inp, me) {
         setTimeout(() => foot.grudgeAt(at2, pickOf(SZWAGIER_COMES)), 2200); }
       else { hud.rant(mouthOf(p), pickOf(HIT_PED[key] || HIT_ANY)); p.flee = 4.5; p.fleeNew = true; } }
     else if (!p && PH.pc) { const g0 = PH.pc.g.position; hud.impact(new THREE.Vector3(g0.x, g0.y + 1, g0.z), PH.kick ? 'BUM!' : 'BANG!'); shake = Math.max(shake, .18); quests.onKickPolice(PH.pc); }
+    else if (!p && geese && PH.kick && (PH.gq = geese.strike(me, PH.reach + .3))) { const q = PH.gq; logEv('kick_goose', me.x, me.z); gooseKicked(q, q.g.position.clone().setY(q.g.position.y + .6)); }
     else if (!p) { const T = stuff.strike(me.x, me.z, me.yaw, PH.reach, PH.kick ? 1 : .55); if (T) shake = Math.max(shake, T.kind === 'mailbox' ? .08 : .03); }   // (no one there: a thing, maybe)
   }
   // a cyclist going by, punched: off his bike he goes (and, as after a kick, often gets up for a fight)
@@ -1444,7 +1465,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'goose', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }

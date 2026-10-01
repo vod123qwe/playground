@@ -973,3 +973,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 109: wyższe drzewa nad drogą
 
 - drzewa przy jezdni są mniej więcej dwa razy wyższe, więc ich korony wiszą wysoko nad drogą i nie zasłaniają już rowerzysty ani tego, co przed nim
+
+## Wersja 110: gęsi do ogrania, bez ponownych wywrotek
+
+- gęś można kopnąć z roweru (spacja) i pieszo: odlatuje z gęganiem, a stado się wścieka i goni (szyje wyciągnięte, skrzydła w górze)
+- wściekłe gęsi pieszo dziobią (trochę zdrowia), na wolnym rowerze syczą i hamują; szybki rower im ucieka, a po chwili odpuszczają i wracają na trawę
+- zagadanie do gęsi (pieszo E, z wolnego roweru T): gęś się gapi, odgęga, obraża się i szarżuje, albo Cię polubi i przez chwilę drepcze za Tobą
+- kwestie gęsi z talii (bez powtórek pod rząd), jeden dymek naraz zamiast całego stada
+- gazeta: kopnięta gęś, pościg stada, gęś-przyjaciółka (anonimowo, w dziale Z GMINY); kopnięcie gęsi liczy się jako drobny wybryk
+- poprawka: po wstaniu z wywrotki albo podniesieniu roweru masz 2,5 s ochrony; uderzenie w tym czasie tylko Cię przyhamuje, zamiast od razu znowu zrzucić (dotyczyło gęsi, psów, przeszkód, aut)
