@@ -180,7 +180,8 @@ export function createHoops({ THREE, scene, track, audio, hud, game }) {
   function drop(silent) { if (!ball.held) return; ball.held = false; ball.rest = false; ball.v.set(0, 0, 0); pickT = 1; if (switched) { switched = false; lastCtx?.toThird(); } ui.classList.remove('on'); if (!silent) audio.play('kick', { vol: .2 }); }
   let lastCtx = null;
   function throwIt(from, dir, p) { armMode = 'throw'; armT = 0; const sp = VMIN + p * (VMAX - VMIN), c = toCourt(from); ball.held = false; ball.rest = false; ball.p.copy(from); ball.v.copy(dir).multiplyScalar(sp); pickT = .7; shots++;
-    const cm = toCourt(lastCtx?.me || from); ball.thrown = { t: 0, scored: false, three: isThree(cm.u, cm.w), cu: cm.u, cw: cm.w };   // (where his feet are decides two or three) audio.play('throw', { vol: .6 }); game.send?.({ k: 'ball', p: [from.x, from.y, from.z].map(n => +n.toFixed(3)), v: [ball.v.x, ball.v.y, ball.v.z].map(n => +n.toFixed(3)) });
+    const cm = toCourt(lastCtx?.me || from); ball.thrown = { t: 0, scored: false, three: isThree(cm.u, cm.w), cu: cm.u, cw: cm.w };   // (where his feet are decides two or three)
+    audio.play('throw', { vol: .6 }); game.send?.({ k: 'ball', p: [from.x, from.y, from.z].map(n => +n.toFixed(3)), v: [ball.v.x, ball.v.y, ball.v.z].map(n => +n.toFixed(3)) });
     if (ch.on) { ch.backT = 1.1; ch.k = (ch.k + 1 + (Math.random() * (SPOTS.length - 1) | 0)) % SPOTS.length; setSpot(ch.k); } }
   function ghostThrow(m) { const g = { m: ballMesh(), p: new V3(...m.p), v: new V3(...m.v), t: 0, hint: home.iJ, ghost: true, thrown: { scored: false } }; ghosts.push(g); }
   // ---------- the challenge ----------

@@ -790,3 +790,4 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - **ręce w widoku z oczu**: piłka trzymana oburącz, przy ładowaniu siły schodzi do klatki, przy rzucie ręce wystrzeliwują w górę i do przodu z ruchem nadgarstków, potem znikają z kadru; przy podniesieniu piłki wracają
 - **tryb RZUTY POD DOMEM** (menu TRYBY GRY): minuta, kolejne zielone koła na boisku (3 miejsca za 2, 3 za 3: rogi i szczyt), rzut liczy się tylko z koła, każde trafienie +2 s, piłka wraca do rąk po każdym rzucie; rekord zapisany
 - **przez sieć**: nowy tryb RZUTY POD DOMEM dla dwóch (minuta, kto więcej punktów), obaj na boisku, widać piłki rzucane przez drugiego
+- poprawka 85.1: wrócił dźwięk rzutu piłką i wysyłanie rzutów do drugiego gracza (komentarz w kodzie połykał tę linię)
