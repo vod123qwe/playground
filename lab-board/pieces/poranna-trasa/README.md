@@ -697,3 +697,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 73: znaczniki zadań nie zasłaniają drogi
 
 - napis nad celem zadania (POSZUKIWANY, ZŁODZIEJ i inne) z odległością pokazuje się tylko, gdy cel jest dalej niż 22 m; z bliska sama strzałka; gdy cel jest poza ekranem, strzałka przy krawędzi dalej mówi, co to i jak daleko
+
+## Wersja 74: naturalniej na rowerze
+
+- ręce nie są już proste jak kije: nowy model ma krótsze ręce niż dawna sylwetka i nie sięgał kierownicy; teraz pochyla się nad nią, plecy zaokrąglone, łokcie ugięte (ok. 40°), palce obejmują chwyty
+- mocniejsze kołysanie bioder i barków w rytm korby, lekkie „pompowanie” plecami
+- rozglądanie się myszką: głowa delikatnie odwraca się w tę stronę (i lekko w górę lub w dół)
+- widok z oczu dopasowany do nowego pochylenia: na dole kierownica i dłonie; czapka znika z widoku z oczu (wcześniej przez błąd zostawała)
