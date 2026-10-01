@@ -543,7 +543,11 @@ function stepPapers(dt) {
       if (a > 0 && b <= 0) { const t = a / (a - b), hx = p.prev.x + (p.m.position.x - p.prev.x) * t, hy = p.prev.y + (p.m.position.y - p.prev.y) * t, hz = p.prev.z + (p.m.position.z - p.prev.z) * t;
         if (Math.hypot(hx - w.p.x, hz - w.p.z) < w.hw + .22 && Math.abs(hy - w.p.y) < w.hh + .18) { breakWindow(w); p.v.multiplyScalar(.15); p.v.addScaledVector(w.n, 1.2); p.m.position.set(hx, hy, hz).addScaledVector(w.n, .05); } } }
     // into a tractor's cab (a moving target): the farmer catches it, once each tractor a run
-    if (!p.landed && track.region === 'wies') for (const b of traffic.boxes()) { const t = b.t; if (!t.tractor || t.gotPaper) continue; const g0 = t.car.group.position, P = p.m.position;
+    if (!p.landed && track.region === 'wies') for (const b of traffic.boxes()) { const t = b.t; if (!t.tractor) continue;
+      if (b.trailer) { if ((t.inTrailer || 0) >= 3) continue; const P = p.m.position, dx = P.x - b.x, dz = P.z - b.z, al = dx * b.s + dz * b.c, ac = dx * b.c - dz * b.s;
+        if (Math.abs(al) < b.hz && Math.abs(ac) < b.hx && P.y > b.y0 + .7 && P.y < b.y0 + 2.2) { t.inTrailer = (t.inTrailer || 0) + 1; p.landed = true; p.rest = true; p.t = 99; scene.remove(p.m, p.dot);
+          const at2 = new THREE.Vector3(b.x, b.y0 + 2.2, b.z); score(2, at2, 'DO PRZYCZEPY! +2', '#efc970'); audio.play('coin'); if (t.inTrailer === 1) logEv('tractor_paper', b.x, b.z); break; } continue; }
+      if (t.gotPaper) continue; const g0 = t.car.group.position, P = p.m.position;
       if (Math.hypot(P.x - g0.x, P.z - g0.z) < 1.25 && P.y > g0.y + .9 && P.y < g0.y + 2.6) { t.gotPaper = true; p.landed = true; p.rest = true; p.t = 99; scene.remove(p.m, p.dot);
         score(4, g0.clone().setY(g0.y + 2.6), 'DO KABINY! +4', '#efc970'); hud.impact(g0.clone().setY(g0.y + 2), 'ŁAP!'); audio.play('trick'); logEv('tractor_paper', g0.x, g0.z);
         setTimeout(() => hud.rant(g0.clone().setY(g0.y + 2.8), draw('tractorThanks', TRACTOR_THANKS), true), 500); break; } }
@@ -682,7 +686,7 @@ function ride(dt, inp) {
       const clean = all.every(o => !o.pulled), n = all.reduce((a, o) => a + o.pts, 0) + (clean ? 1 : 0) + (all.length - 1) * 2;
       const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); logEv('trick', B.x, B.z, { name: lab, clean }); if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
     if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; } }
-  else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else B.y = ground; }
+  else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'mega' ? 2.2 : R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else B.y = ground; }
   B.onRamp = !B.air && rp.h > .05 ? rp.on : null;   // (the ground fell away as he rose: he flies)
   B.gVel = B.air ? 0 : (ground - B.gPrev) / dt; B.gPrev = ground;
   // kerbs, potholes, bags and hedges, bundles; what throws him off
@@ -840,7 +844,7 @@ function stepKick(dt, inp) {
   if (B.trick) { const T = B.trick; T.t += dt;
     if (T.p < 1) { const base = 1 / T.dur, need = (1 - T.p) / Math.max(.03, airLeft() - .05), rate = Math.min(base * 2.8, Math.max(base, need));
       if (need > base * 1.1) T.pulled = true; T.p = Math.min(1, T.p + rate * dt); } }
-  if (inp.kick && B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)) { const big = B.airRamp === 'big', st = inp.steer, left = airLeft();
+  if (inp.kick && B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)) { const big = B.airRamp === 'big' || B.airRamp === 'mega', st = inp.steer, left = airLeft();
     if (left > .2) { if (B.trick) { B.done = [...(B.done || []), B.trick]; } else B.done = [];
       const fit = (lo, hi) => THREE.MathUtils.clamp(left * .8, lo, hi) * (1 - MOD.trick), mk = o => ({ ...o, t: 0, p: 0, pulled: false });   // (its pace: most of what is left of the flight)
       B.trick = Math.abs(st) > .3 ? mk({ kind: 'spin', dir: -Math.sign(st), dur: fit(.34, big ? .9 : .7), pts: 3, name: '360' })
@@ -1016,7 +1020,7 @@ function step(dt, inp) {
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
   rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
+  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
@@ -1132,7 +1136,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor, said: (r, t) => logEv('said', r.G.position.x, r.G.position.z, { who: r.lines || r.key, text: t }) });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
+  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
@@ -1268,13 +1272,16 @@ function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55
     const foot = new THREE.Object3D(); foot.position.set(x, y, z); foot.rotation.y = yaw; RUN.hits.push(track.addHit(foot, { hx: .12, hz: .12, h: H, kind: 'hard' }, i)); }
   const yM = track.probe(S0.p.x, S0.p.z, i).y, ban = new THREE.Mesh(new THREE.BoxGeometry(w * 2 + .2, .75, .06), banM); ban.position.set(S0.p.x, yM + H - .25, S0.p.z); ban.rotation.y = yaw; scene.add(ban); RUN.gate.push(ban); }
 function goRegion(region, poziom) { saveCampaign(); const q = new URLSearchParams(location.search); q.set('play', ''); if (region && region !== 'peryferia') q.set('region', region); else q.delete('region'); if (poziom) q.set('poziom', poziom); else q.delete('poziom'); location.search = q.toString().replace(/=(&|$)/g, '$1'); }
+// the morning's fog on a level that has it: the far end of the view pulled in (25 m clear, gone by 55), the colour of wet air
+const FOG0 = { near: scene.fog.near, far: scene.fog.far, col: scene.fog.color.clone() };
+function setFog(on) { scene.fog.near = on ? 12 : FOG0.near; scene.fog.far = on ? 55 : FOG0.far; scene.fog.color.copy(on ? new THREE.Color('#d9ddd6') : FOG0.col); }
 // (the opening shot from in front of him: only the very first start, from home; later ones start on the road, from behind)
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if ((L0.region === 'peryferia' ? 'peryferia' : L0.region) !== track.region) { goRegion(L0.region, id); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; if (!(id === 'p1' && !LVM.load().done?.p1)) { C.iy = 0; C.yaw = B.yaw; C.init = false; } const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
-  buildFinale(); buildCrossings(); bindJobs(); { const S1 = LVM.load(); LVM.save({ runs: (S1.runs || 0) + 1 }); } Object.assign(RAD, { fin: false, cool: 6, idle: 40, gag: false }); if (LV2.cur?.box) scene.remove(LV2.cur.box); Object.assign(LV2, { offer: null, cur: null, next: 30 + Math.random() * 20 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
+  buildFinale(); buildCrossings(); setFog(!!LV.fog); if (LV.fog) setTimeout(() => flash('Mgła! Widać na kilkadziesiąt metrów. Przejazd słychać, zanim go widać'), 1800); bindJobs(); { const S1 = LVM.load(); LVM.save({ runs: (S1.runs || 0) + 1 }); } Object.assign(RAD, { fin: false, cool: 6, idle: 40, gag: false }); if (LV2.cur?.box) scene.remove(LV2.cur.box); Object.assign(LV2, { offer: null, cur: null, next: 30 + Math.random() * 20 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
   flash(`${L.name}: ${track.home?.homeH ? 'wyjedź z domu' : 'ruszaj'} i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
-function goHome() { if (fin.isOpen) fin.close(); clearFinale(); clearCrossings(); if (track.region !== 'peryferia') { goRegion('peryferia', null); return; } LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
+function goHome() { if (fin.isOpen) fin.close(); clearFinale(); clearCrossings(); setFog(false); if (track.region !== 'peryferia') { goRegion('peryferia', null); return; } LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
 // how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
 const ahead = (i, cp) => ((((cp - i) * LV.finish.dir) % track.N) + track.N) % track.N * track.ds;
@@ -1350,17 +1357,22 @@ function clearFinale() { for (const h of FIN.hits) track.dropHit(h); while (FIN.
 // the final straight (the last 180 m): a banner; a slalom; an arrow pad (a push); a kicker and a trench across the road to clear (in the
 // air: or a fall); big targets by the road, others that pop up as you come, one swinging over the road on a rope; golden rings in the
 // air after the second kicker; a double trench; pads again to the line. Scoring things one after another: a combo (x2, x3)
-function buildFinale() { clearFinale(); const N = track.N, ds = track.ds, dir = LV.finish.dir, iF = RUN.cps[RUN.cps.length - 1], S = track.S, FL = Math.min(300, LV.finish.to * track.len * .45), u = k => k * FL;
+function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1] * track.ds, FL0 = Math.min(300, LV.finish.to * track.len * .45) + 25, d0 = LV.finish.dir; FIN.clear = d0 > 0 ? [sF - FL0, sF + 15] : [sF - 15, sF + FL0]; } const N = track.N, ds = track.ds, dir = LV.finish.dir, iF = RUN.cps[RUN.cps.length - 1], S = track.S, FL = Math.min(300, LV.finish.to * track.len * .45), u = k => k * FL;
   const at = (m0, d) => { const m = m0 <= 1.0001 ? u(m0) : m0; const i = ((iF - dir * Math.round(m / ds)) % N + N) % N, A = S[i], x = A.p.x + A.r.x * d * dir, z = A.p.z + A.r.z * d * dir; return { i, x, z, y: track.probe(x, z, i).y, yaw: Math.atan2(A.f.x * dir, A.f.z * dir), f: new THREE.Vector3(A.f.x * dir, 0, A.f.z * dir), r: new THREE.Vector3(A.r.x * dir, 0, A.r.z * dir) }; };
   const M = c => toon(c), coneM = M('#e8692c'), bandM = M('#f6f3ea'), postM = M('#f6f3ea'), wood = M('#9e7a4f'), dark = M('#1d1e21'), gold = M('#efc970'), red = M('#cf5a3e');
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
-  const W = track.ROAD;
+  const W = track.ROAD, WIES = track.region === 'wies';
+  // (the village's: round bales of hay, lying, their ends spiralled; one to ride into rolls away)
+  const hayM = M('#d9b45a'), hayEnd = (() => { const t = cv(16, 16, g => { g.fillStyle = '#c9a04a'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#a8832f'; for (let a = 0; a < 26; a += .25) { const r = a * .28; g.fillRect(Math.round(7.5 + Math.cos(a) * r), Math.round(7.5 + Math.sin(a) * r), 1, 1); } }); return new THREE.MeshBasicMaterial({ map: t }); })();
+  const bale = (R = .55, L = 1.1) => { const g = new THREE.Group(), b = new THREE.Mesh(new THREE.CylinderGeometry(R, R, L, 14).rotateZ(Math.PI / 2), [hayM, hayEnd, hayEnd]); b.position.y = R; b.castShadow = true; g.add(b); g.userData.R = R; return g; };
   // the banner
-  { const p = at(.995, 0), w = W + .6, tx = cv(96, 12, g => { for (let x = 0; x < 96; x += 4) for (let y = 0; y < 12; y += 4) { g.fillStyle = ((x + y) / 4) % 2 ? '#17181b' : '#f6f3ea'; g.fillRect(x, y, 4, 4); } g.fillStyle = '#cf5a3e'; g.fillRect(12, 1, 72, 10); g.fillStyle = '#f6f3ea'; g.font = '8px PTPix'; g.textBaseline = 'top'; g.textAlign = 'center'; g.fillText('FINAŁOWA PROSTA', 48, 2); });
+  { const p = at(.995, 0), w = W + .6, tx = cv(96, 12, g => { for (let x = 0; x < 96; x += 4) for (let y = 0; y < 12; y += 4) { g.fillStyle = ((x + y) / 4) % 2 ? '#17181b' : '#f6f3ea'; g.fillRect(x, y, 4, 4); } g.fillStyle = WIES ? '#8e5a2e' : '#cf5a3e'; g.fillRect(12, 1, 72, 10); g.fillStyle = '#f6f3ea'; g.font = '8px PTPix'; g.textBaseline = 'top'; g.textAlign = 'center'; g.fillText(WIES ? 'WIEJSKI FINAŁ' : 'FINAŁOWA PROSTA', 48, 2); });
     for (const sd of [-1, 1]) { const q = at(.995, sd * w), post = new THREE.Mesh(new THREE.BoxGeometry(.16, 4.6, .16).translate(0, 2.3, 0), postM); post.position.set(q.x, q.y, q.z); FIN.G.add(post); }
     const b = new THREE.Mesh(new THREE.BoxGeometry(w * 2, .7, .06), new THREE.MeshBasicMaterial({ map: tx })); b.position.set(p.x, p.y + 4.3, p.z); b.rotation.y = p.yaw; FIN.G.add(b); }
   // the slalom
-  const slalom = (u0, n, gap, off) => { for (let k = 0; k < n; k++) { const q = at(u(u0) - k * gap, (k % 2 ? 1 : -1) * off), m = new THREE.Mesh(new THREE.ConeGeometry(.28, .75, 8).translate(0, .375, 0), coneM), band = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, .1, 8).translate(0, .42, 0), bandM);
+  const slalom = (u0, n, gap, off) => { for (let k = 0; k < n; k++) { const q = at(u(u0) - k * gap, (k % 2 ? 1 : -1) * off);
+    if (WIES) { const m = bale(); m.position.set(q.x, q.y, q.z); m.rotation.y = q.yaw; FIN.G.add(m); FIN.cones.push({ m, x: q.x, z: q.z, down: false, t: 0, ax: 0, az: 0, bale: true, vx: 0, vz: 0, i: q.i }); continue; }
+    const m = new THREE.Mesh(new THREE.ConeGeometry(.28, .75, 8).translate(0, .375, 0), coneM), band = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, .1, 8).translate(0, .42, 0), bandM);
     m.add(band); m.position.set(q.x, q.y, q.z); FIN.G.add(m); FIN.cones.push({ m, x: q.x, z: q.z, down: false, t: 0, ax: 0, az: 0 }); } };
   slalom(.95, 6, 7, 1.1); slalom(.5, 6, 5, 1.5);
   // an arrow pad: chevrons on the road, a push forward
@@ -1368,15 +1380,17 @@ function buildFinale() { clearFinale(); const N = track.N, ds = track.ds, dir = 
   const pad = m => { const q = at(m, 0), o = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: arrowT, transparent: true })); o.position.set(q.x, q.y + .03, q.z); o.rotation.y = q.yaw + Math.PI; FIN.G.add(o); FIN.pads.push({ q, used: false, o }); };
   pad(.8); pad(.55); pad(.03);
   // a kicker, a trench after it (planks at its edges, a striped board each side), another before the line (two of them, a gap between)
-  const kicker = (m, size = 'kicker') => { const q = at(m, 0), o = track.props.ramp(Math.random, size); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = q.yaw; FIN.G.add(o.group); FIN.hits.push(track.addHit(o.group, o.hit, q.i)); };
+  const kicker = (m, size = 'kicker') => { const q = at(m, 0), o = track.props.ramp(Math.random, size); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = q.yaw; FIN.G.add(o.group); FIN.hits.push(track.addHit(o.group, o.hit, q.i));
+    if (WIES) for (const sd of [-1, 1]) { const p2 = at(m, sd * 2.1), b = bale(.5, 1); b.position.set(p2.x, p2.y, p2.z); b.rotation.y = q.yaw + Math.PI / 2; FIN.G.add(b); } };   // (in the village: a bale each side of it)
   const stripes = cv(8, 2, g => { for (let x = 0; x < 8; x++) { g.fillStyle = x % 2 ? '#cf5a3e' : '#f6f3ea'; g.fillRect(x, 0, 1, 2); } }), stripeM = new THREE.MeshBasicMaterial({ map: stripes });
   // (a trench: across the whole road, or half of it (hw its half width, cx its middle off the road's): to ride round or to jump)
   const trench = (m, len = 3.2, hw = W, cx = 0) => { const q = at(m, 0), g = new THREE.Group(); g.position.set(q.x, q.y, q.z); g.rotation.y = q.yaw; const k = -1;   // (the group's x is the road's right reversed)
     // (seen from afar: light dug earth round a black hole, yellow and black edges, a cone at each corner)
-    const pit = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, .05, len), M('#8a6a44')); pit.position.set(cx * k, .03, 0); g.add(pit); const deep = new THREE.Mesh(new THREE.BoxGeometry(hw * 2 - .5, .04, len - .6), M('#050403')); deep.position.set(cx * k, .05, 0); g.add(deep);
+    const pit = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, .05, len), M(WIES ? '#5d4a30' : '#8a6a44')); pit.position.set(cx * k, .03, 0); g.add(pit); const deep = new THREE.Mesh(new THREE.BoxGeometry(hw * 2 - .5, .04, len - .6), WIES ? new THREE.MeshBasicMaterial({ color: '#3f6f86' }) : M('#050403')); deep.position.set(cx * k, .05, 0); g.add(deep);
     const hz = cv(8, 2, g2 => { for (let x = 0; x < 8; x++) { g2.fillStyle = (x >> 1) % 2 ? '#17181b' : '#efc930'; g2.fillRect(x, 0, 1, 2); } }), hzM = new THREE.MeshBasicMaterial({ map: hz });
-    for (const z of [-len / 2, len / 2]) { const e = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, .14, .2), hzM); e.position.set(cx * k, .08, z); g.add(e); }
-    for (const sx of [-1, 1]) for (const z of [-len / 2 - .35, len / 2 + .35]) { const c0 = new THREE.Mesh(new THREE.ConeGeometry(.22, .6, 8).translate(0, .3, 0), coneM); c0.position.set((cx + sx * (hw - .15)) * k, 0, z); g.add(c0); }
+    for (const z of [-len / 2, len / 2]) { const e = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, .14, .2), WIES ? wood : hzM); e.position.set(cx * k, .08, z); g.add(e); }
+    if (WIES) { const reed = M('#5f7a3a'); for (let n = 0; n < 14; n++) { const h2 = .5 + Math.random() * .5, rd = new THREE.Mesh(new THREE.BoxGeometry(.04, h2, .04), reed); rd.position.set((cx + (Math.random() - .5) * 2 * (hw - .2)) * k, h2 / 2, (Math.random() < .5 ? -1 : 1) * (len / 2 + .15)); rd.rotation.z = (Math.random() - .5) * .3; g.add(rd); } }   // (a ditch: water at its bottom, reeds on its banks)
+    for (const sx of [-1, 1]) for (const z of [-len / 2 - .35, len / 2 + .35]) { const c0 = WIES ? bale(.3, .55) : new THREE.Mesh(new THREE.ConeGeometry(.22, .6, 8).translate(0, .3, 0), coneM); c0.position.set((cx + sx * (hw - .15)) * k, 0, z); g.add(c0); }
     for (const sd of [-1, 1]) { const x = (cx + sd * (hw + .25)) * k, b = new THREE.Mesh(new THREE.BoxGeometry(.05, .3, len + .6), stripeM); b.position.set(x, .55, 0); g.add(b); for (const z of [-len / 2 - .3, len / 2 + .3]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(.08, .7, .08), postM); p2.position.set(x, .35, z); g.add(p2); } }
     FIN.G.add(g); FIN.trenches.push({ q, len, hw, cx, done: false }); };
   kicker(.87, 'plank'); kicker(.83, 'kicker'); kicker(.77, 'plank'); trench(u(.77) - 5, 1.8, W * .55, -W * .45); kicker(.15, 'kicker'); trench(u(.15) - 6, 2);
@@ -1387,6 +1401,18 @@ function buildFinale() { clearFinale(); const N = track.N, ds = track.ds, dir = 
     const hinge = new THREE.Group(); t.add(hinge); if (kind === 'post') { t.add(new THREE.Mesh(new THREE.BoxGeometry(.12, 1.6, .12).translate(0, .8, 0), wood)); const b = board(r); b.position.y = 2.1; hinge.add(b); }
     else { const b = board(r); b.position.y = r + .1; hinge.add(b); hinge.add(new THREE.Mesh(new THREE.BoxGeometry(.1, r + .1, .1).translate(0, (r + .1) / 2, 0), wood)); hinge.rotation.z = -Math.PI / 2 * sd; }
     FIN.G.add(t); FIN.targets.push({ t, hinge, kind, r, c: new THREE.Vector3(q.x, q.y + (kind === 'post' ? 2.1 : r + .1), q.z), hit: false, spin: 0, up: kind === 'post', upT: 0, sd, pay: kind === 'post' ? 5 : 7 }); };
+  // the barn (in the village), by the road near the end: a ring painted on its wall (its middle +5, the rest +2), the loft's window +8
+  if (WIES) { const sd = Math.random() < .5 ? -1 : 1, q = at(.13, sd * (W + 9.6)), bar = new THREE.Group(), baseY = Math.min(...[[-3.5, W + 7], [3.5, W + 7], [-3.5, W + 12.2], [3.5, W + 12.2]].map(([al, d]) => { const p0 = at(.13, sd * d); return track.probe(p0.x + q.f.x * al, p0.z + q.f.z * al, p0.i).y; })); bar.position.set(q.x, baseY, q.z); bar.rotation.y = q.yaw; FIN.G.add(bar);
+    const barnM = M('#8e2e25'), trim = M('#f4f1e8'), roofM = M('#4a4e55'), bb = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; bar.add(o); return o; };
+    bb(5.2, 5, 7, barnM, 0, 2.5, 0); bb(5.4, 3, 7.2, M('#8a857a'), 0, -1.45, 0);   // (a stone footing under it, down into the ground where it falls away)
+    for (const s2 of [-1, 1]) { const rf = bb(3.3, .16, 7.4, roofM, s2 * 1.35, 5.75, 0); rf.rotation.z = -s2 * .62; } bb(5.25, .14, 7.05, trim, 0, 5.02, 0);
+    const wallAt = (al, y) => { const p2 = at(.13, sd * (W + 6.96)), f2 = q.f; return new THREE.Vector3(p2.x + f2.x * al, baseY + y, p2.z + f2.z * al); }, face = new THREE.Vector3(at(.13, 0).x, 0, at(.13, 0).z);
+    const ringT = cv(32, 32, g => { const C = [['#f4f1e8', 16], ['#cf5a3e', 13], ['#f4f1e8', 10], ['#cf5a3e', 7], ['#efc970', 4]]; for (const [c0, r0] of C) { g.fillStyle = c0; for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) if (Math.hypot(x - 15.5, y - 15.5) < r0) g.fillRect(x, y, 1, 1); } });
+    const plane = (w, h, mat, P) => { const o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); o.position.copy(P); o.lookAt(face.x, P.y, face.z); FIN.G.add(o); return o; };
+    const ringC = wallAt(-.6, 1.9), loftC = wallAt(-.6, 4.15); plane(2.6, 2.6, new THREE.MeshBasicMaterial({ map: ringT, transparent: true, alphaTest: .5 }), ringC);
+    plane(1.1, 1.1, trim, loftC); plane(.9, .9, new THREE.MeshBasicMaterial({ color: '#17181b' }), loftC.clone().addScaledVector(new THREE.Vector3(face.x - loftC.x, 0, face.z - loftC.z).normalize(), .01));
+    const dummy = new THREE.Group(); dummy.add(new THREE.Group());
+    for (const [c0, r0, pay, label] of [[ringC, .42, 5, 'W ŚRODEK!'], [ringC, 1.3, 2, 'W STODOŁĘ!'], [loftC, .5, 8, 'NA STRYCH!']]) FIN.targets.push({ t: bar, hinge: dummy, kind: 'barn', r: r0, c: c0.clone(), hit: false, spin: 0, up: true, sd: 0, pay, label, stick: true }); }
   target(.7, 1); target(.66, -1, 'pop'); target(.62, 1, 'pop'); target(.4, -1); target(.21, 1); target(.17, -1, 'pop'); target(.08, 1, 'pop'); target(.06, -1, 'pop');
   // the swinging one: a frame over the road, the board on a rope, to and fro
   for (const su of [.58, .25]) { const q = at(su, 0), g = new THREE.Group(); g.position.set(q.x, q.y, q.z); g.rotation.y = q.yaw; for (const sd of [-1, 1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(.18, 5.2, .18).translate(0, 2.6, 0), dark); p2.position.x = sd * (W + .5); g.add(p2); }
@@ -1394,7 +1420,7 @@ function buildFinale() { clearFinale(); const N = track.N, ds = track.ds, dir = 
     const rope = new THREE.Mesh(new THREE.BoxGeometry(.03, 1.6, .03).translate(0, -.8, 0), M('#c9b77a')); sw.add(rope); const b = board(.75); b.rotation.y = Math.PI / 2; b.position.y = -2.3; sw.add(b);
     FIN.G.add(g); FIN.targets.push({ t: g, hinge: sw, kind: 'swing', r: .75, c: new THREE.Vector3(q.x, q.y + 2.7, q.z), hit: false, spin: 0, up: true, sd: 0, pay: 10, q, board: b }); }
   // the second kicker and the golden rings in the air after it
-  kicker(.36, 'big');
+  kicker(.36, Math.random() < .5 ? 'mega' : 'big');   // (now and then the mega one: the rings after it hang the same, a higher flight through them)
   for (let k = 0; k < 5; k++) { const q = at(u(.36) - 7 - k * 3.2, 0), o = new THREE.Mesh(new THREE.TorusGeometry(.7, .09, 6, 16), gold); o.position.set(q.x, q.y + 2.4 + Math.sin(k / 4 * Math.PI) * .7, q.z); o.rotation.y = q.yaw; FIN.G.add(o); FIN.rings.push({ o, got: false }); }
   // the double trench, a gap of road between; pop-ups both sides; a pad to the line
   kicker(.46, 'plank'); trench(u(.3), 2, W * .6, W * .4); trench(u(.3) - 5, 2, W * .6, -W * .4);
@@ -1403,8 +1429,11 @@ function finScore(n, at, label) { FIN.combo = FIN.comboT > 0 ? FIN.combo + 1 : 1
   audio.play(k > 1 ? 'trick' : 'coin'); hud.pop(at, `${label} +${v}${k > 1 ? ' x' + k : ''}`, k > 1 ? '#efc970' : '#9fd27a'); }
 function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? foot.me : B; FIN.t += dt; FIN.comboT -= dt;
   const near = (p, m) => Math.hypot(me.x - p.x, me.z - p.z) < m;
-  if (!FIN.entered && FIN.cones[0] && near(FIN.cones[0], 30)) { FIN.entered = true; flash('Finałowa prosta! Slalom, wykopy do przeskoczenia, tarcze i obręcze: kombo mnoży!'); }
-  for (const c of FIN.cones) { if (c.down) { c.t = Math.min(1, c.t + dt * 4); c.m.rotation.x = c.ax * c.t * 1.5; c.m.rotation.z = c.az * c.t * 1.5; continue; } if (near(c, .6)) { c.down = true; c.ax = Math.cos(B.yaw); c.az = -Math.sin(B.yaw); FIN.res.cones++; FIN.combo = 0; audio.play('pick', { vol: .5 }); B.v *= .85; } }
+  if (!FIN.entered && FIN.cones[0] && near(FIN.cones[0], 30)) { FIN.entered = true; flash(track.region === 'wies' ? 'Wiejski finał! Slalom między belami, rowy do przeskoczenia, tarcze i stodoła: kombo mnoży!' : 'Finałowa prosta! Slalom, wykopy do przeskoczenia, tarcze i obręcze: kombo mnoży!'); }
+  for (const c of FIN.cones) if (c.bale) { const R = c.m.userData.R;
+    if (c.down) { const sp = Math.hypot(c.vx, c.vz); if (sp > .05) { c.x += c.vx * dt; c.z += c.vz * dt; const k2 = Math.exp(-dt * .9); c.vx *= k2; c.vz *= k2; const q2 = track.probe(c.x, c.z, c.i); c.i = q2.i; c.m.position.set(c.x, q2.y, c.z); c.m.rotation.y = Math.atan2(c.vx, c.vz); c.m.children[0].rotation.x += sp * dt / R; } continue; }
+    if (near(c, .85) && !foot.active) { c.down = true; const s0 = Math.max(3, Math.abs(B.v) * 1.1); c.vx = Math.sin(B.yaw) * s0; c.vz = Math.cos(B.yaw) * s0; FIN.res.cones++; FIN.combo = 0; audio.play('kick', { vol: .5 }); B.v *= .7; B.jolt = .1; } }
+  for (const c of FIN.cones) { if (c.bale) continue; if (c.down) { c.t = Math.min(1, c.t + dt * 4); c.m.rotation.x = c.ax * c.t * 1.5; c.m.rotation.z = c.az * c.t * 1.5; continue; } if (near(c, .6)) { c.down = true; c.ax = Math.cos(B.yaw); c.az = -Math.sin(B.yaw); FIN.res.cones++; FIN.combo = 0; audio.play('pick', { vol: .5 }); B.v *= .85; } }
   for (const P of FIN.pads) if (!P.used && near(P.q, 1.6) && !foot.active) { P.used = true; B.v = Math.min(B.v + 3.5, 13); audio.play('trick', { vol: .5 }); flash('Strzała! Szybciej!'); setTimeout(() => { P.used = false; }, 4000); }
   // the trenches: over one on the ground, a fall; in the air: cleared
   for (const T of FIN.trenches) { const dx = me.x - T.q.x, dz = me.z - T.q.z, al = dx * T.q.f.x + dz * T.q.f.z, ac = dx * T.q.r.x + dz * T.q.r.z;
@@ -1414,9 +1443,11 @@ function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? f
   for (const T of FIN.targets) {
     if (T.kind === 'pop') { const d = Math.hypot(me.x - T.c.x, me.z - T.c.z); if (!T.up && !T.hit && d < 26) { T.up = true; T.upT = 0; audio.play('ui', { vol: .4 }); } if (T.up) T.upT += dt; const want = T.up && (T.upT < 5 || T.hit) ? 0 : -Math.PI / 2 * T.sd; T.hinge.rotation.z += (want - T.hinge.rotation.z) * Math.min(1, dt * 10); if (T.upT >= 5 && !T.hit) T.up = false; }
     if (T.kind === 'swing') { const a = Math.sin(FIN.t * 1.6) * .75; T.hinge.rotation.x = a; T.board.getWorldPosition(T.c); }
-    if (T.hit) { T.spin += dt * 9; (T.kind === 'swing' ? T.board : T.hinge.children[T.kind === 'post' ? 0 : 0]).rotation.z = T.spin; continue; }
+    if (T.hit) { if (T.kind === 'barn') continue; T.spin += dt * 9; (T.kind === 'swing' ? T.board : T.hinge.children[T.kind === 'post' ? 0 : 0]).rotation.z = T.spin; continue; }
     if (!T.up && T.kind === 'pop') continue;
-    for (const p of papers) if (!p.landed && p.m.position.distanceTo(T.c) < T.r + .25) { T.hit = true; FIN.res.targets++; finScore(T.pay, T.c.clone().setY(T.c.y + .8), T.kind === 'swing' ? 'W WAHADŁO!' : 'TARCZA!'); break; } }
+    for (const p of papers) if (!p.landed && p.m.position.distanceTo(T.c) < T.r + .25) { T.hit = true; FIN.res.targets++; if (T.stick) { p.landed = true; p.v.set(0, -1, 0); } finScore(T.pay, T.c.clone().setY(T.c.y + .8), T.label || (T.kind === 'swing' ? 'W WAHADŁO!' : 'TARCZA!')); break; }
+    // a bale rolling (in the village): into a target by the road, it counts too
+    if (!T.hit && (T.kind === 'post' || T.kind === 'pop') && T.up) for (const c of FIN.cones) if (c.bale && c.down && Math.hypot(c.vx, c.vz) > 1 && Math.hypot(c.x - T.c.x, c.z - T.c.z) < T.r + .8) { T.hit = true; FIN.res.targets++; finScore(T.pay + 3, T.c.clone().setY(T.c.y + .8), 'BELĄ W TARCZĘ!'); break; } }
   // the rings: through one in the air
   for (const R of FIN.rings) { R.o.rotation.z += dt * 2; if (R.got) { R.o.scale.multiplyScalar(Math.max(0, 1 - dt * 4)); continue; } const p = new THREE.Vector3(me.x, (B.y || 0) + 1, me.z); if (p.distanceTo(R.o.position) < 1.1) { R.got = true; FIN.res.rings++; finScore(3, R.o.position.clone().setY(R.o.position.y + .6), 'OBRĘCZ!'); } } }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }

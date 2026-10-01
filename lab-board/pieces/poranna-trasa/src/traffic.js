@@ -32,6 +32,9 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   function update(dt, R) { clock += dt;
     // how many cars are out (R.cars: few at first, more as the run goes on); one coming out starts on the far side of the loop
     { let k = 0; for (const t of list) { if (t.tractor) { t.off = false; continue; } if (t.bus) { const on = R.bus !== false; if (on && t.off) { t.s = wrap(R.s + len / 2); t.snap = true; t.stop = 0; } t.off = !on; t.car.group.visible = on; continue; } const on = k++ < (R.cars ?? 99); if (on && t.off) { t.s = wrap(R.s + len / 2 + k * 41); t.v = t.cruise; t.lane = t.laneT = t.dir * LANE; t.pass = null; t.stop = 0; t.snap = true; } t.off = !on; t.car.group.visible = on; } }
+    // a stretch kept clear (the finale's track): nothing drives on it; one that comes to it goes on from the far side of the loop
+    if (R.clear) { const [a0, b0] = R.clear, A0 = wrap(a0), B0 = wrap(b0), inC = s0 => { const s1 = wrap(s0); return A0 <= B0 ? s1 >= A0 && s1 <= B0 : s1 >= A0 || s1 <= B0; };
+      for (const t of list) if (!t.off && inC(t.s)) { t.s = wrap(t.s + len / 2); t.snap = true; t.stop = 0; } }
     const live = list.filter(t => !t.off);                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
     stepBikes(dt, R);
     // everything that can be in a lane: the cars, the parked ones, the rider
@@ -104,7 +107,8 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     const v = vel.clone().multiplyScalar(.6).addScaledVector(f, b.v * .5), sp = Math.min(6, v.length());
     b.r.ragdoll({ vel: v, spin: new THREE.Vector3(f.z, 0, -f.x).multiplyScalar(.35 * sp).addScaledVector(f, side * .6), lift: .5 + sp * .07, ground: (x, z) => track.probe(x, z, Math.floor(wrap(b.s) / ds) % N).y, near: () => [], hit: () => false });
   }
-  function boxes() { return [...bikes.filter(b => b.on).map(b => ({ x: b.x, z: b.z, c: Math.cos(b.yaw), s: Math.sin(b.yaw), hx: .3, hz: .9, h: 1.6, y0: b.r.root.position.y, kind: 'car', t: b })), ...list.filter(t => !t.off).map(t => ({ x: t.x, z: t.z, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: t.car.half[0], hz: t.car.half[1], h: 1.5, y0: t.car.group.position.y, kind: 'car', t })) ]; }
+  function boxes() { return [...bikes.filter(b => b.on).map(b => ({ x: b.x, z: b.z, c: Math.cos(b.yaw), s: Math.sin(b.yaw), hx: .3, hz: .9, h: 1.6, y0: b.r.root.position.y, kind: 'car', t: b })), ...list.filter(t => !t.off).map(t => ({ x: t.x, z: t.z, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: t.car.half[0], hz: t.car.half[1], h: 1.5, y0: t.car.group.position.y, kind: 'car', t })),
+    ...list.filter(t => !t.off && t.car.trailer).map(t => { const T = t.car.trailer; return { x: t.x - Math.sin(t.yaw) * T.back, z: t.z - Math.cos(t.yaw) * T.back, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: T.hx, hz: T.hz, h: 1.9, y0: t.car.group.position.y, kind: 'car', t, trailer: true }; }) ]; }   // (the tractor's trailer: a box of its own behind it)
   list.forEach(place);
   return { group: G, list, update, boxes, knock, bikes };
 }

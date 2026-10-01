@@ -992,3 +992,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - gazeta: pociąg, szlaban, gazeta w kabinie (anonimowo); szlaban i pociąg to drobne wybryki
 - kamera: ujęcie od przodu tylko przy pierwszym starcie z domu, kolejne odcinki startują z kamerą zza pleców
 - plan Wsi i regionu 3 w docs/plan-wies-druga-strona.md
+
+## Wersja 112: wiejski finał, mega skocznie, pusty tor
+
+- wiejski finał: slalom między belami siana (wjechana bela toczy się dalej; trafiona belą tarcza daje premię), rowy melioracyjne z wodą i trzciną, bele przy skoczniach, stodoła przy mecie z tarczą na ścianie (środek +5, reszta +2) i okienkiem strychu (+8)
+- traktory ciągną przyczepę z belami: można w nią wjechać (zatrzymuje), a gazeta wrzucona do przyczepy daje +2 (do trzech na traktor)
+- mgła o świcie na trasie Za traktorem: widać na kilkadziesiąt metrów, czerwone lampy przejazdu przebijają mgłę
+- mega skocznia (ok. 2 m, żółte poręcze) w połowie każdej pętli, a w finale co drugi raz zamiast dużej
+- na finałowym torze nie jeżdżą żadne pojazdy

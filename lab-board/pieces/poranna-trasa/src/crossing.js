@@ -21,7 +21,7 @@ export function createCrossing({ THREE, toon, track, at }) {
   // a canvas texture: red and white stripes (the barrier), the cross's boards
   const stripes = (() => { const cv = document.createElement('canvas'); cv.width = 16; cv.height = 2; const g = cv.getContext('2d'); for (let x = 0; x < 16; x++) { g.fillStyle = (x >> 1) % 2 ? '#f4f1e8' : '#c23a2e'; g.fillRect(x, 0, 1, 2); }
     const t = new THREE.CanvasTexture(cv); t.magFilter = t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace; return t; })(), barM = new THREE.MeshBasicMaterial({ map: stripes });
-  const lampOff = new THREE.MeshBasicMaterial({ color: '#3a1512' }), lampOn = new THREE.MeshBasicMaterial({ color: '#ff4a30' }), lamps = [], bars = [];
+  const lampOff = new THREE.MeshBasicMaterial({ color: '#3a1512' }), lampOn = new THREE.MeshBasicMaterial({ color: '#ff4a30', fog: false }), lamps = [], bars = [];
   // each approach (al = -1: from the start's side, +1: the other): a post on the right with the cross and the lamps, the barrier's arm
   for (const sg of [-1, 1]) { const ac = -sg * (ROAD + .9), p = pt(sg * 4.2, ac), y = yAt(p.x, p.z), post = new THREE.Group(); post.position.set(p.x, y, p.z); post.rotation.y = yawF + (sg > 0 ? Math.PI : 0); G.add(post);
     post.add(P3(box(.12, 2.6, .12, postM), 0, 1.3, 0));

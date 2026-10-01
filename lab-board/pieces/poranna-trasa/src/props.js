@@ -60,14 +60,16 @@ export function createProps({ THREE, toon, tex }) {
     for (let k = -2; k <= 2; k++) { const l = box(.6 - Math.abs(k) * .1, .012, .03, toon('#5b5f63'), lid.position.x, .075 + k * .005, lid.position.z + k * .11); l.rotation.z = -.18; g.add(l); }   // the lid's ribs
     return { group: g, hit: { hx: .36, hz: .36, h: .05, kind: 'manhole' } }; }
   // a ramp: planks on bricks, rising along +z to its lip
-  //   size: 'plank' (as it was), 'kicker' (short and steep: more lift), 'big' (a long one on a timber frame: time for a flip)
-  function ramp(r, size = 'plank') { const g = new THREE.Group(), big = size === 'big', kick = size === 'kicker';
-    const L = big ? R(3.6, 4, r) : kick ? R(1.1, 1.3, r) : R(1.6, 2.2, r), H = big ? R(1.1, 1.25, r) : kick ? R(.45, .55, r) : R(.4, .55, r), W = big ? 2 : kick ? 1 : 1.2, a = Math.atan2(H, L);
+  //   size: 'plank' (as it was), 'kicker' (short and steep: more lift), 'big' (a long one on a timber frame: time for a flip),
+  //   'mega' (longer and twice as high, on a taller frame: a long flight, two tricks in it)
+  function ramp(r, size = 'plank') { const g = new THREE.Group(), mega = size === 'mega', big = size === 'big' || mega, kick = size === 'kicker';
+    const L = mega ? R(5.6, 6.2, r) : big ? R(3.6, 4, r) : kick ? R(1.1, 1.3, r) : R(1.6, 2.2, r), H = mega ? R(2, 2.2, r) : big ? R(1.1, 1.25, r) : kick ? R(.45, .55, r) : R(.4, .55, r), W = mega ? 2.6 : big ? 2 : kick ? 1 : 1.2, a = Math.atan2(H, L);
     if (big) { const deck = box(W, .06, Math.hypot(L, H), toon('#8a6a45'), 0, H / 2, 0); deck.rotation.x = -a; g.add(deck);
       for (let k = 0; k < 10; k++) { const p = box(W + .02, .062, .04, M.boardD, 0, 0, 0); const t = (k + .5) / 10; p.position.set(0, H * t + .035, -L / 2 + L * t); p.rotation.x = -a; g.add(p); }
       for (const x of [-W / 2 + .06, W / 2 - .06]) { for (const t of [.35, .7, .97]) g.add(box(.1, H * t, .1, M.boardD, x, H * t / 2, -L / 2 + L * t));   // the posts under it, and a brace along each side
         const br = box(.06, .06, Math.hypot(L, H) * .95, M.board, x, H * .3, 0); br.rotation.x = -a * .6; g.add(br); }
       const lip = box(W + .04, .05, .08, toon('#cf5a3e'), 0, H + .01, L / 2 - .04); g.add(lip);   // (its lip painted)
+      if (mega) for (const x of [-W / 2 - .05, W / 2 + .05]) { const rail = box(.05, .05, Math.hypot(L, H) * .9, toon('#efc970'), x, H * .55 + .45, -L * .05); rail.rotation.x = -a; g.add(rail); for (const t of [.25, .6, .9]) g.add(box(.04, .45, .04, toon('#efc970'), x, H * t + .23, -L / 2 + L * t)); }   // (a mega: yellow rails along its sides)
       return { group: g, hit: { hx: W / 2, hz: L / 2, h: H, kind: 'ramp', size } }; }
     const deck = box(W, .05, Math.hypot(L, H), M.board, 0, H / 2, 0); deck.rotation.x = -a; g.add(deck);
     for (let k = 0; k < 6; k++) { const p = box(W + .02, .052, .03, M.boardD, 0, 0, 0); const t = (k + .5) / 6; p.position.set(0, H * t + .03, -L / 2 + L * t); p.rotation.x = -a; g.add(p); }

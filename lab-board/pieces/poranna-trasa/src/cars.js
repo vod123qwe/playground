@@ -176,7 +176,12 @@ export function createCars({ THREE, toon }) {
       g.add(t, h); for (let k = 0; k < 6; k++) { const l = new THREE.Mesh(new THREE.BoxGeometry(w + .04, .09, .16), dark); l.position.y = r; const q = new THREE.Group(); q.rotation.x = k / 6 * Math.PI * 2; q.add(l); g.add(q); }
       g.position.set(x, r, z); G.add(g); wheels.push({ g, r }); };
     for (const sd of [-1, 1]) { wheel(.72, .45, sd * .8, -.5); wheel(.38, .25, sd * .62, 1.45); }
-    return { group: G, wheels: wheels.map(w => w.g), radii: wheels.map(w => w.r), half: [1.05, 1.7], kind: 'tractor', R: .55, blink: null }; }
+    // the hay trailer behind: a bed with low sides, the drawbar, two wheels, bales stacked on it (a paper thrown in: it is caught)
+    const hayM = M('#d9b45a'), hayE = M('#b8923e'), plank = M('#8a6a44'); bx(.1, .1, 1.0, dark, 0, .55, -1.55); bx(1.6, .12, 2.6, plank, 0, .75, -3.2);
+    for (const sd of [-1, 1]) bx(.08, .35, 2.6, plank, sd * .78, .97, -3.2); bx(1.6, .35, .08, plank, 0, .97, -1.92); bx(1.6, .35, .08, plank, 0, .97, -4.48);
+    for (const [x, y, z] of [[-.38, 1.12, -2.55], [.38, 1.12, -2.55], [-.38, 1.12, -3.85], [.38, 1.12, -3.85], [0, 1.62, -3.2]]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(.36, .36, .7, 12).rotateZ(Math.PI / 2), [hayM, hayE, hayE]); b.position.set(x, y, z); b.castShadow = true; G.add(b); }
+    for (const sd of [-1, 1]) wheel(.4, .2, sd * .9, -3.2);
+    return { group: G, wheels: wheels.map(w => w.g), radii: wheels.map(w => w.r), half: [1.05, 1.7], trailer: { back: 3.2, hx: .85, hz: 1.35 }, kind: 'tractor', R: .55, blink: null }; }
   function spin(car, metres) { car.wheels.forEach((w, k) => { w.rotation.x += metres / (car.radii ? car.radii[k] : car.R); }); }
   const COLOURS = { bus: ['#c8323a', '#e3b83a', '#3f6b35', '#e9e3d1'], common: ['#c9b77a', '#7b5836', '#8e2e25', '#34465a', '#9aa0a4', '#e9e3d1', '#355f31', '#8fb0bd', '#a3322a', '#5a5f66'], wedge: ['#cf5a3e', '#efc970', '#f6f3ea', '#17181b'],
     micro: ['#e9e3d1', '#8e2e25', '#efc970', '#8fb0bd', '#355f31', '#c9b77a', '#cf5a3e'], twostroke: ['#b7c4a0', '#8fb0bd', '#e9e3d1', '#c9b77a', '#9aa0a4', '#d9c9a0'], van: ['#5f7a4e', '#8e2e25', '#9aa0a4', '#34465a', '#e9e3d1'], barge: ['#e9e3d1', '#34465a', '#7b5836', '#17181b', '#9aa0a4'] };
