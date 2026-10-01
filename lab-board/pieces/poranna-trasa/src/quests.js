@@ -392,7 +392,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     active.push(e); hud.rant(V(lady.x, lady.G.position.y + 1.9, lady.z), 'ZŁODZIEJ!!! MOJA TOREBKA!', false);
     game.flash(R.foot ? 'Złodziej! Goń tego z czerwonym światłem i przywal mu.' : 'Złodziej! Goń tego z czerwonym światłem i kopnij go.'); return true;
   }
-  function endThief(e, back = true) { remove(e); const { lad, lady } = e; e.glow.parent?.remove(e.glow); lad.flee = 3; lady.stun = 0; if (lady.pr?.handbag && back) lady.pr.handbag.visible = true; e.loot.parent?.remove(e.loot); thiefT = 110 + rnd() * 90; }
+  function endThief(e, back = true) { remove(e); const { lad, lady } = e; e.glow.parent?.remove(e.glow); lad.flee = 3; lady.stun = 0; if (lady.pr?.handbag && back) lady.pr.handbag.visible = true; e.loot.parent?.remove(e.loot); thiefT = (110 + rnd() * 90) * (1 - .45 * (game.diff?.() || 0)); }
   // the bag picked up: what now? Back to her (if you like), in at the police station ahead, the money out and the bag in a bin by the
   // road, or all of it kept. None of them asks you to turn round; what is not done in a few minutes is let go (she gives up).
   function bagPicked(e) {
@@ -474,7 +474,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
       if (P0.t > 70) { P0.stage = 'leave'; } }
     else if (P0.stage === 'stop') { P0.v = 0; const ts = q.s - P0.dir * 3.2, k = Math.min(1, dt * 1.8); P0.s += wrapD(ts, P0.s) * k; P0.d += ((q.d - (Math.sign(q.d) || 1) * 2.5) - P0.d) * k;   // (pulls up beside him, on the road side)
       if (!talk.isOpen && P0.t > 1) { P0.stage = 'leave'; } }
-    else { P0.v += (15 - P0.v) * Math.min(1, dt); P0.d += ((P0.dir > 0 ? 1.75 : -1.75) - P0.d) * Math.min(1, dt); if (gap < -70 || P0.t > 120) { P0.car.g.parent?.remove(P0.car.g); PO.car = null; PO.cool = 160 + rnd() * 120; return; } }
+    else { P0.v += (15 - P0.v) * Math.min(1, dt); P0.d += ((P0.dir > 0 ? 1.75 : -1.75) - P0.d) * Math.min(1, dt); if (gap < -70 || P0.t > 120) { P0.car.g.parent?.remove(P0.car.g); PO.car = null; PO.cool = (160 + rnd() * 120) * (1 - .4 * (game.diff?.() || 0)); return; } }
     if (P0.stage === 'leave' && P0.t < 1e6 && !P0.left) { P0.left = true; P0.t = 0; }
     P0.s += P0.dir * P0.v * dt; const a = along(P0.s, P0.d), y = track.probe(a.x, a.z, a.i).y; P0.car.g.position.set(a.x, y, a.z); P0.car.g.rotation.y = Math.atan2(a.f.x * P0.dir, a.f.z * P0.dir);
   }

@@ -573,3 +573,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - działają w jeździe: prędkość maksymalna i rozpędzanie, opór trawy, podjazdy, skręt, sprint (kondycja), szybkość tricków, pojemność torby (więcej się nie zmieści: „Torba pełna”)
 - fanty z zadań: sprzedaż, a dzwonek i lampka do zamontowania od ręki; dopełnienie torby gazetami (2 gazety za złotówkę)
 - części zostają do końca przejazdu (od nowa: rower fabryczny)
+
+## Wersja 57: przejazd ma początek i koniec
+
+- torba na start mieści 30 gazet (w sklepie 36 i 42)
+- zdrowie (serce i pasek pod portmonetką): wywrotka −15, uderzenie autem −30, potrącenie pieszo −35, przegrana bójka −35; powoli wraca samo, bułka z łupu +30, drożdżówka w sklepie +40 (5 zł)
+- koniec trasy: gdy zdrowie spadnie do zera albo przy trzecim zatrzymaniu przez policję
+- trudność rośnie z dystansem (pełna po 8 km): auta jeżdżą szybciej, patrole i złodzieje zdarzają się częściej
+- ekran końca trasy (`src/run.js`): powód, dystans, dostarczone gazety, zarobek, zbite szyby, zatrzymania; rekord zapamiętany w przeglądarce
+- loteria: z kupionych części i fantów jedna rzecz zostaje na koncie na zawsze; każdy kolejny przejazd zaczyna się z tym, co już na koncie („Z konta: ...”)

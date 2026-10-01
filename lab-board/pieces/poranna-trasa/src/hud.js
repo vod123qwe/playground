@@ -157,7 +157,7 @@ export function createHud() {
     for (let k = hearts.length - 1; k >= 0; k--) { const q = hearts[k]; q.t += dt; if (q.t > 1.3) { hearts.splice(k, 1); continue; } if (q.t > 1 && ((q.t * 20) | 0) % 2) continue;
       heart(Math.round(q.x + Math.sin(q.t * 6 + q.ph) * 2.5), Math.round(q.y - q.t * q.v), q.t < .5 ? '#e08556' : '#cf5a3e', '#5e1c17'); }
     // top right: the papers left, and the money in a purse (see purse())
-    { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); if (st.fame > .3 || st.siren) fame(st.fame || 0, st.siren, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2 + 20); }
+    { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); if (st.fame > .3 || st.siren) fame(st.fame || 0, st.siren, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2 + 20); if (st.hp != null) health(st.hp, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2 + 28); }
     if (st.bagX != null) { const s = String(st.papers), y = st.bagY != null ? Math.round(st.bagY * cv.height) + 2 : cv.height - 11; outlined(s, Math.round(st.bagX * cv.width) - width(s) - 4, y, st.papers ? '#f6f3ea' : '#cf5a3e'); }   // (how many papers, by the bag)
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
@@ -288,6 +288,10 @@ export function createHud() {
     for (let i = 0; i < 6; i++) { const x = x0 + 9 + i * 6; g.fillStyle = '#17181b'; g.fillRect(x - 1, y, 5, 5); g.fillStyle = i < n ? (i >= 2 ? '#e0473a' : '#efc970') : '#3a3c40'; g.fillRect(x, y + 1, 3, 3); } }
   // words broken into lines of at most n signs (a word longer than that: cut)
   function wrapTo(s, n) { if (s.length <= n) return [s]; const out = []; let ln = ''; for (const w of s.split(' ')) { const t = ln ? ln + ' ' + w : w; if (t.length > n && ln) { out.push(ln); ln = w.slice(0, n); } else ln = t.slice(0, n); } if (ln) out.push(ln); return out; }
+  // health: a heart and a bar under the purse (a run ends at nothing); low: the heart beats
+  function health(h, rx, y) { const w = 42, x0 = rx - w, low = h < 30, beat = low && ((markT * 4) | 0) % 2;
+    g.fillStyle = '#17181b'; g.fillRect(x0 - 10, y - 1, w + 11, 7); heart(x0 - 9, y - (beat ? 1 : 0), low ? '#ff5a4a' : '#cf5a3e', '#5e1c17');
+    g.fillStyle = '#3a3c40'; g.fillRect(x0, y + 1, w, 3); g.fillStyle = low ? '#e0473a' : h < 60 ? '#efc970' : '#9fd27a'; g.fillRect(x0, y + 1, Math.round(w * Math.max(0, h) / 100), 3); }
   function questList(L) { const W = cv.width, y0 = document.body.classList.contains('touch') ? Math.round(cv.height * .17) : 5;
     L.slice(0, 3).forEach((s, i) => { const w = width(s) + 9, x = Math.round(W / 2 - w / 2), y = y0 + i * 11; g.fillStyle = 'rgba(23,24,27,.74)'; g.fillRect(x, y, w, 10); g.fillStyle = '#efc970'; g.fillRect(x, y, 1, 10); text(s, x + 5, y + 2, i ? '#f6f3ea' : '#efc970', null); }); }
   // a tip: words in a box over the bottom of the picture, broken into lines that fit
