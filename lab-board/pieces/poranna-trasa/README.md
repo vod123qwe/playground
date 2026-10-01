@@ -914,3 +914,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - kwestie Janusza (słuchawka i telefon) i telefonów na trasie losowane jak z talii: żadna nie wraca, dopóki nie padną wszystkie, i nie dwa razy z rzędu (pamiętane między uruchomieniami)
 - scenki „to ty dzwonisz?” i „wykręciło mi się” najwyżej raz na odcinek i nie w dwóch odcinkach z rzędu
 - dzwonienie przez przypadek kończy się różnie: czasem „do młodego mi się wykręciło”, częściej zwykły klik, bateria w pół słowa, „nie znamy się”, długi sygnał
+
+## Wersja 102: region Wieś
+
+- świat budowany dla regionu (src/track.js: REGION_T): peryferie jak dotąd, a Wieś to osobne miejsce: dłuższa pętla z górkami (prawie 1 km), droga bez krawężników i linii, żwirowe pobocze i wydeptana ścieżka zamiast chodnika, rzadsze domy w tynku (szarości, biele, eternit), gospodarstwa ze stodołami i pola tuż przy drodze, jeden przystanek
+- wiejskie gospodarstwa przy drodze przyjmują gazety (mają drzwi i prenumeratorów)
+- 4 trasy na Wsi: Polna droga (pół wsi), Przez sady (w drugą stronę), Za traktorem (więcej maszyn), Targowy poranek (ruch i psy); z nagrodami za gwiazdki i zapowiedziami w gazecie
+- zmiana regionu: wybór trasy z innego regionu zapisuje stan i ładuje stronę dla tego regionu (adres ?region=wies); powrót do domu wraca do peryferii; trasy w regionie bez przeładowania
+- na Wsi nie ma domu gazeciarza: start spod drogi na początku pętli
+- plan regionów i tras: docs/regiony.md (6 regionów, 24 trasy)
