@@ -459,7 +459,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     return { x: A.p.x + (Bq.p.x - A.p.x) * t + A.r.x * d, z: A.p.z + (Bq.p.z - A.p.z) * t + A.r.z * d, f: A.f, i: i0 }; };
   const wrapD = (a, b) => { const len = track.N * track.ds; let d = (a - b) % len; if (d > len / 2) d -= len; if (d < -len / 2) d += len; return d; };
   function stepPolice(dt, R) {
-    game.fame(-dt / 70); PO.cool -= dt;
+    game.fame(-dt / 70 * (game.lamp?.() ? 1.5 : 1)); PO.cool -= dt;   // (a lamp: the police forget sooner)
     if (PO.job?.kind === 'gonczy' && (!PO.job.b || !PO.job.b.on)) { const b = (game.traffic?.bikes || []).find(x => x.r && x.on && !x.fall); if (b && b !== PO.job.b) { if (PO.job.b) PO.job.b.wanted = false; PO.job.b = b; b.wanted = true; } }
     for (const pk of PO.parked) { pk.t -= dt; pk.car.flash(performance.now() / 1000, pk.t > 0); if (pk.t <= -30) { pk.car.g.parent?.remove(pk.car.g); pk.gone = true; } } PO.parked = PO.parked.filter(p => !p.gone);
     const P0 = PO.car;
@@ -602,8 +602,9 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
         if (active.includes(th) && th.stage !== 'bag' && th.t > 180) { game.flash(th.stage === 'bin' ? 'Torebkę wciąż wieziesz. Pani już nie szuka.' : 'Pani poszła do domu. Torebka zostaje u ciebie.'); endThief(th, false); } } }
     // who is in reach to talk to (the bike: slow, a few metres; on foot: close)
     near = null; const reach = R.foot ? 3.2 : 8.5; let bd = reach;
-    const consider = (p, run, prio = 0, focus) => { const d = Math.hypot(p.x - R.x, p.z - R.z) - prio; if (d < bd) { bd = d; near = { p, run, focus: focus || (() => V(p.x, (p.y || 0) + 1.5, p.z)) }; } };
+    const consider = (p, run, prio = 0, focus, label) => { const d = Math.hypot(p.x - R.x, p.z - R.z) - prio; if (d < bd) { bd = d; near = { p, run, label, focus: focus || (() => V(p.x, (p.y || 0) + 1.5, p.z)) }; } };
     for (const e of active) if (e.talk) { const pt = e.point?.ped ? V(e.point.ped.x, e.point.ped.G.position.y, e.point.ped.z) : e.point?.p || (e.at && e.at.G.position); if (pt) consider(pt, e.talk, 2, e.at ? () => head(e.at) : e.point?.ped ? () => V(e.point.ped.x, e.point.ped.G.position.y + 1.6, e.point.ped.z) : null); }
+    for (const sh of track.shops || []) if (sh.door) consider(sh.door, () => game.openShop(), 0, null, 'SKLEP');   // (the bike shop: in, when you like)
     for (const post of track.posts || []) if (post.door && !active.some(e => e.post === post && e.talk)) consider(post.door, () => stationTalk(post), 0, () => over(post.door, 1.7));
     for (const [r, o] of P) if (o.lead === r && r.G.visible !== false) consider(r.G.position, () => converse(r), o.offer && o.cool <= 0 ? 1 : 0, () => head(r));
     if (near && !talk.isOpen) { near.slow = R.foot || R.v < 3.2; const ask = R.foot ? inp.talk : inp.chat; if (ask && near.slow) { focusAt = near.focus; near.run(); if (R.foot) inp.talk = false; } else if (ask && !near.slow && flashT <= 0) { game.flash('Zwolnij, żeby pogadać'); flashT = 2; } }
@@ -617,7 +618,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     for (const e of active) { const p = e.target?.(); if (!p) continue; const s = typeof e.mark === 'function' ? e.mark() : e.mark || 'v', col = typeof e.col === 'function' ? e.col() : e.col || '#efc970', dist = Math.round(Math.hypot(p.x - R.x, p.z - R.z));
       out.push({ p, s, col, edge: true, dist, label: e.label ? e.label() + ' ' + dist + ' M' : null }); }
     if (PO.car && PO.car.stage === 'chase') { const g = PO.car.car.g.position; out.push({ p: V(g.x, g.y + 2.4, g.z), s: 'v', col: '#3d7be0', edge: true, label: 'POLICJA', dist: 0 }); }
-    if (near && !talk.isOpen) { const p = near.p.clone ? near.p.clone() : V(near.p.x, near.p.y, near.p.z); p.y += 2.6; out.push({ p, s: '', label: near.slow ? game.talkKey() : 'ZWOLNIJ', col: '#f6f3ea' }); }
+    if (near && !talk.isOpen) { const p = near.p.clone ? near.p.clone() : V(near.p.x, near.p.y, near.p.z); p.y += 2.6; out.push({ p, s: '', label: near.slow ? (near.label ? game.talkKey().replace('GADAJ', 'SKLEP') : game.talkKey()) : 'ZWOLNIJ', col: '#f6f3ea' }); }
     return out;
   }
   function tracker() { const R = R0(); return (PO.car && PO.car.stage === 'chase' ? ['POLICJA! ZWOLNIJ I STAŃ' + (PO.car.run > 4 ? ` (UCIEKASZ ${Math.max(0, Math.ceil(14 - PO.car.run))} S)` : '')] : []).concat(active.map(e => { const p = e.target?.(); return e.text() + (p ? ' ' + Math.round(Math.hypot(p.x - R.x, p.z - R.z)) + ' M' : ''); })); }

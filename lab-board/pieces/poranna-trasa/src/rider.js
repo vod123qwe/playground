@@ -76,7 +76,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   { const s = new THREE.Shape(); s.moveTo(0, .15); s.bezierCurveTo(.035, .15, .04, .08, .045, .04); s.bezierCurveTo(.09, 0, .095, -.06, .07, -.1); s.bezierCurveTo(.04, -.125, -.04, -.125, -.07, -.1);
     s.bezierCurveTo(-.095, -.06, -.09, 0, -.045, .04); s.bezierCurveTo(-.04, .08, -.035, .15, 0, .15);
     const g = new THREE.ExtrudeGeometry(s, { depth: .03, bevelEnabled: true, bevelThickness: .015, bevelSize: .012, bevelSegments: 3, curveSegments: 12 }); g.rotateX(-Math.PI / 2); g.translate(0, SEAT.y + .06, SEAT.z - .02);
-    mesh(g, M.black, bike); }
+    M.saddle = toon('#1d1e21'); var saddle = mesh(g, M.saddle, bike); }
   // the steering: fork, stem, bar, grips (turned about the head tube's axis)
   const steer = new THREE.Group(); steer.position.copy(P(HEADT)); bike.add(steer);
   const headAxis = P(HEADT).sub(P(HEADB)).normalize();
@@ -89,10 +89,12 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   for (const s of [-1, 1]) { const g = mesh(taper(.02, .02, 10), M.grip, steer); span(g, new THREE.Vector3(s * .21, .128, -.018), new THREE.Vector3(s * .31, .12, -.085)); }
   const grips = [new THREE.Vector3(-.26, .125, -.05), new THREE.Vector3(.26, .125, -.05)];     // (right, left: where the hands hold, in the steering's space)
   // the wheels: tyre, rim, spokes, hub
+  const tyres = [];
+  M.rim = toon('#c9cbc8');
   function wheel(c, parent) {
     const w = new THREE.Group(); w.position.copy(P(c)); parent.add(w);
-    const t = mesh(new THREE.TorusGeometry(R - .032, .034, 10, 40), M.tyre, w); t.rotation.y = Math.PI / 2;
-    const r = mesh(new THREE.TorusGeometry(R - .06, .011, 6, 36), M.chrome, w); r.rotation.y = Math.PI / 2;
+    const t = mesh(new THREE.TorusGeometry(R - .032, .034, 10, 40), M.tyre, w); t.rotation.y = Math.PI / 2; tyres.push(t);
+    const r = mesh(new THREE.TorusGeometry(R - .06, .011, 6, 36), M.rim, w); r.rotation.y = Math.PI / 2;
     for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, s = mesh(new THREE.CylinderGeometry(.0025, .0025, R - .07, 3), M.chrome, w); s.position.set((i % 2 ? .012 : -.012), Math.cos(a) * (R - .07) / 2, Math.sin(a) * (R - .07) / 2); s.rotation.x = a; s.castShadow = false; }
     const h = mesh(new THREE.CylinderGeometry(.022, .022, .1, 12), M.chrome, w); h.rotation.z = Math.PI / 2;
     return w;
@@ -294,5 +296,18 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   function ragdollOff() { RG.on = false; head.position.set(0, .6, 0); }
   function throwPaper(side) { if (st.throwT >= 0) return false; st.throwT = 0; st.side = side; st.released = false; return true; }
   root.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  return { root, head, boy, bagFill: k => satchel.setFill(k), get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
+  // ---------- the parts (the bike shop): paint, tyres and rims, the saddle, the grips; a bell, a lamp, gears; a bigger bag ----------
+  const extra = {};
+  { const ch = M.chrome, bell = new THREE.Group(); steer.add(bell); bell.position.set(.17, .135, -.005); const dome = new THREE.Mesh(new THREE.SphereGeometry(.026, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), ch); dome.position.y = .012; bell.add(dome); bell.add(new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .02, 6), ch)); extra.bell = bell;
+    const lamp = new THREE.Group(); steer.add(lamp); lamp.position.set(0, .07, .05); lamp.add(new THREE.Mesh(new THREE.BoxGeometry(.06, .05, .07), M.black)); const lens = new THREE.Mesh(new THREE.CircleGeometry(.021, 12), new THREE.MeshBasicMaterial({ color: '#fff3c4' })); lens.position.z = .036; lamp.add(lens); extra.lamp = lamp;
+    const cogs = new THREE.Group(); rearW.add(cogs); for (let k = 0; k < 5; k++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.03 + k * .009, .03 + k * .009, .004, 14), ch); c.rotation.z = Math.PI / 2; c.position.x = -.03 - k * .006; cogs.add(c); } extra.cogs = cogs;
+    for (const k in extra) { extra[k].visible = false; extra[k].traverse(o => { o.castShadow = true; }); } }
+  // parts: { paint, tyre, rim, tyreW, saddle, saddleS, grip, bell, lamp, gears, bagS } (whatever is given; colours as '#rrggbb')
+  function setParts(o) {
+    if (o.paint) M.frame.color.set(o.paint); if (o.tyre) M.tyre.color.set(o.tyre); if (o.rim) M.rim.color.set(o.rim); if (o.saddle) M.saddle.color.set(o.saddle); if (o.grip) M.grip.color.set(o.grip);
+    if (o.tyreW) for (const t of tyres) t.scale.set(1, 1, o.tyreW); if (saddle && o.saddleS) { const k = o.saddleS; saddle.scale.setScalar(k); saddle.position.set(0, (SEAT.y + .06) * (1 - k), (SEAT.z - .02) * (1 - k)); }   // (about its own middle: the geometry sits where the saddle is)
+    for (const k of ['bell', 'lamp']) if (k in o) extra[k].visible = !!o[k]; if ('gears' in o) { extra.cogs.visible = o.gears > 0; extra.cogs.children.forEach((c, i) => { c.visible = i < (o.gears > 1 ? 5 : 3); }); }
+    if (o.bagS) satchel.group.scale.setScalar(o.bagS);
+  }
+  return { root, head, boy, bike, setParts, bagFill: k => satchel.setFill(k), get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
 }

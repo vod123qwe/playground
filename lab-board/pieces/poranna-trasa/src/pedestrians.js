@@ -78,7 +78,7 @@ export function createPedestrians({ THREE, toon, track, seed = 21 }) {
       if ((p.turnT -= dt) <= 0) { p.dir = -p.dir; p.turnT = 12 + rnd() * 25; }                                  // (now and then back the other way)
       // the rider coming along the pavement at them: step aside onto the lawn's edge, wait for him to pass, step back
       const dx = R.x - p.x, dz = R.z - p.z, dist = Math.hypot(dx, dz), A = S[Math.floor(wrap(p.s) / ds) % N], ahead = (dx * A.f.x + dz * A.f.z) * p.dir;
-      const wantOff = dist < 6 && ahead > -1 && Math.abs(R.d - p.side * MID) < 1.1 ? .95 : 0; p.off += THREE.MathUtils.clamp(wantOff - p.off, -dt * 1.5, dt * 1.5);
+      const wantOff = dist < (R.bell ? 11 : 6) && ahead > -1 && Math.abs(R.d - p.side * MID) < 1.1 ? .95 : 0; p.off += THREE.MathUtils.clamp(wantOff - p.off, -dt * 1.5, dt * 1.5);
       p.stun = Math.max(0, (p.stun || 0) - dt); const walking = !(wantOff && p.off > .8 && !(p.flee > 0)) && !(p.stun > 0);   // (stun: kicked, stood a moment)
       if (p.fleeNew) { p.fleeNew = false; if (ahead > 0) p.dir = -p.dir; }                              // (hit: off away from him, fast)
       const pace = p.flee > 0 && !(p.stun > 0) ? (p.flee -= dt, 2.8) : 1;
