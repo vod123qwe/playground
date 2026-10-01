@@ -41,7 +41,8 @@ export function createPad({ onSwitch } = {}) {
     if (!F || !F.isConnected || !bs.includes(F)) { const same = bs.find(b => label(b) === fKey); if (same) set(same, false); else set(bs.find(b => b.classList.contains('sel')) || bs[0]); }
     if (!dir) return; const r0 = F.getBoundingClientRect(), x0 = r0.x + r0.width / 2, y0 = r0.y + r0.height / 2, [ux, uy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[dir];
     let best = null, bv = 1e9; for (const b of bs) { if (b === F) continue; const r = b.getBoundingClientRect(), dx = r.x + r.width / 2 - x0, dy = r.y + r.height / 2 - y0, along = dx * ux + dy * uy, across = Math.abs(dx * uy - dy * ux);
-      if (along < 4 || across > along * 1.6) continue; const v = along + across * 2.2;   // (roughly that way, not far off to a side) if (v < bv) { bv = v; best = b; } }
+      // (roughly that way, not far off to a side)
+      if (along < 4 || across > along * 1.6) continue; const v = along + across * 2.2; if (v < bv) { bv = v; best = b; } }
     if (best) set(best);
   }
   function press() { if (F && F.isConnected) F.click(); }

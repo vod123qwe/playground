@@ -85,7 +85,8 @@ export function createProps({ THREE, toon, tex }) {
     return { group: g, hit: { hx: .7, hz: .7, h: .3, kind: 'soft' } }; }
   function swing(r) { const g = new THREE.Group(), frame = toon('#7b5836');                        // an A-frame and its seat on chains
     for (const x of [-1, 1]) for (const z of [-.55, .55]) { const l = box(.08, 2.3, .08, frame, x * 1.05, 1.1, z * .6); l.rotation.x = -z * .45; g.add(l); }
-    g.add(box(2.3, .1, .1, frame, 0, 2.2, 0)); for (const x of [-.25, .25]) g.add(box(.015, 1.7, .015, metal, x, 1.33, 0)); g.add(box(.6, .04, .22, red, 0, .48, 0));
+    g.add(box(2.3, .1, .1, frame, 0, 2.2, 0)); const pv = new THREE.Group(); pv.position.y = 2.2; g.add(pv); g.userData.pivot = pv;   // (the chains and the seat hung from the bar: they swing)
+    for (const x of [-.25, .25]) pv.add(box(.015, 1.7, .015, metal, x, -.87, 0)); pv.add(box(.6, .04, .22, red, 0, -1.72, 0));
     return { group: g, hit: { hx: 1.15, hz: .5, h: 2.2, kind: 'hard' } }; }
   function kidBike(r) { const g = new THREE.Group(), fr = r() < .5 ? red : blue;                   // lying on the grass
     for (const z of [-.3, .3]) { const w = new THREE.Mesh(new THREE.TorusGeometry(.17, .03, 6, 16), M.wheel); w.position.set(0, .04, z); w.rotation.x = Math.PI / 2; g.add(w); }

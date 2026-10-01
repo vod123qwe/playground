@@ -641,3 +641,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - menu, pytania, rozmowy: krzyżak lub gałka wybiera, A zatwierdza, B wraca; w szybkim wyborze w trakcie jazdy odpowiedzi pod strzałkami krzyżaka; MENU pauza, VIEW notes
 - sklep: podświetlenie skacze po przyciskach (część od razu widać na rowerze), A kupuje, Y pogadaj, B wyjście
 - auta skręcają płynnie: bez przeskoku w bok na styku kawałków drogi, obrót z faktycznego ruchu, jak prawdziwe auto
+
+## Wersja 65: świat reaguje na kopniaki
+
+- naprawione: wersja 64 nie uruchamiała się (błąd w obsłudze pada)
+- kopniak (pieszo albo z roweru) w skrzynkę pocztową: drży, chorągiewka podskakuje, trzecie kopnięcie łamie ją i przewraca na trawnik (sława u policji lekko w górę)
+- słup: ledwie widoczny obłoczek kurzu; drzewo: chwieje się i sypią się liście, im więcej kopniaków, tym więcej (jesienne pomarańczowe, zielone, igły ze świerków); krzak: opadają zielone listki (z kwitnącego płatki); liście zostają na ziemi
+- huśtawka: każdy kopniak rozbuja ją mocniej, potem powoli się uspokaja
+- pachołki: wjechane albo kopnięte przewracają się i odjeżdżają po asfalcie, zamiast stać jak ściana

@@ -62,3 +62,8 @@ Roguelite na rowerze: rozwozisz gazety jak najdalej, trudność i dziwność św
 ## Tryb „czysta jazda” (na przyszłość, decyzja Jarka 2026-10-01)
 
 Osobny tryb bez historii: sama jazda i rzucanie gazet, im dalej dojedziesz, tym lepiej, wynik zapisywany (rekordy). Długa droga, zmieniające się otoczenie i sytuacje: czasem węższe drogi, przejazdy ścieżką, skocznie nad przeszkodami, opony toczące się w poprzek drogi itp.
+
+## Na później: drzwi i teren między domami
+
+- **Pukanie do drzwi**: podchodzisz pieszo i pukasz; czasem ktoś otwiera (krótka rozmowa, prośba, zadanie, kłótnia), czasem tylko cisza albo szczekanie psa za drzwiami. Może z tego wyjść osobny rodzaj akcji (np. dostarczenie do rąk własnych, zbieranie podpisów, ucieczka przed sąsiadem).
+- **Teren między domami**: pusta przestrzeń między posesjami do urozmaicenia (pomysły do wyboru z Jarkiem).

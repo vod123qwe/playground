@@ -39,6 +39,7 @@ import { createRun, kept } from './run.js';
 import { createBook } from './book.js';
 import { createAudio } from './audio.js';
 import { createPad, BTN } from './pad.js';
+import { createWorld } from './world.js';
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
 const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
@@ -123,7 +124,9 @@ const backdrop = createBackdrop({ THREE }); backdrop.position.set(track.centre.x
 const traffic = createTraffic({ THREE, track, cars: track.cars, n: 6, makeRider: () => createRider({ THREE, ramp, toon }), bikes: 2 }); scene.add(traffic.group);   // (cars, and now and then a cyclist coming the other way)
 const dogs = createDogs({ THREE, toon, probe: track.probe });
 const water = createWater({ THREE, scene });
-const residents = createResidents({ THREE, toon, track, hud, scene });   // (people sitting out in their gardens)                         // (a hydrant knocked or kicked)
+const residents = createResidents({ THREE, toon, track, hud, scene });
+// what by the road answers a kick: mailboxes (three and it is off its post), poles, trees and bushes (their leaves), swings, cones
+const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => audio.play(n, o) }, onBreak: T => { B.fame = (B.fame || 0) + .4; hud.pop(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'SKRZYNKA!', '#cf5a3e'); witness?.(T.x, T.z); } });   // (people sitting out in their gardens)                         // (a hydrant knocked or kicked)
 const peds = createPedestrians({ THREE, toon, track }); scene.add(peds.group);
 // a word with people, and the errands that come of it (talk.js: the box; quests.js: who wants what, and what came of it)
 const audio = createAudio();
@@ -555,6 +558,7 @@ function ride(dt, inp) {
     if (C.kind === 'hole') { if (!B.air && !C.cool) { B.jolt = .12; B.v *= .82; C.cool = true; setTimeout(() => { C.cool = false; }, 900); } continue; }
     if (C.kind === 'bundle') { pickBundle(C); continue; }
     if (clear(C)) continue;
+    if (C.thing?.kind === 'cone') { if (Math.abs(B.v) > .4) { stuff.bump(C.thing, Math.sin(B.yaw) * B.v * .9 + (Math.random() - .5), Math.cos(B.yaw) * B.v * .9 + (Math.random() - .5)); B.v *= .9; B.jolt = .06; } continue; }   // (a cone: it goes over, not him)
     if (C.kind === 'soft') { B.v *= Math.pow(.08, dt); continue; }
     if (C.hyd && Math.abs(B.v) > .8 && water.spray(new THREE.Vector3(C.x, C.y0 || 0, C.z), 4.5)) hud.pop(new THREE.Vector3(C.x, (C.y0 || 0) + 1.6, C.z), 'PSSS!', '#9ccad8');   // a hydrant knocked: it gushes
     const into = -(h.nx * Math.sin(B.yaw) + h.nz * Math.cos(B.yaw)) * Math.sign(B.v || 1);   // (how squarely: 1 head on, 0 grazing)
@@ -619,10 +623,11 @@ function kickTargets() {
   for (const pc of quests.policeCars()) add('police', pc.g.position.x, pc.g.position.z, pc, 3.2);
   if (granny.state === 'out') add('granny', granny.group.position.x, granny.group.position.z, granny, 2.6);
   for (const C of track.near(B.hint)) if (C.hyd) add('hyd', C.x, C.z, C, 1.9);
+  for (const T of stuff.near(B.x, B.z, 2.2)) if (!T.broken && !T.down) add('thing', T.x, T.z, T, 2.2 + T.r);
   return out.sort((a, b) => a.d - b.d);
 }
 function landKick(tg) {
-  const at = { dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
+  const at = { dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
   if (tg.kind === 'dog') { dogs.kick(tg.ref, { x: ax / al * 4.5 + Math.sin(B.yaw) * B.v * .5, z: az / al * 4.5 + Math.cos(B.yaw) * B.v * .5 }); hud.impact(mid); slowmo = .09; shake = .3; }   // it flies off
@@ -633,6 +638,7 @@ function landKick(tg) {
   if (tg.kind === 'gangm') { hud.impact(mid); quests.onKickGang(tg.ref); slowmo = .06; shake = .22; }   // (one of the gang: off his bike)
   if (tg.kind === 'police') { hud.impact(mid, 'BUM!'); shake = .28; quests.onKickPolice(tg.ref); }   // (a police car: see quests)
   if (tg.kind === 'granny') { tg.ref.kicked(); hud.rant(tg.ref.mouth, 'JA CI DAM GNOJKU!', true); shake = .12; }   // (the old woman: a kick does nothing, bar make her crosser)
+  if (tg.kind === 'thing') { stuff.hit(tg.ref, ax, az, 1); shake = Math.max(shake, tg.ref.kind === 'mailbox' ? .08 : .03); }   // (from the bike: as on foot)
   if (tg.kind === 'hyd' && water.spray(new THREE.Vector3(tg.ref.x, tg.ref.y0 || 0, tg.ref.z), 4.5)) { hud.impact(new THREE.Vector3(tg.ref.x, (tg.ref.y0 || 0) + .5, tg.ref.z), 'PSSS!'); shake = .15; }
 }
 // ---------- the dogs: which is at his heel; the kick ----------
@@ -867,6 +873,7 @@ function stepPeople(dt, inp, me) {
         setTimeout(() => foot.grudgeAt(at2, pickOf(SZWAGIER_COMES)), 2200); }
       else { hud.rant(mouthOf(p), pickOf(HIT_PED[key] || HIT_ANY)); p.flee = 4.5; p.fleeNew = true; } }
     else if (!p && PH.pc) { const g0 = PH.pc.g.position; hud.impact(new THREE.Vector3(g0.x, g0.y + 1, g0.z), PH.kick ? 'BUM!' : 'BANG!'); shake = Math.max(shake, .18); quests.onKickPolice(PH.pc); }
+    else if (!p) { const T = stuff.strike(me.x, me.z, me.yaw, PH.reach, PH.kick ? 1 : .55); if (T) shake = Math.max(shake, T.kind === 'mailbox' ? .08 : .03); }   // (no one there: a thing, maybe)
   }
   // a cyclist going by, punched: off his bike he goes (and, as after a kick, often gets up for a fight)
   if (pendingBike && (pendingBike.t -= dt) <= 0) { const b = pendingBike.b; pendingBike = null; const bp = b && b.r.root.position;
@@ -1048,7 +1055,7 @@ function frame(now) {
   pad.poll(); padUI(dt);
   if ((menu.open || asking || shop.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !shop.isOpen && !runUI.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if (!asking && !menu.open && !shop.isOpen && !runUI.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); stuff.update(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
@@ -1062,5 +1069,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, unlockTitle, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };
