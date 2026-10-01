@@ -556,3 +556,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - nowy plik `src/stories.js`: pule anegdot dla każdej grupy (policja 18, brzuchacze, babcie i dziadkowie, ekipa spod beczki, przystanek, lump), losowane bez powtórek, aż pula się wyczerpie
 - zagadany ktoś bez sprawy (i nie obrażony) często opowiada anegdotę: lekkie okienko u góry, jedziesz dalej, znika samo po 10 s; każdy raz na jakiś czas
 - policjanci losują anegdoty z większej puli (przy zatrzymaniu, po kopnięciu radiowozu, na posterunku)
+
+## Wersja 55: pula wariantów zadań, dymki w linijkach
+
+- „szyba u sąsiada” w trzech historiach (losowane bez powtórek w przejeździe), każda z własnym twistem i obrazkiem w świecie: wojna o kosiarkę (sąsiad kosi różową kosiarką), antena (Mirek sam ją przekręcił, wieszając flagę w samych skarpetkach; sąsiad podlewa kwiatki z konewką), kogut (pieje budzik w telefonie brzuchacza, bo kogut od trzech lat jest w rosole; sąsiad karmi kury, które dziobią po trawniku)
+- list w trzech wersjach: list, słoik ogórków, pocztówka znad morza spóźniona o pół wieku; każda z własnymi reakcjami odbiorcy
+- ekipa spod beczki chce gazet z różnych powodów: na rozpałkę, na ściółkę dla psa Komornika, na czapki na urodziny Ziutka, na zakład o krzyżówkę
+- dymki z tekstem łamią się na linijki, gdy nie mieszczą się w szerokości ekranu (telefon), a długie zostają dłużej
+- plan: tryb „czysta jazda” na wynik zapisany w docs/wizja.md

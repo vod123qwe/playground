@@ -129,9 +129,9 @@ export function createHud() {
     for (let k = pops.length - 1; k >= 0; k--) { const q = pops[k]; q.t += dt; const p = project(q.p); if (p && q.t < 1.2) { if (q.t > .9 && ((q.t * 20) | 0) % 2) continue; text(q.s, Math.round(p.x - width(q.s) / 2), Math.round(p.y - 10 - q.t * 14), q.col); } if (q.t >= 1.2) pops.splice(k, 1); }
     // the swearing: a bubble with its tail towards the house, springing up, shaking, blinking out
     const taken = [], clear = (x, y, w, h) => { for (let n = 0; n < 6; n++) { const o = taken.find(r => x < r[0] + r[2] + 2 && x + w + 2 > r[0] && y < r[1] + r[3] + 2 && y + h + 2 > r[1]); if (!o) break; y = o[1] - h - 3; } taken.push([x, y, w, h]); return Math.max(2, y); };   // (two at once: one steps up over the other, its tail longer)
-    for (let k = rants.length - 1; k >= 0; k--) { const b = rants[k]; b.t += dt; if (b.t > 2.2) { rants.splice(k, 1); continue; }
-      if (b.t > 1.85 && ((b.t * 18) | 0) % 2) continue;
-      const W = cv.width, H = cv.height, tw = width(b.s), bw = tw + 8, bh = 11, p = project(b.lift ? b.p.clone().setY(b.p.y + b.lift) : b.p);
+    for (let k = rants.length - 1; k >= 0; k--) { const b = rants[k], life = Math.min(4.6, 2.2 + Math.max(0, b.s.length - 18) * .05); b.t += dt; if (b.t > life) { rants.splice(k, 1); continue; }   // (a long one: longer to read)
+      if (b.t > life - .35 && ((b.t * 18) | 0) % 2) continue;
+      const W = cv.width, H = cv.height, L = wrapTo(b.s, Math.max(8, Math.floor((W - 16) / 4))), tw = Math.max(...L.map(width)), bw = tw + 8, bh = 11 + (L.length - 1) * 7, p = project(b.lift ? b.p.clone().setY(b.p.y + b.lift) : b.p);
       const [ax, ay, seen, sx, sy] = anchor(p, b);
       const k0 = Math.min(1, b.t / .22), sc = k0 < 1 ? (1 - Math.pow(1 - k0, 3)) * 1.15 - Math.max(0, k0 - .7) * .5 : 1;   // (a little overshoot on the way up)
       const w = Math.max(3, Math.round(bw * sc)), h = Math.max(3, Math.round(bh * sc));
@@ -139,8 +139,8 @@ export function createHud() {
       g.fillStyle = '#17181b'; g.fillRect(x - 1, y, w + 2, h); g.fillRect(x, y - 1, w, h + 2);                               // the outline (rounded corners)
       g.fillStyle = '#f6f3ea'; g.fillRect(x, y, w, h); g.fillStyle = '#d3d0c3'; g.fillRect(x, y + h - 1, w, 1);               // the bubble, its shaded bottom
       tail(x, y, w, h, sx, sy, seen, '#f6f3ea', b.t);
-      if (sc > .9) { let cx = x + 4; for (let i = 0; i < b.s.length; i++) { const j = ((b.t * 16 + i * 3 + b.seed) | 0) % 3 - 1;   // each sign shaking on its own
-        text(b.s[i], cx, y + 3 + (j > 0 ? 1 : 0) - (j < 0 ? 1 : 0), i === b.s.length - 1 ? '#cf5a3e' : '#8e2e25', null); cx += 4; } } }
+      if (sc > .9) L.forEach((ln, li) => { let cx = x + 4; for (let i = 0; i < ln.length; i++) { const j = ((b.t * 16 + i * 3 + li * 5 + b.seed) | 0) % 3 - 1;   // each sign shaking on its own
+        text(ln[i], cx, y + 3 + li * 7 + (j > 0 ? 1 : 0) - (j < 0 ? 1 : 0), li === L.length - 1 && i === ln.length - 1 ? '#cf5a3e' : '#8e2e25', null); cx += 4; } }); }
     for (let k = impacts.length - 1; k >= 0; k--) { const b = impacts[k]; b.t += dt; if (b.t > .56) { impacts.splice(k, 1); continue; } const p = project(b.p); if (p) drawImpact(b, Math.round(p.x), Math.round(p.y)); }
     // the praise: a bubble springing up, bobbing gently, sending small hearts up; the hearts sway and blink out
     for (let k = praises.length - 1; k >= 0; k--) { const b = praises[k]; b.t += dt; if (b.t > 2.4) { praises.splice(k, 1); continue; }
@@ -286,6 +286,8 @@ export function createHud() {
   function fame(f, siren, rx, y) { const n = Math.min(6, Math.floor(f)), on = siren ? ((markT * 4) | 0) % 2 : -1, x0 = rx - 6 * 6 - 8;
     g.fillStyle = '#17181b'; g.fillRect(x0 - 1, y - 1, 7, 6); g.fillStyle = on === 0 ? '#ff5a4a' : '#8e2e25'; g.fillRect(x0, y, 2, 4); g.fillStyle = on === 1 ? '#5a9aff' : '#2f5aa0'; g.fillRect(x0 + 3, y, 2, 4);
     for (let i = 0; i < 6; i++) { const x = x0 + 9 + i * 6; g.fillStyle = '#17181b'; g.fillRect(x - 1, y, 5, 5); g.fillStyle = i < n ? (i >= 2 ? '#e0473a' : '#efc970') : '#3a3c40'; g.fillRect(x, y + 1, 3, 3); } }
+  // words broken into lines of at most n signs (a word longer than that: cut)
+  function wrapTo(s, n) { if (s.length <= n) return [s]; const out = []; let ln = ''; for (const w of s.split(' ')) { const t = ln ? ln + ' ' + w : w; if (t.length > n && ln) { out.push(ln); ln = w.slice(0, n); } else ln = t.slice(0, n); } if (ln) out.push(ln); return out; }
   function questList(L) { const W = cv.width, y0 = document.body.classList.contains('touch') ? Math.round(cv.height * .17) : 5;
     L.slice(0, 3).forEach((s, i) => { const w = width(s) + 9, x = Math.round(W / 2 - w / 2), y = y0 + i * 11; g.fillStyle = 'rgba(23,24,27,.74)'; g.fillRect(x, y, w, 10); g.fillStyle = '#efc970'; g.fillRect(x, y, 1, 10); text(s, x + 5, y + 2, i ? '#f6f3ea' : '#efc970', null); }); }
   // a tip: words in a box over the bottom of the picture, broken into lines that fit

@@ -58,3 +58,7 @@ Roguelite na rowerze: rozwozisz gazety jak najdalej, trudność i dziwność św
 - Ile kosztuje czas postoju w sklepie (czy świat w tym czasie stoi)?
 - Jak dokładnie liczyć loterię (pula, szanse, zależność od dystansu)?
 - Waluty: kasa w runie i napiwki między runami. Czy to nie za dużo naraz?
+
+## Tryb „czysta jazda” (na przyszłość, decyzja Jarka 2026-10-01)
+
+Osobny tryb bez historii: sama jazda i rzucanie gazet, im dalej dojedziesz, tym lepiej, wynik zapisywany (rekordy). Długa droga, zmieniające się otoczenie i sytuacje: czasem węższe drogi, przejazdy ścieżką, skocznie nad przeszkodami, opony toczące się w poprzek drogi itp.
