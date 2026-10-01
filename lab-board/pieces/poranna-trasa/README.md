@@ -943,3 +943,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - ostatnie ~130 m każdego odcinka to finałowa prosta: brama FINAŁOWA PROSTA nad drogą, slalom pięciu pachołków, skocznia i cztery tarcze przy drodze do trafienia gazetą
 - przewrócony pachołek hamuje; trafiona tarcza kręci się i daje +5 zł; czysty slalom +5 zł
 - przejazd przez metę: chwila zwolnienia i błysk flesza, potem gazeta; w „Twojej trasie” w wypłacie wiersz „Finał: tarcze x/4, czysty slalom”
+
+## Wersja 106: dłuższa, ciekawsza finałowa prosta
+
+- finał do 300 m (na krótkich odcinkach proporcjonalnie krócej): dwa slalomy (drugi ciaśniejszy), trzy strzałki przyspieszenia na asfalcie, seria skoczni różnej wielkości (deska, mała, duża)
+- wykopy w poprzek drogi do przeskoczenia (skocznia albo podskok); część tylko na pół drogi, do objechania albo przeskoczenia; dobrze widoczne: jasna ziemia, czarny środek, żółto-czarne krawędzie, pachołki na rogach, pasiaste barierki
+- tarcze większe (na słupkach), tarcze wyskakujące, gdy podjeżdżasz (chowają się po chwili), dwie tarcze bujające się nad drogą na linie (+10 zł)
+- złote obręcze w powietrzu za dużą skocznią (przelot przez obręcz +3 zł)
+- kombo: punkty jeden po drugim (do 3 s) mnożą premię x2, x3; przewrócony pachołek albo wywrotka zrywa kombo
+- poprawka: po wywrotce w wykopie da się podnieść rower (wykop przewraca tylko przy jeździe, potem chwilę odpuszcza)

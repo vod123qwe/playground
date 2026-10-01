@@ -1296,35 +1296,81 @@ function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.class
   if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; const S0 = LVM.load(), gagOk = !RAD.gag && S0.gagRun !== (S0.runs || 0) - 1; if (gagOk && Math.random() < .3) { RAD.gag = true; LVM.save({ gagRun: S0.runs || 0 }); audio.play('ui'); if (Math.random() < .5) radioScene(draw('mixup', JB.MIXUP)); else radioScene([...draw('pocket', JB.POCKET), draw('pocketEnd', JB.POCKET_END)], true); } else radioSay('idle'); } }
 // ---------- the final straight (the last 130 m before a stretch's finish): a banner over the road, a slalom of cones, a kicker, four
 // targets by the road to hit with a paper; at the finish a beat of slow motion and a flash. What it came to: a bonus, and in the paper ----------
-const FIN = { G: new THREE.Group(), cones: [], targets: [], hits: [], on: false, entered: false, res: null };
+const FIN = { G: new THREE.Group(), cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false, entered: false, res: null, combo: 0, comboT: 0, t: 0 };
 scene.add(FIN.G);
-function clearFinale() { for (const h of FIN.hits) track.dropHit(h); while (FIN.G.children.length) FIN.G.remove(FIN.G.children[0]); FIN.cones = []; FIN.targets = []; FIN.hits = []; FIN.on = false; }
-function buildFinale() { clearFinale(); const N = track.N, ds = track.ds, dir = LV.finish.dir, iF = RUN.cps[RUN.cps.length - 1], S = track.S;
-  const at = (m, d) => { const i = ((iF - dir * Math.round(m / ds)) % N + N) % N, A = S[i], x = A.p.x + A.r.x * d * dir, z = A.p.z + A.r.z * d * dir; return { i, x, z, y: track.probe(x, z, i).y, yaw: Math.atan2(A.f.x * dir, A.f.z * dir) }; };
-  const M = c => toon(c), coneM = M('#e8692c'), bandM = M('#f6f3ea'), postM = M('#f6f3ea'), wood = M('#9e7a4f');
+function clearFinale() { for (const h of FIN.hits) track.dropHit(h); while (FIN.G.children.length) FIN.G.remove(FIN.G.children[0]); Object.assign(FIN, { cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false }); }
+// the final straight (the last 180 m): a banner; a slalom; an arrow pad (a push); a kicker and a trench across the road to clear (in the
+// air: or a fall); big targets by the road, others that pop up as you come, one swinging over the road on a rope; golden rings in the
+// air after the second kicker; a double trench; pads again to the line. Scoring things one after another: a combo (x2, x3)
+function buildFinale() { clearFinale(); const N = track.N, ds = track.ds, dir = LV.finish.dir, iF = RUN.cps[RUN.cps.length - 1], S = track.S, FL = Math.min(300, LV.finish.to * track.len * .45), u = k => k * FL;
+  const at = (m0, d) => { const m = m0 <= 1.0001 ? u(m0) : m0; const i = ((iF - dir * Math.round(m / ds)) % N + N) % N, A = S[i], x = A.p.x + A.r.x * d * dir, z = A.p.z + A.r.z * d * dir; return { i, x, z, y: track.probe(x, z, i).y, yaw: Math.atan2(A.f.x * dir, A.f.z * dir), f: new THREE.Vector3(A.f.x * dir, 0, A.f.z * dir), r: new THREE.Vector3(A.r.x * dir, 0, A.r.z * dir) }; };
+  const M = c => toon(c), coneM = M('#e8692c'), bandM = M('#f6f3ea'), postM = M('#f6f3ea'), wood = M('#9e7a4f'), dark = M('#1d1e21'), gold = M('#efc970'), red = M('#cf5a3e');
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
-  // the banner: FINAŁOWA PROSTA in the pixel letters, chequered ends
-  { const p = at(132, 0), w = track.ROAD + .6, tx = cv(96, 12, g => { for (let x = 0; x < 96; x += 4) for (let y = 0; y < 12; y += 4) { g.fillStyle = ((x + y) / 4) % 2 ? '#17181b' : '#f6f3ea'; g.fillRect(x, y, 4, 4); } g.fillStyle = '#cf5a3e'; g.fillRect(12, 1, 72, 10); g.fillStyle = '#f6f3ea'; g.font = '8px PTPix'; g.textBaseline = 'top'; g.textAlign = 'center'; g.fillText('FINAŁOWA PROSTA', 48, 2); });
-    for (const sd of [-1, 1]) { const q = at(132, sd * w), post = new THREE.Mesh(new THREE.BoxGeometry(.16, 4.6, .16).translate(0, 2.3, 0), postM); post.position.set(q.x, q.y, q.z); FIN.G.add(post); }
+  const W = track.ROAD;
+  // the banner
+  { const p = at(.995, 0), w = W + .6, tx = cv(96, 12, g => { for (let x = 0; x < 96; x += 4) for (let y = 0; y < 12; y += 4) { g.fillStyle = ((x + y) / 4) % 2 ? '#17181b' : '#f6f3ea'; g.fillRect(x, y, 4, 4); } g.fillStyle = '#cf5a3e'; g.fillRect(12, 1, 72, 10); g.fillStyle = '#f6f3ea'; g.font = '8px PTPix'; g.textBaseline = 'top'; g.textAlign = 'center'; g.fillText('FINAŁOWA PROSTA', 48, 2); });
+    for (const sd of [-1, 1]) { const q = at(.995, sd * w), post = new THREE.Mesh(new THREE.BoxGeometry(.16, 4.6, .16).translate(0, 2.3, 0), postM); post.position.set(q.x, q.y, q.z); FIN.G.add(post); }
     const b = new THREE.Mesh(new THREE.BoxGeometry(w * 2, .7, .06), new THREE.MeshBasicMaterial({ map: tx })); b.position.set(p.x, p.y + 4.3, p.z); b.rotation.y = p.yaw; FIN.G.add(b); }
-  // the slalom: five cones, left and right of the middle in turn
-  for (let k = 0; k < 5; k++) { const q = at(118 - k * 8, (k % 2 ? 1 : -1) * 1.1), m = new THREE.Mesh(new THREE.ConeGeometry(.22, .6, 8).translate(0, .3, 0), coneM), band = new THREE.Mesh(new THREE.CylinderGeometry(.13, .16, .08, 8).translate(0, .33, 0), bandM);
-    m.add(band); m.position.set(q.x, q.y, q.z); FIN.G.add(m); FIN.cones.push({ m, x: q.x, z: q.z, down: false, t: 0, ax: 0, az: 0 }); }
-  // the kicker
-  { const q = at(62, 0), o = track.props.ramp(Math.random, 'kicker'); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = q.yaw; FIN.G.add(o.group); FIN.hits.push(track.addHit(o.group, o.hit, q.i)); }
-  // the targets: a round board on a post, red and white rings, by the road, sides in turn
-  const ring = cv(16, 16, g => { const C = [['#cf5a3e', 8], ['#f6f3ea', 6.2], ['#cf5a3e', 4.4], ['#f6f3ea', 2.6], ['#17181b', 1.2]]; for (const [c, r] of C) { g.fillStyle = c; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot(x - 7.5, y - 7.5) < r) g.fillRect(x, y, 1, 1); } });
-  [[104, 1], [80, -1], [44, 1], [26, -1]].forEach(([m, sd]) => { const q = at(m, sd * (track.KERB + 1.6)), t = new THREE.Group(); t.add(new THREE.Mesh(new THREE.BoxGeometry(.1, 1.3, .1).translate(0, .65, 0), wood));
-    const board = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .06, 18).rotateX(Math.PI / 2), [M('#9e7a4f'), new THREE.MeshBasicMaterial({ map: ring }), new THREE.MeshBasicMaterial({ map: ring })]); board.position.y = 1.6; t.add(board);
-    t.position.set(q.x, q.y, q.z); t.rotation.y = q.yaw + sd * Math.PI / 2 * -1; FIN.G.add(t); FIN.targets.push({ t, board, c: new THREE.Vector3(q.x, q.y + 1.6, q.z), hit: false, spin: 0 }); });
-  FIN.on = true; FIN.entered = false; FIN.res = { targets: 0, of: FIN.targets.length, cones: 0, jump: 0 }; }
-function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? foot.me : B;
-  // the straight entered: a word
-  if (!FIN.entered && FIN.targets[0] && Math.hypot(me.x - FIN.targets[0].c.x, me.z - FIN.targets[0].c.z) < 40) { FIN.entered = true; flash('Finałowa prosta! Slalom, skocznia i tarcze: celuj gazetą!'); }
-  for (const c of FIN.cones) { if (c.down) { c.t = Math.min(1, c.t + dt * 4); c.m.rotation.x = c.ax * c.t * 1.5; c.m.rotation.z = c.az * c.t * 1.5; continue; } if (Math.hypot(me.x - c.x, me.z - c.z) < .55) { c.down = true; c.ax = Math.cos(B.yaw); c.az = -Math.sin(B.yaw); FIN.res.cones++; audio.play('pick', { vol: .5 }); B.v *= .85; } }
-  for (const T of FIN.targets) { if (T.hit) { T.spin += dt * 8; T.board.rotation.y = T.spin; continue; }
-    for (const p of papers) if (!p.landed && p.m.position.distanceTo(T.c) < .75) { T.hit = true; FIN.res.targets++; audio.play('coin'); hud.pop(T.c.clone().setY(T.c.y + .8), 'TARCZA! +5', '#9fd27a'); break; } }
-  if (B.air && FIN.entered) FIN.res.jump = Math.max(FIN.res.jump, (FIN.res.jump || 0) + dt); }
+  // the slalom
+  const slalom = (u0, n, gap, off) => { for (let k = 0; k < n; k++) { const q = at(u(u0) - k * gap, (k % 2 ? 1 : -1) * off), m = new THREE.Mesh(new THREE.ConeGeometry(.28, .75, 8).translate(0, .375, 0), coneM), band = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, .1, 8).translate(0, .42, 0), bandM);
+    m.add(band); m.position.set(q.x, q.y, q.z); FIN.G.add(m); FIN.cones.push({ m, x: q.x, z: q.z, down: false, t: 0, ax: 0, az: 0 }); } };
+  slalom(.95, 6, 7, 1.1); slalom(.5, 6, 5, 1.5);
+  // an arrow pad: chevrons on the road, a push forward
+  const arrowT = cv(16, 16, g => { g.fillStyle = '#efc970'; for (let k = 0; k < 2; k++) for (let y = 0; y < 6; y++) { g.fillRect(4 + y - 0, 2 + k * 7 + y, 2, 1); g.fillRect(10 - y, 2 + k * 7 + y, 2, 1); } });
+  const pad = m => { const q = at(m, 0), o = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: arrowT, transparent: true })); o.position.set(q.x, q.y + .03, q.z); o.rotation.y = q.yaw + Math.PI; FIN.G.add(o); FIN.pads.push({ q, used: false, o }); };
+  pad(.8); pad(.55); pad(.03);
+  // a kicker, a trench after it (planks at its edges, a striped board each side), another before the line (two of them, a gap between)
+  const kicker = (m, size = 'kicker') => { const q = at(m, 0), o = track.props.ramp(Math.random, size); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = q.yaw; FIN.G.add(o.group); FIN.hits.push(track.addHit(o.group, o.hit, q.i)); };
+  const stripes = cv(8, 2, g => { for (let x = 0; x < 8; x++) { g.fillStyle = x % 2 ? '#cf5a3e' : '#f6f3ea'; g.fillRect(x, 0, 1, 2); } }), stripeM = new THREE.MeshBasicMaterial({ map: stripes });
+  // (a trench: across the whole road, or half of it (hw its half width, cx its middle off the road's): to ride round or to jump)
+  const trench = (m, len = 3.2, hw = W, cx = 0) => { const q = at(m, 0), g = new THREE.Group(); g.position.set(q.x, q.y, q.z); g.rotation.y = q.yaw; const k = -1;   // (the group's x is the road's right reversed)
+    // (seen from afar: light dug earth round a black hole, yellow and black edges, a cone at each corner)
+    const pit = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, .05, len), M('#8a6a44')); pit.position.set(cx * k, .03, 0); g.add(pit); const deep = new THREE.Mesh(new THREE.BoxGeometry(hw * 2 - .5, .04, len - .6), M('#050403')); deep.position.set(cx * k, .05, 0); g.add(deep);
+    const hz = cv(8, 2, g2 => { for (let x = 0; x < 8; x++) { g2.fillStyle = (x >> 1) % 2 ? '#17181b' : '#efc930'; g2.fillRect(x, 0, 1, 2); } }), hzM = new THREE.MeshBasicMaterial({ map: hz });
+    for (const z of [-len / 2, len / 2]) { const e = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, .14, .2), hzM); e.position.set(cx * k, .08, z); g.add(e); }
+    for (const sx of [-1, 1]) for (const z of [-len / 2 - .35, len / 2 + .35]) { const c0 = new THREE.Mesh(new THREE.ConeGeometry(.22, .6, 8).translate(0, .3, 0), coneM); c0.position.set((cx + sx * (hw - .15)) * k, 0, z); g.add(c0); }
+    for (const sd of [-1, 1]) { const x = (cx + sd * (hw + .25)) * k, b = new THREE.Mesh(new THREE.BoxGeometry(.05, .3, len + .6), stripeM); b.position.set(x, .55, 0); g.add(b); for (const z of [-len / 2 - .3, len / 2 + .3]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(.08, .7, .08), postM); p2.position.set(x, .35, z); g.add(p2); } }
+    FIN.G.add(g); FIN.trenches.push({ q, len, hw, cx, done: false }); };
+  kicker(.87, 'plank'); kicker(.83, 'kicker'); kicker(.77, 'plank'); trench(u(.77) - 5, 1.8, W * .55, -W * .45); kicker(.15, 'kicker'); trench(u(.15) - 6, 2);
+  // the targets: big boards on posts by the road (red and white rings), pop-ups lying flat till you come, one swinging over the road
+  const ring = cv(16, 16, g => { const C = [['#cf5a3e', 8], ['#f6f3ea', 6.2], ['#cf5a3e', 4.4], ['#f6f3ea', 2.6], ['#17181b', 1.2]]; for (const [c, r] of C) { g.fillStyle = c; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot(x - 7.5, y - 7.5) < r) g.fillRect(x, y, 1, 1); } }), ringM = new THREE.MeshBasicMaterial({ map: ring });
+  const board = r => { const b = new THREE.Mesh(new THREE.CylinderGeometry(r, r, .08, 20).rotateX(Math.PI / 2), [wood, ringM, ringM]); return b; };
+  const target = (m, sd, kind = 'post') => { const q = at(m, sd * (W + 1.5)), t = new THREE.Group(), r = kind === 'post' ? .95 : .8; t.position.set(q.x, q.y, q.z); t.rotation.y = q.yaw + Math.PI / 2;
+    const hinge = new THREE.Group(); t.add(hinge); if (kind === 'post') { t.add(new THREE.Mesh(new THREE.BoxGeometry(.12, 1.6, .12).translate(0, .8, 0), wood)); const b = board(r); b.position.y = 2.1; hinge.add(b); }
+    else { const b = board(r); b.position.y = r + .1; hinge.add(b); hinge.add(new THREE.Mesh(new THREE.BoxGeometry(.1, r + .1, .1).translate(0, (r + .1) / 2, 0), wood)); hinge.rotation.z = -Math.PI / 2 * sd; }
+    FIN.G.add(t); FIN.targets.push({ t, hinge, kind, r, c: new THREE.Vector3(q.x, q.y + (kind === 'post' ? 2.1 : r + .1), q.z), hit: false, spin: 0, up: kind === 'post', upT: 0, sd, pay: kind === 'post' ? 5 : 7 }); };
+  target(.7, 1); target(.66, -1, 'pop'); target(.62, 1, 'pop'); target(.4, -1); target(.21, 1); target(.17, -1, 'pop'); target(.08, 1, 'pop'); target(.06, -1, 'pop');
+  // the swinging one: a frame over the road, the board on a rope, to and fro
+  for (const su of [.58, .25]) { const q = at(su, 0), g = new THREE.Group(); g.position.set(q.x, q.y, q.z); g.rotation.y = q.yaw; for (const sd of [-1, 1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(.18, 5.2, .18).translate(0, 2.6, 0), dark); p2.position.x = sd * (W + .5); g.add(p2); }
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(W * 2 + 1.2, .18, .18), dark); bar.position.y = 5.1; g.add(bar); const sw = new THREE.Group(); sw.position.y = 5.0; g.add(sw);
+    const rope = new THREE.Mesh(new THREE.BoxGeometry(.03, 1.6, .03).translate(0, -.8, 0), M('#c9b77a')); sw.add(rope); const b = board(.75); b.rotation.y = Math.PI / 2; b.position.y = -2.3; sw.add(b);
+    FIN.G.add(g); FIN.targets.push({ t: g, hinge: sw, kind: 'swing', r: .75, c: new THREE.Vector3(q.x, q.y + 2.7, q.z), hit: false, spin: 0, up: true, sd: 0, pay: 10, q, board: b }); }
+  // the second kicker and the golden rings in the air after it
+  kicker(.36, 'big');
+  for (let k = 0; k < 5; k++) { const q = at(u(.36) - 7 - k * 3.2, 0), o = new THREE.Mesh(new THREE.TorusGeometry(.7, .09, 6, 16), gold); o.position.set(q.x, q.y + 2.4 + Math.sin(k / 4 * Math.PI) * .7, q.z); o.rotation.y = q.yaw; FIN.G.add(o); FIN.rings.push({ o, got: false }); }
+  // the double trench, a gap of road between; pop-ups both sides; a pad to the line
+  kicker(.46, 'plank'); trench(u(.3), 2, W * .6, W * .4); trench(u(.3) - 5, 2, W * .6, -W * .4);
+  FIN.on = true; FIN.entered = false; FIN.combo = 0; FIN.comboT = 0; FIN.res = { targets: 0, of: FIN.targets.length, cones: 0, rings: 0, trenches: 0, combo: 0, score: 0 }; }
+function finScore(n, at, label) { FIN.combo = FIN.comboT > 0 ? FIN.combo + 1 : 1; FIN.comboT = 3; const k = Math.min(3, FIN.combo), v = n * k; FIN.res.score += v; FIN.res.combo = Math.max(FIN.res.combo, k);
+  audio.play(k > 1 ? 'trick' : 'coin'); hud.pop(at, `${label} +${v}${k > 1 ? ' x' + k : ''}`, k > 1 ? '#efc970' : '#9fd27a'); }
+function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? foot.me : B; FIN.t += dt; FIN.comboT -= dt;
+  const near = (p, m) => Math.hypot(me.x - p.x, me.z - p.z) < m;
+  if (!FIN.entered && FIN.cones[0] && near(FIN.cones[0], 30)) { FIN.entered = true; flash('Finałowa prosta! Slalom, wykopy do przeskoczenia, tarcze i obręcze: kombo mnoży!'); }
+  for (const c of FIN.cones) { if (c.down) { c.t = Math.min(1, c.t + dt * 4); c.m.rotation.x = c.ax * c.t * 1.5; c.m.rotation.z = c.az * c.t * 1.5; continue; } if (near(c, .6)) { c.down = true; c.ax = Math.cos(B.yaw); c.az = -Math.sin(B.yaw); FIN.res.cones++; FIN.combo = 0; audio.play('pick', { vol: .5 }); B.v *= .85; } }
+  for (const P of FIN.pads) if (!P.used && near(P.q, 1.6) && !foot.active) { P.used = true; B.v = Math.min(B.v + 3.5, 13); audio.play('trick', { vol: .5 }); flash('Strzała! Szybciej!'); setTimeout(() => { P.used = false; }, 4000); }
+  // the trenches: over one on the ground, a fall; in the air: cleared
+  for (const T of FIN.trenches) { const dx = me.x - T.q.x, dz = me.z - T.q.z, al = dx * T.q.f.x + dz * T.q.f.z, ac = dx * T.q.r.x + dz * T.q.r.z;
+    T.cool = Math.max(0, (T.cool || 0) - dt);
+    if (Math.abs(ac - T.cx) < T.hw && Math.abs(al) < T.len / 2 - .2 && !foot.active) { if (!B.air && !B.crash && Math.abs(B.v) > 2.5 && !T.cool) { crash(null); T.cool = 6; flash('Wykop! Trzeba było skoczyć (skocznia albo podskok)'); FIN.combo = 0; } else if (B.air && !T.done) { T.done = true; FIN.res.trenches++; finScore(2, new THREE.Vector3(me.x, (B.y || 0) + 2, me.z), 'PRZESKOK!'); } } }
+  // the targets: a pop-up stands as you come, lies again after a while; the swinging one swings
+  for (const T of FIN.targets) {
+    if (T.kind === 'pop') { const d = Math.hypot(me.x - T.c.x, me.z - T.c.z); if (!T.up && !T.hit && d < 26) { T.up = true; T.upT = 0; audio.play('ui', { vol: .4 }); } if (T.up) T.upT += dt; const want = T.up && (T.upT < 5 || T.hit) ? 0 : -Math.PI / 2 * T.sd; T.hinge.rotation.z += (want - T.hinge.rotation.z) * Math.min(1, dt * 10); if (T.upT >= 5 && !T.hit) T.up = false; }
+    if (T.kind === 'swing') { const a = Math.sin(FIN.t * 1.6) * .75; T.hinge.rotation.x = a; T.board.getWorldPosition(T.c); }
+    if (T.hit) { T.spin += dt * 9; (T.kind === 'swing' ? T.board : T.hinge.children[T.kind === 'post' ? 0 : 0]).rotation.z = T.spin; continue; }
+    if (!T.up && T.kind === 'pop') continue;
+    for (const p of papers) if (!p.landed && p.m.position.distanceTo(T.c) < T.r + .25) { T.hit = true; FIN.res.targets++; finScore(T.pay, T.c.clone().setY(T.c.y + .8), T.kind === 'swing' ? 'W WAHADŁO!' : 'TARCZA!'); break; } }
+  // the rings: through one in the air
+  for (const R of FIN.rings) { R.o.rotation.z += dt * 2; if (R.got) { R.o.scale.multiplyScalar(Math.max(0, 1 - dt * 4)); continue; } const p = new THREE.Vector3(me.x, (B.y || 0) + 1, me.z); if (p.distanceTo(R.o.position) < 1.1) { R.got = true; FIN.res.rings++; finScore(3, R.o.position.clone().setY(R.o.position.y + .6), 'OBRĘCZ!'); } } }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
@@ -1346,7 +1392,7 @@ function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LE
   const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
   const got = LVM.rewardsFor(L.id, before, rec.best.stars), bonus = Math.round((B.earned || 0) * LVM.modBonus(RUN.mods || [])), inc = LVM.income();
   for (const g of got) { if (g.cash) B.points += g.cash; if (g.part) shop.grant(g.part[0], g.part[1]); g.name = g.cash ? `${g.cash} ZŁ` : partLabel(g.part[0], g.part[1]); }
-  const FR = FIN.res || { targets: 0, of: 0, cones: 0 }, finB = FR.targets * 5 + (FR.of && !FR.cones ? 5 : 0); B.points += bonus + inc + finB; const pay = { finale: { ...FR, bonus: finB }, earned: B.earned || 0, bonus, mods: (RUN.mods || []).map(id => LVM.MODS.find(m => m.id === id)?.t).filter(Boolean), income: inc, regulars: LVM.regulars(), got };
+  const FR = FIN.res || { targets: 0, of: 0, cones: 0, score: 0 }, finB = (FR.score || 0) + (FR.of && !FR.cones ? 5 : 0); B.points += bonus + inc + finB; const pay = { finale: { ...FR, bonus: finB }, earned: B.earned || 0, bonus, mods: (RUN.mods || []).map(id => LVM.MODS.find(m => m.id === id)?.t).filter(Boolean), income: inc, regulars: LVM.regulars(), got };
   for (const R of JOBRUN) if (!R.done && R.j.kind === 'szarlotka' && (R.j.runs = (R.j.runs || 0) + 1) >= 2) jobEnd(R, false);
   { const S = LVM.load(); for (const j of S.jobs || []) { const R = JOBRUN.find(q => q.j.id === j.id); if (R) j.runs = R.j.runs; } LVM.save(); }
   LVM.save({ mods: [] }); saveCampaign();
