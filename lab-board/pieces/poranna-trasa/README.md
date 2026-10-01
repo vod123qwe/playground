@@ -689,3 +689,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - torba czytelniejsza z daleka: grubsze jasne przeszycia, ciemna lamówka klapy, szersze ciemne paski, jaśniejsze klamry, skórzane rogi u dołu
 - widok z oczu rowerzysty: kamera na oczach nowego modelu (wcześniej siedziała w szyi), na dole kierownica i dłonie
 - na rowerze mniej sztywno: model pochylony mniej niż dawna sylwetka (jest wyższy, głowa wypadała nad kierownicą), reszta pochylenia w zgięciu pleców; biodra i barki kołyszą się w rytm korby, lekkie podskakiwanie, głowa spokojna
+
+## Wersja 72: chłopak bez prześwitów
+
+- naprawione: rowerzysta (i chłopak pieszo) prześwitywał nakrapianą dziurą i tracił głowę: prześwietlanie przeszkód między kamerą a postacią łapało jego samego (nowy model jest wyższy niż dawna sylwetka); teraz jego materiały, czapka, włosy i torba są z tego wyłączone, a drzewa i dachy dalej się prześwietlają
