@@ -143,10 +143,13 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
       const out = tuft.position.clone().setY(0).normalize(); tuft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), out.multiplyScalar(.7).add(new THREE.Vector3(0, -.7, 0)).normalize()); }
     for (const sd of [-1, 1]) { const side = mesh(new THREE.ConeGeometry(.02, .06, 5), M.hair, head); side.position.set(sd * .102, -.01, .03); side.rotation.z = sd * -2.6; }   // and over the ears
     for (const s of [-1, 1]) { const e = mesh(new THREE.SphereGeometry(.024, 10, 8), M.skin, head); e.scale.set(.6, 1, .8); e.position.set(s * .1, -.005, -.005); }
-    const cap = mesh(new THREE.SphereGeometry(.116, 22, 12, 0, Math.PI * 2, 0, Math.PI * .5), M.cap, head); cap.position.y = .018; cap.scale.set(1, .82, 1.05);
+    const cap = mesh(new THREE.SphereGeometry(.116, 22, 12, 0, Math.PI * 2, 0, Math.PI * .5), M.cap, head); cap.position.y = .018; cap.scale.set(1, .96, 1.05);
     const brim = mesh(new THREE.CylinderGeometry(.11, .11, .012, 22, 1, false, -Math.PI * .45, Math.PI * .9), M.cap, head); brim.scale.set(1, 1, 1.25); brim.position.set(0, .02, .07); brim.rotation.x = .12;
-    const btn = mesh(new THREE.SphereGeometry(.014, 8, 6), M.cap, head); btn.position.y = .115;
-    const band = mesh(new THREE.TorusGeometry(.111, .006, 6, 28, Math.PI * .7), M.black, head); band.rotation.set(Math.PI / 2, 0, Math.PI * 1.15); band.position.y = .02; }   // the cap's back opening
+    const btn = mesh(new THREE.SphereGeometry(.014, 8, 6), M.cap, head); btn.position.y = .127;
+    // the cap's back: the arch of its opening (the hair through it) and over the bottom of it the strap, with its buckle
+    const hole = mesh(new THREE.CircleGeometry(.034, 14, 0, Math.PI), M.hair, head); hole.position.set(0, .019, -.1235); hole.rotation.y = Math.PI; hole.scale.y = 1.15;
+    const strap = mesh(new THREE.BoxGeometry(.078, .013, .008), M.cap, head); strap.position.set(0, .025, -.1225);
+    const buckle = mesh(new THREE.BoxGeometry(.015, .016, .01), toon('#c9cbc8'), head); buckle.position.set(.024, .025, -.1235); }
   // arms (sleeve, upper arm, forearm, hand), legs (thigh, shin, shoe)
   const L = { up: .27, lo: .26, th: .43, sh: .43 };
   const limbs = [];
