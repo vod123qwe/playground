@@ -1000,3 +1000,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - mgła o świcie na trasie Za traktorem: widać na kilkadziesiąt metrów, czerwone lampy przejazdu przebijają mgłę
 - mega skocznia (ok. 2 m, żółte poręcze) w połowie każdej pętli, a w finale co drugi raz zamiast dużej
 - na finałowym torze nie jeżdżą żadne pojazdy
+
+## Wersja 113: persony wiejskie
+
+- trzy nowe persony z ogłoszeniami w gazecie (gdy wieś jest otwarta): Pan Sołtys (tablica przy przystanku PKS), Pani Krysia (gospodarstwo pod lasem), Zdzichu z traktora (pole za przejazdem); każda ma swoje powitania przez telefon
+- zlecenia wiejskie (do wzięcia wszędzie, do zrobienia na trasie we wsi; do tego czasu czekają w notesie):
+  - Ogłoszenia gminy (sołtys, 30 zł): cztery gazety do skrzynek pocztowych
+  - Jajka dla sąsiadki (gospodyni, 30 zł): dowóz do domu z gwiazdką; wywrotka albo długi skok (ponad 0,9 s w powietrzu) robi jajecznicę
+  - Wyścig z traktorzystą (40 zł): meta w czasie lepszym niż jego (85% czasu na gwiazdkę)
+- poprawka: ogłoszenia w gazecie znają teraz kupione rzeczy (po słuchawce pojawiają się liczniki) i otwarte regiony
+- poprawka: komunikaty o błocie i przejeździe pojawiają się raz na każdy odcinek, nie raz na całą sesję
