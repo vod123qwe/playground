@@ -75,13 +75,14 @@ export function createTouch({ onCam, onMenu }) {
   zone.addEventListener('pointerdown', e => { if (sid !== null) return; sid = e.pointerId; try { zone.setPointerCapture(sid); } catch { } ox = e.clientX; oy = e.clientY;
     for (const o of [base, knob]) { o.style.display = 'block'; o.style.left = ox + 'px'; o.style.top = oy + 'px'; } state.stick = true; hint.style.display = 'none'; setStick(ox, oy); e.preventDefault(); });
   zone.addEventListener('pointermove', e => { if (e.pointerId === sid) { setStick(e.clientX, e.clientY); e.preventDefault(); } });
-  const stickUp = e => { if (e.pointerId !== sid) return; sid = null; base.style.display = knob.style.display = 'none'; Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0 }); };
-  zone.addEventListener('pointerup', stickUp); zone.addEventListener('pointercancel', stickUp);
+  const stickUp = e => { if (e.pointerId !== sid) return; freeStick(); };
+  const freeStick = () => { sid = null; base.style.display = knob.style.display = 'none'; Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0 }); };
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.addEventListener(ev, stickUp);
   // looking about: a finger dragged over the free right side
   let lid = null, lx = 0, ly = 0;
   look.addEventListener('pointerdown', e => { if (lid !== null) return; lid = e.pointerId; try { look.setPointerCapture(lid); } catch { } lx = e.clientX; ly = e.clientY; e.preventDefault(); });
   look.addEventListener('pointermove', e => { if (e.pointerId !== lid) return; state.lookDx += e.clientX - lx; state.lookDy += e.clientY - ly; lx = e.clientX; ly = e.clientY; e.preventDefault(); });
-  const lookUp = e => { if (e.pointerId === lid) lid = null; }; look.addEventListener('pointerup', lookUp); look.addEventListener('pointercancel', lookUp);
+  const lookUp = e => { if (e.pointerId === lid) lid = null; }; for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) look.addEventListener(ev, lookUp);
 
   // the buttons: each held by its own finger; placed from the bottom right corner (size, right, bottom), shown for the modes they belong to
   const all = [];
@@ -89,9 +90,9 @@ export function createTouch({ onCam, onMenu }) {
     const b = el('btn', icon + (label ? `<i>${label}</i>` : ''), parent); let pid = null; b.setAttribute('role', 'button'); b.setAttribute('aria-label', label || '');
     if (pos) Object.assign(b.style, { width: pos[0] + 'px', height: pos[0] + 'px', right: `calc(max(12px, env(safe-area-inset-right)) + ${pos[1]}px)`, bottom: `calc(max(16px, env(safe-area-inset-bottom)) + ${pos[2]}px)` });
     b.addEventListener('pointerdown', e => { if (pid !== null) return; pid = e.pointerId; try { b.setPointerCapture(pid); } catch { } b.classList.add('down'); down?.(); e.preventDefault(); e.stopPropagation(); });
-    const end = e => { if (e.pointerId !== pid) return; pid = null; b.classList.remove('down'); up?.(); };
-    b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
-    all.push({ b, modes }); return b; }
+    const end = e => { if (e.pointerId !== pid) return; pid = null; b.classList.remove('down'); up?.(e.type === 'pointerup'); };   // (up(true): let go on it)
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, end);
+    all.push({ b, modes, free: () => { if (pid === null) return; pid = null; b.classList.remove('down'); up?.(false); } }); return b; }
   const BIKE = ['bike'], FOOT = ['foot', 'fight'];
   // on the bike: throws either side of the big kick, hop and faster above, off at the top of the column
   const kickB = button(IC.kick, 'kop', [78, 58, 14], BIKE, () => { edges.kick = true; state.kickHeld = true; }, () => { state.kickHeld = false; });
@@ -114,10 +115,12 @@ export function createTouch({ onCam, onMenu }) {
   // at the top, small, in the middle
   const top = el('top');
   for (const [ic, fn, name] of [[IC.cam, onCam, 'kamera'], [IC.menu, onMenu, 'menu'], ...(document.fullscreenEnabled ? [[IC.full, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); }, 'pełny ekran']] : [])])
-    button(ic, '', null, ['bike', 'foot', 'fight'], fn, null, top).setAttribute('aria-label', name);
+    button(ic, '', null, ['bike', 'foot', 'fight'], null, ok => { if (ok) fn(); }, top).setAttribute('aria-label', name);   // (on letting go: the finger is off before the menu is there)
   let mode = null;
   function setMode(m) { if (m === mode) return; mode = m; for (const o of all) o.b.classList.toggle('off', !o.modes.includes(m)); hint.innerHTML = m === 'bike' ? 'kciuk tutaj: jazda' : m === 'foot' ? 'kciuk tutaj: chodzenie<br>prawa strona: kamera' : 'kciuk tutaj: krok i unik'; }
-  function show(v) { root.classList.toggle('hide', !v); if (!v) Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false, kickHeld: false }); }
+  // hidden (a menu, a talk): every finger let go, so nothing stays held (a button pressed as it hid got no let-go and would not take another)
+  let shown = true;
+  function show(v) { root.classList.toggle('hide', !v); if (!v && shown) { for (const o of all) o.free(); freeStick(); lid = null; } shown = v; if (!v) Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false, kickHeld: false }); }
   setMode('bike');
   addEventListener('blur', () => Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false }));
   // in the air off a ramp: the kick button is the trick button (lit, and says so)
