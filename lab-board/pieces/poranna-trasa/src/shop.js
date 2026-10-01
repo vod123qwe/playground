@@ -181,9 +181,9 @@ export function createShop({ THREE, createRider, game }) {
       b.appendChild(k === 'gazety' ? paperIcon() : icon(k, k === cat ? '#17181b' : tierCol(k, Math.max(1, on[k] || 0)), k === 'lakier' ? look().paint : null)); b.insertAdjacentHTML('beforeend', `<span>${k === 'gazety' ? 'GAZETY' : PARTS[k].name}</span>`);
       b.onclick = () => { if (cat === k) return; cat = k; hover = null; R && R.setParts(look()); if (k !== 'gazety') say(pick(JANUSZ.cats[k] || JANUSZ.buy)); draw(); right.scrollTop = 0; }; catsE.appendChild(b); }
     right.innerHTML = '';
-    if (cat !== 'gazety') PARTS[cat].tiers.forEach((t, i) => { const has = owned[cat].has(i), isOn = on[cat] === i, afford = game.money >= t.price, b = document.createElement('button'), n = PARTS[cat].tiers.length - 1;
+    if (cat !== 'gazety') PARTS[cat].tiers.forEach((t, i) => { const has = owned[cat].has(i), isOn = on[cat] === i, pr = cost(cat, i), afford = game.money >= pr, b = document.createElement('button'), n = PARTS[cat].tiers.length - 1;
       b.className = 'tier' + (isOn ? ' sel' : '') + (!has && !afford ? ' off' : '');
-      const state = isOn ? '<span class="st">ZAŁOŻONE</span>' : has ? '<span class="st">MASZ · ZAŁÓŻ</span>' : `<span class="p ${afford ? '' : 'no'}"><i class="coin"></i>${t.price} ZŁ</span>`;
+      const state = isOn ? '<span class="st">ZAŁOŻONE</span>' : has ? '<span class="st">MASZ · ZAŁÓŻ</span>' : `<span class="p ${afford ? '' : 'no'}"><i class="coin"></i>${pr < t.price ? `<s>${t.price}</s> ${pr}` : t.price} ZŁ${pr < t.price ? ' KUPON' : ''}</span>`;
       b.innerHTML = `<span class="nm"><span>${t.name}</span>${cat === 'lakier' ? '' : `<span class="pips" style="color:${tierCol(cat, i)}">${Array.from({ length: n }, (_, j) => `<i class="${j < i ? 'on' : ''}"></i>`).join('')}</span>`}</span><span class="pr">${state}</span><span class="d">${t.note}${Object.keys(t.mods).length ? ' · <em>' + fx(t.mods) + '</em>' : ''}</span>`;
       b.prepend(icon(cat, tierCol(cat, i), cat === 'lakier' ? (t.look.paint || bikeLook({ ...game.bike, parts: { ...game.bike.parts, lakier: 0 } }).paint) : null));
       b.onpointerenter = () => peek([cat, i]); b.onpointerleave = () => peek(null);
@@ -205,7 +205,9 @@ export function createShop({ THREE, createRider, game }) {
     right.scrollTop = keep;
   }
   const fx = m => Object.entries(m).filter(([k]) => !['bell', 'lamp'].includes(k)).map(([k, v]) => (k === 'bag' ? `+${v} GAZET` : `${(k === 'grass' ? -v : v) > 0 ? '+' : ''}${Math.round((k === 'grass' ? -v : v) * 100)}% ${(STATS.find(s => s[0] === k) || [0, k])[1]}`)).join(', ');
-  function buy(k, i) { const t = PARTS[k].tiers[i]; if (!owned[k].has(i)) { if (game.money < t.price) { say(pick(JANUSZ.broke)); return; } game.money -= t.price; if (k === 'lakier') game.paints.add(i); else if (i > 0) game.inv.push({ k, tier: i }); if (i > 0) say(pick(JANUSZ.buy)); } mount(k, i); hover = null; changed(); }
+  // the price, with Janusz's coupon on its slot (from the phone in the paper), used up when bought
+  const cost = (k, i) => { const t = PARTS[k].tiers[i], c = game.coupon?.(); return c && c.k === k && i > 0 && t.price ? Math.ceil(t.price * (1 - c.pct)) : t.price; };
+  function buy(k, i) { const t = PARTS[k].tiers[i], pr = cost(k, i); if (!owned[k].has(i)) { if (game.money < pr) { say(pick(JANUSZ.broke)); return; } game.money -= pr; if (pr < t.price) game.useCoupon?.(); if (k === 'lakier') game.paints.add(i); else if (i > 0) game.inv.push({ k, tier: i }); if (i > 0) say(pick(JANUSZ.buy)); } mount(k, i); hover = null; changed(); }
   function changed() { game.onChange(); R && R.setParts(look()); draw(); }
   // the bubble by his head: its left edge over his face's right side, its bottom at his mouth (the tail there); as wide as there is room
   // for before the window of parts (on a narrow screen, the window under him: to the screen's edge)

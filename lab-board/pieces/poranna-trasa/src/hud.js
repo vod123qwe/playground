@@ -160,7 +160,7 @@ export function createHud() {
     // top right: the papers left, and the money in a purse (see purse())
     { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); if (st.fame > .3 || st.siren) fame(st.fame || 0, st.siren, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2 + 20); if (st.hp != null) health(st.hp, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2 + 28); }
     if (st.bagX != null) { const s = String(st.papers), y = st.bagY != null ? Math.round(st.bagY * cv.height) + 2 : cv.height - 11, xr = Math.round(st.bagX * cv.width) - 4; outlined(s, xr - width(s), y, st.papers ? '#f6f3ea' : '#cf5a3e');
-      if (st.mix) { const up = st.bagY != null, yc = up ? y + 9 : y - 12; let x = xr; for (let i = st.mix.order.length - 1; i >= 0; i--) { const c = st.mix.order[i], t = String(c.n), w = width(t) + 6; x -= w + 2;
+      if (st.mix) { const up = st.bagY != null, yc = up ? y + 9 : y - 12; let x = xr; for (let i = st.mix.order.length > 1 ? st.mix.order.length - 1 : -1; i >= 0; i--) { const c = st.mix.order[i], t = String(c.n), w = width(t) + 6; x -= w + 2;
           g.fillStyle = c.on ? '#f6f3ea' : '#17181b'; g.fillRect(x - 1, yc - 1, w + 2, 9); g.fillStyle = c.col; g.fillRect(x, yc, w, 7); text(t, x + 3, yc + 1, '#f6f3ea', '#17181b'); }
         const nm = st.mix.name; outlined(nm, xr - width(nm), up ? yc + 10 : yc - 9, '#f6f3ea'); } }   // (how many papers, by the bag)
     if (splats.length) drawBlood(dt, st.low || 0);

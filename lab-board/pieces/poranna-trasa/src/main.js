@@ -47,7 +47,7 @@ import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, 
 import { createGarage } from './garage.js';
 import * as LVM from './levels.js';
 import { createMap } from './map.js';
-import { createPaper, NEWS, eventNews, CAST, ANECDOTES, printed } from './paper.js';
+import { createPaper, NEWS, eventNews, CAST, ANECDOTES, printed, badgesOf } from './paper.js';
 import { createHoops } from './hoops.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { PARTS } from './shop.js';
@@ -177,7 +177,7 @@ let myBike = { type: 'moj', parts: newParts() }; const INV = [], PAINTS = new Se
 let LV = null, SUBR = Math.random, reMap = false, reFin = false;
 function applyBike() { MOD = bikeMods(myBike); B.bagMax = 30 + MOD.bag; rider.setParts(bikeLook(myBike)); }
 const shop = createShop({ THREE, createRider: () => createRider({ THREE, ramp, toon }), game: { get money() { return B.points; }, set money(v) { B.points = Math.max(0, v); }, get papers() { return B.papers; }, set papers(v) { B.papers = v; }, get hp() { return B.hp ?? 100; }, set hp(v) { B.hp = v; },
-  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { saveCampaign(); if (reMap) { reMap = false; setTimeout(() => openMap(), 0); return; } if (reFin) { reFin = false; setTimeout(() => fin.reopen(), 0); return; } const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, get bike() { return myBike; }, inv: INV, paints: PAINTS, onChange: () => applyBike() } });
+  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { saveCampaign(); if (reMap) { reMap = false; setTimeout(() => openMap(), 0); return; } if (reFin) { reFin = false; setTimeout(() => fin.reopen(), 0); return; } const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, get bike() { return myBike; }, inv: INV, paints: PAINTS, coupon: () => LVM.load().coupon || null, useCoupon: () => LVM.save({ coupon: null }), onChange: () => applyBike() } });
 const money = (n, at, label) => { B.points = Math.max(0, B.points + n); hud.pop(at, label, n >= 0 ? '#efc970' : '#cf5a3e'); }; money.has = n => B.points >= n;
 const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   rider: () => foot.active ? { x: foot.me.x, z: foot.me.z, y: foot.me.y, yaw: foot.me.yaw, v: Math.hypot(foot.me.vf, foot.me.vs), foot: true } : { x: B.x, z: B.z, y: B.y, yaw: B.yaw, v: Math.abs(B.v), foot: false },
@@ -659,7 +659,7 @@ function ride(dt, inp) {
       if (T.p < .7) { B.y = ground; B.air = false; B.vy = 0; B.airRamp = null; B.done = []; flash('Za późno! Trik od razu po wybiciu'); crash(0); return; }
       if (T.p < 1) T.pulled = true; const all = [...(B.done || []), T]; B.done = [];
       const clean = all.every(o => !o.pulled), n = all.reduce((a, o) => a + o.pts, 0) + (clean ? 1 : 0) + (all.length - 1) * 2;
-      const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
+      const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); logEv('trick', B.x, B.z, { name: lab, clean }); if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
     if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; } }
   else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else B.y = ground; }
   B.onRamp = !B.air && rp.h > .05 ? rp.on : null;   // (the ground fell away as he rose: he flies)
@@ -750,6 +750,7 @@ function landKick(tg) {
   const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
+  logEv('kick_' + (tg.kind === 'thing' ? (tg.ref.kind === 'mailbox' ? 'mailbox' : 'thing') : tg.kind), B.x, B.z);
   if (tg.kind === 'dog') { dogs.kick(tg.ref, { x: ax / al * 4.5 + Math.sin(B.yaw) * B.v * .5, z: az / al * 4.5 + Math.cos(B.yaw) * B.v * .5 }); hud.impact(mid); slowmo = .09; shake = .3; }   // it flies off
   if (tg.kind === 'ped' && quests.onHitPed(tg.ref)) { hud.impact(mid, 'ŁUP!'); slowmo = .08; shake = .25; }   // (the thief: the bag drops)
   else if (tg.kind === 'ped') { hud.impact(mid); tg.ref.stun = 1.6; hud.rant(tg.ref.G.position, pickOf(SWEARS), true, 1.95); slowmo = .06; shake = .22; }   // they stop, and swear after him
@@ -964,7 +965,7 @@ function step(dt, inp) {
     if (was || hoops.holding) inp = { ...inp, lmb: false, rmb: false }; }
   if (foot.active) return stepFoot(dt, inp);
   stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
-  throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor });
+  throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor, said: (r, t) => logEv('said', r.G.position.x, r.G.position.z, { who: r.lines || r.key, text: t }) });
   { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 && (B.bellT = (B.bellT || 0) - dt) > -4 });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
   { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16 && !track.home?.yard(B.x, B.z) && !modes.flags.calm, road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
@@ -1073,7 +1074,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, touch: inp.touch, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
   if (!foot.active) return;
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
-  water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor });
+  water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor, said: (r, t) => logEv('said', r.G.position.x, r.G.position.z, { who: r.lines || r.key, text: t }) });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
   traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
@@ -1217,10 +1218,11 @@ function goHome() { if (fin.isOpen) fin.close(); LV = null; clearGate(); lvHud.c
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
 // how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
 const ahead = (i, cp) => ((((cp - i) * LV.finish.dir) % track.N) + track.N) % track.N * track.ds;
-function logEv(kind, x, z) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
+function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
   { const chased = barkers.some(n => n.dist < 6 && Math.abs(B.v) > 1); if (chased && !RUN.dogOn && RUN.t - (RUN.dogT ?? -99) > 6) { logEv('dog', B.x, B.z); RUN.dogT = RUN.t; } RUN.dogOn = chased; }
+  { const g = !!quests.gang?.chase, sr = !!quests.siren; if (g && !RUN.gangOn) logEv('gang', B.x, B.z); if (sr && !RUN.sirenOn) logEv('chase', B.x, B.z); RUN.gangOn = g; RUN.sirenOn = sr; }
   { const st = quests.police?.stops || 0; if (st > (RUN.stops ?? st)) logEv('police', B.x, B.z); RUN.stops = st; RUN.maxStreak = Math.max(RUN.maxStreak || 0, B.streak || 0); }
   if (RUN.snaps?.length && RUN.t >= RUN.snaps[0].at) { const q = RUN.snaps.shift(); try { q.e.img = photo(camera); } catch { } }
   if ((RUN.chk -= dt) > 0) return; RUN.chk = .1;
@@ -1234,8 +1236,14 @@ function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LE
   const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0 };
   const rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
   audio.play('trick'); B.v *= .3; fin.open(paperData(L, r, rec, opened)); }
-// a photo for the paper: the world through a camera put there, as the game draws it (its own pixels), cut to 4:3
-function photo(cam) { px.render(scene, cam); const [W, H] = px.size, c = document.createElement('canvas'), w = Math.min(W, Math.round(H * 4 / 3)), h = Math.round(w * 3 / 4); c.width = w; c.height = h;
+// the paper's look for its photos: one of the game's own overlays (the look panel's: comic dots, pencil, riso, 1 bit), put on for the
+// shot only, then the look as it was
+const PHOTO_LOOK = { komiks: { mode: 2, fxAmt: 1, comicDot: 4, comicAngle: 45, comicInk: 1.3, comicShade: .55 }, olowek: { mode: 4, fxAmt: 1, pencilGap: 4, pencilStr: .9, pencilColor: 0, pencilPaper: 0 },
+  bit: { mode: 6, fxAmt: 1, bitScale: 1, bitSet: 3 }, riso: { mode: 5, fxAmt: 1, risoMis: 1, risoDot: 3.5, risoInks: 2 } };
+let photoStyle = 'olowek';
+function lookFor(over) { const u = px.uniforms, L = lookUniforms({ ...look.S, ...over }); u.mode.value = L.mode; u.fx.value = L.fx; u.p1.value = L.p[0]; u.p2.value = L.p[1]; u.p3.value = L.p[2]; u.p4.value = L.p[3]; u.inkA.value.set(...L.ink[0]); u.inkB.value.set(...L.ink[1]); u.inkC.value.set(...L.ink[2]); }
+// a photo for the paper: the world through a camera put there, as the game draws it (its own pixels, under the paper's overlay), cut to 4:3
+function photo(cam, st = photoStyle, sc = scene) { if (st && PHOTO_LOOK[st]) lookFor(PHOTO_LOOK[st]); px.render(sc, cam); if (st && PHOTO_LOOK[st]) lookFor({}); const [W, H] = px.size, c = document.createElement('canvas'), w = Math.min(W, Math.round(H * 4 / 3)), h = Math.round(w * 3 / 4); c.width = w; c.height = h;
   const g = c.getContext('2d'); g.imageSmoothingEnabled = false; const sw = renderer.domElement.width, sh = renderer.domElement.height, kx = sw / W, ky = sh / H;
   g.drawImage(renderer.domElement, (W - w) / 2 * kx, (H - h) / 2 * ky, w * kx, h * ky, 0, 0, w, h); return c; }
 const nearSt = (x, z) => { let b = 0, bd = 1e18; for (let i = 0; i < track.N; i += 2) { const p = track.S[i].p, d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bd) { bd = d; b = i; } } return b; };
@@ -1247,13 +1255,17 @@ function photoOf(label) { if (label === 'dom') { const hp = hoops?.hoop?.positio
   cam.position.set(P.x + d.x * back + d.z * 2, P.y + 3.4, P.z + d.z * back - d.x * 2); cam.lookAt(P.x, P.y + 1.6, P.z); return photo(cam); }
 // a portrait for the paper: the person's face as the game draws them (a camera before the head), or Janusz from his picture; printed
 const JIMG = new Image(); JIMG.src = 'assets/ui/janusz.png';
+// the portrait studio: a copy of the person (as they stand now) alone before a plain wall, lit from the front, the camera at their face;
+// Janusz from his picture. Each through the paper's overlay, as the photos
+const STUDIO = (() => { const sc = new THREE.Scene(); sc.background = new THREE.Color('#d9d0b8'); sc.add(new THREE.HemisphereLight('#fff6e4', '#8a8070', 1.5)); const d = new THREE.DirectionalLight('#ffffff', 1.6); d.position.set(1.2, 2.2, 3); sc.add(d); return sc; })();
+const FACES = { mama: 'mama', tata: 'tata', brat: 'brat', sasiadka: 'sasiadka', sasiad: 'sasiad', dzialki: 'dzialki', kapliczka: 'kapliczka', budowa: 'budowa', przyczepa: 'przyczepa', dogman: 'dogman' };
 function faceOf(who) { if (who === 'janusz') { if (!JIMG.complete || !JIMG.naturalWidth) return null; const w = JIMG.naturalWidth, h = JIMG.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 96;
-    const g = c.getContext('2d'); g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 96, 96); g.drawImage(JIMG, w * .29, h * .0, w * .42, w * .42, 0, 0, 96, 96); return printed(c, 56, 56); }
-  if (!['mama', 'tata', 'brat', 'sasiadka', 'sasiad', 'dzialki'].includes(who)) return null;   // (the others stand where no camera gets their face: printed without)
-  const R = (residents?.list || []).find(q => who === 'dogman' ? q.key === 'dogman' : q.lines === who); if (!R?.head) return null;
-  const hp = R.head.getWorldPosition(new THREE.Vector3()), f = new THREE.Vector3(); R.G.getWorldDirection(f); f.y = 0; f.normalize();
-  const D0 = 1.9, cam = new THREE.PerspectiveCamera(30, camera.aspect, D0 - .55, 60); cam.position.copy(hp).addScaledVector(f, D0).add(new THREE.Vector3(0, .1, 0)); cam.lookAt(hp.x, hp.y - .16, hp.z);
-  const ph = photo(cam), sq = Math.min(ph.width, ph.height), c = document.createElement('canvas'); c.width = c.height = sq; c.getContext('2d').drawImage(ph, (ph.width - sq) / 2, (ph.height - sq) / 2, sq, sq, 0, 0, sq, sq); return printed(c, 56, 56); }
+    const g = c.getContext('2d'); g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 96, 96); g.drawImage(JIMG, w * .29, h * .0, w * .42, w * .42, 0, 0, 96, 96); return printed(c, 64, 64); }
+  if (!FACES[who]) return null; const R = (residents?.list || []).find(q => who === 'dogman' ? q.key === 'dogman' : q.lines === who); if (!R?.head) return null;
+  const G = SkeletonUtils.clone(R.G); G.position.set(0, 0, 0); G.rotation.set(0, 0, 0); G.visible = true; G.traverse(o => { o.visible = true; o.frustumCulled = false; }); STUDIO.add(G); G.updateMatrixWorld(true);
+  const hd = G.getObjectByName(R.head.name) || G, hp = hd.getWorldPosition(new THREE.Vector3()), cam = new THREE.PerspectiveCamera(24, camera.aspect, .1, 30);
+  cam.position.set(hp.x + .3, hp.y + .1, hp.z + 1.45); cam.lookAt(hp.x, hp.y - .1, hp.z); const ph = photo(cam, photoStyle, STUDIO); STUDIO.remove(G);
+  const sq = Math.min(ph.width, ph.height), c = document.createElement('canvas'); c.width = c.height = sq; c.getContext('2d').drawImage(ph, (ph.width - sq) / 2, (ph.height - sq) / 2, sq, sq, 0, 0, sq, sq); return c; }
 function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, dir = L.finish.dir, span = Math.round(N * L.finish.to);
   const along = i => ((((i - iJ) * dir) % N) + N) % N, onWay = i => along(i) <= span + 4, S = track.S, st = track.start;
   const route = { loop: [], home: [], way: [], cps: RUN.cps.map(i => [S[i].p.x, S[i].p.z]), doors: [], wins: [], falls: (B.fallsAt || []).slice(), homeAt: [st.x, st.z], len: span * track.ds, subs: 0 };
@@ -1262,8 +1274,8 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['granny', 'car', 'police', 'window', 'dog', 'fall'], news = [];
-  for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n), img: e.img || photoAt(e.x, e.z) }); }
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'trick', 'fall'], news = [];
+  for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   if (news.length < 2 && RUN.maxStreak >= 5) news.push({ ...eventNews('streak', RUN.maxStreak), img: null });
   if (news.length < 2 && !r.falls && !r.windows) news.push({ ...eventNews('clean', 0), img: null });
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
@@ -1272,20 +1284,26 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   const tease = T ? { head: T.head, text: T.text, img: photoOf(T.spot) } : null; if (!T) { const n = pool.pop(); if (n) news.push({ ...n, img: photoOf(n.spot) }); }
   // the briefs: what else happened; a couple of the town's own
   const used = new Set(news.map(n => n.head)), briefs = [];
-  for (const k of ORDER) { const n = count(k); if (!n) continue; const e = eventNews(k, n); if (news[0]?.kind !== k) briefs.push(e.head.replace(/[^.!?]$/, '$&.')); }
+  for (const k of ORDER) { const n = count(k); if (!n) continue; const e = eventNews(k, n, log.find(q => q.kind === k)?.name); if (news[0]?.kind !== k) briefs.push(e.head.replace(/[^.!?]$/, '$&.')); }
+  briefs.splice(3);
   for (const n of NEWS.slice().sort(() => Math.random() - .5)) { if (briefs.length >= 3) break; if (!used.has(n.head)) briefs.push(n.head.replace(/[^.!?]$/, '$&.')); }
   // who is interviewed: whoever the morning was about (the dog's owner after a chase, the neighbour after a window, mum after falls,
   // the brother after a clean run), else anyone; the anecdote from someone else
   const pickWho = count('dog') ? 'dogman' : count('window') ? 'sasiadka' : r.falls >= 2 ? 'mama' : (!r.falls && r.delivered >= L.goal.papers) ? 'brat' : ['janusz', 'brat', 'mama', 'tata', 'sasiadka', 'sasiad', 'dzialki', 'kapliczka', 'budowa'][Math.random() * 9 | 0];
   const iv = { who: pickWho, img: faceOf(pickWho) }; const anPool = ANECDOTES.filter(a => a.who !== pickWho), an0 = anPool[Math.random() * anPool.length | 0], an = an0 ? { ...an0, img: faceOf(an0.who) } : null;
+  const WHO = { stop: 'Pan z przystanku', shacks: 'Ktoś zza płotu', lump: 'Pan spod sklepu', trzepak: 'Dzieciak spod trzepaka', przyczepa: 'Pan z przyczepy', budowa: 'Robotnik z budowy', dzialki: 'Działkowiec', kapliczka: 'Pani spod kapliczki', sasiad: 'Sąsiad z ogrodem', sasiadka: 'Sąsiadka zza płotu', mama: 'Mama', tata: 'Tata', brat: 'Brat' };
+  const heard = []; for (const e of log) if (e.kind === 'said' && e.text && !heard.some(h => h.who === e.who) && heard.length < 3) heard.push({ who: e.who, text: e.text, name: CAST[e.who]?.who || WHO[e.who] || 'Ktoś przy drodze', img: faceOf(e.who) });
+  const counts = {}; for (const e of log) counts[e.kind] = (counts[e.kind] || 0) + 1;
+  const winsOn = track.windows.filter(w => onWay(w.i)).length || 1, broken = track.windows.filter(w => w.broken && onWay(w.i)).length;
+  const badges = badgesOf({ windows: r.windows, winPct: broken / winsOn, mailbox: counts.kick_mailbox || 0, ped: counts.kick_ped || 0, bikes: (counts.kick_bike || 0) + (counts.kick_gangm || 0), gang: counts.gang || 0, kmh: Math.round(trip.max * 3.6), streak: RUN.maxStreak || 0, tricks: counts.trick || 0, dog: counts.kick_dog || 0, granny: counts.kick_granny || 0, falls: r.falls, goalPapers: r.delivered >= L.goal.papers });
   const fin0 = photo(camera);
   const next = nexts.map((l, k) => ({ id: l.soon ? null : l.id, name: l.name + (l.soon ? ' (WKRÓTCE)' : ''), note: l.soon ? (LVM.REGIONS.find(q => q.id === l.region)?.note || l.note) : l.note, first: k === 0 })).filter(x => x.id || x.name);
   // Janusz's ads: parts not had yet, the cheapest first
-  const parts = []; for (const k in PARTS) PARTS[k].tiers.forEach((t, i) => { if (i && t.price && myBike.parts[k] < i && !INV.some(p => p.k === k && p.tier === i) && !(k === 'lakier' && PAINTS.has(i))) parts.push({ t: 'WARSZTAT U JANUSZA', d: `${PARTS[k].name}: ${t.name.toLowerCase()}. ${t.note.charAt(0) + t.note.slice(1).toLowerCase()}`, price: t.price }); });
+  const parts = []; for (const k in PARTS) PARTS[k].tiers.forEach((t, i) => { if (i && t.price && myBike.parts[k] < i && !INV.some(p => p.k === k && p.tier === i) && !(k === 'lakier' && PAINTS.has(i))) parts.push({ k, i, name: t.name === PARTS[k].name ? t.name : `${PARTS[k].name}: ${t.name}`, t: 'WARSZTAT U JANUSZA', d: `${PARTS[k].name}: ${t.name.toLowerCase()}. ${t.note.charAt(0) + t.note.slice(1).toLowerCase()}`, price: t.price }); });
   parts.sort((a, b) => a.price - b.price);
   const issue = Object.values(LVM.load().best).reduce((n, b) => n + (b.runs || 0), 0) + 100;
-  return { L, r, rec, opened, photos: { finish: fin0, news }, tease, briefs: briefs.slice(0, 3), iv, an, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
-const fin = createPaper({ game: { map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
+  return { L, r, rec, opened, photos: { finish: fin0, news }, tease, briefs: briefs.slice(0, 3), iv, an, heard, counts, badges, janusz: faceOf('janusz'), coupon: LVM.load().coupon || null, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
+const fin = createPaper({ game: { coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
 const map = createMap({ levels: LVM, game: { go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
 // ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
 // ghost here: his bike and him as he rides at home, moved to where he says he is (15 times a second), between the messages carried on
@@ -1402,5 +1420,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };
