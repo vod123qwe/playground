@@ -593,7 +593,7 @@ function pose(dt, pedal, brake, slope, fallen) {
     rider.root.rotation.set(B.pitch + tp, B.yaw + ty, tr, 'YXZ'); const mid = new THREE.Vector3(0, -.75, 0).applyEuler(rider.root.rotation); rider.root.position.add(mid).add(new THREE.Vector3(0, .75, 0)); }
   const kick = B.kick ? { side: B.kick.side, t: B.kick.t } : null;
   rider.update({ dt, speed: B.crash ? 0 : B.v, steer: B.steer, lean: B.lean, pedalling: B.crash ? 0 : pedal, braking: brake, climbing: slope, onRelease: release,
-    look: B.look, tired: B.spent ? 1 : B.tired * .5, nervous: Math.min(1, B.dogSlow + Math.max(0, (B.rattled || 0) - 2) * .3), kick, air: B.air, fallen, charge: B.charge });
+    look: B.look != null ? B.look : Math.abs(mlook.x) > .04 ? -mlook.x * .5 - B.steer * 1.2 : null, lookY: mlook.y, tired: B.spent ? 1 : B.tired * .5, nervous: Math.min(1, B.dogSlow + Math.max(0, (B.rattled || 0) - 2) * .3), kick, air: B.air, fallen, charge: B.charge });
 }
 // ---------- the kick's targets, and what a kick does to each ----------
 // drivers stuck behind him: a hoot, and something a little rude (their bubble goes with the car)
@@ -728,7 +728,7 @@ function follow(dt) {
   rider.head.visible = !T.fpv;
   if (T.fpv) {                                                         // through his eyes: from his head, looking where he rides, rolling with him
     rider.eye(_eye); const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw));
-    camera.position.copy(_eye); const lk = _eye.clone().addScaledVector(f, 5).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), mlook.x * 2.4); lk.y -= 1.9 + B.pitch * 3 + mlook.y * 1.4;   // (looking a little down: the bar and his hands at the bottom of the view)
+    camera.position.copy(_eye); const lk = _eye.clone().addScaledVector(f, 5).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), mlook.x * 2.4); lk.y -= 2.9 + B.pitch * 3 + mlook.y * 1.4;   // (looking a little down: the bar and his hands at the bottom of the view)
     if (tw > 0) lk.lerp(throwCam.at, .3 * tw);
     camera.up.set(0, 1, 0); camera.lookAt(lk); camera.rotateZ(-B.lean * .9); camera.fov = CP.fov + Math.max(0, B.v) * .6; camera.updateProjectionMatrix();
     C.init = false; sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return;
