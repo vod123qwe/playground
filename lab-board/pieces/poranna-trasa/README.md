@@ -969,3 +969,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - etykiety regionów i przystanków w pełnych pikselowych ramkach, bez przezroczystości
 - informacje o odcinku w pasku na dole na całą szerokość, z większymi odstępami
 - warsztat: Janusz dopasowuje się do miejsca obok okna, więc twarz i czapka są zawsze widoczne, a dymek wychodzi mu z ust
+
+## Wersja 109: wyższe drzewa nad drogą
+
+- drzewa przy jezdni są mniej więcej dwa razy wyższe, więc ich korony wiszą wysoko nad drogą i nie zasłaniają już rowerzysty ani tego, co przed nim
