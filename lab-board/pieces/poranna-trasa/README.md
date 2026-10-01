@@ -615,3 +615,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - warsztat: ceglana podmurówka, dach z falistej blachy z rdzą, pasiasta markiza nad bramą, większy szyld z rowerkiem, brama podniesiona do połowy (w środku wiszą koła), witryna z czerwonym kołem; obok złom z lat: sterty starych opon, rdzawe ramy rowerów oparte o ścianę, stara lodówka na plecach, beczka, skrzynki; pan Janusz siedzi po drugiej stronie bramy
 - ekran sklepu od nowa: gra przyciemniona rastrem (jak w pauzie), pikselowe okno z „klocków” (blokowe przyciski z cieniem), z boku okno rozmowy z awatarem Janusza (pikselowy portret: czapeczka, wąsy, podbródki, koszulka na ramiączkach; usta ruszają się, gdy mówi) i dymkiem jego kwestii
 - własny awatar: plik `assets/ui/janusz.png` (kwadratowy) zastąpi rysowany portret
+
+## Wersja 62: Janusz z obrazka, łatwiejszy start, dźwięk
+
+- ekran sklepu: pan Janusz z obrazka (`assets/ui/janusz.png`) stoi luzem w lewym dolnym rogu, jakby wychodził zza ekranu; nad nim pikselowy dymek z ogonkiem, słowa wskakują po kolei, migający kursor; gdy mówi, lekko się buja
+- po prawej okno sklepu: rower na górze (sam, bliżej), pod nim statystyki z dziesięciu klocków (zielone/czerwone klocki: co zmieni część) z liczbą obok, niżej przewijane półki
+- Janusz nie powtarza się: każda pula kwestii tasowana bez powtórek; przy każdej kategorii po sześć różnych kwestii (konkretne rady o częściach i anegdoty)
+- naprawione: drożdżówka w sklepie była wypisana dwa razy
+- nad Januszem w świecie chmurka z wózkiem na zakupy
+- łatwiejszy start: na początku jedna gazeta (bez wybierania tytułu), druga dochodzi po 1,4 km, trzecia po 3,8 km; torba przepakowana po równo, dalsze domy dostają nowe prenumeraty (bliskie i obsłużone zostają)
+- naprawione: F przy podnoszeniu roweru czasem otwierało pauzę (puszczenie myszy brane było za Esc)
+- menu Dźwięk: przycisk całkowitego wyciszenia
+- menu Grafika: usunięte style Gładki, Malowany, Komiks i Akwarela

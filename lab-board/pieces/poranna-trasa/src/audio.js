@@ -6,20 +6,20 @@
 // o: { vol (0..1), pan (-1..1) } (for a sound out in the world: from where it is)
 export function createAudio() {
   const KEY = 'pt.audio';
-  let S = { master: .8, music: .5, sfx: .8, voice: .7 }; try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { }
+  let S = { master: .8, music: .5, sfx: .8, voice: .7, mute: false }; try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { }
   let ctx = null, out, bus = {}, noise = null, wind = null, sir = null, song = null, songName = null, wantSong = null;
   const now = () => ctx.currentTime;
   function init() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC();
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ctx.destination);
-    out = ctx.createGain(); out.gain.value = S.master; out.connect(comp);
+    out = ctx.createGain(); out.gain.value = S.mute ? 0 : S.master; out.connect(comp);
     for (const k of ['music', 'sfx', 'voice']) { bus[k] = ctx.createGain(); bus[k].gain.value = S[k]; bus[k].connect(out); }
     const n = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; noise = n;
     if (wantSong) { const w = wantSong; wantSong = null; music(w); }
   }
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, init, { capture: true, passive: true });
-  function set(k, v) { S[k] = v; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } if (!ctx) return; if (k === 'master') out.gain.value = v; else if (bus[k]) bus[k].gain.value = v; }
+  function set(k, v) { S[k] = v; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } if (!ctx) return; if (k === 'master' || k === 'mute') { out.gain.value = S.mute ? 0 : S.master; } else if (bus[k]) bus[k].gain.value = v; }
   // ---------- building blocks ----------
   const panner = (p, dest) => { if (!ctx.createStereoPanner) return dest; const s = ctx.createStereoPanner(); s.pan.value = Math.max(-1, Math.min(1, p || 0)); s.connect(dest); return s; };
   function env(g, t, a, peak, d, end = .0001) { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(end, t + a + d); }

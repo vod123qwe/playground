@@ -148,7 +148,7 @@ const VOICE_OF = n => /ŁAWKI/.test(n) ? 'lump' : /EKIPA/.test(n) ? 'lads' : /PO
 const talk = createTalk({ onSay: (who, text) => { const k = VOICE_OF(who || ''); if (k) audio.say(text, k, { id: 'talk' }); }, onPick: () => audio.play('ui') });
 let MOD = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 };   // (what the bike's parts do: shop.js)
 const shop = createShop({ THREE, createRider: () => createRider({ THREE, ramp, toon }), game: { get money() { return B.points; }, set money(v) { B.points = Math.max(0, v); }, get papers() { return B.papers; }, set papers(v) { B.papers = v; }, get hp() { return B.hp ?? 100; }, set hp(v) { B.hp = v; },
-  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return TK.map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, onChange: (m, look) => { MOD = m; B.bagMax = 30 + m.bag; rider.setParts(look); } } });
+  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, onChange: (m, look) => { MOD = m; B.bagMax = 30 + m.bag; rider.setParts(look); } } });
 const money = (n, at, label) => { B.points = Math.max(0, B.points + n); hud.pop(at, label, n >= 0 ? '#efc970' : '#cf5a3e'); }; money.has = n => B.points >= n;
 const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   rider: () => foot.active ? { x: foot.me.x, z: foot.me.z, y: foot.me.y, yaw: foot.me.yaw, v: Math.hypot(foot.me.vf, foot.me.vs), foot: true } : { x: B.x, z: B.z, y: B.y, yaw: B.yaw, v: Math.abs(B.v), foot: false },
@@ -188,7 +188,8 @@ function dismount(why) {
   if (!foot.start({ x: B.x + lf.x * .8, z: B.z + lf.z * .8, yaw: B.yaw, hint: B.hint })) return false;
   B.v = 0; B.charge = null; B.kick = null; B.parked = true; rider.boy.visible = false; parkBike(); flash(why || 'Pieszo. Kliknij: mysz steruje. F przy rowerze: wsiadasz, V: widok z oczu'); return true;
 }
-function mount() { if (document.pointerLockElement) document.exitPointerLock(); mouse.used = false; foot.stop();
+function mount() { if (document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (let go on purpose: not the Esc that pauses)
+  mouse.used = false; foot.stop();
   if (B.bikeDown) { B.lift = { t: 0, from: B.bikeDown.lean }; B.lean = B.bikeDown.lean; B.bikeDown = null; flash('Podnosisz rower'); } B.parked = false; rider.boy.visible = true; C.init = false; flash('Na rowerze!'); }
 const B = { x: track.start.x, z: track.start.z, y: 0, vy: 0, air: false, gPrev: 0, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
   stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, throwP: .6 };
@@ -323,19 +324,27 @@ function throwing(dt, inp) {
     const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; audio.play('throw', { vol: .8 }); } B.charge = null; } }
 }
 const paperG = new THREE.CylinderGeometry(.035, .035, .26, 10), paperM = toon('#ece5d0'), bandM = toon('#b3372c');
-// ---------- the titles: three papers (made up), each house takes one or none; the bag holds some of each, X picks which is thrown ----------
+// ---------- the titles: papers (made up), each house takes one or none; the bag holds some of each, X picks which is thrown. The run starts
+// with one (no picking: just throw), a second joins further on, the third later still (TITLE_AT, metres ridden) ----------
 const TITLES = { trabka: { name: 'TRĄBKA PORANNA', short: 'TRĄBKA', col: '#cf5a3e' }, wiesci: { name: 'WIEŚCI ZZA PŁOTU', short: 'WIEŚCI', col: '#3f8a4a' }, sport: { name: 'SPORT I DZIAŁKA', short: 'SPORT', col: '#3d7be0' } };
 const TK = Object.keys(TITLES), bandOf = Object.fromEntries(TK.map(k => [k, toon(TITLES[k].col)]));
-B.mix = { trabka: 10, wiesci: 10, sport: 10 }; B.sel = 0;
-const curTitle = () => { for (let k = 0; k < TK.length; k++) { const t = TK[(B.sel + k) % TK.length]; if (B.mix[t] > 0) { B.sel = (B.sel + k) % TK.length; return t; } } return TK[B.sel]; };
+B.nt = 1; B.mix = { trabka: 30, wiesci: 0, sport: 0 }; B.sel = 0;
+const TITLE_AT = [0, 1400, 3800], ACT = () => TK.slice(0, B.nt || 1);
+const curTitle = () => { const A = ACT(); for (let k = 0; k < A.length; k++) { const t = A[(B.sel + k) % A.length]; if (B.mix[t] > 0) { B.sel = (B.sel + k) % A.length; return t; } } return A[B.sel % A.length]; };
 // the bag's total moved by something else (a bundle, the shop, a loss): the change spread over the titles (the fewest first / the most first)
-function syncMix() { let tot = TK.reduce((a, t) => a + B.mix[t], 0);
-  while (tot < B.papers) { const t = TK.reduce((a, b) => B.mix[b] < B.mix[a] ? b : a); B.mix[t]++; tot++; }
+function syncMix() { const A = ACT(); let tot = TK.reduce((a, t) => a + B.mix[t], 0);
+  while (tot < B.papers) { const t = A.reduce((a, b) => B.mix[b] < B.mix[a] ? b : a); B.mix[t]++; tot++; }
   while (tot > B.papers) { const t = TK.reduce((a, b) => B.mix[b] > B.mix[a] ? b : a); if (B.mix[t] <= 0) break; B.mix[t]--; tot--; } }
+// a new title joins: the bag repacked even across what you carry now, the houses beyond sight given their papers anew (the near ones, and the ones
+// done, as they were)
+function unlockTitle(n) { B.nt = n; const A = ACT(), tot = TK.reduce((a, t) => a + B.mix[t], 0); TK.forEach(t => B.mix[t] = 0); A.forEach((t, i) => B.mix[t] = Math.floor(tot / A.length) + (i < tot % A.length ? 1 : 0));
+  assignSubs(true); const T = TITLES[A[n - 1]]; flash(`Nowa gazeta w torbie: ${T.name.toLowerCase()}! Tabliczki w jej kolorze przy drzwiach. Zmiana gazety: ${keysOf('title')}`); audio.play('coin', { vol: .7 }); }
 // the subscribers: about half the houses, each its title; a plaque by the door in its colour (and a mark over it as you come)
 const plaques = [];
-function assignSubs() { for (const p of plaques) scene.remove(p); plaques.length = 0;
-  for (const d of track.doors) { d.sub = Math.random() < .55 ? TK[Math.random() * TK.length | 0] : null; if (!d.sub) continue;
+function assignSubs(keepNear) { const A = ACT();
+  for (const d of track.doors) { if (keepNear && (d.done || Math.hypot(d.p.x - B.x, d.p.z - B.z) < 70)) continue;
+    if (d.plaque) { scene.remove(d.plaque); plaques.splice(plaques.indexOf(d.plaque), 1); d.plaque = null; }
+    d.sub = Math.random() < .55 ? A[Math.random() * A.length | 0] : null; if (!d.sub) continue;
     const n = d.n, fa = d.p.clone().addScaledVector(n, -2.6), side = new THREE.Vector3(-n.z, 0, n.x), pl = new THREE.Group();
     const b = new THREE.Mesh(new THREE.BoxGeometry(.34, .24, .03), toon('#f6f3ea')); pl.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(.28, .08, .035), bandOf[d.sub]); c.position.y = .04; pl.add(c);
     pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; } }
@@ -433,7 +442,7 @@ function hurt(n, why) { if (endT > 0) return; audio.play('hurt', { vol: .6 }); B
 let endT = 0, endWhy = '';
 const runUI = createRun({ onAgain: () => { resetGame(); fromAccount(); } });
 // the notebook (Tab): who thinks what of you, the bike, what you carry, how you are
-const book = createBook({ data: () => ({ reps: quests.reps(), parts: shop.equipped(), items: B.items || [], kept: kept(), hp: B.hp ?? 100, money: B.points, fame: B.fame || 0, papers: TK.map(k => ({ name: TITLES[k].name, n: B.mix[k], col: TITLES[k].col })), dist: trip.dist }) });
+const book = createBook({ data: () => ({ reps: quests.reps(), parts: shop.equipped(), items: B.items || [], kept: kept(), hp: B.hp ?? 100, money: B.points, fame: B.fame || 0, papers: ACT().map(k => ({ name: TITLES[k].name, n: B.mix[k], col: TITLES[k].col })), dist: trip.dist }) });
 function endRun(why) { if (runUI.isOpen) return; endT = 0; runUI.open({ reason: why, dist: trip.dist, delivered: B.delivered || 0, earned: B.earned || 0, windows: B.windows || 0, stops: quests.police?.stops || 0 }, [...shop.ownedList(), ...(B.items || []).map(n => ({ label: 'FANT: ' + n, keep: { item: n } }))]); }
 function fromAccount() { const all = kept(); for (const k of all) { if (k.keep.part) shop.grant(k.keep.part, k.keep.tier); else if (k.keep.item) (B.items ||= []).push(k.keep.item); } if (all.length) flash('Z konta: ' + all.map(k => k.label.toLowerCase()).join(', ')); }
 setTimeout(() => fromAccount(), 0);   // (the first run too)
@@ -785,7 +794,9 @@ function step(dt, inp) {
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
   if (inp.bell && !foot.active) { if (MOD.bell > 0) { audio.play('bell'); B.bellT = 2.5; } else flash('Dzwonek kupisz u Janusza'); }
-  syncMix(); if (inp.title) { for (let k = 1; k <= TK.length; k++) { const t = TK[(B.sel + k) % TK.length]; if (B.mix[t] > 0 || k === TK.length) { B.sel = (B.sel + k) % TK.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); }
+  syncMix(); if (inp.title) { const A = ACT(); if (A.length < 2) flash('Na razie wozisz jedną gazetę: ' + TITLES[A[0]].name.toLowerCase());
+    else { for (let k = 1; k <= A.length; k++) { const t = A[(B.sel + k) % A.length]; if (B.mix[t] > 0 || k === A.length) { B.sel = (B.sel + k) % A.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); } }
+  if (B.nt < TK.length && trip.dist >= TITLE_AT[B.nt] && menu.page !== 'title') unlockTitle(B.nt + 1);
   if (endT > 0 && (endT -= dt) <= 0) endRun(endWhy); B.hp = Math.min(100, (B.hp ?? 100) + dt / 12); if (B.points > (B.lastPts ?? 0)) B.earned = (B.earned || 0) + B.points - B.lastPts; B.lastPts = B.points;
   quests.update(dt, inp);                                               // (who is near to talk to; the errands; the thief)
   if (foot.active) return stepFoot(dt, inp);
@@ -922,7 +933,7 @@ function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
   touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !runUI.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
-  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks()), mix: menu.page !== 'title' ? { order: TK.map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -989,7 +1000,7 @@ function resetGame() {
   for (const mb of track.mailboxes) { mb.done = false; mb.flag.rotation.x = 0; }
   for (const b of track.bundles) { b.used = false; b.o.visible = true; }
   for (const d of dogs.dogs) { Object.assign(d, { x: d.home.x, z: d.home.z, v: 0, state: 'home', cool: 4, bark: 0, hint: -1, fly: null }); }
-  trip.dist = trip.max = trip.time = 0; endT = 0; B.mix = { trabka: 10, wiesci: 10, sport: 10 }; B.sel = 0; assignSubs(); C.init = false; flash('Od nowa!');
+  trip.dist = trip.max = trip.time = 0; endT = 0; B.nt = 1; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; B.sel = 0; assignSubs(); C.init = false; flash('Od nowa!');
 }
 let last = performance.now(), hudT = 0;
 const fly = { s: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false };
@@ -1018,5 +1029,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, unlockTitle, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };

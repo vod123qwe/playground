@@ -660,6 +660,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   function marks() {
     const out = [], R = R0();
     if (talk.isOpen) return out;                                         // (in a talk: no marks over the scene)
+    for (const S of JAN) { const p = S.who; if (!p || !p.head) continue; const d = Math.hypot(p.G.position.x - R.x, p.G.position.z - R.z); if (d > 80) continue; const h = p.head.getWorldPosition(new THREE.Vector3()); out.push({ p: h.setY(h.y + .75), s: '$', col: '#efc970' }); }   // (pan Janusz: a cloud with a shopping cart)
     for (const [r, o] of P) { if (o.lead !== r || !o.offer || o.cool > 0 || busy(o.offer)) continue; if (Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z) > 110) continue; out.push({ p: head(r), s: '!', col: '#efc970' }); }
     for (const e of active) { const p = e.target?.(); if (!p) continue; const s = typeof e.mark === 'function' ? e.mark() : e.mark || 'v', col = typeof e.col === 'function' ? e.col() : e.col || '#efc970', dist = Math.round(Math.hypot(p.x - R.x, p.z - R.z));
       out.push({ p, s, col, edge: true, dist, label: e.label ? e.label() + ' ' + dist + ' M' : null }); }
