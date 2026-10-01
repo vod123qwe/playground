@@ -220,7 +220,7 @@ function loseFight() {
   if (r < .4) { B.points = 0; flash(n ? `Zabrał ci całą kasę (${n} zł)!` : 'Chciał ci zabrać kasę. Nie miałeś.'); return n ? pickOf(['DZIĘKI ZA ' + n + ' ZŁ, KOLEŻKO!', 'TO NA PIWO. I NA DRUGIE.', 'PODATEK OD KOPANIA!', 'ALIMENTY SIĘ SAME NIE ZAPŁACĄ!']) : pickOf(['NAWET KASY NIE MASZ, BIEDAKU!', 'GOŁODUPIEC!']); }
   if (r < .62) { const k = Math.ceil(B.papers / 2); B.papers -= k; flash(`Zabrał ci ${k} gazet!`); return pickOf(['POCZYTAM SOBIE W KIBLU!', 'NA ROZPAŁKĘ DO GRILLA!', 'HOROSKOPY LUBIĘ!']); }
   if (r < .84) { const q = track.probe(B.x, B.z, B.hint), i = (q.i + Math.round((45 + Math.random() * 30) / (track.len / track.N))) % track.N, S = track.S[i];   // (your bike: ridden off and dropped further up the road)
-    B.x = S.p.x + S.r.x * 3.2; B.z = S.p.z + S.r.z * 3.2; B.hint = i; B.y = track.probe(B.x, B.z, i).y; B.yaw = Math.atan2(S.f.x, S.f.z); parkBike(); flash('Ukradł ci rower! Rzucił go dalej przy drodze.');
+    B.x = S.p.x + S.r.x * 3.2; B.z = S.p.z + S.r.z * 3.2; B.hint = i; B.y = track.probe(B.x, B.z, i).y; B.yaw = Math.atan2(S.f.x, S.f.z); parkBike(); flash('Ukradł ci rower! Rzucił go dalej przy drodze (strzałka na dole). Albo weź jego: leży obok.');
     return pickOf(['POŻYCZĘ NA CHWILĘ!', 'TERAZ TY IDZIESZ Z BUTA!', 'DAWAJ KOŁA, KOLEGO!']); }
   B.points = Math.max(0, B.points - 3); flash('Zrobił sobie z tobą selfie. -3 zł za prawa do wizerunku.'); return pickOf(['FOTKA NA GRUPĘ OSIEDLA!', 'UŚMIECH! DO RELACJI!', 'MAMA BĘDZIE DUMNA!']);
 }
@@ -231,8 +231,9 @@ let garage = null;   // (the inventory page: made below, once what it needs is t
 // the bikes he could get on, near him on foot: his own (in reach to get on), one in a garden, a cyclist's knocked down
 function bikeChoices(me) { const out = []; if (foot.active) { const sp = bikeSpot(); out.push({ kind: 'mine', d: Math.hypot(me.x - sp.x, me.z - sp.z) }); }
   const w = wbikes.nearest(me.x, me.z, 6); if (w) { const fx = Math.sin(w.yaw), fz = Math.cos(w.yaw), t = THREE.MathUtils.clamp((me.x - w.x) * fx + (me.z - w.z) * fz, -.9, .9); out.push({ kind: 'world', ref: w, bike: w.bike, x: w.x, z: w.z, yaw: w.yaw, lying: w.lying, side: w.side, owner: w.owner, d: Math.hypot(me.x - w.x - fx * t, me.z - w.z - fz * t) }); }
-  for (const b of traffic.bikes) if (b.on && b.fall) { b.bike ||= { ...strangerBike(['kolarzowka', 'skladak', 'trekking', 'ostre', 'bmx'][Math.random() * 5 | 0]), paint: '#' + b.r.materials.frame.color.getHexString() };
-    out.push({ kind: 'traffic', ref: b, bike: b.bike, x: b.x, z: b.z, yaw: b.yaw, lying: true, side: b.fall.side, owner: { kind: 'cyclist' }, d: Math.hypot(me.x - b.x, me.z - b.z) - .6 }); }
+  // (a cyclist's: knocked down, or the one whose rider is after you or lying beaten: his bike there to take)
+  for (const b of traffic.bikes) if (b.on && (b.fall || b.hold)) { b.bike ||= { ...strangerBike(['kolarzowka', 'skladak', 'trekking', 'ostre', 'bmx'][Math.random() * 5 | 0]), paint: '#' + b.r.materials.frame.color.getHexString() };
+    out.push({ kind: 'traffic', ref: b, bike: b.bike, x: b.x, z: b.z, yaw: b.yaw, lying: true, side: b.fall?.side || 1, owner: { kind: 'cyclist' }, d: Math.hypot(me.x - b.x, me.z - b.z) - .6 }); }
   return out.sort((a, b) => a.d - b.d); }
 function takeBike() { const all = bikeChoices(foot.me), mine = all.find(c => c.kind === 'mine'), other = all.find(c => c.kind !== 'mine');   // (his own first: someone else's only when he stands clearly nearer it)
   const c = mine && mine.d <= 1.7 && !(other && other.d < mine.d - .5) ? mine : all[0]; if (!c || c.d > 1.7) return false; if (c.kind === 'mine') { mount(); return true; } swapTo(c); return true; }
@@ -960,6 +961,7 @@ function step(dt, inp) {
   mp.update(dt); if (mp.counting) inp = still(inp); stepNet(dt, inp);
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
   stepBikeCards(dt);
+  if (foot.active && B.crash) { B.crash = null; B.v = 0; B.lean = 0; B.leanV = 0; rider.ragdollOff?.(); }   // (on foot: a fall from the bike is over)
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (!takeBike()) { const d = Math.round(Math.hypot(foot.me.x - B.x, foot.me.z - B.z)); flash(`Twój rower jest ${d} m stąd: idź za strzałką na dole`); } }
   if (inp.bell && !foot.active) { if (MOD.bell > 0) { audio.play('bell'); B.bellT = 2.5; } else flash('Dzwonek kupisz u Janusza'); }

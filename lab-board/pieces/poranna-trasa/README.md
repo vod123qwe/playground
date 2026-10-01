@@ -952,3 +952,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - złote obręcze w powietrzu za dużą skocznią (przelot przez obręcz +3 zł)
 - kombo: punkty jeden po drugim (do 3 s) mnożą premię x2, x3; przewrócony pachołek albo wywrotka zrywa kombo
 - poprawka: po wywrotce w wykopie da się podnieść rower (wykop przewraca tylko przy jeździe, potem chwilę odpuszcza)
+
+## Wersja 107: rower po bójce
+
+- poprawka: gdy przeciwnik ściągnął Cię do bójki w trakcie wywrotki, gra dalej myślała, że leżysz po wywrotce, i F nic nie robiło (ani przy swoim, ani przy cudzym rowerze); teraz pieszo wywrotka jest zawsze skończona
+- rower przeciwnika po bójce (leżący albo czekający na właściciela) da się wziąć
+- gdy przeciwnik ukradnie Ci rower po przegranej, podpowiedź mówi, gdzie go szukać, i że możesz wziąć jego
