@@ -45,7 +45,7 @@ export function createResidents({ THREE, toon, track, hud, scene, max = 7 }) {
       const mixer = new THREE.AnimationMixer(m), clip = n => g.animations.find(c => c.name === n), acts = { idle: mixer.clipAction(clip('idle')), talk: clip('talk') ? mixer.clipAction(clip('talk')) : null };
       acts.idle.play(); acts.idle.time = Math.random() * 2; if (acts.talk) { acts.talk.play(); acts.talk.setEffectiveWeight(0); }
       let bottle = null; if (key === 'belly') { bottle = new THREE.Group(); G.add(bottle); const glass = toon('#6b4a2e'); const b = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .16, 8), glass); bottle.add(b); const n = new THREE.Mesh(new THREE.CylinderGeometry(.012, .03, .08, 8), glass); n.position.y = .12; bottle.add(n); const lb = new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .06, 8), toon('#efc970')); bottle.add(lb); }
-      list.push({ key, lines: seat.lines, stop: seat.stop, awakeT: 0, G, m, mixer, acts, bottle, hand: m.getObjectByName('hand_r'), head: m.getObjectByName('head'), cool: 3 + Math.random() * 6, talkT: 0, mouth: new THREE.Vector3() });
+      list.push({ key, clips: g.animations, home: G.position.clone(), homeYaw: yaw, lines: seat.lines, stop: seat.stop, awakeT: 0, G, m, mixer, acts, bottle, hand: m.getObjectByName('hand_r'), head: m.getObjectByName('head'), cool: 3 + Math.random() * 6, talkT: 0, mouth: new THREE.Vector3() });
     });
   });
   const _v = new THREE.Vector3();

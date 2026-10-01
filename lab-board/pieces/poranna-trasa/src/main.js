@@ -46,6 +46,7 @@ import { createNet } from './net.js';
 import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, strangerBike } from './bikes.js';
 import { createGarage } from './garage.js';
 import { createHoops } from './hoops.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { PARTS } from './shop.js';
 { const m = location.hash.match(/^#odpowiedz=([^&]+)/); if (m) { const ch = new BroadcastChannel('pt-answer'), say = (t, sub) => { document.body.innerHTML = `<div style="position:fixed;inset:0;display:grid;place-items:center;background:#0c0d0f;color:#f6f3ea;font:700 15px/1.5 ui-monospace,Consolas,monospace;text-align:center;padding:20px"><div><div style="color:#efc970;font-size:22px;letter-spacing:.1em">${t}</div><div style="opacity:.75;margin-top:8px">${sub}</div></div></div>`; };
   let ok = false; ch.onmessage = e => { if (e.data?.ok) { ok = true; say('PRZEKAZANE!', 'Wróć do karty z grą, zaraz się połączycie. Tę kartę możesz zamknąć.'); setTimeout(() => window.close(), 1200); } };
@@ -948,9 +949,11 @@ function step(dt, inp) {
     else { for (let k = 1; k <= A.length; k++) { const t = A[(B.sel + k) % A.length]; if (B.mix[t] > 0 || k === A.length) { B.sel = (B.sel + k) % A.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); } }
   if (B.nt < TK.length && trip.dist >= TITLE_AT[B.nt] && menu.page !== 'title' && !MP.on) unlockTitle(B.nt + 1);   // (two players: one title each, the same)
   if (endT > 0 && (endT -= dt) <= 0) endRun(endWhy); B.hp = Math.min(100, (B.hp ?? 100) + dt / 12); if (B.points > (B.lastPts ?? 0)) B.earned = (B.earned || 0) + B.points - B.lastPts; B.lastPts = B.points;
+  if (foot.active && inp.talk && hoops?.ask(foot.me)) inp = { ...inp, talk: false };   // (on the court, the brother asked for the ball first)
   quests.update(dt, inp);                                               // (who is near to talk to; the errands; the thief)
   if (hoops) { const was = hoops.holding; hoops.update(dt, { me: foot.active && !foot.fighting ? foot.me : null, cam: camera, hold: foot.active && (mouse.lh || (pad.on && pad.held(BTN.X)) || !!inp.hoopHold), drop: !!inp.rmb, view: foot.view,
-      toFirst: () => { if (foot.view !== 'first') foot.toggleView(); }, toThird: () => { if (foot.view === 'first') foot.toggleView(); } }); if (was || hoops.holding) inp = { ...inp, lmb: false, rmb: false }; }
+      toFirst: () => { if (foot.view !== 'first') foot.toggleView(); }, toThird: () => { if (foot.view === 'first') foot.toggleView(); }, talkKey: keysOf('talk') });
+    if (was || hoops.holding) inp = { ...inp, lmb: false, rmb: false }; }
   if (foot.active) return stepFoot(dt, inp);
   stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor });
@@ -1069,7 +1072,8 @@ function stepFoot(dt, inp) {                                           // (on fo
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
   if (!foot.fighting && foot.nearBike(bikeSpot()) && !B.hintShown) { B.hintShown = true; flash(touch.on ? 'ROWER: wsiądź' : keysOf('mount') + ': wsiądź na rower'); } if (!foot.nearBike(bikeSpot())) B.hintShown = false;
-  foot.follow(dt); sun.position.set(me.x, me.y, me.z).addScaledVector(SUN, 60); sun.target.position.set(me.x, me.y, me.z); sun.target.updateMatrixWorld();
+  foot.follow(dt); hoops?.late(dt, { me: foot.fighting ? null : me, P: me.P, cam: camera, view: foot.view });   // (his arms on the ball: after the camera is set)
+  sun.position.set(me.x, me.y, me.z).addScaledVector(SUN, 60); sun.target.position.set(me.x, me.y, me.z); sun.target.updateMatrixWorld();
 }
 // on foot: where the bike is (an arrow at the top, turned the way it is from where you look; its distance; a mark over it when seen)
 function bikeMark() { if (!foot.active || foot.fighting || hoops?.holding) return null; const me = foot.me, sp = bikeSpot(), dist = Math.hypot(me.x - B.x, me.z - B.z); if (Math.hypot(me.x - sp.x, me.z - sp.z) < 1.7) return null;   // (gone only once it is in reach to get on)
@@ -1160,7 +1164,7 @@ function resetGame() {
   trip.dist = trip.max = trip.time = 0; endT = 0; B.nt = 1; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; B.sel = 0; assignSubs(); C.init = false; flash('Od nowa!');
 }
 // the court at home (hoops.js): the ball, the hoop, the challenge (a mode); the other player's throws seen
-const hoops = createHoops({ THREE, scene, track, audio, hud, game: { flash: s => flash(s), send: m => net?.send(m), pop: (at, t, c) => hud.pop(at, t, c) } });
+const hoops = createHoops({ THREE, scene, track, audio, hud, game: { flash: s => flash(s), send: m => net?.send(m), pop: (at, t, c) => hud.pop(at, t, c), residents: () => residents, ghost: () => GW.G?.visible ? GW.G.position.clone().add(new THREE.Vector3(0, 1.2, 0)) : null } });
 // on foot on the court (a mode's start): the bike left on the lawn by it, him at the spot, facing the hoop
 function onFootAt(p, yaw) { if (foot.active) foot.stop(); const side = hoops.at(4.8, 1.5), q = track.probe(side.x, side.z, track.home.iJ); Object.assign(B, { x: side.x, z: side.z, yaw: yaw + Math.PI / 2, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); B.bikeDown = null; parkBike();
   if (!foot.start({ x: p.x, z: p.z, yaw, hint: q.i })) return; B.parked = true; rider.boy.visible = false; C.iy = 0; }
@@ -1179,8 +1183,15 @@ function makeGhost() { const r = createRider({ THREE, ramp, toon }); scene.add(r
   return { B: { x: 0, z: 0, y: 0, yaw: 0, v: 0, steer: 0, lean: 0, pitch: 0, jolt: 0, air: false, vy: 0, crash: null, kick: null, look: null, charge: null, dogSlow: 0, tired: 0, papers: 30, points: 0, delivered: 0, streak: 0 },
     rider: r, C: { yaw: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: 0, iyGo: true }, camera, aim, hot: { L: null, R: null }, streakEl, mlook: { x: 0, y: 0 }, throwCam, rush: 0, shake: 0, id: 2 }; }
 P2 = makeGhost();
+const GW = { G: null, mixer: null, A: {}, ball: null, sp: 0 };
+function ghostWalker() { if (GW.G || !foot.ready || !foot.me?.P?.G) return GW.G; const P = foot.me.P, G = SkeletonUtils.clone(P.G);
+  G.traverse(o => { if (o.isMesh) { o.material = [].concat(o.material).map(m => m.clone()); if (o.material.length === 1) o.material = o.material[0]; for (const m of [].concat(o.material)) { const hsl = m.color?.getHSL({}); if (hsl && hsl.s > .4 && (hsl.h < .05 || hsl.h > .95) && hsl.l > .12 && hsl.l < .62) m.color.setHSL(.6, hsl.s, hsl.l); } o.frustumCulled = false; } });
+  // (copied as he is now: if through his eyes, his head is shrunk and his cap hidden; the copy whole)
+  G.traverse(o => { o.visible = true; if (/^(head|neck_01)$/.test(o.name)) o.scale.setScalar(o.name === 'head' ? (P.headS || 1) : 1); });
+  G.visible = false; scene.add(G); GW.G = G; GW.mixer = new THREE.AnimationMixer(G); for (const n of ['idle', 'walk', 'jog']) { const c = P.clips[n]; if (!c) continue; GW.A[n] = GW.mixer.clipAction(c); GW.A[n].play(); GW.A[n].setEffectiveWeight(n === 'idle' ? 1 : 0); }
+  GW.ball = new THREE.Mesh(new THREE.SphereGeometry(.12, 12, 8), new THREE.MeshLambertMaterial({ color: '#d9682a' })); GW.ball.visible = false; scene.add(GW.ball); return G; }
 const meId = () => net.role === 'guest' ? 2 : 1, otherId = () => 3 - meId(), Bof = k => k === meId() ? P1.B : P2.B;
-const net = createNet({ onMsg: m => netMsg(m), onState: s => { if (s === 'on') flash('Połączono z drugim graczem!'); if (['lost', 'closed', 'failed', 'off'].includes(s) && mp.on) { mp.leaveRound(); flash('Połączenie zerwane: koniec rundy'); } } });
+const net = createNet({ onMsg: m => netMsg(m), onState: s => { if (s === 'on') flash('Połączono z drugim graczem!'); if (['lost', 'closed', 'failed', 'off'].includes(s)) { hoops?.comeBack(); if (GW.G) GW.G.visible = false; if (GW.ball) GW.ball.visible = false; } if (['lost', 'closed', 'failed', 'off'].includes(s) && mp.on) { mp.leaveRound(); flash('Połączenie zerwane: koniec rundy'); } } });
 // the houses' subscribers as the host has them (the guest takes them at a round's start), so the same houses wait for both
 const subsNow = () => track.doors.map(d => d.sub || null);
 function applySubs(a) { if (!a) return; track.doors.forEach((d, i) => { d.sub = a[i] ?? null; }); assignSubs(false, true); }
@@ -1198,6 +1209,8 @@ function netMsg(m) {
   if (m.k === 'paper') { const T = TITLES[m.title] ? m.title : 'trabka', o = new THREE.Mesh(paperG, paperM); o.castShadow = true; o.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandOf[T])); o.position.set(m.x, m.y, m.z); scene.add(o);
     papers.push({ m: o, v: new THREE.Vector3(...m.v), dot: new THREE.Mesh(dotG, dotM), prev: o.position.clone(), spin: new THREE.Vector3(9, 0, 3), hint: P2.B.hint || 0, t: 0, rest: false, landed: false, title: T, ghost: true }); scene.add(papers[papers.length - 1].dot); return; }
   if (m.k === 'ball') { hoops?.ghostThrow(m); return; }
+  if (m.k === 'catch') { hoops?.passCaught(); flash('Masz podanie!'); return; }
+  if (m.k === 'caught') { hoops?.passTaken(); return; }
   if (m.k === 'win') { const w = track.windows[m.i]; if (w && !w.broken) breakWindow(w, true); return; }
   if (m.k === 'kick') { if (B.crash || foot.active) return; const dir = new THREE.Vector3(m.dx, 0, m.dz); hud.impact(rider.root.position.clone().setY(rider.root.position.y + 1), m.how === 'tag' ? 'BEREK!' : 'ŁUP!'); shake = .3; audio.play('kick', { vol: .8 });
     if (m.how === 'crash' && !B.air) crash(0, dir.setLength(3)); else { B.v *= .8; B.jolt = .16; B.x += m.dx * .35; B.z += m.dz * .35; } flash('Kopniak od gracza ' + otherId() + '!'); return; }
@@ -1206,9 +1219,14 @@ function netMsg(m) {
 function served(door, mb) { if (!net.on) return; net.send({ k: 'done', d: door ? track.doors.indexOf(door) : -1, mb: mb ? track.mailboxes.indexOf(mb) : -1 }); }
 // each frame: what I am sent (15 a second); the ghost moved, posed; a bump against him
 function stepNet(dt, inp) { if (!net.on) { P2.rider.root.visible = false; return; }
-  if ((MP.sendT -= dt) <= 0) { MP.sendT = 1 / 15; net.send({ k: 'me', x: +B.x.toFixed(2), y: +B.y.toFixed(2), z: +B.z.toFixed(2), yaw: +B.yaw.toFixed(3), v: +B.v.toFixed(2), lean: +B.lean.toFixed(3), steer: +B.steer.toFixed(3), pitch: +(B.pitch || 0).toFixed(3),
+  if ((MP.sendT -= dt) <= 0) { MP.sendT = 1 / 15; const W0 = foot.active ? foot.me : null; net.send({ k: 'me', x: +(W0 ? W0.x : B.x).toFixed(2), y: +(W0 ? W0.y : B.y).toFixed(2), z: +(W0 ? W0.z : B.z).toFixed(2), yaw: +(W0 ? W0.yaw : B.yaw).toFixed(3), v: +(W0 ? W0.vf || 0 : B.v).toFixed(2), hold: !!hoops?.holding, lean: +B.lean.toFixed(3), steer: +B.steer.toFixed(3), pitch: +(B.pitch || 0).toFixed(3),
     air: !!B.air, crash: !!B.crash, ped: +(inp.pedal || 0).toFixed(2), kick: B.kick ? { side: B.kick.side, t: +B.kick.t.toFixed(2) } : null, papers: B.papers, points: B.points, delivered: B.delivered || 0, streak: B.streak || 0, foot: foot.active, paint: bikeLook(myBike).paint, hoop: hoops?.challenge.pts || 0 }); }
   const R = MP.R, age = (performance.now() - MP.rT) / 1000; P2.rider.root.visible = !!R && age < 4 && !R.foot; if (!R) return;
+  { const G = ghostWalker(); if (G) { const on = age < 4 && !!R.foot; G.visible = on; GW.ball.visible = on && !!R.hold;
+      if (on) { const k = Math.min(1, dt * 12), ex = Math.min(age, .25), tx = R.x + Math.sin(R.yaw) * R.v * ex, tz = R.z + Math.cos(R.yaw) * R.v * ex; if (Math.hypot(tx - G.position.x, tz - G.position.z) > 6) G.position.set(tx, R.y, tz); else { G.position.x += (tx - G.position.x) * k; G.position.z += (tz - G.position.z) * k; G.position.y += (R.y - G.position.y) * k; }
+        G.rotation.y += Math.atan2(Math.sin(R.yaw - G.rotation.y), Math.cos(R.yaw - G.rotation.y)) * k; GW.sp += (Math.abs(R.v) - GW.sp) * Math.min(1, dt * 6); const wk = Math.min(1, GW.sp / 1.4), jg = Math.min(1, Math.max(0, (GW.sp - 1.6) / 1.6));
+        GW.A.idle?.setEffectiveWeight(1 - wk); GW.A.walk?.setEffectiveWeight(wk * (1 - jg)); GW.A.jog?.setEffectiveWeight(wk * jg); GW.mixer.update(dt);
+        if (GW.ball.visible) GW.ball.position.set(G.position.x + Math.sin(G.rotation.y) * .38, G.position.y + 1.15, G.position.z + Math.cos(G.rotation.y) * .38); } } }
   const G = P2.B, k = Math.min(1, dt * 12), ex = Math.min(age, .25), tx = R.x + Math.sin(R.yaw) * R.v * ex, tz = R.z + Math.cos(R.yaw) * R.v * ex;   // (carried on by his speed, a quarter second at most)
   if (Math.hypot(tx - G.x, tz - G.z) > 6) { G.x = tx; G.z = tz; } else { G.x += (tx - G.x) * k; G.z += (tz - G.z) * k; }
   G.y += (R.y - G.y) * k; G.yaw += Math.atan2(Math.sin(R.yaw - G.yaw), Math.cos(R.yaw - G.yaw)) * k; G.v = R.v; G.lean += (R.lean - G.lean) * k; G.steer += (R.steer - G.steer) * k; G.pitch = R.pitch; G.air = R.air; G.kick = R.kick; G.hint = track.probe(G.x, G.z, G.hint || 0).i;
@@ -1216,7 +1234,7 @@ function stepNet(dt, inp) { if (!net.on) { P2.rider.root.visible = false; return
   // (bumped into him: pushed off, a little slower; he gets the same at his end)
   const dx = B.x - G.x, dz = B.z - G.z, d = Math.hypot(dx, dz); if (P2.rider.root.visible && d < .8 && d > 1e-3 && !B.crash && !foot.active) { B.x += dx / d * (.8 - d); B.z += dz / d * (.8 - d); const now = performance.now(); if (!(B.bumpT > now)) { B.bumpT = now + 450; B.v *= .9; B.jolt = .08; audio.play('kick', { vol: .3 }); } } }
 // the marks: the other player (and who is "it"), at the picture's edge with how far when he is out of sight
-function mpMarks() { if (!net.on || !P2.rider.root.visible) return []; const G = P2.B, o = otherId(), it = mp.it === o, dist = Math.round(Math.hypot(G.x - B.x, G.z - B.z));
+function mpMarks() { const onFoot = !!GW.G?.visible; if (!net.on || !(P2.rider.root.visible || onFoot)) return []; const G = onFoot ? { x: GW.G.position.x, y: GW.G.position.y, z: GW.G.position.z } : P2.B, o = otherId(), it = mp.it === o, dist = Math.round(Math.hypot(G.x - B.x, G.z - B.z));
   const col = it ? '#cf5a3e' : o === 1 ? '#efc970' : '#8fc3f0', lab = (it ? 'BEREK ' : '') + 'G' + o;
   return [{ p: new THREE.Vector3(G.x, (G.y || 0) + 2.5, G.z), s: 'v', col, label: dist > 12 ? lab + ' ' + dist + ' M' : lab, edge: true, edgeLabel: lab + ' ' + dist + ' M' }]; }
 { const m = location.hash.match(/^#dolacz=([^&]+)(?:&do=([^&]+))?/); if (m) { history.replaceState(null, '', location.pathname + location.search); if (menu.open) menu.close(); mp.joinFlow(m[1], m[2] ? decodeURIComponent(m[2]) : null); } }

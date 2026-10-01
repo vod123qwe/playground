@@ -791,3 +791,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - **tryb RZUTY POD DOMEM** (menu TRYBY GRY): minuta, kolejne zielone koła na boisku (3 miejsca za 2, 3 za 3: rogi i szczyt), rzut liczy się tylko z koła, każde trafienie +2 s, piłka wraca do rąk po każdym rzucie; rekord zapisany
 - **przez sieć**: nowy tryb RZUTY POD DOMEM dla dwóch (minuta, kto więcej punktów), obaj na boisku, widać piłki rzucane przez drugiego
 - poprawka 85.1: wrócił dźwięk rzutu piłką i wysyłanie rzutów do drugiego gracza (komentarz w kodzie połykał tę linię)
+
+## Wersja 86: prawdziwe ręce, brat do podawania, podania w sieci, lepsze czucie rzutu
+
+- **ręce chłopaka zamiast klocków**: w widoku z oczu piłkę trzymają jego własne ramiona i dłonie z modelu (te same co pieszo i na rowerze): prawa za piłką i pod nią, lewa z boku, palce lekko na piłce. Przy rzucie prawa ręka idzie w górę z opadającą dłonią, przy lekkim podaniu obie wypychają piłkę przed siebie. Z piłką kamera cofa się nieco do środka głowy (kark i głowa schowane), więc piłka i dłonie są u dołu kadru, a kosz zostaje odsłonięty
+- **czucie rzutu**: siła rośnie płynnie, póki trzymasz (szybko, potem wolniej pod górę paska), a na pełnej drga; krótka prowadnica z kropek pokazuje początek lotu (resztę oceniasz sam); dalsze rzuty mają zielone pole w połowie paska, nie na samej górze; trafienie bez dotknięcia obręczy: CZYSTO +1; rzut w wyskoku (skok z piłką): Z WYSKOKU +1
+- **brat**: przy nim klawisz rozmowy (E) i biegnie po piłkę, podnosi ją, obraca się do Ciebie, podskakuje i podaje; lekkie podanie w jego stronę łapie i odrzuca; po wszystkim wraca na swoje miejsce przy linii; komentuje trafienia
+- **podania przez sieć**: lekki rzut do kolegi: on łapie (u niego piłka w rękach, u Ciebie znika), a jego podanie łapiesz Ty. Kolega pieszo jest wreszcie widoczny w sieci: kopia Twojej postaci z niebieską czapką, chodzi i biega jak on, ze znacznikiem G1/G2 i piłką w rękach, gdy ją trzyma
