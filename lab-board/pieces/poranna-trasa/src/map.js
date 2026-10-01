@@ -7,9 +7,9 @@
 
 const W = 320, H = 180;
 // where the regions lie (their middles: each pixel the region of the nearest, the edges wobbled) and where the points are
-const RC = { peryferia: [62, 118], wies: [150, 52], peryferia2: [176, 132], miasto: [236, 78], las: [276, 148], dalej: [300, 24] };
-const LAB = { peryferia: [56, 164], wies: [118, 22], peryferia2: [204, 166], miasto: [240, 44], las: [282, 116], dalej: [292, 12] };   // (the names: off the points)
-const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 72], w2: [126, 50], w3: [174, 50], w4: [150, 30], d1: [178, 112] };
+export const RC = { peryferia: [62, 118], wies: [150, 52], peryferia2: [176, 132], miasto: [236, 78], las: [276, 148], dalej: [300, 24] };
+export const LAB = { peryferia: [56, 164], wies: [118, 22], peryferia2: [204, 166], miasto: [240, 44], las: [282, 116], dalej: [292, 12] };   // (the names: off the points)
+export const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 72], w2: [126, 50], w3: [174, 50], w4: [150, 30], d1: [178, 112] };
 
 import { pxKey } from './pixui.js';
 
@@ -36,11 +36,21 @@ export function createMap({ levels: LV, game }) {
     #map .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } #map .acts > :first-child { grid-column: 1 / -1; } #map .acts { align-items: end; }
     #map .hint { color: #8d8a80; }
     @media (max-width: 860px) { #map .stage { grid-template-columns: 1fr; grid-template-rows: minmax(200px, 1fr) auto; height: calc(100vh - 16px); width: calc(100vw - 16px); } #map .info { max-height: 34vh; } }`;
+  if (game.dio) css.textContent += `
+    #map.d3 { background: transparent; } #map.d3 .stage { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; width: calc(100vw - 24px); height: calc(100vh - 20px); gap: 10px; }
+    #map.d3 .side { display: grid; grid-template-columns: minmax(0, 1fr) 330px; grid-template-rows: auto auto; gap: 10px 26px; max-height: 40vh; padding: 16px 20px 18px; background: #17181b; }
+    #map.d3 .side .info { grid-row: span 2; display: block; columns: 220px; column-gap: 34px; column-rule: 2px solid #33363a; column-fill: balance; max-height: min(34vh, 270px); overflow: hidden; line-height: 1.35; }
+    #map.d3 .side .info > * { break-inside: avoid; } #map.d3 .side .info .ttl { break-after: avoid; } #map.d3 .side .info h4 { break-after: avoid; margin: 12px 0 6px; } #map.d3 .side .info h4:first-child, #map.d3 .side .info .ttl + * h4 { margin-top: 0; } #map.d3 .side .info .ttl { margin-bottom: 10px; } #map.d3 .side .info p { margin: 6px 0 0; }
+    #map.d3 .side .acts { grid-template-columns: 1fr 1fr; align-content: start; gap: 8px; } #map.d3 .side .hint { display: none; }
+    @media (max-width: 640px) { #map.d3 .side { grid-template-columns: 1fr; max-height: 46vh; } #map.d3 .side .info { grid-row: auto; max-height: 22vh; overflow-y: auto; } } #map.d3 .win.landw { border-image: var(--px-win) 4 / 12px; background: none; } #map.d3 .land { border-image: var(--px-inset) 3 / 6px; background: none; cursor: pointer; } #map.d3 canvas { display: none; } #map.d3 .landw .head { background-color: #17181b; margin: -2px -2px 8px; padding: 6px 8px 10px; }
+    #map .pins { position: fixed; inset: 0; pointer-events: none; z-index: 1; } #map .pin { position: absolute; transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 1px; white-space: nowrap; }
+    #map .pin .st { color: #efc970; letter-spacing: 1px; text-shadow: 2px 0 0 #17181b, -2px 0 0 #17181b, 0 2px 0 #17181b, 0 -2px 0 #17181b; } #map .pin .st i { font-style: normal; color: #6a6f78; } #map .pin .nm { position: relative; color: #f6f3ea; background: #17181b; border: 2px solid #5a5f66; padding: 2px 6px 1px; box-shadow: 2px 2px 0 #000; display: none; margin-bottom: 6px; } #map .pin .nm::after { content: ''; position: absolute; left: calc(50% - 3px); bottom: -8px; width: 6px; height: 6px; background: inherit; border: 2px solid; border-color: inherit; border-top: 0; } #map .pin.near:not(.sel) .nm::after { display: none; } #map .pin.sel .nm, #map .pin.home .nm, #map .pin.near .nm { display: block; } #map .pin.near:not(.sel) .nm { color: #cfcabd; border-color: #3a3d42; margin-bottom: 2px; } #map .pin.shut .nm { color: #8d8a80; } #map .pin.sel .nm { color: #17181b; background: #efc970; border-color: #17181b; } #map .pin.home .nm { color: #f6f3ea; background: #8e2e25; border-color: #17181b; }
+    #map .rlab { position: absolute; transform: translate(-50%, -50%); color: #17181b; background: #f6f3ea; border: 2px solid #17181b; box-shadow: 3px 3px 0 #000; padding: 3px 10px 2px; letter-spacing: 3px; white-space: nowrap; text-align: center; } #map .rlab.off { color: #cfcabd; background: #3a3d42; } #map .rlab small { display: block; color: #efc970; font-size: 16px; letter-spacing: 1px; }`;
   document.head.appendChild(css);
-  const el = document.createElement('div'); el.id = 'map';
-  el.innerHTML = `<div class="stage"><div class="win"><div class="head"><b>MAPA TRASY</b><span class="chip tot"></span></div><div class="land"><canvas width="${W}" height="${H}"></canvas></div></div>
+  const el = document.createElement('div'); el.id = 'map'; if (game.dio) el.classList.add('d3');
+  el.innerHTML = `<div class="stage"><div class="win landw"><div class="head"><b>MAPA TRASY</b><span class="chip tot"></span></div><div class="land"><canvas width="${W}" height="${H}"></canvas></div></div>
     <div class="win side"><div class="info"></div><div class="acts">${pxKey('JEDŹ', { icon: 'play', key: 'ENTER', kind: 'gold big', attrs: 'data-a="go"', nudge: true })}${pxKey('DO DOMU', { icon: 'home', attrs: 'data-a="home"' })}${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-a="shop"' })}${pxKey('ZAPISZ', { icon: 'save', attrs: 'data-a="save"' })}${pxKey('ZAMKNIJ', { icon: 'close', key: 'ESC', attrs: 'data-a="close"' })}</div><div class="hint">STRZAŁKI: WYBÓR · ENTER: JEDŹ · ESC: ZAMKNIJ</div></div></div>`;
-  document.body.appendChild(el);
+  document.body.appendChild(el); const pins = document.createElement('div'); pins.className = 'pins'; el.appendChild(pins);
   const cv = el.querySelector('canvas'), g = cv.getContext('2d'), info = el.querySelector('.info'), goB = el.querySelector('[data-a="go"]'), goL = goB.querySelector('span');
   let open_ = false, sel = 'p1', t0 = 0, raf = 0;
 
@@ -86,7 +96,16 @@ export function createMap({ levels: LV, game }) {
       if (on) { g.fillStyle = blink ? '#efc970' : '#f6f3ea'; for (const [dx, dy] of [[-7, -7], [5, -7], [-7, 5], [5, 5]]) { g.fillRect(x + dx, y + dy, 3, 1); g.fillRect(x + dx + (dx < 0 ? 0 : 2), y + dy + (dy < 0 ? 0 : -2), 1, 3); } } }
     // you: the little rider at the point you are by, bobbing
     const cur = game.current?.() || 'dom', [mx, my] = PTS[cur] || PTS.dom, bob = Math.floor(t / 250) % 2; g.fillStyle = '#17181b'; g.fillRect(mx + 6, my - 12 + bob, 6, 8); g.fillStyle = '#c23a2e'; g.fillRect(mx + 7, my - 11 + bob, 4, 2); g.fillStyle = '#e3b08a'; g.fillRect(mx + 7, my - 9 + bob, 4, 2); g.fillStyle = '#3d7be0'; g.fillRect(mx + 7, my - 7 + bob, 4, 2); }
-  function loop(t) { if (!open_) return; draw(t); raf = requestAnimationFrame(loop); }
+  // the model's state: what is open, done, built; where you are, what is chosen
+  const state = () => ({ reg: sel === 'dom' ? 'peryferia' : LEVEL(sel)?.region || 'peryferia', open: id => id === 'dom' || (!!LEVEL(id) && !LEVEL(id).soon && LV.isOpen(id)), done: id => !!LV.load().done[id], built: rid => !!REGIONS.find(r => r.id === rid)?.built, cur: game.current?.() || 'dom', sel });
+  function pinsDraw(t) { const land = el.querySelector('.land').getBoundingClientRect(); const st0 = state(); game.dio.frame(land, t, st0, links()); let h = '';
+    for (const r of REGIONS) { const [x, y] = LAB[r.id], p = game.dio.projectXY(x, y, 3.5); if (p.x < land.left || p.x > land.right || p.y < land.top || p.y > land.bottom) continue; h += `<div class="rlab ${r.built ? '' : 'off'}" style="left:${p.x}px;top:${p.y}px">${r.name}${r.built ? '' : '<small>WKRÓTCE</small>'}</div>`; }
+    for (const id of nodes()) { const p = game.dio.project(id); if (!p) continue; const L = LEVEL(id), n = L ? LV.starsOf(id) : 0, open = id === 'dom' || (L && !L.soon && LV.isOpen(id));
+      const reg = st0.reg, near = id === 'dom' ? reg === 'peryferia' : L?.region === reg; h += `<div class="pin ${id === sel ? 'sel' : ''} ${id === 'dom' ? 'home' : ''} ${near ? 'near' : ''} ${open ? '' : 'shut'}" style="left:${p.x}px;top:${p.y}px">${L && open ? `<span class="st">${'★'.repeat(n)}<i>${'★'.repeat(3 - n)}</i></span>` : ''}<span class="nm">${id === 'dom' ? 'DOM' : L ? L.name : ''}</span></div>`; }
+    pins.innerHTML = h; }
+  function loop(t) { if (!open_) return; if (game.dio) pinsDraw(t); else draw(t); raf = requestAnimationFrame(loop); }
+  // a click on the model: the point nearest on the screen
+  if (game.dio) el.querySelector('.land').addEventListener('click', e => { let best = null, bd = 46; for (const id of nodes()) { const p = game.dio.project(id); if (!p) continue; const d = Math.hypot(p.x - e.clientX, p.y - e.clientY + 18); if (d < bd) { bd = d; best = id; } } if (best) { if (best === sel) go(); else pick(best); } });
 
   // ---------- the side: what the chosen point is ----------
   const mmss = s => s == null ? '-' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -118,7 +137,7 @@ export function createMap({ levels: LV, game }) {
     if (c === 'Escape' || c === 'KeyM') close(); else if (c === 'Enter' || c === 'Space') go(); else if (c === 'ArrowLeft' || c === 'KeyA') step(-1, 0); else if (c === 'ArrowRight' || c === 'KeyD') step(1, 0); else if (c === 'ArrowUp' || c === 'KeyW') step(0, -1); else if (c === 'ArrowDown' || c === 'KeyS') step(0, 1);
     e.preventDefault(); return true; }
   function open(at) { if (open_) return; open_ = true; const cur = at || game.current?.(); const next = LEVELS.find(l => !l.soon && LV.isOpen(l.id) && !LV.load().done[l.id]); sel = cur && cur !== 'dom' ? (LEVEL(cur)?.after.find(a => LV.isOpen(a) && !LEVEL(a)?.soon) || cur) : next?.id || LEVELS[0].id;
-    landImg = null; el.classList.add('on'); side(); t0 = performance.now(); raf = requestAnimationFrame(loop); }
-  function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); }
+    landImg = null; el.classList.add('on'); side(); game.onOpen?.(true); t0 = performance.now(); raf = requestAnimationFrame(loop); }
+  function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); pins.innerHTML = ''; game.onOpen?.(false); }
   return { open, close, key, get isOpen() { return open_; }, refresh: side };
 }

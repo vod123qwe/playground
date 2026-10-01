@@ -49,7 +49,8 @@ import * as LVM from './levels.js';
 import * as JB from './jobs.js';
 import * as WT from './watki.js';
 import { createGeese } from './geese.js';
-import { createMap } from './map.js';
+import { createMap, RC as MAP_RC, PTS as MAP_PTS } from './map.js';
+import { createDiorama } from './dio.js';
 import { createPaper, NEWS, eventNews, CAST, ANECDOTES, printed, badgesOf } from './paper.js';
 import { createHoops } from './hoops.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
@@ -1482,7 +1483,10 @@ const fin = createPaper({ game: { JB,  jobs: () => LVM.load().jobs || [], slots:
     S.money = B.points; LVM.save(); return { ok: true, msg: J.done + ' ' + pickOf(['I nie mów nikomu, skąd masz.', 'Interes zrobiony. Nie znamy się.', 'Proszę bardzo. Paragonu nie będzie, bo paragon to papier, a papier się pali.']) }; },
   buyNotes: () => { const S = LVM.load(), c = JB.JOBS.notes.cost; if ((S.slots || 2) >= 4) return { ok: false, msg: 'Większego notesu nie mam. Większy to już segregator.' }; if (B.points < c) return { ok: false, msg: 'Sześćdziesiąt złotych, kochanieńki. Wróć z pieniążkami.' }; B.points -= c; S.slots = (S.slots || 2) + 1; S.money = B.points; LVM.save(); return { ok: true, msg: 'Proszę bardzo, notes z twardą okładką. Teraz zmieścisz więcej spraw.' }; },
  mods: () => LVM.mods(), setMod: (id, on) => LVM.setMod(id, on), MODS: LVM.MODS, modBonus: ids => LVM.modBonus(ids), rewards: id => ({ R: LVM.REWARDS[id] || {}, got: LVM.load().got || {} }), partName: (k, i) => partLabel(k, i), coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
-const map = createMap({ levels: LVM, game: { partName: (k, i) => partLabel(k, i), go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
+// the map's model (dio.js): drawn instead of the world while the map is open
+const dio = createDiorama({ THREE, toon, REGIONS: LVM.REGIONS, RC: MAP_RC, PTS: MAP_PTS });
+{ const st = document.createElement('style'); st.textContent = 'body.mapopen #hudpx, body.mapopen #hud, body.mapopen #lvhud, body.mapopen #radio, body.mapopen #note { visibility: hidden; }'; document.head.appendChild(st); }
+const map = createMap({ levels: LVM, game: { dio, onOpen: on => document.body.classList.toggle('mapopen', on), partName: (k, i) => partLabel(k, i), go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
 // ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
 // ghost here: his bike and him as he rides at home, moved to where he says he is (15 times a second), between the messages carried on
 // by his speed. Each player's own (his state, his bike, his camera, his aim, ...) is in a context; use(ctx) puts one in the game's
@@ -1594,7 +1598,7 @@ function frame(now) {
   { const pc = quests.policeCars()[0]; audio.siren(quests.siren && !menu.open, where(pc && pc.g.position)); }
   audio.music(menu.page === 'title' || runUI.isOpen ? 'tytul' : quests.siren || quests.gangTargets.length ? 'poscig' : 'poranek');
   talkCam(dt); if (B.papers > (B.bagMax || 30)) { B.papers = B.bagMax || 30; if (!(B.fullT > 0)) { flash('Torba pełna'); B.fullT = 4; } } B.fullT = (B.fullT || 0) - dt;   // (no more than the bag holds)
-  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); px.render(scene, camera, hudBag); drawHud(dt);
+  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { px.render(scene, camera, hudBag); drawHud(dt); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

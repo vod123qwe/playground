@@ -958,3 +958,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - poprawka: gdy przeciwnik ściągnął Cię do bójki w trakcie wywrotki, gra dalej myślała, że leżysz po wywrotce, i F nic nie robiło (ani przy swoim, ani przy cudzym rowerze); teraz pieszo wywrotka jest zawsze skończona
 - rower przeciwnika po bójce (leżący albo czekający na właściciela) da się wziąć
 - gdy przeciwnik ukradnie Ci rower po przegranej, podpowiedź mówi, gdzie go szukać, i że możesz wziąć jego
+
+## Wersja 108: mapa jako makieta 3D
+
+- mapa między poziomami to teraz mała makieta z klocków: regiony różnią się kolorem i ziemią, wybrany region jest jaśniejszy i lekko podniesiony, reszta przygaszona, niezbudowane szare pod chmurami
+- w każdym regionie charakterystyczne budowle: dom z koszem, warsztat, posterunek, wieża ciśnień; we wsi wiatrak, stodoła z silosem, stogi, kapliczka i traktor; dalej dźwigi, tory z pociągiem, ratusz, kościół, bloki, pomost, namioty, domki, kamieniołom
+- żywe elementy: chmury z cieniem, klucz ptaków, dym z kominów, autka jeżdżące po drogach
+- drogi jak drogi: ciemne pobocze, jezdnia (we wsi gruntowa), przerywana linia, złota po przejechaniu; zamknięte odcinki jako kropki; droga do wybranego przystanku jasno obrysowana
+- przystanki: okrągły podest z flagą w kolorze stanu i pikselowa etykieta z nazwą (dom na czerwono, wybrany na złoto)
+- etykiety regionów i przystanków w pełnych pikselowych ramkach, bez przezroczystości
+- informacje o odcinku w pasku na dole na całą szerokość, z większymi odstępami
+- warsztat: Janusz dopasowuje się do miejsca obok okna, więc twarz i czapka są zawsze widoczne, a dymek wychodzi mu z ust
