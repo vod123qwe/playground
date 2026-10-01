@@ -15,11 +15,14 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   const wrap = x => ((x % len) + len) % len, ahead = (from, to, dir) => { let d = ((to - from) * dir % len + len) % len; return d > len / 2 ? d - len : d; };
   function place(t) {
     const f = wrap(t.s) / ds, i0 = Math.floor(f) % N, i1 = (i0 + 1) % N, k = f - Math.floor(f), A = S[i0], B = S[i1];
-    const px = A.p.x + (B.p.x - A.p.x) * k, pz = A.p.z + (B.p.z - A.p.z) * k, py = A.p.y + (B.p.y - A.p.y) * k, rx = A.r.x, rz = A.r.z;
+    const px = A.p.x + (B.p.x - A.p.x) * k, pz = A.p.z + (B.p.z - A.p.z) * k, py = A.p.y + (B.p.y - A.p.y) * k;
+    let rx = A.r.x + (B.r.x - A.r.x) * k, rz = A.r.z + (B.r.z - A.r.z) * k; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;   // (the side between the two too: no step sideways where one bit of road meets the next)
     const fx = A.f.x + (B.f.x - A.f.x) * k, fz = A.f.z + (B.f.z - A.f.z) * k;                    // (the heading between the two points it is between)
-    t.x = px + rx * t.lane; t.z = pz + rz * t.lane; const yawT = Math.atan2(fx, fz) + (t.dir < 0 ? Math.PI : 0);
-    if (t.yaw === undefined || t.snap) { t.yaw = yawT; t.snap = false; } else t.yaw += Math.atan2(Math.sin(yawT - t.yaw), Math.cos(yawT - t.yaw)) * Math.min(1, (t.dt || .016) * 7);   // (eased: it swings round, not snaps)
-    const steer = Math.atan2(t.laneV * t.dir, Math.max(2, t.v));        // (changing lanes: nosed a little into it)
+    // the heading: the way it has actually gone (the road's bend and a lane change in one), eased as a car's is, and held when it stands
+    const ox = t.x, oz = t.z; t.x = px + rx * t.lane; t.z = pz + rz * t.lane; const mx = t.x - ox, mz = t.z - oz, moved = Math.hypot(mx, mz);
+    const road = Math.atan2(fx, fz) + (t.dir < 0 ? Math.PI : 0), yawT = moved > .004 && moved < 3 && !t.snap ? Math.atan2(mx, mz) : road; if (moved >= 3) t.yaw = road;   // (a jump: sent elsewhere, faced down the road)
+    if (t.yaw === undefined || t.snap) { t.yaw = road; t.snap = false; } else { const dy = Math.atan2(Math.sin(yawT - t.yaw), Math.cos(yawT - t.yaw)); t.yaw += dy * Math.min(1, (t.dt || .016) * 9); }
+    const steer = 0;
     if (!t.car) return;
     t.car.group.position.set(t.x, py, t.z); t.car.group.rotation.set(-Math.atan((B.p.y - A.p.y) / ds) * t.dir, t.yaw - steer, 0, 'YXZ');
   }

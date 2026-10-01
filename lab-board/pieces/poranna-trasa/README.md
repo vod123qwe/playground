@@ -632,3 +632,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - auta wymijają już tylko to, co stoi w miejscu: zaparkowane przy krawężniku, rampę, autobus na przystanku i rowerzystę, który stoi dłużej niż 4 sekundy; za wolnym autem i za jadącym rowerzystą grzecznie czekają (i trąbią)
 - przed wymijaniem kierunkowskaz: najpierw chwilę miga lewy (auto jeszcze na swoim pasie), potem zjazd; w drodze powrotnej miga prawy
+
+## Wersja 64: pad i płynne auta
+
+- pad Xbox i PlayStation (każdy w standardowym układzie): pierwsze wciśnięcie przełącza grę na pada, podpowiedzi pokazują jego przyciski (A B X Y albo krzyżyk, kółko, kwadrat, trójkąt), klawisz lub mysz przełącza z powrotem
+- rower: RT jedź, LT hamuj, lewa gałka skręt, LB / RB rzut (trzymaj: siła, prawa gałka: celowanie), A podskok, X kopniak / trick, Y pogadaj, B zsiądź, L3 szybciej, R3 kamera, krzyżak ↑ zmiana gazety, ↓ dzwonek
+- pieszo: lewa gałka idzie tam, gdzie ją pchniesz (względem kamery), prawa obraca kamerę, A skok, X uderz, Y zagadaj, B wsiądź; w bójce X prosty, Y sierpowy, RB garda, LB / A unik, krzyżak ↑ ↓ hak i dół, ← prowokacja
+- menu, pytania, rozmowy: krzyżak lub gałka wybiera, A zatwierdza, B wraca; w szybkim wyborze w trakcie jazdy odpowiedzi pod strzałkami krzyżaka; MENU pauza, VIEW notes
+- sklep: podświetlenie skacze po przyciskach (część od razu widać na rowerze), A kupuje, Y pogadaj, B wyjście
+- auta skręcają płynnie: bez przeskoku w bok na styku kawałków drogi, obrót z faktycznego ruchu, jak prawdziwe auto
