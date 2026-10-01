@@ -47,6 +47,7 @@ import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, 
 import { createGarage } from './garage.js';
 import * as LVM from './levels.js';
 import * as JB from './jobs.js';
+import * as WT from './watki.js';
 import { createMap } from './map.js';
 import { createPaper, NEWS, eventNews, CAST, ANECDOTES, printed, badgesOf } from './paper.js';
 import { createHoops } from './hoops.js';
@@ -1357,10 +1358,8 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'trick', 'fall'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
-  if (news.length < 2 && RUN.maxStreak >= 5) news.push({ ...eventNews('streak', RUN.maxStreak), img: null });
-  if (news.length < 2 && !r.falls && !r.windows) news.push({ ...eventNews('clean', 0), img: null });
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }
   const nexts = L.after.map(id => LVM.LEVEL(id)).filter(Boolean), T = nexts.find(l => l.tease)?.tease;
@@ -1380,13 +1379,17 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const e of log) if (e.kind === 'live') briefs.unshift(`Telefon na trasie od: ${JB.PERSONAS[e.who]?.name || 'ktoś'}. ${e.ok ? 'Załatwione, +' + e.pay + ' zł.' : 'Nie zdążył.'}`);
   const winsOn = track.windows.filter(w => onWay(w.i)).length || 1, broken = track.windows.filter(w => w.broken && onWay(w.i)).length;
   const badges = badgesOf({ windows: r.windows, winPct: broken / winsOn, mailbox: counts.kick_mailbox || 0, ped: counts.kick_ped || 0, bikes: (counts.kick_bike || 0) + (counts.kick_gangm || 0), gang: counts.gang || 0, kmh: Math.round(trip.max * 3.6), streak: RUN.maxStreak || 0, tricks: counts.trick || 0, dog: counts.kick_dog || 0, granny: counts.kick_granny || 0, falls: r.falls, goalPapers: r.delivered >= L.goal.papers });
+  // the town's stories of this issue (watki.js): a step on, a new one; the police's thread out of what you did
+  const misdeeds = log.reduce((n, e) => n + (WT.MISDEED[e.kind] || 0), 0), Ssv = LVM.load(), adv = WT.advance(Ssv.threads, { region: track.region, misdeeds, clean: !misdeeds && !r.falls });
+  LVM.save({ threads: adv.state }); const stories = adv.stories.map(q => ({ ...q, img: q.spot ? photoOf(q.spot) : null, faceImg: q.face ? faceOf(q.face) : null }));
+  for (const q of stories) if (q.id === 'sprawca' && !q.img) { const e = log.find(x => WT.MISDEED[x.kind]); q.img = e?.img || (e ? photoAt(e.x, e.z) : null); }
   const fin0 = photo(camera);
   const next = nexts.map((l, k) => ({ id: l.soon ? null : l.id, name: l.name + (l.soon ? ' (WKRÓTCE)' : ''), note: l.soon ? (LVM.REGIONS.find(q => q.id === l.region)?.note || l.note) : l.note, first: k === 0 })).filter(x => x.id || x.name);
   // Janusz's ads: parts not had yet, the cheapest first
   const parts = []; for (const k in PARTS) PARTS[k].tiers.forEach((t, i) => { if (i && t.price && myBike.parts[k] < i && !INV.some(p => p.k === k && p.tier === i) && !(k === 'lakier' && PAINTS.has(i))) parts.push({ k, i, name: t.name === PARTS[k].name ? t.name : `${PARTS[k].name}: ${t.name}`, t: 'WARSZTAT U JANUSZA', d: `${PARTS[k].name}: ${t.name.toLowerCase()}. ${t.note.charAt(0) + t.note.slice(1).toLowerCase()}`, price: t.price }); });
   parts.sort((a, b) => a.price - b.price);
   const issue = Object.values(LVM.load().best).reduce((n, b) => n + (b.runs || 0), 0) + 100;
-  return { L, r, rec, opened, photos: { finish: fin0, news }, tease, briefs: briefs.slice(0, 3), iv, an, heard, counts, badges, janusz: faceOf('janusz'), coupon: LVM.load().coupon || null, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
+  return { L, r, rec, opened, photos: { finish: fin0, news }, stories, heat: adv.state.heat, tease, briefs: briefs.slice(0, 3), iv, an, heard, counts, badges, janusz: faceOf('janusz'), coupon: LVM.load().coupon || null, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
 const fin = createPaper({ game: { JB,  jobs: () => LVM.load().jobs || [], slots: () => LVM.load().slots || 2,
   takeJob: kind => { const S = LVM.load(), slots = S.slots || 2; S.jobs ||= []; if (S.jobs.some(j => j.kind === kind)) return { ok: false, msg: 'Już to masz w notesie.' }; if (S.jobs.length >= slots) return { ok: false, msg: 'Notes pełny. Najpierw załatw, co masz, albo kup większy u pani Heli.' }; const j = JB.take(kind); S.jobs.push(j); LVM.save(); return { ok: true, j }; },
   buy: kind => { const J = JB.JOBS[kind]; if (kind === 'notes') return fin.buyNotes(); const S = LVM.load(); S.owned ||= {}; if (J.item === 'sluchawka' && S.owned.sluchawka) return { ok: false, msg: 'Już masz. Drugiej nie sprzedam, bo by się kłóciły w uszach.' };

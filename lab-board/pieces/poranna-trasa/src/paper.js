@@ -36,26 +36,28 @@ export const NEWS = [
   { spot: 'dom', head: 'Kosz pod domem: brat trenuje', text: 'Młodszy brat naszego gazeciarza ćwiczy rzuty od rana. Twierdzi, że w przyszłym roku zagra w lidze.' }];
 
 // what happened on your route (main.js logs it as you ride): the news about it, the photo taken where it happened; {n} how many times
+// what happened on the route, as the town's paper tells it: about the people and the place, the cyclist in it unnamed (the red cap);
+// {n} how many times
 export const EVENTS = {
-  granny: [{ head: 'Starsza pani kontra rower', text: 'Przy drodze doszło do spięcia z emerytką i jej torebką. Świadkowie twierdzą, że wygrała torebka.' }],
-  car: [{ head: 'Zderzenie na trasie gazeciarza', text: 'Auto i rower spotkały się na jezdni. Kierowca przeprasza, rower mniej. Na szczęście obyło się bez złamań.' }, { head: 'Kierowcy, uwaga na rowery!', text: 'Rano na trasie auto potrąciło naszego gazeciarza. Apelujemy o ostrożność, zwłaszcza przy wyjazdach z posesji.' }],
-  police: [{ head: 'Patrol zatrzymał rowerzystę', text: 'Policja skontrolowała gazeciarza {n} {razy}. Dyżurny przypomina: lampka i dzwonek to nie ozdoby.' }],
-  window: [{ head: 'Szyby lecą, szklarz się cieszy', text: 'Na trasie stłuczono {n} {szyb}. Poszkodowani wiedzą, kto jechał. Gazety do nich na razie nie trafią.' }, { head: 'Gazeta przez okno', text: 'Mieszkańcy znaleźli dziś prasę w salonie, razem ze szkłem. Prenumeratę zawiesili.' }],
-  dog: [{ head: 'Pies pognał gazeciarza', text: 'Czworonóg zza płotu ruszył w pościg {n} {razy}. Właściciel zapewnia, że pies tylko chciał poczytać.' }, { head: 'Psy nie śpią od świtu', text: 'Na trasie co chwilę ujadanie. Gazeciarz radzi: nie zwalniać przy furtkach.' }],
-  fall: [{ head: 'Asfalt znów wygrał', text: 'Gazeciarz zaliczył {n} {wywrotek}. Kolana w porządku, duma trochę mniej.' }],
-  streak: [{ head: 'Seria jak z karabinu', text: 'Gazeciarz trafił do {n} skrzynek z rzędu, bez jednego pudła. Takiej serii dawno tu nie było.' }],
-  gang: [{ head: 'Gang rowerowy znów na ulicach', text: 'Ekipa na rowerach ruszyła rano za naszym gazeciarzem. Mieszkańcy zamykali furtki, a psy chowały się do bud.' }],
-  chase: [{ head: 'Pościg z kogutem', text: 'Radiowóz na sygnale przemknął przez okolicę. Policja nie zdradza, kogo goniła. Gazeciarz też nie.' }],
-  kick_ped: [{ head: 'Przechodzień oberwał z buta', text: 'Na chodniku doszło do bliskiego spotkania buta z przechodniem. Poszkodowany zapowiada skargę u dzielnicowego.' }],
-  kick_bike: [{ head: 'Kolarz wylądował w żywopłocie', text: 'Rowerzysta zderzył się z butem gazeciarza {n} {razy}. Żywopłot ucierpiał najbardziej.' }],
-  kick_gangm: [{ head: 'Gang rozbity na prostej', text: 'Członkowie rowerowej ekipy wylądowali na asfalcie. Świadkowie mówią o kopniaku jak z filmu.' }],
-  kick_police: [{ head: 'Kopnięty radiowóz', text: 'Na trasie ktoś kopnął w drzwi policyjnego auta. Dyżurny szuka sprawcy. Rower ma podobno czerwony.' }],
-  kick_granny: [{ head: 'Starsza pani kopnięta. Wstyd!', text: 'Mieszkańcy są oburzeni. Babcia z torebką twierdzi, że i tak wygrała, i że zna jego matkę.' }],
-  kick_car: [{ head: 'Wgniecione drzwi auta', text: 'Kierowca znalazł na drzwiach ślad buta. Sąsiedzi przysięgają, że to nie oni.' }],
-  kick_dog: [{ head: 'Pies wylądował w krzakach', text: 'Czworonóg, który gonił gazeciarza, dostał nauczkę. Obrońcy zwierząt protestują, listonosz bije brawo.' }],
-  kick_mailbox: [{ head: 'Skrzynki pocztowe w opałach', text: 'Na trasie ktoś skopał {n} {skrzynek}. Poczta rozkłada ręce, a stolarz ma ręce pełne roboty.' }],
-  trick: [{ head: 'Akrobata na rowerze', text: 'Gazeciarz wyskoczył ze skoczni i wykręcił {name}. Sąsiedzi nagrodzili go oklaskami spod firanek.' }],
-  clean: [{ head: 'Czysto od startu do mety', text: 'Ani jednej wywrotki, ani jednej szyby. Mieszkańcy mówią, że tak powinno być codziennie.' }] };
+  granny: [{ head: 'Emerytka obroniła torebkę', text: 'Przy drodze starsza pani starła się z rowerzystą. Świadkowie twierdzą, że wygrała torebka. Sama zainteresowana mówi, że „za jej czasów młodzież miała szacunek”.' }],
+  car: [{ head: 'Potrącenie rowerzysty', text: 'Rano auto zderzyło się z rowerzystą w czerwonej czapce. Kierowca przeprasza, rowerzysta odjechał, zanim ktokolwiek zdążył zapytać o nazwisko.' }, { head: 'Kierowcy, uwaga na rowery!', text: 'Kolejne zderzenie auta z rowerem w okolicy. Mieszkańcy domagają się progów zwalniających. Rada osiedla obiecuje zająć się sprawą po wakacjach.' }],
+  police: [{ head: 'Kontrole na osiedlu', text: 'Patrol {n} {razy} zatrzymywał rano rowerzystów. Dyżurny przypomina, że lampka i dzwonek to nie ozdoby, a mandat to nie prezent.' }],
+  window: [{ head: 'Szyby lecą, szklarz zaciera ręce', text: 'Na osiedlu stłuczono {n} {szyb}. Poszkodowani widzieli tylko rower i czerwoną czapkę. Szklarz z Lipowej ma kolejkę do przyszłego tygodnia.' }, { head: 'Gazeta przez okno', text: 'Mieszkańcy znaleźli rano prasę w salonie, razem ze szkłem. Sprawą zainteresował się dzielnicowy. Prenumeratę na razie zawieszono.' }],
+  dog: [{ head: 'Pies z Akacjowej znów w natarciu', text: 'Czworonóg zza płotu {n} {razy} ruszył rano za rowerem. Właściciel zapewnia, że pies jest łagodny, tylko nie lubi kółek.' }, { head: 'Psy nie śpią od świtu', text: 'Mieszkańcy skarżą się na ujadanie od piątej rano. Według sąsiadów psy reagują na rowery i na listonosza. Na listonosza bardziej.' }],
+  gang: [{ head: 'Gang rowerowy znów na ulicach', text: 'Ekipa na rowerach przemknęła rano przez osiedle w pogoni za samotnym rowerzystą. Mieszkańcy zamykali furtki, a psy chowały się do bud.' }],
+  chase: [{ head: 'Pościg z kogutem', text: 'Radiowóz na sygnale przemknął przez okolicę. Policja nie zdradza, kogo goniła. Świadkowie mówią o rowerze i czerwonej czapce.' }],
+  kick_ped: [{ head: 'Przechodzień pobity przez rowerzystę', text: 'Na chodniku nieznany rowerzysta kopnął przechodnia i odjechał. Poszkodowany zapowiada skargę u dzielnicowego. Policja prosi świadków o kontakt.' }],
+  kick_bike: [{ head: 'Kolarz w żywopłocie', text: 'Rowerzysta w kolarskim stroju wylądował {n} {razy} w żywopłocie. Twierdzi, że ktoś go kopnął. Żywopłot ucierpiał najbardziej.' }],
+  kick_gangm: [{ head: 'Rowerowy gang rozbity', text: 'Członkowie osiedlowej ekipy wylądowali na asfalcie. Świadkowie mówią o kopniaku jak z filmu i o czerwonej czapce, która zniknęła za zakrętem.' }],
+  kick_police: [{ head: 'Kopnięty radiowóz', text: 'Ktoś kopnął w drzwi policyjnego auta i odjechał na rowerze. Dyżurny traktuje sprawę osobiście. Rower podobno ma czerwoną ramę.' }],
+  kick_granny: [{ head: 'Starsza pani kopnięta. Wstyd!', text: 'Mieszkańcy są oburzeni. Poszkodowana mówi, że rozpozna sprawcę wszędzie, i że zna jego matkę. Policja szuka rowerzysty w czerwonej czapce.' }],
+  kick_car: [{ head: 'Wgniecione drzwi', text: 'Kierowca znalazł na drzwiach auta ślad buta. Sąsiedzi przysięgają, że to nie oni. Ślad ma rozmiar, jak mówi kierowca, „młodzieżowy”.' }],
+  kick_dog: [{ head: 'Pies w krzakach', text: 'Czworonóg, który gonił rowery na Akacjowej, sam wylądował w krzakach. Obrońcy zwierząt protestują, listonosz bije brawo.' }],
+  kick_mailbox: [{ head: 'Skrzynki pocztowe w opałach', text: 'Ktoś skopał {n} {skrzynek}. Poczta rozkłada ręce, a stolarz ma pełne ręce roboty. Podejrzenia padają na konkurencję gazety. Albo na młodzież.' }],
+  trick: [{ head: 'Akrobata na skoczni', text: 'Mieszkańcy widzieli rano rowerzystę, który wykręcił w powietrzu {name}. Sąsiadki oklaskiwały spod firanek, dzielnicowy kręcił głową.' }],
+  fall: [{ head: 'Asfalt znów wygrał', text: 'Rowerzysta {n} {razy} zaliczył rano asfalt. Kolana w porządku, duma trochę mniej.' }],
+  streak: [{ head: 'Seria jak z karabinu', text: 'Seria {n} trafień do skrzynek z rzędu. Takiej serii dawno tu nie było.' }],
+  clean: [{ head: 'Spokojny poranek', text: 'Ani jednej stłuczonej szyby, ani jednego wypadku. Rada osiedla mówi, że tak powinno być codziennie.' }] };
 const FORMS = { razy: ['raz', 'razy', 'razy'], szyb: ['szybę', 'szyby', 'szyb'], wywrotek: ['wywrotkę', 'wywrotki', 'wywrotek'], skrzynek: ['skrzynkę', 'skrzynki', 'skrzynek'] };
 export const eventNews = (kind, n, name = '') => { const t = pickOf(EVENTS[kind]), f = s => s.replace('{n}', n).replace('{name}', String(name).toLowerCase()).replace(/\{(\w+)\}/g, (_, k) => FORMS[k] ? plural(n, ...FORMS[k]) : ''); return { head: f(t.head), text: f(t.text) }; };
 // the headline of the lead: the best thing (or the worst) of the ride
@@ -195,7 +197,7 @@ export function createPaper({ game }) {
     /* the columns */
     #paper .body { flex: 1 1 0; min-height: 0; columns: var(--cols); column-gap: 18px; column-rule: 2px solid #2b2723; column-fill: auto; overflow: hidden; }
     #paper .face { line-height: 20px; }
-    #paper .blk { break-inside: avoid; margin: 0 0 10px; padding-top: 10px; border-top: 2px solid #2b2723; } #paper .blk.txt { break-inside: auto; border-top: 0; padding-top: 0; }
+    #paper .blk { break-inside: avoid; margin: 0 0 10px; padding-top: 10px; border-top: 2px solid #2b2723; } #paper .blk.txt { break-inside: auto; border-top: 0; padding-top: 0; } #paper .blk.quote { border-top: 0; padding-top: 0; }
     #paper .blk.span { column-span: all; margin-bottom: 12px; border-top: 0; padding: 0 0 8px; border-bottom: 2px solid #2b2723; } #paper .blk.span + .blk { border-top: 0; padding-top: 0; }
     #paper .kick { color: #b8483a; letter-spacing: 2px; margin: 0 0 4px; } #paper .kick:before { content: ''; display: inline-block; width: 8px; height: 8px; background: #b8483a; margin-right: 6px; vertical-align: 1px; }
     #paper .deck { color: #4a4540; margin: 6px 0 2px; } #paper .by { color: #8a8278; letter-spacing: 1px; margin: 0; }
@@ -317,23 +319,29 @@ export function createPaper({ game }) {
   const KICK = { granny: 'KRONIKA', car: 'Z DROGI', police: 'KRONIKA POLICYJNA', window: 'Z OSIEDLA', dog: 'Z OSIEDLA', fall: 'Z TRASY', gang: 'KRONIKA', chase: 'KRONIKA POLICYJNA', kick_ped: 'KRONIKA', kick_bike: 'Z DROGI', kick_gangm: 'KRONIKA', kick_police: 'KRONIKA POLICYJNA', kick_granny: 'SKANDAL', kick_car: 'Z DROGI', kick_dog: 'Z OSIEDLA', kick_mailbox: 'Z OSIEDLA', trick: 'SPORT', streak: 'SPORT', clean: 'Z TRASY' };
   const BYS = ['R. KOWAL', 'M. WRÓBEL', 'J. SIKORA', 'A. DZIĘCIOŁ'];
   function blocks(sec) { const { L, r, rec } = D, nw = D.photos.news, tz = D.tease, out = [], B = (h, cls = '') => out.push(`<div class="blk ${cls}">${h}</div>`), by = pickOf(BYS);
-    if (sec === 0) {
-      B(`<p class="kick">Z TRASY · ${D.region}</p><h2>${D.headline}</h2><p class="deck">${r.delivered} ${plural(r.delivered, 'gazeta', 'gazety', 'gazet')} w skrzynkach, ${mmss(r.time)} na liczniku, ${rec.g.n} ${plural(rec.g.n, 'gwiazdka', 'gwiazdki', 'gwiazdek')}.</p><p class="by">TEKST: ${by} · FOT.: REDAKCJA</p>`, 'span');
-      B(pic(D.photos.finish, `FOT. Meta odcinka ${L.name.toLowerCase()}.`));
-      B(`<p class="lede">${story()}</p>`, 'txt');
-      B(`<div class="box" data-sec="1"><h3>Twoja trasa</h3><div class="kvs"><div class="kv"><canvas data-ico="dist"></canvas><b>${(D.route.len / 1000).toFixed(2)} KM</b><small>DYSTANS</small></div>
-          <div class="kv"><canvas data-ico="time"></canvas><b>${mmss(r.time)}</b><small>CZAS</small></div><div class="kv"><canvas data-ico="paper"></canvas><b>${r.delivered} / ${D.route.subs}</b><small>DORĘCZONE</small></div>
-          <div class="kv"><canvas data-ico="star"></canvas><b>${rec.g.n} / 3</b><small>GWIAZDKI</small></div></div><canvas class="mini" data-map="mini"></canvas><p class="more">WIĘCEJ: TWOJA TRASA ▸</p></div>`);
-      if (nw[0]) B(`<p class="kick">${KICK[nw[0].kind] || 'Z MIASTECZKA'}</p><h3>${nw[0].head}</h3>${nw[0].img ? pic(nw[0].img, 'FOT. Redakcja, na miejscu zdarzenia.') : ''}<p>${nw[0].text}</p>`);
+    // the front: the town's stories (the lead the freshest of them, the police's first when there is one); what happened on the
+    // streets (the cyclist unnamed); the interview; what was heard; tomorrow. The paperboy's own numbers are inside (Twoja trasa)
+    if (sec === 0) { const st = (D.stories || []).filter(q => q.fresh), lead = st.find(q => q.lead) || st[0], rest = st.filter(q => q !== lead), ev = nw.filter(n => n.kind);
+      const story = (q, big) => `<p class="kick">${q.kicker}</p>${big ? `<h2>${q.head}</h2>` : `<h3>${q.head}</h3>`}`;
+      if (lead) { B(`${story(lead, true)}<p class="by">TEKST: ${by} · FOT.: REDAKCJA</p>`, 'span'); if (lead.img || lead.faceImg) B(pic(lead.img || lead.faceImg, `FOT. ${lead.kicker.charAt(0) + lead.kicker.slice(1).toLowerCase()}.`));
+        B(`<p class="lede">${lead.text}</p>`, 'txt'); if (lead.quote) B(`<blockquote>${lead.quote[1]}</blockquote><p class="sig">${lead.quote[0]}</p>`, 'quote'); }
+      else if (ev[0]) { B(`<p class="kick">${KICK[ev[0].kind] || 'Z OSIEDLA'}</p><h2>${ev[0].head}</h2><p class="by">TEKST: ${by}</p>`, 'span'); if (ev[0].img) B(pic(ev[0].img, 'FOT. Redakcja, na miejscu zdarzenia.')); B(`<p class="lede">${ev[0].text}</p>`, 'txt'); ev.shift(); }
+      for (const q of rest) B(`${story(q)}${q.img ? pic(q.img) : q.faceImg ? portrait(q.faceImg) : ''}<p>${q.text}</p>${q.quote ? `<p class="q">„${q.quote[1]}”</p><p class="sig">${q.quote[0]}</p>` : ''}`, q.faceImg && !q.img ? 'iv' : '');
+      for (const n of ev.slice(0, 2)) B(`<p class="kick">${KICK[n.kind] || 'Z OSIEDLA'}</p><h3>${n.head}</h3>${n.img ? pic(n.img, 'FOT. Redakcja, na miejscu zdarzenia.') : ''}<p>${n.text}</p>`);
       { const I = D.iv, C = I && CAST[I.who]; if (C) { const qa = C.qa(r); B(`<p class="kick">ROZMOWA DNIA</p><h3>${C.who}</h3>${portrait(I.img)}<p class="who">${C.role}</p><blockquote>${qa[0][1]}</blockquote>${qa.map(([q, a]) => `<p class="q">${q}</p><p class="a">${a}</p>`).join('')}`, 'iv'); } }
-      if (D.jobRes?.length) { const JB = game.JB; B(`<p class="kick">Z NOTESU GAZECIARZA</p>${D.jobRes.map(q => `<p class="li">${JB.JOBS[q.kind].title}: ${q.ok ? JB.JOBS[q.kind].done + ` <span class="pr">+${q.pay} ZŁ</span>` : JB.JOBS[q.kind].fail}</p>`).join('')}`, 'brief'); }
-      for (const sh of D.shots || []) B(`<p class="kick">ZDJĘCIE CZYTELNIKA</p><h3>${sh.what.charAt(0).toUpperCase() + sh.what.slice(1)}</h3>${pic(sh.img, 'FOT. Nasz gazeciarz, na trasie.')}`);
-      if (D.heard?.length) B(`<p class="kick">PODSŁUCHANE NA TRASIE</p>${D.heard.map(h => `<div class="heard">${h.img ? portrait(h.img, 'pt xs') : ''}<p>„${h.text.charAt(0) + h.text.slice(1).toLowerCase()}”</p><p class="sig">${h.name}</p></div>`).join('')}`, 'iv');
+      for (const sh of D.shots || []) B(`<p class="kick">ZDJĘCIE CZYTELNIKA</p><h3>${sh.what.charAt(0).toUpperCase() + sh.what.slice(1)}</h3>${pic(sh.img, 'FOT. Czytelnik, na trasie.')}`);
+      if (D.heard?.length) B(`<p class="kick">PODSŁUCHANE NA ULICY</p>${D.heard.map(h => `<div class="heard">${h.img ? portrait(h.img, 'pt xs') : ''}<p>„${h.text.charAt(0) + h.text.slice(1).toLowerCase()}”</p><p class="sig">${h.name}</p></div>`).join('')}`, 'iv');
       if (D.briefs.length) B(`<p class="kick">W SKRÓCIE</p>${D.briefs.slice(0, 3).map(t => `<p class="li">${t}</p>`).join('')}`, 'brief');
-      if (tz) B(`<p class="kick">JUTRO</p><h3>${tz.head}</h3>${tz.img ? pic(tz.img) : ''}<p>${tz.text}</p>${D.next.length ? `<p class="opts">DO WYBORU: ${D.next.map(x => x.name).join(' ALBO ')}</p>` : ''}`);
-      else if (nw[1]) B(`<p class="kick">Z MIASTECZKA</p><h3>${nw[1].head}</h3>${nw[1].img ? pic(nw[1].img) : ''}<p>${nw[1].text}</p>`); }
+      if (tz) B(`<p class="kick">JUTRO</p><h3>${tz.head}</h3>${tz.img ? pic(tz.img) : ''}<p>${tz.text}</p>`);
+      else if (nw[1] && !nw[1].kind) B(`<p class="kick">Z MIASTECZKA</p><h3>${nw[1].head}</h3>${nw[1].img ? pic(nw[1].img) : ''}<p>${nw[1].text}</p>`); }
     if (sec === 1) { const b = rec.best, gl = L.goal, st = rec.g.st, row = (k, v, bv, rk) => `<tr><td>${k}</td><td>${v}${rec.beat[rk] ? ' <span class="rec">REKORD</span>' : ''}</td><td>${bv}</td></tr>`, bd = D.badges || [];
-      B(`<p class="kick">RAPORT DORĘCZEŃ</p><h2>Twoja trasa: ${L.name.toLowerCase()}</h2>`, 'span');
+      B(`<p class="kick">WKŁADKA DLA DORĘCZYCIELA</p><h2>Twoja trasa: ${L.name.toLowerCase()}</h2><p class="deck">${D.headline}</p>`, 'span');
+      B(`<div class="box" data-sec="1"><h3>W liczbach</h3><div class="kvs"><div class="kv"><canvas data-ico="dist"></canvas><b>${(D.route.len / 1000).toFixed(2)} KM</b><small>DYSTANS</small></div>
+          <div class="kv"><canvas data-ico="time"></canvas><b>${mmss(r.time)}</b><small>CZAS</small></div><div class="kv"><canvas data-ico="paper"></canvas><b>${r.delivered} / ${D.route.subs}</b><small>DORĘCZONE</small></div>
+          <div class="kv"><canvas data-ico="star"></canvas><b>${rec.g.n} / 3</b><small>GWIAZDKI</small></div></div></div>`);
+      B(`<p class="kick">RAPORT Z TRASY</p><p>${story()}</p>`, 'txt');
+      if (D.jobRes?.length) { const JB = game.JB; B(`<p class="kick">Z NOTESU</p>${D.jobRes.map(q => `<p class="li">${JB.JOBS[q.kind].title}: ${q.ok ? JB.JOBS[q.kind].done + ` <span class="pr">+${q.pay} ZŁ</span>` : JB.JOBS[q.kind].fail}</p>`).join('')}`, 'brief'); }
+      if (D.heat >= 3) B(`<p class="kick">UWAGA</p><p>Policja szuka rowerzysty w czerwonej czapce. Im więcej szkód, tym więcej patroli na trasie.</p>`, 'brief');
       B(`<canvas class="big" data-map="big"></canvas><div class="legend"><span style="--c:#4f9a3e">DORĘCZONE</span><span style="--c:#cf5a3e">BEZ GAZETY</span><span style="--c:#e8e2d2">BEZ PRENUMERATY</span><span style="--c:#b8483a">TRASA</span><span style="--c:#8e2e25">WYWROTKA</span><span style="--c:#2b2723">SZYBA</span></div>`);
       B(`<h3>Gwiazdki ${starsH(rec.g.n)}</h3><div class="goal">${starsH(st[0] ? 1 : 0, 1)}<span>CZAS DO ${mmss(gl.time)}</span><span>${mmss(r.time)}</span></div>
         <div class="goal">${starsH(st[1] ? 1 : 0, 1)}<span>${gl.papers} GAZET, ${Math.round(gl.acc * 100)}% CELNIE</span><span>${r.delivered}, ${Math.round(r.acc * 100)}%</span></div><div class="goal">${starsH(st[2] ? 1 : 0, 1)}<span>BEZ WYWROTKI</span><span>${r.falls}</span></div>`);

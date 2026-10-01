@@ -923,3 +923,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - zmiana regionu: wybór trasy z innego regionu zapisuje stan i ładuje stronę dla tego regionu (adres ?region=wies); powrót do domu wraca do peryferii; trasy w regionie bez przeładowania
 - na Wsi nie ma domu gazeciarza: start spod drogi na początku pętli
 - plan regionów i tras: docs/regiony.md (6 regionów, 24 trasy)
+
+## Wersja 103: gazeta o mieście, nie o gazeciarzu
+
+- wątki fabularne (src/watki.js), które idą z wydania na wydanie, każdy z ludźmi, zdjęciami, cytatami: zaginiony kot Mruczek (Babcia Stasia, działkowiec, pan z przyczepy), skradziona koszulka zwycięzcy Janusza (Mietek podejrzany, ślad kobiety w czerwonej chustce), Kurier Osiedlowy wchodzi na osiedle, budowa na rogu, jubileusz i petycja pani Heli, tajemnica przyczepy; na Wsi: gęsi sołtysa i rekordowa dynia
+- „rowerzysta w czerwonej czapce”: Twoje wybryki (szyby, skrzynki, kopniaki, babcia, radiowóz, pościgi) nabijają policyjny wątek: wandal, poszukiwania, nagroda za wskazanie sprawcy; spokojne poranki go wyciszają
+- zdarzenia z trasy opisane jak w lokalnej gazecie, bez gazeciarza w roli głównej („nieznany rowerzysta...”)
+- Twoje liczby, raport z trasy i wyniki zleceń przeniesione do wkładki „Twoja trasa”
