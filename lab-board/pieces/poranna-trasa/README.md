@@ -462,3 +462,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - przyciski dopasowane do sytuacji: pieszo cios (na zmianę lewa i prawa), skok, gadaj, rower; w bójce lewy, prawy, blok (trzymany), unik (z gałką w bok)
 - na telefonie cios albo gadanie samo obraca go do najbliższej osoby (albo rowerzysty), bo nie ma myszy do celowania
 - podpowiedzi bez klawiszy na telefonie (trening bójki, „ROWER: wsiądź”), ramka treningu nad przyciskami; „×” w treningu zamienione na „x” (czcionka go nie ma)
+
+## Wersja 43: tricki bez nerwów
+
+- trick to jedno kliknięcie w locie ze skoczni (Spacja, na telefonie przycisk kopniaka, który w powietrzu świeci i mówi TRIK!); kręci się sam, w tempie dopasowanym do tego, ile lotu zostało
+- dociąganie: gdy brakuje czasu, obrót przyspiesza, żeby zdążył przed lądowaniem; zrobiony we własnym tempie: CZYSTO +1, dociągnięty na końcu: NA STYK (bez bonusu)
+- kombo: trick skończony, a dalej w locie? klik jeszcze raz, następny (+2 za każdy kolejny); punkty liczone razem przy lądowaniu, np. „360 + STÓŁ CZYSTO”
+- koniec wywrotek za złe puszczenie albo trzymanie przy lądowaniu; za późno jest tylko wtedy, gdy do ziemi zostało mniej niż ułamek sekundy (wtedy trick się po prostu nie zaczyna)
+- kierunki bez zmian: z A albo D 360, z W na dużej skoczni salto, sam klik stół

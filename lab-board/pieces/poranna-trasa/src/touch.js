@@ -12,7 +12,7 @@ export function createTouch({ onCam, onMenu }) {
   const state = { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, kickHeld: false, guard: false, lookDx: 0, lookDy: 0 };
   const edges = { kick: false, hop: false, punchL: false, punchR: false, dodge: false, mount: false, talk: false };
   const take = () => { const e = { ...edges }; for (const k in edges) edges[k] = false; e.lookDx = state.lookDx; e.lookDy = state.lookDy; state.lookDx = state.lookDy = 0; return e; };
-  if (!on) return { on, state, take, setMode() { }, show() { } };
+  if (!on) return { on, state, take, setMode() { }, show() { }, trick() { } };
   document.body.classList.add('touch');
 
   // the page keeps still under the fingers: no scroll, no pull to refresh, no pinch, no double-tap zoom, no long-press menu
@@ -40,6 +40,7 @@ export function createTouch({ onCam, onMenu }) {
     #tc .btn.down { background: rgba(239,201,112,.92); color: #17181b; border-color: rgba(23,24,27,.9); transform: scale(.93); }
     #tc .btn.off { display: none; }
     #tc .top { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: none; }
+    #tc .btn.trick { background: rgba(239,201,112,.55); border-color: #efc970; } #tc .btn.trick i { color: #efc970; opacity: 1; }
     #tc .top .btn { position: relative; width: 38px; height: 38px; border-radius: 11px; }
     @media (max-width: 639px) { #tc .top { left: max(14px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 76px); transform: none; gap: 6px; } #tc .top .btn { width: 34px; height: 34px; border-radius: 10px; } }   /* (narrow: a row under the bike computer) */
   `; document.head.appendChild(css);
@@ -93,7 +94,7 @@ export function createTouch({ onCam, onMenu }) {
     all.push({ b, modes }); return b; }
   const BIKE = ['bike'], FOOT = ['foot', 'fight'];
   // on the bike: throws either side of the big kick, hop and faster above, off at the top of the column
-  button(IC.kick, 'kop', [78, 58, 14], BIKE, () => { edges.kick = true; state.kickHeld = true; }, () => { state.kickHeld = false; });
+  const kickB = button(IC.kick, 'kop', [78, 58, 14], BIKE, () => { edges.kick = true; state.kickHeld = true; }, () => { state.kickHeld = false; });
   button(IC.throwL, 'rzut', [62, 150, 30], BIKE, () => { state.holdL = true; }, () => { state.holdL = false; });
   button(IC.throwR, 'rzut', [62, 0, 104], BIKE, () => { state.holdR = true; }, () => { state.holdR = false; });
   button(IC.hop, 'skok', [52, 118, 108], BIKE, () => { edges.hop = true; });
@@ -119,5 +120,8 @@ export function createTouch({ onCam, onMenu }) {
   function show(v) { root.classList.toggle('hide', !v); if (!v) Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false, kickHeld: false }); }
   setMode('bike');
   addEventListener('blur', () => Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false }));
-  return { on, state, take, setMode, show };
+  // in the air off a ramp: the kick button is the trick button (lit, and says so)
+  let trickOn = false; const kickI = kickB.querySelector('i');
+  function trick(v) { if (v === trickOn) return; trickOn = v; kickB.classList.toggle('trick', v); kickI.textContent = v ? 'TRIK!' : 'kop'; }
+  return { on, state, take, setMode, show, trick };
 }
