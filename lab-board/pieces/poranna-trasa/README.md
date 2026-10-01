@@ -454,3 +454,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - swipe nic nie przełącza: przeglądarka nie przewija, nie cofa strony, nie przybliża i nie odświeża (poza przewijaniem panelu stylu)
 - ekran responsywny: tytuł mieści się w szerokości, licznik rowerowy mniejszy, pod nim rząd małych przycisków (kamera, menu, pełny ekran), torba z gazetami w prawym górnym rogu pod portmonetką, szerszy kąt kamery przy telefonie trzymanym pionowo
 - lżejsze renderowanie na telefonie (piksel do piksela, mniejsza mapa cieni); w Grafice przycisk „Panel stylu: wszystko”
+
+## Wersja 42: chodzenie na telefonie
+
+- kamera osobno od postaci: przeciąganie palcem po prawej stronie ekranu obraca kamerę wokół niego (w bok i w górę albo w dół), postać stoi
+- lewa gałka prowadzi go tam, gdzie ją pchniesz, względem kamery; on sam się obraca w tę stronę; gałka wychylona do końca: bieg
+- przyciski dopasowane do sytuacji: pieszo cios (na zmianę lewa i prawa), skok, gadaj, rower; w bójce lewy, prawy, blok (trzymany), unik (z gałką w bok)
+- na telefonie cios albo gadanie samo obraca go do najbliższej osoby (albo rowerzysty), bo nie ma myszy do celowania
+- podpowiedzi bez klawiszy na telefonie (trening bójki, „ROWER: wsiądź”), ramka treningu nad przyciskami; „×” w treningu zamienione na „x” (czcionka go nie ma)

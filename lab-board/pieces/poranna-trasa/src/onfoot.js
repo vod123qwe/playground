@@ -301,7 +301,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
 
   // ---------- the state: him on foot, the ones with a grudge, the fight ----------
   const _bq = new THREE.Quaternion(), _be = new THREE.Euler();   // (the bag's swing)
-  let ready = false, me = null, foe = null, active = false, view = 'third', fightNow = null, grudges = [], pitch = 0;
+  let ready = false, me = null, foe = null, active = false, view = 'third', fightNow = null, grudges = [], pitch = 0, camYaw = null;   // (camYaw: on a phone the camera goes round him on its own)
   const mAim = { x: 0, y: 0, dir: 'right' };                              // (the mouse's side for the next punch; it stays where last pointed)
   const ATK = { left: 'jab', right: 'cross', up: 'hook' };
   const SIDE = { jab: 'right', cross: 'left', hook: 'up', bodyL: 'down', bodyR: 'down' };   // (his punch, as it comes at you: his left from your right)
@@ -321,7 +321,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     P.mixer.stopAllAction(); for (const n of ['idle', 'walk', 'jog', 'stance']) if (P.A[n]) { P.A[n].play(); P.A[n].setEffectiveWeight(n === 'idle' ? 1 : 0); }
   }
 
-  function start(at) { if (!ready) return false; active = true; Object.assign(me, { x: at.x, z: at.z, yaw: at.yaw, y: track.probe(at.x, at.z, at.hint ?? -1).y, hint: at.hint ?? 0, vf: 0, vs: 0, mode: 'walk', ko: false, hp: Math.max(me.hp, 60), move: null, stagger: 0, dodge: null, down: null });
+  function start(at) { if (!ready) return false; active = true; camYaw = null; pitch = 0; Object.assign(me, { x: at.x, z: at.z, yaw: at.yaw, y: track.probe(at.x, at.z, at.hint ?? -1).y, hint: at.hint ?? 0, vf: 0, vs: 0, mode: 'walk', ko: false, hp: Math.max(me.hp, 60), move: null, stagger: 0, dodge: null, down: null });
     me.P.G.visible = true; place(me); if (at.getUp) { shot(me.P, 'death', .05, { clamp: true }); me.down = { t: 2.1, vx: 0, vz: 0 }; } return true; }   // (getUp: he was lying; up he gets)
   // knocked down (a car): flung along the way it went, a while on the ground, up again
   function knock(vx, vz, dmg) { if (!active || me.down) return false; me.hp = Math.max(8, me.hp - dmg); me.move = null; me.guard = false; me.down = { t: 0, vx, vz }; shot(me.P, 'death', 1.1, { clamp: true }); fx.shake(.4); fx.slow(.1); return true; }
@@ -361,7 +361,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
         setKind(f, Math.random() < .6 ? 'cherlak' : 'kozak'); b.r.boy.visible = false; f.P.G.visible = true; shot(f.P, 'getup', .9); G.state = 'after'; G.t = 0; const lines = active ? SAY.grudgeFoot : SAY.grudge; setTimeout(() => say(f, pick(lines)), 600); }
       else if (G.state === 'after') {
         if (d > 24 || G.t > 25) { say(f, pick(SAY.coward)); G.state = 'leave'; G.wait = .6; }
-        else if (d < 1.9 && (active || Math.abs(world.rider.v) < 3.5)) { if (!active) world.pullOff(); fightNow = G; G.state = 'fight'; me.mode = 'fight'; f.mode = 'fight'; say(f, pick(SAY.start)); startTraining(G); fx.flash(me.lockedHint ? 'Bójka! Mysz: strona ciosu, LPM cios, PPM blok, Shift unik' : 'Bójka! Kliknij: mysz (LPM cios, PPM blok) albo ← → ↑ ↓ i Spacja'); }
+        else if (d < 1.9 && (active || Math.abs(world.rider.v) < 3.5)) { if (!active) world.pullOff(); fightNow = G; G.state = 'fight'; me.mode = 'fight'; f.mode = 'fight'; say(f, pick(SAY.start)); startTraining(G); fx.flash(TOUCH ? 'Bójka! LEWY / PRAWY: cios, BLOK trzymaj, gałka w bok + UNIK' : me.lockedHint ? 'Bójka! Mysz: strona ciosu, LPM cios, PPM blok, Shift unik' : 'Bójka! Kliknij: mysz (LPM cios, PPM blok) albo ← → ↑ ↓ i Spacja'); }
         else { const want = Math.atan2(tx - f.x, tz - f.z); f.yaw += Math.atan2(Math.sin(want - f.yaw), Math.cos(want - f.yaw)) * Math.min(1, dt * 5); const v = G.t < .9 ? 0 : d > 6 ? 3.2 : 1.5;
           f.x += Math.sin(f.yaw) * v * dt; f.z += Math.cos(f.yaw) * v * dt; push(f); animate(f.P, dt, v, 'walk'); f.P.body.rotation.set(0, 0, 0); place(f); } }
       else if (G.state === 'fight') { if (!active) { G.state = 'after'; if (fightNow === G) { fightNow = null; me.mode = 'walk'; fx.tip(null); } continue; }
@@ -383,7 +383,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
       animate(me.P, dt, 0, fightNow ? 'fight' : 'walk'); arms(me.P, me, dt); place(me); return; }
     if (me.ko && !fightNow) { me.koT += dt; if (me.koT > 3.2) { me.ko = false; me.hp = 55; shot(me.P, 'getup', 1.1); } animate(me.P, dt, 0, 'fight'); arms(me.P, me, dt); place(me); return; }
     me.lockedHint = !!inp.locked;
-    if (fightNow) { let atk = inp.atkL ? (inp.up ? 'hook' : inp.down ? 'bodyL' : 'jab') : inp.atkR ? (inp.up ? 'hook' : inp.down ? 'bodyR' : 'cross') : null;
+    if (fightNow) { camYaw = null; let atk = inp.atkL ? (inp.up ? 'hook' : inp.down ? 'bodyL' : 'jab') : inp.atkR ? (inp.up ? 'hook' : inp.down ? 'bodyR' : 'cross') : null;
       if (inp.locked) { mAim.x += (inp.dx || 0) * .014; mAim.y += (inp.dy || 0) * .014; const l = Math.hypot(mAim.x, mAim.y); if (l > 1) { mAim.x /= l; mAim.y /= l; }
         if (l > .45) mAim.dir = Math.abs(mAim.x) > Math.abs(mAim.y) ? (mAim.x < 0 ? 'left' : 'right') : mAim.y < 0 ? 'up' : 'down';
         mAim.x *= 1 - Math.min(1, dt * 2.5); mAim.y *= 1 - Math.min(1, dt * 2.5);
@@ -392,9 +392,17 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     me.hp = Math.min(100, me.hp + dt * 4); me.st = Math.min(100, me.st + dt * 25);
     if (inp.jump && !me.air) { me.air = true; me.vy = 4.4; if (me.P.A.jump) shot(me.P, 'jump', .9); }     // (a jump: up about a metre)
     if (me.air) { me.vy -= 9.8 * dt; me.y += me.vy * dt; }
+    if (inp.touch && view !== 'first') {
+      // a phone: the right finger turns the camera round him; the stick walks him the way it is pushed (as seen), he turns to it; pushed all the way: a run
+      if (camYaw === null) camYaw = me.yaw; camYaw -= (inp.dx || 0) * .0075; pitch = clamp(pitch - (inp.dy || 0) * .004, -.6, .6);
+      const sx = inp.side || 0, sy = inp.fwd || 0, mag = Math.min(1, Math.hypot(sx, sy)); let top = 0;
+      if (mag > .05) { const cs = Math.cos(camYaw), sn = Math.sin(camYaw), want = Math.atan2(sn * sy - cs * sx, cs * sy + sn * sx), d = Math.atan2(Math.sin(want - me.yaw), Math.cos(want - me.yaw));
+        me.yaw += d * Math.min(1, dt * 10); top = (mag > .92 || inp.run ? 3.6 : 1.5 * clamp(mag / .75, .35, 1)) * Math.max(.25, Math.cos(d)); }
+      me.vf += (top - me.vf) * Math.min(1, dt * (top ? 5 : me.air ? 1 : 8)); me.vs = 0;
+    } else {
     const top = inp.fwd > 0 ? (inp.run ? 3.6 : 1.5) : inp.fwd < 0 ? -.9 : 0; me.vf += (top - me.vf) * Math.min(1, dt * (top ? 5 : me.air ? 1 : 8));
     if (inp.locked) { me.yaw -= (inp.dx || 0) * .0026; pitch = clamp(pitch - (inp.dy || 0) * .0022, -1, .75); me.vs += ((inp.side || 0) * 1.25 - me.vs) * Math.min(1, dt * 8); }
-    else { me.vs = 0; me.yaw -= (inp.side || 0) * dt * (2.6 - Math.min(1, Math.abs(me.vf) / 3.6) * .9); pitch += (0 - pitch) * Math.min(1, dt * 2); }
+    else { me.vs = 0; me.yaw -= (inp.side || 0) * dt * (2.6 - Math.min(1, Math.abs(me.vf) / 3.6) * .9); pitch += (0 - pitch) * Math.min(1, dt * 2); } }
     const rt = new V3(-Math.cos(me.yaw), 0, Math.sin(me.yaw)); me.x += Math.sin(me.yaw) * me.vf * dt + rt.x * me.vs * dt; me.z += Math.cos(me.yaw) * me.vf * dt + rt.z * me.vs * dt; push(me);
     { const u = me.P.m.userData; if (u.bagPivot) { const sp = Math.min(1, Math.hypot(me.vf, me.vs) / 3); me.bagT = (me.bagT || 0) + dt * (2.5 + Math.abs(me.vf) * 1.9); me.bagK = (me.bagK || 0) + (sp - (me.bagK || 0)) * Math.min(1, dt * 4);
       _bq.setFromEuler(_be.set(Math.sin(me.bagT * 2) * .03 * me.bagK + Math.max(0, me.vf) * .012, 0, Math.sin(me.bagT) * .045 * me.bagK)); u.bagPivot.quaternion.copy(u.bagQ0).multiply(_bq); } }
@@ -415,8 +423,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
       camera.position.copy(_eye); camera.up.set(0, 1, 0); camera.lookAt(cam.look); camera.rotateZ(-f.vs * .02);
       camera.near = .04; camera.fov += (74 - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); return f;
     }
-    const lf = new V3(Math.cos(f.yaw), 0, -Math.sin(f.yaw)), back = foeF ? 2.5 : 3.1, want = new V3(f.x, f.y + (foeF ? 1.95 : 1.9 - pitch * 1.3), f.z).addScaledVector(fw, -back).addScaledVector(lf, foeF ? 1.05 : 0);   // (in a fight: over his shoulder, off to the side, both in the picture)
-    const look = foeF ? new V3(f.x + (foeF.x - f.x) * .62, f.y + 1.2, f.z + (foeF.z - f.z) * .62) : new V3(f.x, f.y + 1.3 + pitch * 2.4, f.z).addScaledVector(fw, 2.2);
+    const fc = !foeF && camYaw !== null ? new V3(Math.sin(camYaw), 0, Math.cos(camYaw)) : fw;   // (a phone: where the camera was turned, not where he faces)
+    const lf = new V3(Math.cos(f.yaw), 0, -Math.sin(f.yaw)), back = foeF ? 2.5 : 3.1, want = new V3(f.x, f.y + (foeF ? 1.95 : 1.9 - pitch * 1.3), f.z).addScaledVector(fc, -back).addScaledVector(lf, foeF ? 1.05 : 0);   // (in a fight: over his shoulder, off to the side, both in the picture)
+    const look = foeF ? new V3(f.x + (foeF.x - f.x) * .62, f.y + 1.2, f.z + (foeF.z - f.z) * .62) : new V3(f.x, f.y + 1.3 + pitch * 2.4, f.z).addScaledVector(fc, 2.2);
     if (!cam.init) { cam.pos.copy(want); cam.look.copy(look); cam.init = true; }
     cam.pos.lerp(want, 1 - Math.exp(-dt * 6)); cam.look.lerp(look, 1 - Math.exp(-dt * 8)); const q = track.probe(cam.pos.x, cam.pos.z, f.hint); cam.pos.y = Math.max(cam.pos.y, q.y + .5);
     camera.position.copy(cam.pos); camera.up.set(0, 1, 0); camera.lookAt(cam.look); camera.near = .1; camera.fov += (60 - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); return f;
@@ -428,11 +437,15 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   function status() { if (!me) return null; return { train: fightNow && fightNow.train ? fightNow.train.step + ':' + fightNow.train.n : null, foeState: fightNow ? (fightNow.f.wind ? 'wind' : fightNow.f.move ? 'move' : fightNow.f.recover > 0 ? 'open' : (fightNow.f.ai && fightNow.f.ai.plan)) : null, star: star(), fight: fightNow ? { a: { name: 'TY', hp: me.hp, st: me.st, guard: me.guard }, b: { name: fightNow.f.kind ? fightNow.f.kind.name : fightNow.f.name, hp: fightNow.f.hp / (fightNow.f.max || 100) * 100, st: fightNow.f.st } } : null, low: active ? clamp((40 - me.hp) / 40, 0, 1) : 0 }; }
   function setKind(f, k) { f.kind = KINDS[k]; f.max = f.kind.hp; f.hp = f.max; }
   // ---------- the training, at the first fight: a parry, a dodge, a hit when he is open; then for real ----------
-  const TIPS = ['TRENING 1/3 · Bierze zamach: żółta strzałka. Gdy zrobi się ZIELONA, PPM albo Spacja: KONTRA (2×)', 'TRENING 2/3 · UNIK: gdy bierze zamach, Shift i krok w bok (A albo D) (1×)', 'TRENING 3/3 · Po jego ciosie jest ODSŁONIĘTY (środek gwiazdy świeci): wtedy LPM (2×)'];
+  const TIPS = ['TRENING 1/3 · Bierze zamach: żółta strzałka. Gdy zrobi się ZIELONA, PPM albo Spacja: KONTRA (2x)', 'TRENING 2/3 · UNIK: gdy bierze zamach, Shift i krok w bok (A albo D) (1x)', 'TRENING 3/3 · Po jego ciosie jest ODSŁONIĘTY (środek gwiazdy świeci): wtedy LPM (2x)'];
   let trained = false; try { trained = localStorage.getItem('pt.trained') === '1'; } catch { }
-  function startTraining(G) { if (trained) return; G.train = { step: 0, n: 0 }; fx.tip(TIPS[0] + ' · ENTER: POMIŃ'); }
+  // a phone: the same, in its buttons (and no Enter to skip it)
+  const TOUCH = matchMedia('(pointer: coarse)').matches || /[?&]touch/.test(location.search);
+  if (TOUCH) TIPS.splice(0, 3, 'TRENING 1/3 · Bierze zamach: żółta strzałka. Gdy zrobi się ZIELONA, BLOK: KONTRA (2x)', 'TRENING 2/3 · Gdy bierze zamach: gałka w bok i UNIK (1x)', 'TRENING 3/3 · Po jego ciosie jest ODSŁONIĘTY (środek gwiazdy świeci): wtedy LEWY albo PRAWY (2x)');
+  const SKIP = TOUCH ? '' : ' · ENTER: POMIŃ';
+  function startTraining(G) { if (trained) return; G.train = { step: 0, n: 0 }; fx.tip(TIPS[0] + SKIP); }
   function trainCount(step) { const T = fightNow && fightNow.train; if (!T || T.step !== step) return; T.n++; if (T.n < [2, 1, 2][step]) return;
-    T.step++; T.n = 0; if (T.step < 3) { fx.tip(TIPS[T.step] + ' · ENTER: POMIŃ'); return; } endTraining(); }
+    T.step++; T.n = 0; if (T.step < 3) { fx.tip(TIPS[T.step] + SKIP); return; } endTraining(); }
   function endTraining() { const G = fightNow; if (!G || !G.train) return; G.train = null; trained = true; try { localStorage.setItem('pt.trained', '1'); } catch { } G.f.hp = G.f.max; me.hp = 100; fx.tip('DOBRA. TERAZ NA SERIO!'); setTimeout(() => fx.tip(null), 1800); }
   // the arena (the workshop's fight test): one of a chosen kind comes at him from a few metres; the training on demand; he can not
   // be beaten if asked (god); phase(): what the opponent is doing, for the test's readout
