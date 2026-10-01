@@ -87,15 +87,16 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   function kit(m, bones) {
     m.updateMatrixWorld(true);
     // the head: the top of the skull and its width and depth just under it, from the body's vertices; the hair's top over it
-    const H = bones.head, hp = H.getWorldPosition(new V3()), v = new V3(), pts = [];
+    const H = bones.head, hp = H.getWorldPosition(new V3()), v = new V3(), pts = [], hpts = [];
     let skull = hp.y, hair = hp.y;
     m.traverse(o => { if (!o.isMesh) return; const isBody = /male1591|female1605/.test(o.name), isHair = /short|hair|bob|long|ponytail|afro|braid/.test(o.name); if (!isBody && !isHair) return;
       const pos = o.geometry.attributes.position; for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); if (v.y < hp.y + .04 || Math.hypot(v.x - hp.x, v.z - hp.z) > .2) continue;
-        if (isBody) { skull = Math.max(skull, v.y); pts.push(v.clone()); } else hair = Math.max(hair, v.y); } });
-    const band = pts.filter(p => p.y > skull - .1 && p.y < skull - .05); let x0 = 9, x1 = -9, z0 = 9, z1 = -9; for (const p of band) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
+        if (isBody) { skull = Math.max(skull, v.y); pts.push(v.clone()); } else { hair = Math.max(hair, v.y); hpts.push(v.clone()); } } });
+    // (the band it sits on: the head and the hair round it, so the hair stays under it at the back, not out over it)
+    const band = [...pts, ...hpts].filter(p => p.y > skull - .1 && p.y < skull - .02); let x0 = 9, x1 = -9, z0 = 9, z1 = -9; for (const p of band) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
     const hw = band.length ? (x1 - x0) / 2 + .016 : .09, hd = band.length ? (z1 - z0) / 2 + .016 : .105, cx = band.length ? (x0 + x1) / 2 : hp.x, cz = band.length ? (z0 + z1) / 2 : hp.z;
     m.userData.headFit = { hp: hp.y, skull, hair, hw, hd, n: band.length, cz: cz - hp.z };
-    const rim = skull - .065, crown = Math.max(skull + .02, Math.min(hair + .004, skull + .04)) - rim;   // (its edge on the forehead, over the ears; over the hair, pressing it)
+    const rim = skull - .065, crown = Math.max(skull + .03, Math.min(hair + .012, skull + .05)) - rim;   // (its edge on the forehead, over the ears; over the hair, pressing it)
     const red = toon('#b3372c'), redD = toon('#9e3127'), cap = new THREE.Group(); cap.position.set(cx, rim, cz);
     const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), red); dome.scale.set(hw, crown, hd); cap.add(dome);
     for (let k = 0; k < 3; k++) { const th = k * Math.PI / 3, rr = 1 / Math.sqrt((Math.cos(th) / hw) ** 2 + (Math.sin(th) / hd) ** 2), seam = new THREE.Mesh(new THREE.TorusGeometry(1, .07, 3, 20, Math.PI), redD); seam.scale.set(rr * 1.006, crown * 1.006, .1); seam.rotation.y = th; cap.add(seam); }   // (the panels' seams)
@@ -103,7 +104,11 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .012, 16, 1, false, -Math.PI / 2, Math.PI), red); brim.scale.set(hw * .92, 1, hd * .55 + .075); brim.position.set(0, .006, hd * .38); brim.rotation.x = .14; cap.add(brim);
     const under = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .004, 16, 1, false, -Math.PI / 2, Math.PI), toon('#4a3a2c')); under.scale.copy(brim.scale).multiplyScalar(.97); under.scale.y = 1; under.position.set(0, -.002, hd * .38); under.rotation.x = .14; cap.add(under);   // (dark under the brim)
     const button = new THREE.Mesh(new THREE.SphereGeometry(.011, 6, 4), redD); button.position.y = crown; cap.add(button);
-    cap.rotation.x = -.1; m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;   // (the front up on the forehead, the back down to the nape)
+    // its back: the arch of the opening (the hair through it) and the strap over the bottom of it, with its buckle
+    { const hole = new THREE.Mesh(new THREE.CircleGeometry(hw * .36, 14, 0, Math.PI), toon('#3a2a1e')); hole.position.set(0, .004, -hd - .003); hole.rotation.y = Math.PI; hole.scale.y = 1.1; cap.add(hole);
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(hw * .82, .013, .007), red); strap.position.set(0, .011, -hd - .004); cap.add(strap);
+      const buckle = new THREE.Mesh(new THREE.BoxGeometry(.014, .016, .009), toon('#c9cbc8')); buckle.position.set(hw * .26, .011, -hd - .005); cap.add(buckle); }
+    cap.rotation.x = -.04; m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;   // (the front up on the forehead, the back down to the nape)
     // the satchel: low across his back, a touch right of his spine, close in; hung from a pivot at its top (it swings a little as he
     // walks, see update); its strap lies on him: from the bag's end up across his back to his right shoulder, over it, down across his
     // chest to his left hip, round his side back to the bag (the body's surface found from its vertices, in the rest pose)
