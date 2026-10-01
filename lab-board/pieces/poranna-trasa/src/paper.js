@@ -119,11 +119,29 @@ export function corners(D) { const r = D.r, out = [], ev = D.counts || {};
   return out.sort(() => Math.random() - .5).slice(0, 2).map(f => f()); }
 // the phone to Janusz: what he says (his tip for tomorrow from the ads, a coupon, a story)
 export const CALL = {
-  hello: ['Warsztat, słucham! A, to ty, młody. Czytałem o tobie w gazecie.', 'Janusz przy telefonie. Mów szybko, mam dętkę w kleju.', 'Halo? Warsztat u Janusza. Jak rower, jak kolana?'],
-  tip: p => p ? `Na jutro? Weź ${p.toLowerCase()}. Mówię ci, różnica jak między składakiem a kolarzówką.` : 'Masz już wszystko, co trzeba. Teraz tylko nogi i głowa.',
-  coupon: c => `Dobra, dla stałego klienta: ${c.name.toLowerCase()} taniej o ${Math.round(c.pct * 100)} procent. Kupon czeka w warsztacie, tylko nie mów nikomu.`,
-  couponHad: 'Kupon już masz, młody. Jeden na raz, bo zbankrutuję.',
-  bye: ['No, to jedź. I nie hamuj przodem!', 'Trzymaj się. I oddaj mi kiedyś tę pompkę.', 'Do usłyszenia. Wpadaj, jak coś zgrzytnie.'] };
+  // he picks up (sometimes not knowing he did: still at whoever is in the shop)
+  hello: ['Warsztat, słucham! A, to ty, młody. Czytałem o tobie w gazecie. Zdjęcie słabe, ale rower poznałem.', 'Janusz przy telefonie. Mów szybko, mam dętkę w kleju i klej na palcach.', 'Halo? Warsztat u Janusza, mistrza regionu z osiemdziesiątego którego tam roku. Słucham.',
+    'No słucham, słucham. Tylko głośno, bo mi kompresor chodzi. MIETEK, WYŁĄCZ TO! Dobra, mów.', 'Warsztat! Jak ktoś znowu w sprawie tego składaka z wczoraj, to on się sam rozkręcił, ja tylko patrzyłem.', 'O, młody! Akurat o tobie myślałem. To znaczy o twoich oponach. Ale o tobie też.'],
+  unaware: ['...MIETEK, PODAJ MI SZESNASTKĘ. NIE TĘ, TĘ DRUGĄ. NO TĘ ZE ŚLADAMI ZĘBÓW... A? Halo? To ktoś dzwoni? Mów, młody, mów.', '...i wtedy mówię mu: panie, ja na tym rowerze zjechałem z Kasprowego, bez hamulców, z ciastem na kierownicy... Halo? Długo tam wisisz?',
+    '...nie, proszę pani, dzwonek nie dzwoni, bo jest do ozdoby. Co? A, to telefon dzwoni. Halo! Warsztat!', '...osiem, dziewięć, dziesięć... szprych mi brakuje, Mietek. Kto liczył szprychy? Halo? Młody? Ty mi nie liczyłeś szprych?'],
+  // what he says when asked how he is: a rant, a boast
+  how: ['Jak ja się mam? Jak łańcuch po zimie: zgrzytam, ale jadę. Wczoraj zrobiłem sto kilometrów przed śniadaniem. No, może dziesięć. Ale pod wiatr.', 'Dobrze, tylko kolano mi skrzypi. Lekarz mówi: panie Januszu, mniej roweru. Ja mu na to: panie doktorze, mniej doktora.',
+    'Kiedyś to były rowery. Stal, chłopie. Spadłeś, rower cały, ty w gipsie. A teraz? Wszystko plastik. I ludzie z plastiku.', 'Nie ma złej pogody, młody, są tylko słabe opony. I słabi kolarze. Ale ty nie jesteś słaby. Jeszcze.',
+    'Świetnie! Ubrałem dziś nowe obcisłe spodenki. Sąsiad mówi, że wyglądam jak parówka. Aerodynamiczna parówka, mówię mu.'],
+  tip: p => p ? pickOf([`Na jutro? Weź ${p.toLowerCase()}. Mówię ci, różnica jak między składakiem a kolarzówką.`, `${p}. Bez tego nawet nie wyjeżdżaj. Ja bez tego nie wyjeżdżałem nawet do kiosku.`, `Słuchaj starego: ${p.toLowerCase()}. Zawodowcy tak robią. Ja tak robiłem. Ja byłem zawodowcem. Prawie.`])
+    : pickOf(['Masz już wszystko, co trzeba. Teraz tylko nogi i głowa. Z głową może być gorzej.', 'Rower masz jak z katalogu. Teraz tylko trenuj. Pięćset przysiadów i surowe jajko. Tak robiłem przed każdym wyścigiem.']),
+  coupon: c => pickOf([`Dobra, dla stałego klienta: ${c.name.toLowerCase()} taniej o ${Math.round(c.pct * 100)} procent. Kupon czeka w warsztacie, tylko nie mów nikomu.`, `Masz szczęście, dziś mam gest. ${c.name} o ${Math.round(c.pct * 100)} procent taniej. Mietek, zapisz! Mietek nie zapisał. Ja zapamiętam.`,
+    `Wiesz co, za tę gazetę o tobie dam ci rabat. ${Math.round(c.pct * 100)} procent na ${c.name.toLowerCase()}. Ale jak mnie opiszesz w wywiadzie, to piszesz, że jestem wysoki.`]),
+  couponHad: ['Kupon już masz, młody. Jeden na raz, bo zbankrutuję.', 'Drugi kupon? Ja nie jestem bank, ja jestem warsztat. Najpierw wykorzystaj pierwszy.', 'Mietek mówi, że już masz kupon. Mietek nic nie zapisuje, ale to akurat pamięta.'],
+  // his stories: every one true, he says
+  story: ['Raz goniłem pociąg na rowerze. Dogoniłem. Maszynista zatrzymał się i pyta, czy chcę podwózkę. Odmówiłem. Wygrałem z nim do następnej stacji.', 'W osiemdziesiątym którymś jechałem w wielkim wyścigu. Prowadziłem przez trzy etapy. Potem mi mama kazała wracać na obiad.',
+    'Kiedyś przejechałem całe miasto na jednym kole. Drugie koło miał Mietek. Do dziś nie wiem, po co mu było.', 'Znam faceta, który zjechał rowerem po schodach w wieżowcu. Z dziesiątego piętra. To byłem ja. Ale mówię, że znam faceta, bo skromny jestem.',
+    'Mój pierwszy rower zrobiłem sam. Z łóżka. Babcia spała wtedy na podłodze, ale mówiła, że warto było.', 'Raz mnie wyprzedził kolarz w obcisłym stroju. Na podjeździe. Dogoniłem go na zjeździe i powiedziałem, że ma rozwiązane sznurowadło. Nie miał sznurówek. Do dziś jest w szoku.',
+    'Mam w garażu rower, na którym jeździł prezes jakiegoś klubu. Albo jego listonosz. W każdym razie ktoś ważny.', 'Raz trenowałem tak ostro, że opony się stopiły. Jechałem dalej na obręczach. Iskry było widać z kosmosu, tak mówili w telewizji. W lokalnej.'],
+  // the call ends; sometimes he does not hang up, and you hear on
+  bye: ['No, to jedź. I nie hamuj przodem!', 'Trzymaj się. I oddaj mi kiedyś tę pompkę.', 'Do usłyszenia. Wpadaj, jak coś zgrzytnie.', 'Lecę, bo mi się klej zsycha. I Mietek coś przypala. MIETEK!'],
+  hangOn: ['(słuchawka leży obok, słychać dalej) ...i mówię ci, Mietek, ten młody to ma talent. Po mnie ma. Nie, nie jesteśmy rodziną. Ale po mnie.', '(nie odłożył słuchawki) ...gdzie jest moja koszulka ze Szczyrku? Ta z dziurą na łokciu. To jest koszulka zwycięzcy, Mietek, nie szmata!',
+    '(słychać szuranie) ...dobra, kto zjadł mój pączek? Mietek? Ja widzę cukier puder na twoim wąsie. Ja widzę wszystko. Jak kolarz.', '(dalej gada do kogoś) ...nie, proszę pani, ten rower nie jest na sprzedaż. Wszystko jest na sprzedaż, ale ten nie. No dobra, ile pani da?'] };
 
 const ADS = [
   { t: 'ZGINĄŁ KOT', d: 'Rudy, odpowiada na Mruczek, nie odpowiada na nic innego. Nagroda: szarlotka.' },
@@ -339,15 +357,17 @@ export function createPaper({ game }) {
   function say(t, opts) { const sayE = call.querySelector('.say'); clearInterval(callT); let n = 0; sayE.textContent = ''; callT = setInterval(() => { n += 2; sayE.textContent = t.slice(0, n); if (n >= t.length) clearInterval(callT); }, 30);
     call.querySelector('.opts').innerHTML = (opts || []).map(([lab, act, gold]) => pxKey(lab, { kind: gold ? 'gold' : '', attrs: `data-c="${act}"` })).join('');
     call.querySelectorAll('[data-c]').forEach(b => b.onclick = () => callAct(b.dataset.c)); }
-  const MENU = () => [['Co polecasz na jutro?', 'tip'], ['Masz coś taniej?', 'deal'], ['Opowiedz coś', 'story'], ['Wpadnę do warsztatu', 'shop'], ['Na razie, panie Januszu', 'bye', true]];
+  const MENU = () => [['Co polecasz na jutro?', 'tip'], ['Masz coś taniej?', 'deal'], ['Jak się pan ma?', 'how'], ['Opowiedz coś', 'story'], ['Wpadnę do warsztatu', 'shop'], ['Na razie, panie Januszu', 'bye', true]];
   function callJanusz() { game.sound?.('ui'); call.innerHTML = `<div class="phone"><div class="ph-h"><i class="ic" style="--ic: var(--ic-phone)"></i><b>WARSZTAT U JANUSZA</b><span>TEL. 23-45</span></div><div class="ph-b">${portrait(D.janusz, 'pt big')}<div><p class="ring">DRYŃ... DRYŃ...</p><p class="say"></p></div></div><div class="opts"></div></div>`;
-    call.classList.add('on'); setTimeout(() => { call.querySelector('.ring').textContent = 'PAN JANUSZ:'; say(pickOf(CALL.hello), MENU()); }, 900); }
+    call.classList.add('on'); setTimeout(() => { call.querySelector('.ring').textContent = 'PAN JANUSZ:'; say(pickOf(Math.random() < .35 ? CALL.unaware : CALL.hello), MENU()); }, 900); }
   function callAct(a) { game.sound?.('ui');
     if (a === 'tip') say(CALL.tip(D.parts?.[0]?.name), MENU());
-    else if (a === 'deal') { const c = game.coupon?.(D.parts?.[0]?.k); if (c) { D.coupon = c; say(CALL.coupon(c), MENU()); } else say(CALL.couponHad, MENU()); }
-    else if (a === 'story') { const s0 = pickOf(ANECDOTES.filter(x => x.who === 'janusz').concat(ANECDOTES)); say(s0.text.replace(/^Pan Janusz twierdzi, że/, 'Wiesz co? Ja'), MENU()); }
+    else if (a === 'deal') { const c = game.coupon?.(D.parts?.[0]?.k); if (c) { D.coupon = c; say(CALL.coupon(c), MENU()); } else say(pickOf(CALL.couponHad), MENU()); }
+    else if (a === 'how') say(pickOf(CALL.how), MENU());
+    else if (a === 'story') say(pickOf(CALL.story), MENU());
     else if (a === 'shop') { endCall(); game.shop(); }
-    else if (a === 'bye') { say(pickOf(CALL.bye), []); setTimeout(endCall, 1400); } }
+    else if (a === 'bye') { say(pickOf(CALL.bye), []); if (Math.random() < .45) setTimeout(() => { call.querySelector('.ring').textContent = 'SŁUCHAWKA:'; say(pickOf(CALL.hangOn), [['Odłóż słuchawkę', 'end', true]]); }, 1900); else setTimeout(endCall, 1700); }
+    else if (a === 'end') endCall(); }
   function endCall() { clearInterval(callT); call.classList.remove('on'); if (open_) build(); }
   // a page drawn into a face: its head, its columns, its corners (to turn on, to turn back), its number
   function draw(f, p) { const P = pages[p];
