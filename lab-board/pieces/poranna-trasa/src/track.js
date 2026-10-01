@@ -635,22 +635,23 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const st = W0(L.gx, L.fz - L.GZ - 2.4);   // (on the drive, a little out of the garage)
     const start = { x: st.x, z: st.z, yaw: Math.atan2(front.n.x, front.n.z) };
     // the bikes by the garage: his brother's leant on its stand on the lawn, one upside down on the other side, its front wheel off
-    const bikes = [{ p: W0(L.gx - 2.15, L.fz - 1.5), yaw: hy + Math.PI / 2 + .3, up: false }, { p: W0(L.gx + 2.2, L.fz - 1.1), yaw: hy + Math.PI / 2 - .2, up: true }];
+    const bikes = [{ p: W0(L.gx - 2.45, L.fz - .75), yaw: hy + Math.PI / 2 + .08, up: false }, { p: W0(L.gx + 8.4, L.fz - 3.2), yaw: hy + Math.PI / 2 - .06, up: true }];   // (by the wall each side of the garage, off the court)
     // the family: mum on the lawn by the path, dad at his bench in the garage, the brother by the bike he took the wheel off
-    const family = [{ key: 'mum', lines: 'mama', x: L.dx - 1.6, z: L.fz - 2.8, face: Math.PI + .5 }, { key: 'suit', lines: 'tata', x: L.gx + .55, z: L.fz - .85, face: Math.PI - .3 }, { key: 'kid', lines: 'brat', x: L.gx + 2.4, z: L.fz - 2.3, face: Math.PI - .6 }];
+    const family = [{ key: 'mum', lines: 'mama', x: L.dx - 1.6, z: L.fz - 2.8, face: Math.PI + .5 }, { key: 'suit', lines: 'tata', x: L.gx + .55, z: L.fz - .85, face: Math.PI - .3 }, { key: 'kid', lines: 'brat', x: L.gx + 1.9 + 8.6, z: -1.6, face: -Math.PI / 2 }];
     for (const F of family) seats.push({ h: homeH, local: new THREE.Vector3(F.x, 0, F.z), stand: true, key: F.key, face: F.face, lines: F.lines, i: iC });
+    // the court beside the house (hoops.js): nothing else to grow or stand on it
+    zone(homeH, 5.2, 5.4, L.gx + 1.9 + 4.4, -1);
     // the family car: parked on the circle by the kerb, out of the way of the drive
     { const a = -.8, u = n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f, Math.sin(a)), t = n.clone().multiplyScalar(-Math.sin(a)).addScaledVector(f, Math.cos(a)), c = CARS.random(rnd), p = C0.clone().addScaledVector(u, Rc - 1.3);
       c.group.position.set(p.x, gy(p.x, p.z) + .04, p.z); c.group.rotation.y = Math.atan2(t.x, t.z); G.add(c.group); hit(c.group, { hx: .9, hz: 2.1, h: 1.5, kind: 'hard' }, iC); }
-    // round the home: a basketball hoop over the garage, hopscotch chalked on the drive, hedges between the gardens, a bench and a bin
+    // round the home: hopscotch chalked on the drive (the court's: hoops.js), hedges between the gardens, a bench and a bin
     // on the circle, the street's name on a post at its mouth
     { const L2 = L, white = toon('#f4f1e8'), hoopM = toon('#d9542e'), hedgeM = toon('#3f6b35', { map: rep(tex.grass(3), 1, 1) });
-      homeH.add(box(1.15, .72, .05, white, L2.gx, 3.05, L2.fz - L2.GZ + .12)); homeH.add(box(.42, .3, .055, toon('#c23a2e'), L2.gx, 2.98, L2.fz - L2.GZ + .1)); homeH.add(box(.36, .24, .06, white, L2.gx, 2.98, L2.fz - L2.GZ + .095));
-      { const ring = new THREE.Mesh(new THREE.TorusGeometry(.23, .018, 5, 14).rotateX(Math.PI / 2), hoopM); ring.position.set(L2.gx, 2.78, L2.fz - L2.GZ - .2); homeH.add(ring);
-        const net = new THREE.Mesh(new THREE.CylinderGeometry(.22, .14, .35, 10, 1, true), toon('#efeae0', { side: THREE.DoubleSide })); net.position.set(L2.gx, 2.6, L2.fz - L2.GZ - .2); homeH.add(net); }
+      // (the hoop over the garage, the court on the drive: hoops.js)
       const chalk = ['#f3a6c0', '#9fc6e8', '#efc970', '#b7e09a'].map(c => toon(c)), hz0 = -L2.D / 2 - 5.2;
       [[0, 0], [0, .6], [-.3, 1.2], [.3, 1.2], [0, 1.8], [-.3, 2.4], [.3, 2.4], [0, 3.0]].forEach(([x, z], k) => homeH.add(slab(box(.5, .012, .5, chalk[k % 4], L2.gx + .55 + x, .05, hz0 - z))));
-      for (const sg of [-1, 1]) { const a = sg * .72, u = n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f, Math.sin(a));
+      for (const sg of [-1]) { const a = sg * .72,   // (only on the gardener's side: on the other the court by the house, the way to the neighbour open, hoops.js)
+        u = n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f, Math.sin(a));
         for (let r0 = Rc + 2.6; r0 < Rc + 12.5; r0 += 1.15) { const x = C0.x + u.x * r0, z = C0.z + u.z * r0, hh = 1 + rnd() * .12, hg = box(.75, hh, 1.2, hedgeM, 0, hh / 2, 0), g0 = new THREE.Group(); g0.add(hg);
           g0.position.set(x, gy(x, z), z); g0.rotation.y = Math.atan2(u.x, u.z); G.add(g0); hit(g0, { hx: .38, hz: .6, h: hh, kind: 'hard' }, iC); things.push({ kind: 'bush', o: g0 }); } }
       { const a = 2.75, u = n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f, Math.sin(a)), r0 = Rc + 1.5, x = C0.x + u.x * r0, z = C0.z + u.z * r0, b = new THREE.Group(), wood = toon('#8a6a44'), iron = toon('#2f3236');

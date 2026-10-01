@@ -45,6 +45,7 @@ import { createMp } from './mp.js';
 import { createNet } from './net.js';
 import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, strangerBike } from './bikes.js';
 import { createGarage } from './garage.js';
+import { createHoops } from './hoops.js';
 import { PARTS } from './shop.js';
 { const m = location.hash.match(/^#odpowiedz=([^&]+)/); if (m) { const ch = new BroadcastChannel('pt-answer'), say = (t, sub) => { document.body.innerHTML = `<div style="position:fixed;inset:0;display:grid;place-items:center;background:#0c0d0f;color:#f6f3ea;font:700 15px/1.5 ui-monospace,Consolas,monospace;text-align:center;padding:20px"><div><div style="color:#efc970;font-size:22px;letter-spacing:.1em">${t}</div><div style="opacity:.75;margin-top:8px">${sub}</div></div></div>`; };
   let ok = false; ch.onmessage = e => { if (e.data?.ok) { ok = true; say('PRZEKAZANE!', 'Wróć do karty z grą, zaraz się połączycie. Tę kartę możesz zamknąć.'); setTimeout(() => window.close(), 1200); } };
@@ -948,6 +949,8 @@ function step(dt, inp) {
   if (B.nt < TK.length && trip.dist >= TITLE_AT[B.nt] && menu.page !== 'title' && !MP.on) unlockTitle(B.nt + 1);   // (two players: one title each, the same)
   if (endT > 0 && (endT -= dt) <= 0) endRun(endWhy); B.hp = Math.min(100, (B.hp ?? 100) + dt / 12); if (B.points > (B.lastPts ?? 0)) B.earned = (B.earned || 0) + B.points - B.lastPts; B.lastPts = B.points;
   quests.update(dt, inp);                                               // (who is near to talk to; the errands; the thief)
+  if (hoops) { const was = hoops.holding; hoops.update(dt, { me: foot.active && !foot.fighting ? foot.me : null, cam: camera, hold: foot.active && (mouse.lh || (pad.on && pad.held(BTN.X)) || !!inp.hoopHold), drop: !!inp.rmb, view: foot.view,
+      toFirst: () => { if (foot.view !== 'first') foot.toggleView(); }, toThird: () => { if (foot.view === 'first') foot.toggleView(); } }); if (was || hoops.holding) inp = { ...inp, lmb: false, rmb: false }; }
   if (foot.active) return stepFoot(dt, inp);
   stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor });
@@ -1069,7 +1072,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   foot.follow(dt); sun.position.set(me.x, me.y, me.z).addScaledVector(SUN, 60); sun.target.position.set(me.x, me.y, me.z); sun.target.updateMatrixWorld();
 }
 // on foot: where the bike is (an arrow at the top, turned the way it is from where you look; its distance; a mark over it when seen)
-function bikeMark() { if (!foot.active || foot.fighting) return null; const me = foot.me, sp = bikeSpot(), dist = Math.hypot(me.x - B.x, me.z - B.z); if (Math.hypot(me.x - sp.x, me.z - sp.z) < 1.7) return null;   // (gone only once it is in reach to get on)
+function bikeMark() { if (!foot.active || foot.fighting || hoops?.holding) return null; const me = foot.me, sp = bikeSpot(), dist = Math.hypot(me.x - B.x, me.z - B.z); if (Math.hypot(me.x - sp.x, me.z - sp.z) < 1.7) return null;   // (gone only once it is in reach to get on)
   const at = new THREE.Vector3(B.x, B.y + 1.35, B.z), v = at.clone().applyMatrix4(camera.matrixWorldInverse); return { at, dist, angle: Math.atan2(v.x, -v.z) }; }
 const hurtFx = { hp: 100, flash: 0, t: 0 };
 function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : null, hp = me ? me.hp : 100;
@@ -1156,8 +1159,13 @@ function resetGame() {
   for (const d of dogs.dogs) { Object.assign(d, { x: d.home.x, z: d.home.z, v: 0, state: 'home', cool: 4, bark: 0, hint: -1, fly: null }); }
   trip.dist = trip.max = trip.time = 0; endT = 0; B.nt = 1; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; B.sel = 0; assignSubs(); C.init = false; flash('Od nowa!');
 }
+// the court at home (hoops.js): the ball, the hoop, the challenge (a mode); the other player's throws seen
+const hoops = createHoops({ THREE, scene, track, audio, hud, game: { flash: s => flash(s), send: m => net?.send(m), pop: (at, t, c) => hud.pop(at, t, c) } });
+// on foot on the court (a mode's start): the bike left on the lawn by it, him at the spot, facing the hoop
+function onFootAt(p, yaw) { if (foot.active) foot.stop(); const side = hoops.at(4.8, 1.5), q = track.probe(side.x, side.z, track.home.iJ); Object.assign(B, { x: side.x, z: side.z, yaw: yaw + Math.PI / 2, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); B.bikeDown = null; parkBike();
+  if (!foot.start({ x: p.x, z: p.z, yaw, hint: q.i })) return; B.parked = true; rider.boy.visible = false; C.iy = 0; }
 // the modes (modes.js): the sprint against the clock, the obstacle course; they thin the traffic (modes.flags) and pause on their end page
-const modes = createModes({ THREE, scene, track, audio, game: { get B() { return B; }, restart: () => { resetGame(); C.iy = 0; }, flash: s => flash(s), pop: (at, t, c) => hud.pop(at, t, c),
+const modes = createModes({ THREE, scene, track, audio, game: { get B() { return B; }, get hoops() { return hoops; }, onFootAt, restart: () => { resetGame(); C.iy = 0; }, flash: s => flash(s), pop: (at, t, c) => hud.pop(at, t, c),
   place: (x, z, yaw, i = 0) => { const q = track.probe(x, z, i); Object.assign(B, { x, z, yaw, hint: q.i, y: q.y, gPrev: q.y, v: 0, steer: 0, lean: 0, leanV: 0 }); C.yaw = yaw; C.init = false; C.iy = 0; } } });
 // ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
 // ghost here: his bike and him as he rides at home, moved to where he says he is (15 times a second), between the messages carried on
@@ -1176,18 +1184,20 @@ const net = createNet({ onMsg: m => netMsg(m), onState: s => { if (s === 'on') f
 // the houses' subscribers as the host has them (the guest takes them at a round's start), so the same houses wait for both
 const subsNow = () => track.doors.map(d => d.sub || null);
 function applySubs(a) { if (!a) return; track.doors.forEach((d, i) => { d.sub = a[i] ?? null; }); assignSubs(false, true); }
-function mpBegin(subs) { use(P1); if (menu.open) menu.close(); resetGame(); C.iy = 0; if (subs) applySubs(subs);
+function mpBegin(subs, id) { use(P1); if (menu.open) menu.close(); resetGame(); C.iy = 0; if (subs) applySubs(subs);
+  if (id === 'kosz') { MP.on = true; B.hoop = 0; onFootAt(hoops.at(meId() === 1 ? -1.6 : 1.6, 4.6), hoops.facing); return; }
   const i0 = (track.home.iJ + 12) % track.N, S0 = track.S[i0], yaw0 = Math.atan2(S0.f.x, S0.f.z), d = meId() === 1 ? .95 : 2.55;   // (just out of the home street, side by side in the lane)
   const x = S0.p.x + S0.r.x * d, z = S0.p.z + S0.r.z * d, q = track.probe(x, z, i0); Object.assign(B, { x, z, yaw: yaw0, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); C.yaw = yaw0; C.init = false; MP.on = true; }
-function mpEnd() { MP.on = false; use(P1); resetGame(); }
-const mp = createMp({ net, api: { me: meId, B: Bof, begin: mpBegin, end: mpEnd, flash: s => flash(s), audio, subs: subsNow, applySubs,
+function mpEnd() { MP.on = false; hoops?.challenge.stop(); use(P1); resetGame(); }
+const mp = createMp({ net, api: { me: meId, B: k => { const b = Bof(k); if (k === meId()) b.hoop = hoops?.challenge.pts || 0; return b; }, onRun: id => { if (id === 'kosz') hoops.challenge.start(); }, onEnd: () => hoops?.challenge.stop(), begin: mpBegin, end: mpEnd, flash: s => flash(s), audio, subs: subsNow, applySubs,
   pop: (k, t, c) => { const b = Bof(k); hud.pop(new THREE.Vector3(b.x, (b.y || 0) + 2.4, b.z), t, c); } } });
 // what comes from the other: where he is, a house served, a paper thrown, a window, a kick
 function netMsg(m) {
-  if (m.k === 'me') { if (m.paint && m.paint !== MP.R?.paint) P2.rider.setParts({ paint: m.paint }); MP.R = m; MP.rT = performance.now(); Object.assign(P2.B, { papers: m.papers, points: m.points, delivered: m.delivered, streak: m.streak, crash: m.crash ? (P2.B.crash || { t: 0 }) : null }); return; }
+  if (m.k === 'me') { if (m.paint && m.paint !== MP.R?.paint) P2.rider.setParts({ paint: m.paint }); MP.R = m; MP.rT = performance.now(); Object.assign(P2.B, { hoop: m.hoop || 0, papers: m.papers, points: m.points, delivered: m.delivered, streak: m.streak, crash: m.crash ? (P2.B.crash || { t: 0 }) : null }); return; }
   if (m.k === 'done') { const d = track.doors[m.d]; if (d) d.done = true; const mb = track.mailboxes[m.mb]; if (mb) { mb.done = true; mb.flag.rotation.x = -Math.PI / 2; } return; }
   if (m.k === 'paper') { const T = TITLES[m.title] ? m.title : 'trabka', o = new THREE.Mesh(paperG, paperM); o.castShadow = true; o.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandOf[T])); o.position.set(m.x, m.y, m.z); scene.add(o);
     papers.push({ m: o, v: new THREE.Vector3(...m.v), dot: new THREE.Mesh(dotG, dotM), prev: o.position.clone(), spin: new THREE.Vector3(9, 0, 3), hint: P2.B.hint || 0, t: 0, rest: false, landed: false, title: T, ghost: true }); scene.add(papers[papers.length - 1].dot); return; }
+  if (m.k === 'ball') { hoops?.ghostThrow(m); return; }
   if (m.k === 'win') { const w = track.windows[m.i]; if (w && !w.broken) breakWindow(w, true); return; }
   if (m.k === 'kick') { if (B.crash || foot.active) return; const dir = new THREE.Vector3(m.dx, 0, m.dz); hud.impact(rider.root.position.clone().setY(rider.root.position.y + 1), m.how === 'tag' ? 'BEREK!' : 'ŁUP!'); shake = .3; audio.play('kick', { vol: .8 });
     if (m.how === 'crash' && !B.air) crash(0, dir.setLength(3)); else { B.v *= .8; B.jolt = .16; B.x += m.dx * .35; B.z += m.dz * .35; } flash('Kopniak od gracza ' + otherId() + '!'); return; }
@@ -1197,7 +1207,7 @@ function served(door, mb) { if (!net.on) return; net.send({ k: 'done', d: door ?
 // each frame: what I am sent (15 a second); the ghost moved, posed; a bump against him
 function stepNet(dt, inp) { if (!net.on) { P2.rider.root.visible = false; return; }
   if ((MP.sendT -= dt) <= 0) { MP.sendT = 1 / 15; net.send({ k: 'me', x: +B.x.toFixed(2), y: +B.y.toFixed(2), z: +B.z.toFixed(2), yaw: +B.yaw.toFixed(3), v: +B.v.toFixed(2), lean: +B.lean.toFixed(3), steer: +B.steer.toFixed(3), pitch: +(B.pitch || 0).toFixed(3),
-    air: !!B.air, crash: !!B.crash, ped: +(inp.pedal || 0).toFixed(2), kick: B.kick ? { side: B.kick.side, t: +B.kick.t.toFixed(2) } : null, papers: B.papers, points: B.points, delivered: B.delivered || 0, streak: B.streak || 0, foot: foot.active, paint: bikeLook(myBike).paint }); }
+    air: !!B.air, crash: !!B.crash, ped: +(inp.pedal || 0).toFixed(2), kick: B.kick ? { side: B.kick.side, t: +B.kick.t.toFixed(2) } : null, papers: B.papers, points: B.points, delivered: B.delivered || 0, streak: B.streak || 0, foot: foot.active, paint: bikeLook(myBike).paint, hoop: hoops?.challenge.pts || 0 }); }
   const R = MP.R, age = (performance.now() - MP.rT) / 1000; P2.rider.root.visible = !!R && age < 4 && !R.foot; if (!R) return;
   const G = P2.B, k = Math.min(1, dt * 12), ex = Math.min(age, .25), tx = R.x + Math.sin(R.yaw) * R.v * ex, tz = R.z + Math.cos(R.yaw) * R.v * ex;   // (carried on by his speed, a quarter second at most)
   if (Math.hypot(tx - G.x, tz - G.z) > 6) { G.x = tx; G.z = tz; } else { G.x += (tx - G.x) * k; G.z += (tz - G.z) * k; }
@@ -1259,4 +1269,4 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 window.PT = { THREE, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
-  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; } };
+  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };
