@@ -61,6 +61,7 @@ const ramp = (() => { const t = new THREE.DataTexture(new Uint8Array([80, 165, 2
 // camera's place, his (his chest), the radius (0: off, as through his eyes)
 const FADE = { cam: { value: new THREE.Vector3() }, tgt: { value: new THREE.Vector3() }, r: { value: 0 } };
 const RIM = { k: { value: .5 }, col: { value: new THREE.Color('#ffe0a0') }, sun: { value: new THREE.Vector3(0, 1, 0) }, up: { value: new THREE.Vector3(0, 1, 0) } };
+// (noFade on a material: the boy himself, never thinned away)
 function rimmed(m) { m.onBeforeCompile = sh => { sh.uniforms.rimK = RIM.k; sh.uniforms.rimCol = RIM.col; sh.uniforms.sunV = RIM.sun; sh.uniforms.upV = RIM.up;
     sh.uniforms.fadeCam = FADE.cam; sh.uniforms.fadeTgt = FADE.tgt; sh.uniforms.fadeR = FADE.r;
     sh.vertexShader = 'varying vec3 vFadeW;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
@@ -70,14 +71,14 @@ function rimmed(m) { m.onBeforeCompile = sh => { sh.uniforms.rimK = RIM.k; sh.un
         vFadeW = (modelMatrix * vec4(transformed, 1.)).xyz;
       #endif`);
     sh.fragmentShader = 'varying vec3 vFadeW; uniform vec3 fadeCam, fadeTgt; uniform float fadeR;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-      if (fadeR > 0.) { vec3 ab = fadeTgt - fadeCam; float t = clamp(dot(vFadeW - fadeCam, ab) / max(dot(ab, ab), 1e-4), 0., 1.);
+      if (fadeR > 0. && ${m.userData.noFade ? 'false' : 'true'}) { vec3 ab = fadeTgt - fadeCam; float t = clamp(dot(vFadeW - fadeCam, ab) / max(dot(ab, ab), 1e-4), 0., 1.);
         float d = length(vFadeW - (fadeCam + ab * t)), rad = fadeR * max(smoothstep(0., .3, t), 1.7 * (1. - smoothstep(0., .14, t)));   // (wide by him, and wide right at the lens too: a crown the camera is in)
         if (t < .92 && d < rad && vFadeW.y > fadeTgt.y - .75) { float k = 1. - d / rad, n = fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy / 2.), vec2(.06711056, .00583715)))); if (n < k * 2.2) discard; } }`);   // (not the ground under him: only what stands higher than his knees)
     sh.fragmentShader = 'uniform float rimK; uniform vec3 rimCol; uniform vec3 sunV; uniform vec3 upV;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `#include <opaque_fragment>
       { float fr = 1. - clamp(dot(normal, normalize(vViewPosition)), 0., 1.), lit = dot(normal, sunV);
         float lying = smoothstep(.5, .8, dot(normal, upV));             // (not the ground, nor anything lying flat: only things that stand)
         gl_FragColor.rgb += rimCol * rimK * step(.7, fr) * step(.12, lit) * (1. - lying) * (1. - gl_FragColor.rgb * .55); }`); };
-  m.customProgramCacheKey = () => 'rim2'; return m; }
+  m.customProgramCacheKey = () => m.userData.noFade ? 'rim2nf' : 'rim2'; return m; }
 const toon = (c, o = {}) => rimmed(new THREE.MeshToonMaterial({ color: c, gradientMap: ramp, ...o }));
 const RAMPS = { 2: [105, 255], 3: [80, 165, 255], 4: [72, 132, 196, 255], 5: [62, 112, 162, 212, 255] };
 function setToon(n) { const d = RAMPS[n] || RAMPS[3]; ramp.image = { data: new Uint8Array(d), width: d.length, height: 1 }; ramp.needsUpdate = true; }

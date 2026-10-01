@@ -81,7 +81,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     m.updateMatrixWorld(true);
     if (extras) extras(m, bones);
     // the paper boy younger than the model as made: a bigger head for his body (as a lad of thirteen or so)
-    const headS = key === 'boy' ? 1.1 : 1; if (key === 'boy') { bones.head.scale.setScalar(headS); m.updateMatrixWorld(true); }
+    const headS = key === 'boy' ? 1.1 : 1; if (key === 'boy') { bones.head.scale.setScalar(headS); m.traverse(o => { if (o.isMesh) for (const mt of [].concat(o.material)) mt.userData.noFade = true; }); m.updateMatrixWorld(true); }
     return { key, G, body, m, mixer, A, clips, bones, fingers, headS, shot: null, w: { idle: 1, walk: 0, jog: 0, stance: 0 }, ik: 0, fist: 0, height: (PACE[key] || {}).height || 1.7 };
   }
   // his cap and his bag, as on the bike (a red cap snug on his head, the hair out under it; an olive satchel of papers on his left hip,
