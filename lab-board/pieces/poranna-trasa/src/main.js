@@ -1272,8 +1272,8 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   const tease = T ? { head: T.head, text: T.text, img: photoOf(T.spot) } : null; if (!T) { const n = pool.pop(); if (n) news.push({ ...n, img: photoOf(n.spot) }); }
   // the briefs: what else happened; a couple of the town's own
   const used = new Set(news.map(n => n.head)), briefs = [];
-  for (const k of ORDER) { const n = count(k); if (!n) continue; const e = eventNews(k, n); if (news[0]?.kind !== k) briefs.push(e.head + '.'); }
-  for (const n of NEWS.slice().sort(() => Math.random() - .5)) { if (briefs.length >= 3) break; if (!used.has(n.head)) briefs.push(n.head + '.'); }
+  for (const k of ORDER) { const n = count(k); if (!n) continue; const e = eventNews(k, n); if (news[0]?.kind !== k) briefs.push(e.head.replace(/[^.!?]$/, '$&.')); }
+  for (const n of NEWS.slice().sort(() => Math.random() - .5)) { if (briefs.length >= 3) break; if (!used.has(n.head)) briefs.push(n.head.replace(/[^.!?]$/, '$&.')); }
   // who is interviewed: whoever the morning was about (the dog's owner after a chase, the neighbour after a window, mum after falls,
   // the brother after a clean run), else anyone; the anecdote from someone else
   const pickWho = count('dog') ? 'dogman' : count('window') ? 'sasiadka' : r.falls >= 2 ? 'mama' : (!r.falls && r.delivered >= L.goal.papers) ? 'brat' : ['janusz', 'brat', 'mama', 'tata', 'sasiadka', 'sasiad', 'dzialki', 'kapliczka', 'budowa'][Math.random() * 9 | 0];

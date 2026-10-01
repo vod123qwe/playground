@@ -842,3 +842,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - „W skrócie”: inne zdarzenia z trasy i lokalne krótkie wiadomości
 - gazeta w wąskim oknie: dwa łamy zamiast jednej długiej kolumny
 - nowe przyciski w całej grze (gazeta, mapa, warsztat, garaż): pikselowe klawisze z grubością, które wciskają się przy kliknięciu, z ikonką i podpowiedzią klawisza; najważniejszy złoty z drgającą strzałką
+
+## Wersja 92: gazeta bez scrolla, strony przewracane za róg
+
+- gazeta zajmuje najwyżej 80% szerokości ekranu
+- koniec ze scrollem: treść sama układa się w łamy (1 do 3, zależnie od szerokości okna), a co się nie mieści, przechodzi na następną stronę; każda część (Poranek, Twoja trasa, Ogłoszenia) zaczyna się od nowej strony
+- pierwsza strona z pełną winietą (nazwa gazety dopasowana do szerokości), następne z wąskim nagłówkiem i numerami części; na dole numer strony
+- róg kartki (ośli róg) w prawym dolnym rogu: kliknięcie przewraca stronę; w lewym dolnym: z powrotem
+- strona odlatuje za róg w kilku klatkach (10 na sekundę, jak gra), poprzednia przy powrocie spada na stos
+- artykuł zaczyna się dużą inicjałą, ramka „Twoja trasa” zaraz pod nim
+- w wąskim oknie przyciski pod gazetą same ikonki z klawiszem (napis zostaje tylko na złotym)
