@@ -66,6 +66,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   function press(row) { if (row.type === 'bind') { capture = row; capture.t0 = performance.now(); window.PT_capturing = true; return; } if (row.type === 'button') row.act(); else if (row.type === 'toggle') change(row, 1); else if (row.type === 'styles') change(row, 1); }
   function key(e) {
     const c = e.code, row = rows[sel];
+    if (capture && !e.isTrusted) { capture = null; window.PT_capturing = false; return; }   // (the pad: no keys to give, the waiting called off)
     if (capture) { if (performance.now() - capture.t0 < 150) { e.preventDefault(); return; }   // (the key that opened it, not a new one)
       if (c !== 'Escape') { controls.set(capture.act, c); rows = build(); } capture = null; window.PT_capturing = false; e.preventDefault(); return; }   // (waiting for a key: this is it)
     const step = d => { let i = sel; for (let n = 0; n < rows.length; n++) { i = (i + d + rows.length) % rows.length; if (pickable(rows[i])) break; } sel = i; };
@@ -134,7 +135,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       y += hgt; });
     g.restore();
     if (full > view) { const bh = Math.max(8, view * view / full), by = top + (view - bh) * (scroll / (full - view)); g.fillStyle = '#44484c'; g.fillRect(x0 + pw - 5, top, 2, view); g.fillStyle = '#efc970'; g.fillRect(x0 + pw - 5, Math.round(by), 2, Math.round(bh)); }   // (where in the list)
-    const hint = document.body.classList.contains('touch') ? (page === 'pause' ? 'DOTKNIJ, ŻEBY WYBRAĆ' : 'DOTKNIJ ALBO PRZECIĄGNIJ SUWAK') : page === 'pause' ? 'ESC: WRÓĆ DO GRY' : keysPage ? '↑ ↓ WYBÓR · ENTER: NOWY KLAWISZ · CZERWONY: KLAWISZ ZAJĘTY · ESC WRÓĆ' : '↑ ↓ WYBÓR · ← → ZMIANA · ESC WRÓĆ'; A.text(hint, side ? x0 + 2 : Math.round(W / 2 - A.width(hint) / 2), Math.min(H - 8, y0 + ph + 7), '#f6f3ea');
+    const hint = document.body.classList.contains('touch') ? (page === 'pause' ? 'DOTKNIJ, ŻEBY WYBRAĆ' : 'DOTKNIJ ALBO PRZECIĄGNIJ SUWAK') : window.PT_PAD?.active ? (page === 'pause' ? '↑ ↓ WYBÓR · ' + PT_PAD.name(0) + ': OK · ' + PT_PAD.name(1) + ': WRÓĆ DO GRY' : keysPage ? '↑ ↓ WYBÓR · KLAWISZE ZMIENISZ Z KLAWIATURY · ' + PT_PAD.name(1) + ': WRÓĆ' : '↑ ↓ WYBÓR · ← → ZMIANA · ' + PT_PAD.name(0) + ': OK · ' + PT_PAD.name(1) + ': WRÓĆ') : page === 'pause' ? 'ESC: WRÓĆ DO GRY' : keysPage ? '↑ ↓ WYBÓR · ENTER: NOWY KLAWISZ · CZERWONY: KLAWISZ ZAJĘTY · ESC WRÓĆ' : '↑ ↓ WYBÓR · ← → ZMIANA · ESC WRÓĆ'; A.text(hint, side ? x0 + 2 : Math.round(W / 2 - A.width(hint) / 2), Math.min(H - 8, y0 + ph + 7), '#f6f3ea');
   }
   // the title screen: the name big over the street going by, a line under it, the buttons, a hint
   function drawTitle(dt) { const W = A.W, H = A.H, k = Math.min(1, t / .5), e = 1 - Math.pow(1 - k, 3);
@@ -145,7 +146,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     const bw = 130, bx = Math.round(W / 2 - bw / 2); let y = Math.round(H - 26 - rows.length * 16 + (1 - e) * 20); hits = [];
     const panel = (x, yy, w, h, fill, edge) => { g.fillStyle = '#17181b'; g.fillRect(x + 1, yy - 1, w - 2, h + 2); g.fillRect(x - 1, yy + 1, w + 2, h - 2); g.fillRect(x, yy, w, h); g.fillStyle = edge; g.fillRect(x + 1, yy + 1, w - 2, h - 2); g.fillStyle = fill; g.fillRect(x + 2, yy + 2, w - 4, h - 4); };
     rows.forEach((r, i) => { const on = i === sel; panel(bx, y, bw, 12, on ? '#efc970' : '#25272b', on ? '#f6f3ea' : '#44484c'); A.text(r.label, Math.round(bx + bw / 2 - A.width(r.label) / 2), y + 3, on ? '#17181b' : '#d3d0c3', null); hits.push({ x: bx, y, w: bw, h: 12, i }); y += 16; });
-    const hint = document.body.classList.contains('touch') ? 'DOTKNIJ, ŻEBY WYBRAĆ' : '↑ ↓ WYBÓR · ENTER'; A.text(hint, Math.round(W / 2 - A.width(hint) / 2), H - 10, '#d3d0c3'); }
+    const hint = document.body.classList.contains('touch') ? 'DOTKNIJ, ŻEBY WYBRAĆ' : window.PT_PAD?.active ? '↑ ↓ WYBÓR · ' + PT_PAD.name(0) : '↑ ↓ WYBÓR · ENTER'; A.text(hint, Math.round(W / 2 - A.width(hint) / 2), H - 10, '#d3d0c3'); }
   hud.setOverlay(draw);
   // the wheel scrolls a long page (the chosen row follows)
   function wheel(dy) { if (!page) return; const d = dy > 0 ? 1 : -1; let i = sel; for (let n = 0; n < 3; n++) { let j = i; do { j = (j + d + rows.length) % rows.length; } while (!pickable(rows[j]) && j !== i); i = j; } sel = i; }

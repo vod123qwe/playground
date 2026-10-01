@@ -81,7 +81,7 @@ export function createHud() {
       big(w, Math.round(bx + bw / 2 - width(w)), by + 3 + press, on ? '#17181b' : '#d3d0c3', null);
       if (on && ((t * 3) | 0) % 2) { const cx = bx - 6, cy = by + bh / 2; g.fillStyle = '#efc970'; for (let r = 0; r < 3; r++) g.fillRect(cx + r, cy - 2 + r, 1, 5 - r * 2); }   // a blinking pointer
       Q.hits.push({ x: bx - 2, y: by - 2, w: bw + 4, h: bh + 4, i }); });
-    const hint = Q.touch ? 'DOTKNIJ WYBÓR' : narrow ? 'Y / N' : '← → WYBÓR · ENTER · Y / N'; text(hint, Math.round(W / 2 - width(hint) / 2), y0 + ph + 8, '#d3d0c3');
+    const hint = Q.touch ? 'DOTKNIJ WYBÓR' : window.PT_PAD?.active ? '← → WYBÓR · ' + PT_PAD.name(0) + ': OK · ' + PT_PAD.name(1) + ': NIE' : narrow ? 'Y / N' : '← → WYBÓR · ENTER · Y / N'; text(hint, Math.round(W / 2 - width(hint) / 2), y0 + ph + 8, '#d3d0c3');
   }
   function askAt(px, py) { for (const h of Q.hits) if (px >= h.x && px < h.x + h.w && py >= h.y && py < h.y + h.h) return h.i; return -1; }   // (the picture's pixels → which button)
   // each frame: project: a world point to the picture's pixels (or null); state: { power (0..1, or -1), head (a world point), barks: [world points], papers, points }

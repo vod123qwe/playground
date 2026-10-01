@@ -419,7 +419,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     me.hp = Math.min(100, me.hp + dt * 4); me.st = Math.min(100, me.st + dt * 25);
     if (inp.jump && !me.air) { me.air = true; me.vy = 4.4; if (me.P.A.jump) shot(me.P, 'jump', .9); }     // (a jump: up about a metre)
     if (me.air) { me.vy -= 9.8 * dt; me.y += me.vy * dt; }
-    if (inp.touch && view !== 'first') {
+    if ((inp.touch || inp.stick) && view !== 'first') {
       // a phone: the right finger turns the camera round him; the stick walks him the way it is pushed (as seen), he turns to it; pushed all the way: a run
       if (camYaw === null) camYaw = me.yaw; camYaw -= (inp.dx || 0) * .0075; pitch = clamp(pitch - (inp.dy || 0) * .004, -.6, .6);
       const sx = inp.side || 0, sy = inp.fwd || 0, mag = Math.min(1, Math.hypot(sx, sy)); let top = 0;

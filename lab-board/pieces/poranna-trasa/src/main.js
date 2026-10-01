@@ -38,6 +38,7 @@ import { createShop } from './shop.js';
 import { createRun, kept } from './run.js';
 import { createBook } from './book.js';
 import { createAudio } from './audio.js';
+import { createPad, BTN } from './pad.js';
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
 const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
@@ -145,7 +146,7 @@ function speakerAt(at) { if (!at) return 'voice'; const d = (x, z) => Math.hypot
 hud.hooks.onSay = (text, at) => { const k = speakerAt(at); audio.say(text, k, { ...where(at), id: k }); };
 hud.hooks.onHit = (word, at) => aud(word === 'BUM!' || word === 'BACH!' || word === 'ŁUBUDU!' || word === 'KOP!' ? 'kick' : 'punch', at);
 const VOICE_OF = n => /ŁAWKI/.test(n) ? 'lump' : /EKIPA/.test(n) ? 'lads' : /POSTERUNKOWY|SIERŻANT|ASPIRANT|DYŻURNY/.test(n) ? 'police' : /JANUSZ/.test(n) ? 'janusz' : /GŁOS Z OKNA|^PANI/.test(n) ? 'granma' : /TOREBKA/.test(n) ? null : /MIREK|RYSIEK|JANEK/.test(n) ? 'belly' : 'grandpa';
-const talk = createTalk({ onSay: (who, text) => { const k = VOICE_OF(who || ''); if (k) audio.say(text, k, { id: 'talk' }); }, onPick: () => audio.play('ui') });
+const talk = createTalk({ label: (i, light, sel) => !pad.active ? String(i + 1) : light ? ['←', '→', '↑', '↓'][i] || String(i + 1) : sel ? pad.name(BTN.A, true) : '·', onSay: (who, text) => { const k = VOICE_OF(who || ''); if (k) audio.say(text, k, { id: 'talk' }); }, onPick: () => audio.play('ui') });
 let MOD = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 };   // (what the bike's parts do: shop.js)
 const shop = createShop({ THREE, createRider: () => createRider({ THREE, ramp, toon }), game: { get money() { return B.points; }, set money(v) { B.points = Math.max(0, v); }, get papers() { return B.papers; }, set papers(v) { B.papers = v; }, get hp() { return B.hp ?? 100; }, set hp(v) { B.hp = v; },
   get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return ACT().map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, onChange: (m, look) => { MOD = m; B.bagMax = 30 + m.bag; rider.setParts(look); } } });
@@ -196,6 +197,11 @@ const B = { x: track.start.x, z: track.start.z, y: 0, vy: 0, air: false, gPrev: 
 const L = rider.wheelbase, g = 9.81;
 
 // ---------- input: keys and a pad ----------
+const pad = createPad({ onSwitch: a => padSwitch(a) }); window.PT_PAD = pad;
+// the pad taken up (or put down): the hints named anew; the first time, a word on what is where
+function padSwitch(a) { renderHelp(); const go = document.querySelector('#shop .go'), ch = document.querySelector('#shop .chat');
+  if (go) go.textContent = a ? `JEDŹ DALEJ (${pad.name(BTN.B, true)})` : 'JEDŹ DALEJ (ESC)'; if (ch) ch.textContent = a ? `POGADAJ (${pad.name(BTN.Y, true)})` : 'POGADAJ';
+  if (a && !padSwitch.told) { padSwitch.told = true; flash(`Pad: ${pad.name(BTN.RT)} jedź, ${pad.name(BTN.LT)} hamuj, ${pad.name(BTN.LB)} / ${pad.name(BTN.RB)} rzut, ${pad.name(BTN.A)} podskok, ${pad.name(BTN.X)} kop, ${pad.name(BTN.Y)} gadaj, ${pad.name(BTN.B)} zsiądź`); } }
 // ---------- the keys: each action and the keys it is on (changed in the menu: STEROWANIE; kept in the browser) ----------
 //   modes: where it works (bike: riding, walk: on foot, fight: in a fight); two actions on one key clash only if they share a mode
 const ACTIONS = [
@@ -217,7 +223,12 @@ const on = (id, code) => BIND[id].includes(code);
 const keyName = c => ({ Space: 'SPACJA', ShiftLeft: 'SHIFT', ShiftRight: 'P.SHIFT', ControlLeft: 'CTRL', ControlRight: 'P.CTRL', AltLeft: 'ALT', AltRight: 'P.ALT', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
   Enter: 'ENTER', Tab: 'TAB', Backspace: 'BACKSPACE', CapsLock: 'CAPS', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Minus: '-', Equal: '=', Backquote: '`' })[c]
   || c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').toUpperCase();
-const keysOf = id => BIND[id].filter((c, i, a) => !(c === 'ShiftRight' && a.includes('ShiftLeft'))).map(keyName).join(' / ') || '—';
+// the pad: which button does what (the same for both makes: A/✕ hop and jump, X/□ kick and hit, Y/△ talk, B/○ on and off the bike,
+// the triggers pedal and brake, the bumpers throw, the left stick steers and walks, the right one aims and turns the camera)
+const PADB = { pedal: BTN.RT, brake: BTN.LT, left: 'LS', right: 'LS', sprint: BTN.LS, throwL: BTN.LB, throwR: BTN.RB, kick: BTN.X, hop: BTN.A, mount: BTN.B, view: BTN.RS, talk: BTN.Y, chat: BTN.Y,
+  title: BTN.UP, bell: BTN.DOWN, punchL: BTN.X, punchR: BTN.Y, high: BTN.UP, low: BTN.DOWN, guard: BTN.RB, dodge: BTN.LB, taunt: BTN.LEFT };
+const padKey = id => PADB[id] == null ? '—' : PADB[id] === 'LS' ? 'LEWA GAŁKA' : pad.name(PADB[id]);
+const keysOf = id => pad.active ? padKey(id) : BIND[id].filter((c, i, a) => !(c === 'ShiftRight' && a.includes('ShiftLeft'))).map(keyName).join(' / ') || '—';
 const clashes = (id, code) => { const A = ACTIONS.find(a => a.id === id); return ACTIONS.filter(b => b.id !== id && BIND[b.id].includes(code) && (A.modes.includes('all') || b.modes.includes('all') || b.modes.some(m => A.modes.includes(m)))).map(b => b.id); };
 // what each is, where (the menu's page and the help window list them so)
 const SECTIONS = [
@@ -247,7 +258,6 @@ addEventListener('keydown', e => { if (e.repeat) return; keys.add(e.code); edge.
   if (on('full', e.code)) toggleFull();
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code) || ACTIONS.some(a => BIND[a.id].includes(e.code))) e.preventDefault(); });
 addEventListener('keyup', e => { keys.delete(e.code); }); addEventListener('blur', () => keys.clear());
-const padPrev = {};
 function lockPointer() { if (document.pointerLockElement || mouse.failed || menu.open || asking || touch.on) return;   // (the cursor kept in the game's window; refused: not asked again)
   try { const pr = canvas.requestPointerLock?.(); pr?.catch?.(() => { mouse.failed = true; }); } catch { mouse.failed = true; } }
 const mouse = { dx: 0, dy: 0, l: false, r: false, lh: false, rh: false, locked: false, used: false, nx: 0, ny: 0, inside: false, failed: false };   // (l, r: pressed this frame; lh, rh: held)
@@ -280,10 +290,16 @@ function input() {
   const held = id => BIND[id].some(c => keys.has(c)) ? 1 : 0, hit = id => BIND[id].some(c => edge.has(c));   // (through the bindings)
   let steer = held('right') - held('left'), pedal = held('pedal'), brake = held('brake');
   let sprint = held('sprint'), hop = hit('hop'), kickK = hit('kick'), kickHold = !!held('kick'), holdL = held('throwL'), holdR = held('throwR');
-  const gp = [...(navigator.getGamepads?.() || [])].find(p => p && p.connected);
-  if (gp) { const ax = gp.axes[0] || 0; if (Math.abs(ax) > .12) steer = Math.sign(ax) * (Math.abs(ax) - .12) / .88; const b = i => gp.buttons[i];
-    pedal = Math.max(pedal, b(7)?.value || 0); brake = Math.max(brake, b(6)?.value || 0); sprint = sprint || !!b(2)?.pressed;
-    if (b(0)?.pressed && !padPrev.a) kickK = true; kickHold = kickHold || !!b(0)?.pressed; padPrev.a = !!b(0)?.pressed; if (b(1)?.pressed && !padPrev.b) hop = true; padPrev.b = !!b(1)?.pressed; holdL = holdL || !!b(4)?.pressed; holdR = holdR || !!b(5)?.pressed; }
+  const pf = {}; let pDx = 0, pDy = 0;
+  if (pad.on) { const h = pad.held, x = pad.hit, A = pad.ax, light = talk.isOpen && talk.isLight;   // (a choice on the move: the cross answers it, see padUI)
+    if (Math.abs(A[0]) > 0) steer = A[0]; pDx = A[2] * 7; pDy = A[3] * 7;
+    if (!foot.active) { pedal = Math.max(pedal, pad.val(BTN.RT), A[1] < -.5 ? -A[1] : 0); brake = Math.max(brake, pad.val(BTN.LT), A[1] > .5 ? A[1] : 0);
+      sprint = sprint || h(BTN.LS); hop = hop || x(BTN.A); kickK = kickK || x(BTN.X); kickHold = kickHold || h(BTN.X); holdL = holdL || h(BTN.LB); holdR = holdR || h(BTN.RB);
+      pf.chat = x(BTN.Y); if (!light) { pf.title = x(BTN.UP); pf.bell = x(BTN.DOWN); } }
+    else { if (A[1]) { pedal = Math.max(pedal, -A[1]); brake = Math.max(brake, A[1]); } sprint = sprint || h(BTN.LS);
+      if (foot.fighting) { pf.atkL = x(BTN.X); pf.atkR = x(BTN.Y); pf.guard = h(BTN.RB); pf.dodge = x(BTN.LB) || x(BTN.A); pf.up = h(BTN.UP); pf.down = h(BTN.DOWN); pf.taunt = x(BTN.LEFT); }
+      else { hop = hop || x(BTN.A); pf.lmb = x(BTN.X); pf.talk = x(BTN.Y); pf.title = x(BTN.UP); } }
+    pf.mount = x(BTN.B); if (x(BTN.RS)) { if (foot.active) foot.toggleView(); else setCam((camI + 1) % CAMS.length); } }
   let tE = null, tDx = 0, tDy = 0;
   if (touch.on) { const t = touch.state, e = tE = touch.take(); if (t.stick) steer = t.steer; pedal = Math.max(pedal, t.pedal); brake = Math.max(brake, t.brake);
     sprint = sprint || t.sprint; holdL = holdL || t.holdL; holdR = holdR || t.holdR; kickK = kickK || e.kick; kickHold = kickHold || !!t.kickHeld; hop = hop || e.hop;
@@ -292,7 +308,7 @@ function input() {
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
-    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, chat: hit0('chat') || !!tE?.talk, title: hit0('title') || !!tE?.title, bell: hit0('bell'), skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
+    atkL: hit0('punchL') || !!tE?.punchL || !!pf.atkL, atkR: hit0('punchR') || !!tE?.punchR || !!pf.atkR, up: !!held('high') || !!pf.up, down: !!held('low') || !!pf.down, mount: hit0('mount') || !!tE?.mount || !!pf.mount, guard: !!held('guard') || !!touch.state.guard || !!pf.guard, dx: m0.dx + tDx + pDx, dy: m0.dy + tDy + pDy, lmb: m0.l || !!pf.lmb, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk || !!pf.talk, chat: hit0('chat') || !!tE?.talk || !!pf.chat, title: hit0('title') || !!tE?.title || !!pf.title, bell: hit0('bell') || !!pf.bell, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge || !!pf.dodge, taunt: hit0('taunt') || !!pf.taunt, touch: touch.on, stick: pad.active && foot.active };
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
@@ -915,7 +931,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
-  if (!foot.fighting && foot.nearBike(B) && !B.hintShown) { B.hintShown = true; flash(touch.on ? 'ROWER: wsiądź' : 'F: wsiądź na rower'); } if (!foot.nearBike(B)) B.hintShown = false;
+  if (!foot.fighting && foot.nearBike(B) && !B.hintShown) { B.hintShown = true; flash(touch.on ? 'ROWER: wsiądź' : keysOf('mount') + ': wsiądź na rower'); } if (!foot.nearBike(B)) B.hintShown = false;
   foot.follow(dt); sun.position.set(me.x, me.y, me.z).addScaledVector(SUN, 60); sun.target.position.set(me.x, me.y, me.z); sun.target.updateMatrixWorld();
 }
 // on foot: where the bike is (an arrow at the top, turned the way it is from where you look; its distance; a mark over it when seen)
@@ -1011,8 +1027,25 @@ function attract(dt) {                                                  // (the 
   if (!fly.init) { fly.pos.copy(want); fly.look.copy(look); fly.init = true; } fly.pos.lerp(want, 1 - Math.exp(-dt * 2)); fly.look.lerp(look, 1 - Math.exp(-dt * 2));
   camera.position.copy(fly.pos); camera.up.set(0, 1, 0); camera.lookAt(fly.look); camera.fov = 58; camera.near = .1; camera.updateProjectionMatrix();
   sun.position.copy(fly.pos).addScaledVector(SUN, 60); sun.target.position.copy(fly.pos); sun.target.updateMatrixWorld(); }
+// the pad over what is open: the menus, a question, a talk get the keys it stands for (the cross and the stick: arrows, A: Enter,
+// B: Esc); the shop and the end of a run: the highlight moves over their buttons, A presses; in the game MENU pauses, VIEW opens the notes
+function padUI(dt) {
+  if (!pad.on) return; const x = pad.hit, d = pad.nav(dt), arrow = d && { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }[d];
+  const key = code => { const o = { code, key: code, bubbles: true, cancelable: true }; dispatchEvent(new KeyboardEvent('keydown', o)); dispatchEvent(new KeyboardEvent('keyup', o)); };
+  const page = sel => { pad.focus(sel, d); if (x(BTN.A)) pad.press(); };
+  if (shop.isOpen) { page('#shop .win'); if (x(BTN.Y)) document.querySelector('#shop .chat')?.click(); if (x(BTN.B) || x(BTN.MENU)) key('Escape'); return; }
+  pad.forget();
+  if (runUI.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); return; }
+  if (book.isOpen) { const el = document.getElementById('book'); if (el) el.scrollTop += pad.ax[1] * 14 + pad.ax[3] * 14; if (x(BTN.B) || x(BTN.VIEW) || x(BTN.A) || x(BTN.MENU)) key('Escape'); return; }
+  if (asking) { if (arrow === 'ArrowLeft' || arrow === 'ArrowRight') key(arrow); if (x(BTN.A)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
+  if (menu.open) { if (arrow) key(arrow); if (x(BTN.A)) key('Enter'); if (x(BTN.B) || (x(BTN.MENU) && menu.page === 'pause')) key('Escape'); return; }
+  if (talk.isOpen && !talk.isLight) { if (arrow === 'ArrowUp' || arrow === 'ArrowDown') key(arrow); if (x(BTN.A)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
+  if (talk.isOpen && talk.isLight) [BTN.LEFT, BTN.RIGHT, BTN.UP, BTN.DOWN].forEach((b, i) => { if (x(b)) key('Digit' + (i + 1)); });   // (on the move: the cross picks)
+  if (x(BTN.MENU)) key('Escape'); if (x(BTN.VIEW)) key('Tab');
+}
 function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
+  pad.poll(); padUI(dt);
   if ((menu.open || asking || shop.isOpen || book.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
   if (!asking && !menu.open && !shop.isOpen && !runUI.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)

@@ -4,7 +4,7 @@
 //   name, or null: the end), act() (done on choosing; what it returns, if not undefined, is where to go), off() (a reason it cannot
 //   be chosen now, or nothing); bye (on an answer or a node): what they say after it is over. A node without opts: one answer, DALEJ, to node.next (or the end).
 // createTalk() → { run(nodes, start, onEnd), key(e) → true if it took the key, isOpen }
-export function createTalk({ onSay, onPick } = {}) {
+export function createTalk({ onSay, onPick, label } = {}) {
   const css = document.createElement('style'); css.textContent = `
     #talk { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); box-sizing: border-box;
       z-index: 7; display: none; padding: 12px 14px 12px; background: rgba(23,24,27,.94); border: 2px solid #efc970; box-shadow: 0 0 0 2px #17181b, 0 8px 0 rgba(0,0,0,.25);
@@ -30,7 +30,7 @@ export function createTalk({ onSay, onPick } = {}) {
     sayE.textContent = full.slice(0, shown);
     optsE.innerHTML = ''; if (shown < full.length) return;                             // (the answers once it is all said)
     opts.forEach((o, i) => { const b = document.createElement('button'), why = o.off?.(); b.className = (i === sel ? 'sel' : '') + (why ? ' off' : '');
-      b.innerHTML = `<b>${i + 1}</b>`; b.append(str(o.t)); if (why) { const em = document.createElement('em'); em.textContent = '(' + why + ')'; b.append(em); }
+      b.innerHTML = `<b>${label ? label(i, light, i === sel) : i + 1}</b>`; b.append(str(o.t)); if (why) { const em = document.createElement('em'); em.textContent = '(' + why + ')'; b.append(em); }
       b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); }); b.addEventListener('click', e => { e.stopPropagation(); choose(i); }); optsE.append(b); });
   }
   function go(id) {
