@@ -164,6 +164,17 @@
      compositor while the kitchen and the living room are built) and the step in words */
   .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; transition:opacity .5s ease, visibility 0s linear .5s}
   body.ready .loading{opacity:0; visibility:hidden}
+  /* while it loads the flat is built under a heavy blur (no room popping in piece by piece), lifted when all is ready, walk included */
+  #gl{transition:filter 1s var(--ease), transform 1s var(--ease)}
+  body:not(.ready) #gl{filter:blur(30px) saturate(1.15) brightness(1.05); transform:scale(1.1)}
+  body.clear #gl{filter:none; transform:none; transition:none}
+  body:not(.ready) .loading{pointer-events:auto; z-index:10}   /* nothing to press until it is all there (the back arrow stays: it is above) */
+  body:not(.ready) .back{z-index:11}
+  .loading::before{content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%, rgba(250,248,244,.55), rgba(232,229,223,.35))}
+  .build{position:relative; overflow:hidden}
+  .build::after{content:''; position:absolute; left:0; bottom:0; height:3px; width:calc(var(--p, .1) * 100%); background:#cf8a5e; border-radius:0 3px 3px 0; transition:width .6s var(--ease)}
+  .lost{position:fixed; inset:0; z-index:30; display:none; place-items:center; background:rgba(232,229,223,.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px)}
+  .lost.on{display:grid} .lost .build{gap:14px} .lost button{font:inherit; border:0; border-radius:999px; padding:8px 14px; background:var(--ink); color:#fff; cursor:pointer}
   .build{display:flex; align-items:center; gap:12px; height:46px; padding:0 22px 0 16px; border-radius:999px; background:#fff; color:var(--ink); font-weight:600;
     box-shadow:0 8px 28px rgba(20,20,20,.08); transition:transform .5s var(--ease)}
   body.ready .build{transform:translateY(8px) scale(.97)}
@@ -191,7 +202,8 @@
     <rect x="0" y="16" width="14" height="6.5" rx="1.2" style="--i:0"/><rect x="16" y="16" width="14" height="6.5" rx="1.2" style="--i:1"/>
     <rect x="0" y="8.25" width="6" height="6.5" rx="1.2" style="--i:2"/><rect x="8" y="8.25" width="14" height="6.5" rx="1.2" style="--i:3"/><rect x="24" y="8.25" width="6" height="6.5" rx="1.2" style="--i:4"/>
     <rect x="0" y=".5" width="14" height="6.5" rx="1.2" style="--i:5"/><rect x="16" y=".5" width="14" height="6.5" rx="1.2" style="--i:6"/>
-  </svg><span id="loading-t">Laying the floors…</span><small id="loading-n">1 / 4</small></div></div>
+  </svg><span id="loading-t">Laying the floors…</span><small id="loading-n">1 / 5</small></div></div>
+<div class="lost" id="lost" role="alert"><div class="build"><span></span><button type="button" hidden onclick="location.reload()">Try again</button></div></div>
 <div class="overlay" id="overlay"></div>
 <div class="hand" id="hand" aria-hidden="true"><svg viewBox="-2 -2 28 28" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="h-open"><g class="halo"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g><g class="ink"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></g><g class="h-grab"><g class="halo"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g><g class="ink"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g></g></svg></div>
 
@@ -299,6 +311,12 @@ const shoelace = ps => Math.abs(ps.reduce((s, p, i) => { const q = ps[(i + 1) % 
 // path tracing when you stand still: opt-in (the panel, or ?pt=1). On a weaker graphics card a long trace can reset the card, and the
 // browser then blocks WebGL for the whole site for a while; the traced photo works in small buckets instead
 const PT_ON = new URLSearchParams(location.search).get('pt') === '1';
+// LITE: a phone (or a page that lost its WebGL once and came back): fewer pixels, smaller and harder shadows, no area light in each window
+// (more sky light instead), one lamp shadow, no lens effects on zoom. A phone's card that cannot finish a frame in time is reset by the
+// system: the screen goes black (what happened on entering the walk). ?lite=1 forces it, ?lite=0 turns it off
+const ssGet = k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, ssSet = (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) { } };
+const LITE_Q = new URLSearchParams(location.search).get('lite');
+const LITE = LITE_Q === '1' || (LITE_Q !== '0' && (matchMedia('(pointer:coarse)').matches || (navigator.deviceMemory && navigator.deviceMemory <= 4) || ssGet('aw.lite') === '1'));
 let ptShown = false, ptFence = null;                                // the live trace: on screen now; the card still busy with the last tile
 const S = { bob: true, live: true, view: 'generic', sofa: 'gala3', curtains: 'sheers', lamps: false, q: PT_ON ? 'low' : 'preview', portal: 1.1, pt: PT_ON, bounces: 3, aisle: 0, fix: 'frame', paint: '#ded8cb', hb: 'window', cut: 255, plan: false, planOp: .75, labels: true, thick: true, eye: 165, speed: 1.4, fov: 72, ceiling: true, sun: 35, time: 11 * 60 + 30, warmth: 5500, power: 1, exposure: 1 };
 const DEF = { ...S };
@@ -306,25 +324,28 @@ const AISLE0 = A.kitchen ? Math.round((A.kitchen.island.off - A.kitchen.island.d
 
 // ---------- renderer, scene, light ----------
 const canvas = document.getElementById('gl');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: LITE ? 'default' : 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, LITE ? 1.25 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = LITE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.localClippingEnabled = true;
+canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); const n = +(ssGet('aw.lost') || 0) + 1; ssSet('aw.lost', String(n)); ssSet('aw.lite', '1');
+  const el = document.getElementById('lost'); el.classList.add('on'); el.querySelector('span').textContent = n <= 2 ? 'The phone ran out of graphics memory. Loading a lighter version…' : 'The graphics card keeps resetting.';
+  if (n <= 2) setTimeout(() => location.reload(), 1400); else el.querySelector('button').hidden = false; }, false);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#e8e5df');
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture;
-scene.environmentIntensity = .55;
+scene.environmentIntensity = LITE ? .8 : .55;
 
-const hemi = new THREE.HemisphereLight('#fffaf2', '#cbbfae', .55); scene.add(hemi);
+const hemi = new THREE.HemisphereLight('#fffaf2', '#cbbfae', LITE ? .95 : .55); scene.add(hemi);
 RectAreaLightUniformsLib.init();
 // window portals: a soft sky-coloured area light in every glazed opening, facing in. Indoors the traced light mostly comes through the windows;
 // with a light there the tracer finds it at once (far less noise), and the preview gets the same soft window light
 const portals = [];
 const sun = new THREE.DirectionalLight('#fff1dc', 2.4);
-sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02;
+sun.castShadow = true; sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02;
 Object.assign(sun.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: .5, far: 60 });
 scene.add(sun, sun.target);
 // ---------- the sun by the clock: today's date, southern Poland (about 50 N, 20 E), Polish time (summer time from the last Sunday of
@@ -791,7 +812,7 @@ function buildGlazing(o) {
   if (!portals.some(l => l.userData.o === o)) {                     // once per opening (the leaves may be rebuilt, the portal stays)
     const hgt = o.head - o.sill, lg = new THREE.RectAreaLight('#eef3ff', S.portal, len * M, hgt * M), c = [mid[0] + n[0] * 4, mid[1] + n[1] * 4];
     lg.position.set(wx(c[0]), (o.sill + hgt / 2) * M, wz(c[1])); lg.lookAt(wx(c[0] + n[0] * 100), (o.sill + hgt / 2) * M, wz(c[1] + n[1] * 100));
-    lg.userData.o = o; lg.userData.mid = mid; scene.add(lg); portals.push(lg);
+    lg.userData.o = o; lg.userData.mid = mid; if (!LITE) scene.add(lg); portals.push(lg);
   }
   // a bar in two halves: the inside one white, the outside one graphite (x, y: centre in the plane; w, h: size; depth 7 cm)
   const bar = (parent, w, h, x, y) => {
@@ -1041,10 +1062,10 @@ const OPEN = [];
 // in the room, stands for the light they bounce off the walls and the ceiling: the shadows soften as in a real room instead of going
 // black. The number of lights never changes (switching a lamp needs no new shaders); the shadows are drawn only when something changes
 // (a lamp, a door, a front, a curtain, the furniture moving)
-const SLOTS = [0, 1, 2].map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); l.castShadow = true; l.shadow.autoUpdate = false; l.shadow.mapSize.set(1024, 1024);
+const SLOTS = [0, 1, 2].slice(0, LITE ? 1 : 3).map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); l.castShadow = true; l.shadow.autoUpdate = false; l.shadow.mapSize.set(LITE ? 512 : 1024, LITE ? 512 : 1024);
   l.shadow.camera.near = .03; l.shadow.bias = -.002; l.shadow.normalBias = .015; l.shadow.needsUpdate = true; scene.add(l); return l; });   // (drawn once at the start: a shadow map never drawn
 // has no texture, and a sampler without one stops every lit material from drawing: only the sky showed)
-const FILLS = [0, 1, 2, 3, 4].map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); scene.add(l); return l; });
+const FILLS = [0, 1, 2, 3, 4].slice(0, LITE ? 3 : 5).map(() => { const l = new THREE.PointLight('#ffc98a', 0, 5, 2); scene.add(l); return l; });
 const bounce = new THREE.AmbientLight('#ffd6a8', 0); scene.add(bounce);
 let slotKey = '';
 function lendShadows(changed) {
@@ -1942,7 +1963,7 @@ async function takePhoto(FR = 32) {
 
 // ---------- the lens: scroll to zoom in on a detail (towards the pointer); focus falls on what is under it, with a light vignette and fringe ----------
 const Z = { level: 1, target: 1, nx: 0, ny: 0, focus: 2, focusT: 2, lastPick: 0 };
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: LITE ? 0 : 4 }));
 composer.addPass(new RenderPass(scene, camera));
 const bokeh = new BokehPass(scene, camera, { focus: 2, aperture: 0, maxblur: .008 }); composer.addPass(bokeh);
 const lens = new ShaderPass({
@@ -1958,7 +1979,7 @@ const lens = new ShaderPass({
     }`,
 });
 composer.addPass(lens); composer.addPass(new OutputPass());
-const lensOn = () => mode === 'walk' && !tween && (Z.level > 1.02 || Z.target > 1.02);
+const lensOn = () => !LITE && mode === 'walk' && !tween && (Z.level > 1.02 || Z.target > 1.02);
 canvas.addEventListener('wheel', e => {
   if (mode !== 'walk' || tween) return;
   e.preventDefault();
@@ -2002,7 +2023,7 @@ function stepLens(dt) {
 
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); ptShown = false; camera.aspect = w / h; camera.updateProjectionMatrix(); paintModes();
-  composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
+  if (!LITE) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }   // (a phone never draws through it: no buffers for it)
 }
 addEventListener('resize', resize);
 const v = new THREE.Vector3();
@@ -2115,8 +2136,8 @@ function frame(now) {
 placeSun(); paintWalls(); applyCut(S.cut); plan.visible = S.plan; renderer.toneMappingExposure = S.exposure;
 resize(); paintHint(); requestAnimationFrame(frame);
 // the loader stays until the whole flat is built and its shaders are compiled (that was the stutter on the first visit)
-const loadStep = (n, t) => { document.getElementById('loading-t').textContent = t; document.getElementById('loading-n').textContent = `${n} / 4`; };
-const loaded = () => document.body.classList.add('ready');
+const loadStep = (n, t) => { document.getElementById('loading-t').textContent = t; document.getElementById('loading-n').textContent = `${n} / 5`; document.querySelector('#loading .build').style.setProperty('--p', n / 5); };
+const loaded = () => { if (document.body.classList.contains('ready')) return; document.querySelector('#loading .build').style.setProperty('--p', 1); document.body.classList.add('ready'); setTimeout(() => document.body.classList.add('clear'), 1100); ssSet('aw.lost', '0'); };
 setTimeout(loaded, 30000);                                          // whatever happens, the page is never held behind it
 const floorsReady = new Promise(r => setTimeout(r, 60)).then(buildFloors).catch(err => console.warn('floors', err));
 // the kitchen (concept M48 on the layout A.04), in centimetres, set on the kitchen wall
@@ -2160,6 +2181,12 @@ livingReady.then(async () => {
   loadStep(4, 'Switching on the light…');
   lendShadows(true);                                                // the lamps' own lights hidden before the shaders are made
   try { await renderer.compileAsync(scene, camera); } catch (err) { console.warn('compile', err); }
+  // the walk warmed up as well, behind the blur: its view from the eyes compiled, its lamps' shadows drawn once (their maps made now, not
+  // on the first step in), so going in later has nothing left to build
+  loadStep(5, 'Getting the walk ready…');
+  try { const e = eyePose(), wc = camera.clone(); wc.position.copy(e.pos); wc.quaternion.copy(e.q); wc.fov = S.fov; wc.aspect = camera.aspect; wc.updateProjectionMatrix(); wc.updateMatrixWorld();
+    await renderer.compileAsync(scene, wc); const keep = mode; mode = 'walk'; lendShadows(true); renderer.render(scene, wc); mode = keep; lendShadows(true); }
+  catch (err) { console.warn('walk warm-up', err); }
   await new Promise(r => { requestAnimationFrame(() => requestAnimationFrame(r)); setTimeout(r, 600); });   // two frames drawn with it all in place (a hidden tab draws none: then a moment), then away
   loaded();
   startLive();                                                       // the others: once the flat is up

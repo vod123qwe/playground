@@ -9,6 +9,18 @@ Mieszkanie (typ 15, 4 piętro) przeniesione z rzutu do 3D w prawdziwych centymet
 - **Walk:** kamera na wysokości oczu (165 cm). WASD albo strzałki, przeciąganie myszą rozgląda się, Shift przyspiesza, M przełącza tryb. Na telefonie gałka po lewej i przeciąganie palcem. Ściany, balustrady, szyby i zamknięte skrzydła zatrzymują (ciało to okrąg 22 cm); wejście w zamknięte drzwi je otwiera. Na górze widać nazwę pomieszczenia, w rogu minimapę (kliknięcie w nią przenosi w to miejsce).
 - **Customize:** przycięcie ścian, nazwy pomieszczeń, wyróżnienie grubych ścian, rzut na podłodze (do porównania z modelem) i jego krycie, wysokość oczu, prędkość, pole widzenia, sufit, kierunek słońca, ekspozycja.
 
+## Telefon i ładowanie (01.10.2026)
+
+- **Lekki profil (LITE)** włącza się sam na ekranach dotykowych i urządzeniach z małą pamięcią:
+  - render w 1,25× zamiast 2× (prawie 3× mniej pikseli);
+  - cienie 1024 i twardsze, jedna lampa z cieniem zamiast trzech;
+  - okna bez świateł powierzchniowych (w zamian więcej światła nieba);
+  - przy zoomie bez efektów soczewki (sam zoom działa).
+  - `?lite=1` wymusza profil, `?lite=0` go wyłącza.
+- Wcześniej telefon nie wyrabiał klatki przy gęstym widoku spaceru i system resetował kartę graficzną (czarny ekran). Teraz po takim resecie strona mówi, co się stało, i sama wczytuje się w lekkiej wersji (do dwóch razy, potem przycisk „Try again”).
+- **Loader**: mieszkanie buduje się pod mocnym rozmyciem, bez wyskakiwania mebli po kolei. Pigułka pokazuje 5 kroków z paskiem, a ostatni krok rozgrzewa spacer: kompiluje widok z oczu i rysuje cienie lamp, więc wejście w Walk nie ma już nic do budowania. Do końca ładowania nic się nie klika, poza strzałką wstecz.
+- Czas ładowania na komputerze: ok. 30 s w pełnej jakości, ok. 8 s w LITE.
+
 ## Stolarka i balkony (decyzje Jarka, 28.09.2026)
 
 - **Drzwi wewnętrzne:** Porta Vector Premium model V, bezprzylgowe 80, białe, pełne (dwa frezowane panele, każdy z podwójną linią), ościeżnica z opaskami. Klamki Metal-Bud Rumba z kwadratowym szyldem, nikiel satyna velvet. Kierunek otwierania i strona zawiasów z łuków na rzucie.
