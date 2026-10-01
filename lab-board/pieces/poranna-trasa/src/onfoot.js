@@ -101,19 +101,19 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     // the cap, shrunk onto the head: a dome whose every point is set just over the head and the hair under it (measured from their
     // points, in its direction), tipped as a cap sits: its front up on the brow, its back down to the nape; a brim, the strap's arch
     // at the back, a button on top; and the hair out from under it, longer, round the back and over the ears
-    const red = toon('#b3372c'), redD = toon('#9e3127'), C = new V3(cx, skull - .072, cz), cap = new THREE.Group(); cap.position.copy(C); cap.rotation.x = -.24; cap.updateMatrixWorld(true);
+    const red = toon('#b3372c'), redD = toon('#9e3127'), seamM = toon('#8a2a22'), C = new V3(cx, skull - .072, cz), cap = new THREE.Group(); cap.position.copy(C); cap.rotation.x = -.24; cap.updateMatrixWorld(true);
     const near = [...pts, ...hpts].map(p => p.clone().sub(C)).filter(p => p.length() > .03), uw = new V3();
     const reach = u => { uw.copy(u).applyQuaternion(cap.quaternion); let r = 0; for (const p of near) { const d = p.length(), c = p.dot(uw) / d; if (c > .955 && d * c > r) r = d * c; } return r || Math.hypot(hw * u.x, hd * u.z, .1 * u.y); };
     const dg = new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), dp = dg.attributes.position, u = new V3();
-    const topR = reach(new V3(0, 1, 0)), ea = hw + .028, eb = topR + .016, ec = hd + .034, ell = u => 1 / Math.sqrt((u.x / ea) ** 2 + (u.y / eb) ** 2 + (u.z / ec) ** 2);
-    const shell = u => Math.max(reach(u) + .009, (reach(u) + .012) * .45 + ell(u) * .55);   // (snug on the head, full and round as a crown is)
+    const topR = reach(new V3(0, 1, 0)), ea = hw + .03, eb = topR + .006, ec = hd + .036, SQ = 2.6, ell = u => 1 / Math.pow(Math.abs(u.x / ea) ** SQ + Math.abs(u.y / eb) ** SQ + Math.abs(u.z / ec) ** SQ, 1 / SQ);   // (a squarish ellipse: full shoulders, a flatter top)
+    const shell = u => Math.max(reach(u) + .008, (reach(u) + .01) * .35 + ell(u) * .65);   // (snug on the head, full and round as a crown is)
     for (let k = 0; k < dp.count; k++) { u.fromBufferAttribute(dp, k).normalize(); const r = shell(u); dp.setXYZ(k, u.x * r, u.y * r, u.z * r); }
     dg.computeVertexNormals(); cap.add(new THREE.Mesh(dg, red));
     const rimAt = th => shell(u.set(Math.sin(th), .03, Math.cos(th)).normalize());   // (how far out its edge is, round it: th 0 the front)
     // its six panels' seams, from the edge up to the button; the sweatband's darker edge round the bottom; little eyelets near the top
     const onShell = (th, el, out = .0015) => { const v = new V3(Math.sin(th) * Math.cos(el), Math.sin(el), Math.cos(th) * Math.cos(el)); return v.multiplyScalar(shell(v) + out); };
     for (let k = 0; k < 6; k++) { const th = k * Math.PI / 3 + Math.PI / 6, pts = []; for (let e = 0; e <= 10; e++) pts.push(onShell(th, .05 + e / 10 * (Math.PI / 2 - .08)));
-      cap.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, .0022, 3, false), redD)); }
+      cap.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, .0018, 3, false), seamM)); }
     { const pts = []; for (let k = 0; k <= 32; k++) pts.push(onShell(k / 32 * Math.PI * 2, .02, .002)); cap.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 48, .0045, 4, true), redD)); }
     for (let k = 0; k < 6; k++) { const ey = new THREE.Mesh(new THREE.SphereGeometry(.0042, 5, 3), toon('#5e1c17')); ey.position.copy(onShell(k * Math.PI / 3 + Math.PI / 3, 1.05, .001)); cap.add(ey); }
     { const rf = rimAt(0), w = Math.min(hw * .95, .095), brim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .01, 18, 1, false, -Math.PI / 2, Math.PI), red); brim.scale.set(w, 1, .085); brim.position.set(0, .004, rf - .012); brim.rotation.x = .3; cap.add(brim);
@@ -124,18 +124,18 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
       const strap = new THREE.Mesh(new THREE.BoxGeometry(.074, .013, .006), redD); strap.position.set(0, .011, -rb - .004); cap.add(strap);
       const tail = new THREE.Mesh(new THREE.BoxGeometry(.03, .011, .005), red); tail.position.set(-.03, .013, -rb - .007); tail.rotation.z = -.15; cap.add(tail);
       const buckle = new THREE.Mesh(new THREE.BoxGeometry(.013, .017, .009), toon('#d8d6cf')); buckle.position.set(.022, .011, -rb - .006); cap.add(buckle); }
-    // the hair from under it: a full mass round the back and the sides (narrowing to the nape), and over it locks: flat, rounded, wavy,
-    // curling out at their ends, three rows overlapping; longer at the nape and over the ears, so the ears just show under them
-    { const hm = toon('#4b3221', { side: THREE.DoubleSide }), hl = toon('#6a4a30', { side: THREE.DoubleSide }), hd2 = toon('#3a2618', { side: THREE.DoubleSide });
-      { const pos = [], idx = [], A0 = Math.PI * .36, A1 = Math.PI * 1.64, NA = 26, rows = [[0, 0], [-.025, .985], [-.05, .93]];
-        for (let i = 0; i <= NA; i++) { const th = A0 + (A1 - A0) * i / NA, back = Math.max(0, -Math.cos(th)), R = rimAt(th) - .002; for (const [y, k] of rows) { const ear = Math.max(0, 1 - Math.abs(Math.cos(th)) / .3), kk = 1 - (1 - k) * (.6 + back * .6), yy = y * (.7 + back * .5) * (1 - ear * .75); pos.push(Math.sin(th) * R * kk, yy - .002, Math.cos(th) * R * kk); } }
-        for (let i = 0; i < NA; i++) for (let j = 0; j < 2; j++) { const a0 = i * 3 + j, b0 = a0 + 3; idx.push(a0, b0, a0 + 1, b0, b0 + 1, a0 + 1); }
-        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); cap.add(new THREE.Mesh(g, hd2)); }
-      const lockG = (w, L, curl, flip = 0) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.quadraticCurveTo(-w * .62, -L * .55, -w * .08, -L); sh.quadraticCurveTo(w * .1, -L * 1.02, w * .2, -L * .92); sh.quadraticCurveTo(w * .6, -L * .5, w / 2, 0); sh.lineTo(-w / 2, 0);
-        const g = new THREE.ShapeGeometry(sh, 5), q = g.attributes.position; for (let i = 0; i < q.count; i++) { const y = q.getY(i), t = -y / L; q.setZ(i, curl * t * t * L + Math.sin(t * 5.5 + w * 90) * .0035 + flip * Math.max(0, t - .45) ** 2 * L * 2.2); if (flip) q.setY(i, y + flip * Math.max(0, t - .55) ** 2 * L * 1.8); } g.computeVertexNormals(); return g; };   // (bent out toward the tip, a wave in it)
-      let n = 0; for (const [row, dy, out] of [[0, -.002, .003], [1, -.013, .007], [2, -.026, .009]]) for (let th = Math.PI * (.36 + row * .02); th <= Math.PI * (1.64 - row * .02); th += Math.PI * (.07 + row * .01)) {
-        const c = Math.cos(th), ear = Math.abs(c) < .3, flick = c < -.25 && c > -.62, back = c <= -.62, L = (ear ? .024 : flick ? .062 : back ? .05 : .04) + ((n * 7) % 5) * .004 - row * .012, w = .042 + ((n * 3) % 4) * .005, r = rimAt(th) - .006 + out - row * .004;
-        if (L < .018 || (ear && row > 0)) continue; const lock = new THREE.Mesh(lockG(w, L, back ? .12 : .25 + (n % 3) * .1, flick && row < 2 ? 1 : 0), [hm, hl, hm, hd2][(n + row) % 4]); lock.position.set(Math.sin(th) * r, dy, c * r); lock.rotation.set(0, th, 0); lock.rotateX(-.04 - row * .05); lock.rotateZ(((n * 5) % 7 - 3) * .05); cap.add(lock); n++; } }
+    // the hair from under it, one piece: a skirt round the back and the sides that lies on the head, narrowing a little to the nape,
+    // its edge wavy in clumps (longer at the back, short over the ears so they show, the ends just turned out behind the ears), strands
+    // in light and dark down it
+    { const NA = 56, NR = 6, A0 = Math.PI * .34, A1 = Math.PI * 1.66, pos = [], col = [], idx = [], dark = new THREE.Color('#3a2618'), mid = new THREE.Color('#4b3221'), lite = new THREE.Color('#6a4a30'), cc = new THREE.Color();
+      for (let i = 0; i <= NA; i++) { const th = A0 + (A1 - A0) * i / NA, c = Math.cos(th), ear = Math.max(0, 1 - Math.abs(c) / .32), flick = Math.max(0, 1 - Math.abs(c + .45) / .2), back = Math.max(0, -c - .3);
+        const clump = Math.abs(Math.sin(i * Math.PI / 3.5)), L = (.034 + back * .022 + flick * .01) * (1 - ear * .62) + clump * .009 * (1 - ear * .5), R0 = rimAt(th) - .003;
+        const strand = (i * 7) % 5, base = strand === 0 ? lite : strand === 3 ? dark : mid;
+        for (let j = 0; j <= NR; j++) { const t = j / NR, y = -L * t - .001, r = R0 * (1 - .06 * t * (.6 + back)) + flick * .012 * Math.max(0, t - .5) ** 2 * 4 + .002 * t;
+          pos.push(Math.sin(th) * r, y + flick * .006 * Math.max(0, t - .6) * 2.5, c * r); cc.copy(base).lerp(dark, t * .45); col.push(cc.r, cc.g, cc.b); } }
+      for (let i = 0; i < NA; i++) for (let j = 0; j < NR; j++) { const a0 = i * (NR + 1) + j, b0 = a0 + NR + 1; idx.push(a0, b0, a0 + 1, b0, b0 + 1, a0 + 1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+      cap.add(new THREE.Mesh(g, toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide }))); }
     m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;
     // the satchel: low across his back, a touch right of his spine, close in; hung from a pivot at its top (it swings a little as he
     // walks, see update); its strap lies on him: from the bag's end up across his back to his right shoulder, over it, down across his
