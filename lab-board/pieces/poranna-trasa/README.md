@@ -826,3 +826,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - zapis postępu w przeglądarce po każdym odcinku (i przyciskiem ZAPISZ): kasa, rower, części, lakiery, wyniki
 - warsztat dostępny z mapy, żeby zrobić zakupy między odcinkami
 - plan dalszych etapów: docs/progresja.md
+
+## Wersja 90: gazeta między odcinkami
+
+- po mecie zamiast okienka jest gazeta „Wieści zza płotu”: stos pikselowych kartek, herb miasteczka, data, numer wydania, przewracanie stron (strzałki, Enter, przyciski)
+- strona 1 PORANEK: artykuł o Twoim poranku (nagłówek i tekst z tego, co zrobiłeś), zdjęcie z mety zrobione w grze, dwa newsy o zdarzeniach z trasy (wywrotka, auto, babcia, policja, szyby, pies, seria) ze zdjęciem z chwili zdarzenia, a gdy nic się nie stało: lokalne newsy ze zdjęciem z miejsca (posterunek, warsztat, kapliczka, buda z psem, budowa...); zapowiedź jutra z odcinków, które się otwierają; ramka „Twoja trasa” z liczbami i mapką
+- strona 2 TWOJA TRASA: duża mapka trasy z każdym domem (doręczone, prenumerator bez gazety, bez prenumeraty), szybami i wywrotkami; gwiazdki i ich cele; dziś obok najlepszych, rekordy
+- strona 3 OGŁOSZENIA: drobne ogłoszenia (części od Janusza z cenami i zabawne z miasteczka), dokąd dalej (od razu na kolejny odcinek), warsztat, mapa, tabela wyników wszystkich odcinków
