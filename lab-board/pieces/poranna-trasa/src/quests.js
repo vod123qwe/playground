@@ -607,7 +607,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   // pan Janusz outside each bike shop: sat on a stool by the door, a cap on, calling out to you as you go by
   const JAN = [];
   for (const sh of track.shops || []) { if (!sh.door) continue; const S = { sh, who: null, cap: null, cool: 4 }; JAN.push(S);
-    residents.spawn?.('belly').then(p => { if (!p) return; S.who = p; const d = sh.door, q = track.probe(d.x, d.z, -1), A = track.S[q.i], at = V(d.x + A.f.x * 1.4, track.probe(d.x + A.f.x * 1.4, d.z + A.f.z * 1.4, q.i).y, d.z + A.f.z * 1.4);
+    residents.spawn?.('belly').then(p => { if (!p) return; S.who = p; const d = sh.door, q = track.probe(d.x, d.z, -1), A = track.S[q.i], st = sh.seat || V(d.x + A.f.x * 1.4, 0, d.z + A.f.z * 1.4), at = V(st.x, track.probe(st.x, st.z, q.i).y, st.z);
       p.G.position.copy(at); p.G.rotation.y = Math.atan2(A.p.x - at.x, A.p.z - at.z); p.acts.idle?.play(); if (p.acts.talk) { p.acts.talk.play(); p.acts.talk.setEffectiveWeight(0); }
       const stool = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .44, 10), new THREE.MeshToonMaterial({ color: '#7a4a2a' })); stool.position.y = .22; p.G.add(stool);
       const cap = new THREE.Group(), cm = new THREE.MeshToonMaterial({ color: '#c23a2e' }); cap.add(new THREE.Mesh(new THREE.SphereGeometry(.105, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cm)); const vz = new THREE.Mesh(new THREE.BoxGeometry(.17, .015, .12), cm); vz.position.set(0, .005, .1); cap.add(vz); scene().add(cap); S.cap = cap; S.talkT = 0; }); }

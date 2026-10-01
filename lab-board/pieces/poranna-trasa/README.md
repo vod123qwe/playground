@@ -609,3 +609,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - muzyka: pogodny poranek w trakcie jazdy, pościg (gang albo policja za tobą) z płynnym przejściem, spokojna na ekranie tytułowym i podsumowaniu
 - menu (pauza i ekran tytułowy): DŹWIĘK z suwakami głośności, muzyki, efektów i głosów (zapamiętane)
 - Warsztat: kategoria „Dźwięki” do odsłuchu każdego efektu, głosu i muzyki, z suwakami
+
+## Wersja 61: nowy warsztat i ekran sklepu
+
+- warsztat: ceglana podmurówka, dach z falistej blachy z rdzą, pasiasta markiza nad bramą, większy szyld z rowerkiem, brama podniesiona do połowy (w środku wiszą koła), witryna z czerwonym kołem; obok złom z lat: sterty starych opon, rdzawe ramy rowerów oparte o ścianę, stara lodówka na plecach, beczka, skrzynki; pan Janusz siedzi po drugiej stronie bramy
+- ekran sklepu od nowa: gra przyciemniona rastrem (jak w pauzie), pikselowe okno z „klocków” (blokowe przyciski z cieniem), z boku okno rozmowy z awatarem Janusza (pikselowy portret: czapeczka, wąsy, podbródki, koszulka na ramiączkach; usta ruszają się, gdy mówi) i dymkiem jego kwestii
+- własny awatar: plik `assets/ui/janusz.png` (kwadratowy) zastąpi rysowany portret

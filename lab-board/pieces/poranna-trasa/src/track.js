@@ -478,19 +478,40 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       hit(h, { hx: 3.5, hz: 2.5, h: 3.5, kind: 'hard' }, q.i); zone(h, 4.6, 3.8, 0, -.5);
       q.door = h.localToWorld(new THREE.Vector3(0, 0, -3.4)); q.lamp = h.localToWorld(new THREE.Vector3(0, 3.9, -2.2));
       show.shacks.push({ o: h, label: 'posterunek policji', note: '7 × 5 m' }); }
-    // the bike shops: a small workshop, its door open (a dark inside), a sign on the front, a bike on a stand outside, a tyre hung up
-    const wallS = toon('#d9c7a0'), roofS2 = toon('#5a3d27'), darkS = toon('#1d1e21'), redS = toon('#c23a2e'), steelS = toon('#9a9c9e');
-    const wordS = cvT(80, 14, g => { g.fillStyle = '#e3b83a'; g.fillRect(0, 0, 80, 14); g.fillStyle = '#17181b'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ROWERY · CZĘŚCI', 40, 7.5); });
+    // the bike shops: a workshop with a brick footing, a corrugated roof, a striped awning, a big sign, a shop window with a wheel in it,
+    // the door rolled half up (the dark inside, wheels hung up in it); a bike on a stand outside; to one side the junk of years: stacks of
+    // old tyres, bent frames, a fridge, a drum, crates
+    const spanB = (o, a, b) => { const d = b.clone().sub(a); o.position.copy(a).add(b).multiplyScalar(.5); o.scale.set(1, 1, d.length()); o.lookAt(o.position.clone().add(d)); };   // (a bar from a to b)
+    const wallS = toon('#d9c7a0'), brickS = toon('#9a4a32'), darkS = toon('#1d1e21'), redS = toon('#c23a2e'), steelS = toon('#9a9c9e'), rustS = toon('#8a4a2a'), tyreS = toon('#26272a'), woodS = toon('#7a5a3a');
+    const tinT = cvT(16, 16, g => { for (let x = 0; x < 16; x++) { g.fillStyle = x % 4 < 2 ? '#7e8287' : '#5f6368'; g.fillRect(x, 0, 1, 16); } g.fillStyle = 'rgba(138,74,42,.55)'; g.fillRect(3, 9, 5, 4); g.fillRect(11, 2, 3, 6); });
+    const awnT = cvT(16, 4, g => { for (let x = 0; x < 16; x++) { g.fillStyle = (x >> 2) % 2 ? '#f6f3ea' : '#c23a2e'; g.fillRect(x, 0, 1, 4); } });
+    const wordS = cvT(96, 20, g => { g.fillStyle = '#e3b83a'; g.fillRect(0, 0, 96, 20); g.fillStyle = '#17181b'; g.fillRect(0, 0, 96, 2); g.fillRect(0, 18, 96, 2);
+      g.strokeStyle = '#17181b'; g.lineWidth = 1.5; g.beginPath(); g.arc(9, 12, 4, 0, 7); g.moveTo(25, 12); g.arc(21, 12, 4, 0, 7); g.moveTo(9, 12); g.lineTo(14, 6); g.lineTo(21, 12); g.moveTo(14, 6); g.lineTo(18, 6); g.stroke();
+      g.fillStyle = '#17181b'; g.font = 'bold 10px monospace'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText('ROWERY · CZĘŚCI', 30, 10.5); });
     for (const q of shops) { const h = new THREE.Group();
-      h.add(box(6, 3, 4.5, wallS, 0, 1.5, 0)); h.add(box(6.6, .24, 5.1, roofS2, 0, 3.12, 0)); h.add(box(2.6, 2.3, .08, darkS, -.8, 1.15, -2.27)); h.add(box(2.9, .5, .08, toon('#ffffff', { map: wordS }), -.8, 2.65, -2.3));
-      h.add(box(1.2, .9, .06, toon('#9fc0cc'), 1.9, 1.5, -2.27));
-      { const st = new THREE.Group(); st.position.set(1.7, 0, -3.1); h.add(st); for (const z of [-.5, .5]) { const w = new THREE.Mesh(new THREE.TorusGeometry(.3, .035, 8, 20), darkS); w.rotation.y = Math.PI / 2; w.position.set(0, .36, z); st.add(w); }
+      h.add(box(6, 3, 4.5, wallS, 0, 1.5, 0)); h.add(box(6.06, .6, 4.56, brickS, 0, .3, 0));                                            // walls on a brick footing
+      { const rf = box(6.8, .12, 5.3, toon('#ffffff', { map: rep(tinT, 6, 1) }), 0, 3.12, 0); rf.rotation.x = .05; h.add(rf); }          // the corrugated roof
+      h.add(box(2.6, 1.15, .08, darkS, -.8, .58, -2.27)); h.add(box(2.7, 1.1, .1, toon('#8d9295', { map: rep(tinT, 3, 1) }), -.8, 1.7, -2.3));   // the door rolled half up: dark below, the shutter above
+      for (const [x, y] of [[-1.5, .9], [-.3, .7]]) { const w = new THREE.Mesh(new THREE.TorusGeometry(.28, .03, 6, 16), darkS); w.position.set(x, y, -2.1); h.add(w); }   // wheels hung up inside
+      { const sg = box(3.4, .62, .08, toon('#ffffff', { map: wordS }), -.4, 2.62, -2.32); h.add(sg); }                                  // the sign
+      { const aw = box(3, .06, 1, toon('#ffffff', { map: rep(awnT, 3, 1) }), -.8, 2.3, -2.75); aw.rotation.x = -.35; h.add(aw); }      // the awning over the door
+      h.add(box(1.3, 1, .06, toon('#9fc0cc'), 2, 1.5, -2.27)); { const w = new THREE.Mesh(new THREE.TorusGeometry(.3, .03, 6, 16), redS); w.position.set(2, 1.5, -2.22); h.add(w); }   // the shop window, a red wheel in it
+      { const st = new THREE.Group(); st.position.set(1.7, 0, -3.2); h.add(st); for (const z of [-.5, .5]) { const w = new THREE.Mesh(new THREE.TorusGeometry(.3, .035, 8, 20), darkS); w.rotation.y = Math.PI / 2; w.position.set(0, .36, z); st.add(w); }
         st.add(box(.05, .05, .9, redS, 0, .55, 0)); st.add(box(.05, .45, .05, redS, 0, .55, -.15)); st.add(box(.04, .06, .3, darkS, 0, .82, .45)); st.add(box(.2, .35, .05, steelS, 0, .18, 0)); }
-      { const t = new THREE.Mesh(new THREE.TorusGeometry(.32, .05, 8, 20), darkS); t.position.set(-2.6, 2.1, -2.3); h.add(t); }
+      // the junk, to the side: stacks of tyres, frames leant on the wall, a fridge on its back, a drum, crates
+      const J = new THREE.Group(); J.position.set(4.1, 0, -.6); h.add(J);
+      for (const [x, z, n] of [[0, -1.2, 5], [.75, -.7, 3], [-.1, .2, 4]]) for (let k = 0; k < n; k++) { const t = new THREE.Mesh(new THREE.TorusGeometry(.32, .12, 6, 14), tyreS); t.rotation.x = Math.PI / 2; t.position.set(x + (rnd() - .5) * .06, .12 + k * .22, z); t.rotation.z = rnd(); J.add(t); }
+      { const t = new THREE.Mesh(new THREE.TorusGeometry(.32, .12, 6, 14), tyreS); t.position.set(.9, .4, .5); t.rotation.set(0, .6, .25); J.add(t); }
+      for (const [z, r] of [[1.1, .2], [1.6, -.15]]) { const f = new THREE.Group(); f.position.set(-.85, 0, z); f.rotation.set(0, Math.PI / 2, r); J.add(f);
+        for (const [a, b] of [[[0, .3, -.35], [0, .75, .1]], [[0, .75, .1], [0, .72, .5]], [[0, .3, -.35], [0, .7, .5]], [[0, .3, -.35], [0, .3, -.85]]]) { const o = box(.04, .04, 1, rustS, 0, 0, 0); spanB(o, new THREE.Vector3(...a), new THREE.Vector3(...b)); f.add(o); }
+        const w = new THREE.Mesh(new THREE.TorusGeometry(.3, .025, 6, 16), steelS); w.rotation.y = Math.PI / 2; w.position.set(0, .3, -.85); f.add(w); }
+      { const fr = box(.7, .55, 1.4, toon('#e9e6dc'), .2, .28, 1.5); fr.rotation.y = .3; J.add(fr); J.add(box(.05, .3, .5, steelS, .55, .5, 1.4)); }   // an old fridge on its back
+      { const dr = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .85, 12), rustS); dr.position.set(1, .43, -1.5); J.add(dr); }
+      for (const [x, z, y, r] of [[.9, 1.2, 0, .2], [1.05, 1.15, .4, .5]]) { const c = box(.5, .4, .4, woodS, x, .2 + y, z); c.rotation.y = r; J.add(c); }
       put(h, q.i, q.sd * (PAVE + 4.4), 0, q.sd > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true);
-      hit(h, { hx: 3, hz: 2.25, h: 3.2, kind: 'hard' }, q.i); zone(h, 4, 3.6, 0, -.5);
-      q.door = h.localToWorld(new THREE.Vector3(-.8, 0, -3.3));
-      show.shacks.push({ o: h, label: 'sklep rowerowy', note: '6 × 4,5 m' }); } }
+      hit(h, { hx: 3, hz: 2.25, h: 3.2, kind: 'hard' }, q.i); hit(h, { hx: 1.3, hz: 1.6, h: 1.4, kind: 'hard' }, q.i, 4.2, -.4); zone(h, 5.6, 3.6, .8, -.5);
+      q.door = h.localToWorld(new THREE.Vector3(-.8, 0, -3.3)); q.seat = h.localToWorld(new THREE.Vector3(-2.6, 0, -2.9));   // (seat: where pan Janusz sits, by the door, away from the bike stand)
+      show.shacks.push({ o: h, label: 'sklep rowerowy', note: '6 × 4,5 m, ze złomem' }); } }
   // the paths, planned before the houses: where one leaves the pavement there is a meadow (no house there, no fence across it), and
   // its first stretch is kept clear (no tree, no tuft of grass on it)
   const trailPlans = []; for (let i0 = Math.round(40 / ds); i0 < N - 40; i0 += Math.round((42 + nr() * 40) / ds)) { const sd = nr() < .5 ? -1 : 1; if (nearStop(i0, sd, 25) || nearPost(i0, sd, 24) || nearShop(i0, sd, 22)) continue;
