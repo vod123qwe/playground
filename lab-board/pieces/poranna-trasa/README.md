@@ -591,3 +591,4 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - właściwy tytuł: pełna zapłata i liczy się do dostarczonych; zły: połowa i „JA CZYTAM SPORT!”; dom bez prenumeraty: nic („NIE ZAMAWIAŁEM!”)
 - wybita szyba u prenumeratora: „REZYGNUJĘ Z PRENUMERATY!” (tabliczka znika)
 - gazety dochodzące skądkolwiek (paczki, sklep, łupy, ekipa) rozkładają się po tytułach (najpierw tam, gdzie najmniej); każdy przejazd: nowi prenumeratorzy
+- w sklepie także konkretny tytuł: +5 wybranej gazety za 3 zł (obok „dopełnij” po równo)
