@@ -318,6 +318,13 @@ function breakWindow(w) {
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
 }
+// a paper flying at a window, its last fraction of a second, about to go just by: drawn in a little (a near miss goes in)
+function magnet(p, w, dist, dt) {
+  const vn = p.v.x * w.n.x + p.v.y * w.n.y + p.v.z * w.n.z; if (vn > -1) return; const t = dist / -vn; if (t > .55) return;
+  const sx = -w.n.z, sz = w.n.x, hx = p.m.position.x + p.v.x * t - w.p.x, hz = p.m.position.z + p.v.z * t - w.p.z, hy = p.m.position.y + p.v.y * t - .5 * g * t * t - w.p.y, lat = hx * sx + hz * sz;
+  if (Math.abs(lat) > w.hw + .85 || Math.abs(hy) > w.hh + .75) return; const k = Math.min(1, dt * 5) * .7 / Math.max(.08, t);
+  p.v.x -= sx * lat * k; p.v.z -= sz * lat * k; p.v.y -= hy * k;
+}
 function score(n, at, label, col) { B.points += n; hud.pop(at, label, col); }
 function stepPapers(dt) {
   for (const p of papers) {
@@ -328,8 +335,9 @@ function stepPapers(dt) {
     // through a window: the pane's plane crossed from outside, within its frame
     for (const w of track.windows) { if (w.broken || Math.abs(w.p.x - p.m.position.x) + Math.abs(w.p.z - p.m.position.z) > 6) continue;
       const a = (p.prev.x - w.p.x) * w.n.x + (p.prev.y - w.p.y) * w.n.y + (p.prev.z - w.p.z) * w.n.z, b = (p.m.position.x - w.p.x) * w.n.x + (p.m.position.y - w.p.y) * w.n.y + (p.m.position.z - w.p.z) * w.n.z;
+      if (!p.landed && b > .05 && b < 3.5) magnet(p, w, b, dt);
       if (a > 0 && b <= 0) { const t = a / (a - b), hx = p.prev.x + (p.m.position.x - p.prev.x) * t, hy = p.prev.y + (p.m.position.y - p.prev.y) * t, hz = p.prev.z + (p.m.position.z - p.prev.z) * t;
-        if (Math.hypot(hx - w.p.x, hz - w.p.z) < w.hw && Math.abs(hy - w.p.y) < w.hh) { breakWindow(w); p.v.multiplyScalar(.15); p.v.addScaledVector(w.n, 1.2); p.m.position.set(hx, hy, hz).addScaledVector(w.n, .05); } } }
+        if (Math.hypot(hx - w.p.x, hz - w.p.z) < w.hw + .22 && Math.abs(hy - w.p.y) < w.hh + .18) { breakWindow(w); p.v.multiplyScalar(.15); p.v.addScaledVector(w.n, 1.2); p.m.position.set(hx, hy, hz).addScaledVector(w.n, .05); } } }
     // against walls, fences, cars: back off, bounce weakly
     for (const C of track.near(p.hint)) { if (C.kind !== 'hard' || p.m.position.y > C.y0 + C.h) continue; if (boxHit(C, p.m.position.x, p.m.position.z, .05)) { p.m.position.x = p.prev.x; p.m.position.z = p.prev.z; p.v.x *= -.3; p.v.z *= -.3; } }
     const hgt = p.m.position.y - q.y; p.dot.position.set(p.m.position.x, q.y + .02, p.m.position.z); p.dot.scale.setScalar(Math.max(.5, 1.3 - hgt * .25));
@@ -649,6 +657,18 @@ const hudBag = createHudBag({ THREE, toon: (c, o = {}) => new THREE.MeshToonMate
 const cyclo = createCyclo(hudEl), trip = { dist: 0, max: 0, time: 0 };
 function paintHud() { cyclo.update({ v: B.v, ...trip, on: !foot.active }); }
 const _v = new THREE.Vector3();
+// a talk: the camera eases round over his shoulder to whoever he talks to (both in the picture, on the side nearer the road), and back after
+const TC = { w: 0, at: null, q: new THREE.Quaternion(), m: new THREE.Matrix4(), pos: new THREE.Vector3(), look: new THREE.Vector3() };
+function talkCam(dt) {
+  const f = quests.focus; TC.w += ((f ? 1 : 0) - TC.w) * Math.min(1, dt * 2.6); if (f) TC.at = f.clone(); if (TC.w < .003 || !TC.at) return;
+  const me = foot.active ? foot.me : null, P = me ? new THREE.Vector3(me.x, me.y, me.z) : new THREE.Vector3(B.x, B.y, B.z), at = TC.at;
+  const dx = at.x - P.x, dz = at.z - P.z, l = Math.hypot(dx, dz) || 1, ux = dx / l, uz = dz / l;
+  // (the camera higher the farther they are, or the lower they sit: over a fence; someone far off: it goes in towards them)
+  const lift = 1.7 + Math.min(1.6, l * .16 + Math.max(0, P.y + 1.4 - at.y) * .8), bk = 2.3 - Math.min(4, Math.max(0, l - 4) * .55), spot = sd => new THREE.Vector3(P.x - ux * bk - uz * 1.35 * sd, P.y + lift, P.z - uz * bk + ux * 1.35 * sd), d1 = Math.abs(track.probe(spot(1).x, spot(1).z, B.hint).d), d2 = Math.abs(track.probe(spot(-1).x, spot(-1).z, B.hint).d);
+  TC.pos.copy(spot(d1 <= d2 ? 1 : -1)); TC.pos.y = Math.max(TC.pos.y, track.probe(TC.pos.x, TC.pos.z, B.hint).y + .8);
+  const lf = l > 5 ? .85 : .68; TC.look.set(P.x + dx * lf, P.y + 1.1 + (at.y - P.y - 1.1) * .75, P.z + dz * lf); TC.m.lookAt(TC.pos, TC.look, new THREE.Vector3(0, 1, 0)); TC.q.setFromRotationMatrix(TC.m);
+  const e = THREE.MathUtils.smootherstep(TC.w, 0, 1); camera.position.lerp(TC.pos, e); camera.quaternion.slerp(TC.q, e); camera.updateMatrixWorld();
+}
 function project(w) { _v.copy(w).project(camera); if (_v.z > 1) return null; const [W, H] = px.size; return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H }; }
 // the same, for a mark at the picture's edge: behind the camera too (turned round: which side it is on)
 function projectEdge(w) { _v.copy(w).project(camera); const [W, H] = px.size, b = _v.z > 1; if (b) { _v.x = -_v.x; _v.y = -_v.y; } return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H, behind: b }; }
@@ -825,7 +845,7 @@ function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : n
 function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
-  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !talk.isOpen); touch.chat(!foot.active && quests.canChat);
+  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
   hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks(), quests: quests.tracker(), projEdge: projectEdge, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
@@ -846,7 +866,7 @@ const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../',
 const menu = createMenu({ hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
-  if (talk.isOpen) { talk.key(e); keys.clear(); e.stopImmediatePropagation(); return; }   // (a talk open: its keys only)
+  if (talk.isOpen && talk.key(e)) { if (!talk.isLight) keys.clear(); e.stopImmediatePropagation(); return; }   // (a talk open: its keys (a light one: just the numbers))
   if (menu.open && !asking) { menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
   if (!asking && e.code === 'Escape') { menu.show('pause'); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
 const Q = new URLSearchParams(location.search), ARENA = Q.get('arena');
@@ -902,15 +922,15 @@ function attract(dt) {                                                  // (the 
   sun.position.copy(fly.pos).addScaledVector(SUN, 60); sun.target.position.copy(fly.pos); sun.target.updateMatrixWorld(); }
 function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
-  if ((menu.open || asking || talk.isOpen) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
-  document.body.classList.toggle('walk', !menu.open && !asking && !talk.isOpen);                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !window.PT?.hold) { step(dt, talk.isOpen ? still(input()) : input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if ((menu.open || asking || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
+  document.body.classList.toggle('walk', !menu.open && !asking && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
+  if (!asking && !menu.open && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
   drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
-  hudBag.update(dt, B.papers, 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); px.render(scene, camera, hudBag); drawHud(dt);
+  talkCam(dt); hudBag.update(dt, B.papers, 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); px.render(scene, camera, hudBag); drawHud(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

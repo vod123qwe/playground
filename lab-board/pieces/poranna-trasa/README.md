@@ -512,3 +512,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - czucie prędkości: szerszy kąt i kamera dalej przy prędkości, kamera przechyla się z rowerem, drobne drgania od nawierzchni (asfalt, krawężnik, najmocniej trawa), lekkie rozmycie brzegów obrazu przy pełnej prędkości
 - rozmowa nie zatrzymuje świata: auta, ludzie i złodziej żyją dalej, tylko rower hamuje i stoi
 - historia widać w świecie: sąsiad z „wojny o kosiarkę” naprawdę kosi swój trawnik różową kosiarką (miejsce wybrane tak, żeby nie wchodził w auto ani kosze); donos i przeprosiny mówisz mu na trawniku; po wybitej szybie przestaje kosić i stoi wściekły; gdy prawda wyjdzie na jaw, przy leżaku brzuchacza stoi odtąd jego szara kosiarka na trzech kółkach
+
+## Wersja 49: rozmowy bliżej, rzuty celniej, porządek w ogródkach
+
+- po rozmowie postać rzuca jeszcze ostatnie słowo zależne od twojego wyboru („TYLKO MNIE NIE SPRZEDAJ!”, „I ANI SŁOWA O KOCIE!”, „PĄCZKI JUTRO! PAMIĘTAJ!”); kamera chwilę na niej zostaje
+- kamera w rozmowie: płynnie przechodzi zza ramienia na rozmówcę (wyżej, gdy siedzi nisko albo za płotem; bliżej, gdy jest daleko), po rozmowie wraca; w rozmowie bez znaczników nad sceną
+- nikt nie wciąga w rozmowę sam: posterunek otwiera się dopiero na „gadaj”; wybór przy podniesionej torebce to lekkie okienko u góry ekranu, wybierane cyframi albo dotykiem, a rower jedzie dalej
+- znak rozmowy: dyndająca chmurka dymka nad głową (kropki: ma sprawę; „?”: czeka na ciebie); strzałka zostaje dla celów
+- rzucanie: okno odrobinę łatwiej trafić (ramka liczy się szerzej), a gazeta lecąca tuż obok szyby w ostatniej chwili jest lekko do niej przyciągana
+- ogródki: krzesło i leżak nie stają już na ozdobach, podjeździe ani ścieżce (wcześniej grill albo poidełko potrafiło stać na leżaku); ozdoby omijają też klomby, kosz przy ganku i pojemniki przy chodniku
