@@ -181,7 +181,7 @@ const ACTIONS = [
   { id: 'sprint', keys: ['ShiftLeft', 'ShiftRight'], modes: ['bike', 'walk'] },
   { id: 'throwL', keys: ['ArrowLeft', 'KeyQ'], modes: ['bike'] }, { id: 'throwR', keys: ['ArrowRight', 'KeyE'], modes: ['bike'] },
   { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyC'], modes: ['bike'] },
-  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] },
+  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] },
   { id: 'punchL', keys: ['ArrowLeft'], modes: ['fight'] }, { id: 'punchR', keys: ['ArrowRight'], modes: ['fight'] }, { id: 'high', keys: ['ArrowUp'], modes: ['fight'] },
   { id: 'low', keys: ['ArrowDown'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
   { id: 'taunt', keys: ['KeyG'], modes: ['fight'] },
@@ -202,7 +202,7 @@ const SECTIONS = [
     ['throwL', 'RZUT W LEWO (TRZYMAJ: SIŁA, PUŚĆ: RZUT)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
-    ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
+    ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
     [null, 'MYSZ: RUCH', 'OBRÓT I SPOJRZENIE (PRZY KRAWĘDZI DALEJ)'], [null, 'MYSZ: LPM', 'UDERZ KOGOŚ']] },
   { title: 'W BÓJCE', items: [['pedal', 'DOSKOK'], ['brake', 'ODSKOK'], ['left', 'KRĄŻ W LEWO'], ['right', 'KRĄŻ W PRAWO'], ['dodge', 'UNIK (Z KIERUNKIEM)'],
     ['punchL', 'PROSTY (BEZ MYSZY)'], ['punchR', 'SIERPOWY (BEZ MYSZY)'], ['high', 'Z CIOSEM: HAK'], ['low', 'Z CIOSEM: NA KORPUS · Z GARDĄ: NISKA'], ['guard', 'GARDA (BEZ MYSZY)'], ['taunt', 'PROWOKACJA'],
@@ -269,7 +269,7 @@ function input() {
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
-    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, chat: hit0('chat') || !!tE?.talk, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
+    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, chat: hit0('chat') || !!tE?.talk, title: hit0('title') || !!tE?.title, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
@@ -298,16 +298,40 @@ function throwing(dt, inp) {
   if (!B.charge && held && B.papers > 0 && !rider.throwing) B.charge = { side: held, p: 0 };
   if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge;
     c.ay = THREE.MathUtils.clamp((c.ay || 0) - (inp.dy || 0) * .005, -1, 1); c.ax = THREE.MathUtils.clamp((c.ax || 0) - (inp.dx || 0) * .005 * c.side, -1, 1);
-    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) B.papers--; B.charge = null; } }
+    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; } B.charge = null; } }
 }
 const paperG = new THREE.CylinderGeometry(.035, .035, .26, 10), paperM = toon('#ece5d0'), bandM = toon('#b3372c');
+// ---------- the titles: three papers (made up), each house takes one or none; the bag holds some of each, X picks which is thrown ----------
+const TITLES = { trabka: { name: 'TRĄBKA PORANNA', short: 'TRĄBKA', col: '#cf5a3e' }, wiesci: { name: 'WIEŚCI ZZA PŁOTU', short: 'WIEŚCI', col: '#3f8a4a' }, sport: { name: 'SPORT I DZIAŁKA', short: 'SPORT', col: '#3d7be0' } };
+const TK = Object.keys(TITLES), bandOf = Object.fromEntries(TK.map(k => [k, toon(TITLES[k].col)]));
+B.mix = { trabka: 10, wiesci: 10, sport: 10 }; B.sel = 0;
+const curTitle = () => { for (let k = 0; k < TK.length; k++) { const t = TK[(B.sel + k) % TK.length]; if (B.mix[t] > 0) { B.sel = (B.sel + k) % TK.length; return t; } } return TK[B.sel]; };
+// the bag's total moved by something else (a bundle, the shop, a loss): the change spread over the titles (the fewest first / the most first)
+function syncMix() { let tot = TK.reduce((a, t) => a + B.mix[t], 0);
+  while (tot < B.papers) { const t = TK.reduce((a, b) => B.mix[b] < B.mix[a] ? b : a); B.mix[t]++; tot++; }
+  while (tot > B.papers) { const t = TK.reduce((a, b) => B.mix[b] > B.mix[a] ? b : a); if (B.mix[t] <= 0) break; B.mix[t]--; tot--; } }
+// the subscribers: about half the houses, each its title; a plaque by the door in its colour (and a mark over it as you come)
+const plaques = [];
+function assignSubs() { for (const p of plaques) scene.remove(p); plaques.length = 0;
+  for (const d of track.doors) { d.sub = Math.random() < .55 ? TK[Math.random() * TK.length | 0] : null; if (!d.sub) continue;
+    const n = d.n, fa = d.p.clone().addScaledVector(n, -2.6), side = new THREE.Vector3(-n.z, 0, n.x), pl = new THREE.Group();
+    const b = new THREE.Mesh(new THREE.BoxGeometry(.34, .24, .03), toon('#f6f3ea')); pl.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(.28, .08, .035), bandOf[d.sub]); c.position.y = .04; pl.add(c);
+    pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; } }
+assignSubs();
+// a paper come down by a house: the right title for its subscriber (paid in full), the wrong one (a little, and words), or a house that takes none
+function deliver(hi, base, at, how, title) {
+  const d = track.doors[hi], sub = d && d.sub, up = at.clone().setY(at.y + 1.3);
+  if (!sub) { hud.rant(up, pickOf(['NIE ZAMAWIAŁEM!', 'ZA DARMO? NO TO BIORĘ.', 'ZNOWU ULOTKI?!', 'JA NIE CZYTAM, JA OGLĄDAM!']), false); flash('Ten dom nic nie prenumeruje'); return false; }
+  if (sub === title) { B.delivered = (B.delivered || 0) + 1; score(base, at, '+' + base, '#efc970'); flash(`${how}: ${TITLES[title].short.toLowerCase()} dla prenumeratora! +${base}`); return true; }
+  const n = Math.max(1, base >> 1); score(n, at, '+' + n, '#cf5a3e'); hud.rant(up, pickOf([`JA CZYTAM ${TITLES[sub].short}!`, 'TO NIE MOJA GAZETA!', 'POMYLIŁEŚ GAZETY, MŁODY!']), false); flash(`Zły tytuł: tu czytają ${TITLES[sub].short.toLowerCase()}. +${n}`); return false;
+}
 const dotG = new THREE.CircleGeometry(.16, 12).rotateX(-Math.PI / 2), dotM = new THREE.MeshBasicMaterial({ color: '#1b1510', transparent: true, opacity: .45, depthWrite: false });
 const papers = [];
 function release(at, side) {                                          // (from the rider, at the moment the hand lets go)
-  const m = new THREE.Mesh(paperG, paperM); m.castShadow = true; m.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandM)); scene.add(m); m.position.copy(at);
+  const title = B.throwT || curTitle(), m = new THREE.Mesh(paperG, paperM); m.castShadow = true; m.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandOf[title] || bandM)); scene.add(m); m.position.copy(at);
   const v = throwVel(B.throwP, side, B.throwC || {});                   // (from a lob to a hard throw, turned as it was aimed)
   const dot = new THREE.Mesh(dotG, dotM); dot.renderOrder = 1; scene.add(dot);
-  papers.push({ m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false });
+  papers.push({ m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false, title });
 }
 // a broken window: a pane of cracks over it, a spray of glass
 const crackT = (() => { const c = document.createElement('canvas'); c.width = 48; c.height = 44; const x = c.getContext('2d'); x.fillStyle = '#1b2a33'; x.fillRect(0, 0, 48, 44);
@@ -318,7 +342,7 @@ const crackM = new THREE.MeshBasicMaterial({ map: crackT, transparent: true, alp
 const shards = [];
 const cracks = [];
 function breakWindow(w) {
-  w.broken = true; B.windows = (B.windows || 0) + 1; B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
+  w.broken = true; B.windows = (B.windows || 0) + 1; { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
   for (let k = 0; k < 12; k++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.07, .06), shardM); s.position.copy(w.p).add(new THREE.Vector3((Math.random() - .5) * .8, (Math.random() - .5) * .6, (Math.random() - .5) * .8)); scene.add(s);
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
@@ -330,6 +354,7 @@ function magnet(p, w, dist, dt) {
   if (Math.abs(lat) > w.hw + .85 || Math.abs(hy) > w.hh + .75) return; const k = Math.min(1, dt * 5) * .7 / Math.max(.08, t);
   p.v.x -= sx * lat * k; p.v.z -= sz * lat * k; p.v.y -= hy * k;
 }
+const nearestDoor = w => { let bi = 0, bd = 1e9; track.doors.forEach((d, i) => { const l = d.p.distanceToSquared(w); if (l < bd) { bd = l; bi = i; } }); return bi; };
 function score(n, at, label, col) { B.points += n; hud.pop(at, label, col); }
 function stepPapers(dt) {
   for (const p of papers) {
@@ -352,11 +377,11 @@ function stepPapers(dt) {
         const P = p.m.position, at = P.clone().setY(q.y + .5), door = track.doors.find(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - P.x, d.p.z - d.n.z * 1.3 - P.z) < 1.6);
         const under = () => track.windows.find(w => { if (track.doors[w.house]?.done) return false; const dx = P.x - w.p.x, dz = P.z - w.p.z, out = dx * w.n.x + dz * w.n.z, side = Math.abs(dx * -w.n.z + dz * w.n.x); return out > -.3 && out < 2.2 && side < 1.3; });
         let w0 = null, boxed = false;
-        if (door) { door.done = true; B.delivered = (B.delivered || 0) + 1; score(2, at, '+2', '#efc970'); flash('Na ganek! +2'); }
-        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; B.delivered = (B.delivered || 0) + 1; boxed = true; mb.flag.rotation.x = -Math.PI / 2; score(5, w.clone().setY(w.y + 1.5), '+5', '#efc970'); flash('Do skrzynki! +5');
+        if (door) { door.done = true; deliver(track.doors.indexOf(door), 2, at, 'Na ganek', p.title); }
+        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; boxed = true; mb.flag.rotation.x = -Math.PI / 2; const hi = mb.house ?? (mb.house = nearestDoor(w)); if (!deliver(hi, 5, w.clone().setY(w.y + 1.5), 'Do skrzynki', p.title)) break;
             const win = track.windows.filter(o => !o.broken).sort((a, b) => a.p.distanceToSquared(w) - b.p.distanceToSquared(w))[0];   // (thanks from the nearest window of the house)
             hud.praise(win && win.p.distanceTo(w) < 16 ? win.p.clone().add(new THREE.Vector3(0, .9, 0)) : w.clone().setY(w.y + 2.6)); break; } }
-        if (!door && !boxed && (w0 = under())) { track.doors[w0.house].done = true; B.delivered = (B.delivered || 0) + 1; score(1, at, '+1', '#efc970'); flash('Pod okno +1'); } }
+        if (!door && !boxed && (w0 = under())) { track.doors[w0.house].done = true; deliver(w0.house, 1, at, 'Pod okno', p.title); } }
       if (Math.abs(p.v.y) < 1.2) { p.v.multiplyScalar(Math.pow(.02, dt)); p.v.y = 0; p.spin.multiplyScalar(Math.pow(.05, dt)); if (p.v.length() < .15) { p.rest = true; scene.remove(p.dot); } }
       else { p.v.y *= -.3; p.v.x *= .6; p.v.z *= .6; } }
   }
@@ -684,6 +709,9 @@ function talkCam(dt) {
   const lf = l > 5 ? .85 : .68; TC.look.set(P.x + dx * lf, P.y + 1.1 + (at.y - P.y - 1.1) * .75, P.z + dz * lf); TC.m.lookAt(TC.pos, TC.look, new THREE.Vector3(0, 1, 0)); TC.q.setFromRotationMatrix(TC.m);
   const e = THREE.MathUtils.smootherstep(TC.w, 0, 1); camera.position.lerp(TC.pos, e); camera.quaternion.slerp(TC.q, e); camera.updateMatrixWorld();
 }
+// over the subscribers ahead (near, not served yet): a little paper in their title's colour
+function subMarks() { const out = [], P = foot.active ? foot.me : B, fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
+  for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - P.x, dz = d.p.z - P.z, l = Math.hypot(dx, dz); if (l > 38 || l < 2 || (dx * fx + dz * fz) / l < -.2) continue; out.push({ p: new THREE.Vector3(d.p.x, d.p.y + 3, d.p.z), s: 'sub', col: TITLES[d.sub].col }); } return out; }
 function project(w) { _v.copy(w).project(camera); if (_v.z > 1) return null; const [W, H] = px.size; return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H }; }
 // the same, for a mark at the picture's edge: behind the camera too (turned round: which side it is on)
 function projectEdge(w) { _v.copy(w).project(camera); const [W, H] = px.size, b = _v.z > 1; if (b) { _v.x = -_v.x; _v.y = -_v.y; } return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H, behind: b }; }
@@ -728,6 +756,7 @@ function step(dt, inp) {
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
+  syncMix(); if (inp.title) { for (let k = 1; k <= TK.length; k++) { const t = TK[(B.sel + k) % TK.length]; if (B.mix[t] > 0 || k === TK.length) { B.sel = (B.sel + k) % TK.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); }
   if (endT > 0 && (endT -= dt) <= 0) endRun(endWhy); B.hp = Math.min(100, (B.hp ?? 100) + dt / 12); if (B.points > (B.lastPts ?? 0)) B.earned = (B.earned || 0) + B.points - B.lastPts; B.lastPts = B.points;
   quests.update(dt, inp);                                               // (who is near to talk to; the errands; the thief)
   if (foot.active) return stepFoot(dt, inp);
@@ -864,7 +893,7 @@ function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
   touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !runUI.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
-  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks(), quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks()), mix: menu.page !== 'title' ? { order: TK.map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -929,7 +958,7 @@ function resetGame() {
   for (const mb of track.mailboxes) { mb.done = false; mb.flag.rotation.x = 0; }
   for (const b of track.bundles) { b.used = false; b.o.visible = true; }
   for (const d of dogs.dogs) { Object.assign(d, { x: d.home.x, z: d.home.z, v: 0, state: 'home', cool: 4, bark: 0, hint: -1, fly: null }); }
-  trip.dist = trip.max = trip.time = 0; endT = 0; C.init = false; flash('Od nowa!');
+  trip.dist = trip.max = trip.time = 0; endT = 0; B.mix = { trabka: 10, wiesci: 10, sport: 10 }; B.sel = 0; assignSubs(); C.init = false; flash('Od nowa!');
 }
 let last = performance.now(), hudT = 0;
 const fly = { s: 0, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false };
@@ -955,5 +984,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, hudBag, quests, talk, shop, hurt, endRun, runUI, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, scene, camera, hudBag, quests, talk, shop, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };
