@@ -15,6 +15,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createCars } from './cars.js';
 import { createProps } from './props.js';
 import { createNature } from './nature.js';
+import { createPlots } from './plots.js';
 
 export function createTrack({ THREE, toon, tex, showcase = false }) {   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
   const G = new THREE.Group();
@@ -46,9 +47,10 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
         pos.push(x, s.p.y + hAt(d, i), z); uvs.push(d / tu, i * ds / tv); const k = 1 + (vnoise(x * scale, z * scale) - .5) * 2 * vary + (noise(x * 3.1, z * 3.3) - .5) * vary * .6; t.copy(c).multiplyScalar(k); colr.push(t.r, t.g, t.b); } }
     for (let i = 0; i < N; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals();
-    const m = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true, map })); m.receiveShadow = true; G.add(m); return m;
+    const m = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true, map })); m.receiveShadow = true; m.userData.ground = true; G.add(m); return m;
   }
   const INNER = Math.sign((90 - S[0].p.x) * S[0].r.x + (0 - S[0].p.z) * S[0].r.z) || 1;   // (which side the loop's inside is on)
+  const EDGE_OUT = [0, ROAD - .32, ROAD, KERB, KERB + .18, VERGE, PAVE, 14, 20, 28, 38, 52, 72, 84, 88, 100, 135, 170, 200], EDGE_IN = [0, ROAD - .32, ROAD, KERB, KERB + .18, VERGE, PAVE, 14, 20, 28, 40];
   strip(-ROAD + .32, ROAD - .32, '#3f4246', .1, .25, tex.asphalt(), 2.4);   // the asphalt: patchy, grainy
   for (const s of [-1, 1]) {
     strip(s * (ROAD - .32), s * ROAD, '#323437', .16, .5, tex.asphalt(), 2.4);   // the gutter: darker, dirtier
@@ -133,7 +135,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   // ---------- the things along it ----------
   const rnd = mulberry(11);
   // ---------- what stops a bike, and what a paper can hit ----------
-  const things = [];
+  const things = [], bundles = [], ramps = [], puddles = [];   // (puddles: { x, z, r, mud } what a wheel splashes through)
   const floors = [], floorGrid = new Map(), FC = 8, fkey = (x, z) => Math.floor(x / FC) + ',' + Math.floor(z / FC);
   function floor(h, cx, cz, hx, hz, top) { h.updateMatrixWorld(true); const p = h.localToWorld(new THREE.Vector3(cx, top, cz)), yaw = h.rotation.y, F = { x: p.x, z: p.z, y: p.y, c: Math.cos(yaw), s: Math.sin(yaw), hx, hz };
     floors.push(F); const r = Math.max(hx, hz); for (const ox of [-r, 0, r]) for (const oz of [-r, 0, r]) { const k = fkey(p.x + ox, p.z + oz); if (!floorGrid.has(k)) floorGrid.set(k, new Set()); floorGrid.get(k).add(F); } }
@@ -156,7 +158,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     for (let k = -reach; k <= reach; k++) buckets[((b0 + k) % NB + NB) % NB].push(C); return C;
   }
   function near(i) { const b0 = Math.floor(((i % N) + N) % N / BK), out = new Set(); for (let k = -1; k <= 1; k++) for (const C of buckets[((b0 + k) % NB + NB) % NB]) out.add(C); return out; }
-  const at = (i, d, y = 0) => { const s = S[((i % N) + N) % N]; return new THREE.Vector3(s.p.x + s.r.x * d, s.p.y + hAt(d, i) + y, s.p.z + s.r.z * d); };
+  const at = (i, d, y = 0) => { const s = S[((i % N) + N) % N], x = s.p.x + s.r.x * d, z = s.p.z + s.r.z * d; return new THREE.Vector3(x, (Math.abs(d) > ROAD + .6 ? meshY(x, z, ((i % N) + N) % N) : s.p.y + hAt(d, i)) + y, z); };   // (off the road: the ground as drawn)
   const yawOf = i => { const f = S[((i % N) + N) % N].f; return Math.atan2(f.x, f.z); };   // (a thing's +z along the road)
   const put = (o, i, d, y = 0, turn = 0) => { o.position.copy(at(i, d, y)); o.rotation.y = yawOf(i) + turn; o.traverse(c => { if (c.isMesh && !c.userData.noShadow) { c.castShadow = true; c.receiveShadow = true; } }); G.add(o); return o; };
   const box = (w, h, d, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); return o; };
@@ -197,15 +199,39 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   // the ground's height at a point off the road (the station nearest along the road, the distance across it), as the ground is made
   const slab = o => { o.userData.slab = true; return o; };           // (a thing laid flat on the ground: a drive, a path)
   function groundAt(x, z, i0) { let best = i0, bd = 1e9; for (let k = -70; k <= 70; k++) { const j = ((i0 + k) % N + N) % N, s = S[j], a = Math.abs((x - s.p.x) * s.f.x + (z - s.p.z) * s.f.z); if (a < bd) { bd = a; best = j; } }
-    const s = S[best], d = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z; return s.p.y + hAt(d, best); }
+    return meshY(x, z, best); }
+  // the ground's height as it is drawn: the land is laid in strips across the road, one per station; on a bend the strips fan out, so a
+  // point far off is not on its nearest station's line but between two of them: found, and the height taken between theirs (as the
+  // triangles between them have it)
+  // across the road the land is straight between the strips' edges (see strip()): its height so, not the curve hAt draws through them
+  function hLin(d, i) { const a = Math.abs(d), sg = d < 0 ? -1 : 1, E = sg === INNER ? EDGE_IN : EDGE_OUT; if (a >= E[E.length - 1]) return hAt(d, i);
+    for (let k = 1; k < E.length; k++) if (a <= E[k]) { const t = (a - E[k - 1]) / (E[k] - E[k - 1]); return hAt(sg * E[k - 1], i) * (1 - t) + hAt(sg * E[k], i) * t; } return hAt(d, i); }
+  function meshY(x, z, i0) {
+    for (let k = 0; k <= 8; k++) for (const sg of k ? [-1, 1] : [1]) { const j = ((i0 + sg * k) % N + N) % N, j1 = (j + 1) % N, A = S[j], B = S[j1];
+      const a = (x - A.p.x) * A.f.x + (z - A.p.z) * A.f.z, b = (x - B.p.x) * B.f.x + (z - B.p.z) * B.f.z; if (a < 0 || b >= 0) continue;
+      const t = a / (a - b), da = (x - A.p.x) * A.r.x + (z - A.p.z) * A.r.z, db = (x - B.p.x) * B.r.x + (z - B.p.z) * B.r.z;
+      return (A.p.y + hLin(da, j)) * (1 - t) + (B.p.y + hLin(db, j1)) * t; }
+    const s = S[i0], d = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z; return s.p.y + hLin(d, i0); }
   // a lot on a slope: the house up to the highest ground under it (a deeper plinth hides the gap on the low side), and each thing on
   // the lot (a car, a bush, a swing, a bin, a chair, the fence at the back) set down on the ground where it stands, not buried, not hanging
+  // a slab laid on the ground (a drive, a path, a yard's concrete, mud): not a flat board tilted, which leaves a gap on one side and goes
+  // under the grass on the other, but bent to the ground under it point by point (a vertex every ~70 cm), its edge sunk a little into it
+  function drape(c, h, i, top, thick = c.userData.thick ?? .03, deep = .18) {
+    c.rotation.x = c.rotation.z = 0; c.position.y = 0; h.updateMatrixWorld(true); let g = c.geometry; const p = g.parameters || {};
+    if (g.type === 'BoxGeometry') g = new THREE.BoxGeometry(p.width, 1, p.depth, Math.max(1, Math.ceil(p.width / .7)), 1, Math.max(1, Math.ceil(p.depth / .7)));
+    else if (g.type === 'CylinderGeometry') g = new THREE.CylinderGeometry(p.radiusTop, p.radiusBottom, 1, p.radialSegments, 1);
+    const pos = g.attributes.position, v = new THREE.Vector3(), M = c.matrixWorld;
+    for (let k = 0; k < pos.count; k++) { v.set(pos.getX(k), 0, pos.getZ(k)).applyMatrix4(M); const gy = groundAt(v.x, v.z, i) - top; pos.setY(k, pos.getY(k) > 0 ? gy + thick : gy - deep); }
+    pos.needsUpdate = true; g.computeVertexNormals(); c.geometry = g; c.userData.draped = true; }
+  // a plot set on the ground: as a house is (settle), and its loose meshes too (a tyre, a pallet, a plank) down to the ground under each, and
+  // whoever stands there (a seat) on it as well
+  function onSlope(h, i, W, D) { settle(h, i, W, D); const v = new THREE.Vector3();
+    for (const c of h.children) { if (!c.isMesh || c.userData.slab || c.geometry.type === 'IcosahedronGeometry') continue; c.getWorldPosition(v); c.position.y += groundAt(v.x, v.z, i) - h.position.y; }
+    h.updateMatrixWorld(true); for (const q of seats) if (q.h === h) { h.localToWorld(v.copy(q.local)); q.local.y = groundAt(v.x, v.z, i) - h.position.y; } }
   function settle(h, i, W, D) { h.updateMatrixWorld(true); const v = new THREE.Vector3();
     let top = -1e9; for (const [x, z] of [[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2], [0, 0]]) { h.localToWorld(v.set(x, 0, z)); top = Math.max(top, groundAt(v.x, v.z, i)); }
     h.position.y = top; h.updateMatrixWorld(true);
-    for (const c of h.children) { if (!c.userData.slab) continue; const g = c.geometry.parameters, at = (x, z) => { h.localToWorld(v.set(c.position.x + x, 0, c.position.z + z)); return groundAt(v.x, v.z, i) - top; };
-      const L = at(-g.width / 2, 0), R = at(g.width / 2, 0), B = at(0, -g.depth / 2), F = at(0, g.depth / 2);
-      c.position.y = (L + R + B + F) / 4 + g.height / 2 - .01; c.rotation.z = Math.atan2(R - L, g.width); c.rotation.x = -Math.atan2(F - B, g.depth); }
+    for (const c of h.children) if (c.userData.slab) drape(c, h, i, top);
     for (const c of h.children) { if (!(c.isGroup || (c.isMesh && c.geometry.type === 'IcosahedronGeometry')) || c.userData.onHouse) continue;   // (onHouse: fixed to the house, as a flag on its wall)
       c.getWorldPosition(v); c.userData.dy = groundAt(v.x, v.z, i) - top; c.position.y += c.userData.dy; }
     for (const q of seats) if (q.h === h && q.chair) q.local.y += q.chair.userData.dy || 0; }
@@ -286,7 +312,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
         for (let tries = 0; tries < 8; tries++) { const rr = big ? 2 : .8, x = (rnd() - .5) * Math.max(0, W - 2 * (rr + .35)), z = lawnZ1 + (lawnZ0 - lawnZ1) * rnd();
           if (Math.abs(x - dx) < 1.2 + rr * .5 || (drv && Math.abs(x - dvx) < 1.8 + rr * .5) || (z > fz - 2.6 && Math.abs(x - dx) < 2.2 + rr) || spots.some(([a, b, c]) => Math.hypot(a - x, b - z) < c + rr)) continue;
           const o = kind === 'sandbox' ? P.sandbox(rnd) : P[kind] ? P[kind](rnd) : NATK[kind](nr); if (kind === 'sandbox') o.group.scale.setScalar(.8); o.group.position.set(x, 0, z); o.group.rotation.y = o.group.rotation.y || (rnd() - .5) * .6; h.add(o.group);
-          if (kind === 'swing') things.push({ kind: 'swing', o: o.group, pivot: o.group.userData.pivot, r: 1.1 }); else if (kind === 'natBush') things.push({ kind: 'bush', o: o.group, parts: [o.group], r: .6, top: 1 });
+          if (kind === 'swing') o.group.userData.keep = true; if (kind === 'swing') things.push({ kind: 'swing', o: o.group, pivot: o.group.userData.pivot, r: 1.1 }); else if (kind === 'natBush') things.push({ kind: 'bush', o: o.group, parts: [o.group], r: .6, top: 1 });
           if (o.hit) yard.push([o.hit, x, z]); spots.push([x, z, rr]); break; } } }
     if (!annex && rnd() < .18) { const old = CARS.makeCar(rnd() < .5 ? 'saloon' : 'estate', ['#8a9a8c', '#b39b7a', '#7a6a5a', '#9aa0a4'][rnd() * 4 | 0]), sx = (rnd() < .5 ? -1 : 1) * (W / 2 + 1.9);
       old.group.position.set(sx, .06, -.5); old.group.rotation.set(0, rnd() < .5 ? 0 : Math.PI, .03); h.add(old.group); old.wheels[0].visible = false;             // on blocks, a wheel off
@@ -430,7 +456,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   function shacks(i, side) {
     const late = [];   // (its colliders: made once it stands where it does)
     const h = new THREE.Group(), tin = c => { const t = rep(tex.siding(), 1, 2.4); t.rotation = Math.PI / 2; t.center.set(.5, .5); return toon(c, { map: t }); }, roofs = ['#8a4a2e', '#6e7478', '#9a5a36'].map(c => tin(c)), mats = [tin('#8a5a3a'), tin('#8a8f94'), tin('#5d6639'), toon('#6b4a2e', { map: rep(tex.siding(), 1, 1.2) })], dirt = toon('#7a6a50');
-    for (const [x, z, w, d, a] of [[0, -.6, 8, 5.5, .15], [-3.6, 2.2, 6, 4.5, -.2], [3.8, 2, 5.5, 5, .3], [-5.6, -2.4, 3.2, 2.6, .5], [5.2, -2.4, 3.6, 3, -.4]]) { const pt = box(w, .03, d, dirt, x, .015 + Math.abs(a) * .01, z); pt.rotation.y = a; h.add(pt); }
+    for (const [x, z, w, d, a] of [[0, -.6, 8, 5.5, .15], [-3.6, 2.2, 6, 4.5, -.2], [3.8, 2, 5.5, 5, .3], [-5.6, -2.4, 3.2, 2.6, .5], [5.2, -2.4, 3.6, 3, -.4]]) { const pt = slab(box(w, .03, d, dirt, x, .015 + Math.abs(a) * .01, z)); pt.userData.thick = .02 + Math.abs(a) * .01; pt.rotation.y = a; h.add(pt); }
     for (const [x, z, w, d, hh] of [[-4.2, 2.2, 3.4, 2.8, 2.2], [.3, 3.4, 3, 2.6, 2.4], [4.4, 1.6, 2.8, 3, 2.1]]) { const m = mats[rnd() * mats.length | 0], s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = (rnd() - .5) * .25; h.add(s);
       s.add(box(w, hh, d, m, 0, hh / 2, 0)); const rf = box(w + .5, .06, d + .6, roofs[rnd() * roofs.length | 0], 0, hh + .2, 0); rf.rotation.x = .2; rf.rotation.z = (rnd() - .5) * .12; s.add(rf);
       for (let q = 0; q < 3; q++) { const pw = .5 + rnd() * .8, ph = .4 + rnd() * .7, pa = box(pw, ph, .03, mats[rnd() * mats.length | 0], (rnd() - .5) * (w - pw), .3 + rnd() * (hh - ph - .4), -d / 2 - .02); pa.rotation.z = (rnd() - .5) * .2; s.add(pa); }   // patches of other tin
@@ -449,11 +475,12 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     // the fence along the road, broken: two runs, a gap, a board fallen
     for (const [x, len] of [[-5, 4], [4.8, 4.4]]) { const f = P.boardFence(len); f.group.position.set(x, 0, -5.4); f.group.rotation.y = Math.PI / 2 + (rnd() - .5) * .06; h.add(f.group); }
     { const fb = box(1.2, .9, .04, toon('#6b4a2e'), 1.2, .08, -5.2); fb.rotation.x = -1.45; h.add(fb); }
-    put(h, i, side * (PAVE + 7), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true); zone(h, 7.5, 6, 0, 1); for (const [sp, x, z] of late) hit(h, sp, i, x, z);
+    put(h, i, side * (PAVE + 7), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2); onSlope(h, i, 15, 12); zone(h, 7.5, 6, 0, 1); for (const [sp, x, z] of late) hit(h, sp, i, x, z);
     for (const [x, len] of [[-5, 4], [4.8, 4.4]]) hit(h, { hx: len / 2, hz: .08, h: 1.4, kind: 'hard' }, i, x, -5.4);
     fires.push({ drum, flame, core }); show.shacks.push({ o: h, label: 'baraki', note: '15 × 12 m' });
     // the lads, standing round the fire on its far side (their faces to the road), facing it
     for (let k = 0; k < 3; k++) { const a = -1.2 + k * 1.2, x = .5 + Math.sin(a) * 1.25, z = -1.2 + Math.cos(a) * 1.3; seats.push({ h, local: new THREE.Vector3(x, 0, z), stand: true, key: ['teen', 'brawler', 'dogman', 'gardener'][(rnd() * 4) | 0], face: Math.atan2(.5 - x, -1.2 - z), lines: 'shacks', i }); }
+    { const v = new THREE.Vector3(); for (const q of seats) if (q.h === h) { h.localToWorld(v.copy(q.local).setY(0)); q.local.y = groundAt(v.x, v.z, i) - h.position.y; } }   // (the lads on the ground too)
   }
   // the bus stops: a shelter on the pavement's far side (posts, a roof, glass at the back and the ends, a bench, a bin, an advert), the
   // stop's sign by the kerb; on the bench a man asleep with his bottle (a paper wakes him, see main), one or two waiting by it
@@ -526,7 +553,10 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const trailPlans = []; for (let i0 = Math.round(40 / ds); i0 < N - 40; i0 += Math.round((42 + nr() * 40) / ds)) { const sd = nr() < .5 ? -1 : 1; if (nearStop(i0, sd, 25) || nearPost(i0, sd, 24) || nearShop(i0, sd, 22)) continue;
     trailPlans.push({ i0, sd }); zone({ position: at(i0, sd * (PAVE + 13)), rotation: { y: yawOf(i0) } }, 13, 3.2); }
   const nearTrail = (i, s, m) => trailPlans.some(t => t.sd === s && Math.abs((((i - t.i0) % N) + N + N / 2) % N - N / 2) * ds < m);
-  const lot = (i, s) => nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11) ? null : rnd() < .07 ? shacks(i, s) : house(i, s);
+  // the plots in place of a house now and then (see plots.js): each kind in turn, so all of them are along the way
+  const pr = mulberry(97), puddle = (h, x, z, r, mud) => { h.updateMatrixWorld(true); const p = h.localToWorld(new THREE.Vector3(x, 0, z)); puddles.push({ x: p.x, z: p.z, r, mud }); };
+  const plots = createPlots({ THREE, toon, tex, P, box, rep, hit, put, zone, things, seats, show, ramps, PAVE, rnd: pr, puddle, settle, groundAt }), plotOrder = [...plots.kinds].sort(() => pr() - .5); let plotK = 0;
+  const lot = (i, s) => nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11) ? null : rnd() < .07 ? shacks(i, s) : pr() < .2 ? plots.build(plotOrder[plotK++ % plotOrder.length], i, s) : house(i, s);
   for (let i = 30; i < N - 40; i += Math.round((20 + rnd() * 10) / ds)) { lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1; tree(i, side * (PAVE + 1.6 + rnd() * 3)); if (rnd() < .25) tree(i + 7, (rnd() < .5 ? -1 : 1) * (VERGE - .6)); }
   const poles = []; for (let i = 10; i < N; i += Math.round(38 / ds)) poles.push(pole(i));
@@ -625,7 +655,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const lay = (pts, narrow) => { const pos = [], uv = [], idx = []; let L = 0;
       for (let k = 0; k < pts.length; k++) { const p0 = pts[Math.max(0, k - 1)], p1 = pts[Math.min(pts.length - 1, k + 1)], dx = p1.x - p0.x, dz = p1.z - p0.z, dl = Math.hypot(dx, dz) || 1, w = (narrow ? .38 : .5) + Math.sin(k * 1.7) * .08 - (k > pts.length - 4 ? (k - pts.length + 4) * .1 : 0);
         if (k) L += pts[k].distanceTo(pts[k - 1]); const nx = -dz / dl, nz = dx / dl, p = pts[k];
-        pos.push(p.x + nx * w, p.y, p.z + nz * w, p.x - nx * w, p.y, p.z - nz * w); uv.push(0, L / 1.2, 1, L / 1.2); if (k) { const q = k * 2; idx.push(q - 2, q - 1, q, q - 1, q + 1, q); } }
+        { const hi = probe(p.x, p.z, p.i ?? -1).i, lift = p.y - meshY(p.x, p.z, hi); pos.push(p.x + nx * w, meshY(p.x + nx * w, p.z + nz * w, hi) + lift, p.z + nz * w, p.x - nx * w, meshY(p.x - nx * w, p.z - nz * w, hi) + lift, p.z - nz * w); } uv.push(0, L / 1.2, 1, L / 1.2); if (k) { const q = k * 2; idx.push(q - 2, q - 1, q, q - 1, q + 1, q); } }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
       { const n = g.attributes.normal; let up = 0; for (let k = 0; k < n.count; k++) up += n.getY(k); if (up < 0) { g.index.array.reverse(); g.computeVertexNormals(); } }
       const m = new THREE.Mesh(g, dirtM); m.receiveShadow = true; G.add(m);
@@ -663,18 +693,23 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       if (pts.length < 10) return; lay(pts, true); if (nr() < .6) sitBy(pts, Math.floor(pts.length / 2), benchKind()); };
     for (const t of trailPlans) trail(t.i0, t.sd, PAVE + .3, t.sd === INNER ? 36 + nr() * 11 : 31 + nr() * 8, (nr() - .5) * .9, 0);   // (inside: into the woods, short of the lake)
     for (let k = 0; k < trailPlans.length; k++) { const a = trailPlans[k], b = trailPlans.slice(k + 1).find(o => o.sd === a.sd); if (!b || (b.i0 - a.i0) * ds > 95 || nr() < .35) continue; along(a.i0 + 2, b.i0 - 2, a.sd, 30.5 + nr() * 2.5); } }
+  // ---------- puddles by the kerb, after the night's rain (a wheel through one: a splash; one by the pavement: whoever is there gets it) ----------
+  { const waterM = toon('#8aa2b0', { transparent: true, opacity: .8 });
+    for (let i = 20; i < N; i += Math.round((24 + pr() * 30) / ds)) { if (pr() > .5) continue; const sd = pr() < .5 ? -1 : 1, r = .45 + pr() * .5, d = sd * (ROAD - .25 - r - pr() * .6);
+      const g = new THREE.CircleGeometry(r, 14); g.scale(1, 1.9, 1); g.rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, waterM); m.userData.noShadow = true; m.renderOrder = 1; put(m, i, d, .014, 0); m.receiveShadow = true;
+      puddles.push({ x: m.position.x, z: m.position.z, r: r * 1.5, mud: false }); } }
   // ---------- on the road and the pavement: things to ride round, over or into ----------
-  const bundles = [], ramps = [];
+
   const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)
   for (const i of bigAt) { const o = P.ramp(rnd, 'big'); put(o.group, i, 1.4, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: 1.4 }); }   // (the traffic goes round it)
   for (let i = 90; i < N - 30; i += Math.round((26 + rnd() * 30) / ds)) {
     const r = rnd(), sd = rnd() < .5 ? -1 : 1;
     if (bigAt.some(b => Math.abs(b - i) * ds < 14)) continue;             // (the big ones' run up and landing kept clear)
     if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride
-    else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); const C = hit(o.group, o.hit, ii); C.thing = { kind: 'cone', o: o.group, C, r: .18 }; things.push(C.thing); } }
+    else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); const C = hit(o.group, o.hit, ii); o.group.userData.keep = true; C.thing = { kind: 'cone', o: o.group, C, r: .18 }; things.push(C.thing); } }
     else if (r < .48) { const o = P.bags(rnd), d = sd * (VERGE - .3 + rnd() * 1.4); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); }
     else if (r < .56) { const o = P.wagon(), d = sd * (VERGE + .8); put(o.group, i, d, 0, rnd() * 6); hit(o.group, o.hit, i); }
-    else if (r < .64) { const o = P.barrier(), d = sd * (1.7 + rnd()); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); for (const dz of [-3, 3]) { const c = P.cone(), ii = i + Math.round(dz / ds); put(c.group, ii, d, 0, 0); const C = hit(c.group, c.hit, ii); C.thing = { kind: 'cone', o: c.group, C, r: .18 }; things.push(C.thing); } }
+    else if (r < .64) { const o = P.barrier(), d = sd * (1.7 + rnd()); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); for (const dz of [-3, 3]) { const c = P.cone(), ii = i + Math.round(dz / ds); put(c.group, ii, d, 0, 0); const C = hit(c.group, c.hit, ii); c.group.userData.keep = true; C.thing = { kind: 'cone', o: c.group, C, r: .18 }; things.push(C.thing); } }
     else if (r < .74) { const o = P.pothole(rnd), d = (rnd() - .5) * 5; put(o.group, i, d, 0, rnd() * 3); hit(o.group, o.hit, i); }
     else if (r < .84) { const o = P.manhole(rnd), d = sd * (.8 + rnd() * 1.6); put(o.group, i, d, 0, rnd() * 6); hit(o.group, o.hit, i); }   // an open manhole
     else { const o = P.bundle(), d = sd * (VERGE + .6); o.group.userData.keep = true; put(o.group, i, d, 0, 0); bundles.push(hit(o.group, o.hit, i)); }   // (kept whole: it goes when picked up)
@@ -738,7 +773,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     // inside the loop, behind the houses: woods, thick ones, here and there (leafy trees and spruces, bushes under them)
     { const wr = mulberry(47); let i = Math.round(wr() * 40 / ds);
       while (i < N - 10) { const lenM = 25 + wr() * 25, i1 = Math.min(N - 1, i + Math.round(lenM / ds));
-        for (let n = 0; n < 16 + (wr() * 16 | 0); n++) { const ii = i + Math.round(wr() * (i1 - i)), dd = INNER * (32 + wr() * 20); if (!free(ii, dd, 1.6)) continue;
+        // (the woods within the land: past 40 m on the inside there is none)
+        for (let n = 0; n < 16 + (wr() * 16 | 0); n++) { const ii = i + Math.round(wr() * (i1 - i)), dd = INNER * (30 + wr() * 8.5); if (!free(ii, dd, 1.6)) continue;
           if (wr() < .35) { const t = new THREE.Group(), H = 6 + wr() * 5; t.add(box(.22, H * .3, .22, wood, 0, H * .15, 0)); for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry((1.7 - k * .34) * (H / 10), H * .34, 7), spruceM); c.position.y = H * (.3 + k * .19); t.add(c); } put(t, ii, dd, 0, wr() * 6); }
           else farTree(ii, dd, .9 + wr() * .5);
           if (wr() < .45) { const u = wr() < .5 ? NAT.bush(nr, 'fern') : NAT.grassTuft(nr, wr() < .3 ? 'tall' : 'lawn'); put(u.group, ii + Math.round((wr() - .5) * 4 / ds), dd + (wr() - .5) * 3, 0, wr() * 6); }   // (under them: ferns, grass)
@@ -814,9 +850,31 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const s = S[best], nx = S[(best + 1) % N], t = THREE.MathUtils.clamp(((x - s.p.x) * s.f.x + (z - s.p.z) * s.f.z) / ds, -1, 1);
     const i0 = t >= 0 ? best : (best + N - 1) % N, i1 = (i0 + 1) % N, k = t >= 0 ? t : 1 + t, a = S[i0], b = S[i1];
     const cy = a.p.y + (b.p.y - a.p.y) * k, off = (x - s.p.x) * s.r.x + (z - s.p.z) * s.r.z;
-    return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
+    return { i: best, d: off, y: Math.abs(off) > ROAD + .6 ? meshY(x, z, best) : cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
   const bins = binsO.map(b => b.getWorldPosition(new THREE.Vector3()));
-  return { things, floorAt, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  // ---------- the ground check (?audit: nothing merged, so each thing can be looked at): what hangs in the air, what is under the grass ----------
+  //   each thing by the road, and each thing on a lot or a plot (the ones at its foot: not a window on a wall), against the ground under it
+  //   at nine points. hangs: its lowest point above the highest ground under it; under: a flat thing (a slab, mud, a puddle) whose top is
+  //   below the ground somewhere; sunk: a small thing the ground climbs up more than a hand's width
+  function audit() {
+    const labels = new Map(); for (const k in show) for (const e of show[k]) labels.set(e.o, e.label); const out = [], B3 = new THREE.Box3(), v = new THREE.Vector3(); G.updateMatrixWorld(true);
+    // (only the land by the road: the hills beyond have their own ground)
+    const check = (o, name, baseY, only) => { B3.setFromObject(o); if (B3.isEmpty()) return; const sz = B3.getSize(v.clone()); if (Math.max(sz.x, sz.z) > 26 || sz.y > 14) return;
+      if (baseY != null && B3.min.y - baseY > .35) return;   // (on a wall, a roof: not at the foot)
+      const q = probe((B3.min.x + B3.max.x) / 2, (B3.min.z + B3.max.z) / 2, -1); if (!q || Math.abs(q.d) > 60) return; let gmin = 1e9, gmax = -1e9;
+      for (const a of [.15, .5, .85]) for (const b of [.15, .5, .85]) { const x = B3.min.x + sz.x * a, z = B3.min.z + sz.z * b, gy = probe(x, z, q.i).y; gmin = Math.min(gmin, gy); gmax = Math.max(gmax, gy); }
+      const at = [+((B3.min.x + B3.max.x) / 2).toFixed(1), +((B3.min.z + B3.max.z) / 2).toFixed(1)];
+      const gp = o.isMesh && o.geometry.parameters, flat = sz.y < .25 && (gp && gp.width != null && gp.depth != null ? Math.min(gp.width * o.scale.x, gp.depth * o.scale.z) > .35 : gp && gp.radius != null ? gp.radius > .2 : Math.min(sz.x, sz.z) > .35);
+      // (flat: a slab, mud, a puddle, wide both ways; a rail or a board is not)
+      if (only === 'flat' && !flat) return;
+      if (B3.min.y > gmax + .12 && !(o.isMesh && o.geometry.type === 'TorusGeometry')) out.push({ issue: 'wisi', name, by: +(B3.min.y - gmax).toFixed(2), at });
+      else if (flat && B3.max.y < gmax - .015) out.push({ issue: 'pod trawą', name, by: +(gmax - B3.max.y).toFixed(2), at });
+      else if (sz.y < 2.5 && gmax - B3.min.y > .3 + sz.y * .25 && o.material !== stoneM && !o.userData.draped) out.push({ issue: 'zapada się', name, by: +(gmax - B3.min.y).toFixed(2), at }); };
+    for (const o of G.children) { if (!(o.isGroup || o.isMesh)) continue; const lab = labels.get(o); B3.setFromObject(o); const big = B3.isEmpty() ? false : Math.max(B3.max.x - B3.min.x, B3.max.z - B3.min.z) > 5 && o.children.length > 6;
+      if (lab && /dom|baraki|działki|garaże|budowa|trzepak|buda|kapliczka|przyczepa|posterunek|sklep/.test(lab) || big && o.isGroup) { for (const c of o.children) check(c, (lab || 'działka') + ' / ' + (c.isMesh ? c.geometry.type.replace('Geometry', '') : 'grupa ' + c.children.length), o.position.y, c.isMesh && !c.userData.slab ? 'flat' : null); }
+      else check(o, lab || (o.isMesh ? o.geometry.type.replace('Geometry', '') : 'grupa ' + o.children.length), null, o.isMesh ? 'flat' : null); }   // (loose boxes along the road, a rail, a kerb: only if flat on the ground)
+    return out; }
+  return { audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

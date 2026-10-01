@@ -654,3 +654,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - pieszo stoisz na werandzie, jej stopniach i stopniu posterunku zamiast zapadać się w nie po kolana (podłogi chodzenia zapisane osobno od gruntu)
 - naprawione: szopy, beczka i stary samochód przy barakach oraz krzesła i leżaki w ogródkach miały kolizje w jednym punkcie mapy zamiast u siebie (przy barakach przejeżdżało się przez szopy, a w tamtym miejscu stały niewidzialne ściany)
+
+## Wersja 67: działki zamiast niektórych domów, grunt pod wszystkim
+
+- nowe działki w miejsce części domów: działki ogrodowe (grządki, szklarnia z folii, strach na wróble, działkowiec krzyczy, gdy wjedziesz w grządki), garaże blaszaki (czasem jeden otwarty, a w nim przerzutki do zwinięcia), budowa (hałda piasku, betoniarka, pustaki, kontener, błoto, deska do skoku na chodniku), trzepak z dywanem, piaskownicą, dzieciakiem i piłką do kopania, buda z psem na łańcuchu (rzuca się, ile łańcuch pozwoli) i kurnikiem (kury się rozbiegają), kapliczka ze świeczkami i babcią (kopnięta: świeczki gasną, babcia ma coś do powiedzenia), przyczepa kempingowa na pustakach z dymiącą rurą i jej lokatorem
+- kałuże przy krawężnikach: przejazd chlapie (dźwięk i krople), przechodzień obok dostaje i komentuje; błoto na budowie hamuje
+- dopasowanie do gruntu: płyty (podjazdy, ścieżki, beton, błoto, place przy barakach) są wyginane po terenie punkt po punkcie, bez szpar i chowania pod trawą; działki i baraki siadają na zboczu jak domy, każdy element na swojej wysokości, ludzie też
+- jedna wysokość gruntu dla wszystkiego: teren liczony dokładnie tak, jak jest narysowany (wcześniej na łukach 30 do 50 m od drogi rozjeżdżało się to do kilkudziesięciu centymetrów), więc przedmioty, stopy i ścieżki stoją na trawie, nie nad nią ani pod nią
+- las po wewnętrznej stronie pętli nie wychodzi już poza trawę (drzewa wisiały tam nad pustką)
+- naprawione: kopane pachołki i huśtawki naprawdę się ruszają (wcześniej były wtopione w nieruchome siatki), drzewo kopnięte brzmi jak uderzenie, nie jak szelest
+- narzędzie: `?audit` buduje trasę bez łączenia siatek i `PT.track.audit()` wypisuje, co wisi w powietrzu, co jest pod trawą, co się zapada
