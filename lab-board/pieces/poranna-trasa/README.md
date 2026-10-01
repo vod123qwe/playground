@@ -576,7 +576,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 ## Wersja 57: przejazd ma początek i koniec
 
-- torba na start mieści 30 gazet (w sklepie 36 i 42)
+- torba na start mieści 30 gazet i jest pełna (w sklepie 36 i 42)
 - zdrowie (serce i pasek pod portmonetką): wywrotka −15, uderzenie autem −30, potrącenie pieszo −35, przegrana bójka −35; powoli wraca samo, bułka z łupu +30, drożdżówka w sklepie +40 (5 zł)
 - koniec trasy: gdy zdrowie spadnie do zera albo przy trzecim zatrzymaniu przez policję
 - trudność rośnie z dystansem (pełna po 8 km): auta jeżdżą szybciej, patrole i złodzieje zdarzają się częściej
