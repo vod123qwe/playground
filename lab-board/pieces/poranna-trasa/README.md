@@ -852,3 +852,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - strona odlatuje za róg w kilku klatkach (10 na sekundę, jak gra), poprzednia przy powrocie spada na stos
 - artykuł zaczyna się dużą inicjałą, ramka „Twoja trasa” zaraz pod nim
 - w wąskim oknie przyciski pod gazetą same ikonki z klawiszem (napis zostaje tylko na złotym)
+
+## Wersja 93: typografia gazety, zdjęcia ołówkiem, podsłuchane na trasie, odznaki, telefon do Janusza
+
+- typografia: jeden rytm wierszy (20 px), akapity z wcięciem zamiast odstępów, czerwone nadtytuły (Z TRASY, KRONIKA, ROZMOWA DNIA...), podtytuł i stopka autora pod tytułem, podpisy FOT., linie między artykułami, duży cytat z wywiadu
+- zdjęcia w jednej tonacji: robione nakładką „ołówek” z panelu wyglądu gry (grafit na kremowym papierze), tylko na czas zdjęcia
+- portrety ludzi w „studio”: kopia postaci sama przed gładką ścianą, kamera przy twarzy (mama, tata, brat, sąsiedzi, działkowiec, pani spod kapliczki, budowlaniec, pan z przyczepy, właściciel psa), Janusz ze swojego obrazka
+- gra zapisuje, co się działo na trasie: co kto Ci powiedział (rubryka „Podsłuchane na trasie” z cytatami i portretami), kopniaki (przechodnie, rowerzyści, gang, radiowóz, babcia, auta, psy, skrzynki pocztowe), pościgi gangu i policji, triki ze skoczni; z tego newsy, „W skrócie” i kronika policyjna
+- odznaki poranka jako pieczątki: Szklarz miesiąca (połowa szyb na trasie), Postrach skrzynek, Sierpowy z siodełka, Pogromca kolarzy, Gang na karku, Pirat drogowy, Snajper, Akrobata, Hycel, Wstyd na dzielnicę, Czysta robota
+- gazeta w 4 częściach: Poranek, Twoja trasa, Ogłoszenia, Jutro; zakończenia różne w każdym wydaniu (dwie z: horoskop, listy do redakcji, kronika policyjna, plotki, przepis babci)
+- reklama Warsztatu u Janusza z jego częściami i telefonem: rozmowa z Januszem w gazecie (poleci coś na jutro, da kupon -20% na część z reklamy, opowie anegdotę, zaprosi do warsztatu); kupon działa w warsztacie i znika po zakupie
+- HUD: przy jednym tytule gazety nad torbą sama nazwa (bez powtórzonej liczby)
