@@ -8,6 +8,9 @@
 //   paints (Set of the paint tiers bought), onChange(), flash(s) }
 import { JANUSZ, bag } from './stories.js';
 import { bikeMods, bikeLook } from './bikes.js';
+import { icon, TIER_COL } from './garage.js';
+import { pixUI } from './pixui.js';
+import { pixFont } from './pixfont.js';
 export const PARTS = {
   kola: { name: 'KOŁA', tiers: [
     { name: 'ZWYKŁE', price: 0, look: { tyre: '#26272a', rim: '#c9cbc8', tyreW: 1 }, mods: {}, note: 'JEŻDŻĄ. TYLE DOBREGO.' },
@@ -51,56 +54,78 @@ const HELLO_OLD = ['ROMAN, WARSZTAT: CO DLA CIEBIE? TYLKO NIE PYTAJ O RATY.', 'R
 export function createShop({ THREE, createRider, game }) {
   // the look: the game dimmed under a dither (as in the pause); on the left pan Janusz himself, standing loose over it (no frame), his
   // speech cloud up to his right, the words popping in one by one; on the right the window of pixel blocks: the bike, how it rides, the shelves
+  pixUI(); pixFont();
   const css = document.createElement('style'); css.textContent = `
-    #shop { position: fixed; inset: 0; z-index: 8; display: none; place-items: center; color: #f6f3ea; font: 700 12px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: uppercase; letter-spacing: .03em;
+    #shop { position: fixed; inset: 0; z-index: 8; display: none; place-items: center; color: #f6f3ea; font: 16px/1.25 PTPix, ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: 0;
       background-color: rgba(10,11,13,.5); background-image: linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%), linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%); background-size: 4px 4px; background-position: 0 0, 2px 2px; }
+    #shop * { image-rendering: pixelated; }
     #shop.on { display: grid; }
-    #shop .stage { width: min(1120px, calc(100vw - 24px)); height: min(700px, calc(100vh - 24px)); display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 470px); gap: 18px; }
+    #shop .stage { width: min(1320px, calc(100vw - 24px)); height: min(720px, calc(100vh - 24px)); display: grid; grid-template-columns: minmax(0, 1fr) minmax(600px, 880px); gap: 18px; }
     #shop .janusz { position: relative; min-height: 0; }
     #shop .fig { position: fixed; left: -3vw; bottom: -11vh; height: min(84vh, 64vw); aspect-ratio: 1; pointer-events: none; filter: drop-shadow(8px 6px 0 rgba(0,0,0,.35)); }
-    #shop .fig img, #shop .fig canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; object-fit: contain; object-position: left bottom; transform-origin: 40% 100%; }
+    #shop .fig img, #shop .fig canvas { width: 100%; height: 100%; display: block; object-fit: contain; object-position: left bottom; transform-origin: 40% 100%; }
     #shop .fig canvas { display: none; width: 60%; height: 60%; margin-top: 40%; } #shop .fig.noimg canvas { display: block; } #shop .fig.noimg img { display: none; }
     #shop .fig.talk img, #shop .fig.talk canvas { animation: jbob .34s steps(1) infinite; } @keyframes jbob { 50% { transform: translateY(-4px) rotate(-.6deg); } }
-    #shop .bubble { position: absolute; top: 0; left: 38%; right: 0; filter: drop-shadow(6px 6px 0 rgba(0,0,0,.4)); }
-    #shop .bb { background: #f6f3ea; color: #17181b; border: 4px solid #17181b; padding: 12px 16px 12px; min-height: 7.6em; font-size: 13px; line-height: 1.5;
+    #shop .bubble { position: fixed; z-index: 2; top: 40px; left: 40%; width: 420px; filter: drop-shadow(6px 6px 0 rgba(0,0,0,.4)); }   /* (placed by his head: placeBubble) */
+    #shop .bb { background: #f6f3ea; color: #17181b; border: 4px solid #17181b; padding: 14px 18px 14px; min-height: 6.2em; font-size: 16px; line-height: 1.4;
       clip-path: polygon(4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px), 0 4px, 4px 4px); }
-    #shop .bb > b { display: inline-block; color: #f6f3ea; background: #8e2e25; padding: 2px 7px; margin-bottom: 8px; font-size: 11px; letter-spacing: .12em; }
-    #shop .say { display: block; min-height: 4.5em; } #shop .say span { display: inline-block; animation: wpop .18s steps(3) both; }
+    #shop .bb > b { display: inline-block; color: #f6f3ea; background: #8e2e25; padding: 3px 8px 2px; margin-bottom: 8px; }
+    #shop .say { display: block; min-height: 4.2em; } #shop .say span { display: inline-block; animation: wpop .18s steps(3) both; }
     @keyframes wpop { from { opacity: 0; transform: translateY(5px) scale(.5); } to { opacity: 1; transform: none; } }
     #shop .say:after { content: ''; display: inline-block; width: .55em; height: .9em; margin-left: 4px; background: #17181b; vertical-align: -1px; animation: blink .8s steps(1) infinite; } @keyframes blink { 50% { opacity: 0; } }
-    #shop .bb .chat { margin-top: 8px; padding: 5px 9px; font-size: 11px; color: #f6f3ea; }
+    #shop .bb .chat { margin-top: 10px; }
     #shop .tail, #shop .tail i { position: absolute; display: block; width: 28px; height: 20px; }
-    #shop .tail { left: 12%; top: calc(100% - 6px); transform: scale(1.6); transform-origin: 0 0; background: #17181b; clip-path: polygon(8px 0, 28px 0, 28px 4px, 20px 4px, 20px 8px, 16px 8px, 16px 12px, 12px 12px, 12px 16px, 4px 16px, 4px 20px, 0 20px, 0 12px, 4px 12px, 4px 4px, 8px 4px); }
+    #shop .tail { left: 4px; top: calc(100% - 6px); transform: scale(1.6) scaleX(-1); transform-origin: 0 0; background: #17181b; clip-path: polygon(8px 0, 28px 0, 28px 4px, 20px 4px, 20px 8px, 16px 8px, 16px 12px, 12px 12px, 12px 16px, 4px 16px, 4px 20px, 0 20px, 0 12px, 4px 12px, 4px 4px, 8px 4px); }
     #shop .tail i { left: 0; top: 0; background: #f6f3ea; clip-path: polygon(12px 0, 24px 0, 24px 4px, 16px 4px, 16px 8px, 12px 8px, 12px 12px, 8px 12px, 8px 4px, 12px 4px); }
-    #shop .win { position: relative; z-index: 1; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; padding: 0 14px 12px;
-      background: #25272b; border: 3px solid #17181b; box-shadow: 0 0 0 3px #d3d0c3, 0 0 0 6px #17181b, 8px 8px 0 6px rgba(0,0,0,.35); }
-    #shop .head { display: flex; justify-content: space-between; align-items: center; background: #17181b; margin: 0 -14px; padding: 8px 14px; border-bottom: 3px solid #efc970; }
-    #shop .head b { color: #efc970; font-size: 14px; letter-spacing: .14em; } #shop .cash { color: #efc970; font-size: 15px; white-space: nowrap; background: #33363a; padding: 3px 9px; box-shadow: inset 2px 2px 0 #44484c, inset -2px -2px 0 #1d1e21; }
-    #shop canvas.bike { width: 100%; aspect-ratio: 16 / 9; flex: none; background: #1d1e21; border: 3px solid #17181b; box-shadow: inset 0 0 0 2px #33363a; image-rendering: pixelated; box-sizing: border-box; }
-    #shop .stats { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; font-size: 11px; align-items: center; background: #1d1e21; padding: 8px 10px; box-shadow: inset 2px 2px 0 #17181b, inset -2px -2px 0 #33363a; }
-    #shop .blk { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; } #shop .blk i { height: 9px; background: #33363a; } #shop .blk i.f { background: #efc970; } #shop .blk i.up { background: #9fd27a; } #shop .blk i.dn { background: #cf5a3e; }
-    #shop .stats .v { min-width: 4.2em; text-align: right; color: #c9c6bb; } #shop .stats .v.up { color: #9fd27a; } #shop .stats .v.dn { color: #cf5a3e; }
-    #shop .right { flex: 1; overflow-y: auto; min-height: 60px; padding-right: 4px; } #shop .cats { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-    #shop button { all: unset; box-sizing: border-box; cursor: pointer; padding: 7px 9px; background: #33363a; border: 2px solid #17181b; box-shadow: inset 2px 2px 0 #4a4d52, inset -2px -2px 0 #1d1e21; }
-    #shop button:active { box-shadow: inset -2px -2px 0 #4a4d52, inset 2px 2px 0 #1d1e21; }
-    #shop button.sel { background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; } #shop button.off { opacity: .4; cursor: default; }
-    #shop .tier { display: block; width: 100%; margin-bottom: 6px; } #shop .tier .n { display: flex; justify-content: space-between; gap: 8px; } #shop .tier .d { font-size: 10px; opacity: .75; margin-top: 3px; text-transform: none; } #shop .tier em { font-style: normal; color: #2f6b2a; } #shop .tier:not(.sel) em { color: #9fd27a; }
-    #shop h4 { margin: 12px 0 6px; color: #efc970; font-size: 11px; letter-spacing: .12em; } #shop .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 5px; } #shop .row button { padding: 5px 8px; font-size: 11px; }
-    #shop .bottom { display: flex; justify-content: flex-end; } #shop .go { background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; padding: 9px 16px; }
-    @media (max-height: 560px) { #shop canvas.bike { aspect-ratio: auto; height: 26vh; } #shop .stats { grid-template-columns: auto 1fr auto auto 1fr auto; padding: 6px 8px; } }
-    @media (max-width: 820px) { #shop .stage { grid-template-columns: 1fr; grid-template-rows: 170px minmax(0, 1fr); gap: 10px; height: calc(100vh - 16px); width: calc(100vw - 16px); }
-      #shop .fig { position: absolute; height: 100%; left: -10px; bottom: 0; } #shop .bubble { left: 128px; } #shop .bb { min-height: 0; padding: 8px 10px; font-size: 11px; } #shop .say { min-height: 3em; } #shop .tail { left: -16px; bottom: auto; top: 26px; transform: rotate(90deg) scaleX(-1); }
-      #shop canvas.bike { aspect-ratio: auto; height: 20vh; } #shop .stats { grid-template-columns: auto 1fr auto; } }
+    /* the window: its pixel frame; inside, the bike and what it can do on the left, the parts on the right */
+    #shop .win { position: relative; z-index: 1; min-height: 0; box-sizing: border-box; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; border: 12px solid transparent; border-image: var(--px-win) 4 fill / 12px; filter: drop-shadow(8px 8px 0 rgba(0,0,0,.35)); }
+    #shop .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 6px 10px; margin-bottom: 10px; background: linear-gradient(#efc970, #efc970) left bottom / 100% 4px no-repeat; }
+    #shop .head b { color: #efc970; font-size: 24px; font-weight: normal; letter-spacing: 0; } #shop .cash { color: #efc970; white-space: nowrap; border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 2px 6px; display: flex; gap: 8px; align-items: center; }
+    #shop .coin { width: 14px; height: 14px; background: #efc970; box-shadow: inset -2px -2px 0 #b8902e, inset 2px 2px 0 #f8e6b0; clip-path: polygon(4px 0, 10px 0, 10px 2px, 12px 2px, 12px 4px, 14px 4px, 14px 10px, 12px 10px, 12px 12px, 10px 12px, 10px 14px, 4px 14px, 4px 12px, 2px 12px, 2px 10px, 0 10px, 0 4px, 2px 4px, 2px 2px, 4px 2px); flex: none; }
+    #shop .body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 14px; min-height: 0; }
+    #shop .lft { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    #shop canvas.bike { width: 100%; flex: 1 1 auto; min-height: 120px; box-sizing: border-box; border: 6px solid transparent; border-image: var(--px-inset) 3 fill / 6px; background: #1d1e21 padding-box; }
+    #shop .stats { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; border: 6px solid transparent; border-image: var(--px-inset) 3 fill / 6px; padding: 6px 6px; }
+    #shop .blk { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; } #shop .blk i { height: 10px; background: #33363a; } #shop .blk i.f { background: #efc970; } #shop .blk i.up { background: #9fd27a; animation: bl .5s steps(1) infinite; } #shop .blk i.dn { background: #cf5a3e; animation: bl .5s steps(1) infinite; }
+    @keyframes bl { 50% { opacity: .55; } }
+    #shop .stats .v { min-width: 3.4em; text-align: right; color: #c9c6bb; } #shop .stats .v.up { color: #9fd27a; } #shop .stats .v.dn { color: #cf5a3e; }
+    #shop .rgt { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    #shop .cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; flex: none; }
+    #shop .cats button { display: flex; align-items: center; gap: 6px; padding: 1px 2px; font-size: 16px; white-space: nowrap; overflow: hidden; } #shop .cats canvas { width: 32px; height: 32px; flex: none; }
+    #shop .list { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 6px 2px 2px; scrollbar-width: thin; scrollbar-color: #efc970 #1d1e21; }
+    #shop button { all: unset; box-sizing: border-box; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 6px; color: #f6f3ea; }
+    #shop button:hover, #shop button.pad-focus { border-image-source: var(--px-btn-hi); }
+    #shop button:active { border-image-source: var(--px-btn-dn); transform: translateY(2px); }
+    #shop button.sel { border-image-source: var(--px-sel); color: #17181b; } #shop button.sel:active { border-image-source: var(--px-sel-dn); }
+    #shop button.off { opacity: .45; cursor: default; } #shop button.off:active { transform: none; border-image-source: var(--px-btn); }
+    #shop .tier { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 10px; align-items: center; width: 100%; margin-bottom: 4px; padding: 4px 8px 4px 4px; position: relative; }
+    #shop .tier canvas { width: 32px; height: 32px; grid-row: span 2; }
+    #shop .tier .nm { display: flex; align-items: center; gap: 8px; min-width: 0; } #shop .tier .pips { display: inline-flex; gap: 2px; } #shop .tier .pips i { width: 6px; height: 6px; background: #17181b; } #shop .tier .pips i.on { background: currentColor; }
+    #shop .tier .pr { text-align: right; white-space: nowrap; }
+    #shop .tier .pr .p { display: inline-flex; align-items: center; gap: 6px; color: #efc970; } #shop .tier .pr .st { color: #9fd27a; } #shop .tier .pr .no { color: #cf5a3e; }
+    #shop .tier .d { font-size: 16px; color: #a9a69b; grid-column: 2 / -1; } #shop .tier em { font-style: normal; color: #9fd27a; }
+    #shop .tier.sel .d { color: #4a3c1e; } #shop .tier.sel em { color: #2f6b2a; } #shop .tier.sel .pr .st { color: #17181b; } #shop .tier.sel .pips i { background: #b8902e; } #shop .tier.sel .pips i.on { background: #17181b; }
+    #shop .tier:hover:before, #shop .tier.pad-focus:before { content: ''; position: absolute; left: -16px; top: 50%; width: 10px; height: 10px; margin-top: -5px; background: var(--px-arrow) 0 0 / 100% 100%; filter: invert(1) sepia(1) saturate(4) hue-rotate(5deg); animation: arr .5s steps(1) infinite; }
+    @keyframes arr { 50% { transform: translateX(3px); } }
+    #shop .list { padding-left: 16px; margin-left: -12px; }
+    #shop h4 { margin: 4px 0 6px; color: #efc970; font-size: 16px; font-weight: normal; } #shop .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; } #shop .row > span:first-child { min-width: 0; }
+    #shop .bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 10px; } #shop .bottom small { color: #8d8a80; font-size: 16px; }
+    #shop .go { border-image-source: var(--px-sel); color: #17181b; padding: 4px 14px; } #shop .go:hover { border-image-source: var(--px-sel); filter: brightness(1.08); }
+    @media (max-height: 640px) { #shop .cats canvas { width: 16px; height: 16px; } #shop .tier canvas { width: 16px; height: 16px; } #shop .tier { grid-template-columns: 18px 1fr auto; } #shop .stats { gap: 3px 8px; } }
+    @media (max-width: 1180px) { #shop .stage { grid-template-columns: minmax(0, .7fr) minmax(560px, 1fr); } }
+    @media (max-width: 860px) { #shop .stage { grid-template-columns: 1fr; grid-template-rows: 150px minmax(0, 1fr); gap: 10px; height: calc(100vh - 16px); width: calc(100vw - 16px); }
+      #shop .fig { position: absolute; height: 100%; left: -10px; bottom: 0; } #shop .bb { min-height: 0; padding: 9px 12px; } #shop .say { min-height: 2.6em; } #shop .tail { left: -16px; bottom: auto; top: 26px; transform: rotate(90deg) scaleX(-1); }
+      #shop .body { grid-template-columns: 1fr; overflow-y: auto; align-content: start; } #shop .lft, #shop .rgt { min-height: auto; } #shop .lft { order: 2; } #shop .cats { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } #shop canvas.bike { height: 22vh; flex: none; } #shop .list { overflow: visible; } }
   `; document.head.appendChild(css);
-  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="stage"><div class="janusz"><div class="fig"><img alt="" src="assets/ui/janusz.png"><canvas class="face" width="32" height="32"></canvas></div><div class="bubble"><div class="bb"><b>PAN JANUSZ</b><span class="say"></span><button class="chat">POGADAJ</button></div><span class="tail"><i></i></span></div></div><div class="win"><div class="head"><b>WARSZTAT U JANUSZA</b><span class="cash"></span></div><canvas class="bike"></canvas><div class="stats"></div><div class="right"></div><div class="bottom"><button class="go">JEDŹ DALEJ (ESC)</button></div></div></div>';
+  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="stage"><div class="janusz"><div class="fig"><img alt="" src="assets/ui/janusz.png"><canvas class="face" width="32" height="32"></canvas></div><div class="bubble"><div class="bb"><b>PAN JANUSZ</b><span class="say"></span><button class="chat">POGADAJ</button></div><span class="tail"><i></i></span></div></div><div class="win"><div class="head"><b>WARSZTAT U JANUSZA</b><span class="cash"><i class="coin"></i><span></span></span></div><div class="body"><div class="lft"><canvas class="bike"></canvas><div class="stats"></div></div><div class="rgt"><div class="cats"></div><div class="list"></div></div></div><div class="bottom"><small>NAJEDŹ: PODGLĄD · KLIK: KUP / ZAŁÓŻ</small><button class="go">JEDŹ DALEJ (ESC)</button></div></div></div>';
   document.body.appendChild(el);
-  const cv = el.querySelector('canvas.bike'), right = el.querySelector('.right'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
+  const cv = el.querySelector('canvas.bike'), right = el.querySelector('.list'), catsE = el.querySelector('.cats'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
   // pan Janusz: what he says (a line at the top; his talking clip while he says it), his trips with Mietek on asking
   // (each pool shuffled and drawn without repeats; a fresh shuffle never starts with the line just said)
   const AN = bag(), decks = new Map(); let talkT = 0, lastLine = '';
   const pick = a => { let d = decks.get(a); if (!d || !d.length) { d = a.slice().sort(() => Math.random() - .5); if (d.length > 1 && d[d.length - 1] === lastLine) d.unshift(d.pop()); decks.set(a, d); } return (lastLine = d.pop()); };
   const sayE = el.querySelector('.say'), fig = el.querySelector('.fig');
-  const say = s => { const w = s.split(/\s+/); sayE.innerHTML = w.map((x, i) => `<span style="animation-delay:${i * 85}ms">${x}</span>`).join(' '); talkT = Math.min(6, .6 + w.length * .09); game.say?.(s); };   // (word by word)
+  const say = s => { const w = s.split(/\s+/); sayE.innerHTML = w.map((x, i) => `<span style="animation-delay:${i * 85}ms">${x}</span>`).join(' '); talkT = Math.min(6, .6 + w.length * .09); game.say?.(s); if (open_) requestAnimationFrame(placeBubble); };   // (a longer line: the bubble taller, kept by his mouth)   // (word by word)
   el.querySelector('.chat').onclick = () => say(AN.draw('janusz'));
   // him: the picture (assets/ui/janusz.png); without it his face drawn here in pixels: the cap, the moustache, the chins, the mouth moving
   const faceC = el.querySelector('.face'), fg = faceC.getContext('2d'); let mouthT = 0;
@@ -138,36 +163,58 @@ export function createShop({ THREE, createRider, game }) {
     talkT = Math.max(0, talkT - dt); fig.classList.toggle('talk', talkT > 0);
     ren.render(sc, cam); raf = requestAnimationFrame(spin); }
   // the lists
-  function draw() {
-    el.querySelector('.cash').textContent = game.money + ' ZŁ';
+  // the newspapers' icon (for the tab of papers, food and finds)
+  function paperIcon() { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'), P = (x, y, w, h, k) => { g.fillStyle = k; g.fillRect(x, y, w, h); };
+    P(2, 3, 12, 10, '#17181b'); P(3, 4, 10, 8, '#f6f3ea'); P(4, 5, 8, 2, '#8e2e25'); P(4, 8, 3, 3, '#9a968c'); P(8, 8, 4, 1, '#9a968c'); P(8, 10, 4, 1, '#9a968c'); P(13, 5, 2, 8, '#d3d0c3'); return c; }
+  const tierCol = (k, i) => k === 'lakier' ? '#c9cbc8' : TIER_COL[Math.min(3, i)];
+  function drawStats() {
+    el.querySelector('.cash span').textContent = game.money + ' ZŁ';
     const m0 = mods(), m1 = hover ? mods(hover) : m0; statsE.innerHTML = '';
     for (const [k, n, sgn = 1, max = .5] of STATS) { const f = v => k === 'bag' ? (30 + v) / 42 : Math.max(0, Math.min(1, .5 + sgn * v / max * .5)), a = Math.round(f(m0[k]) * 10), b = Math.round(f(m1[k]) * 10);
       const val = v => k === 'bag' ? String(30 + v) : (sgn * v > 0 ? '+' : '') + Math.round(sgn * v * 100) + '%', d = m1[k] === m0[k] ? '' : sgn * (m1[k] - m0[k]) > 0 ? 'up' : 'dn';
       const bl = Array.from({ length: 10 }, (_, j) => `<i class="${j < Math.min(a, b) ? 'f' : j < Math.max(a, b) ? (b > a ? 'up' : 'dn') : ''}"></i>`).join('');
-      statsE.insertAdjacentHTML('beforeend', `<span>${n}</span><span class="blk">${bl}</span><span class="v ${d}">${val(m1[k])}</span>`); }
-    right.innerHTML = `<div class="cats">${Object.keys(PARTS).map(k => `<button data-cat="${k}" class="${k === cat ? 'sel' : ''}">${PARTS[k].name}</button>`).join('')}</div>`;
-    PARTS[cat].tiers.forEach((t, i) => { const has = owned[cat].has(i), isOn = on[cat] === i, afford = game.money >= t.price, b = document.createElement('button');
-      b.className = 'tier' + (isOn ? ' sel' : '') + (!has && !afford ? ' off' : ''); b.innerHTML = `<div class="n"><span>${t.name}</span><span>${isOn ? 'ZAŁOŻONE' : has ? 'ZAŁÓŻ' : t.price + ' ZŁ'}</span></div><div class="d">${t.note}${Object.keys(t.mods).length ? ' · <em>' + fx(t.mods) + '</em>' : ''}</div>`;
-      b.onmouseenter = () => { hover = [cat, i]; R && R.setParts(look(hover)); draw(); }; b.onmouseleave = () => { hover = null; R && R.setParts(look()); draw(); };
+      statsE.insertAdjacentHTML('beforeend', `<span>${n}</span><span class="blk">${bl}</span><span class="v ${d}">${val(m1[k])}</span>`); } }
+  const peek = h => { hover = h; R && R.setParts(look(hover)); drawStats(); };
+  function draw() { const keep = right.scrollTop; drawStats();
+    catsE.innerHTML = ''; for (const k of [...Object.keys(PARTS), 'gazety']) { const b = document.createElement('button'); b.className = k === cat ? 'sel' : ''; b.dataset.cat = k;
+      b.appendChild(k === 'gazety' ? paperIcon() : icon(k, k === cat ? '#17181b' : tierCol(k, Math.max(1, on[k] || 0)), k === 'lakier' ? look().paint : null)); b.insertAdjacentHTML('beforeend', `<span>${k === 'gazety' ? 'GAZETY' : PARTS[k].name}</span>`);
+      b.onclick = () => { if (cat === k) return; cat = k; hover = null; R && R.setParts(look()); if (k !== 'gazety') say(pick(JANUSZ.cats[k] || JANUSZ.buy)); draw(); right.scrollTop = 0; }; catsE.appendChild(b); }
+    right.innerHTML = '';
+    if (cat !== 'gazety') PARTS[cat].tiers.forEach((t, i) => { const has = owned[cat].has(i), isOn = on[cat] === i, afford = game.money >= t.price, b = document.createElement('button'), n = PARTS[cat].tiers.length - 1;
+      b.className = 'tier' + (isOn ? ' sel' : '') + (!has && !afford ? ' off' : '');
+      const state = isOn ? '<span class="st">ZAŁOŻONE</span>' : has ? '<span class="st">MASZ · ZAŁÓŻ</span>' : `<span class="p ${afford ? '' : 'no'}"><i class="coin"></i>${t.price} ZŁ</span>`;
+      b.innerHTML = `<span class="nm"><span>${t.name}</span>${cat === 'lakier' ? '' : `<span class="pips" style="color:${tierCol(cat, i)}">${Array.from({ length: n }, (_, j) => `<i class="${j < i ? 'on' : ''}"></i>`).join('')}</span>`}</span><span class="pr">${state}</span><span class="d">${t.note}${Object.keys(t.mods).length ? ' · <em>' + fx(t.mods) + '</em>' : ''}</span>`;
+      b.prepend(icon(cat, tierCol(cat, i), cat === 'lakier' ? (t.look.paint || bikeLook({ ...game.bike, parts: { ...game.bike.parts, lakier: 0 } }).paint) : null));
+      b.onpointerenter = () => peek([cat, i]); b.onpointerleave = () => peek(null);
       b.onclick = () => buy(cat, i); right.appendChild(b); });
-    // the bag filled; your finds
-    const max = 30 + m0.bag, need = Math.max(0, max - game.papers), cost = Math.ceil(need / 2);
-    right.insertAdjacentHTML('beforeend', `<h4>GAZETY</h4><div class="row"><span>TORBA: ${game.papers}/${max}</span><button data-fill ${need && game.money >= cost ? '' : 'class="off"'}>DOPEŁNIJ (+${need}) ${cost} ZŁ</button></div>` +
-      (game.titles || []).map(t => `<div class="row"><span style="color:${t.col}">${t.name}: ${t.n}</span><button data-tt="${t.key}" ${need >= 1 && game.money >= 3 ? '' : 'class="off"'}>+${Math.min(5, need)} · 3 ZŁ</button></div>`).join(''));
-    right.querySelectorAll('[data-tt]').forEach(b => b.onclick = () => { const k = Math.min(5, need); if (k < 1 || game.money < 3) return; game.money -= 3; game.addTitle(b.dataset.tt, k); changed(); });   // (one title in particular)
-    right.insertAdjacentHTML('beforeend', `<h4>NA DROGĘ</h4><div class="row"><span>DROŻDŻÓWKA (ZDROWIE ${Math.round(game.hp)}/100)</span><button data-bun ${game.money >= 5 && game.hp < 100 ? '' : 'class="off"'}>+40 ZDROWIA · 5 ZŁ</button></div>`);
-    right.querySelector('[data-bun]').addEventListener('click', () => { if (game.money < 5 || game.hp >= 100) return; game.money -= 5; game.hp = Math.min(100, game.hp + 40); changed(); });
-    const items = game.items; if (items.length) { right.insertAdjacentHTML('beforeend', '<h4>FANTY</h4>'); items.forEach((it, i) => { const F = FINDS[it] || { sell: 3 }, fit = F.fit && !owned[F.fit[0]].has(F.fit[1]);
-      right.insertAdjacentHTML('beforeend', `<div class="row"><span>${it}</span><span>${fit ? `<button data-fit="${i}">ZAMONTUJ</button> ` : ''}<button data-sell="${i}">SPRZEDAJ +${F.sell} ZŁ</button></span></div>`); }); }
-    right.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { cat = b.dataset.cat; hover = null; R && R.setParts(look()); say(pick(JANUSZ.cats[cat] || JANUSZ.buy)); draw(); });
-    right.querySelector('[data-fill]')?.addEventListener('click', () => { if (!need || game.money < cost) { if (need) say(pick(JANUSZ.broke)); return; } game.money -= cost; game.papers += need; say(pick(JANUSZ.fill)); changed(); });
-    right.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { const i = +b.dataset.sell, it = items[i]; game.money += (FINDS[it] || { sell: 3 }).sell; items.splice(i, 1); say(pick(JANUSZ.sell)); changed(); });
-    right.querySelectorAll('[data-fit]').forEach(b => b.onclick = () => { const i = +b.dataset.fit, F = FINDS[items[i]]; mount(F.fit[0], F.fit[1]); items.splice(i, 1); game.flash('Zamontowane: ' + PARTS[F.fit[0]].tiers[F.fit[1]].name.toLowerCase()); changed(); });
+    else {
+      // the bag filled; one title in particular; a bun; your finds
+      const m0 = mods(), max = 30 + m0.bag, need = Math.max(0, max - game.papers), cost = Math.ceil(need / 2);
+      right.insertAdjacentHTML('beforeend', `<h4>GAZETY</h4><div class="row"><span>TORBA: ${game.papers}/${max}</span><button data-fill ${need && game.money >= cost ? '' : 'class="off"'}>DOPEŁNIJ +${need} · ${cost} ZŁ</button></div>` +
+        (game.titles || []).map(t => `<div class="row"><span style="color:${t.col}">${t.name}: ${t.n}</span><button data-tt="${t.key}" ${need >= 1 && game.money >= 3 ? '' : 'class="off"'}>+${Math.min(5, need)} · 3 ZŁ</button></div>`).join(''));
+      right.querySelectorAll('[data-tt]').forEach(b => b.onclick = () => { const k = Math.min(5, need); if (k < 1 || game.money < 3) return; game.money -= 3; game.addTitle(b.dataset.tt, k); changed(); });
+      right.insertAdjacentHTML('beforeend', `<h4>NA DROGĘ</h4><div class="row"><span>DROŻDŻÓWKA (ZDROWIE ${Math.round(game.hp)}/100)</span><button data-bun ${game.money >= 5 && game.hp < 100 ? '' : 'class="off"'}>+40 · 5 ZŁ</button></div>`);
+      right.querySelector('[data-bun]').addEventListener('click', () => { if (game.money < 5 || game.hp >= 100) return; game.money -= 5; game.hp = Math.min(100, game.hp + 40); changed(); });
+      const items = game.items; right.insertAdjacentHTML('beforeend', '<h4>FANTY</h4>' + (items.length ? '' : '<div class="row"><span style="color:#8d8a80">NIC NIE ZNALAZŁEŚ. JESZCZE.</span></div>'));
+      items.forEach((it, i) => { const F = FINDS[it] || { sell: 3 }, fit = F.fit && !owned[F.fit[0]].has(F.fit[1]);
+        right.insertAdjacentHTML('beforeend', `<div class="row"><span>${it}</span><span>${fit ? `<button data-fit="${i}">ZAMONTUJ</button> ` : ''}<button data-sell="${i}">SPRZEDAJ +${F.sell} ZŁ</button></span></div>`); });
+      right.querySelector('[data-fill]')?.addEventListener('click', () => { if (!need || game.money < cost) { if (need) say(pick(JANUSZ.broke)); return; } game.money -= cost; game.papers += need; say(pick(JANUSZ.fill)); changed(); });
+      right.querySelectorAll('[data-sell]').forEach(b => b.onclick = () => { const i = +b.dataset.sell, it = items[i]; game.money += (FINDS[it] || { sell: 3 }).sell; items.splice(i, 1); say(pick(JANUSZ.sell)); changed(); });
+      right.querySelectorAll('[data-fit]').forEach(b => b.onclick = () => { const i = +b.dataset.fit, F = FINDS[items[i]]; mount(F.fit[0], F.fit[1]); items.splice(i, 1); game.flash('Zamontowane: ' + PARTS[F.fit[0]].tiers[F.fit[1]].name.toLowerCase()); changed(); }); }
+    right.scrollTop = keep;
   }
   const fx = m => Object.entries(m).filter(([k]) => !['bell', 'lamp'].includes(k)).map(([k, v]) => (k === 'bag' ? `+${v} GAZET` : `${(k === 'grass' ? -v : v) > 0 ? '+' : ''}${Math.round((k === 'grass' ? -v : v) * 100)}% ${(STATS.find(s => s[0] === k) || [0, k])[1]}`)).join(', ');
   function buy(k, i) { const t = PARTS[k].tiers[i]; if (!owned[k].has(i)) { if (game.money < t.price) { say(pick(JANUSZ.broke)); return; } game.money -= t.price; if (k === 'lakier') game.paints.add(i); else if (i > 0) game.inv.push({ k, tier: i }); if (i > 0) say(pick(JANUSZ.buy)); } mount(k, i); hover = null; changed(); }
   function changed() { game.onChange(); R && R.setParts(look()); draw(); }
-  function open() { if (open_) return; open_ = true; el.classList.add('on'); say(pick(JANUSZ.hello)); preview(); draw(); last = performance.now(); raf = requestAnimationFrame(spin); }
+  // the bubble by his head: its left edge over his face's right side, its bottom at his mouth (the tail there); as wide as there is room
+  // for before the window of parts (on a narrow screen, the window under him: to the screen's edge)
+  const bub = el.querySelector('.bubble'), win = el.querySelector('.win');
+  function placeBubble() { const f = (fig.querySelector('img:not([style*="none"])') && !fig.classList.contains('noimg') ? fig : fig.querySelector('canvas') || fig).getBoundingClientRect(), w = win.getBoundingClientRect(), narrow = innerWidth <= 820;
+    const left = Math.max(8, f.left + f.width * (narrow ? .5 : .36)), room = (narrow ? innerWidth - 12 : w.left - 18) - left, width = Math.max(240, Math.min(460, room)), h = bub.offsetHeight || 140;
+    const mouthY = f.top + f.height * (narrow ? .42 : .25), top = Math.max(8, mouthY - h - 18);
+    Object.assign(bub.style, { left: left + 'px', top: top + 'px', width: width + 'px' }); }
+  addEventListener('resize', () => { if (open_) placeBubble(); });
+  function open() { if (open_) return; open_ = true; el.classList.add('on'); requestAnimationFrame(placeBubble); setTimeout(placeBubble, 120); say(pick(JANUSZ.hello)); preview(); draw(); last = performance.now(); raf = requestAnimationFrame(spin); }
   function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); game.onChange(); game.bye?.(pick(JANUSZ.bye)); }
   function key(e) { if (!open_) return false; if (e.code === 'Escape' || e.code === 'Enter') close(); e.preventDefault(); return true; }
   // (for the run's end: what you have, on the bike and spare; and back from the account at a run's start: spare, on if better)
