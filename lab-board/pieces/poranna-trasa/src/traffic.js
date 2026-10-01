@@ -86,12 +86,21 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     M.shirt.color.set(pick(['#cf5a3e', '#3b5670', '#467537', '#efc970', '#b7a4e0', '#e9e3d1'])); M.jeans.color.set(pick(['#2f4a6e', '#44484c', '#1d1e21', '#7c8446']));
     M.cap.color.set(pick(['#3b5670', '#17181b', '#e9e3d1', '#467537'])); M.frame.color.set(pick(['#3b5670', '#17181b', '#9aa0a4', '#467537', '#efc970'])); M.hair.color.set(pick(['#24190f', '#9a938a', '#d9a441', '#5b3a22']));
     G.add(r.root); bikes.push({ r, s: 0, dir: 1, lane: 0, v: 4 + rnd() * 1.6, wait: 4 + k * 9 + rnd() * 8, stop: 0, x: 0, z: 0, yaw: 0, snap: true, on: false }); r.root.visible = false; }
+  // the Kurier Osiedlowy's couriers (the newspaper war): yellow and navy, a bag of their own papers; they ride his way, ahead of him
+  let rivalsOn = 0;
+  function rivals(n) { rivalsOn = n; if (!makeRider) return; while (bikes.filter(b => b.rival).length < n) { const r = makeRider(), M = r.materials; M.shirt.color.set('#e3b22e'); M.jeans.color.set('#2f4a6e'); M.cap.color.set('#2f4a6e'); M.frame.color.set('#2f4a6e'); M.hair.color.set(['#24190f', '#5b3a22'][bikes.length % 2]);
+      G.add(r.root); r.root.visible = false; bikes.push({ r, rival: true, s: 0, dir: 1, lane: 0, v: 5.6 + rnd() * .9, wait: 2 + bikes.filter(b => b.rival).length * 7, stop: 0, x: 0, z: 0, yaw: 0, snap: true, on: false }); }
+    for (const b of bikes) if (b.rival && bikes.filter(q => q.rival).indexOf(b) >= n) { b.on = false; b.r.root.visible = false; } }
   function stepBikes(dt, R) {
     for (const b of bikes) {
       b.stop = Math.max(0, b.stop - dt);
-      if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = -(R.along || 1); b.s = wrap(R.s + (R.along || 1) * (110 + rnd() * 70)); b.lane = b.dir * 2.55; b.snap = true; b.r.root.visible = true; }   // (ahead of him, coming his way)
+      if (b.rival && bikes.filter(q => q.rival).indexOf(b) >= rivalsOn) continue;
+      if (b.rival) { if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = R.along || 1; b.s = wrap(R.s + b.dir * (55 + rnd() * 60)); b.lane = b.dir * 1.7; b.snap = true; b.r.root.visible = true; b.v = 5.6 + rnd() * .9; }
+        const rel = ahead(R.s, b.s, R.along || 1); if (!b.hold && rel < -40 && rel > -400) { b.on = false; b.wait = 16 + rnd() * 12; b.r.root.visible = false; b.dropped = (b.dropped || 0) + 1; continue; }
+        if (b.dir !== (R.along || 1) && !b.fall) b.dir = R.along || 1; }
+      else if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = -(R.along || 1); b.s = wrap(R.s + (R.along || 1) * (110 + rnd() * 70)); b.lane = b.dir * 2.55; b.snap = true; b.r.root.visible = true; }   // (ahead of him, coming his way)
       const rel = ahead(R.s, b.s, R.along || 1);                       // (how far ahead of him, the way he rides)
-      if (!b.hold && (rel < -40 || rel > 320)) { b.on = false; b.wait = 6 + rnd() * 14; b.r.root.visible = false; continue; }
+      if (!b.rival && !b.hold && (rel < -40 || rel > 320)) { b.on = false; b.wait = 6 + rnd() * 14; b.r.root.visible = false; continue; }
       if (b.hold) b.stop = Math.max(b.stop, .5); const v = b.stop > 0 ? 0 : b.v; b.s = wrap(b.s + b.dir * v * dt); b.dt = dt; if (!b.fall) place(b);
       const q = track.probe(b.x, b.z, Math.floor(wrap(b.s) / ds) % N); b.r.root.position.set(b.x, q.y, b.z); b.r.root.rotation.set(0, b.yaw, 0);
       // knocked off: the bike over on its side, the rider thrown (a ragdoll), a while, up again; bumped: a wobble
@@ -110,5 +119,5 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   function boxes() { return [...bikes.filter(b => b.on).map(b => ({ x: b.x, z: b.z, c: Math.cos(b.yaw), s: Math.sin(b.yaw), hx: .3, hz: .9, h: 1.6, y0: b.r.root.position.y, kind: 'car', t: b })), ...list.filter(t => !t.off).map(t => ({ x: t.x, z: t.z, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: t.car.half[0], hz: t.car.half[1], h: 1.5, y0: t.car.group.position.y, kind: 'car', t })),
     ...list.filter(t => !t.off && t.car.trailer).map(t => { const T = t.car.trailer; return { x: t.x - Math.sin(t.yaw) * T.back, z: t.z - Math.cos(t.yaw) * T.back, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: T.hx, hz: T.hz, h: 1.9, y0: t.car.group.position.y, kind: 'car', t, trailer: true }; }) ]; }   // (the tractor's trailer: a box of its own behind it)
   list.forEach(place);
-  return { group: G, list, update, boxes, knock, bikes };
+  return { group: G, list, update, boxes, knock, bikes, rivals };
 }

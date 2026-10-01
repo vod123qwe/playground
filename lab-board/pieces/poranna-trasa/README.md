@@ -1020,3 +1020,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - dźwigi wieżowe nad dachami
 - trasy: Nowe osiedle (pół pętli), Plac budowy (cała pętla w drugą stronę, przejazd kolejowy), Magazyny (cała pętla, większy ruch); Wojna gazet zapowiedziana (v115)
 - mapa: nowe punkty tras w regionie, region w kolorze
+
+## Wersja 115: Wojna gazet
+
+- trasa Wojna gazet (Druga strona, cała pętla, przejazd kolejowy): na trasie dwaj kurierzy Kuriera Osiedlowego w żółto-granatowych barwach, jadą w tę samą stronę przed Tobą
+- kurier namierza skrzynkę prenumeratora kilkanaście metrów przed sobą, zjeżdża do niej i wrzuca swoją (żółtą) gazetę: ten dom przepada na ten przejazd, kurier się z tego śmieje
+- co z nimi zrobić: wyprzedzić (40 m za Tobą odpadają na chwilę i wracają z przodu), kopnąć (często wstają do bójki) albo trafić gazetą (+3, wywrotka)
+- finał na Drugiej stronie: kontener budowlany z tarczą na drzwiach (środek +5, reszta +2) i kontener na gruz (gazeta do środka +6)
+- gazeta: dział WOJNA GAZET (podebrane skrzynki, starcia roznosicieli)
+- poprawka: przejazdy kolejowe, gęsi i kurierzy działają też, gdy chodzisz pieszo (wcześniej stały, a gęsi pieszo nie dziobały)
