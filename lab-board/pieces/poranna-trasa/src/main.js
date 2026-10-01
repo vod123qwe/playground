@@ -32,6 +32,8 @@ import { createLife } from './life.js';
 import { createCyclo } from './cyclo.js';
 import { createHudBag } from './hudbag.js';
 import { makeBag } from './bag.js';
+import { createTalk } from './talk.js';
+import { createQuests } from './quests.js';
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
 const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
@@ -118,6 +120,18 @@ const dogs = createDogs({ THREE, toon, probe: track.probe });
 const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });   // (people sitting out in their gardens)                         // (a hydrant knocked or kicked)
 const peds = createPedestrians({ THREE, toon, track }); scene.add(peds.group);
+// a word with people, and the errands that come of it (talk.js: the box; quests.js: who wants what, and what came of it)
+const talk = createTalk();
+const money = (n, at, label) => { B.points = Math.max(0, B.points + n); hud.pop(at, label, n >= 0 ? '#efc970' : '#cf5a3e'); }; money.has = n => B.points >= n;
+const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
+  rider: () => foot.active ? { x: foot.me.x, z: foot.me.z, y: foot.me.y, yaw: foot.me.yaw, v: Math.hypot(foot.me.vf, foot.me.vs), foot: true } : { x: B.x, z: B.z, y: B.y, yaw: B.yaw, v: Math.abs(B.v), foot: false },
+  money, get papers() { return B.papers; }, set papers(v) { B.papers = Math.max(0, v); },
+  item: (name, at) => { (B.items ||= []).push(name); hud.pop(at.clone(), 'FANT: ' + name, '#9fd27a'); flash('Fant: ' + name.toLowerCase()); },
+  flash: s => flash(s), fame: n => { B.fame = Math.max(0, (B.fame || 0) + n); },
+  bottle: () => { if (foot.active || B.crash) return; hud.impact(rider.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'BRZDĘK!'); B.v *= .6; B.rattled = (B.rattled || 0) + 1.5; shake = Math.max(shake, .25); },
+  grudgeAt: (at, line, kind) => foot.grudgeAt(at, line, kind),
+  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick),
+  talkKey: () => touch.on ? 'GADAJ' : (foot.active ? keysOf('talk') : keysOf('chat')) + ': GADAJ' } });
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
@@ -162,7 +176,7 @@ const ACTIONS = [
   { id: 'sprint', keys: ['ShiftLeft', 'ShiftRight'], modes: ['bike', 'walk'] },
   { id: 'throwL', keys: ['ArrowLeft', 'KeyQ'], modes: ['bike'] }, { id: 'throwR', keys: ['ArrowRight', 'KeyE'], modes: ['bike'] },
   { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyC'], modes: ['bike'] },
-  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] },
+  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] },
   { id: 'punchL', keys: ['ArrowLeft'], modes: ['fight'] }, { id: 'punchR', keys: ['ArrowRight'], modes: ['fight'] }, { id: 'high', keys: ['ArrowUp'], modes: ['fight'] },
   { id: 'low', keys: ['ArrowDown'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
   { id: 'taunt', keys: ['KeyG'], modes: ['fight'] },
@@ -183,7 +197,7 @@ const SECTIONS = [
     ['throwL', 'RZUT W LEWO (TRZYMAJ: SIŁA, PUŚĆ: RZUT)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
-    ['talk', 'ZAGADAJ DO KOGOŚ'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
+    ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
     [null, 'MYSZ: RUCH', 'OBRÓT I SPOJRZENIE (PRZY KRAWĘDZI DALEJ)'], [null, 'MYSZ: LPM', 'UDERZ KOGOŚ']] },
   { title: 'W BÓJCE', items: [['pedal', 'DOSKOK'], ['brake', 'ODSKOK'], ['left', 'KRĄŻ W LEWO'], ['right', 'KRĄŻ W PRAWO'], ['dodge', 'UNIK (Z KIERUNKIEM)'],
     ['punchL', 'PROSTY (BEZ MYSZY)'], ['punchR', 'SIERPOWY (BEZ MYSZY)'], ['high', 'Z CIOSEM: HAK'], ['low', 'Z CIOSEM: NA KORPUS · Z GARDĄ: NISKA'], ['guard', 'GARDA (BEZ MYSZY)'], ['taunt', 'PROWOKACJA'],
@@ -219,7 +233,7 @@ addEventListener('mousemove', e => { if (mouse.mh) return; mouse.nx = e.clientX 
   if (document.pointerLockElement || (!menu.open && !asking)) { mouse.dx += e.movementX; mouse.dy += e.movementY; if (foot.active) mouse.used = true; } });
 document.addEventListener('mouseleave', () => { mouse.inside = false; });
 document.addEventListener('pointerlockerror', () => { if (!mouse.failed) { mouse.failed = true; flash('Mysz: ruszaj nią, a przy krawędzi ekranu obracasz się dalej'); } });
-addEventListener('mousedown', e => { if (menu.open || asking || e.target.closest?.('#styl, #stylBtn, #pix, #ink, button')) return;
+addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button')) return;
   lockPointer(); if (foot.active) mouse.used = true;
   if (e.button === 0) { mouse.l = true; mouse.lh = true; } if (e.button === 2) { mouse.r = true; mouse.rh = true; }
   if (e.button === 1) { e.preventDefault(); if (e.detail >= 2) { camUser.dist = 1; camUser.tilt = 0; camUser.yaw = 0; saveCam(); flash('Kamera: jak była'); } else mouse.mh = true; } });
@@ -248,7 +262,7 @@ function input() {
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
-    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
+    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, chat: hit0('chat') || !!tE?.talk, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
@@ -297,7 +311,7 @@ const crackM = new THREE.MeshBasicMaterial({ map: crackT, transparent: true, alp
 const shards = [];
 const cracks = [];
 function breakWindow(w) {
-  w.broken = true; const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
+  w.broken = true; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
   for (let k = 0; k < 12; k++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.07, .06), shardM); s.position.copy(w.p).add(new THREE.Vector3((Math.random() - .5) * .8, (Math.random() - .5) * .6, (Math.random() - .5) * .8)); scene.add(s);
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
@@ -318,7 +332,7 @@ function stepPapers(dt) {
     for (const C of track.near(p.hint)) { if (C.kind !== 'hard' || p.m.position.y > C.y0 + C.h) continue; if (boxHit(C, p.m.position.x, p.m.position.z, .05)) { p.m.position.x = p.prev.x; p.m.position.z = p.prev.z; p.v.x *= -.3; p.v.z *= -.3; } }
     const hgt = p.m.position.y - q.y; p.dot.position.set(p.m.position.x, q.y + .02, p.m.position.z); p.dot.scale.setScalar(Math.max(.5, 1.3 - hgt * .25));
     if (p.m.position.y < q.y + .035) { p.m.position.y = q.y + .035;
-      if (!p.landed) { p.landed = true; p.landT = p.t;                                // where it came down: by a door, at a mailbox
+      if (!p.landed) { p.landed = true; p.landT = p.t; quests.onLand(p.m.position);                                // where it came down: by a door, at a mailbox
         // on the porch by the door: 2; in a mailbox: 5; under the windows: 1; past the house: nothing (each house counts once)
         const P = p.m.position, at = P.clone().setY(q.y + .5), door = track.doors.find(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - P.x, d.p.z - d.n.z * 1.3 - P.z) < 1.6);
         const under = () => track.windows.find(w => { if (track.doors[w.house]?.done) return false; const dx = P.x - w.p.x, dz = P.z - w.p.z, out = dx * w.n.x + dz * w.n.z, side = Math.abs(dx * -w.n.z + dz * w.n.x); return out > -.3 && out < 2.2 && side < 1.3; });
@@ -449,7 +463,7 @@ function ride(dt, inp) {
   // the traffic
   for (const C of traffic.boxes()) { if (Math.abs(C.x - nx) + Math.abs(C.z - nz) > 8 || clear(C) || (C.t.ghostUntil > performance.now())) continue; const h = boxHit(C, nx, nz, .38); if (h && C.t.r) {            // a cyclist: both go over if it was hard (by how fast they met), else a bump and a wobble
       const bv = new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.stop > 0 ? 0 : C.t.v), mv = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)).multiplyScalar(B.v), hard = mv.clone().sub(bv).length() > 3.4;
-      traffic.knock(C.t, mv, hard); if (hard) { C.t.ghostUntil = performance.now() + 7000; if (Math.random() < .3) foot.grudge(C.t); }
+      traffic.knock(C.t, mv, hard); if (hard) { quests.onKnockBike(); C.t.ghostUntil = performance.now() + 7000; if (Math.random() < .3) foot.grudge(C.t); }
       if (!(C.t.rantAt > performance.now())) { C.t.rantAt = performance.now() + 2500; hud.rant(C.t.r.root.position, hard ? pickOf(OUCH) : pickOf(SWEARS), true, 2); if (hard) witness(C.t.x, C.t.z); }
       if (hard) { crash(0, bv.multiplyScalar(.5)); return; } B.x = nx + h.nx * (h.pen + .02); B.z = nz + h.nz * (h.pen + .02); B.v *= .55; B.jolt = .12; return pose(dt, 0, 0, slope, 0); }
     if (h) { C.t.stop = 2.5; if (Math.abs(B.v) > 2.2 || C.t.v > 2.5) { crash(0, new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.v)); return; } B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01); B.v *= .4; return pose(dt, 0, 0, slope, 0); } }
@@ -506,8 +520,9 @@ function landKick(tg) {
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
   if (tg.kind === 'dog') { dogs.kick(tg.ref, { x: ax / al * 4.5 + Math.sin(B.yaw) * B.v * .5, z: az / al * 4.5 + Math.cos(B.yaw) * B.v * .5 }); hud.impact(mid); slowmo = .09; shake = .3; }   // it flies off
-  if (tg.kind === 'ped') { hud.impact(mid); tg.ref.stun = 1.6; hud.rant(tg.ref.G.position, pickOf(SWEARS), true, 1.95); slowmo = .06; shake = .22; }   // they stop, and swear after him
-  if (tg.kind === 'bike') { hud.impact(mid); traffic.knock(tg.ref, new THREE.Vector3(ax / al * 3.2, 0, az / al * 3.2), true); if (Math.random() < .8) foot.grudge(tg.ref); tg.ref.ghostUntil = performance.now() + 5000; hud.rant(tg.ref.r.root.position, pickOf(SWEARS), true, 2.0); slowmo = .06; shake = .22; }
+  if (tg.kind === 'ped' && quests.onHitPed(tg.ref)) { hud.impact(mid, 'ŁUP!'); slowmo = .08; shake = .25; }   // (the thief: the bag drops)
+  else if (tg.kind === 'ped') { hud.impact(mid); tg.ref.stun = 1.6; hud.rant(tg.ref.G.position, pickOf(SWEARS), true, 1.95); slowmo = .06; shake = .22; }   // they stop, and swear after him
+  if (tg.kind === 'bike') { hud.impact(mid); quests.onKnockBike(); traffic.knock(tg.ref, new THREE.Vector3(ax / al * 3.2, 0, az / al * 3.2), true); if (Math.random() < .8) foot.grudge(tg.ref); tg.ref.ghostUntil = performance.now() + 5000; hud.rant(tg.ref.r.root.position, pickOf(SWEARS), true, 2.0); slowmo = .06; shake = .22; }
   if (tg.kind === 'car') { hud.impact(mid, 'BUM!'); tg.ref.stop = Math.max(tg.ref.stop, .7); hud.rant(tg.ref.car.group.position, pickOf(DRIVERS), true, 1.7); shake = .28; }   // the driver: the bubble goes with the car
   if (tg.kind === 'granny') { tg.ref.kicked(); hud.rant(tg.ref.mouth, 'JA CI DAM GNOJKU!', true); shake = .12; }   // (the old woman: a kick does nothing, bar make her crosser)
   if (tg.kind === 'hyd' && water.spray(new THREE.Vector3(tg.ref.x, tg.ref.y0 || 0, tg.ref.z), 4.5)) { hud.impact(new THREE.Vector3(tg.ref.x, (tg.ref.y0 || 0) + .5, tg.ref.z), 'PSSS!'); shake = .15; }
@@ -546,7 +561,7 @@ function stepDogs(dt, inp) {
         : mk({ kind: 'table', dir: Math.random() < .5 ? -1 : 1, dur: fit(.3, .7), pts: 2, name: 'STÓŁ' });
       hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 2.1, 0)), B.trick.name + (B.done.length ? ' +' : '!'), '#efc970'); }
     inp = { ...inp, kick: false }; }
-  touch.trick(!!(B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)));   // (a phone: the kick button says TRIK while one can be done)
+  { const tr = !!(B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)); touch.trick(tr || quests.kickHint, tr ? 'TRIK!' : 'KOPNIJ!'); }   // (a phone: the kick button says TRIK while one can be done)
   if (inp.kick && !B.crash && !B.kick && !B.air) { const tg = kickTargets()[0]; let side = 1;
     if (tg) { const rx = -Math.cos(B.yaw), rz = Math.sin(B.yaw); side = ((tg.x - B.x) * rx + (tg.z - B.z) * rz) > 0 ? -1 : 1; }   // (+1: his left)
     B.kick = { t: 0, side, target: tg || null }; }
@@ -625,6 +640,8 @@ const cyclo = createCyclo(hudEl), trip = { dist: 0, max: 0, time: 0 };
 function paintHud() { cyclo.update({ v: B.v, ...trip, on: !foot.active }); }
 const _v = new THREE.Vector3();
 function project(w) { _v.copy(w).project(camera); if (_v.z > 1) return null; const [W, H] = px.size; return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H }; }
+// the same, for a mark at the picture's edge: behind the camera too (turned round: which side it is on)
+function projectEdge(w) { _v.copy(w).project(camera); const [W, H] = px.size, b = _v.z > 1; if (b) { _v.x = -_v.x; _v.y = -_v.y; } return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H, behind: b }; }
 
 // the pixel size: how many pixels high the picture is drawn (fewer: bigger pixels); a row of buttons, keys 1-5
 const SIZES = [180, 240, 320, 400, 540]; let pxH = 240;
@@ -666,6 +683,7 @@ function step(dt, inp) {
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
+  quests.update(dt, inp);                                               // (who is near to talk to; the errands; the thief)
   if (foot.active) return stepFoot(dt, inp);
   stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v });
@@ -708,7 +726,8 @@ function stepPeople(dt, inp, me) {
   if (k && foot.swing(k)) pendingHit = { t: k === 'jab' ? .15 : .22, p: pedNear(me, 1.35), b: bikeNear(me, 2.2) };
   if (pendingHit && !pendingHit.p && pendingHit.b) { pendingBike = { t: pendingHit.t, b: pendingHit.b }; pendingHit = null; }
   if (pendingHit && (pendingHit.t -= dt) <= 0) { const p = pendingHit.p; pendingHit = null;
-    if (p && Math.hypot(p.x - me.x, p.z - me.z) < 1.5) { const key = p.P.key, at = p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)); hud.impact(at, 'ŁUP!'); shake = Math.max(shake, .15); p.stun = .7; p.faceT = 1.2;
+    if (p && Math.hypot(p.x - me.x, p.z - me.z) < 1.5 && quests.onHitPed(p)) { hud.impact(p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)), 'ŁUP!'); shake = Math.max(shake, .15); }   // (the thief)
+    else if (p && Math.hypot(p.x - me.x, p.z - me.z) < 1.5) { const key = p.P.key, at = p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)); hud.impact(at, 'ŁUP!'); shake = Math.max(shake, .15); p.stun = .7; p.faceT = 1.2;
       B.points = Math.max(0, B.points - 2); hud.pop(at.clone().add(new THREE.Vector3(0, .4, 0)), 'BRZYDKO! -2', '#cf5a3e');
       if (TOUGH.includes(key) && Math.random() < .6 && !foot.chasing) { hud.rant(mouthOf(p), pickOf(SZWAGIER)); p.flee = 3; p.fleeNew = true;   // (he goes for his brother-in-law: out of a house one comes)
         const q = track.probe(me.x, me.z, me.hint), S = track.S[(q.i + (Math.random() < .5 ? 14 : -14) + track.N) % track.N], sd = q.d >= 0 ? 1 : -1, at2 = new THREE.Vector3(S.p.x + S.r.x * sd * 12, S.p.y, S.p.z + S.r.z * sd * 12);
@@ -718,7 +737,7 @@ function stepPeople(dt, inp, me) {
   // a cyclist going by, punched: off his bike he goes (and, as after a kick, often gets up for a fight)
   if (pendingBike && (pendingBike.t -= dt) <= 0) { const b = pendingBike.b; pendingBike = null; const bp = b && b.r.root.position;
     if (bp && Math.hypot(bp.x - me.x, bp.z - me.z) < 2.4 && !(b.ghostUntil > performance.now())) { const ax = bp.x - me.x, az = bp.z - me.z, al = Math.hypot(ax, az) || 1;
-      hud.impact(bp.clone().setY(bp.y + 1.4), 'ŁUP!'); shake = Math.max(shake, .2); traffic.knock(b, new THREE.Vector3(ax / al * 3, 0, az / al * 3), true); b.ghostUntil = performance.now() + 7000;
+      hud.impact(bp.clone().setY(bp.y + 1.4), 'ŁUP!'); shake = Math.max(shake, .2); quests.onKnockBike(); traffic.knock(b, new THREE.Vector3(ax / al * 3, 0, az / al * 3), true); b.ghostUntil = performance.now() + 7000;
       if (Math.random() < .8) foot.grudge(b); else hud.rant(bp.clone().setY(bp.y + 1.8), pickOf(['MÓJ ROWER!', 'ZA CO?!', 'WARIAT!', 'JA TYLKO PO BUŁKI!'])); } }
 }
 // the cyclist nearest him on foot, going by (for a punch)
@@ -746,26 +765,27 @@ function stepBundles(dt, px_, pz_) { const t = performance.now() / 1000;
 // what a beaten cyclist leaves on the ground (three times in four): a wallet with a few złoty, a few of his papers, a bun (health);
 // lit as the bundles are (a ring, a beam, an arrow over it), picked up walking up to it or riding over it; gone after a minute
 const drops = [];
-function dropLoot(at) { if (Math.random() < .25) return; const k = Math.random(), kind = k < .45 ? 'cash' : k < .8 ? 'papers' : 'bun';
+function dropLoot(at, kind0, onPick) { if (!kind0 && Math.random() < .25) return; const k = Math.random(), kind = kind0 || (k < .45 ? 'cash' : k < .8 ? 'papers' : 'bun');
   const g = new THREE.Group(), y = track.probe(at.x, at.z, -1).y; g.position.set(at.x + (Math.random() - .5) * .8, y + .03, at.z + (Math.random() - .5) * .8); scene.add(g);
   const item = new THREE.Group(); g.add(item);
   if (kind === 'cash') { const w = new THREE.Mesh(new THREE.BoxGeometry(.2, .04, .14), toon('#6b4a2e')); w.position.y = .03; item.add(w); for (let q = 0; q < 4; q++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .012, 10), toon('#efc970')); c.position.set(.12 + q * .05, .008 + (q % 2) * .012, (q - 1.5) * .04); item.add(c); } }
   if (kind === 'papers') for (let q = 0; q < 3; q++) { const r = new THREE.Mesh(paperG, paperM); r.rotation.z = Math.PI / 2; r.rotation.y = q * .5; r.position.set(0, .04 + q * .06, 0); r.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandM)); item.add(r); }
+  if (kind === 'bag') { const b = new THREE.Mesh(new THREE.BoxGeometry(.24, .18, .09), toon('#5a3d27')); b.position.y = .1; item.add(b); const h = new THREE.Mesh(new THREE.TorusGeometry(.07, .012, 4, 12, Math.PI), toon('#3a2718')); h.position.y = .19; item.add(h); }
   if (kind === 'bun') { const b = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 6), toon('#c98a45')); b.scale.set(1.3, .7, 1); b.position.y = .06; item.add(b); }
   const ring = new THREE.Mesh(new THREE.RingGeometry(.28, .5, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: kind === 'bun' ? '#9fd27a' : '#efc970', transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending })); ring.renderOrder = 2;
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(.03, .12, 2.2, 10, 1, true).translate(0, 1.1, 0), new THREE.MeshBasicMaterial({ color: '#efc970', transparent: true, opacity: .08, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); beam.renderOrder = 2;
   const arrow = new THREE.Group(); arrow.add(new THREE.Mesh(new THREE.ConeGeometry(.15, .28, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#17181b' })), new THREE.Mesh(new THREE.ConeGeometry(.12, .22, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#efc970' })));
-  g.add(ring, beam, arrow); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); drops.push({ g, item, ring, arrow, kind, t: 0, ph: Math.random() * 6 });
-  setTimeout(() => hud.pop(g.position.clone().setY(g.position.y + .9), kind === 'cash' ? 'PORTFEL!' : kind === 'papers' ? 'JEGO GAZETY!' : 'BUŁKA!', '#efc970'), 400); }
+  g.add(ring, beam, arrow); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); const D = { g, item, ring, arrow, kind, t: 0, ph: Math.random() * 6, onPick }; drops.push(D);
+  setTimeout(() => hud.pop(g.position.clone().setY(g.position.y + .9), kind === 'cash' ? 'PORTFEL!' : kind === 'papers' ? 'JEGO GAZETY!' : kind === 'bag' ? 'TOREBKA!' : 'BUŁKA!', '#efc970'), 400); return D; }
 function stepDrops(dt) { const me = foot.active ? foot.me : null, px_ = me ? me.x : B.x, pz_ = me ? me.z : B.z, reach = me ? 1.1 : 1.7, t = performance.now() / 1000;
   for (let k = drops.length - 1; k >= 0; k--) { const d = drops[k]; d.t += dt; const kk = .5 + .5 * Math.sin(t * 4 + d.ph); d.ring.scale.setScalar(.85 + kk * .35); d.ring.material.opacity = .35 + kk * .45;
     d.arrow.position.y = 1 + Math.sin(t * 3 + d.ph) * .12; d.arrow.rotation.y = t * 2 + d.ph; d.item.rotation.y += dt * .9;
     const at = d.g.position, near = Math.hypot(at.x - px_, at.z - pz_) < reach;
-    if (near) { const lift = at.clone().setY(at.y + .7);
+    if (near) { const lift = at.clone().setY(at.y + .7); d.onPick?.();
       if (d.kind === 'cash') { const n = 3 + (Math.random() * 7 | 0); score(n, lift, `+${n} ZŁ`, '#efc970'); flash(pickOf(['Portfel! Dowodu nie ma, kasa jest.', 'Drobne na bułki. I na piwo.', 'Łup z bójki: ' + n + ' zł']));  }
       if (d.kind === 'papers') { B.papers += 4; hud.pop(lift, '+4', '#f6f3ea'); flash('Jego gazety. Teraz twoje. +4'); }
       if (d.kind === 'bun') { if (me) me.hp = Math.min(100, me.hp + 30); hud.pop(lift, '+30 HP', '#9fd27a'); flash('Bułka z makiem. Siły wracają.'); } }
-    if (near || d.t > 60) { scene.remove(d.g); drops.splice(k, 1); } } }
+    if (near || (d.t > 60 && !d.onPick)) { scene.remove(d.g); drops.splice(k, 1); } } }
 function pickBundle(C) { C.used = true; C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); }
 function stepFoot(dt, inp) {                                           // (on foot: him walking or fighting; the world goes on round him)
   foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, touch: inp.touch, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
@@ -794,8 +814,8 @@ function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : n
 function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
-  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen);
-  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !talk.isOpen); touch.chat(!foot.active && quests.canChat);
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks(), quests: quests.tracker(), projEdge: projectEdge, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -815,6 +835,7 @@ const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../',
 const menu = createMenu({ hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
+  if (talk.isOpen) { talk.key(e); keys.clear(); e.stopImmediatePropagation(); return; }   // (a talk open: its keys only)
   if (menu.open && !asking) { menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
   if (!asking && e.code === 'Escape') { menu.show('pause'); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
 const Q = new URLSearchParams(location.search), ARENA = Q.get('arena');
@@ -847,7 +868,7 @@ addEventListener('keydown', e => { if (e.repeat) return;
     else if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Tab'].includes(e.code)) hud.askSel = 1 - hud.askSel; else if (e.code === 'Enter' || e.code === 'Space') answer(hud.askSel === 0); e.preventDefault(); } });
 function resetGame() {
   if (foot.active) foot.stop(); foot.reset(); B.parked = false; rider.boy.visible = true;
-  granny.reset(); rider.root.visible = true; B.rattled = 0;
+  granny.reset(); quests.reset(); rider.root.visible = true; B.rattled = 0;
   rider.ragdollOff();
   const q = track.probe(track.start.x, track.start.z, 0);
   Object.assign(B, { x: track.start.x, z: track.start.z, y: q.y, vy: 0, air: false, gPrev: q.y, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
@@ -870,9 +891,9 @@ function attract(dt) {                                                  // (the 
   sun.position.copy(fly.pos).addScaledVector(SUN, 60); sun.target.position.copy(fly.pos); sun.target.updateMatrixWorld(); }
 function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
-  if ((menu.open || asking) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
-  document.body.classList.toggle('walk', !menu.open && !asking);                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !window.PT?.hold) { step(dt, input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if ((menu.open || asking || talk.isOpen) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
+  document.body.classList.toggle('walk', !menu.open && !asking && !talk.isOpen);                          // (in the game: no cursor; the menu and the question have one)
+  if (!asking && !menu.open && !talk.isOpen && !window.PT?.hold) { step(dt, input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
@@ -882,5 +903,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, hudBag, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, scene, camera, hudBag, quests, talk, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };

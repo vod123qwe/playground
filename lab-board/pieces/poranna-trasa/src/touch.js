@@ -12,7 +12,7 @@ export function createTouch({ onCam, onMenu }) {
   const state = { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, kickHeld: false, guard: false, lookDx: 0, lookDy: 0 };
   const edges = { kick: false, hop: false, punchL: false, punchR: false, dodge: false, mount: false, talk: false };
   const take = () => { const e = { ...edges }; for (const k in edges) edges[k] = false; e.lookDx = state.lookDx; e.lookDy = state.lookDy; state.lookDx = state.lookDy = 0; return e; };
-  if (!on) return { on, state, take, setMode() { }, show() { }, trick() { } };
+  if (!on) return { on, state, take, setMode() { }, show() { }, trick() { }, chat() { } };
   document.body.classList.add('touch');
 
   // the page keeps still under the fingers: no scroll, no pull to refresh, no pinch, no double-tap zoom, no long-press menu
@@ -40,6 +40,7 @@ export function createTouch({ onCam, onMenu }) {
     #tc .btn.down { background: rgba(239,201,112,.92); color: #17181b; border-color: rgba(23,24,27,.9); transform: scale(.93); }
     #tc .btn.off { display: none; }
     #tc .top { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: none; }
+    #tc .btn.hid { display: none; }
     #tc .btn.trick { background: rgba(239,201,112,.55); border-color: #efc970; } #tc .btn.trick i { color: #efc970; opacity: 1; }
     #tc .top .btn { position: relative; width: 38px; height: 38px; border-radius: 11px; }
     @media (max-width: 639px) { #tc .top { left: max(14px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 76px); transform: none; gap: 6px; } #tc .top .btn { width: 34px; height: 34px; border-radius: 10px; } }   /* (narrow: a row under the bike computer) */
@@ -101,6 +102,7 @@ export function createTouch({ onCam, onMenu }) {
   button(IC.hop, 'skok', [52, 118, 108], BIKE, () => { edges.hop = true; });
   button(IC.fast, 'szybciej', [52, 4, 190], BIKE, () => { state.sprint = true; }, () => { state.sprint = false; });
   button(IC.off, 'zsiądź', [44, 76, 190], BIKE, () => { edges.mount = true; });
+  const chatB = button(IC.talk, 'gadaj', [50, 190, 118], BIKE, () => { edges.talk = true; }); chatB.classList.add('hid');   // (only by someone to talk to)
   // on foot: one punch (left and right by turns), hop, talk, back on the bike (a run: the stick pushed all the way)
   let fist = 0;
   button(IC.punchR, 'cios', [78, 58, 14], ['foot'], () => { edges[(fist ^= 1) ? 'punchL' : 'punchR'] = true; });
@@ -125,6 +127,7 @@ export function createTouch({ onCam, onMenu }) {
   addEventListener('blur', () => Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false }));
   // in the air off a ramp: the kick button is the trick button (lit, and says so)
   let trickOn = false; const kickI = kickB.querySelector('i');
-  function trick(v) { if (v === trickOn) return; trickOn = v; kickB.classList.toggle('trick', v); kickI.textContent = v ? 'TRIK!' : 'kop'; }
-  return { on, state, take, setMode, show, trick };
+  let trickLab = ''; function trick(v, lab = 'TRIK!') { if (v === trickOn && lab === trickLab) return; trickOn = v; trickLab = lab; kickB.classList.toggle('trick', v); kickI.textContent = v ? lab : 'kop'; }
+  let chatOn = false; function chat(v) { if (v !== chatOn) { chatOn = v; chatB.classList.toggle('hid', !v); } }
+  return { on, state, take, setMode, show, trick, chat };
 }

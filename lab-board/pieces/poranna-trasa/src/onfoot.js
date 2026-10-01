@@ -427,7 +427,8 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const lf = new V3(Math.cos(f.yaw), 0, -Math.sin(f.yaw)), back = foeF ? 2.5 : 3.1, want = new V3(f.x, f.y + (foeF ? 1.95 : 1.9 - pitch * 1.3), f.z).addScaledVector(fc, -back).addScaledVector(lf, foeF ? 1.05 : 0);   // (in a fight: over his shoulder, off to the side, both in the picture)
     const look = foeF ? new V3(f.x + (foeF.x - f.x) * .62, f.y + 1.2, f.z + (foeF.z - f.z) * .62) : new V3(f.x, f.y + 1.3 + pitch * 2.4, f.z).addScaledVector(fc, 2.2);
     if (!cam.init) { cam.pos.copy(want); cam.look.copy(look); cam.init = true; }
-    cam.pos.lerp(want, 1 - Math.exp(-dt * 6)); cam.look.lerp(look, 1 - Math.exp(-dt * 8)); const q = track.probe(cam.pos.x, cam.pos.z, f.hint); cam.pos.y = Math.max(cam.pos.y, q.y + .5);
+    cam.pos.lerp(want, 1 - Math.exp(-dt * 6)); cam.look.lerp(look, 1 - Math.exp(-dt * 8));
+    { const dx = cam.pos.x - f.x, dz = cam.pos.z - f.z, l = Math.hypot(dx, dz), mn = back * .82; if (l < mn && l > 1e-3) { cam.pos.x = f.x + dx / l * mn; cam.pos.z = f.z + dz / l * mn; } }   // (him coming at the camera: it backs off, never in its lens) const q = track.probe(cam.pos.x, cam.pos.z, f.hint); cam.pos.y = Math.max(cam.pos.y, q.y + .5);
     camera.position.copy(cam.pos); camera.up.set(0, 1, 0); camera.lookAt(cam.look); camera.near = .1; camera.fov += (60 - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); return f;
   }
   // what the HUD shows: the two bars in a fight; how red the edges (his health low)

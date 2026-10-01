@@ -162,6 +162,8 @@ export function createHud() {
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
     if (st.bike) bikeArrow(st.bike, project, dt);
+    markT += dt; if (st.marks) for (const m of st.marks) drawMark(m, project, st.projEdge);
+    if (st.quests && st.quests.length) questList(st.quests);
     if (tipText) drawTip();
     if (st.star) aimStar(st.star, dt); else if (st.cross) { const cx = cv.width >> 1, cy = cv.height >> 1; g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = '#f6f3ea'; g.fillRect(cx, cy, 1, 1); }
     if (Q.open) drawAsk(dt);
@@ -255,6 +257,25 @@ export function createHud() {
     const lab = 'ROWER ' + Math.round(Bk.dist) + ' M'; text(lab, cx - (width(lab) >> 1), cy + 11, '#efc970');
     const p = project(Bk.at); if (p && p.x > 0 && p.x < W && p.y > 0 && p.y < cv.height) { const bob = Math.round(Math.sin(bikeT * 5) * 1.5), x = Math.round(p.x), y = Math.round(p.y) - 6 + bob;
       for (let r = 0; r < 4; r++) { g.fillStyle = '#17181b'; g.fillRect(x - 4 + r, y + r - 1, 9 - r * 2, 1); g.fillStyle = '#efc970'; g.fillRect(x - 3 + r, y + r, 7 - r * 2, 1); } } }
+  // the errands' marks: "!" over someone with a matter, "?" over someone waiting for you, an arrow over a target (out of the picture: at
+  // its edge); a label under one (how to talk to them); and at the top, the errands under way, with how far
+  let markT = 0;
+  function drawMark(m, project, edgeP) { const p = project(m.p), W = cv.width, H = cv.height;
+    if (!p || p.x < 6 || p.x > W - 6 || p.y < 6 || p.y > H - 16) { if (m.edge && edgeP) edgeArrow(m, edgeP(m.p)); return; }
+    let x = Math.round(p.x), y = Math.round(p.y);
+    const bob = Math.round(Math.sin(markT * 4 + m.p.x * .7) * 1.5);
+    if (m.s === 'v') { for (let r = 0; r < 6; r++) { g.fillStyle = '#17181b'; g.fillRect(x - 6 + r, y - 9 + r + bob, 13 - r * 2, 2); } for (let r = 0; r < 5; r++) { g.fillStyle = m.col; g.fillRect(x - 5 + r, y - 8 + r + bob, 11 - r * 2, 1); } }
+    else if (m.s) big(m.s, x - 3, y - 12 + bob, m.col, '#17181b');
+    if (m.label) { const w = width(m.label) + 6; g.fillStyle = 'rgba(23,24,27,.78)'; g.fillRect(x - (w >> 1), y + 2, w, 9); text(m.label, x - (w >> 1) + 3, y + 4, m.col, null); } }
+  // a target out of the picture: an arrow at the edge on its side, pointing to it, and how far
+  function edgeArrow(m, q) { const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2; let dx = q.x - cx, dy = q.y - cy; if (q.behind && Math.abs(dy) < 1) dy = 1; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const mx = cx - 14, my = cy - 22, k = Math.min(mx / Math.max(1e-3, Math.abs(dx)), my / Math.max(1e-3, Math.abs(dy))), x = Math.round(cx + dx * k), y = Math.round(cy + dy * k), pulse = ((markT * 3) | 0) % 2;
+    for (let r = 0; r <= 7; r++) for (let s = -(7 - r) * .6; s <= (7 - r) * .6; s += .5) { const px = Math.round(x + dx * (r - 2) - dy * s), py = Math.round(y + dy * (r - 2) + dx * s); g.fillStyle = '#17181b'; g.fillRect(px - 1, py - 1, 3, 3); }
+    for (let r = 0; r <= 6; r++) for (let s = -(6 - r) * .55; s <= (6 - r) * .55; s += .5) { g.fillStyle = pulse ? m.col : '#f6f3ea'; g.fillRect(Math.round(x + dx * (r - 1.5) - dy * s), Math.round(y + dy * (r - 1.5) + dx * s), 1, 1); }
+    const lab = (m.label || '') .trim() || (m.dist + ' M'), w = width(lab) + 6, lx = Math.max(2, Math.min(W - w - 2, x - (w >> 1) - Math.round(dx * 14))), ly = Math.max(2, Math.min(H - 11, y - 4 - Math.round(dy * 12)));
+    g.fillStyle = 'rgba(23,24,27,.8)'; g.fillRect(lx, ly, w, 9); text(lab, lx + 3, ly + 2, m.col, null); }
+  function questList(L) { const W = cv.width, y0 = document.body.classList.contains('touch') ? Math.round(cv.height * .17) : 5;
+    L.slice(0, 3).forEach((s, i) => { const w = width(s) + 9, x = Math.round(W / 2 - w / 2), y = y0 + i * 11; g.fillStyle = 'rgba(23,24,27,.74)'; g.fillRect(x, y, w, 10); g.fillStyle = '#efc970'; g.fillRect(x, y, 1, 10); text(s, x + 5, y + 2, i ? '#f6f3ea' : '#efc970', null); }); }
   // a tip: words in a box over the bottom of the picture, broken into lines that fit
   let tipText = null; const tip = s => { tipText = s; };
   function drawTip() { const W = cv.width, H = cv.height, maxW = Math.min(W - 20, 260), words = tipText.split(' '), lines = []; let ln = '';
