@@ -375,5 +375,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   }
   // the clothes' colours (a gang: black tees, black caps)
   function setLook(o) { if (o.shirt) M.shirt.color.set(o.shirt); if (o.cap) M.cap.color.set(o.cap); if (o.jeans) { M.jeans.color.set(o.jeans); M.jeansD.color.set(o.jeans); } }
-  return { root, head, boy, bike, setParts, setLook, bagFill: k => PR && PR.P.m.userData.bagFill ? PR.P.m.userData.bagFill(k) : satchel.setFill(k), setPerson, eye, frontWheel: frontW, lean, get tuning() { return PR; }, get person() { return PR && PR.P; }, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
+  // (where the parts are, for the bike's slots on the inventory page: each an Object3D, its world position read when wanted)
+  const anchors = { front: frontW, rear: rearW, saddle, steer, bell: extra.bell, lamp: extra.lamp, cogs: extra.cogs, frame: bike, bag: satchel.group };
+  return { root, head, boy, bike, anchors, setParts, setLook, bagFill: k => PR && PR.P.m.userData.bagFill ? PR.P.m.userData.bagFill(k) : satchel.setFill(k), setPerson, eye, frontWheel: frontW, lean, get tuning() { return PR; }, get person() { return PR && PR.P; }, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
 }
