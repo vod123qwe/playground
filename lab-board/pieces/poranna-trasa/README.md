@@ -712,3 +712,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - każdy z gangu wytrzymuje trzy kopniaki: po pierwszych chwieje się i odpada na bok, potem wraca
 - patrzą przed siebie i omijają przeszkody (pachołki, zaparkowane auta, barierki, studzienki: ich prawdziwe obrysy, nie przybliżenia); kto jednak wjedzie, traci życie, a na koniec leży
 - pościg trwa dłużej (do 160 s, jeśli nie uciekniesz ani ich nie położysz)
+
+## Wersja 76: włosy spod czapki jak na koncepcie
+
+- za uszami końcówki włosów podkręcone na zewnątrz i do góry, z tyłu krótsze i proste do karku, nad uszami krótko, więc uszy (i z tyłu kawałek policzka) widać
