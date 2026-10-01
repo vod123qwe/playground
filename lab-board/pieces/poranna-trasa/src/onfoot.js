@@ -194,7 +194,8 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   const say = (f, s) => fx.rant(f.mouth, s);                          // (a bubble over him, following him)
   const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   const facing = (a, b) => { const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || 1; return (Math.sin(a.yaw) * dx + Math.cos(a.yaw) * dz) / d; };
-  function place(f) { const q = track.probe(f.x, f.z, f.hint); f.hint = q.i; if (f.air) { if (f.y <= q.y) { f.y = q.y; f.air = false; f.vy = 0; } } else { f.y += (q.y - f.y) * .5; if (Math.abs(q.y - f.y) > .5) f.y = q.y; } f.P.G.position.set(f.x, f.y, f.z); f.P.G.rotation.y = f.yaw; f.mouth.set(f.x, f.y + f.P.height + .22, f.z); }
+  function place(f) { const q = track.probe(f.x, f.z, f.hint); f.hint = q.i; const gy = Math.max(q.y, track.floorAt?.(f.x, f.z) ?? -Infinity);   // (a porch, a step: stood on, not sunk into)
+    if (f.air) { if (f.y <= gy) { f.y = gy; f.air = false; f.vy = 0; } } else { f.y += (gy - f.y) * .5; if (Math.abs(gy - f.y) > .5) f.y = gy; } f.P.G.position.set(f.x, f.y, f.z); f.P.G.rotation.y = f.yaw; f.mouth.set(f.x, f.y + f.P.height + .22, f.z); }
   function push(f) { if (f.ghost) return; const s = solid(f.x, f.z, .3, f.hint, f.air ? f.y : null); if (s) { f.x += s.x; f.z += s.z; } }   // (ghost: the computer's one, stuck behind something, lets himself through; in the air: over what is lower than his feet)
 
   function fight(f, o, inp, dt) {                                      // one step of a fighter against the other

@@ -133,7 +133,11 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   // ---------- the things along it ----------
   const rnd = mulberry(11);
   // ---------- what stops a bike, and what a paper can hit ----------
-  const things = [];   // (what a kick or a bike reaches: { kind: tree | bush | pole | mailbox | swing | cone, o, ... })
+  const things = [];
+  const floors = [], floorGrid = new Map(), FC = 8, fkey = (x, z) => Math.floor(x / FC) + ',' + Math.floor(z / FC);
+  function floor(h, cx, cz, hx, hz, top) { h.updateMatrixWorld(true); const p = h.localToWorld(new THREE.Vector3(cx, top, cz)), yaw = h.rotation.y, F = { x: p.x, z: p.z, y: p.y, c: Math.cos(yaw), s: Math.sin(yaw), hx, hz };
+    floors.push(F); const r = Math.max(hx, hz); for (const ox of [-r, 0, r]) for (const oz of [-r, 0, r]) { const k = fkey(p.x + ox, p.z + oz); if (!floorGrid.has(k)) floorGrid.set(k, new Set()); floorGrid.get(k).add(F); } }
+  function floorAt(x, z) { let y = -Infinity; for (const F of floorGrid.get(fkey(x, z)) || []) { const dx = x - F.x, dz = z - F.z, lx = dx * F.c - dz * F.s, lz = dx * F.s + dz * F.c; if (Math.abs(lx) <= F.hx && Math.abs(lz) <= F.hz && F.y > y) y = F.y; } return y; }   // (what a kick or a bike reaches: { kind: tree | bush | pole | mailbox | swing | cone, o, ... })
   const colliders = [], BK = 16, NB = Math.ceil(N / BK), buckets = Array.from({ length: NB }, () => []), windows = [], doors = [];
   // places a tree must not grow in: a drive, a path, a porch (kept here, not in the colliders: nothing stops a bike there)
   const keepOut = [];
@@ -206,6 +210,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       c.getWorldPosition(v); c.userData.dy = groundAt(v.x, v.z, i) - top; c.position.y += c.userData.dy; }
     for (const q of seats) if (q.h === h && q.chair) q.local.y += q.chair.userData.dy || 0; }
   function house(i, side) {                                          // side +1 right, -1 left; its front towards the road
+    const yard = [];   // (what stands on the lot and stops a bike: made into colliders once the house stands where it does)
     const h = new THREE.Group(), W = 8 + rnd() * 3, D = 7 + rnd() * 2, H = 2.9 + rnd() * .6, wallC = WALLS[rnd() * WALLS.length | 0], roof = ROOFS[rnd() * ROOFS.length | 0];
     const two = rnd() < .35, HH = two ? H * 1.9 : H, wall = wallM(wallC, W, HH);
     h.add(box(W, HH, D, wall, 0, HH / 2, 0));
@@ -240,7 +245,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       const rf = box(aw + .3, .14, ad + .3, dark, ax, ah + .07, azc); rf.rotation.x = -.04; h.add(rf); h.add(box(aw + .34, .1, .1, trimM, ax, ah + .02, fz - .16));
       h.add(box(2.6, 2.1, .1, garA, ax, 1.05, fz - .02)); h.add(box(2.8, .12, .14, white, ax, 2.2, fz - .03)); for (const x of [-aw / 2, aw / 2]) h.add(box(.16, ah, .16, trimM, ax + x, ah / 2, fz + .02)); }
     const drv = garage || annex, dvx = garage ? gx : ax, path = !garage || rr() < .7;   // (a path to the door: always without a garage, mostly with one too)                                            // (a drive: to the garage, in the house or in the annex)
-    if (rnd() < .7) { const pz = fz - 1.1, pw = garage ? 2.6 : 3.4, px0 = dx;                                                          // a porch: its floor, steps, roof, posts, rails
+    let porch = null; if (rnd() < .7) { const pz = fz - 1.1, pw = garage ? 2.6 : 3.4, px0 = dx; porch = { pw, px0 };                                                          // a porch: its floor, steps, roof, posts, rails
       h.add(box(pw, .3, 2.2, white, px0, .15, fz - 1.1)); h.add(box(pw - .04, 1.2, 2.9, stoneM, px0, -.6, fz - 1.4)); for (const [k, y] of [[0, .1], [1, .2]]) h.add(box(1.2, .1 + y * 0, .32, white, px0, .05 + k * .1, fz - 2.3 + k * .3));
       h.add(box(pw + .4, .14, 2.4, roof, px0, 2.55, pz)); for (const x of [-pw / 2 + .1, pw / 2 - .1]) h.add(box(.16, 2.3, .16, white, px0 + x, 1.4, pz - 1));
       for (const sgn of [-1, 1]) { const x0 = px0 + sgn * pw / 2 - sgn * .1, a = sgn < 0 ? x0 : px0 + .7, b = sgn < 0 ? px0 - .7 : x0;
@@ -272,9 +277,9 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       if (lounger) { c.add(box(.62, .06, 1.7, cloth, 0, .3, .05)); const bk = box(.62, .06, .8, cloth, 0, .62, -.72); bk.rotation.x = -1.0; c.add(bk); for (const x of [-.3, .3]) for (const z of [-.7, .75]) c.add(box(.04, .3, .04, wd, x, .15, z)); }
       else { c.add(box(.5, .05, .48, wd, 0, .45, 0)); c.add(box(.5, .5, .05, wd, 0, .72, -.24)); for (const x of [-.22, .22]) for (const z of [-.2, .2]) c.add(box(.04, .45, .04, wd, x, .22, z)); for (const x of [-.26, .26]) c.add(box(.04, .04, .45, wd, x, .62, 0)); }
       c.position.set(sx, 0, sz); c.rotation.y = Math.PI; h.add(c);                                   // (the seat faces the road: -z here)
-      seats.push({ h, chair: c, local: new THREE.Vector3(sx, lounger ? .06 : 0, sz + (lounger ? .15 : .02)), lounger, i }); hit(h, { hx: .4, hz: lounger ? .9 : .35, h: .8, kind: 'hard' }, i, sx, sz); taken.push([sx, sz, lounger ? 1.1 : .6]); }
+      seats.push({ h, chair: c, local: new THREE.Vector3(sx, lounger ? .06 : 0, sz + (lounger ? .15 : .02)), lounger, i }); yard.push([{ hx: .4, hz: lounger ? .9 : .35, h: .8, kind: 'hard' }, sx, sz]); taken.push([sx, sz, lounger ? 1.1 : .6]); }
     // the front garden, lived in: a few things about the lawn (not on the path, the drive, the porch, nor on what stands there); now and then an old car by the house
-    const yard = [];
+    
     { const spots = [...taken], lawnZ0 = fz - 1, lawnZ1 = -D / 2 - gap + 1.4, pick = [['natLeaves', 2], ['natBush', 3], ['natFlowers', 3], ['natRocks', 1], ['leafPile', 1], ['gnome', 2], ['sandbox', 1], ['swing', 1], ['kidBike', 1], ['trampoline', 1], ['grill', 1], ['birdbath', 1]], tot = pick.reduce((a, b) => a + b[1], 0);
       for (let n = 0; n < 2 + (rnd() * 3 | 0); n++) { let r = rnd() * tot, kind = pick[0][0]; for (const [k, wgt] of pick) { if ((r -= wgt) < 0) { kind = k; break; } }
         const big = kind === 'swing' || kind === 'trampoline' || kind === 'sandbox';
@@ -305,6 +310,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     zone(h, 2.4, 1.7, dx, fz - 1.1);                                                                                             // the porch
     const nrm = new THREE.Vector3(0, 0, -1).transformDirection(h.matrixWorld);
     settle(h, i, W + (annex ? 3.5 : 0), D);
+    if (porch) { floor(h, porch.px0, fz - 1.1, porch.pw / 2, 1.1, .3); floor(h, porch.px0, fz - 2.3, .6, .16, .1); floor(h, porch.px0, fz - 2.0, .6, .16, .2); }   // (the porch's floor and its two steps)
     show.house.push({ o: h, label: [two ? 'piętrowy' : 'parterowy', garage ? 'z garażem' : annex ? 'z dobudówką' : ''].filter(Boolean).join(', '), note: `${W.toFixed(1)} × ${D.toFixed(1)} m`, kind: (two ? 2 : 1) + (garage ? 'g' : annex ? 'a' : '') });
     for (const [x, y] of wins) windows.push({ p: h.localToWorld(new THREE.Vector3(x, y, fz - .07)), n: nrm.clone(), hw: .56, hh: .5, broken: false, i, house: doors.length });   // (house: its door's number)
     doors.push({ p: h.localToWorld(new THREE.Vector3(dx, 0, fz - 2.6)), n: nrm.clone(), done: false, i });   // (n: the way the house faces)
@@ -422,6 +428,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   //   tyres, pallets, washing, a car on blocks, a broken fence, and the lads standing round the fire (they have something to say) ----------
   const fires = [], annexes = [], train = { update() { } };   // (the fires by the shacks, to flicker; where the annexes are, for a look in the tests)
   function shacks(i, side) {
+    const late = [];   // (its colliders: made once it stands where it does)
     const h = new THREE.Group(), tin = c => { const t = rep(tex.siding(), 1, 2.4); t.rotation = Math.PI / 2; t.center.set(.5, .5); return toon(c, { map: t }); }, roofs = ['#8a4a2e', '#6e7478', '#9a5a36'].map(c => tin(c)), mats = [tin('#8a5a3a'), tin('#8a8f94'), tin('#5d6639'), toon('#6b4a2e', { map: rep(tex.siding(), 1, 1.2) })], dirt = toon('#7a6a50');
     for (const [x, z, w, d, a] of [[0, -.6, 8, 5.5, .15], [-3.6, 2.2, 6, 4.5, -.2], [3.8, 2, 5.5, 5, .3], [-5.6, -2.4, 3.2, 2.6, .5], [5.2, -2.4, 3.6, 3, -.4]]) { const pt = box(w, .03, d, dirt, x, .015 + Math.abs(a) * .01, z); pt.rotation.y = a; h.add(pt); }
     for (const [x, z, w, d, hh] of [[-4.2, 2.2, 3.4, 2.8, 2.2], [.3, 3.4, 3, 2.6, 2.4], [4.4, 1.6, 2.8, 3, 2.1]]) { const m = mats[rnd() * mats.length | 0], s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = (rnd() - .5) * .25; h.add(s);
@@ -430,19 +437,19 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       if (rnd() < .5) { const lw = 1.4, sx = (rnd() < .5 ? -1 : 1) * (w / 2 + lw / 2); s.add(box(lw, hh * .7, d * .7, mats[3], sx, hh * .35, d * .1)); const lr = box(lw + .3, .05, d * .7 + .3, roofs[0], sx, hh * .72, d * .1); lr.rotation.z = Math.sign(sx) * -.25; s.add(lr); }   // a lean-to at its side
       s.add(box(.9, 1.85, .05, toon('#3a2a1e'), -w * .2, .93, -d / 2 - .03)); s.add(box(.7, .5, .05, toon('#c9b77a'), w * .25, 1.35, -d / 2 - .03));   // a door, a boarded window
       if (rnd() < .6) { s.add(box(.12, 1, .12, toon('#44484c'), w * .3, hh + .6, d * .2)); }                                                             // a stovepipe
-      hit(h, { hx: w / 2, hz: d / 2, h: hh + .2, kind: 'hard' }, i, x, z); }
+      late.push([{ hx: w / 2, hz: d / 2, h: hh + .2, kind: 'hard' }, x, z]); }
     const drum = new THREE.Group(); drum.position.set(.5, 0, -1.2); h.add(drum); drum.add(new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .85, 12), toon('#7b3326'))); drum.children[0].position.y = .43;
     const flame = new THREE.Mesh(new THREE.ConeGeometry(.24, .6, 7), new THREE.MeshBasicMaterial({ color: '#ffb040' })); flame.position.y = 1.05; drum.add(flame); const core = new THREE.Mesh(new THREE.ConeGeometry(.14, .4, 6), new THREE.MeshBasicMaterial({ color: '#fff0b0' })); core.position.y = .98; drum.add(core);
-    drum.userData.keep = true; hit(h, { hx: .32, hz: .32, h: .9, kind: 'hard' }, i, .5, -1.2);
+    drum.userData.keep = true; late.push([{ hx: .32, hz: .32, h: .9, kind: 'hard' }, .5, -1.2]);
     const sofa = new THREE.Group(), sm = toon('#6b4a3a'); sofa.position.set(2.6, 0, -1.6); sofa.rotation.y = -1.1; sofa.add(box(1.8, .4, .8, sm, 0, .3, 0)); sofa.add(box(1.8, .6, .2, sm, 0, .7, .32)); for (const x of [-.85, .85]) sofa.add(box(.18, .55, .8, sm, x, .45, 0)); h.add(sofa);
     for (let k = 0; k < 3; k++) { const t = new THREE.Mesh(new THREE.TorusGeometry(.32, .12, 6, 12), toon('#1d1e21')); t.rotation.x = Math.PI / 2; t.position.set(-6, .12 + k * .24, -2.4 + (k % 2) * .05); h.add(t); }
     for (let k = 0; k < 2; k++) { const pl = new THREE.Group(); pl.position.set(-2.2 + k * .2, .06 + k * .13, -2.8); for (let q = 0; q < 5; q++) pl.add(box(.1, .03, 1.2, toon('#9e7a4f'), -.5 + q * .25, 0, 0)); h.add(pl); }
     { const w = P.washing(rnd); w.group.position.set(-3.5, 0, -.6); h.add(w.group); }
-    if (rnd() < .7) { const old = CARS.makeCar(rnd() < .5 ? 'micro' : 'twostroke', ['#8a9a8c', '#b39b7a', '#7a6a5a'][rnd() * 3 | 0]); old.group.position.set(5.6, .1, -2.2); old.group.rotation.y = 1.3; old.wheels.forEach(w => { w.visible = false; }); h.add(old.group); hit(h, { hx: old.half[0], hz: old.half[1], h: 1.4, kind: 'hard' }, i, 5.6, -2.2); }
+    if (rnd() < .7) { const old = CARS.makeCar(rnd() < .5 ? 'micro' : 'twostroke', ['#8a9a8c', '#b39b7a', '#7a6a5a'][rnd() * 3 | 0]); old.group.position.set(5.6, .1, -2.2); old.group.rotation.y = 1.3; old.wheels.forEach(w => { w.visible = false; }); h.add(old.group); late.push([{ hx: old.half[0], hz: old.half[1], h: 1.4, kind: 'hard' }, 5.6, -2.2]); }
     // the fence along the road, broken: two runs, a gap, a board fallen
     for (const [x, len] of [[-5, 4], [4.8, 4.4]]) { const f = P.boardFence(len); f.group.position.set(x, 0, -5.4); f.group.rotation.y = Math.PI / 2 + (rnd() - .5) * .06; h.add(f.group); }
     { const fb = box(1.2, .9, .04, toon('#6b4a2e'), 1.2, .08, -5.2); fb.rotation.x = -1.45; h.add(fb); }
-    put(h, i, side * (PAVE + 7), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true); zone(h, 7.5, 6, 0, 1);
+    put(h, i, side * (PAVE + 7), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true); zone(h, 7.5, 6, 0, 1); for (const [sp, x, z] of late) hit(h, sp, i, x, z);
     for (const [x, len] of [[-5, 4], [4.8, 4.4]]) hit(h, { hx: len / 2, hz: .08, h: 1.4, kind: 'hard' }, i, x, -5.4);
     fires.push({ drum, flame, core }); show.shacks.push({ o: h, label: 'baraki', note: '15 × 12 m' });
     // the lads, standing round the fire on its far side (their faces to the road), facing it
@@ -477,7 +484,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       h.add(box(2.2, .14, 1, toon('#9a968c'), 0, .07, -3)); h.add(box(.5, .3, .3, lampP, 0, 3.67, -2.2));
       { const bn = box(1.6, .08, .4, toon('#9e7a4f'), 2.6, .45, -3.1); h.add(bn); for (const x of [1.95, 3.25]) h.add(box(.06, .45, .36, doorP, x, .22, -3.1)); }
       put(h, q.i, q.sd * (PAVE + 4.6), 0, q.sd > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true);
-      hit(h, { hx: 3.5, hz: 2.5, h: 3.5, kind: 'hard' }, q.i); zone(h, 4.6, 3.8, 0, -.5);
+      hit(h, { hx: 3.5, hz: 2.5, h: 3.5, kind: 'hard' }, q.i); zone(h, 4.6, 3.8, 0, -.5); floor(h, 0, -3, 1.1, .5, .14);
       q.door = h.localToWorld(new THREE.Vector3(0, 0, -3.4)); q.lamp = h.localToWorld(new THREE.Vector3(0, 3.9, -2.2));
       show.shacks.push({ o: h, label: 'posterunek policji', note: '7 × 5 m' }); }
     // the bike shops: a workshop with a brick footing, a corrugated roof, a striped awning, a big sign, a shop window with a wheel in it,
@@ -810,6 +817,6 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
   const bins = binsO.map(b => b.getWorldPosition(new THREE.Vector3()));
-  return { things, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  return { things, floorAt, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
