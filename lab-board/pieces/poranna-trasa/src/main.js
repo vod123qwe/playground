@@ -331,6 +331,7 @@ addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') &&
   if (on('view', e.code)) { if (foot.active) foot.toggleView(); else setCam((camI + 1) % CAMS.length); }
   if (on('ink', e.code)) look.set({ ink: (look.S.ink + 1) % INKS.length });
   if (on('help', e.code)) toggleKeys();
+  if (on('chat', e.code) && LV2.offer && liveTake()) { e.stopImmediatePropagation(); return; }
   if (on('snap', e.code) && LV && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !map.isOpen && !fin.isOpen) snapJob();
   if (on('map', e.code) && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !garage.isOpen && !foot.fighting) openMap();
   if (on('inv', e.code) && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !foot.fighting) garage.toggle();
@@ -1189,7 +1190,7 @@ const modes = createModes({ THREE, scene, track, audio, game: { get B() { return
 // push; at the finish the paper (paper.js), the stars, the best kept, the save. At home: no gate, no clock (riding free, as before).
 const lvHud = document.createElement('div'); lvHud.id = 'lvhud'; document.body.appendChild(lvHud);
 { const st = document.createElement('style'); st.textContent = `#lvhud { position: fixed; z-index: 4; left: 50%; top: 10px; transform: translateX(-50%); display: none; gap: 12px; align-items: center; white-space: nowrap; font: 16px/1.2 PTPix, ui-monospace, monospace; color: #f6f3ea;
-  border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 2px 8px; pointer-events: none; } #lvhud.on { display: flex; } #lvhud b { color: #efc970; font-weight: normal; } #lvhud .job { color: #8fc3f0; } #lvhud { flex-wrap: wrap; justify-content: center; max-width: 92vw; } #lvhud .w { color: #cf5a3e; animation: lvw .5s steps(1) infinite; } @keyframes lvw { 50% { opacity: .3; } }`; document.head.appendChild(st); }
+  border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 2px 8px; pointer-events: none; } #lvhud.on { display: flex; } #lvhud b { color: #efc970; font-weight: normal; } #lvhud .job { color: #8fc3f0; } #lvhud .live { color: #cf5a3e; animation: lvw 1s steps(1) infinite; } #radio em.take { display: block; font-style: normal; color: #9fd27a; margin-top: 2px; } #lvhud { flex-wrap: wrap; justify-content: center; max-width: 92vw; } #lvhud .w { color: #cf5a3e; animation: lvw .5s steps(1) infinite; } @keyframes lvw { 50% { opacity: .3; } }`; document.head.appendChild(st); }
 const RUN = { t: 0, go: false, cp: 0, cps: [], done: false, gate: [], hits: [], chk: 0 };
 const seeded = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -1215,7 +1216,7 @@ function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
   const iJ = track.home.iJ, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
-  bindJobs(); Object.assign(RAD, { fin: false, cool: 6, idle: 40 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
+  bindJobs(); Object.assign(RAD, { fin: false, cool: 6, idle: 40 }); if (LV2.cur?.box) scene.remove(LV2.cur.box); Object.assign(LV2, { offer: null, cur: null, next: 30 + Math.random() * 20 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
   flash(`${L.name}: wyjedź z domu i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
 function goHome() { if (fin.isOpen) fin.close(); LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
@@ -1237,22 +1238,44 @@ function stepJobs() { if (!LV || RUN.done) return; const me = foot.active ? foot
     if (k === 'szarlotka') { if ((B.falls || 0) > R.falls0) { jobEnd(R, false); continue; } if (R.door && Math.hypot(me.x - R.door.p.x, me.z - R.door.p.z) < 5 && sp < 2) jobEnd(R, true); }
     if (k === 'skrzynki' && (RUN.log || []).filter(e => e.kind === 'kick_mailbox').length >= 3) { jobEnd(R, true); if (quests.police) quests.police.rep = (quests.police.rep || 0) - 1; } } }
 // the camera (Q): a photo through the game's eye; for the photo job, its subject near and before you
-function snapJob() { const R = JOBRUN.find(q => !q.done && q.j.kind === 'foto'); audio.play('ui'); const img = photo(camera); if (!R) { flash('Pstryk! (żadne zlecenie nie czeka na zdjęcie)'); return; }
+function snapJob() { const R = JOBRUN.find(q => !q.done && q.j.kind === 'foto'); audio.play('ui'); const img = photo(camera);
+  if (LV2.cur?.kind === 'dog') { const me = foot.active ? foot.me : B, fy = new THREE.Vector3(Math.sin(me.yaw), 0, Math.cos(me.yaw)); if (dogs.dogs.some(d => { const w = new THREE.Vector3(d.x - me.x, 0, d.z - me.z), l = w.length(); return l < 16 && w.normalize().dot(fy) > .55; })) { LV2.cur.snapped = true; (RUN.shots ||= []).push({ what: 'pies na trasie, z telefonu redakcji', img }); return; } }
+  if (!R) { flash('Pstryk! (żadne zlecenie nie czeka na zdjęcie)'); return; }
   const f = new THREE.Vector3(); camera.getWorldDirection(f); const cand = R.j.k === 'dog' ? dogs.dogs.map(d => new THREE.Vector3(d.x, B.y + .5, d.z)) : R.at ? [R.at] : [];
   const me = foot.active ? foot.me : B, fy = new THREE.Vector3(Math.sin(me.yaw), 0, Math.cos(me.yaw)), okAt = cand.find(P => { const v = P.clone().sub(camera.position), l = v.length(), w = new THREE.Vector3(P.x - me.x, 0, P.z - me.z), lw = w.length(); return (l < 24 && v.normalize().dot(f) > .75) || (lw < 14 && w.normalize().dot(fy) > .6); });
   if (!okAt) { flash('Pstryk! Ale to nie to. Podjedź bliżej i wyceluj w ' + (R.j.aim || R.j.what.split(',')[0])); return; }
   R.img = img; (RUN.shots ||= []).push({ what: R.j.what, img }); jobEnd(R, true); }
 // the marks over the jobs' targets
-function jobMarks() { const out = []; for (const R of JOBRUN) { if (R.done) continue; if (R.door) out.push({ p: new THREE.Vector3(R.door.p.x, R.door.p.y + 3.4, R.door.p.z), s: 'v', col: '#efc970' }); if (R.at) out.push({ p: R.at.clone().setY(R.at.y + 4), s: 'v', col: '#8fc3f0' }); } return out; }
+function jobMarks() { const out = []; const J = LV2.cur; if (J) { if (J.box) out.push({ p: J.box.position.clone().setY(J.box.position.y + 2.2), s: 'v', col: '#cf5a3e' }); if (J.door && (J.kind === 'door' || J.got)) out.push({ p: new THREE.Vector3(J.door.p.x, J.door.p.y + 3.4, J.door.p.z), s: 'v', col: '#cf5a3e' }); } for (const R of JOBRUN) { if (R.done) continue; if (R.door) out.push({ p: new THREE.Vector3(R.door.p.x, R.door.p.y + 3.4, R.door.p.z), s: 'v', col: '#efc970' }); if (R.at) out.push({ p: R.at.clone().setY(R.at.y + 4), s: 'v', col: '#8fc3f0' }); } return out; }
 // ---------- Janusz on the earpiece (bought from Żaneta): his voice in a box under the bike computer, typed out. A sprint after a while: his
 // pep talk and a turbo (more push, less breath) for a few seconds; a car close behind; a fall; a checkpoint; the finish near; his talk now and then ----------
 const RAD = { t: 0, cool: 6, idle: 50, turbo: 0, sprint: false, fin: false, behind: 0, fall: 0, face: null, el: null, typ: 0 };
 { const st = document.createElement('style'); st.textContent = `#radio { position: fixed; z-index: 4; left: 12px; top: 128px; width: min(360px, 60vw); display: none; gap: 8px; align-items: flex-start; font: 16px/20px PTPix, ui-monospace, monospace; color: #f6f3ea; border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 4px 8px; pointer-events: none; }
   #radio.on { display: flex; } #radio img { width: 40px; height: 40px; image-rendering: pixelated; border: 2px solid #17181b; flex: none; } #radio b { display: block; font-weight: normal; color: #efc970; } #radio b i { display: inline-block; width: 8px; height: 8px; background: #cf5a3e; margin-right: 6px; animation: rad-on .6s steps(1) infinite; } @keyframes rad-on { 50% { opacity: 0; } }
   #radio.turbo { border-image-source: var(--px-sel); color: #17181b; } #radio.turbo b { color: #8e2e25; } @media (max-width: 640px) { #radio { top: 96px; } }`; document.head.appendChild(st); }
-function radioSay(kind) { const S = LVM.load(); if (!S.owned?.sluchawka) return; if (!RAD.el) { RAD.el = document.createElement('div'); RAD.el.id = 'radio'; document.body.appendChild(RAD.el); }
-  if (!RAD.face) { const f = faceOf('janusz'); if (f) RAD.face = f.toDataURL(); } const t = pickOf(JB.RADIO[kind]); RAD.el.innerHTML = `${RAD.face ? `<img src="${RAD.face}" alt="">` : ''}<div><b><i></i>SŁUCHAWKA · JANUSZ</b><span></span></div>`;
+function radioSay(kind, line, who = 'janusz', extra = '') { const S = LVM.load(); if (!S.owned?.sluchawka) return; if (!RAD.el) { RAD.el = document.createElement('div'); RAD.el.id = 'radio'; document.body.appendChild(RAD.el); }
+  RAD.faces ||= {}; if (!RAD.faces[who]) { const f = faceOf(JB.PERSONAS[who]?.face || who); if (f) RAD.faces[who] = f.toDataURL(); } const t = line || pickOf(JB.RADIO[kind]), fc = RAD.faces[who]; RAD.el.innerHTML = `${fc ? `<img src="${fc}" alt="">` : ''}<div><b><i></i>SŁUCHAWKA · ${(JB.PERSONAS[who]?.name || 'JANUSZ').toUpperCase()}</b><span></span>${extra}</div>`;
   RAD.el.classList.add('on'); RAD.el.classList.toggle('turbo', kind === 'turbo'); const sp = RAD.el.querySelector('span'); clearInterval(RAD.typ); let n = 0; RAD.typ = setInterval(() => { n += 2; sp.textContent = t.slice(0, n); if (n >= t.length) clearInterval(RAD.typ); }, 35); RAD.t = 2.6 + t.length * .045; }
+// ---------- the calls on the earpiece (jobs.js LIVE): now and then someone with something for right now; T takes it, then the clock ----------
+const LV2 = { offer: null, cur: null, next: 35, el: null };
+function liveOffer() { const L = JB.LIVE.filter(q => q.kind !== 'rush' || RUN.cp < RUN.cps.length - 1), o = pickOf(L); LV2.offer = { ...o, until: 8 }; radioSay('', o.say, o.who, `<em class="take">${keysOf('chat')}: BIORĘ · 8 S</em>`); RAD.t = 8.5; audio.play('ui'); }
+function liveTake() { const o = LV2.offer; if (!o) return false; LV2.offer = null; const me = foot.active ? foot.me : B, J = { ...o, left: o.t, log0: (RUN.log || []).length };
+  if (o.kind === 'door' || o.kind === 'parcel') { const ahead = track.doors.filter(d => { const dx = d.p.x - me.x, dz = d.p.z - me.z, l = Math.hypot(dx, dz); return l > 25 && l < 120 && (dx * Math.sin(me.yaw) + dz * Math.cos(me.yaw)) / l > .3; }); J.door = ahead[Math.random() * ahead.length | 0] || track.doors[0]; }
+  if (o.kind === 'parcel') { const f = new THREE.Vector3(Math.sin(me.yaw), 0, Math.cos(me.yaw)), p = new THREE.Vector3(me.x, 0, me.z).addScaledVector(f, 18), q = track.probe(p.x, p.z, B.hint); J.box = new THREE.Mesh(new THREE.BoxGeometry(.4, .3, .32), toon('#a07a4a')); J.box.position.set(p.x, q.y + .15, p.z); scene.add(J.box); J.got = false; }
+  if (o.kind === 'rush') J.cp = RUN.cp;
+  LV2.cur = J; radioSay('', 'Dobra, to leć! ' + (o.kind === 'dog' ? 'Aparat pod ' + keysOf('snap') + '.' : ''), o.who); return true; }
+function liveEnd(ok) { const J = LV2.cur; if (!J) return; LV2.cur = null; if (J.box) scene.remove(J.box); logEv('live', B.x, B.z, { who: J.who, ok, what: J.kind, pay: ok ? J.pay : 0 });
+  if (ok) { B.points += J.pay; audio.play('coin'); radioSay('', pickOf(JB.LIVE_OK) + ` +${J.pay} zł`, J.who); } else radioSay('', pickOf(JB.LIVE_LATE), J.who); }
+function stepLive(dt) { if (!LV || RUN.done || !LVM.load().owned?.sluchawka) { if (LV2.cur) liveEnd(false); return; } const me = foot.active ? foot.me : B, sp = Math.abs(foot.active ? foot.me.vf || 0 : B.v);
+  if (LV2.offer && (LV2.offer.until -= dt) <= 0) { LV2.offer = null; RAD.el?.classList.remove('on'); }
+  if (!LV2.offer && !LV2.cur && RUN.go && (LV2.next -= dt) <= 0 && RAD.t <= 0) { LV2.next = 45 + Math.random() * 40; liveOffer(); }
+  const J = LV2.cur; if (!J) return; if ((J.left -= dt) <= 0) { liveEnd(false); return; } const evs = (RUN.log || []).slice(J.log0);
+  if (J.kind === 'door' && Math.hypot(me.x - J.door.p.x, me.z - J.door.p.z) < 5 && sp < 2.2) liveEnd(true);
+  if (J.kind === 'parcel') { if (!J.got && Math.hypot(me.x - J.box.position.x, me.z - J.box.position.z) < 1.8) { J.got = true; scene.remove(J.box); J.box = null; audio.play('pick'); flash('Paczuszka w torbie. Teraz pod drzwi ze znaczkiem.'); } else if (J.got && Math.hypot(me.x - J.door.p.x, me.z - J.door.p.z) < 5 && sp < 2.2) liveEnd(true); }
+  if (J.kind === 'bike' && evs.some(e => e.kind === 'kick_bike')) liveEnd(true);
+  if (J.kind === 'trick' && evs.some(e => e.kind === 'trick')) liveEnd(true);
+  if (J.kind === 'rush' && RUN.cp > J.cp) liveEnd(true);
+  if (J.kind === 'dog' && J.snapped) liveEnd(true); }
 function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.classList.remove('on'); RAD.turbo = Math.max(0, RAD.turbo - dt); RAD.cool -= dt; RAD.behind -= dt; RAD.fall -= dt;
   if (!LVM.load().owned?.sluchawka || foot.active || menu.open) { RAD.sprint = !!inp.sprint; return; }
   if (inp.sprint && !RAD.sprint && RAD.cool <= 0 && B.v > 3) { RAD.turbo = 3.5; RAD.cool = 22; radioSay('turbo'); audio.play('trick', { vol: .4 }); } RAD.sprint = !!inp.sprint;
@@ -1265,6 +1288,7 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   { const g = !!quests.gang?.chase, sr = !!quests.siren; if (g && !RUN.gangOn) logEv('gang', B.x, B.z); if (sr && !RUN.sirenOn) logEv('chase', B.x, B.z); RUN.gangOn = g; RUN.sirenOn = sr; }
   { const st = quests.police?.stops || 0; if (st > (RUN.stops ?? st)) logEv('police', B.x, B.z); RUN.stops = st; RUN.maxStreak = Math.max(RUN.maxStreak || 0, B.streak || 0); }
   if (RUN.snaps?.length && RUN.t >= RUN.snaps[0].at) { const q = RUN.snaps.shift(); try { q.e.img = photo(camera); } catch { } }
+  stepLive(dt);
   if ((RUN.chk -= dt) > 0) return; RUN.chk = .1; stepJobs();
   const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
   const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;
@@ -1272,7 +1296,7 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   let rest = ahead(q.i, RUN.cps[RUN.cp]); for (let k = RUN.cp + 1; k < RUN.cps.length; k++) rest += ahead(RUN.cps[k - 1], RUN.cps[k]);
   if (rest < 130 && !RAD.fin && RUN.go) { RAD.fin = true; radioSay('finish'); }
   const aNow = ahead(q.i, RUN.cps[RUN.cp]); if (onRoad) RUN.minA = Math.min(RUN.minA, aNow); const wrong = onRoad && aNow > RUN.minA + 25;
-  lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>${JOBRUN.filter(q => !q.done).map(q => `<span class="job">▸ ${JB.lineOf(q.j)}${q.door ? ' ' + Math.round(Math.hypot(me.x - q.door.p.x, me.z - q.door.p.z)) + ' M' : ''}</span>`).join('')}`; }
+  lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>${LV2.cur ? `<span class="live">☎ ${LV2.cur.kind === 'parcel' && !LV2.cur.got ? 'PACZUSZKA NA DRODZE' : JB.PERSONAS[LV2.cur.who]?.name.toUpperCase()} · ${Math.ceil(LV2.cur.left)} S</span>` : ''}${JOBRUN.filter(q => !q.done).map(q => `<span class="job">▸ ${JB.lineOf(q.j)}${q.door ? ' ' + Math.round(Math.hypot(me.x - q.door.p.x, me.z - q.door.p.z)) + ' M' : ''}</span>`).join('')}`; }
 function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
   const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0 };
   const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
@@ -1343,6 +1367,7 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   const WHO = { stop: 'Pan z przystanku', shacks: 'Ktoś zza płotu', lump: 'Pan spod sklepu', trzepak: 'Dzieciak spod trzepaka', przyczepa: 'Pan z przyczepy', budowa: 'Robotnik z budowy', dzialki: 'Działkowiec', kapliczka: 'Pani spod kapliczki', sasiad: 'Sąsiad z ogrodem', sasiadka: 'Sąsiadka zza płotu', mama: 'Mama', tata: 'Tata', brat: 'Brat' };
   const heard = []; for (const e of log) if (e.kind === 'said' && e.text && !heard.some(h => h.who === e.who) && heard.length < 3) heard.push({ who: e.who, text: e.text, name: CAST[e.who]?.who || WHO[e.who] || 'Ktoś przy drodze', img: faceOf(e.who) });
   const counts = {}; for (const e of log) counts[e.kind] = (counts[e.kind] || 0) + 1;
+  for (const e of log) if (e.kind === 'live') briefs.unshift(`Telefon na trasie od: ${JB.PERSONAS[e.who]?.name || 'ktoś'}. ${e.ok ? 'Załatwione, +' + e.pay + ' zł.' : 'Nie zdążył.'}`);
   const winsOn = track.windows.filter(w => onWay(w.i)).length || 1, broken = track.windows.filter(w => w.broken && onWay(w.i)).length;
   const badges = badgesOf({ windows: r.windows, winPct: broken / winsOn, mailbox: counts.kick_mailbox || 0, ped: counts.kick_ped || 0, bikes: (counts.kick_bike || 0) + (counts.kick_gangm || 0), gang: counts.gang || 0, kmh: Math.round(trip.max * 3.6), streak: RUN.maxStreak || 0, tricks: counts.trick || 0, dog: counts.kick_dog || 0, granny: counts.kick_granny || 0, falls: r.falls, goalPapers: r.delivered >= L.goal.papers });
   const fin0 = photo(camera);
@@ -1475,5 +1500,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };

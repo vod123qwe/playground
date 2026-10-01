@@ -17,6 +17,7 @@ export const PERSONAS = {
   zaneta: { name: 'Pani Żaneta', role: 'ma znajomości na mieście', tel: '44-77', face: 'img:zaneta',
     hello: ['No słucham. Tylko szybko, bo mi kawa stygnie.', 'Czego, kochaniutki? Ja tu interesy prowadzę, a nie poczekalnię.', 'Halo. Jak w sprawie długu, to mnie nie ma. A jak w interesach, to jestem.', 'Mówi Żaneta. Słucham, ale nie obiecuję, że usłyszę.',
       'No i co się tak gapisz w tę słuchawkę? Gadaj, czego trzeba.', 'Ten od rowerów jeszcze żyje? Nieważne. Nie mów mu, że pytałam. Czego chcesz?'] },
+  brat: { name: 'Brat', role: 'spod kosza', tel: 'domowy', face: 'brat' },
   hela: { name: 'Pani Hela', role: 'papierniczy na rogu', tel: '20-20', face: 'key:shopper',
     hello: ['Papierniczy, Hela przy telefonie. Zeszyty, długopisy, znaczki. I plotki, ale te za darmo.', 'Słucham, kochanieńki. Notesik się skończył? Mam takie, że się ich nie da zapisać do końca.'] } };
 
@@ -30,6 +31,16 @@ export const RADIO = {
   finish: ['Ostatnia prosta! Tu się wygrywa wyścigi i traci zęby!', 'Meta blisko! Ręce na kierownicy, uśmiech do zdjęcia!', 'Jeszcze chwila! Tak finiszowałem pod Maciejowicami. Bez zęba, ale finiszowałem!'],
   idle: ['Wiesz, młody, kiedyś pewna pani w czerwonej chustce powiedziała, że jestem za szybki. Do dziś nie wiem, o rower jej chodziło czy o co.', 'Słyszysz to? To Mietek. Znowu je moje pączki.', 'Jak ktoś ci powie kochaniutki takim głosem jak kawa bez cukru, to uciekaj. Albo nie uciekaj. Ja nie uciekłem.',
     'Pamiętaj: nie ma złej pogody, są tylko słabe opony.', 'Kiedyś to były rowery. Stal. I kobiety, co sprowadzały części zza granicy. Nieważne. Jedź.', 'Gdybym miał twoje nogi i moją głowę, to byłbym... no, mną, ale młodszym.', 'Halo? Słyszysz mnie? Bo ja siebie słabo. Mietek, zabierz tę szlifierkę!'] };
+
+// the calls on the earpiece while you ride: someone needs something now. T takes it; then a clock. kind: what it asks (main.js does it)
+export const LIVE = [
+  { kind: 'door', who: 'babcia', t: 50, pay: 12, say: 'Kochanie, sąsiadka spod tego domu ze znaczkiem zapomniała gazety. Podjedź i zatrzymaj się przy drzwiach, zanim wyjdzie do kościoła!' },
+  { kind: 'dog', who: 'redaktor', t: 60, pay: 15, say: 'Mamy dziurę na drugiej stronie! Pstryknij mi psa, jakiegokolwiek. Masz minutę. Aparat pod Q!' },
+  { kind: 'bike', who: 'beczka', t: 45, pay: 18, say: 'Młody, jedzie tam taki jeden w kolarskich gaciach, co nam wisi kasę. Zrzuć go z roweru. Szybko!' },
+  { kind: 'parcel', who: 'zaneta', t: 70, pay: 22, say: 'Kochaniutki, na drodze przed tobą leży paczuszka. Podnieś, dowieź pod drzwi ze znaczkiem. I nie otwieraj, bo się obrażę.' },
+  { kind: 'rush', who: 'redaktor', t: 40, pay: 15, say: 'Zamykamy numer! Masz czterdzieści sekund do najbliższego punktu kontrolnego, inaczej druk bez ciebie!' },
+  { kind: 'trick', who: 'brat', t: 60, pay: 8, say: 'Ej, to ja! Mam kamerę od kolegi. Zrób jakiś trik na skoczni, nagram cię! Nie śmiej się, minutę mam baterii.' }];
+export const LIVE_OK = ['Dobra robota. Kasa poszła.', 'O, umiesz. Zapłacone.', 'No proszę. Należy się.'], LIVE_LATE = ['Za późno. Nieważne.', 'Nie zdążyłeś. Trudno, następnym razem.', 'No i po sprawie. Bez ciebie.'];
 
 // the jobs. kind: what it asks; giver; pay; text for the ad and the call; bind (its target on the way), step (watch the run)
 export const JOBS = {
