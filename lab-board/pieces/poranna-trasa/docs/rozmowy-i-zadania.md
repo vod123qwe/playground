@@ -37,3 +37,15 @@ Nagrody nie tylko w złotówkach: **fanty** (części, drobiazgi), paczki gazet,
 - **ukryte rzeczy (easter eggi)**: coś za domem, otwarty garaż z nowymi przerzutkami, które trzeba zakosić; wskazówki tylko z plotek u ludzi, z którymi masz dobre relacje;
 - policja: złe uczynki (zatrzymana torebka, szyby) podnoszą „sławę”, która ściąga patrol (koniec przejazdu przy trzecim zatrzymaniu);
 - pieszo: wątki, które żyją (ktoś cię śledzi, ktoś woła na pomoc z podwórka, kłótnia sąsiadów do rozstrzygnięcia).
+
+## Policja (pierwsza wersja zbudowana)
+
+- **Sława**: złe uczynki ją podnoszą (zrzuceni rowerzyści, pobici przechodnie, szyby, zatrzymana torebka, kłamstwa), dobre obniżają (oddanie na posterunek, pomoc); sama powoli opada. Widać ją pod portmonetką.
+- **Patrol**: przy wyższej sławie, rzadko (co kilka minut), radiowóz dojeżdża z tyłu na sygnale; zatrzymaj się i pogadaj albo uciekaj (sława rośnie). Rozmowa: mandat, pouczenie, próba przekupstwa gazetą, wymówki, kablowanie zamiast mandatu. Trzecie zatrzymanie kończy przejazd.
+- **Posterunek**: można wejść i pogadać zawsze. Zgłosić, co wiesz (np. kto zamówił szybę, kto zbiera rowery) za kasę i dobrą opinię; skutek widać w świecie (radiowóz pod domem, obrażona postać, zemsta ekipy). Zadania z tablicy: list gończy za rowerzystą, wezwania do rozniesienia.
+
+## Ścieżka postaci i grupy (kierunek na później)
+
+- Postać z czasem wybiera stronę: grupy mają między sobą zgrzyty (policja, ekipa spod beczki, gang rowerowy, lumpy z przystanków i ławek); przysługa jednym psuje relacje z drugimi.
+- **Gang rowerowy**: rzadkie zdarzenie, nie co chwilę. Goni cię kilku na rowerach, gdy pobijesz ich kolegę albo jeździsz po ich rewirze (rewir oznaczony, np. graffiti na płotach, i zapamiętany).
+- Grupy zawsze fikcyjne, bez odniesień etnicznych.

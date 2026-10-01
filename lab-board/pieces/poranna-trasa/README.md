@@ -526,3 +526,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - sprawy rozdaje „reżyser”: na starcie nikt nie ma sprawy, pierwsza pojawia się po chwili jazdy, potem mniej więcej co minutę, zawsze u kogoś przed tobą (50–220 m), naraz najwyżej dwie
 - sprawa minięta (ktoś został za tobą) przepada; później pojawi się inna, dalej na trasie
+
+## Wersja 51: policja
+
+- sława: rośnie za złe uczynki (zrzuceni rowerzyści, pobici przechodnie, szyby, zatrzymana torebka, kłamstwa), maleje za dobre (posterunek, mandat przyjęty z pokorą, pomoc); sama powoli opada; pod portmonetką lampka i kropki (od trzech może przyjechać patrol), lampka miga na niebiesko-czerwono, gdy patrol jedzie za tobą
+- patrol: rzadko (co kilka minut), przy sławie od 3; radiowóz dojeżdża z tyłu na sygnale, u góry „POLICJA! ZWOLNIJ I STAŃ”; zatrzymaj się (podjeżdża obok) albo uciekaj (po 14 s ucieczki odpuszcza, sława rośnie)
+- rozmowa z posterunkowym Kapustą: przeprosiny (mandat), „to mój brat bliźniak”, gazeta jako łapówka, albo „mogę coś zgłosić?” zamiast mandatu; trzecie zatrzymanie kończy trasę (gra od nowa)
+- posterunek: zawsze ktoś na dyżurce (pogadaj przy drzwiach): zgłoś, co wiesz (kto zamawia szyby, kto skupuje kradzione rowery) za kasę i dobrą opinię; skutek widać: radiowóz pod domem, obrażona postać („KABEL!”, butelki), ekipa spod beczki raz się mści (wybiega do bójki)
+- tablica na posterunku: list gończy (pierwszy rowerzysta na drodze dostaje czerwoną strzałkę; zrzuć go, zapłata przez radio, bez wracania), wezwania do rozniesienia (trzy domy, każdy reaguje po swojemu)
+- plan grup i gangu rowerowego: docs/rozmowy-i-zadania.md

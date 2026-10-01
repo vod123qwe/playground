@@ -133,7 +133,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
         story: { enter: () => { if (!mowerOf(hi)) mowing(hi); }, say: `WIDZISZ TEN DOM TAM DALEJ? MIESZKA TAM ${nb}. TRZY LATA TEMU POŻYCZYŁ ODE MNIE KOSIARKĘ. WCZORAJ WIDZĘ JĄ U NIEGO W OGRÓDKU. POMALOWANĄ NA RÓŻOWO. O, PATRZ, ZNOWU NIĄ KOSI! MYŚLI, ŻE SIĘ NIE POZNAM.`, opts: [
           { t: 'I CO JA MAM Z TYM ZROBIĆ?', go: 'ask' }, { t: 'MOŻE PAN GO PO PROSTU ZAPYTA?', go: 'never' }] },
         never: { say: `ZAPYTAĆ?! Z ${NB[3]}?! NIE ROZMAWIAM Z NIM OD WESELA SZWAGRA. ZJADŁ MI SCHABOWEGO. Z MOJEGO TALERZA. JAK POSZEDŁEM PO SÓL.`, opts: [{ t: 'NO DOBRA. TO CO MAM ZROBIĆ?', go: 'ask' }] },
-        ask: { say: 'WYBIJ MU SZYBĘ GAZETĄ. TAKĄ OSTRZEGAWCZĄ. DAM DYSZKĘ. A JAK ZAPYTA, TO MNIE NIE ZNASZ. MNIE TU NIE BYŁO. JA LEŻĘ.', opts: [job, snitch, no] } });
+        ask: { enter: () => know('szyba:' + o.name, `${o.name} ZAMAWIA WYBIJANIE SZYB U ${NB[1]}.`, o), say: 'WYBIJ MU SZYBĘ GAZETĄ. TAKĄ OSTRZEGAWCZĄ. DAM DYSZKĘ. A JAK ZAPYTA, TO MNIE NIE ZNASZ. MNIE TU NIE BYŁO. JA LEŻĘ.', opts: [job, snitch, no] } });
     },
     // papers for the lads' fire
     beczka(o, r) {
@@ -160,7 +160,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
         pay: { say: 'KASY NIE MAMY. NIGDY NIE MAMY. ALE MAKULATURY CAŁY BARAK. DOSTANIESZ GAZETY DO ROZWOŻENIA. DUŻO GAZET.', opts: [
           { t: 'NIECH BĘDZIE.', bye: 'TYLKO ŻEBY NIKT NIE WIDZIAŁ!', act: () => take() },
           { t: 'NIE, DZIĘKI.', act: () => { o.cool = 60; return null; } }] } });
-      function take() { done(o); o.cool = 1e9; const e = { kind: 'rowery', o, r, n: 0, need, text: () => `ROWERY DLA EKIPY ${e.n}/${need}`, target: () => null };
+      function take() { know('ekipa', 'EKIPA SPOD BECZKI SKUPUJE KRADZIONE ROWERY.', o); done(o); o.cool = 1e9; const e = { kind: 'rowery', o, r, n: 0, need, text: () => `ROWERY DLA EKIPY ${e.n}/${need}`, target: () => null };
         active.push(e); game.flash('Zrzuć rowerzystów: kopniak z roweru, cios pieszo albo wjazd w nich.'); return null; }
     },
     // a paper for someone waiting for the bus
@@ -341,13 +341,105 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
 
   function remove(e) { const i = active.indexOf(e); if (i >= 0) active.splice(i, 1); }
 
+  // ---------- the police: fame, the patrol, the station (telling on people, its board of jobs) ----------
+  // fame: bad deeds raise it, good ones lower it, it falls slowly by itself. At 3 or more, now and then (minutes apart) a patrol car comes
+  // up behind on its lights: stop and talk (a fine, a warning, a paper as a bribe, an excuse, or telling on someone instead), or ride
+  // on (fame up; it gives up after a while). The third time stopped: the run is over. At the station: tell what you know (who asked
+  // for a window, who takes bikes) for money and their goodwill, the one told on sees to it (a police car at their house, a grudge, the
+  // lads' revenge); jobs from its board: a wanted cyclist, summonses to take round.
+  const PO = { fameT: 0, car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null };
+  function policeCar() { const c = track.cars.makeCar('saloon', '#f1f0ea'), g = c.group, [hw, hl] = c.half, box = new THREE.Box3().setFromObject(g), top = box.max.y;
+    const M = col => new THREE.MeshBasicMaterial({ color: col }), stripe = new THREE.MeshToonMaterial({ color: '#2f5aa0' });
+    for (const sd of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(.02, .16, hl * 1.7), stripe); st.position.set(sd * (hw + .012), (box.min.y + top) * .42, 0); g.add(st); }
+    const red = new THREE.Mesh(new THREE.BoxGeometry(.32, .1, .2), M('#e0473a')), blue = new THREE.Mesh(new THREE.BoxGeometry(.32, .1, .2), M('#3d7be0')); red.position.set(-.17, top + .05, 0); blue.position.set(.17, top + .05, 0); g.add(red, blue);
+    return { c, g, red, blue, flash(t, on) { const k = on ? ((t * 4) | 0) % 2 : -1; red.material.color.set(k === 0 ? '#ff5a4a' : '#5e1c17'); blue.material.color.set(k === 1 ? '#5a9aff' : '#1d2f5e'); } }; }
+  const along = (s, d) => { const len = track.N * track.ds, w = ((s % len) + len) % len, f = w / track.ds, i0 = Math.floor(f) % track.N, i1 = (i0 + 1) % track.N, t = f - Math.floor(f), A = track.S[i0], Bq = track.S[i1];
+    return { x: A.p.x + (Bq.p.x - A.p.x) * t + A.r.x * d, z: A.p.z + (Bq.p.z - A.p.z) * t + A.r.z * d, f: A.f, i: i0 }; };
+  const wrapD = (a, b) => { const len = track.N * track.ds; let d = (a - b) % len; if (d > len / 2) d -= len; if (d < -len / 2) d += len; return d; };
+  function stepPolice(dt, R) {
+    game.fame(-dt / 70); PO.cool -= dt;
+    if (PO.job?.kind === 'gonczy' && (!PO.job.b || !PO.job.b.on)) { const b = (game.traffic?.bikes || []).find(x => x.r && x.on && !x.fall); if (b && b !== PO.job.b) { if (PO.job.b) PO.job.b.wanted = false; PO.job.b = b; b.wanted = true; } }
+    for (const pk of PO.parked) { pk.t -= dt; pk.car.flash(performance.now() / 1000, pk.t > 0); if (pk.t <= -30) { pk.car.g.parent?.remove(pk.car.g); pk.gone = true; } } PO.parked = PO.parked.filter(p => !p.gone);
+    const P0 = PO.car;
+    if (!P0) { if (game.fameNow() >= 3 && PO.cool <= 0 && !R.foot && R.v > 2 && !talk.isOpen) {   // a patrol, from behind
+        const q = track.probe(R.x, R.z, -1), dir = Math.sign(Math.sin(R.yaw) * q.f.x + Math.cos(R.yaw) * q.f.z) || 1, car = policeCar(); scene().add(car.g);
+        PO.car = { car, s: q.s - dir * 55, dir, d: THREE.MathUtils.clamp(q.d, -1.9, 1.9), v: R.v + 4, stage: 'chase', run: 0, t: 0 }; game.flash('Policja! Zatrzymaj się (zwolnij i stań).'); }
+      return; }
+    const now = performance.now() / 1000, q = track.probe(R.x, R.z, -1), gap = wrapD(q.s - P0.s, 0) * P0.dir; P0.t += dt; P0.car.flash(now, P0.stage !== 'leave');
+    if (P0.stage === 'chase') { const want = Math.max(0, (gap - 7) * 1.4 + R.v); P0.v += (Math.min(17, want) - P0.v) * Math.min(1, dt * 2); P0.d += (THREE.MathUtils.clamp(q.d, -1.9, 1.9) - P0.d) * Math.min(1, dt * 1.5);
+      if (gap < 14 && R.v < 1.2 && !talk.isOpen && !R.foot) { P0.stage = 'stop'; P0.v = 0; stopTalk(P0); }
+      else if (gap < 30) { P0.run += R.v > 1.5 ? dt : 0; if (P0.run > 14) { P0.stage = 'leave'; game.fame(2); game.flash('Uciekłeś policji. Sława rośnie.'); } }
+      if (P0.t > 70) { P0.stage = 'leave'; } }
+    else if (P0.stage === 'stop') { P0.v = 0; const ts = q.s - P0.dir * 3.2, k = Math.min(1, dt * 1.8); P0.s += wrapD(ts, P0.s) * k; P0.d += ((q.d - (Math.sign(q.d) || 1) * 2.5) - P0.d) * k;   // (pulls up beside him, on the road side)
+      if (!talk.isOpen && P0.t > 1) { P0.stage = 'leave'; } }
+    else { P0.v += (15 - P0.v) * Math.min(1, dt); P0.d += ((P0.dir > 0 ? 1.75 : -1.75) - P0.d) * Math.min(1, dt); if (gap < -70 || P0.t > 120) { P0.car.g.parent?.remove(P0.car.g); PO.car = null; PO.cool = 160 + rnd() * 120; return; } }
+    if (P0.stage === 'leave' && P0.t < 1e6 && !P0.left) { P0.left = true; P0.t = 0; }
+    P0.s += P0.dir * P0.v * dt; const a = along(P0.s, P0.d), y = track.probe(a.x, a.z, a.i).y; P0.car.g.position.set(a.x, y, a.z); P0.car.g.rotation.y = Math.atan2(a.f.x * P0.dir, a.f.z * P0.dir);
+  }
+  const why = () => { const f = game.fameNow(); return f >= 6 ? 'MAMY NA PANA CAŁĄ TECZKĘ. SZYBY, ROWERZYŚCI, JAKAŚ TOREBKA...' : f >= 4 ? 'ZGŁOSZENIA MAMY. SZYBY, PRZEWRÓCENI ROWERZYŚCI.' : 'ZGŁOSZENIE BYŁO. ŻE JAKIŚ CHULIGAN NA ROWERZE.'; };
+  function stopTalk(P0) {
+    PO.stops++; const third = PO.stops >= 3, at = () => V(P0.car.g.position.x, P0.car.g.position.y + 1.6, P0.car.g.position.z), fine = Math.max(5, Math.round(game.fameNow() * 4));
+    focusAt = at; const end = msg => { if (third) setTimeout(() => game.endRun(msg), 900); };
+    const tell = PO.dirt.filter(d => !d.told).map(d => ({ t: `${d.what}`, act: () => { snitch(d); game.fame(-2); return 'deal'; } }));
+    run({ who: 'POSTERUNKOWY KAPUSTA',
+      start: { say: third ? 'ZNOWU PAN?! TRZECI RAZ DZISIAJ! KONIEC TRASY NA DZIŚ, ROWER NA PARKING POLICYJNY.' : `DZIEŃ DOBRY. POSTERUNKOWY KAPUSTA. DOKUMENTY ROWERU PROSZĘ. ${why()}`, opts: third ? [{ t: 'ALE PANIE WŁADZO...', act: () => { end('Trzecie zatrzymanie: koniec trasy.'); return 'over'; } }] : [
+        { t: 'PRZEPRASZAM. TO SIĘ WIĘCEJ NIE POWTÓRZY.', act: () => { game.money(-fine, at(), `-${fine} ZŁ`); game.fame(-2); return 'fined'; } },
+        { t: 'TO NIE JA. TO MÓJ BRAT BLIŹNIAK.', act: () => { if (rnd() < .4) { game.fame(-1); return 'twin'; } game.money(-fine * 2, at(), `-${fine * 2} ZŁ`); return 'twinNo'; } },
+        { t: 'GAZETKĘ? NA KOSZT FIRMY.', off: () => game.papers >= 1 ? null : 'NIE MASZ GAZET', act: () => { game.papers -= 1; if (rnd() < .35) { game.fame(-1); return 'bribe'; } game.money(-fine * 2, at(), `-${fine * 2} ZŁ`); game.fame(1); return 'bribeNo'; } },
+        ...(tell.length ? [{ t: 'A MOGĘ COŚ ZGŁOSIĆ? W ZAMIAN.', go: 'tell' }] : [])] },
+      tell: { say: 'O. SŁUCHAM. JAK BĘDZIE CIEKAWE, TO MANDAT ZAPOMNIMY.', opts: [...tell, { t: 'NIEWAŻNE. PŁACĘ.', act: () => { game.money(-fine, at(), `-${fine} ZŁ`); game.fame(-2); return 'fined'; } }] },
+      deal: { bye: 'I NIE MÓW NIKOMU, ŻE OD NAS!', say: 'NO PROSZĘ. TO ZMIENIA POSTAĆ RZECZY. MANDATU NIE BĘDZIE. JEDŹ, MŁODY. I OSTROŻNIE.' },
+      fined: { bye: 'I KASK BY SIĘ PRZYDAŁ!', say: `MANDAT: ${fine} ZŁOTYCH. I ŻEBYM PANA WIĘCEJ NIE WIDZIAŁ. ZNACZY WIDZIAŁ, ALE GRZECZNEGO.` },
+      twin: { bye: 'POZDRÓW BRATA!', say: 'BLIŹNIAK? ...FAKTYCZNIE, TAMTEN MIAŁ CZERWONĄ CZAPKĘ. A, PAN TEŻ MA. NO NIC. JEDŹ.' },
+      twinNo: { bye: 'BRATU TEŻ WYPISZEMY!', say: 'BLIŹNIAK. JASNE. TO DLA BRATA TEŻ MANDAT. PODWÓJNY.' },
+      bribe: { bye: 'HOROSKOP CZYTAM NAJPIERW!', say: 'NO... DOBRA. ALE TYLKO DLATEGO, ŻE JEST KRZYŻÓWKA. OSTATNI RAZ.' },
+      bribeNo: { bye: 'PRZEKUPSTWO, PROSZĘ PANA!', say: 'PRÓBA PRZEKUPSTWA FUNKCJONARIUSZA GAZETĄ?! MANDAT PODWÓJNY. I GAZETĘ ZATRZYMUJĘ. DOWÓD RZECZOWY.' },
+      over: { say: 'PANIE, TRZY RAZY. TRZY. MAMY TU TABELKĘ. DO DOMU NA PIECHOTĘ, ROWER ODBIERZE MAMA.' } });
+  }
+  // what you know: who could be told on (set as stories go)
+  function know(key, what, o) { if (!PO.dirt.some(d => d.key === key)) PO.dirt.push({ key, what, o, told: false }); }
+  function snitch(d) {
+    d.told = true; const o = d.o; mood(o, -6); o.flag.snitched = true; o.offer = null; o.cool = 1e9;
+    const pos = o.lead.G.position, q = track.probe(pos.x, pos.z, -1), S = track.S[q.i], sd = Math.sign(q.d) || 1, car = policeCar(); car.g.position.set(S.p.x + S.r.x * sd * 3.2, S.p.y, S.p.z + S.r.z * sd * 3.2); car.g.rotation.y = Math.atan2(S.f.x, S.f.z); scene().add(car.g);
+    PO.parked.push({ car, t: 90 }); game.flash(d.key === 'ekipa' ? 'Ekipa spod beczki wie, kto doniósł. Uważaj przy barakach.' : 'Radiowóz pojechał do: ' + o.name.toLowerCase() + '.');
+    if (d.key === 'ekipa') o.flag.revenge = true;
+  }
+  // the station: always someone at the desk
+  function stationTalk(post) {
+    focusAt = () => over(post.door, 1.7); const tell = PO.dirt.filter(d => !d.told);
+    run({ who: 'DYŻURNY',
+      start: { say: pick(['POSTERUNEK. W CZYM POMÓC? TYLKO SZYBKO, BO MI KAWA STYGNIE.', 'SŁUCHAM. ZGŁOSZENIE? SKARGA? ZNALEZIONY KOT?']), opts: [
+        { t: 'CHCĘ COŚ ZGŁOSIĆ.', if: () => tell.length > 0, go: 'tell' },
+        { t: 'MACIE COŚ DLA MNIE DO ROBOTY?', if: () => !PO.job, go: 'board' },
+        { t: 'NIC, TYLKO PATRZĘ.', bye: 'TO NIE MUZEUM!', go: null }] },
+      tell: { say: 'NO TO SŁUCHAM. PROTOKÓŁ PISZĘ.', opts: [...tell.map(d => ({ t: d.what, act: () => { snitch(d); game.money(d.key === 'ekipa' ? 15 : 10, over(post.door, 2.2), `+${d.key === 'ekipa' ? 15 : 10} ZŁ`); game.fame(-2); return 'thanks'; } })), { t: 'JEDNAK NIC.', go: null }] },
+      thanks: { bye: 'I NIC NIE SŁYSZAŁEŚ OD NAS!', say: 'DZIĘKUJEMY ZA OBYWATELSKĄ POSTAWĘ. MASZ, Z FUNDUSZU INFORMATORA. FUNDUSZ TO JEST SŁOIK.' },
+      board: { say: 'NA TABLICY MAM DWIE RZECZY. ROWERZYSTA, CO KOPIE LUSTERKA W AUTACH. I WEZWANIA DO ROZNIESIENIA, BO LISTONOSZ NA L4.', opts: [
+        { t: 'ZŁAPIĘ ROWERZYSTĘ.', act: () => { jobWanted(); return null; }, bye: 'TYLKO BEZ PRZESADY!' },
+        { t: 'ROZNIOSĘ WEZWANIA.', act: () => { jobSummons(); return null; }, bye: 'NIE CZYTAJ ICH PO DRODZE!' },
+        { t: 'TO NIE DLA MNIE.', go: null }] } });
+  }
+  // a job: the wanted cyclist (knock him off his bike; paid over the radio, no need to go back)
+  function jobWanted() {
+    // (the first cyclist out on the road is the one; none yet: the job waits for one)
+    const e = { kind: 'gonczy', b: null, text: () => e.b ? 'LIST GOŃCZY: ROWERZYSTA' : 'LIST GOŃCZY: WYPATRUJ ROWERZYSTY', target: () => { if (!e.b) return null; const p = e.b.r.root.position; return V(p.x, p.y + 2.4, p.z); }, mark: 'v', col: '#e0473a', label: () => 'POSZUKIWANY' };
+    PO.job = e; active.push(e); game.flash('List gończy: rowerzysta z czerwoną strzałką. Zrzuć go z roweru.');
+  }
+  function jobSummons() {
+    const hs = []; for (let k = 0; k < 3; k++) { const hi = houseAhead(40 + k * 40, 240 + k * 40); if (hi != null && !hs.includes(hi)) hs.push(hi); } if (!hs.length) { game.flash('Dziś nie ma komu. Przyjdź później.'); return; }
+    const e = { kind: 'wezwania', left: [...hs], n: hs.length, text: () => `WEZWANIA: ${e.n - e.left.length}/${e.n}`, target: () => { const d = track.doors[e.left[0]]; return d ? over(d.p, 3.4) : null; }, mark: 'v', label: () => 'WEZWANIE' };
+    PO.job = e; active.push(e); game.flash('Wezwania: rzuć pod drzwi domów ze strzałką.');
+  }
+
   // ---------- each frame ----------
   function update(dt, inp) {
-    const R = R0(); flashT -= dt; byeT = Math.max(0, byeT - dt); for (const r of residents.list) person(r); stepStage(dt);
+    const R = R0(); flashT -= dt; byeT = Math.max(0, byeT - dt); for (const r of residents.list) person(r); stepStage(dt); stepPolice(dt, R);
     for (const o of new Set(P.values())) { o.cool -= dt; if (o.flag.lied) o.flag.lieT -= dt; o.redo = false; }
     // passing by: moods acted on (a bottle, a coin, a lie found out)
     for (const [r, o] of P) { if (o.lead !== r) continue; o.passT -= dt; const d = Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z); if (d > 11 || o.passT > 0) continue;
       if (o.flag.lied && o.flag.lieT <= 0) { o.flag.lied = false; mood(o, -4); say(r, o.she ? 'OKŁAMAŁEŚ MNIE! ON MA INNĄ!' : 'OKŁAMAŁEŚ MNIE! ONA MA INNEGO!'); o.passT = 20; continue; }   // (the lie found out)
+      if (o.flag.revenge) { o.flag.revenge = false; o.passT = 40; say(r, 'TO TEN KABEL! BRAĆ GO!'); const p = r.G.position; setTimeout(() => game.grudgeAt(V(p.x, p.y, p.z), 'KABLE SIĘ BIJE!', 'kozak'), 700); continue; }
+      if (o.flag.snitched && rnd() < .5) { o.passT = 30; say(r, o.kind === 'shacks' ? 'KABEL JEDEN...' : 'KABEL! PRZEZ CIEBIE MANDAT DOSTAŁEM!'); if (!R.foot && R.v > 2) setTimeout(() => game.bottle(), 450); continue; }
       if ((o.mood <= -3 || o.flag.snitch) && R.v > 2 && !R.foot) { o.passT = 28; say(r, o.flag.snitch ? 'KABLARZ!' : pick(['MASZ, PAN Z ROWERKIEM!', 'ŁAP!'])); setTimeout(() => game.bottle(), 450); o.flag.snitch = false; continue; }
       if (o.mood >= 3 && rnd() < .35) { o.passT = 60; say(r, pick(['TRZYMAJ, MŁODY! NA LODY!', 'DLA NASZEGO GAZECIARZA!'])); game.money(2, head(r), '+2 ZŁ'); continue; }
       o.passT = 8; }
@@ -373,6 +465,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     near = null; const reach = R.foot ? 3.2 : 8.5; let bd = reach;
     const consider = (p, run, prio = 0, focus) => { const d = Math.hypot(p.x - R.x, p.z - R.z) - prio; if (d < bd) { bd = d; near = { p, run, focus: focus || (() => V(p.x, (p.y || 0) + 1.5, p.z)) }; } };
     for (const e of active) if (e.talk) { const pt = e.point?.ped ? V(e.point.ped.x, e.point.ped.G.position.y, e.point.ped.z) : e.point?.p || (e.at && e.at.G.position); if (pt) consider(pt, e.talk, 2, e.at ? () => head(e.at) : e.point?.ped ? () => V(e.point.ped.x, e.point.ped.G.position.y + 1.6, e.point.ped.z) : null); }
+    for (const post of track.posts || []) if (post.door && !active.some(e => e.post === post && e.talk)) consider(post.door, () => stationTalk(post), 0, () => over(post.door, 1.7));
     for (const [r, o] of P) if (o.lead === r && r.G.visible !== false) consider(r.G.position, () => converse(r), o.offer && o.cool <= 0 ? 1 : 0, () => head(r));
     if (near && !talk.isOpen) { near.slow = R.foot || R.v < 3.2; const ask = R.foot ? inp.talk : inp.chat; if (ask && near.slow) { focusAt = near.focus; near.run(); if (R.foot) inp.talk = false; } else if (ask && !near.slow && flashT <= 0) { game.flash('Zwolnij, żeby pogadać'); flashT = 2; } }
   }
@@ -384,13 +477,18 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     for (const [r, o] of P) { if (o.lead !== r || !o.offer || o.cool > 0 || busy(o.offer)) continue; if (Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z) > 110) continue; out.push({ p: head(r), s: '!', col: '#efc970' }); }
     for (const e of active) { const p = e.target?.(); if (!p) continue; const s = typeof e.mark === 'function' ? e.mark() : e.mark || 'v', col = typeof e.col === 'function' ? e.col() : e.col || '#efc970', dist = Math.round(Math.hypot(p.x - R.x, p.z - R.z));
       out.push({ p, s, col, edge: true, dist, label: e.label ? e.label() + ' ' + dist + ' M' : null }); }
+    if (PO.car && PO.car.stage === 'chase') { const g = PO.car.car.g.position; out.push({ p: V(g.x, g.y + 2.4, g.z), s: 'v', col: '#3d7be0', edge: true, label: 'POLICJA', dist: 0 }); }
     if (near && !talk.isOpen) { const p = near.p.clone ? near.p.clone() : V(near.p.x, near.p.y, near.p.z); p.y += 2.6; out.push({ p, s: '', label: near.slow ? game.talkKey() : 'ZWOLNIJ', col: '#f6f3ea' }); }
     return out;
   }
-  function tracker() { const R = R0(); return active.map(e => { const p = e.target?.(); return e.text() + (p ? ' ' + Math.round(Math.hypot(p.x - R.x, p.z - R.z)) + ' M' : ''); }); }
+  function tracker() { const R = R0(); return (PO.car && PO.car.stage === 'chase' ? ['POLICJA! ZWOLNIJ I STAŃ' + (PO.car.run > 4 ? ` (UCIEKASZ ${Math.max(0, Math.ceil(14 - PO.car.run))} S)` : '')] : []).concat(active.map(e => { const p = e.target?.(); return e.text() + (p ? ' ' + Math.round(Math.hypot(p.x - R.x, p.z - R.z)) + ' M' : ''); })); }
 
   // ---------- what happened in the world ----------
   function onLand(P0) {
+    for (const e of [...active]) if (e.kind === 'wezwania') for (const hi of [...e.left]) { const mb = mailboxOf(hi), sp = doorSpot(hi);
+      if (Math.hypot(P0.x - sp.x, P0.z - sp.z) < 2.6 || (mb && Math.hypot(P0.x - mb.o.position.x, P0.z - mb.o.position.z) < 1.8)) { e.left.splice(e.left.indexOf(hi), 1); const d = track.doors[hi], at = V(d.p.x, d.p.y + 2.4, d.p.z);
+        hud.rant(at, pick(['WEZWANIE?! ZA CO?!', 'TO PEWNIE ZA TEGO PSA...', 'JA NIC NIE ZROBIŁEM! NO, PRAWIE NIC.', 'ZNOWU ZA PARKOWANIE NA TRAWNIKU?!']), false); game.money(4, at, '+4 ZŁ');
+        if (!e.left.length) { remove(e); PO.job = null; game.money(5, at, '+5 ZŁ'); game.flash('Wezwania rozniesione. Premia od dyżurnego +5 zł'); } } }
     for (const e of [...active]) if (e.kind === 'list') { const mb = mailboxOf(e.house), sp = doorSpot(e.house);
       if (Math.hypot(P0.x - sp.x, P0.z - sp.z) < 2.6 || (mb && Math.hypot(P0.x - mb.o.position.x, P0.z - mb.o.position.z) < 1.8)) delivered(e); }
   }
@@ -398,7 +496,9 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     for (const e of [...active]) if (e.kind === 'szyba' && e.house === w.house) { e.kind = 'kasa'; e.from = 'szyba'; e.text = () => 'DYSZKA OD: ' + e.o.name; e.target = () => head(e.r); e.mark = '?'; e.at = e.r; e.talk = () => payTalk(e);
       const mw = mowerOf(e.house); if (mw) { mw.angry = 25; } game.flash('Brzdęk! Po dyszkę do: ' + e.o.name.toLowerCase()); if (rnd() < .5) { const sp = doorSpot(e.house); setTimeout(() => game.grudgeAt(sp, pick(['MOJA SZYBA!!!', 'JA CI DAM SZYBY!', 'ŁAP GO!']), 'kozak'), 900); } }
   }
-  function onKnockBike() {                                             // (a cyclist off his bike: for the lads, if they asked)
+  function onKnockBike(b) {                                            // (a cyclist off his bike: the wanted one, or for the lads, if they asked)
+    if (b && b.wanted) { b.wanted = false; const j = active.find(q => q.kind === 'gonczy'); if (j) remove(j); PO.job = null; game.money(15, V(R0().x, R0().y + 2, R0().z), '+15 ZŁ'); game.fame(-2); game.flash('Dyżurny przez radio: mamy go! +15 zł'); }
+    else game.fame(1);
     const e = active.find(q => q.kind === 'rowery'); if (!e) return; e.n++; game.flash(`Rower dla ekipy: ${e.n}/${e.need}`);
     if (e.n >= e.need) { e.kind = 'rowery-back'; e.from = 'rowery'; e.text = () => 'WRÓĆ DO: EKIPA SPOD BECZKI'; e.target = () => head(e.r); e.mark = '?'; e.at = e.r;
       e.talk = () => run({ who: e.o.name, start: { say: 'WIDZIELIŚMY! ŁADNIE ICH POZBIERAŁEŚ. MASZ, MAKULATURA, JAK OBIECALIŚMY. KASY I TAK NIE MAMY.', enter: () => { remove(e); const n = 6 * e.need; game.papers += n; game.flash('Makulatura od ekipy: +' + n + ' gazet'); mood(e.o, 2); game.fame(1); e.o.cool = 70; } } }); }
@@ -408,6 +508,6 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     e.stage = 'bag'; p.flee = 5; p.fleeNew = true; p.stun = .9; e.loot.parent?.remove(e.loot); e.glow.parent?.remove(e.glow); hud.rant(V(p.x, p.G.position.y + 1.9, p.z), pick(['AŁA! DOBRA, DOBRA!', 'MOJA NOGA!', 'TO NIE JA!']), false);
     e.drop = game.dropBag(V(p.x, p.G.position.y, p.z), () => bagPicked(e)); game.flash('Torebka na chodniku. Podnieś ją.'); return true;
   }
-  function reset() { for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
-  return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, get focus() { return talk.isOpen && focusAt ? focusAt() : byeT > 0 && byeAt ? byeAt() : null; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
+  function reset() { PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
+  return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, get siren() { return !!PO.car && PO.car.stage === 'chase'; }, police: PO, people: P, get focus() { return talk.isOpen && focusAt ? focusAt() : byeT > 0 && byeAt ? byeAt() : null; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
 }
