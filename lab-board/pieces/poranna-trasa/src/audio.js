@@ -53,6 +53,7 @@ export function createAudio() {
     trick: (d, t) => { hiss(d, t, .25, { f: 500, to: 3000, vol: .18 }); [784, 988, 1175].forEach((f, k) => tone(d, f, t + .1 + k * .06, .2, { type: 'square', vol: .035 })); },
     hurt: (d, t) => { tone(d, 320, t, .2, { type: 'sawtooth', vol: .07, to: 140 }); },
     rustle: (d, t) => { hiss(d, t, .18, { type: 'highpass', f: 2000, vol: .12 }); hiss(d, t + .08, .12, { type: 'highpass', f: 3000, vol: .08 }); },
+    miss: (d, t) => { tone(d, 520, t, .12, { vol: .12, to: 380 }); tone(d, 380, t + .13, .2, { vol: .12, to: 230 }); },
     splash: (d, t) => { hiss(d, t, .32, { f: 1100, to: 380, q: .7, vol: .3 }); for (let k = 0; k < 4; k++) tone(d, R(420, 820), t + R(.02, .18), .05, { vol: .05, to: R(1100, 1700) }); },
     whistle: (d, t) => { tone(d, 1800, t, .12, { vol: .08, to: 2400 }); tone(d, 2400, t + .14, .25, { vol: .08, to: 1500 }); },
   };

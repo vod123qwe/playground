@@ -71,8 +71,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const nearStop = (i, sd, m) => stops.some(q => q.sd === sd && Math.abs(((i - q.i) % N + N + N / 2) % N - N / 2) * ds < m);
   // two police stations by the road (a lost handbag can be handed in there; later: the patrol's base)
   const posts = [.33, .7].map((f, k) => { const i = Math.round(N * f); return { i, sd: k % 2 ? 1 : -1, id: k, door: null }; });
-  // two bike shops by the road (a stop on the way: parts for the bike, papers for the bag)
-  const shops = [.11, .6].map((f, k) => { const i = Math.round(N * f); return { i, sd: k % 2 ? -1 : 1, id: k, door: null }; });
+  // a bike shop by the road (a stop on the way: parts for the bike, papers for the bag)
+  const shops = [[.6, -1]].map(([f, sd], k) => { const i = Math.round(N * f); return { i, sd, id: k, door: null }; });   // (one: you are by it once a lap, not every few hundred metres)
   const nearShop = (i, sd, m) => shops.some(q => q.sd === sd && Math.abs(((i - q.i) % N + N + N / 2) % N - N / 2) * ds < m);
   const nearPost = (i, sd, m) => posts.some(q => q.sd === sd && Math.abs(((i - q.i) % N + N + N / 2) % N - N / 2) * ds < m);
   const cvT = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
@@ -642,6 +642,27 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     // the family car: parked on the circle by the kerb, out of the way of the drive
     { const a = -.8, u = n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f, Math.sin(a)), t = n.clone().multiplyScalar(-Math.sin(a)).addScaledVector(f, Math.cos(a)), c = CARS.random(rnd), p = C0.clone().addScaledVector(u, Rc - 1.3);
       c.group.position.set(p.x, gy(p.x, p.z) + .04, p.z); c.group.rotation.y = Math.atan2(t.x, t.z); G.add(c.group); hit(c.group, { hx: .9, hz: 2.1, h: 1.5, kind: 'hard' }, iC); }
+    // round the home: a basketball hoop over the garage, hopscotch chalked on the drive, hedges between the gardens, a bench and a bin
+    // on the circle, the street's name on a post at its mouth
+    { const L2 = L, white = toon('#f4f1e8'), hoopM = toon('#d9542e'), hedgeM = toon('#3f6b35', { map: rep(tex.grass(3), 1, 1) });
+      homeH.add(box(1.15, .72, .05, white, L2.gx, 3.05, L2.fz - L2.GZ + .12)); homeH.add(box(.42, .3, .055, toon('#c23a2e'), L2.gx, 2.98, L2.fz - L2.GZ + .1)); homeH.add(box(.36, .24, .06, white, L2.gx, 2.98, L2.fz - L2.GZ + .095));
+      { const ring = new THREE.Mesh(new THREE.TorusGeometry(.23, .018, 5, 14).rotateX(Math.PI / 2), hoopM); ring.position.set(L2.gx, 2.78, L2.fz - L2.GZ - .2); homeH.add(ring);
+        const net = new THREE.Mesh(new THREE.CylinderGeometry(.22, .14, .35, 10, 1, true), toon('#efeae0', { side: THREE.DoubleSide })); net.position.set(L2.gx, 2.6, L2.fz - L2.GZ - .2); homeH.add(net); }
+      const chalk = ['#f3a6c0', '#9fc6e8', '#efc970', '#b7e09a'].map(c => toon(c)), hz0 = -L2.D / 2 - 5.2;
+      [[0, 0], [0, .6], [-.3, 1.2], [.3, 1.2], [0, 1.8], [-.3, 2.4], [.3, 2.4], [0, 3.0]].forEach(([x, z], k) => homeH.add(slab(box(.5, .012, .5, chalk[k % 4], L2.gx + .55 + x, .05, hz0 - z))));
+      for (const sg of [-1, 1]) { const a = sg * .72, u = n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f, Math.sin(a));
+        for (let r0 = Rc + 2.6; r0 < Rc + 12.5; r0 += 1.15) { const x = C0.x + u.x * r0, z = C0.z + u.z * r0, hh = 1 + rnd() * .12, hg = box(.75, hh, 1.2, hedgeM, 0, hh / 2, 0), g0 = new THREE.Group(); g0.add(hg);
+          g0.position.set(x, gy(x, z), z); g0.rotation.y = Math.atan2(u.x, u.z); G.add(g0); hit(g0, { hx: .38, hz: .6, h: hh, kind: 'hard' }, iC); things.push({ kind: 'bush', o: g0 }); } }
+      { const a = 2.75, u = n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f, Math.sin(a)), r0 = Rc + 1.5, x = C0.x + u.x * r0, z = C0.z + u.z * r0, b = new THREE.Group(), wood = toon('#8a6a44'), iron = toon('#2f3236');
+        for (const k of [0, 1, 2]) b.add(box(1.6, .05, .1, wood, 0, .45, -.12 + k * .12)); for (const k of [0, 1]) b.add(box(1.6, .1, .04, wood, 0, .7 + k * .14, .2));
+        for (const sx of [-.7, .7]) { b.add(box(.06, .45, .45, iron, sx, .22, 0)); b.add(box(.06, .5, .05, iron, sx, .7, .22)); }
+        b.position.set(x, gy(x, z), z); b.rotation.y = Math.atan2(-u.x, -u.z); G.add(b); hit(b, { hx: .8, hz: .3, h: .9, kind: 'hard' }, iC);
+        const bin = new THREE.Group(); bin.add(box(.4, .7, .4, toon('#3f6b35'), 0, .35, 0)); bin.add(box(.44, .05, .44, toon('#2f4a3a'), 0, .72, 0)); const bx = x + f.x * 1.3 * Math.sign(Math.sin(a) || 1), bz = z + f.z * 1.3;
+        const t2 = new THREE.Vector3(x, 0, z).addScaledVector(new THREE.Vector3(-u.z, 0, u.x), 1.25); bin.position.set(t2.x, gy(t2.x, t2.z), t2.z); bin.userData.keep = true; G.add(bin); hit(bin, { hx: .2, hz: .2, h: .75, kind: 'soft' }, iC); things.push({ kind: 'cone', o: bin }); }
+      { const plate = cvT(64, 16, g => { g.fillStyle = '#f6f3ea'; g.fillRect(0, 0, 64, 16); g.fillStyle = '#2f5aa0'; g.fillRect(1, 1, 62, 14); g.fillStyle = '#f6f3ea'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('UL. PORANNA', 32, 8.5); });
+        const [px, pz] = P(PAVE - ROAD + .5, -(W2 + 1.3)), post = new THREE.Group(); post.add(box(.07, 2.5, .07, toon('#8d9196'), 0, 1.25, 0));
+        for (const sg of [-1, 1]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .28), toon('#ffffff', { map: plate, side: THREE.DoubleSide })); m.position.set(0, 2.35, sg * .01); m.rotation.y = sg > 0 ? 0 : Math.PI; post.add(m); }
+        post.position.set(px, gy(px, pz), pz); post.rotation.y = Math.atan2(n.x, n.z) + Math.PI / 2; G.add(post); hit(post, { hx: .05, hz: .05, h: 2.5, kind: 'hard' }, iJ); things.push({ kind: 'pole', o: post, r: .07 }); } }
     rnd = keep;
     const inStreet = (x, z) => { const dx = x - J.x, dz = z - J.z, al = dx * n.x + dz * n.z, ac = dx * f.x + dz * f.z; return al > -.3 && al < Lr && Math.abs(ac) < W2; };
     const inCircle = (x, z) => { const r = Math.hypot(x - C0.x, z - C0.z); return r < Rc && r > Ri; };

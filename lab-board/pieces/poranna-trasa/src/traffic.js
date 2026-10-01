@@ -27,11 +27,14 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     t.car.group.position.set(t.x, py, t.z); t.car.group.rotation.set(-Math.atan((B.p.y - A.p.y) / ds) * t.dir, t.yaw - steer, 0, 'YXZ');
   }
   let clock = 0;
-  function update(dt, R) { clock += dt;                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
+  function update(dt, R) { clock += dt;
+    // how many cars are out (R.cars: few at first, more as the run goes on); one coming out starts on the far side of the loop
+    { let k = 0; for (const t of list) { if (t.bus) continue; const on = k++ < (R.cars ?? 99); if (on && t.off) { t.s = wrap(R.s + len / 2 + k * 41); t.v = t.cruise; t.lane = t.laneT = t.dir * LANE; t.pass = null; t.stop = 0; t.snap = true; } t.off = !on; t.car.group.visible = on; } }
+    const live = list.filter(t => !t.off);                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
     stepBikes(dt, R);
     // everything that can be in a lane: the cars, the parked ones, the rider
-    const things = [...list.map(t => ({ s: t.s, d: t.lane, v: t.v * t.dir, t })), ...bikes.map(b => ({ s: b.s, d: b.lane, v: b.v * b.dir })), ...track.parked.map(p => ({ s: p.s, d: p.d, v: 0 })), { s: R.s, d: R.d, v: R.v * R.along, rider: true }];
-    for (const t of list) {
+    const things = [...live.map(t => ({ s: t.s, d: t.lane, v: t.v * t.dir, t })), ...bikes.map(b => ({ s: b.s, d: b.lane, v: b.v * b.dir })), ...track.parked.map(p => ({ s: p.s, d: p.d, v: 0 })), { s: R.s, d: R.d, v: R.v * R.along, rider: true }];
+    for (const t of live) {
       t.stop = Math.max(0, t.stop - dt);
       const mine = t.dir * LANE, other = -mine;
       // what is ahead of it in a lane (d), and how near, and how fast it goes our way
@@ -99,7 +102,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     const v = vel.clone().multiplyScalar(.6).addScaledVector(f, b.v * .5), sp = Math.min(6, v.length());
     b.r.ragdoll({ vel: v, spin: new THREE.Vector3(f.z, 0, -f.x).multiplyScalar(.35 * sp).addScaledVector(f, side * .6), lift: .5 + sp * .07, ground: (x, z) => track.probe(x, z, Math.floor(wrap(b.s) / ds) % N).y, near: () => [], hit: () => false });
   }
-  function boxes() { return [...bikes.filter(b => b.on).map(b => ({ x: b.x, z: b.z, c: Math.cos(b.yaw), s: Math.sin(b.yaw), hx: .3, hz: .9, h: 1.6, y0: b.r.root.position.y, kind: 'car', t: b })), ...list.map(t => ({ x: t.x, z: t.z, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: t.car.half[0], hz: t.car.half[1], h: 1.5, y0: t.car.group.position.y, kind: 'car', t })) ]; }
+  function boxes() { return [...bikes.filter(b => b.on).map(b => ({ x: b.x, z: b.z, c: Math.cos(b.yaw), s: Math.sin(b.yaw), hx: .3, hz: .9, h: 1.6, y0: b.r.root.position.y, kind: 'car', t: b })), ...list.filter(t => !t.off).map(t => ({ x: t.x, z: t.z, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: t.car.half[0], hz: t.car.half[1], h: 1.5, y0: t.car.group.position.y, kind: 'car', t })) ]; }
   list.forEach(place);
   return { group: G, list, update, boxes, knock, bikes };
 }
