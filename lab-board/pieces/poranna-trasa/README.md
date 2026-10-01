@@ -543,3 +543,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - ktoś obrażony: można przeprosić (raz na jakiś czas), dać gazetę na zgodę albo dolać oliwy do ognia
 - ktoś bardzo zadowolony raz coś podaruje (szarlotka, „sok”, dzwonek, bilet)
 - policja płaci „z funduszu konfidenta. Znaczy... prawowitego obywatela”
+
+## Wersja 53: kopanie radiowozu, anegdoty, opinia u policji
+
+- radiowóz (patrol albo zaparkowany po donosie) można kopnąć z roweru, a pieszo kopniakiem albo pięścią; z środka najpierw ostrzeżenia („TO JEST MIENIE PAŃSTWOWE!”), po kilku razach policjant wysiada
+- rozmowa z nim: przyjmij mandat, odmów (wtedy bójka „w imieniu prawa”), dogadaj się (łapówka, udaje się częściej, gdy policja cię lubi) albo zapytaj, czemu taki nerwowy (anegdota)
+- anegdoty policjantów (kura, mandat dla samego siebie, babcia na chodziku, kot z własną szafką...) także przy zatrzymaniu przez patrol i na posterunku („co słychać na komisariacie?”)
+- opinia u policji: rośnie za donosy, oddaną torebkę, zadania z tablicy, przyjęty mandat; spada za ucieczkę, kopanie radiowozu, łapówki i bójkę; przy świetnej opinii policja przymyka oko (przy kopaniu i przy zatrzymaniu: „PANIE WŁADZO, TO JA, GAZECIARZ”), ale opinia na tym traci
