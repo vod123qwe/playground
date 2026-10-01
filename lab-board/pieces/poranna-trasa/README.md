@@ -476,3 +476,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - naprawione: po wejściu w menu przycisk menu zostawał podświetlony i nie dało się go nacisnąć drugi raz (menu zasłaniało sterowanie, zanim palec się podniósł, więc przycisk nie dostawał puszczenia)
 - gdy sterowanie się chowa (menu, rozmowa), wszystkie palce są puszczane: przyciski, gałka i przeciąganie kamery; nic nie zostaje „trzymane”
 - górny rząd (kamera, menu, pełny ekran) działa po puszczeniu palca, więc dotyk nie przebija się na przycisk w otwartym menu
+
+## Wersja 45: rozmowy i zadania
+
+- ludzie przy trasie mają sprawy: „!” nad kimś, kto ma sprawę, „?” nad kimś, kto na ciebie czeka, strzałka nad celem (poza kadrem: przy krawędzi ekranu, z odległością); pod najbliższą osobą jak zagadać (rower: T, trzeba zwolnić; pieszo: E; telefon: przycisk GADAJ)
+- rozmowa w okienku z odpowiedziami do wyboru (1–4, strzałki i Enter, dotyk); gra czeka; bez sprawy tylko krótka odzywka, gra leci dalej
+- nastroje: każdy pamięta, jak go potraktowałeś; zły nastrój: wyzwiska, butelka w przejeżdżającego; dobry: pozdrowienia, rzucony napiwek; kłamstwo wychodzi na jaw po jakimś czasie
+- zadania z historią i zwrotami akcji: „wojna o kosiarkę” (szyba u sąsiada albo donos; na końcu prawda z piwnicy, szantaż albo przeprosiny), list (podziękowania, rachunek, mąż od czterech lat u siostry przez pilota, odpowiedź do przekazania: szczerze, kłamstwem albo złośliwie), gazety na podpałkę dla ekipy spod beczki (fanty ze śmietnika, potem tanie gazety), rowery dla ekipy (zrzuć rowerzystów, płacą makulaturą, bo kasy nigdy nie mają), przystanek (gazeta do poczytania, lump po obudzeniu chce dwa złote na bilet)
+- złodziej (samo się zdarza): wyrywa torebkę i ucieka; czerwony pierścień i słup światła nad nim, napis z odległością, przycisk kopniaka świeci KOPNIJ!, przy 80 m ucieka na dobre; torebkę oddajesz właścicielce, na posterunek dalej na trasie (zwrot akcji u dyżurnego), kasa dla ciebie i torebka do kosza przy drodze, albo wszystko zostaje u ciebie
+- nic nie zmusza do zawracania: niezałatwiona sprawa sama przepada po kilku minutach
+- dwa posterunki policji przy trasie; kosze na śmieci znane grze (przy domach, przystankach, w parkach)
+- pieszo: kamera nie wjeżdża już w postać, gdy biegniesz w jej stronę (trzyma minimalny dystans)
+- plan i dalsze pomysły: docs/rozmowy-i-zadania.md
