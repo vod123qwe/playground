@@ -51,5 +51,12 @@ export function createResidents({ THREE, toon, track, hud, scene, max = 7 }) {
       if (r.talkT > 0 && r.head) { r.head.getWorldPosition(r.mouth); r.mouth.y += .35; }
     }
   }
-  return { update, list };
+  // someone more, for a story (spawn(key) → { G, m, mixer, acts: { walk, idle, talk }, head } or null): the same model, the same toon
+  function spawn(key) {
+    return load(key).then(g => { if (!g) return null; const m = SkeletonUtils.clone(g.scene), G = new THREE.Group(); G.add(m); scene.add(G);
+      m.traverse(o => { if (o.isMesh) { const om = o.material, cut = om.transparent || om.alphaTest > 0; o.material = toon(om.color.clone(), { map: om.map || null, ...(cut ? { alphaTest: .5, side: THREE.DoubleSide } : {}) }); o.castShadow = true; o.frustumCulled = false; } });
+      const mixer = new THREE.AnimationMixer(m), acts = {}; for (const n of ['walk', 'idle', 'talk']) { const c = g.animations.find(q => q.name === n); if (c) acts[n] = mixer.clipAction(c); }
+      return { G, m, mixer, acts, head: m.getObjectByName('head') }; });
+  }
+  return { update, list, spawn };
 }

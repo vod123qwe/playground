@@ -130,7 +130,7 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   flash: s => flash(s), fame: n => { B.fame = Math.max(0, (B.fame || 0) + n); },
   bottle: () => { if (foot.active || B.crash) return; hud.impact(rider.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'BRZDĘK!'); B.v *= .6; B.rattled = (B.rattled || 0) + 1.5; shake = Math.max(shake, .25); },
   grudgeAt: (at, line, kind) => foot.grudgeAt(at, line, kind),
-  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick),
+  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick), scene,
   talkKey: () => touch.on ? 'GADAJ' : (foot.active ? keysOf('talk') : keysOf('chat')) + ': GADAJ' } });
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
@@ -246,6 +246,8 @@ const touch = createTouch({ onCam: () => setCam((camI + 1) % CAMS.length), onMen
 if (touch.on) { renderer.setPixelRatio(1); sun.shadow.mapSize.set(1024, 1024); dispatchEvent(new Event('resize')); }
 // a phone held upright: a taller view, so the road is not a slit
 const PK = () => Math.max(1, Math.min(1.55, .75 * innerHeight / Math.max(1, innerWidth)));
+// while a talk is open the world goes on, he does not: no steering, no pedalling, the brake on till he stops (not back)
+const still = i => ({ ...i, steer: 0, pedal: 0, brake: B.v > .2 ? 1 : 0, sprint: false, hop: false, kick: false, kickHold: false, holdL: false, holdR: false, atkL: false, atkR: false, mount: false, talk: false, chat: false, dodge: false, guard: false, dx: 0, dy: 0, lmb: false, rmb: false, taunt: false });
 function input() {
   const held = id => BIND[id].some(c => keys.has(c)) ? 1 : 0, hit = id => BIND[id].some(c => edge.has(c));   // (through the bindings)
   let steer = held('right') - held('left'), pedal = held('pedal'), brake = held('brake');
@@ -416,15 +418,21 @@ function ride(dt, inp) {
   // (B.v is signed: held at a stop, the brake walks him backwards, slowly)
   const push = inp.pedal * (inp.sprint ? 1.35 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) - Math.max(0, B.v) * (inp.sprint ? .33 : .36));
   const back = inp.brake > .1 && B.v < .15 && inp.pedal < .1, brk = B.v > .05 ? inp.brake * 6.5 : 0;
-  let a = push - brk - .012 * B.v * Math.abs(B.v) - .06 * B.v - (off ? .9 * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
+  let a = push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
   if (inp.pedal < .05 && !B.air && Math.abs(B.v) < 1.3) a -= Math.sign(B.v) * (1.2 - Math.abs(B.v) * .7);   // (coasting slowly: the tyres drag him to a stop)
   if (back) a = -1.6 * inp.brake - .6 * B.v;
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
   const v0 = B.v; B.v = Math.max(-1.4, B.v + a * dt); if (!back && inp.pedal < .05 && !B.air && (Math.abs(B.v) < .1 || B.v < 0 || (v0 !== 0 && Math.sign(B.v) !== Math.sign(v0)))) B.v = 0;   // (crawling: he stops, a foot on the ground, on a hill too; back only if he walks it back)
   // steering (hardly any in the air)
-  const lock = .6 / (1 + Math.abs(B.v) * .3), want = inp.steer * lock * (B.air ? .25 : 1); B.steer += THREE.MathUtils.clamp(want - B.steer, -dt * 2.2, dt * 2.2);
+  const sIn = Math.sign(inp.steer) * Math.pow(Math.abs(inp.steer), 1.4);   // (a stick: small pushes finer; a key is all or nothing anyway)
+  const lock = .62 / (1 + Math.abs(B.v) * .24), want = sIn * lock * (B.air ? .25 : 1), outOf = Math.abs(want) < Math.abs(B.steer) || Math.sign(want) !== Math.sign(B.steer);
+  const rate = (outOf ? 4.6 : 2.4 + 1.6 * (1 - Math.min(1, Math.abs(B.steer) / Math.max(.05, lock)))) * dt;   // (in: quick at first, easing as it comes to full lock; out: quicker)
+  B.steer += THREE.MathUtils.clamp(want - B.steer, -rate, rate);
   B.yaw += -B.v * Math.tan(B.steer) / L * dt;
-  const leanT = THREE.MathUtils.clamp(Math.atan(B.v * Math.abs(B.v) * Math.tan(B.steer) / (L * g)) * .6, -.35, .35);
+  // the road's bends: not steering (or hardly), on the road and going, he is eased along it (a lane change ends straight with the road)
+  if (!B.air && B.v > 2 && Math.abs(q.d) < track.KERB + .6) { const ry = Math.atan2(q.f.x, q.f.z) + (along < 0 ? Math.PI : 0), d = Math.atan2(Math.sin(ry - B.yaw), Math.cos(ry - B.yaw)), k = Math.max(0, 1 - Math.abs(inp.steer) * 4);
+    if (Math.abs(d) < .5 && k > 0) B.yaw += d * Math.min(1, dt * 1.7) * k * (1 - Math.abs(d) / .5 * .5); }
+  const leanT = THREE.MathUtils.clamp(Math.atan(B.v * Math.abs(B.v) * Math.tan(B.steer) / (L * g)) * .78, -.44, .44);
   B.leanV += (42 * (leanT - B.lean) - 12 * B.leanV) * dt; B.lean += B.leanV * dt;
   const nx = B.x + Math.sin(B.yaw) * B.v * dt, nz = B.z + Math.cos(B.yaw) * B.v * dt;
   // up and down: the ground (and a ramp on it); a hop; off a ramp's lip into the air; the landing
@@ -616,7 +624,7 @@ function follow(dt) {
     if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
     CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov * PK(); camera.updateProjectionMatrix();
     sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return; }
-  const ch = aim.on && B.charge ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .08 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
+  const ch = aim.on && B.charge ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .13 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
   const [bk, upU] = userCam(back, CP.up), cy = C.yaw + camUser.yaw, want = new THREE.Vector3(B.x - Math.sin(cy) * bk - Math.cos(cy) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(cy) * bk + Math.sin(cy) * aside);   // (cy: turned round him as he set it)   // (far and high enough to see the houses, and a window go)
   const look = new THREE.Vector3(B.x + Math.sin(B.yaw) * CP.ahead - Math.cos(B.yaw) * mlook.x * 2.6, C.gy + CP.lookUp - mlook.y * 1.2, B.z + Math.cos(B.yaw) * CP.ahead + Math.sin(B.yaw) * mlook.x * 2.6);   // (the mouse turns it a little)
   if (tw > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(throwCam.at, .5), .2 * tw);
@@ -624,9 +632,11 @@ function follow(dt) {
   if (!C.init) { C.gy = B.y; C.pos.copy(camI === 0 ? want : camera.position.lengthSq() ? camera.position : want); C.look.copy(look); C.init = true; }
   C.pos.lerp(want, 1 - Math.exp(-dt * 6)); C.look.lerp(look, 1 - Math.exp(-dt * 8));
   const q = track.probe(C.pos.x, C.pos.z, B.hint); C.pos.y = Math.max(C.pos.y, q.y + .6);
-  camera.position.copy(C.pos); camera.up.set(0, 1, 0); camera.lookAt(C.look); camera.rotateZ(-B.lean * .12 * (B.crash ? .3 : 1) - mlook.x * .04);
+  camera.position.copy(C.pos); camera.up.set(0, 1, 0); camera.lookAt(C.look); camera.rotateZ(-B.lean * .2 * (B.crash ? .3 : 1) - mlook.x * .04);
   if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.y += (Math.random() - .5) * a; }
-  camera.fov = (CP.fov + Math.max(0, B.v) * .45 + rush * 7 + THREE.MathUtils.smootherstep(throwCam.w, 0, 1) * 8) * PK(); camera.updateProjectionMatrix();
+  { const sp = Math.min(1, Math.max(0, B.v) / 9), rum = (Math.abs(gq.d) > track.PAVE ? .035 : Math.abs(gq.d) > track.KERB ? .014 : .006) * sp * (B.air || B.crash ? 0 : 1), t = performance.now() / 1000;
+    camera.position.y += (Math.sin(t * 47) * .6 + Math.sin(t * 71) * .4) * rum; camera.position.x += Math.sin(t * 39) * rum * .5; }   // (the ground under the wheels: asphalt, the kerb, the grass)
+  camera.fov = (CP.fov + Math.max(0, B.v) * .75 + rush * 7 + THREE.MathUtils.smootherstep(throwCam.w, 0, 1) * 8) * PK(); camera.updateProjectionMatrix();
   sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld();
 }
 
@@ -693,7 +703,7 @@ function step(dt, inp) {
     if (ev === 'shout') hud.rant(granny.mouth, 'NIE PO SIONYM!', true);
     if (ev === 'caught') { const n = B.points; B.points = 0; hud.rant(granny.mouth, 'MAM CIE!', true);
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
-  rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = rush * FXK.blur;
+  rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
   traffic.update(dt, { s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
@@ -894,7 +904,7 @@ function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
   if ((menu.open || asking || talk.isOpen) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
   document.body.classList.toggle('walk', !menu.open && !asking && !talk.isOpen);                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !talk.isOpen && !window.PT?.hold) { step(dt, input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if (!asking && !menu.open && !window.PT?.hold) { step(dt, talk.isOpen ? still(input()) : input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
