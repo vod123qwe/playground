@@ -212,8 +212,11 @@ export function createShop({ THREE, createRider, game }) {
   // the bubble by his head: its left edge over his face's right side, its bottom at his mouth (the tail there); as wide as there is room
   // for before the window of parts (on a narrow screen, the window under him: to the screen's edge)
   const bub = el.querySelector('.bubble'), win = el.querySelector('.win');
-  function placeBubble() { const f = (fig.querySelector('img:not([style*="none"])') && !fig.classList.contains('noimg') ? fig : fig.querySelector('canvas') || fig).getBoundingClientRect(), w = win.getBoundingClientRect(), narrow = innerWidth <= 820;
-    const left = Math.max(8, f.left + f.width * (narrow ? .5 : .36)), room = (narrow ? innerWidth - 12 : w.left - 18) - left, width = Math.max(240, Math.min(460, room)), h = bub.offsetHeight || 140;
+  // him as big as there is room for his face left of the window: he steps out past the screen's left edge (his arm cut, his face whole)
+  function fitFig() { if (innerWidth <= 860) { fig.style.height = fig.style.left = fig.style.bottom = ''; return; } const w = win.getBoundingClientRect(), H = Math.max(260, Math.min(innerHeight * .84, innerWidth * .64, (w.left - 8) / .47));
+    fig.style.height = H + 'px'; fig.style.left = -.2 * H + 'px'; fig.style.bottom = -Math.min(innerHeight * .11, H * .14) + 'px'; }
+  function placeBubble() { fitFig(); const f = (fig.querySelector('img:not([style*="none"])') && !fig.classList.contains('noimg') ? fig : fig.querySelector('canvas') || fig).getBoundingClientRect(), w = win.getBoundingClientRect(), narrow = innerWidth <= 820;
+    const left = Math.max(8, f.left + f.width * (narrow ? .5 : .58)), room = (narrow ? innerWidth - 12 : w.left - 18) - left, width = Math.max(240, Math.min(460, room)), h = bub.offsetHeight || 140;
     const mouthY = f.top + f.height * (narrow ? .42 : .25), top = Math.max(8, mouthY - h - 18);
     Object.assign(bub.style, { left: left + 'px', top: top + 'px', width: width + 'px' }); }
   addEventListener('resize', () => { if (open_) placeBubble(); });
