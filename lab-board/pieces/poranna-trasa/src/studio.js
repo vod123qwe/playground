@@ -13,6 +13,8 @@ import { createDogs } from './dogs.js';
 import { makeBag } from './bag.js';
 import { createTrack } from './track.js';
 import { createNature } from './nature.js';
+import { createAudio } from './audio.js';
+const audio = createAudio();   // (the sounds: listened to here, one by one)
 
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false }); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -35,7 +37,12 @@ let mixer = null, rider = null, current = null, clipBtns = null;
 const NAMES = { saloon: 'sedan trzybryłowy', liftback: 'liftback', estate: 'kombi', pickup: 'pikap', wedge: 'klin (sportowy)', hatch: 'hatchback', micro: 'maluch', twostroke: 'dwusuw', fastback: 'kanciasty liftback', barge: 'długa limuzyna', van: 'dostawczak', bus: 'autobus' };
 const PEOPLE_NAMES = { oldman: 'staruszek z laską', jogger: 'biegaczka', mum: 'mama z wózkiem', dogman: 'pan z psem', teen: 'nastolatek', suit: 'facet w garniturze', shopper: 'pani z zakupami', kid: 'dzieciak z balonem', gardener: 'ogrodnik', lady: 'pani w sukience', belly: 'brzuchacz (leżak)', granma: 'babcia (krzesło)', grandpa: 'dziadek (krzesło)', boy: 'gazeciarz pieszo', brawler: 'bójkarz' };
 const PROP_NAMES = { boardFence: 'płot z desek', wireFence: 'płot z siatki', shed: 'szopa', washing: 'pranie', logs: 'drewno', sandbox: 'piaskownica', birdbath: 'poidełko', cone: 'pachołek', bags: 'worki', wagon: 'wózek', barrier: 'zapora', pothole: 'dziura', manhole: 'studzienka', bundle: 'paczka gazet', leafPile: 'kupka liści', swing: 'huśtawka', kidBike: 'rowerek', trampoline: 'trampolina', grill: 'grill', gnome: 'krasnal', stones: 'kamienie' };
+const SFX_NAMES = { throw: 'rzut gazety', land: 'gazeta ląduje', porch: 'na ganek', mailbox: 'do skrzynki', glass: 'szyba', coin: 'kasa', bell: 'dzwonek', crash: 'wywrotka', kick: 'kopniak', punch: 'cios', bark: 'pies', horn: 'klakson', ui: 'klik w menu', pick: 'podniesienie', chime: 'dzwoneczek', trick: 'trick', hurt: 'au', rustle: 'szelest gazet', whistle: 'gwizd' };
+const VOICE_NAMES = { player: 'gazeciarz', granma: 'babcia', grandpa: 'dziadek', belly: 'pan z brzuchem', lump: 'lump z ławki (mamrocze)', lads: 'ekipa spod beczki', police: 'policjant', janusz: 'pan Janusz', lady: 'pani z torebką', kid: 'dzieciak', gang: 'gang rowerowy', shout: 'krzyk', voice: 'ktoś' };
+const SONG_NAMES = { poranek: 'muzyka: poranek (w grze)', poscig: 'muzyka: pościg (gang, policja)', tytul: 'muzyka: ekran tytułowy', '': 'muzyka: cisza' };
+const VOICE_LINES = ['MŁODY! CHODŹ NO TU, MAM SPRAWĘ.', 'ZZZ... PIWKO... MAMO, JESZCZE PIĘĆ MINUT...', 'A GAZETKA GDZIE?!', 'TO TEN, CO KOPIE NASZYCH!', 'JAPOŃSKI OSPRZĘT, MŁODY! JAPOŃSKI!', 'DOKUMENTY ROWERU PROSZĘ.', 'CO?! ZA CO?!'];
 const CATS = [
+  { k: 'sound', name: 'Dźwięki', items: () => [...Object.keys(SFX_NAMES).map(n => ({ k: 'fx:' + n, label: SFX_NAMES[n], note: 'efekt' })), ...Object.keys(VOICE_NAMES).map(n => ({ k: 'v:' + n, label: VOICE_NAMES[n], note: 'głos' })), ...Object.keys(SONG_NAMES).map(n => ({ k: 'm:' + n, label: SONG_NAMES[n], note: 'muzyka' }))] },
   { k: 'cars', name: 'Auta', items: () => Object.keys(cars.KINDS).map(k => ({ k, label: NAMES[k] || k, note: `${cars.KINDS[k].L.toFixed(2)} m` })) },
   { k: 'people', name: 'Ludzie', items: () => Object.keys(PEOPLE_NAMES).map(k => ({ k, label: PEOPLE_NAMES[k], note: k })) },
   { k: 'rider', name: 'Rowerzysta', items: () => [{ k: 'rider', label: 'gazeciarz na rowerze', note: 'proceduralny' }] },
@@ -90,6 +97,10 @@ async function show(it) {
     const play = c => { if (act) act.fadeOut(.15); act = mixer.clipAction(c); act.reset().fadeIn(.15).play(); row.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.textContent === c.name))); };
     for (const c of g.animations) { const b = document.createElement('button'); b.textContent = c.name; b.onclick = () => play(c); row.appendChild(b); }
     const first = g.animations.find(c => c.name === 'walk') || g.animations.find(c => c.name === 'idle') || g.animations[0]; if (first) play(first); }
+  if (cat.k === 'sound') { const [t, n] = it.k.split(':'), go = () => { if (t === 'fx') audio.play(n); else if (t === 'v') audio.say(VOICE_LINES[Math.random() * VOICE_LINES.length | 0], n, { id: 'studio' + Math.random() }); else audio.music(n || null); };
+    go(); describe(it.label, t === 'm' ? 'Muzyka grana w przeglądarce (sekwencer, bez plików). Gra w kółko, aż wybierzesz inną albo ciszę.' : t === 'v' ? 'Bez słów: bełkot sylab w głosie postaci (jak w bajkach). Losowa kwestia przy każdym kliknięciu.' : 'Efekt robiony w przeglądarce (oscylatory, szum, filtry). Bez plików.', new THREE.Group(), [['rodzaj', t === 'fx' ? 'efekt' : t === 'v' ? 'głos' : 'muzyka']]);
+    const ex = $('extra'); ex.innerHTML = '<h2>Odsłuch</h2>'; const row = document.createElement('div'); row.className = 'row'; ex.appendChild(row); const b = document.createElement('button'); b.textContent = 'zagraj jeszcze raz'; b.onclick = go; row.appendChild(b);
+    for (const [k, lab] of [['master', 'głośność'], ['music', 'muzyka'], ['sfx', 'efekty'], ['voice', 'głosy']]) { const r = document.createElement('label'); r.className = 'row'; r.innerHTML = `${lab} <input type="range" min="0" max="1" step="0.05" value="${audio.get(k)}">`; r.querySelector('input').oninput = e => audio.set(k, +e.target.value); ex.appendChild(r); } }
   if (cat.k === 'rider') { rider = createRider({ THREE, ramp, toon }); place(rider.root); frame(rider.root, 'side'); describe('gazeciarz na rowerze', 'Rower i chłopak budowane w kodzie (bez pliku), pedałuje w podglądzie.', rider.root); }
   if (cat.k === 'dogs') { const d = dogs.makeDog(null, 1, Math.random, it.k); place(d.group); frame(d.group, 'side'); describe(dogs.BREEDS[it.k].name, 'Pies z brył (tułów z przekrojów, głowa, uszy i ogon wg rasy).', d.group); }
   if (cat.k === 'props') { const o = /Fence$/.test(it.k) ? props[it.k](6) : props[it.k](Math.random); place(o.group); frame(o.group); describe(PROP_NAMES[it.k], 'Rekwizyt z ogródków i ulicy.', o.group, [['kolizja', o.hit ? `${o.hit.kind} · ${(o.hit.hx * 2).toFixed(2)} × ${(o.hit.hz * 2).toFixed(2)} m` : '—']]); }

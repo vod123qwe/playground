@@ -37,6 +37,7 @@ import { createQuests } from './quests.js';
 import { createShop } from './shop.js';
 import { createRun, kept } from './run.js';
 import { createBook } from './book.js';
+import { createAudio } from './audio.js';
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
 const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
@@ -124,10 +125,30 @@ const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });   // (people sitting out in their gardens)                         // (a hydrant knocked or kicked)
 const peds = createPedestrians({ THREE, toon, track }); scene.add(peds.group);
 // a word with people, and the errands that come of it (talk.js: the box; quests.js: who wants what, and what came of it)
-const talk = createTalk();
+const audio = createAudio();
+// a sound out in the world: as loud as it is near the camera, from its side
+const _ar = new THREE.Vector3();
+function where(at) { if (!at) return { vol: 1, pan: 0 }; const dx = at.x - camera.position.x, dz = at.z - camera.position.z, d = Math.hypot(dx, dz, (at.y || 0) - camera.position.y); _ar.set(1, 0, 0).applyQuaternion(camera.quaternion);
+  return { vol: Math.min(1, 1.6 / (1 + d / 12)), pan: Math.max(-1, Math.min(1, (dx * _ar.x + dz * _ar.z) / Math.max(4, d))) }; }
+const aud = (name, at) => audio.play(name, where(at));
+// whose voice a bubble is in: the nearest one there (him, someone in a garden, out walking, the police, the gang, a driver, pan Janusz)
+const PED_V = { lady: 'lady', mum: 'lady', shopper: 'lady', kid: 'kid', teen: 'gang', jogger: 'voice', oldman: 'grandpa', dogman: 'grandpa', suit: 'voice', gardener: 'grandpa' };
+function speakerAt(at) { if (!at) return 'voice'; const d = (x, z) => Math.hypot(x - at.x, z - at.z); const P = foot.active ? foot.me : B; if (d(P.x, P.z) < 1.4) return 'player';
+  let best = 'voice', bd = 3;
+  for (const r of residents.list) { const l = d(r.G.position.x, r.G.position.z); if (l < bd) { bd = l; best = r.lines === 'lump' ? 'lump' : r.lines === 'shacks' ? 'lads' : r.key === 'belly' ? 'belly' : r.key === 'granma' ? 'granma' : r.key === 'grandpa' || r.lines === 'stop' ? 'grandpa' : 'voice'; } }
+  for (const p of peds.list) { const l = d(p.x, p.z); if (l < bd) { bd = l; best = PED_V[p.P.key] || 'voice'; } }
+  for (const c of quests.policeCars()) { const l = d(c.g.position.x, c.g.position.z); if (l < Math.max(bd, 4)) { bd = l; best = 'police'; } }
+  for (const g of quests.gangTargets) { const l = d(g.x, g.z); if (l < bd) { bd = l; best = 'gang'; } }
+  for (const t of traffic.list) { const l = d(t.car.group.position.x, t.car.group.position.z); if (l < Math.max(bd, 3)) { bd = l; best = 'voice'; } }
+  for (const s of track.shops || []) if (s.door && d(s.door.x, s.door.z) < 4.5 && bd > 1) best = 'janusz';
+  return best; }
+hud.hooks.onSay = (text, at) => { const k = speakerAt(at); audio.say(text, k, { ...where(at), id: k }); };
+hud.hooks.onHit = (word, at) => aud(word === 'BUM!' || word === 'BACH!' || word === 'ŁUBUDU!' || word === 'KOP!' ? 'kick' : 'punch', at);
+const VOICE_OF = n => /ŁAWKI/.test(n) ? 'lump' : /EKIPA/.test(n) ? 'lads' : /POSTERUNKOWY|SIERŻANT|ASPIRANT|DYŻURNY/.test(n) ? 'police' : /JANUSZ/.test(n) ? 'janusz' : /GŁOS Z OKNA|^PANI/.test(n) ? 'granma' : /TOREBKA/.test(n) ? null : /MIREK|RYSIEK|JANEK/.test(n) ? 'belly' : 'grandpa';
+const talk = createTalk({ onSay: (who, text) => { const k = VOICE_OF(who || ''); if (k) audio.say(text, k, { id: 'talk' }); }, onPick: () => audio.play('ui') });
 let MOD = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 };   // (what the bike's parts do: shop.js)
 const shop = createShop({ THREE, createRider: () => createRider({ THREE, ramp, toon }), game: { get money() { return B.points; }, set money(v) { B.points = Math.max(0, v); }, get papers() { return B.papers; }, set papers(v) { B.papers = v; }, get hp() { return B.hp ?? 100; }, set hp(v) { B.hp = v; },
-  get items() { return (B.items ||= []); }, flash: s => flash(s), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return TK.map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, onChange: (m, look) => { MOD = m; B.bagMax = 30 + m.bag; rider.setParts(look); } } });
+  get items() { return (B.items ||= []); }, flash: s => flash(s), say: s => audio.say(s, 'janusz', { id: 'shop' }), bye: s => { const sh = (track.shops || []).filter(q => q.door).sort((a, b) => Math.hypot(a.door.x - B.x, a.door.z - B.z) - Math.hypot(b.door.x - B.x, b.door.z - B.z))[0]; if (sh) hud.rant(sh.door.clone().setY(sh.door.y + 2.1), s, false); }, get titles() { return TK.map(k => ({ key: k, name: TITLES[k].name, col: TITLES[k].col, n: B.mix[k] })); }, addTitle: (k, n) => { B.mix[k] += n; B.papers += n; }, onChange: (m, look) => { MOD = m; B.bagMax = 30 + m.bag; rider.setParts(look); } } });
 const money = (n, at, label) => { B.points = Math.max(0, B.points + n); hud.pop(at, label, n >= 0 ? '#efc970' : '#cf5a3e'); }; money.has = n => B.points >= n;
 const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   rider: () => foot.active ? { x: foot.me.x, z: foot.me.z, y: foot.me.y, yaw: foot.me.yaw, v: Math.hypot(foot.me.vf, foot.me.vs), foot: true } : { x: B.x, z: B.z, y: B.y, yaw: B.yaw, v: Math.abs(B.v), foot: false },
@@ -182,7 +203,7 @@ const ACTIONS = [
   { id: 'sprint', keys: ['ShiftLeft', 'ShiftRight'], modes: ['bike', 'walk'] },
   { id: 'throwL', keys: ['ArrowLeft', 'KeyQ'], modes: ['bike'] }, { id: 'throwR', keys: ['ArrowRight', 'KeyE'], modes: ['bike'] },
   { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyC'], modes: ['bike'] },
-  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] },
+  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
   { id: 'punchL', keys: ['ArrowLeft'], modes: ['fight'] }, { id: 'punchR', keys: ['ArrowRight'], modes: ['fight'] }, { id: 'high', keys: ['ArrowUp'], modes: ['fight'] },
   { id: 'low', keys: ['ArrowDown'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
   { id: 'taunt', keys: ['KeyG'], modes: ['fight'] },
@@ -203,7 +224,7 @@ const SECTIONS = [
     ['throwL', 'RZUT W LEWO (TRZYMAJ: SIŁA, PUŚĆ: RZUT)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
-    ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
+    ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['bell', 'DZWONEK (GDY GO MASZ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
     [null, 'MYSZ: RUCH', 'OBRÓT I SPOJRZENIE (PRZY KRAWĘDZI DALEJ)'], [null, 'MYSZ: LPM', 'UDERZ KOGOŚ']] },
   { title: 'W BÓJCE', items: [['pedal', 'DOSKOK'], ['brake', 'ODSKOK'], ['left', 'KRĄŻ W LEWO'], ['right', 'KRĄŻ W PRAWO'], ['dodge', 'UNIK (Z KIERUNKIEM)'],
     ['punchL', 'PROSTY (BEZ MYSZY)'], ['punchR', 'SIERPOWY (BEZ MYSZY)'], ['high', 'Z CIOSEM: HAK'], ['low', 'Z CIOSEM: NA KORPUS · Z GARDĄ: NISKA'], ['guard', 'GARDA (BEZ MYSZY)'], ['taunt', 'PROWOKACJA'],
@@ -270,7 +291,7 @@ function input() {
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
-    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, chat: hit0('chat') || !!tE?.talk, title: hit0('title') || !!tE?.title, skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
+    atkL: hit0('punchL') || !!tE?.punchL, atkR: hit0('punchR') || !!tE?.punchR, up: !!held('high'), down: !!held('low'), mount: hit0('mount') || !!tE?.mount, guard: !!held('guard') || !!touch.state.guard, dx: m0.dx + tDx, dy: m0.dy + tDy, lmb: m0.l, rmb: m0.r, locked: m0.locked || m0.used, talk: hit0('talk') || !!tE?.talk, chat: hit0('chat') || !!tE?.talk, title: hit0('title') || !!tE?.title, bell: hit0('bell'), skip: edge0.has('Enter'), dodge: hit0('dodge') || !!tE?.dodge, taunt: hit0('taunt'), touch: touch.on };
 }
 
 // ---------- throwing: held, the power builds; let go, the paper flies ----------
@@ -299,7 +320,7 @@ function throwing(dt, inp) {
   if (!B.charge && held && B.papers > 0 && !rider.throwing) B.charge = { side: held, p: 0 };
   if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge;
     c.ay = THREE.MathUtils.clamp((c.ay || 0) - (inp.dy || 0) * .005, -1, 1); c.ax = THREE.MathUtils.clamp((c.ax || 0) - (inp.dx || 0) * .005 * c.side, -1, 1);
-    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; } B.charge = null; } }
+    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; audio.play('throw', { vol: .8 }); } B.charge = null; } }
 }
 const paperG = new THREE.CylinderGeometry(.035, .035, .26, 10), paperM = toon('#ece5d0'), bandM = toon('#b3372c');
 // ---------- the titles: three papers (made up), each house takes one or none; the bag holds some of each, X picks which is thrown ----------
@@ -343,7 +364,7 @@ const crackM = new THREE.MeshBasicMaterial({ map: crackT, transparent: true, alp
 const shards = [];
 const cracks = [];
 function breakWindow(w) {
-  w.broken = true; B.windows = (B.windows || 0) + 1; { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
+  w.broken = true; aud('glass', w.p); B.windows = (B.windows || 0) + 1; { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
   for (let k = 0; k < 12; k++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.07, .06), shardM); s.position.copy(w.p).add(new THREE.Vector3((Math.random() - .5) * .8, (Math.random() - .5) * .6, (Math.random() - .5) * .8)); scene.add(s);
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
@@ -356,7 +377,8 @@ function magnet(p, w, dist, dt) {
   p.v.x -= sx * lat * k; p.v.z -= sz * lat * k; p.v.y -= hy * k;
 }
 const nearestDoor = w => { let bi = 0, bd = 1e9; track.doors.forEach((d, i) => { const l = d.p.distanceToSquared(w); if (l < bd) { bd = l; bi = i; } }); return bi; };
-function score(n, at, label, col) { B.points += n; hud.pop(at, label, col); }
+let coinT = 0;
+function score(n, at, label, col) { if (n > 0 && performance.now() - coinT > 120) { coinT = performance.now(); aud('coin', at); } B.points += n; hud.pop(at, label, col); }
 function stepPapers(dt) {
   for (const p of papers) {
     p.t += dt; if (p.rest) continue;
@@ -373,13 +395,13 @@ function stepPapers(dt) {
     for (const C of track.near(p.hint)) { if (C.kind !== 'hard' || p.m.position.y > C.y0 + C.h) continue; if (boxHit(C, p.m.position.x, p.m.position.z, .05)) { p.m.position.x = p.prev.x; p.m.position.z = p.prev.z; p.v.x *= -.3; p.v.z *= -.3; } }
     const hgt = p.m.position.y - q.y; p.dot.position.set(p.m.position.x, q.y + .02, p.m.position.z); p.dot.scale.setScalar(Math.max(.5, 1.3 - hgt * .25));
     if (p.m.position.y < q.y + .035) { p.m.position.y = q.y + .035;
-      if (!p.landed) { p.landed = true; p.landT = p.t; quests.onLand(p.m.position);                                // where it came down: by a door, at a mailbox
+      if (!p.landed) { p.landed = true; p.landT = p.t; quests.onLand(p.m.position); aud('land', p.m.position);                                // where it came down: by a door, at a mailbox
         // on the porch by the door: 2; in a mailbox: 5; under the windows: 1; past the house: nothing (each house counts once)
         const P = p.m.position, at = P.clone().setY(q.y + .5), door = track.doors.find(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - P.x, d.p.z - d.n.z * 1.3 - P.z) < 1.6);
         const under = () => track.windows.find(w => { if (track.doors[w.house]?.done) return false; const dx = P.x - w.p.x, dz = P.z - w.p.z, out = dx * w.n.x + dz * w.n.z, side = Math.abs(dx * -w.n.z + dz * w.n.x); return out > -.3 && out < 2.2 && side < 1.3; });
         let w0 = null, boxed = false;
-        if (door) { door.done = true; deliver(track.doors.indexOf(door), 2, at, 'Na ganek', p.title); }
-        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; boxed = true; mb.flag.rotation.x = -Math.PI / 2; const hi = mb.house ?? (mb.house = nearestDoor(w)); if (!deliver(hi, 5, w.clone().setY(w.y + 1.5), 'Do skrzynki', p.title)) break;
+        if (door) { door.done = true; aud('porch', at); deliver(track.doors.indexOf(door), 2, at, 'Na ganek', p.title); }
+        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; boxed = true; mb.flag.rotation.x = -Math.PI / 2; aud('mailbox', w); const hi = mb.house ?? (mb.house = nearestDoor(w)); if (!deliver(hi, 5, w.clone().setY(w.y + 1.5), 'Do skrzynki', p.title)) break;
             const win = track.windows.filter(o => !o.broken).sort((a, b) => a.p.distanceToSquared(w) - b.p.distanceToSquared(w))[0];   // (thanks from the nearest window of the house)
             hud.praise(win && win.p.distanceTo(w) < 16 ? win.p.clone().add(new THREE.Vector3(0, .9, 0)) : w.clone().setY(w.y + 2.6)); break; } }
         if (!door && !boxed && (w0 = under())) { track.doors[w0.house].done = true; deliver(w0.house, 1, at, 'Pod okno', p.title); } }
@@ -407,7 +429,7 @@ function rampAt(x, z) {                                              // how high
 // ---------- the ride ----------
 // the run: how hard it is by now (0..1 over 8 km), hurt (a run ends at nothing), its end (the summary, the lottery), its start (what the lottery kept)
 const difficulty = () => Math.min(1, trip.dist / 8000);
-function hurt(n, why) { if (endT > 0) return; B.hp = Math.max(0, (B.hp ?? 100) - n); if (B.hp <= 0) { endT = 2.4; endWhy = why || 'Zdrowie się skończyło.'; } }
+function hurt(n, why) { if (endT > 0) return; audio.play('hurt', { vol: .6 }); B.hp = Math.max(0, (B.hp ?? 100) - n); if (B.hp <= 0) { endT = 2.4; endWhy = why || 'Zdrowie się skończyło.'; } }
 let endT = 0, endWhy = '';
 const runUI = createRun({ onAgain: () => { resetGame(); fromAccount(); } });
 // the notebook (Tab): who thinks what of you, the bike, what you carry, how you are
@@ -416,7 +438,7 @@ function endRun(why) { if (runUI.isOpen) return; endT = 0; runUI.open({ reason: 
 function fromAccount() { const all = kept(); for (const k of all) { if (k.keep.part) shop.grant(k.keep.part, k.keep.tier); else if (k.keep.item) (B.items ||= []).push(k.keep.item); } if (all.length) flash('Z konta: ' + all.map(k => k.label.toLowerCase()).join(', ')); }
 setTimeout(() => fromAccount(), 0);   // (the first run too)
 function crash(side, push, robbed) {                                 // push: what hit him (a car's velocity), if anything; robbed: the old woman got him
-  if (B.crash) return; hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
+  if (B.crash) return; audio.play('crash'); hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
   // he comes off: a ragdoll, flung on the way he was going (over the bars), a little to the side he falls, and with whatever hit him
   const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)), vel = f.clone().multiplyScalar(B.v * .55).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), B.crash.side * .5);
   if (push) vel.addScaledVector(push, .45); vel.y += B.air ? B.vy : 0;
@@ -493,7 +515,7 @@ function ride(dt, inp) {
       if (T.p < .7) { B.y = ground; B.air = false; B.vy = 0; B.airRamp = null; B.done = []; flash('Za późno! Trik od razu po wybiciu'); crash(0); return; }
       if (T.p < 1) T.pulled = true; const all = [...(B.done || []), T]; B.done = [];
       const clean = all.every(o => !o.pulled), n = all.reduce((a, o) => a + o.pts, 0) + (clean ? 1 : 0) + (all.length - 1) * 2;
-      const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); if (clean) quests.gangRep(.3); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
+      const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
     if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; } }
   else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else B.y = ground; }
   B.onRamp = !B.air && rp.h > .05 ? rp.on : null;   // (the ground fell away as he rose: he flies)
@@ -544,7 +566,7 @@ function pose(dt, pedal, brake, slope, fallen) {
 const TAUNTS = ['TE, SZOFER!', 'ZDUPCAJ Z DROGI, KUBICA!', 'RUSZAJ SIĘ, TOUR DE FRANCE!', 'NA ROWERKU TO PO CHODNIKU!', 'SZYBCIEJ, DZIADKU!', 'MAM CAŁY DZIEŃ, SERIO...', 'PEDAŁY SIĘ ZACIĘŁY?',
   'NO JEDŹŻE, ŚLIMAKU!', 'TE, PAPIEROWY RYCERZU!', 'GAZETĘ MI DAJ I SPADAJ!', 'MOJA BABCIA SZYBCIEJ JEŹDZI!', 'ZJEDŹ, BO CIĘ ROZNIOSĘ JAK TĘ GAZETĘ!'];
 const TAUNTS_FOOT = ['ZEJDŹ Z JEZDNI!', 'CHODNIK JEST OBOK, PIESZY!', 'CO, ROWER CI UKRADLI?', 'PIESZO TO PO PASACH!', 'SPACERUJ W PARKU!', 'NA ŁEB CI SPADŁO?'];   // (him on foot, in the way)
-function stepTaunts() { for (const t of traffic.list) if (t.shoutNow) { t.shoutNow = false; const at = t.car.group.position, L = foot.active ? TAUNTS_FOOT : TAUNTS; hud.pop(at.clone().setY(at.y + 1.6), foot.active ? 'TRĄB!' : 'BIP BIP!', '#efc970'); setTimeout(() => hud.rant(t.car.group.position, pickOf(L), true, 1.75), 450); } }
+function stepTaunts() { for (const t of traffic.list) if (t.shoutNow) { t.shoutNow = false; const at = t.car.group.position, L = foot.active ? TAUNTS_FOOT : TAUNTS; hud.pop(at.clone().setY(at.y + 1.6), foot.active ? 'TRĄB!' : 'BIP BIP!', '#efc970'); aud('horn', at); setTimeout(() => hud.rant(t.car.group.position, pickOf(L), true, 1.75), 450); } }
 const SWEARS = ['EJ!', 'CO TY ROBISZ?!', '@#$%!', 'GNOJEK!', 'UWAŻAJ!', 'ZWARIOWAŁEŚ?!'], DRIVERS = ['@#$%&!', 'MOJE AUTO!', 'ZWARIOWAŁEŚ?!', 'GNOJU!'];
 const pickOf = a => a[Math.random() * a.length | 0];
 const OUCH = ['AŁA!', 'KURDE, RZECZYWIŚCIE...', 'MOJE KOLANO!', 'AŁAAA!'], WOW = ['ALEEE URWAŁ!', 'OJ, TO BOLAŁO!', 'HAHAHA!', 'WIDZIAŁEŚ TO?!', 'DO KARETKI!'];
@@ -593,6 +615,7 @@ let barkers = [];
 const nearDog = () => barkers.find(n => n.dist < 2.9);
 function stepDogs(dt, inp) {
   barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw });
+  for (const n of barkers) { const d = n.dog; d.sndT = (d.sndT || 0) - dt; if (d.sndT <= 0) { d.sndT = 1 + Math.random() * 1.4; aud('bark', d); } }   // (a dog at him: a bark now and then)
   // a dog into a car or a tree (running at him, or kicked through the air): it goes over, and home
   const cars = traffic.boxes();
   for (const d of dogs.dogs) { if (!(d.state === 'chase' && d.v > 2.5) && !(d.fly && !d.fly.tumble)) continue;
@@ -761,13 +784,14 @@ function step(dt, inp) {
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
     else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
+  if (inp.bell && !foot.active) { if (MOD.bell > 0) { audio.play('bell'); B.bellT = 2.5; } else flash('Dzwonek kupisz u Janusza'); }
   syncMix(); if (inp.title) { for (let k = 1; k <= TK.length; k++) { const t = TK[(B.sel + k) % TK.length]; if (B.mix[t] > 0 || k === TK.length) { B.sel = (B.sel + k) % TK.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); }
   if (endT > 0 && (endT -= dt) <= 0) endRun(endWhy); B.hp = Math.min(100, (B.hp ?? 100) + dt / 12); if (B.points > (B.lastPts ?? 0)) B.earned = (B.earned || 0) + B.points - B.lastPts; B.lastPts = B.points;
   quests.update(dt, inp);                                               // (who is near to talk to; the errands; the thief)
   if (foot.active) return stepFoot(dt, inp);
   stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor });
-  { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 });   // someone walking: ridden into, over he goes
+  { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 && (B.bellT = (B.bellT || 0) - dt) > -4 });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
   { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16, road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
     if (ev === 'shout') hud.rant(granny.mouth, 'NIE PO SIONYM!', true);
@@ -864,12 +888,12 @@ function stepDrops(dt) { const me = foot.active ? foot.me : null, px_ = me ? me.
   for (let k = drops.length - 1; k >= 0; k--) { const d = drops[k]; d.t += dt; const kk = .5 + .5 * Math.sin(t * 4 + d.ph); d.ring.scale.setScalar(.85 + kk * .35); d.ring.material.opacity = .35 + kk * .45;
     d.arrow.position.y = 1 + Math.sin(t * 3 + d.ph) * .12; d.arrow.rotation.y = t * 2 + d.ph; d.item.rotation.y += dt * .9;
     const at = d.g.position, near = Math.hypot(at.x - px_, at.z - pz_) < reach;
-    if (near) { const lift = at.clone().setY(at.y + .7); d.onPick?.();
+    if (near) { const lift = at.clone().setY(at.y + .7); d.onPick?.(); audio.play('pick');
       if (d.kind === 'cash') { const n = 3 + (Math.random() * 7 | 0); score(n, lift, `+${n} ZŁ`, '#efc970'); flash(pickOf(['Portfel! Dowodu nie ma, kasa jest.', 'Drobne na bułki. I na piwo.', 'Łup z bójki: ' + n + ' zł']));  }
       if (d.kind === 'papers') { B.papers += 4; hud.pop(lift, '+4', '#f6f3ea'); flash('Jego gazety. Teraz twoje. +4'); }
       if (d.kind === 'bun') { if (me) me.hp = Math.min(100, me.hp + 30); B.hp = Math.min(100, (B.hp ?? 100) + 30); hud.pop(lift, '+30 HP', '#9fd27a'); flash('Bułka z makiem. Siły wracają.'); } }
     if (near || (d.t > 60 && !d.onPick)) { scene.remove(d.g); drops.splice(k, 1); } } }
-function pickBundle(C) { C.used = true; C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); }
+function pickBundle(C) { C.used = true; audio.play('rustle'); C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); }
 function stepFoot(dt, inp) {                                           // (on foot: him walking or fighting; the world goes on round him)
   foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, touch: inp.touch, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
   if (!foot.active) return;
@@ -915,7 +939,7 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
 const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
-const menu = createMenu({ hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
+const menu = createMenu({ sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (book.isOpen && book.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
@@ -923,7 +947,7 @@ addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 
   if (runUI.isOpen && runUI.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (shop.isOpen && shop.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (talk.isOpen && talk.key(e)) { if (!talk.isLight) keys.clear(); e.stopImmediatePropagation(); return; }   // (a talk open: its keys (a light one: just the numbers))
-  if (menu.open && !asking) { menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
+  if (menu.open && !asking) { audio.play('ui'); menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
   if (!asking && e.code === 'Escape') { menu.show('pause'); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
 const Q = new URLSearchParams(location.search), ARENA = Q.get('arena');
 if (!Q.has('play') && !ARENA) menu.show('title');   // (the title screen first; ?play skips it, as does the arena)
@@ -986,10 +1010,13 @@ function frame(now) {
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
   drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
+  { const q0 = track.probe(B.x, B.z, B.hint); audio.ride(foot.active || menu.open ? 0 : Math.abs(B.v), Math.abs(q0.d) > track.PAVE ? 1 : 0); }
+  { const pc = quests.policeCars()[0]; audio.siren(quests.siren && !menu.open, where(pc && pc.g.position)); }
+  audio.music(menu.page === 'title' || runUI.isOpen ? 'tytul' : quests.siren || quests.gangTargets.length ? 'poscig' : 'poranek');
   talkCam(dt); if (B.papers > (B.bagMax || 30)) { B.papers = B.bagMax || 30; if (!(B.fullT > 0)) { flash('Torba pełna'); B.fullT = 4; } } B.fullT = (B.fullT || 0) - dt;   // (no more than the bag holds)
   hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); px.render(scene, camera, hudBag); drawHud(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, hudBag, quests, talk, shop, book, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };

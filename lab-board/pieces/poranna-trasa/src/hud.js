@@ -19,6 +19,7 @@ export function createHud() {
   const cv = document.createElement('canvas'); cv.id = 'hudpx'; Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', imageRendering: 'pixelated', pointerEvents: 'none', zIndex: 2 });
   document.body.appendChild(cv); let g = cv.getContext('2d');
   const pops = [], rants = [], praises = [], hearts = [], impacts = [];
+  const hooks = {};                                                   // (onSay(words, where), onHit(word, where): the sound listens)
   const SWEAR = '@#$%&*!?';
   const MARK = { 'Ą': ['A', [[2, 5]]], 'Ć': ['C', [[2, -1]]], 'Ę': ['E', [[2, 5]]], 'Ł': ['L', [[1, 2]]], 'Ń': ['N', [[2, -1]]], 'Ó': ['O', [[2, -1]]], 'Ś': ['S', [[2, -1]]], 'Ź': ['Z', [[2, -1]]], 'Ż': ['Z', [[1, -1]]] };
   const glyphs = new Map();
@@ -42,11 +43,11 @@ export function createHud() {
   function resize(W, H) { cv.width = W; cv.height = H; g.imageSmoothingEnabled = false; }
   function pop(world, s, col) { pops.push({ p: world.clone(), s, col, t: 0 }); }
   function rant(world, say, follow, lift = 0) { let s = ''; for (let k = 0; k < 6 + (Math.random() * 3 | 0); k++) s += SWEAR[Math.random() * (SWEAR.length - 1) | 0]; s += '!';   // (say: words instead of the signs; follow: keep to the point as it moves)
-    rants.push({ p: follow ? world : world.clone(), lift, s: say || s, t: 0, seed: Math.random() * 99 }); }
+    rants.push({ p: follow ? world : world.clone(), lift, s: say || s, t: 0, seed: Math.random() * 99 }); hooks.onSay?.(say || s, world); }
   const THANKS = ['DZIEKI!', 'SUPER!', 'BRAWO!', 'HURA!', 'KOCHAM!'];
   function praise(world) { praises.push({ p: world.clone(), s: THANKS[Math.random() * THANKS.length | 0], t: 0, seed: Math.random() * 9, sent: 0 }); }
   // a hit, drawn as a comic does it: a jagged star (black rim, red, yellow, a white heart), the word in it, lines flying off, sparks
-  function impact(world, word = 'KOP!') { impacts.push({ p: world.clone(), t: 0, s: word, seed: Math.random() * 6.28, sparks: Array.from({ length: 5 }, () => ({ a: Math.random() * 6.28, v: 30 + Math.random() * 30 })) }); }
+  function impact(world, word = 'KOP!') { hooks.onHit?.(word, world); impacts.push({ p: world.clone(), t: 0, s: word, seed: Math.random() * 6.28, sparks: Array.from({ length: 5 }, () => ({ a: Math.random() * 6.28, v: 30 + Math.random() * 30 })) }); }
   function drawImpact(b, cx, cy) {
     const t = b.t, k = t < .07 ? t / .07 * 1.3 : t < .15 ? 1.3 - (t - .07) / .08 * .3 : t > .4 ? Math.max(0, 1 - (t - .4) / .14) : 1, R = 23 * k, r = 13 * k, n = 9;
     if (R < 1) return;
@@ -326,6 +327,6 @@ export function createHud() {
     bar(rx, F.b.hp, 5, '#cf5a3e', '#3a2a26', true); bar(rx, F.b.st, 2, '#efc970', '#3a3526', true);
     text(F.a.name, lx, y - 8, '#f6f3ea'); text(F.b.name, rx + bw - width(F.b.name), y - 8, '#f6f3ea');
     if (F.a.guard) { g.fillStyle = '#9ccad8'; g.fillRect(lx + bw + 4, y, 5, 5); g.fillStyle = '#17181b'; g.fillRect(lx + bw + 6, y + 1, 1, 3); } }
-  return { resize, draw, pop, rant, praise, impact, ask, askAt, bleed, tip, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
+  return { hooks, resize, draw, pop, rant, praise, impact, ask, askAt, bleed, tip, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
     api: { get g() { return g; }, text, big, width, glyph, get W() { return cv.width; }, get H() { return cv.height; } }, get askSel() { return Q.sel; }, set askSel(v) { Q.sel = v; }, canvas: cv };
 }

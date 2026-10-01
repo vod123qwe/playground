@@ -69,7 +69,7 @@ export function createShop({ THREE, createRider, game }) {
   const cv = el.querySelector('canvas'), right = el.querySelector('.right'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
   // pan Janusz: what he says (a line at the top; his talking clip while he says it), his trips with Mietek on asking
   const AN = bag(), pick = a => a[Math.random() * a.length | 0]; let talkT = 0;
-  const say = s => { el.querySelector('.jan .say').textContent = s; talkT = Math.min(5, 1.2 + s.length * .035); };
+  const say = s => { el.querySelector('.jan .say').textContent = s; talkT = Math.min(5, 1.2 + s.length * .035); game.say?.(s); };
   el.querySelector('.chat').onclick = () => say(AN.draw('janusz'));
   // what you have: per part, the tiers owned and the one on
   const owned = {}, on = {}; const reset = () => { for (const k in PARTS) { owned[k] = new Set([0]); on[k] = 0; } }; reset();
