@@ -19,7 +19,7 @@ export function createPad({ onSwitch } = {}) {
   addEventListener('pointerdown', e => { if (e.isTrusted) use(false); }, true);
   addEventListener('mousemove', e => { if (e.isTrusted && Math.abs(e.movementX) + Math.abs(e.movementY) > 12) use(false); });
   function poll() {
-    const all = [...(navigator.getGamepads?.() || [])].filter(p => p && p.connected), gp = all.find(p => p.mapping === 'standard') || all[0];
+    const all = [...(navigator.getGamepads?.() || [])].filter(p => p && p.connected && p.index !== P.exclude), gp = all.find(p => p.mapping === 'standard') || all[0];
     prev = cur; P.on = !!gp; if (!gp) { cur = []; vals = []; P.ax = [0, 0, 0, 0]; if (P.active) use(false); return; }
     if (gp.id !== lastId) { lastId = gp.id; P.kind = /054c|sony|playstation|dualsense|dualshock/i.test(gp.id) ? 'ps' : 'xbox'; }
     cur = gp.buttons.map(b => b.pressed || b.value > .5); vals = gp.buttons.map(b => b.value || (b.pressed ? 1 : 0));

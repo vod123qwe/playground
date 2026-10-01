@@ -146,7 +146,11 @@ export function createPixel({ THREE, renderer, height = 240 }) {
   // plane, so still things fall on the same pixels frame after frame and do not shimmer; the rest of the move, under a pixel, is given
   // back by shifting the finished picture (shift), so it still glides
   const snap = { on: false, tgt: new THREE.Vector3() }, _r = new THREE.Vector3(), _u = new THREE.Vector3(), _p = new THREE.Vector3();
-  function render(scene, camera, over) {                              // (over: { scene, camera } drawn over the world into the same picture: the bag in the corner)
+  function render(scene, camera, over, cam2, split) {                 // (over: { scene, camera } drawn over the world into the same picture: the bag in the corner; cam2: two players, the picture split ('v': side by side, 'h': one over the other))
+    if (cam2) { mat.uniforms.near.value = camera.near; mat.uniforms.far.value = camera.far; mat.uniforms.shift.value.set(0, 0); const w = rt.width, h = rt.height;
+      const R = split === 'v' ? [[0, 0, w >> 1, h], [w >> 1, 0, w - (w >> 1), h]] : [[0, h >> 1, w, h - (h >> 1)], [0, 0, w, h >> 1]];
+      [camera, cam2].forEach((c, k) => { const [x, y, ww, hh] = R[k]; rt.viewport.set(x, y, ww, hh); rt.scissor.set(x, y, ww, hh); rt.scissorTest = true; renderer.setRenderTarget(rt); if (k === 0) renderer.clear(); renderer.render(scene, c); });
+      rt.viewport.set(0, 0, w, h); rt.scissor.set(0, 0, w, h); rt.scissorTest = false; renderer.setRenderTarget(null); renderer.render(qs, qc); return; }
     mat.uniforms.near.value = camera.near; mat.uniforms.far.value = camera.far;
     let moved = false; mat.uniforms.shift.value.set(0, 0);
     if (snap.on && camera.isPerspectiveCamera) { camera.updateMatrixWorld(); _p.copy(camera.position); _r.setFromMatrixColumn(camera.matrixWorld, 0); _u.setFromMatrixColumn(camera.matrixWorld, 1);

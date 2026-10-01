@@ -666,7 +666,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     rnd = keep;
     const inStreet = (x, z) => { const dx = x - J.x, dz = z - J.z, al = dx * n.x + dz * n.z, ac = dx * f.x + dz * f.z; return al > -.3 && al < Lr && Math.abs(ac) < W2; };
     const inCircle = (x, z) => { const r = Math.hypot(x - C0.x, z - C0.z); return r < Rc && r > Ri; };
-    return { start, bikes, family, iJ, sd, C0, J, n, homeH, paved: (x, z) => inStreet(x, z) || inCircle(x, z), yard: (x, z) => Math.hypot(x - C0.x, z - C0.z) < Rc + 17, C0R: Rc + 15, near: (i, s2, m) => s2 === sd && Math.abs((((i - iJ) % N) + N + N / 2) % N - N / 2) * ds < m + Rc + 14 };
+    return { start, bikes, family, iJ, sd, C0, J, n, Rc, homeH, paved: (x, z) => inStreet(x, z) || inCircle(x, z), yard: (x, z) => Math.hypot(x - C0.x, z - C0.z) < Rc + 17, C0R: Rc + 15, near: (i, s2, m) => s2 === sd && Math.abs((((i - iJ) % N) + N + N / 2) % N - N / 2) * ds < m + Rc + 14 };
   }
   // the plots in place of a house now and then (see plots.js): each kind in turn, so all of them are along the way
   const pr = mulberry(97), puddle = (h, x, z, r, mud) => { h.updateMatrixWorld(true); const p = h.localToWorld(new THREE.Vector3(x, 0, z)); puddles.push({ x: p.x, z: p.z, r, mud }); };
@@ -990,6 +990,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       if (lab && /dom|baraki|działki|garaże|budowa|trzepak|buda|kapliczka|przyczepa|posterunek|sklep/.test(lab) || big && o.isGroup) { for (const c of o.children) check(c, (lab || 'działka') + ' / ' + (c.isMesh ? c.geometry.type.replace('Geometry', '') : 'grupa ' + c.children.length), o.position.y, c.isMesh && !c.userData.slab ? 'flat' : null); }
       else check(o, lab || (o.isMesh ? o.geometry.type.replace('Geometry', '') : 'grupa ' + o.children.length), null, o.isMesh ? 'flat' : null); }   // (loose boxes along the road, a rail, a kerb: only if flat on the ground)
     return out; }
-  return { home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, ROAD, KERB, PAVE };
+  // (for the game's modes: a collider added or taken away while it runs, the props to build with)
+  const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
+  return { addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
