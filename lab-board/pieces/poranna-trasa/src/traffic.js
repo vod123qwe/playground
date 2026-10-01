@@ -12,6 +12,8 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     list.push({ car: c, dir, s: (k + .3) / n * len, v: 8 + rnd() * 3, cruise: 8.5 + rnd() * 2.5, lane: dir * LANE, laneV: 0, laneT: dir * LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0 }); }
   // the bus: round the loop, stopping at the stops on its side (track.stops) a few seconds; the cars behind go round it
   { const c = cars.makeCar('bus', cars.COLOURS.bus[rnd() * 3 | 0]); G.add(c.group); list.push({ car: c, dir: 1, s: len * .6, v: 7, cruise: 7.6, lane: LANE, laneV: 0, laneT: LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0, bus: true, extra: 3.2 }); }
+  // the village's tractor: slow, always out, the cars behind it wait and go round
+  if (track.region === 'wies' && cars.makeTractor) for (const [dir, f] of [[-1, .3], [1, .75]]) { const c = cars.makeTractor(); G.add(c.group); list.push({ car: c, dir, s: len * f, v: 3.4, cruise: 3.4 + rnd() * .5, lane: dir * LANE, laneV: 0, laneT: dir * LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0, tractor: true, extra: 1 }); }
   const wrap = x => ((x % len) + len) % len, ahead = (from, to, dir) => { let d = ((to - from) * dir % len + len) % len; return d > len / 2 ? d - len : d; };
   function place(t) {
     const f = wrap(t.s) / ds, i0 = Math.floor(f) % N, i1 = (i0 + 1) % N, k = f - Math.floor(f), A = S[i0], B = S[i1];
@@ -29,7 +31,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   let clock = 0;
   function update(dt, R) { clock += dt;
     // how many cars are out (R.cars: few at first, more as the run goes on); one coming out starts on the far side of the loop
-    { let k = 0; for (const t of list) { if (t.bus) { const on = R.bus !== false; if (on && t.off) { t.s = wrap(R.s + len / 2); t.snap = true; t.stop = 0; } t.off = !on; t.car.group.visible = on; continue; } const on = k++ < (R.cars ?? 99); if (on && t.off) { t.s = wrap(R.s + len / 2 + k * 41); t.v = t.cruise; t.lane = t.laneT = t.dir * LANE; t.pass = null; t.stop = 0; t.snap = true; } t.off = !on; t.car.group.visible = on; } }
+    { let k = 0; for (const t of list) { if (t.tractor) { t.off = false; continue; } if (t.bus) { const on = R.bus !== false; if (on && t.off) { t.s = wrap(R.s + len / 2); t.snap = true; t.stop = 0; } t.off = !on; t.car.group.visible = on; continue; } const on = k++ < (R.cars ?? 99); if (on && t.off) { t.s = wrap(R.s + len / 2 + k * 41); t.v = t.cruise; t.lane = t.laneT = t.dir * LANE; t.pass = null; t.stop = 0; t.snap = true; } t.off = !on; t.car.group.visible = on; } }
     const live = list.filter(t => !t.off);                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
     stepBikes(dt, R);
     // everything that can be in a lane: the cars, the parked ones, the rider

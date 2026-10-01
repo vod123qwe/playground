@@ -54,6 +54,7 @@ export const EVENTS = {
   kick_car: [{ head: 'Wgniecione drzwi', text: 'Kierowca znalazł na drzwiach auta ślad buta. Sąsiedzi przysięgają, że to nie oni. Ślad ma rozmiar, jak mówi kierowca, „młodzieżowy”.' }],
   kick_dog: [{ head: 'Pies w krzakach', text: 'Czworonóg, który gonił rowery na Akacjowej, sam wylądował w krzakach. Obrońcy zwierząt protestują, listonosz bije brawo.' }],
   kick_mailbox: [{ head: 'Skrzynki pocztowe w opałach', text: 'Ktoś skopał {n} {skrzynek}. Poczta rozkłada ręce, a stolarz ma pełne ręce roboty. Podejrzenia padają na konkurencję gazety. Albo na młodzież.' }],
+  goose: [{ head: 'Gęsi kontra rower', text: 'Na drodze przez wieś stado gęsi zatrzymało rowerzystę. Rowerzysta leży, gęsi syczą, a sołtys zapewnia, że to nie jego gęsi.' }, { head: 'Rowerzysta w rowie przez gęsi', text: 'Gęsi przechodziły przez drogę, rowerzysta nie zdążył. Świadkowie mówią, że gęś wyglądała na zadowoloną.' }],
   trick: [{ head: 'Akrobata na skoczni', text: 'Mieszkańcy widzieli rano rowerzystę, który wykręcił w powietrzu {name}. Sąsiadki oklaskiwały spod firanek, dzielnicowy kręcił głową.' }],
   fall: [{ head: 'Asfalt znów wygrał', text: 'Rowerzysta {n} {razy} zaliczył rano asfalt. Kolana w porządku, duma trochę mniej.' }],
   streak: [{ head: 'Seria jak z karabinu', text: 'Seria {n} trafień do skrzynek z rzędu. Takiej serii dawno tu nie było.' }],
@@ -316,7 +317,7 @@ export function createPaper({ game }) {
   const portrait = (c, cls = 'pt') => c ? `<img class="${cls}" src="${url(c)}" alt="">` : '';
   // the sections' blocks, in their order. The type: a kicker (the red label over a story), the headline, a deck under it (grey), the
   // byline; paragraphs indented, not spaced; captions FOT.; rules between stories
-  const KICK = { granny: 'KRONIKA', car: 'Z DROGI', police: 'KRONIKA POLICYJNA', window: 'Z OSIEDLA', dog: 'Z OSIEDLA', fall: 'Z TRASY', gang: 'KRONIKA', chase: 'KRONIKA POLICYJNA', kick_ped: 'KRONIKA', kick_bike: 'Z DROGI', kick_gangm: 'KRONIKA', kick_police: 'KRONIKA POLICYJNA', kick_granny: 'SKANDAL', kick_car: 'Z DROGI', kick_dog: 'Z OSIEDLA', kick_mailbox: 'Z OSIEDLA', trick: 'SPORT', streak: 'SPORT', clean: 'Z TRASY' };
+  const KICK = { granny: 'KRONIKA', car: 'Z DROGI', police: 'KRONIKA POLICYJNA', window: 'Z OSIEDLA', dog: 'Z OSIEDLA', fall: 'Z TRASY', gang: 'KRONIKA', chase: 'KRONIKA POLICYJNA', kick_ped: 'KRONIKA', kick_bike: 'Z DROGI', kick_gangm: 'KRONIKA', kick_police: 'KRONIKA POLICYJNA', kick_granny: 'SKANDAL', kick_car: 'Z DROGI', kick_dog: 'Z OSIEDLA', kick_mailbox: 'Z OSIEDLA', goose: 'Z GMINY', trick: 'SPORT', streak: 'SPORT', clean: 'Z TRASY' };
   const BYS = ['R. KOWAL', 'M. WRÓBEL', 'J. SIKORA', 'A. DZIĘCIOŁ'];
   function blocks(sec) { const { L, r, rec } = D, nw = D.photos.news, tz = D.tease, out = [], B = (h, cls = '') => out.push(`<div class="blk ${cls}">${h}</div>`), by = pickOf(BYS);
     // the front: the town's stories (the lead the freshest of them, the police's first when there is one); what happened on the

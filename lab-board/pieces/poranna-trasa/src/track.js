@@ -730,6 +730,13 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     dapple(i + Math.round((rnd() - .5) * 4 / ds), side * (VERGE - 3.2));
   }
   for (let i = 60; i < N - 20; i += Math.round((10 + rnd() * 7) / ds)) { if (rnd() < .82) streetTree(i, rnd() < .5 ? 1 : -1); }   // (thick along the road: the crowns close over it here and there)
+  // the village's poplars: rows along stretches of the road, tall and slim, at the dirt path's far edge
+  if (RG.farms) { const popM = toon('#4f7a3a', { map: rep(tex.leaves(), 1, 3) }), pr2 = mulberry(77); let i = Math.round(pr2() * 60 / ds);
+    while (i < N - 30) { const run = Math.round((50 + pr2() * 80) / ds), sd = pr2() < .5 ? -1 : 1;
+      for (let j = i; j < i + run && j < N - 10; j += Math.round((7 + pr2() * 2) / ds)) { if (nearStop(j, sd, 12) || nearShop(j, sd, 12)) continue; const d = sd * (PAVE + 1.3); if (!free(j, d, 1)) continue;
+        const t = new THREE.Group(), H = 3 + pr2() * 1.5; t.add(new THREE.Mesh(new THREE.CylinderGeometry(.16, .24, H, 6).translate(0, H / 2, 0), wood)); const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), popM); c.scale.set(.85, 3.4 + pr2(), .85); c.position.y = H + 2.6; t.add(c);
+        put(t, j, d, 0, pr2() * 6); hit(t, { hx: .22, hz: .22, h: 3, kind: 'hard' }, j); show.tree.push({ o: t, label: 'topola', note: (H + 6).toFixed(1) + ' m' }); }
+      i += run + Math.round((60 + pr2() * 120) / ds); } }
   // street lamps on the right: a grey post, an arm out over the road, a lamp
   for (let i = 30; i < N; i += Math.round((46 + rnd() * 10) / ds)) { const l = new THREE.Group(), m = toon('#6a6e70'); l.add(box(.14, 6.2, .14, m, 0, 3.1, 0));
     const arm = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 6.0, 0), new THREE.Vector3(-.4, 6.5, 0), new THREE.Vector3(-1.4, 6.6, 0), new THREE.Vector3(-2.0, 6.45, 0)]), 12, .05, 6), m); l.add(arm);
