@@ -188,6 +188,17 @@ export function createPaper({ game }) {
     #paper .stamp b { display: block; font-weight: normal; letter-spacing: 2px; } #paper .stamp span { color: #6a3a30; }
     #paper .jad { overflow: hidden; } #paper .jad .jt { display: block; font-weight: normal; font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; } #paper .jad .js { color: #6a645c; } #paper .jad .jc { color: #8e2e25; margin: 6px 0; clear: both; }
     #paper .corner p { margin-bottom: 4px; } #paper .nx { margin-bottom: 10px; } #paper .nx .cap { margin-top: 4px; }
+    /* the last page: side by side, the new day on the right */
+    #paper .blk.full { height: 100%; border-bottom: 0; padding: 0; margin: 0; } #paper .jt { display: grid; gap: 16px; height: 100%; } #paper .jt.three { grid-template-columns: 1fr 1.05fr 1.15fr; } #paper .jt.two { grid-template-columns: 1fr 1.1fr; }
+    #paper .jt > div { min-height: 0; overflow: hidden; } #paper .jt-deal, #paper .jt-tab { border-right: 2px solid #2b2723; padding-right: 14px; } #paper .jt .big { font-weight: normal; font-size: 32px; text-shadow: 4px 0 0 #2b2723; }
+    #paper .mod, #paper .pick { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 18px 1fr auto; gap: 2px 8px; width: 100%; padding: 6px 8px; margin: 6px 0 0; border: 2px solid #2b2723; background: #e6dcc2; }
+    #paper .mod i { width: 14px; height: 14px; border: 2px solid #2b2723; background: #f2ece0; margin-top: 2px; } #paper .mod.on i { background: #b8483a; box-shadow: inset 0 0 0 2px #f2ece0; } #paper .mod b, #paper .pick b { font-weight: normal; } #paper .mod em { font-style: normal; color: #8e2e25; }
+    #paper .mod span { grid-column: 2 / -1; color: #6a645c; } #paper .mod.on { background: #f0d9c8; border-color: #8e2e25; } #paper .mod:hover, #paper .pick:hover { background: #f2e6c0; }
+    #paper .sum { margin-top: 8px; color: #8e2e25; } #paper .sum b { font-weight: normal; font-size: 24px; text-shadow: 3px 0 0 #8e2e25; }
+    #paper .jt-cta { background: #e9d9a8; border: 4px solid #2b2723; padding: 10px 12px; display: flex; flex-direction: column; box-shadow: 6px 6px 0 rgba(43,39,35,.25); }
+    #paper .jt-cta h2 { margin-bottom: 4px; } #paper .pick { grid-template-columns: 1fr; background: #f2ece0; } #paper .pick span { color: #6a645c; } #paper .pick.on { background: #2b2723; color: #efc970; } #paper .pick.on span { color: #d8cfb6; }
+    #paper .rws { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; } #paper .rw { color: #8e2e25; } #paper .pick.on .rw { color: #efc970; } #paper .rw.had { text-decoration: line-through; opacity: .6; }
+    #paper .jt-cta .go { margin: auto 0 8px; padding-top: 10px; } #paper .jt-cta .go .pxk { width: 100%; white-space: normal; } #paper .jt-cta .keys2 .pxk { flex: 1; } #paper .wallet { margin: 6px 0 0; color: #4a4540; }
     /* the phone call over the paper */
     #paper .call { position: absolute; inset: 0; z-index: 4; display: none; place-items: center; background-color: rgba(10,11,13,.55); background-image: linear-gradient(45deg, rgba(10,11,13,.5) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.5) 75%), linear-gradient(45deg, rgba(10,11,13,.5) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.5) 75%); background-size: 4px 4px; background-position: 0 0, 2px 2px; }
     #paper .call.on { display: grid; } #paper .phone { width: min(520px, 86vw); border: 12px solid transparent; border-image: var(--px-win) 4 fill / 12px; color: #f6f3ea; animation: pp-ring .5s steps(4) both; } @keyframes pp-ring { 0% { transform: translateY(40px) rotate(-3deg); } 50% { transform: rotate(2deg); } }
@@ -301,6 +312,7 @@ export function createPaper({ game }) {
       B(`<canvas class="big" data-map="big"></canvas><div class="legend"><span style="--c:#4f9a3e">DORĘCZONE</span><span style="--c:#cf5a3e">BEZ GAZETY</span><span style="--c:#e8e2d2">BEZ PRENUMERATY</span><span style="--c:#b8483a">TRASA</span><span style="--c:#8e2e25">WYWROTKA</span><span style="--c:#2b2723">SZYBA</span></div>`);
       B(`<h3>Gwiazdki ${starsH(rec.g.n)}</h3><div class="goal">${starsH(st[0] ? 1 : 0, 1)}<span>CZAS DO ${mmss(gl.time)}</span><span>${mmss(r.time)}</span></div>
         <div class="goal">${starsH(st[1] ? 1 : 0, 1)}<span>${gl.papers} GAZET, ${Math.round(gl.acc * 100)}% CELNIE</span><span>${r.delivered}, ${Math.round(r.acc * 100)}%</span></div><div class="goal">${starsH(st[2] ? 1 : 0, 1)}<span>BEZ WYWROTKI</span><span>${r.falls}</span></div>`);
+      { const P = D.pay; if (P) B(`<h3>Wypłata</h3><table><tr><td>ZAROBEK NA TRASIE</td><td>${P.earned} ZŁ</td></tr>${P.bonus ? `<tr><td>PREMIA ZA UMOWĘ</td><td>+${P.bonus} ZŁ</td></tr>` : ''}<tr><td>ABONAMENT (${P.regulars} STAŁYCH)</td><td>+${P.income} ZŁ</td></tr>${P.got.map(g => `<tr class="rec"><td>NAGRODA ZA ${'★'.repeat(g.stars)}</td><td>${g.name}</td></tr>`).join('')}</table>${P.mods.length ? `<p class="cap">Umowa: ${P.mods.join(', ').toLowerCase()}.</p>` : ''}`); }
       if (bd.length) B(`<h3>Odznaki poranka</h3><div class="stamps">${bd.map((x, k) => `<div class="stamp" style="--r:${(k % 2 ? 3 : -4)}deg"><b>${x.t}</b><span>${x.d}</span></div>`).join('')}</div>`);
       B(`<h3>Dziś i najlepiej</h3><table><tr><th></th><th>DZIŚ</th><th>NAJLEPIEJ</th></tr>${row('CZAS', mmss(r.time), mmss(b.time), 'time')}${row('GAZETY', r.delivered, b.delivered, 'delivered')}${row('CELNOŚĆ', Math.round(r.acc * 100) + '%', Math.round((b.acc || 0) * 100) + '%', 'acc')}
         ${row('RZUTY', r.thrown, '-')}${row('WYWROTKI', r.falls, b.falls)}${row('SZYBY', r.windows, '-')}${row('ZAROBEK', r.earned + ' ZŁ', b.earned + ' ZŁ', 'earned')}${row('PRZEJAZDY', b.runs, '')}</table>`);
@@ -312,11 +324,15 @@ export function createPaper({ game }) {
       for (const a of D.ads.filter(a => !a.j)) B(`<b>${a.t}</b>${a.d}`, 'ad');
       for (const c of corners(D)) B(`<p class="kick">${c.k}</p>${c.h}`, 'corner');
       if (C) B(`<p class="kick">ANEGDOTA</p><h3>${N.head}</h3>${portrait(N.img)}<p>${N.text}</p><p class="sig">${C.who}, ${C.role}</p>`, 'iv'); }
-    if (sec === 3) {
-      B(`<p class="kick">CO DALEJ</p><h2>Dokąd jutro?</h2>`, 'span');
-      B(`${D.next.length ? D.next.map(x => `<div class="nx">${pxKey(x.name, { icon: 'play', kind: x.first ? 'gold' : '', attrs: `data-go="${x.id}"`, nudge: true })}<p class="cap">${x.note}</p></div>`).join('') : '<p>Wszystkie odcinki w okolicy są już otwarte albo czekają na gwiazdki.</p>'}`, 'next');
-      B(`<h3>W portfelu: ${D.money} ZŁ</h3><div class="keys2">${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}${pxKey('MAPA', { icon: 'map', attrs: 'data-act="map"' })}</div>`);
-      B(`<h3>Tabela wyników</h3><table><tr><th>ODCINEK</th><th>★</th><th>CZAS</th></tr>${(D.table || []).map(t => `<tr${t.on ? ' class="rec"' : ''}><td>${t.open ? t.name : '???'}</td><td>${starsH(t.stars)}</td><td>${t.best ? mmss(t.best.time) : '-'}</td></tr>`).join('')}</table>`); }
+    if (sec === 3) { const nexts = D.next.filter(x => x.id), sel = D.pick && nexts.some(x => x.id === D.pick) ? D.pick : nexts[0]?.id, ms = game.mods?.() || [], MODS = game.MODS || [], bon = game.modBonus?.(ms) || 0;
+      const rw = id => { const { R, got } = game.rewards?.(id) || { R: {} }; return [1, 3].filter(k => R[k]).map(k => `<span class="rw ${got?.[id + ':' + k] ? 'had' : ''}">${'★'.repeat(k)} ${R[k].cash ? R[k].cash + ' ZŁ' : game.partName(...R[k].part)}</span>`).join(''); };
+      const tab = `<div class="jt-tab"><p class="kick">TABELA WYNIKÓW</p><table><tr><th>ODCINEK</th><th>★</th><th>CZAS</th></tr>${(D.table || []).map(t => `<tr${t.on ? ' class="rec"' : ''}><td>${t.open ? t.name : '???'}</td><td>${starsH(t.stars)}</td><td>${t.best ? mmss(t.best.time) : '-'}</td></tr>`).join('')}</table>
+        <p class="kick" style="margin-top:12px">STALI PRENUMERATORZY</p><p><b class="big">${D.pay?.regulars ?? 0}</b> stałych klientów płaci <b>${D.pay?.income ?? 0} zł</b> abonamentu za każdą metę. Więcej gwiazdek na odcinkach, więcej stałych klientów.</p></div>`;
+      const deal = `<div class="jt-deal"><p class="kick">UMOWA NA JUTRO</p><h3>Utrudnienia za premię</h3><p class="cap">Redaktor dopłaci, jeśli weźmiesz trudniejszy poranek.</p>
+        ${MODS.map(m => `<button class="mod ${ms.includes(m.id) ? 'on' : ''}" data-mod="${m.id}"><i></i><b>${m.t}</b><em>+${Math.round(m.bonus * 100)}%</em><span>${m.d}</span></button>`).join('')}<p class="sum">PREMIA: <b>+${Math.round(bon * 100)}%</b> ZAROBKU</p></div>`;
+      const cta = `<div class="jt-cta"><p class="kick">NOWY DZIEŃ</p><h2>Dokąd jutro?</h2>${nexts.length ? nexts.map(x => `<button class="pick ${x.id === sel ? 'on' : ''}" data-pick="${x.id}"><b>${x.name}</b><span>${x.note}</span><span class="rws">${rw(x.id)}</span></button>`).join('') : '<p>Dalej jeszcze nie pojedziesz. Zdobądź gwiazdki albo powtórz odcinek.</p>'}
+        <div class="go">${sel ? pxKey('RUSZAM W TRASĘ', { icon: 'play', key: 'ENTER', kind: 'gold', attrs: `data-go="${sel}"`, nudge: true }) : ''}</div><div class="keys2">${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}${pxKey('MAPA', { icon: 'map', attrs: 'data-act="map"' })}</div><p class="wallet">W PORTFELU: ${D.money} ZŁ</p></div>`;
+      const lay = cols >= 3 ? 'three' : 'two'; B(`<div class="jt ${lay}">${lay === 'three' ? tab + deal + cta : deal + cta}</div>`, 'span full'); }
     return out; }
   // ---------- the phone: a call to Janusz over the paper (his printed face, what he says typed out, what you can ask) ----------
   const call = document.createElement('div'); call.className = 'call'; el.appendChild(call); let callT = 0;
@@ -345,6 +361,8 @@ export function createPaper({ game }) {
     f.querySelectorAll('[data-sec]').forEach(a => a.onclick = () => turn(pages.findIndex(q => q.sec === +a.dataset.sec)));
     f.querySelectorAll('[data-turn]').forEach(a => a.onclick = () => turn(page + +a.dataset.turn));
     f.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { close(); game.go(b.dataset.go); });
+    f.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { game.setMod?.(b.dataset.mod, !b.classList.contains('on')); game.sound?.('ui'); build(); });
+    f.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { D.pick = b.dataset.pick; game.sound?.('ui'); build(); });
     f.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { const a = b.dataset.act; if (a === 'shop') game.shop(); else if (a === 'call') callJanusz(); else { close(); game.map(); } }); }
   // pour: each section from a new page; a block that makes the columns run over goes to the next page (alone on a page, it stays)
   let pages = [], cols = 2;
@@ -367,7 +385,7 @@ export function createPaper({ game }) {
   addEventListener('resize', () => { if (open_ && !busy) build(); });
   function key(e) { if (!open_) return false; const c = e.code; if (call.classList.contains('on')) { if (c === 'Escape') endCall(); e.preventDefault(); return true; }
     if (c === 'ArrowRight' || c === 'KeyD' || c === 'PageDown') turn(page + 1); else if (c === 'ArrowLeft' || c === 'KeyA' || c === 'PageUp') turn(page - 1);
-    else if (c === 'Enter' || c === 'Space') { if (page < pages.length - 1) turn(page + 1); else { close(); game.map(); } } else if (c === 'KeyR') { close(); game.again(); } else if (c === 'Escape' || c === 'KeyM') { close(); game.map(); }
+    else if (c === 'Enter' || c === 'Space') { if (page < pages.length - 1) turn(page + 1); else { const g = A.face.querySelector('.jt [data-go]'); if (g) g.click(); else { close(); game.map(); } } } else if (c === 'KeyR') { close(); game.again(); } else if (c === 'Escape' || c === 'KeyM') { close(); game.map(); }
     e.preventDefault(); return true; }
   const reopen = () => { if (!D) return; D.money = game.money?.() ?? D.money; open_ = true; el.classList.add('on'); build(); };
   return { open, close, reopen, key, get isOpen() { return open_; } };

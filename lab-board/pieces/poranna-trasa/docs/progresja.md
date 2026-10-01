@@ -78,6 +78,14 @@ Deszcz (ślisko, kałuże), mgła (krótki widok), roboty drogowe (objazd), fest
 3. **Pory dnia**: świt, poranek, dzień; o świcie zapalone latarnie, okna, światła aut.
 4. **Różnorodność budynków**: bloki i inne budynki w kolejnych poziomach, nie tylko domki.
 
+## Otwarte: po co wracać na odcinek (Jarek po v92)
+
+Dziś „Okrążenie od tyłu” to ta sama pętla w drugą stronę, bez własnej nagrody. Propozycje (do wyboru):
+- prenumeraty jako farma: zadowoleni prenumeratorzy płacą abonament co poranek w domu; im więcej gwiazdek na odcinku, tym więcej stałych klientów i dochodu;
+- każdy odcinek z własną nagrodą za pierwsze i trzecie gwiazdki (części, lakiery, nowe rowery do kupienia u Janusza);
+- finał odcinka: ostatnie metry jako tor przeszkód (skocznie, rampy), przejazd przez bramę z zwolnionym tempem, błysk aparatu i to zdjęcie na pierwszej stronie gazety;
+- zadania z gazety: ogłoszenia jako zlecenia na następny przejazd (znajdź kota, dowieź paczkę), nagroda w kolejnym wydaniu.
+
 ## Pomysły na później
 
 - **Kopanie w skrzynki konkurencji** (Jarek): domy z prenumeratą innej gazety mają swoje skrzynki; można w nie kopnąć (mniej klientów dla konkurencji), ale to czasem wywołuje zdarzenie (sąsiad widział, pościg, zła sława, odwet konkurencji).

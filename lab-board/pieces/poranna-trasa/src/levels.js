@@ -50,3 +50,23 @@ export function record(L, r) { const s = load(), g = grade(L, r), b = s.best[L.i
   if (!b || r.time < b.time) { nb.time = r.time; beat.time = !!b; } if (!b || r.delivered > (b.delivered || 0)) { nb.delivered = r.delivered; beat.delivered = !!b; }
   if (!b || r.acc > (b.acc || 0)) { nb.acc = r.acc; beat.acc = !!b; } if (!b || r.earned > (b.earned || 0)) { nb.earned = r.earned; beat.earned = !!b; }
   nb.stars = Math.max(b?.stars || 0, g.n); nb.runs = (b?.runs || 0) + 1; nb.falls = Math.min(b?.falls ?? 99, r.falls); s.best[L.id] = nb; s.done[L.id] = true; save(); return { g, beat, best: nb, first: !b }; }
+
+// ---------- why ride a stretch again ----------
+// the rewards of a stretch's stars: the first star and the third, each once (cash, or a part from Janusz's: it goes to your spare parts)
+export const REWARDS = { p1: { 1: { cash: 10 }, 3: { part: ['dzwonek', 1] } }, p2: { 1: { cash: 15 }, 3: { part: ['siodelko', 1] } }, p3: { 1: { cash: 15 }, 3: { part: ['kola', 1] } }, p4: { 1: { cash: 25 }, 3: { part: ['biegi', 1] } } };
+// what a new star brought (the ones not had before): marks them given in the save
+export function rewardsFor(id, before, now) { const s = load(), R = REWARDS[id] || {}, got = []; s.got ||= {};
+  for (const k of [1, 3]) if (R[k] && now >= k && before < k && !s.got[id + ':' + k]) { s.got[id + ':' + k] = true; got.push({ stars: k, ...R[k] }); } save(); return got; }
+// the subscribers who stay (the farm): each stretch's best stars keep that many regulars, who pay every morning a run is finished
+export const regulars = () => LEVELS.reduce((n, l) => n + [0, 2, 4, 7][starsOf(l.id)], 0);
+export const income = () => regulars() * 2;
+// the deal for tomorrow: hardships taken on for a bonus on the pay (agreed on the paper's last page, kept in the save till used)
+export const MODS = [
+  { id: 'ruch', t: 'GODZINA SZCZYTU', d: 'Dwa auta więcej na drodze.', bonus: .15, apply: L => ({ ...L, cars: Math.min(8, L.cars + 2) }) },
+  { id: 'psy', t: 'PSY BEZ SMYCZY', d: 'Psy czujniejsze i szybsze.', bonus: .15, apply: L => ({ ...L, heat: L.heat + .35 }) },
+  { id: 'torba', t: 'CHUDA TORBA', d: 'Sześć gazet mniej na start.', bonus: .2, apply: L => ({ ...L, papers: Math.max(8, L.papers - 6) }) },
+  { id: 'czas', t: 'NA WCZORAJ', d: 'Gwiazdka za czas o piątą część trudniejsza.', bonus: .2, apply: L => ({ ...L, goal: { ...L.goal, time: Math.round(L.goal.time * .8) } }) }];
+export const mods = () => (load().mods || []).filter(id => MODS.some(m => m.id === id));
+export function setMod(id, on) { const s = load(), m = new Set(s.mods || []); on ? m.add(id) : m.delete(id); s.mods = [...m]; save(); return s.mods; }
+export const modBonus = (ids = mods()) => ids.reduce((b, id) => b + (MODS.find(m => m.id === id)?.bonus || 0), 0);
+export const withMods = (L, ids = mods()) => ids.reduce((x, id) => MODS.find(m => m.id === id)?.apply(x) || x, L);

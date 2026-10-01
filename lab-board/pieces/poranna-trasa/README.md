@@ -863,3 +863,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - gazeta w 4 częściach: Poranek, Twoja trasa, Ogłoszenia, Jutro; zakończenia różne w każdym wydaniu (dwie z: horoskop, listy do redakcji, kronika policyjna, plotki, przepis babci)
 - reklama Warsztatu u Janusza z jego częściami i telefonem: rozmowa z Januszem w gazecie (poleci coś na jutro, da kupon -20% na część z reklamy, opowie anegdotę, zaprosi do warsztatu); kupon działa w warsztacie i znika po zakupie
 - HUD: przy jednym tytule gazety nad torbą sama nazwa (bez powtórzonej liczby)
+
+## Wersja 94: ostatnia strona „Jutro”, umowa z utrudnieniami, stali prenumeratorzy, nagrody za gwiazdki
+
+- ostatnia strona gazety ułożona w kolumny: tabela wyników i stali prenumeratorzy, w środku „Umowa na jutro”, po prawej wyróżniona karta „Nowy dzień” z wyborem odcinka i przyciskiem RUSZAM W TRASĘ (Enter)
+- umowa na jutro: utrudnienia za premię od zarobku (Godzina szczytu +15%: dwa auta więcej; Psy bez smyczy +15%; Chuda torba +20%: sześć gazet mniej; Na wczoraj +20%: gwiazdka za czas trudniejsza); zostaje w zapisie do najbliższej mety, widać ją też na mapie
+- stali prenumeratorzy (farma): gwiazdki na odcinkach dają stałych klientów (1, 2, 3 gwiazdki: 2, 4, 7 osób), każdy płaci 2 zł abonamentu za każdą ukończoną metę
+- nagrody za gwiazdki: za pierwszą gwiazdkę gotówka, za trzecią część od Janusza (dzwonek, skórzane siodełko, szosowe koła, 3 biegi); każda raz, widać je na mapie i na ostatniej stronie
+- wypłata na stronie trasy: zarobek, premia za umowę, abonament, nagrody
