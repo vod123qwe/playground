@@ -716,3 +716,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 76: włosy spod czapki jak na koncepcie
 
 - za uszami końcówki włosów podkręcone na zewnątrz i do góry, z tyłu krótsze i proste do karku, nad uszami krótko, więc uszy (i z tyłu kawałek policzka) widać
+
+## Wersja 77: fryzura z jednego kawałka, niższa korona czapki
+
+- włosy pod czapką to jedna warstwa dookoła głowy (z tyłu i po bokach), przylegająca, lekko zwężona do karku, z falistym brzegiem w pasma i jaśniejszymi i ciemniejszymi smugami; nad uszami krótko, za uszami tylko delikatne podwinięcie (wcześniej osobne kosmyki odstawały jak płatki)
+- korona czapki niższa i szersza w ramionach, bardziej płaska na górze (wcześniej półkula); szwy paneli ciemniejsze i cieńsze
