@@ -157,7 +157,7 @@ export function createHud() {
     for (let k = hearts.length - 1; k >= 0; k--) { const q = hearts[k]; q.t += dt; if (q.t > 1.3) { hearts.splice(k, 1); continue; } if (q.t > 1 && ((q.t * 20) | 0) % 2) continue;
       heart(Math.round(q.x + Math.sin(q.t * 6 + q.ph) * 2.5), Math.round(q.y - q.t * q.v), q.t < .5 ? '#e08556' : '#cf5a3e', '#5e1c17'); }
     // top right: the papers left, and the money in a purse (see purse())
-    { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); }
+    { const k = cv.width / Math.max(1, innerWidth); purse(dt, st.points, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2, st.papers); if (st.fame > .3 || st.siren) fame(st.fame || 0, st.siren, cv.width - Math.round(12 * k) - 2, Math.round(10 * k) + 2 + 20); }
     if (st.bagX != null) { const s = String(st.papers), y = st.bagY != null ? Math.round(st.bagY * cv.height) + 2 : cv.height - 11; outlined(s, Math.round(st.bagX * cv.width) - width(s) - 4, y, st.papers ? '#f6f3ea' : '#cf5a3e'); }   // (how many papers, by the bag)
     if (splats.length) drawBlood(dt, st.low || 0);
     if (st.fight) fightBars(st.fight);
@@ -281,6 +281,11 @@ export function createHud() {
     for (let r = 0; r <= 6; r++) for (let s = -(6 - r) * .55; s <= (6 - r) * .55; s += .5) { g.fillStyle = pulse ? m.col : '#f6f3ea'; g.fillRect(Math.round(x + dx * (r - 1.5) - dy * s), Math.round(y + dy * (r - 1.5) + dx * s), 1, 1); }
     const lab = (m.label || '') .trim() || (m.dist + ' M'), w = width(lab) + 6, lx = Math.max(2, Math.min(W - w - 2, x - (w >> 1) - Math.round(dx * 14))), ly = Math.max(2, Math.min(H - 11, y - 4 - Math.round(dy * 12)));
     g.fillStyle = 'rgba(23,24,27,.8)'; g.fillRect(lx, ly, w, 9); text(lab, lx + 3, ly + 2, m.col, null); }
+  // fame (with the police): a little light and pips under the purse, one per point (from three a patrol may come); the light flashes
+  // red and blue while one is after you
+  function fame(f, siren, rx, y) { const n = Math.min(6, Math.floor(f)), on = siren ? ((markT * 4) | 0) % 2 : -1, x0 = rx - 6 * 6 - 8;
+    g.fillStyle = '#17181b'; g.fillRect(x0 - 1, y - 1, 7, 6); g.fillStyle = on === 0 ? '#ff5a4a' : '#8e2e25'; g.fillRect(x0, y, 2, 4); g.fillStyle = on === 1 ? '#5a9aff' : '#2f5aa0'; g.fillRect(x0 + 3, y, 2, 4);
+    for (let i = 0; i < 6; i++) { const x = x0 + 9 + i * 6; g.fillStyle = '#17181b'; g.fillRect(x - 1, y, 5, 5); g.fillStyle = i < n ? (i >= 2 ? '#e0473a' : '#efc970') : '#3a3c40'; g.fillRect(x, y + 1, 3, 3); } }
   function questList(L) { const W = cv.width, y0 = document.body.classList.contains('touch') ? Math.round(cv.height * .17) : 5;
     L.slice(0, 3).forEach((s, i) => { const w = width(s) + 9, x = Math.round(W / 2 - w / 2), y = y0 + i * 11; g.fillStyle = 'rgba(23,24,27,.74)'; g.fillRect(x, y, w, 10); g.fillStyle = '#efc970'; g.fillRect(x, y, 1, 10); text(s, x + 5, y + 2, i ? '#f6f3ea' : '#efc970', null); }); }
   // a tip: words in a box over the bottom of the picture, broken into lines that fit

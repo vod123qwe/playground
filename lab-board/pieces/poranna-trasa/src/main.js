@@ -130,7 +130,7 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   flash: s => flash(s), fame: n => { B.fame = Math.max(0, (B.fame || 0) + n); },
   bottle: () => { if (foot.active || B.crash) return; hud.impact(rider.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'BRZDĘK!'); B.v *= .6; B.rattled = (B.rattled || 0) + 1.5; shake = Math.max(shake, .25); },
   grudgeAt: (at, line, kind) => foot.grudgeAt(at, line, kind),
-  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick), scene,
+  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick), scene, traffic, fameNow: () => B.fame || 0, endRun: msg => { flash(msg); resetGame(); },
   talkKey: () => touch.on ? 'GADAJ' : (foot.active ? keysOf('talk') : keysOf('chat')) + ': GADAJ' } });
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
@@ -313,7 +313,7 @@ const crackM = new THREE.MeshBasicMaterial({ map: crackT, transparent: true, alp
 const shards = [];
 const cracks = [];
 function breakWindow(w) {
-  w.broken = true; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
+  w.broken = true; B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
   for (let k = 0; k < 12; k++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.07, .06), shardM); s.position.copy(w.p).add(new THREE.Vector3((Math.random() - .5) * .8, (Math.random() - .5) * .6, (Math.random() - .5) * .8)); scene.add(s);
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
@@ -479,7 +479,7 @@ function ride(dt, inp) {
   // the traffic
   for (const C of traffic.boxes()) { if (Math.abs(C.x - nx) + Math.abs(C.z - nz) > 8 || clear(C) || (C.t.ghostUntil > performance.now())) continue; const h = boxHit(C, nx, nz, .38); if (h && C.t.r) {            // a cyclist: both go over if it was hard (by how fast they met), else a bump and a wobble
       const bv = new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.stop > 0 ? 0 : C.t.v), mv = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)).multiplyScalar(B.v), hard = mv.clone().sub(bv).length() > 3.4;
-      traffic.knock(C.t, mv, hard); if (hard) { quests.onKnockBike(); C.t.ghostUntil = performance.now() + 7000; if (Math.random() < .3) foot.grudge(C.t); }
+      traffic.knock(C.t, mv, hard); if (hard) { quests.onKnockBike(C.t); C.t.ghostUntil = performance.now() + 7000; if (Math.random() < .3) foot.grudge(C.t); }
       if (!(C.t.rantAt > performance.now())) { C.t.rantAt = performance.now() + 2500; hud.rant(C.t.r.root.position, hard ? pickOf(OUCH) : pickOf(SWEARS), true, 2); if (hard) witness(C.t.x, C.t.z); }
       if (hard) { crash(0, bv.multiplyScalar(.5)); return; } B.x = nx + h.nx * (h.pen + .02); B.z = nz + h.nz * (h.pen + .02); B.v *= .55; B.jolt = .12; return pose(dt, 0, 0, slope, 0); }
     if (h) { C.t.stop = 2.5; if (Math.abs(B.v) > 2.2 || C.t.v > 2.5) { crash(0, new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.v)); return; } B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01); B.v *= .4; return pose(dt, 0, 0, slope, 0); } }
@@ -538,7 +538,7 @@ function landKick(tg) {
   if (tg.kind === 'dog') { dogs.kick(tg.ref, { x: ax / al * 4.5 + Math.sin(B.yaw) * B.v * .5, z: az / al * 4.5 + Math.cos(B.yaw) * B.v * .5 }); hud.impact(mid); slowmo = .09; shake = .3; }   // it flies off
   if (tg.kind === 'ped' && quests.onHitPed(tg.ref)) { hud.impact(mid, 'ŁUP!'); slowmo = .08; shake = .25; }   // (the thief: the bag drops)
   else if (tg.kind === 'ped') { hud.impact(mid); tg.ref.stun = 1.6; hud.rant(tg.ref.G.position, pickOf(SWEARS), true, 1.95); slowmo = .06; shake = .22; }   // they stop, and swear after him
-  if (tg.kind === 'bike') { hud.impact(mid); quests.onKnockBike(); traffic.knock(tg.ref, new THREE.Vector3(ax / al * 3.2, 0, az / al * 3.2), true); if (Math.random() < .8) foot.grudge(tg.ref); tg.ref.ghostUntil = performance.now() + 5000; hud.rant(tg.ref.r.root.position, pickOf(SWEARS), true, 2.0); slowmo = .06; shake = .22; }
+  if (tg.kind === 'bike') { hud.impact(mid); quests.onKnockBike(tg.ref); traffic.knock(tg.ref, new THREE.Vector3(ax / al * 3.2, 0, az / al * 3.2), true); if (Math.random() < .8) foot.grudge(tg.ref); tg.ref.ghostUntil = performance.now() + 5000; hud.rant(tg.ref.r.root.position, pickOf(SWEARS), true, 2.0); slowmo = .06; shake = .22; }
   if (tg.kind === 'car') { hud.impact(mid, 'BUM!'); tg.ref.stop = Math.max(tg.ref.stop, .7); hud.rant(tg.ref.car.group.position, pickOf(DRIVERS), true, 1.7); shake = .28; }   // the driver: the bubble goes with the car
   if (tg.kind === 'granny') { tg.ref.kicked(); hud.rant(tg.ref.mouth, 'JA CI DAM GNOJKU!', true); shake = .12; }   // (the old woman: a kick does nothing, bar make her crosser)
   if (tg.kind === 'hyd' && water.spray(new THREE.Vector3(tg.ref.x, tg.ref.y0 || 0, tg.ref.z), 4.5)) { hud.impact(new THREE.Vector3(tg.ref.x, (tg.ref.y0 || 0) + .5, tg.ref.z), 'PSSS!'); shake = .15; }
@@ -759,7 +759,7 @@ function stepPeople(dt, inp, me) {
   if (pendingHit && (pendingHit.t -= dt) <= 0) { const p = pendingHit.p, PH = pendingHit; pendingHit = null; const word = PH.kick ? pickOf(['BACH!', 'ŁUBUDU!', 'KOP!']) : 'ŁUP!';
     if (p && Math.hypot(p.x - me.x, p.z - me.z) < PH.reach && quests.onHitPed(p)) { hud.impact(p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)), word); shake = Math.max(shake, .15); }   // (the thief)
     else if (p && Math.hypot(p.x - me.x, p.z - me.z) < PH.reach) { const key = p.P.key, at = p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)); hud.impact(at, word); shake = Math.max(shake, .15); p.stun = .7; p.faceT = 1.2;
-      B.points = Math.max(0, B.points - 2); hud.pop(at.clone().add(new THREE.Vector3(0, .4, 0)), 'BRZYDKO! -2', '#cf5a3e');
+      B.points = Math.max(0, B.points - 2); B.fame = (B.fame || 0) + 1; hud.pop(at.clone().add(new THREE.Vector3(0, .4, 0)), 'BRZYDKO! -2', '#cf5a3e');
       if (TOUGH.includes(key) && Math.random() < .6 && !foot.chasing) { hud.rant(mouthOf(p), pickOf(SZWAGIER)); p.flee = 3; p.fleeNew = true;   // (he goes for his brother-in-law: out of a house one comes)
         const q = track.probe(me.x, me.z, me.hint), S = track.S[(q.i + (Math.random() < .5 ? 14 : -14) + track.N) % track.N], sd = q.d >= 0 ? 1 : -1, at2 = new THREE.Vector3(S.p.x + S.r.x * sd * 12, S.p.y, S.p.z + S.r.z * sd * 12);
         setTimeout(() => foot.grudgeAt(at2, pickOf(SZWAGIER_COMES)), 2200); }
@@ -768,7 +768,7 @@ function stepPeople(dt, inp, me) {
   // a cyclist going by, punched: off his bike he goes (and, as after a kick, often gets up for a fight)
   if (pendingBike && (pendingBike.t -= dt) <= 0) { const b = pendingBike.b; pendingBike = null; const bp = b && b.r.root.position;
     if (bp && Math.hypot(bp.x - me.x, bp.z - me.z) < 2.4 && !(b.ghostUntil > performance.now())) { const ax = bp.x - me.x, az = bp.z - me.z, al = Math.hypot(ax, az) || 1;
-      hud.impact(bp.clone().setY(bp.y + 1.4), 'ŁUP!'); shake = Math.max(shake, .2); quests.onKnockBike(); traffic.knock(b, new THREE.Vector3(ax / al * 3, 0, az / al * 3), true); b.ghostUntil = performance.now() + 7000;
+      hud.impact(bp.clone().setY(bp.y + 1.4), 'ŁUP!'); shake = Math.max(shake, .2); quests.onKnockBike(b); traffic.knock(b, new THREE.Vector3(ax / al * 3, 0, az / al * 3), true); b.ghostUntil = performance.now() + 7000;
       if (Math.random() < .8) foot.grudge(b); else hud.rant(bp.clone().setY(bp.y + 1.8), pickOf(['MÓJ ROWER!', 'ZA CO?!', 'WARIAT!', 'JA TYLKO PO BUŁKI!'])); } }
 }
 // the cyclist nearest him on foot, going by (for a punch)
@@ -846,7 +846,7 @@ function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
   touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
-  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks(), quests: quests.tracker(), projEdge: projectEdge, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks(), quests: quests.tracker(), projEdge: projectEdge, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
