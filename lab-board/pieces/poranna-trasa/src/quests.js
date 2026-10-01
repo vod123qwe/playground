@@ -663,7 +663,8 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     for (const S of JAN) { const p = S.who; if (!p || !p.head) continue; const d = Math.hypot(p.G.position.x - R.x, p.G.position.z - R.z); if (d > 80) continue; const h = p.head.getWorldPosition(new THREE.Vector3()); out.push({ p: h.setY(h.y + .75), s: '$', col: '#efc970' }); }   // (pan Janusz: a cloud with a shopping cart)
     for (const [r, o] of P) { if (o.lead !== r || !o.offer || o.cool > 0 || busy(o.offer)) continue; if (Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z) > 110) continue; out.push({ p: head(r), s: '!', col: '#efc970' }); }
     for (const e of active) { const p = e.target?.(); if (!p) continue; const s = typeof e.mark === 'function' ? e.mark() : e.mark || 'v', col = typeof e.col === 'function' ? e.col() : e.col || '#efc970', dist = Math.round(Math.hypot(p.x - R.x, p.z - R.z));
-      out.push({ p, s, col, edge: true, dist, label: e.label ? e.label() + ' ' + dist + ' M' : null }); }
+      // (the words over it only while it is far to find; near, the arrow alone, not to hide the road; off the screen, the edge arrow says how far)
+      out.push({ p, s, col, edge: true, dist, label: e.label && dist > 22 ? e.label() + ' ' + dist + ' M' : null, edgeLabel: e.label ? e.label() + ' ' + dist + ' M' : null }); }
     if (GA.chase) for (const g of GA.chase.m) if (!g.down) out.push({ p: V(g.x, g.r.root.position.y + 2.3, g.z), s: 'v', col: '#9a9c9e', edge: true, label: 'GANG' });
     if (PO.car && PO.car.stage === 'chase') { const g = PO.car.car.g.position; out.push({ p: V(g.x, g.y + 2.4, g.z), s: 'v', col: '#3d7be0', edge: true, label: 'POLICJA', dist: 0 }); }
     if (near && !talk.isOpen) { const p = near.p.clone ? near.p.clone() : V(near.p.x, near.p.y, near.p.z); p.y += 2.6; out.push({ p, s: '', label: near.slow ? (near.label ? game.talkKey().replace('GADAJ', 'SKLEP') : game.talkKey()) : 'ZWOLNIJ', col: '#f6f3ea' }); }
