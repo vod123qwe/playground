@@ -53,6 +53,10 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     bodyR: { clip: 'cross', dur: .54, dmg: 13, st: 12, zone: 'low',  reach: 1.34, dip: true },
   };
   const IMPACT = { jab: .45, cross: .45, hook: .5 };
+  // kicks, only out of a fight (one on one it is fists): a front kick, a roundhouse, and from a jump a flying kick. dur: the whole
+  // kick; hit: when it lands (s); the leg moved by reach() to where the foot goes (knee up, out, back)
+  const KICKS = { kickF: { dur: .52, hit: .24, side: 'r', kind: 'front' }, kickR: { dur: .62, hit: .32, side: 'l', kind: 'round' }, kickJ: { dur: .5, hit: .18, side: 'r', kind: 'fly' } };
+  const CHAIN = { jab: ['jab', 'cross', 'kickF', 'kickR'], cross: ['cross', 'jab', 'kickF', 'kickR'] };   // (hit after hit: fist, fist, kick, roundhouse)
   const AI_DMG = .85;
   // the kinds he fights: how much they take, how hard they hit, how long their wind-up (the time to read it), how long they stand open
   // after a punch, how often they guard, feint (a wind-up let go of) or throw a second one straight after; the brother-in-law's
@@ -71,7 +75,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     for (const c of g.animations) { clips[c.name] = c; A[c.name] = mixer.clipAction(c); }
     const jab = clips.jab; if (jab) { clips.stance = THREE.AnimationUtils.subclip(jab, 'stance', 0, 2, 30); A.stance = mixer.clipAction(clips.stance); }   // (the jab's first frame: fists up, feet set)
     const b = n => m.getObjectByName(n), bones = {};
-    for (const n of ['pelvis', 'spine_02', 'spine_03', 'neck_01', 'head', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r']) bones[n] = b(n);
+    for (const n of ['pelvis', 'spine_02', 'spine_03', 'neck_01', 'head', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r', 'thigh_l', 'calf_l', 'foot_l', 'thigh_r', 'calf_r', 'foot_r']) bones[n] = b(n);
     const fingers = { l: [], r: [] }; m.traverse(o => { const r = /^(index|middle|ring|pinky)_0[123]_([lr])$/.exec(o.name); if (r) fingers[r[2]].push(o); });
     for (const n of ['idle', 'walk', 'jog', 'stance']) if (A[n]) { A[n].play(); A[n].setEffectiveWeight(n === 'idle' ? 1 : 0); }
     m.updateMatrixWorld(true);
@@ -326,7 +330,30 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   // knocked down (a car): flung along the way it went, a while on the ground, up again
   function knock(vx, vz, dmg) { if (!active || me.down) return false; me.hp = Math.max(8, me.hp - dmg); me.move = null; me.guard = false; me.down = { t: 0, vx, vz }; shot(me.P, 'death', 1.1, { clamp: true }); fx.shake(.4); fx.slow(.1); return true; }
   // a punch thrown when not fighting (at someone walking, or at the air): true if it was started
-  function swing(k) { if (!active || fightNow || me.down || (me.P.shot && ['jab', 'cross', 'hook'].includes(me.P.shot.name))) return false; shot(me.P, k, MOVES[k].dur); return true; }
+  // a blow out of a fight: one after another they make a run (fist, fist, kick, roundhouse); in the air: a flying kick. A press while one
+  // is still going is kept and thrown as soon as it is over (fired(): the one thrown so, for the game to know). → the move, or false
+  let fired = null;
+  const busyHit = () => me.kick || (me.P.shot && ['jab', 'cross', 'hook'].includes(me.P.shot.name));
+  function swing(k) { if (!active || fightNow || me.down) return false; if (busyHit()) { me.queue = k; return false; } return throwHit(k); }
+  function throwHit(k) {
+    const run = (me.comboT || 0) > 0 ? (me.combo || 0) + 1 : 0, mv = me.air ? 'kickJ' : CHAIN[k][run % 4]; me.combo = me.air ? me.combo || 0 : run;
+    if (KICKS[mv]) me.kick = { ...KICKS[mv], name: mv, t: 0 }; else shot(me.P, mv, MOVES[mv].dur);
+    me.comboT = (KICKS[mv] ? KICKS[mv].dur : MOVES[mv].dur) + .5; return mv;
+  }
+  // the body's lean in a kick: added after the walk has set it, taken off again before the next frame (so it never builds up)
+  const lean = (P, x, z) => { P.body.rotation.x += x; P.body.rotation.z += z; P.kOff = [x, z]; };
+  // the leg in a kick: chambered (the knee up), out (the foot to its mark), back; in a flying kick the other leg tucked
+  function legs(P, f) {
+    const K = f.kick; if (!K || !P.bones.thigh_r) return; const t = K.t / K.dur, s = K.side, o = s === 'l' ? 'r' : 'l', sd = s === 'l' ? 1 : -1;
+    const fw = new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw)), lf = new V3(Math.cos(f.yaw), 0, -Math.sin(f.yaw)), hip = P.bones['thigh_' + s].getWorldPosition(new V3());
+    const w = t < .12 ? t / .12 : t > .82 ? Math.max(0, (1 - t) / .18) : 1, ext = K.kind === 'fly' ? (t < .12 ? 0 : t < .3 ? (t - .12) / .18 : t < .8 ? 1 : 1 - (t - .8) / .2 * .6) : t < .3 ? 0 : t < .5 ? (t - .3) / .2 : t < .7 ? 1 : 1 - (t - .7) / .3 * .7;   // (the flying one: out at once, held through the flight)
+    let T, pole;
+    if (K.kind === 'front') { T = hip.clone().addScaledVector(fw, .22 + ext * .62).addScaledVector(UP, -.42 + ext * .42); pole = hip.clone().addScaledVector(fw, 1).addScaledVector(UP, .4); lean(P, -.18 * w * ext, 0); }
+    else if (K.kind === 'round') { const a = (1 - ext) * 1.2, dir = fw.clone().multiplyScalar(Math.cos(a)).addScaledVector(lf, sd * Math.sin(a)); T = hip.clone().addScaledVector(dir, .3 + ext * .55).addScaledVector(UP, -.3 + ext * .45); pole = hip.clone().addScaledVector(UP, 1.2).addScaledVector(lf, sd * .4); lean(P, 0, sd * .22 * w * ext); }
+    else { T = hip.clone().addScaledVector(fw, .35 + ext * .5).addScaledVector(UP, -.25 + ext * .2); pole = hip.clone().addScaledVector(fw, 1).addScaledVector(UP, .5);
+      const hip2 = P.bones['thigh_' + o].getWorldPosition(new V3()); reach(P.bones['thigh_' + o], P.bones['calf_' + o], P.bones['foot_' + o], hip2.clone().addScaledVector(fw, .12).addScaledVector(UP, -.32), hip2.clone().addScaledVector(fw, 1).addScaledVector(UP, .3), w); lean(P, -.12 * w, 0); }
+    reach(P.bones['thigh_' + s], P.bones['calf_' + s], P.bones['foot_' + s], T, pole, w);
+  }
   // someone called for (a brother-in-law out of a house): he comes for you, fights, and goes off again
   function grudgeAt(at, line, kind = 'szwagier') { if (!ready || fightNow) return false; const f = brawlers.find(b => !b.busy); if (!f) return false; f.busy = true;
     Object.assign(f, { x: at.x, z: at.z, y: at.y, hint: -1, yaw: Math.atan2(me.x - at.x, me.z - at.z), hp: 100, st: 100, ko: false, move: null, mode: 'walk', vf: 0, vs: 0, stagger: 0, dodge: null, wind: null });
@@ -406,8 +433,11 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const rt = new V3(-Math.cos(me.yaw), 0, Math.sin(me.yaw)); me.x += Math.sin(me.yaw) * me.vf * dt + rt.x * me.vs * dt; me.z += Math.cos(me.yaw) * me.vf * dt + rt.z * me.vs * dt; push(me);
     { const u = me.P.m.userData; if (u.bagPivot) { const sp = Math.min(1, Math.hypot(me.vf, me.vs) / 3); me.bagT = (me.bagT || 0) + dt * (2.5 + Math.abs(me.vf) * 1.9); me.bagK = (me.bagK || 0) + (sp - (me.bagK || 0)) * Math.min(1, dt * 4);
       _bq.setFromEuler(_be.set(Math.sin(me.bagT * 2) * .03 * me.bagK + Math.max(0, me.vf) * .012, 0, Math.sin(me.bagT) * .045 * me.bagK)); u.bagPivot.quaternion.copy(u.bagQ0).multiply(_bq); } }
+    if (me.P.kOff) { me.P.body.rotation.x -= me.P.kOff[0]; me.P.body.rotation.z -= me.P.kOff[1]; me.P.kOff = null; }
+    me.comboT = Math.max(0, (me.comboT || 0) - dt); if (me.kick && (me.kick.t += dt) >= me.kick.dur) me.kick = null;
+    if (me.queue && !busyHit()) { const q = me.queue; me.queue = null; fired = throwHit(q); }
     animate(me.P, dt, Math.abs(me.vs) > Math.abs(me.vf) ? Math.abs(me.vs) : me.vf, 'walk'); const b = me.P.body; b.rotation.x += (Math.max(0, me.vf - 2) * .05 - b.rotation.x) * Math.min(1, dt * 6); b.rotation.z += ((inp.side || 0) * me.vf * -.03 - b.rotation.z) * Math.min(1, dt * 6); b.position.y = 0;
-    arms(me.P, me, dt); place(me);
+    arms(me.P, me, dt); legs(me.P, me); place(me);
   }
 
   // ---------- the camera: through his eyes (his head out of the way, his fists in the picture), or behind him ----------
@@ -457,6 +487,6 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const ph = o.ko ? 'nokaut' : o.wind ? `zamach ${o.wind.t.toFixed(2)}/${o.wind.dur.toFixed(2)} s${o.wind.feint ? ' (zwód)' : ''}` : o.move && !o.move.done ? `cios ${o.move.k}, do trafienia ${(o.move.dur * o.move.imp - o.move.t).toFixed(2)} s` : o.move ? `cios ${o.move.k} (po)` : o.recover > 0 ? `odsłonięty ${o.recover.toFixed(2)} s` : o.stagger > 0 ? `zatacza się ${o.stagger.toFixed(2)} s` : o.guard ? 'garda' : (o.ai && o.ai.plan) || '—';
     return { kind: K.name, phase: ph, hp: Math.round(o.hp), max: o.max, myHp: Math.round(me.hp), mySt: Math.round(me.st), train: G.train ? G.train.step + 1 : 0 }; }
   function bagFill(k) { me && me.P.m.userData.bagFill && me.P.m.userData.bagFill(k); }
-  return { reset, arena, phase, get god() { return god; }, bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
+  return { KICKS, fired: () => { const f = fired; fired = null; return f; }, reset, arena, phase, get god() { return god; }, bagFill, get tempo() { const o = fightNow && fightNow.f; return o && o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY ? .55 : 1; }, skipTraining: () => endTraining(), get fit() { return me && me.P.m.userData.headFit; }, FIST, knock, swing, grudgeAt, get down() { return !!(me && me.down); }, get foe() { return fightNow ? fightNow.f : null; }, get ready() { return ready; }, get active() { return active; }, get fighting() { return !!fightNow; }, get me() { return me; }, get view() { return view; }, get chasing() { return grudges.some(g => g.state === 'after'); },
     start, stop, update, follow, grudge, nearBike, toggleView, status };
 }
