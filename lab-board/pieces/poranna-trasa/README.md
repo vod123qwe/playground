@@ -704,3 +704,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - mocniejsze kołysanie bioder i barków w rytm korby, lekkie „pompowanie” plecami
 - rozglądanie się myszką: głowa delikatnie odwraca się w tę stronę (i lekko w górę lub w dół)
 - widok z oczu dopasowany do nowego pochylenia: na dole kierownica i dłonie; czapka znika z widoku z oczu (wcześniej przez błąd zostawała)
+
+## Wersja 75: dłuższa walka z gangiem
+
+- gang najpierw dojeżdża i przez kilka sekund jedzie obok po bokach (z docinkami), dopiero potem atakuje: jeden naraz zjeżdża i kopie, z przerwą między atakami
+- jeden kopniak już nie zrzuca: szarpnięcie, wolniej, trochę zdrowia mniej, licznik 1/5 … dopiero piąty przewraca
+- każdy z gangu wytrzymuje trzy kopniaki: po pierwszych chwieje się i odpada na bok, potem wraca
+- patrzą przed siebie i omijają przeszkody (pachołki, zaparkowane auta, barierki, studzienki: ich prawdziwe obrysy, nie przybliżenia); kto jednak wjedzie, traci życie, a na koniec leży
+- pościg trwa dłużej (do 160 s, jeśli nie uciekniesz ani ich nie położysz)

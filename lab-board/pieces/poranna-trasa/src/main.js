@@ -166,7 +166,8 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   flash: s => flash(s), fame: n => { B.fame = Math.max(0, (B.fame || 0) + n); },
   bottle: () => { if (foot.active || B.crash) return; hud.impact(rider.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'BRZDĘK!'); B.v *= .6; B.rattled = (B.rattled || 0) + 1.5; shake = Math.max(shake, .25); },
   grudgeAt: (at, line, kind) => foot.grudgeAt(at, line, kind),
-  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick), makeRider: () => createRider({ THREE, ramp, toon }), shove: dir => { if (!foot.active && !B.crash) crash(0, dir.setLength(3.2)); }, scene, openShop: () => shop.open(), lamp: () => MOD.lamp > 0, diff: () => difficulty(), traffic, fameNow: () => B.fame || 0, endRun: msg => endRun(msg),
+  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick), makeRider: () => createRider({ THREE, ramp, toon }), shove: dir => { if (!foot.active && !B.crash) crash(0, dir.setLength(3.2)); },
+  jostle: (dir, n) => { if (foot.active || B.crash) return; B.v *= .82; B.jolt = .16; const l = Math.hypot(dir.x, dir.z) || 1; B.x += dir.x / l * .35; B.z += dir.z / l * .35; shake = Math.max(shake, .25); audio.play('kick', { vol: .6 }); hud.impact(rider.root.position.clone().setY(rider.root.position.y + 1.3), 'ŁUP!'); hurt(6, 'Gang cię dopadł.'); flash(`Kopniak od gangu: ${n}/5`); }, scene, openShop: () => shop.open(), lamp: () => MOD.lamp > 0, diff: () => difficulty(), traffic, fameNow: () => B.fame || 0, endRun: msg => endRun(msg),
   talkKey: () => touch.on ? 'GADAJ' : (foot.active ? keysOf('talk') : keysOf('chat')) + ': GADAJ' } });
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
