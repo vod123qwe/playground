@@ -71,6 +71,13 @@ Deszcz (ślisko, kałuże), mgła (krótki widok), roboty drogowe (objazd), fest
 5. Kolejne regiony.
 6. Potem: prenumeraty, różne gazety, historie, policja z mechaniką (frakcje), duch rekordu.
 
+## Kolejka dopieszczania (Jarek, po v89: „na spokojnie, po kolei”)
+
+1. **Mapa ładniejsza**: mini budowle 3D (izometryczny widok z góry), obszar miasteczka z wyraźnie podzielonymi dzielnicami i peryferiami.
+2. **Gazeta na mecie**: wygląda jak prawdziwa gazeta złożona na pół; na pierwszej stronie zajawka fabularna (krótki artykuł o Twoim poranku i o tym, co się działo w okolicy), wynik w artykule; statystyki osobno (np. tabela na odwrocie albo osobna karta).
+3. **Pory dnia**: świt, poranek, dzień; o świcie zapalone latarnie, okna, światła aut.
+4. **Różnorodność budynków**: bloki i inne budynki w kolejnych poziomach, nie tylko domki.
+
 ## Pomysły na później
 
 - **Kopanie w skrzynki konkurencji** (Jarek): domy z prenumeratą innej gazety mają swoje skrzynki; można w nie kopnąć (mniej klientów dla konkurencji), ale to czasem wywołuje zdarzenie (sąsiad widział, pościg, zła sława, odwet konkurencji).

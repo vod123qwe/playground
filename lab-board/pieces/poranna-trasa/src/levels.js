@@ -20,13 +20,13 @@ export const REGIONS = [
 export const LEVELS = [
   { id: 'p1', region: 'peryferia', name: 'PIERWSZY PORANEK', note: 'Pół dzielnicy, mało aut. Na rozgrzewkę.', finish: { to: .5, dir: 1 }, cars: 2, pace: .9, heat: .5, papers: 20, seed: 101,
     goal: { time: 75, acc: .6, papers: 6 }, after: ['p2', 'p3'] },
-  { id: 'p2', region: 'peryferia', name: 'OKRĄŻENIE OD TYŁU', note: 'Całe okrążenie, ale w drugą stronę. Mniej aut, spokojniejsze tempo.', finish: { to: 1, dir: -1 }, cars: 2, pace: 1, heat: .7, papers: 26, seed: 202,
+  { id: 'p2', tease: { head: 'Jutro od drugiej strony', text: 'Sąsiedzi z końca ulicy pytają, czemu gazeta zawsze przychodzi do nich ostatnia. Jutro mają być pierwsi.', spot: 'kapliczka' }, region: 'peryferia', name: 'OKRĄŻENIE OD TYŁU', note: 'Całe okrążenie, ale w drugą stronę. Mniej aut, spokojniejsze tempo.', finish: { to: 1, dir: -1 }, cars: 2, pace: 1, heat: .7, papers: 26, seed: 202,
     goal: { time: 140, acc: .65, papers: 10 }, after: ['p4'] },
-  { id: 'p3', region: 'peryferia', name: 'GŁÓWNĄ ULICĄ', note: 'Całe okrążenie w ruchu. Więcej aut, szybsze tempo, wyższa poprzeczka.', finish: { to: 1, dir: 1 }, cars: 4, pace: 1.1, heat: .7, papers: 30, seed: 303,
+  { id: 'p3', tease: { head: 'Na głównej coraz tłoczniej', text: 'Drogowcy naliczyli więcej aut niż zwykle. Kto jutro jedzie główną, niech uważa na zakrętach.', spot: 'przystanek' }, region: 'peryferia', name: 'GŁÓWNĄ ULICĄ', note: 'Całe okrążenie w ruchu. Więcej aut, szybsze tempo, wyższa poprzeczka.', finish: { to: 1, dir: 1 }, cars: 4, pace: 1.1, heat: .7, papers: 30, seed: 303,
     goal: { time: 130, acc: .65, papers: 13 }, after: ['p4'] },
-  { id: 'p4', region: 'peryferia', name: 'GODZINA SZCZYTU', note: 'Okrążenie, gdy wszyscy jadą do pracy. Psy już nie śpią.', finish: { to: 1, dir: 1 }, cars: 6, pace: 1.3, heat: 1.15, papers: 30, seed: 404,
+  { id: 'p4', tease: { head: 'Nadciąga godzina szczytu', text: 'Jutro wszyscy jadą do pracy naraz, a psy podobno się wyspały. Gazeciarz musi zdążyć przed nimi.', spot: 'buda z psem' }, region: 'peryferia', name: 'GODZINA SZCZYTU', note: 'Okrążenie, gdy wszyscy jadą do pracy. Psy już nie śpią.', finish: { to: 1, dir: 1 }, cars: 6, pace: 1.3, heat: 1.15, papers: 30, seed: 404,
     goal: { time: 125, acc: .7, papers: 15 }, after: ['w1'] },
-  { id: 'w1', region: 'wies', name: 'POLNA DROGA', note: 'Wkrótce.', soon: true, after: [] }];
+  { id: 'w1', tease: { head: 'Za torami czeka wieś', text: 'Polne drogi, gęsi i błoto. Mówią, że na wsi gazetę czyta się od deski do deski.', spot: 'działki' }, region: 'wies', name: 'POLNA DROGA', note: 'Wkrótce.', soon: true, after: [] }];
 export const LEVEL = id => LEVELS.find(l => l.id === id);
 
 // ---------- the save ----------
