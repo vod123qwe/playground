@@ -488,3 +488,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - dwa posterunki policji przy trasie; kosze na śmieci znane grze (przy domach, przystankach, w parkach)
 - pieszo: kamera nie wjeżdża już w postać, gdy biegniesz w jej stronę (trzyma minimalny dystans)
 - plan i dalsze pomysły: docs/rozmowy-i-zadania.md
+
+## Wersja 46: kopniaki poza bójką
+
+- pieszo, poza solówką, ciosy jeden po drugim układają się w kombinację: pięść, druga pięść, kopniak z przodu, kopniak z półobrotu; wciśnięcie w trakcie ruchu czeka i leci zaraz po nim (szybkie klikanie nic nie gubi)
+- w powietrzu (po skoku) cios to kopniak z wyskoku
+- kopniaki sięgają dalej niż pięść i mają swoje „BACH!” i „ŁUBUDU!”; działają na przechodniów, rowerzystów i złodzieja
+- nogi bez osobnych animacji: stopa prowadzona do celu (kolano w górę, wyprost, powrót), ciało lekko się odchyla
+- w solówce (bójka jeden na jeden) bez zmian: tylko pięści

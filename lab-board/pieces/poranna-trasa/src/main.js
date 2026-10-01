@@ -723,11 +723,12 @@ function stepPeople(dt, inp, me) {
     else hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
   for (const p of peds.list) p.talkT = Math.max(0, (p.talkT || 0) - dt);
   const k = inp.atkL || (inp.lmb && Math.random() < .5) ? 'jab' : inp.atkR || inp.lmb ? 'cross' : null;
-  if (k && foot.swing(k)) pendingHit = { t: k === 'jab' ? .15 : .22, p: pedNear(me, 1.35), b: bikeNear(me, 2.2) };
+  const mv = (k && foot.swing(k)) || foot.fired();                         // (a punch, or a kick in a run of them; a kept press thrown now)
+  if (mv) { const K = foot.KICKS[mv]; pendingHit = { t: K ? K.hit : mv === 'jab' ? .15 : .22, p: pedNear(me, K ? 1.9 : 1.35), b: bikeNear(me, K ? 2.6 : 2.2), kick: !!K, reach: K ? 2.1 : 1.5 }; }
   if (pendingHit && !pendingHit.p && pendingHit.b) { pendingBike = { t: pendingHit.t, b: pendingHit.b }; pendingHit = null; }
-  if (pendingHit && (pendingHit.t -= dt) <= 0) { const p = pendingHit.p; pendingHit = null;
-    if (p && Math.hypot(p.x - me.x, p.z - me.z) < 1.5 && quests.onHitPed(p)) { hud.impact(p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)), 'ŁUP!'); shake = Math.max(shake, .15); }   // (the thief)
-    else if (p && Math.hypot(p.x - me.x, p.z - me.z) < 1.5) { const key = p.P.key, at = p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)); hud.impact(at, 'ŁUP!'); shake = Math.max(shake, .15); p.stun = .7; p.faceT = 1.2;
+  if (pendingHit && (pendingHit.t -= dt) <= 0) { const p = pendingHit.p, PH = pendingHit; pendingHit = null; const word = PH.kick ? pickOf(['BACH!', 'ŁUBUDU!', 'KOP!']) : 'ŁUP!';
+    if (p && Math.hypot(p.x - me.x, p.z - me.z) < PH.reach && quests.onHitPed(p)) { hud.impact(p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)), word); shake = Math.max(shake, .15); }   // (the thief)
+    else if (p && Math.hypot(p.x - me.x, p.z - me.z) < PH.reach) { const key = p.P.key, at = p.G.position.clone().add(new THREE.Vector3(0, 1.55, 0)); hud.impact(at, word); shake = Math.max(shake, .15); p.stun = .7; p.faceT = 1.2;
       B.points = Math.max(0, B.points - 2); hud.pop(at.clone().add(new THREE.Vector3(0, .4, 0)), 'BRZYDKO! -2', '#cf5a3e');
       if (TOUGH.includes(key) && Math.random() < .6 && !foot.chasing) { hud.rant(mouthOf(p), pickOf(SZWAGIER)); p.flee = 3; p.fleeNew = true;   // (he goes for his brother-in-law: out of a house one comes)
         const q = track.probe(me.x, me.z, me.hint), S = track.S[(q.i + (Math.random() < .5 ? 14 : -14) + track.N) % track.N], sd = q.d >= 0 ? 1 : -1, at2 = new THREE.Vector3(S.p.x + S.r.x * sd * 12, S.p.y, S.p.z + S.r.z * sd * 12);
