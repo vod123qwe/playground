@@ -35,9 +35,9 @@ export const PARTS = {
     { name: 'BRAK', price: 0, look: { lamp: false }, mods: {}, note: 'PO CIEMKU NA PAMIĘĆ.' },
     { name: 'LAMPKA', price: 10, look: { lamp: true }, mods: { lamp: 1 }, note: 'PRZEPISOWO. POLICJA SZYBCIEJ ZAPOMINA.' }] },
   torba: { name: 'TORBA', tiers: [
-    { name: 'ZWYKŁA (20)', price: 0, look: { bagS: 1 }, mods: {}, note: 'DWADZIEŚCIA GAZET I KANAPKA.' },
-    { name: 'WIĘKSZA (26)', price: 20, look: { bagS: 1.12 }, mods: { bag: 6 }, note: 'SZEŚĆ GAZET WIĘCEJ.' },
-    { name: 'LISTONOSZOWA (32)', price: 40, look: { bagS: 1.26 }, mods: { bag: 12 }, note: 'PO LISTONOSZU NA L4. DWANAŚCIE WIĘCEJ.' }] } };
+    { name: 'ZWYKŁA (30)', price: 0, look: { bagS: 1 }, mods: {}, note: 'TRZYDZIEŚCI GAZET I KANAPKA.' },
+    { name: 'WIĘKSZA (36)', price: 20, look: { bagS: 1.12 }, mods: { bag: 6 }, note: 'SZEŚĆ GAZET WIĘCEJ.' },
+    { name: 'LISTONOSZOWA (42)', price: 40, look: { bagS: 1.26 }, mods: { bag: 12 }, note: 'PO LISTONOSZU NA L4. DWANAŚCIE WIĘCEJ.' }] } };
 const FINDS = { 'DZWONEK ROWEROWY': { fit: ['dzwonek', 1], sell: 4 }, 'STARA LAMPKA': { fit: ['lampka', 1], sell: 5 }, 'ŁYŻKA DO OPON': { sell: 4 }, 'ŁATKI DO DĘTEK': { sell: 3 }, 'KLUCZ DO SZPRYCH': { sell: 5 },
   'KLUCZ PŁASKI 15': { sell: 4 }, 'DAMSKA TOREBKA': { sell: 8 }, 'MEDALIK NA DROGĘ': { sell: 6 }, 'SOK (CHYBA)': { sell: 2 }, 'SZARLOTKA': { sell: 3 }, 'BILET AUTOBUSOWY': { sell: 2 }, 'ODZNAKA "PRZYJACIEL POSTERUNKU"': { sell: 10 } };
 const STATS = [['top', 'PRĘDKOŚĆ'], ['acc', 'PRZYSPIESZENIE'], ['steer', 'SKRĘT'], ['grass', 'NA TRAWIE', -1], ['hill', 'POD GÓRKĘ'], ['stam', 'KONDYCJA'], ['bag', 'TORBA', 0, 12]];
@@ -81,7 +81,7 @@ export function createShop({ THREE, createRider, game }) {
   function draw() {
     el.querySelector('.cash').textContent = game.money + ' ZŁ';
     const m0 = mods(), m1 = hover ? mods(hover) : m0; statsE.innerHTML = '';
-    for (const [k, n, sgn = 1, max = .5] of STATS) { const f = v => k === 'bag' ? (20 + v) / 32 : Math.max(0, Math.min(1, .5 + sgn * v / max * .5)), a = f(m0[k]), b = f(m1[k]);
+    for (const [k, n, sgn = 1, max = .5] of STATS) { const f = v => k === 'bag' ? (30 + v) / 42 : Math.max(0, Math.min(1, .5 + sgn * v / max * .5)), a = f(m0[k]), b = f(m1[k]);
       statsE.insertAdjacentHTML('beforeend', `<span>${n}</span><span class="bar"><i style="width:${Math.min(a, b) * 100}%"></i>${b !== a ? `<s style="left:${Math.min(a, b) * 100}%;width:${Math.abs(b - a) * 100}%;background:${b > a ? '#9fd27a' : '#cf5a3e'}"></s>` : ''}</span>`); }
     right.innerHTML = `<div class="cats">${Object.keys(PARTS).map(k => `<button data-cat="${k}" class="${k === cat ? 'sel' : ''}">${PARTS[k].name}</button>`).join('')}</div>`;
     PARTS[cat].tiers.forEach((t, i) => { const has = owned[cat].has(i), isOn = on[cat] === i, afford = game.money >= t.price, b = document.createElement('button');
@@ -89,8 +89,12 @@ export function createShop({ THREE, createRider, game }) {
       b.onmouseenter = () => { hover = [cat, i]; R && R.setParts(look(hover)); draw(); }; b.onmouseleave = () => { hover = null; R && R.setParts(look()); draw(); };
       b.onclick = () => buy(cat, i); right.appendChild(b); });
     // the bag filled; your finds
-    const max = 20 + m0.bag, need = Math.max(0, max - game.papers), cost = Math.ceil(need / 2);
+    const max = 30 + m0.bag, need = Math.max(0, max - game.papers), cost = Math.ceil(need / 2);
     right.insertAdjacentHTML('beforeend', `<h4>GAZETY</h4><div class="row"><span>TORBA: ${game.papers}/${max}</span><button data-fill ${need && game.money >= cost ? '' : 'class="off"'}>DOPEŁNIJ (+${need}) ${cost} ZŁ</button></div>`);
+    right.insertAdjacentHTML('beforeend', `<h4>NA DROGĘ</h4><div class="row"><span>DROŻDŻÓWKA (ZDROWIE ${Math.round(game.hp)}/100)</span><button data-bun ${game.money >= 5 && game.hp < 100 ? '' : 'class="off"'}>+40 ZDROWIA · 5 ZŁ</button></div>`);
+    right.querySelector('[data-bun]').addEventListener('click', () => { if (game.money < 5 || game.hp >= 100) return; game.money -= 5; game.hp = Math.min(100, game.hp + 40); changed(); });
+    right.insertAdjacentHTML('beforeend', `<h4>NA DROGĘ</h4><div class="row"><span>DROŻDŻÓWKA (ZDROWIE ${Math.round(game.hp)}/100)</span><button data-bun ${game.money >= 5 && game.hp < 100 ? '' : 'class="off"'}>+40 ZDROWIA · 5 ZŁ</button></div>`);
+    right.querySelector('[data-bun]').addEventListener('click', () => { if (game.money < 5 || game.hp >= 100) return; game.money -= 5; game.hp = Math.min(100, game.hp + 40); changed(); });
     const items = game.items; if (items.length) { right.insertAdjacentHTML('beforeend', '<h4>FANTY</h4>'); items.forEach((it, i) => { const F = FINDS[it] || { sell: 3 }, fit = F.fit && !owned[F.fit[0]].has(F.fit[1]);
       right.insertAdjacentHTML('beforeend', `<div class="row"><span>${it}</span><span>${fit ? `<button data-fit="${i}">ZAMONTUJ</button> ` : ''}<button data-sell="${i}">SPRZEDAJ +${F.sell} ZŁ</button></span></div>`); }); }
     right.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { cat = b.dataset.cat; hover = null; R && R.setParts(look()); draw(); });
@@ -104,5 +108,7 @@ export function createShop({ THREE, createRider, game }) {
   function open() { if (open_) return; open_ = true; el.classList.add('on'); el.querySelector('.hello').textContent = HELLO[Math.random() * HELLO.length | 0]; preview(); draw(); last = performance.now(); raf = requestAnimationFrame(spin); }
   function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); game.onChange(mods(), look()); }
   function key(e) { if (!open_) return false; if (e.code === 'Escape' || e.code === 'Enter') close(); e.preventDefault(); return true; }
-  return { open, close, key, get isOpen() { return open_; }, mods, look, reset: () => { reset(); game.onChange(mods(), look()); } };
+  const ownedList = () => { const out = []; for (const k in PARTS) for (const i of owned[k]) if (i > 0) out.push({ label: PARTS[k].name + ': ' + PARTS[k].tiers[i].name, keep: { part: k, tier: i } }); return out; };
+  function grant(k, i) { if (!PARTS[k] || !PARTS[k].tiers[i]) return; owned[k].add(i); if (i > on[k]) on[k] = i; game.onChange(mods(), look()); }
+  return { open, close, key, get isOpen() { return open_; }, mods, look, ownedList, grant, PARTS, reset: () => { reset(); game.onChange(mods(), look()); } };
 }

@@ -38,7 +38,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       // stuck behind him a good while (he is ahead, near, and it has had to slow): it hoots, the driver has something to say
       const behind = L && L.o.rider && L.g < 14 && t.v < t.cruise * .75 && !t.pass; t.stuckT = behind ? (t.stuckT || 0) + dt : Math.max(0, (t.stuckT || 0) - dt * 2);
       t.shoutCool = Math.max(0, (t.shoutCool || 0) - dt); if (t.stuckT > 3.5 && t.shoutCool <= 0) { t.shoutNow = true; t.shoutCool = 7 + rnd() * 6; }
-      let want = t.cruise;
+      let want = t.cruise * (R.pace || 1);   // (the run's difficulty: faster as it goes on)
       if (L) want = Math.max(0, Math.min(t.cruise, (L.g - 6.5 - (L.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, L.v)));        // (keep behind it; further behind a bus)
       if (t.bus && track.stops) for (const q of track.stops) { if (q.sd !== t.dir) continue; const g = ahead(t.s, q.s, t.dir);   // (the bus: easing in to its stop, standing there a few seconds)
         if (t.lastStop === q) { if (g < -40) t.lastStop = null; continue; }
