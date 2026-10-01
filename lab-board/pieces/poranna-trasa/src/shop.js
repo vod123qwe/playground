@@ -4,7 +4,6 @@
 // the bag filled with papers. What you bought stays for the run.
 // createShop({ THREE, createRider, game }) → { open(), close(), key(e), isOpen, mods(), look(), reset() }
 // game: { money (get/set), papers (get/set), items (array), onChange(mods, look), flash(s) }
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { JANUSZ, bag } from './stories.js';
 export const PARTS = {
   kola: { name: 'KOŁA', tiers: [
@@ -46,48 +45,63 @@ const STATS = [['top', 'PRĘDKOŚĆ'], ['acc', 'PRZYSPIESZENIE'], ['steer', 'SKR
 const HELLO_OLD = ['ROMAN, WARSZTAT: CO DLA CIEBIE? TYLKO NIE PYTAJ O RATY.', 'ROMAN, WARSZTAT: ROWER JAK KOŃ. TRZEBA GO KARMIĆ. CZĘŚCIAMI.', 'ROMAN, WARSZTAT: ZNOWU TY? DOBRZE, KASA SIĘ ZGADZA.', 'ROMAN, WARSZTAT: W TYM TYGODNIU PROMOCJA: NIC NIE JEST TAŃSZE, ALE JEST PROMOCJA.'];
 
 export function createShop({ THREE, createRider, game }) {
-  // the look: the game dimmed under a dither (as in the pause), a window of pixel blocks; on its left pan Janusz (his face, what he says)
+  // the look: the game dimmed under a dither (as in the pause); on the left pan Janusz himself, standing loose over it (no frame), his
+  // speech cloud up to his right, the words popping in one by one; on the right the window of pixel blocks: the bike, how it rides, the shelves
   const css = document.createElement('style'); css.textContent = `
     #shop { position: fixed; inset: 0; z-index: 8; display: none; place-items: center; color: #f6f3ea; font: 700 12px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: uppercase; letter-spacing: .03em;
       background-color: rgba(10,11,13,.5); background-image: linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%), linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%); background-size: 4px 4px; background-position: 0 0, 2px 2px; }
     #shop.on { display: grid; }
-    #shop .win { width: min(1040px, calc(100vw - 24px)); max-height: calc(100vh - 24px); box-sizing: border-box; display: grid; grid-template-columns: 210px minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px 14px; padding: 12px 14px;
+    #shop .stage { width: min(1120px, calc(100vw - 24px)); height: min(700px, calc(100vh - 24px)); display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 470px); gap: 18px; }
+    #shop .janusz { position: relative; min-height: 0; }
+    #shop .fig { position: fixed; left: -3vw; bottom: -11vh; height: min(84vh, 64vw); aspect-ratio: 1; pointer-events: none; filter: drop-shadow(8px 6px 0 rgba(0,0,0,.35)); }
+    #shop .fig img, #shop .fig canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; object-fit: contain; object-position: left bottom; transform-origin: 40% 100%; }
+    #shop .fig canvas { display: none; width: 60%; height: 60%; margin-top: 40%; } #shop .fig.noimg canvas { display: block; } #shop .fig.noimg img { display: none; }
+    #shop .fig.talk img, #shop .fig.talk canvas { animation: jbob .34s steps(1) infinite; } @keyframes jbob { 50% { transform: translateY(-4px) rotate(-.6deg); } }
+    #shop .bubble { position: absolute; top: 0; left: 38%; right: 0; filter: drop-shadow(6px 6px 0 rgba(0,0,0,.4)); }
+    #shop .bb { background: #f6f3ea; color: #17181b; border: 4px solid #17181b; padding: 12px 16px 12px; min-height: 7.6em; font-size: 13px; line-height: 1.5;
+      clip-path: polygon(4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px), 0 4px, 4px 4px); }
+    #shop .bb > b { display: inline-block; color: #f6f3ea; background: #8e2e25; padding: 2px 7px; margin-bottom: 8px; font-size: 11px; letter-spacing: .12em; }
+    #shop .say { display: block; min-height: 4.5em; } #shop .say span { display: inline-block; animation: wpop .18s steps(3) both; }
+    @keyframes wpop { from { opacity: 0; transform: translateY(5px) scale(.5); } to { opacity: 1; transform: none; } }
+    #shop .say:after { content: ''; display: inline-block; width: .55em; height: .9em; margin-left: 4px; background: #17181b; vertical-align: -1px; animation: blink .8s steps(1) infinite; } @keyframes blink { 50% { opacity: 0; } }
+    #shop .bb .chat { margin-top: 8px; padding: 5px 9px; font-size: 11px; color: #f6f3ea; }
+    #shop .tail, #shop .tail i { position: absolute; display: block; width: 28px; height: 20px; }
+    #shop .tail { left: 12%; top: calc(100% - 6px); transform: scale(1.6); transform-origin: 0 0; background: #17181b; clip-path: polygon(8px 0, 28px 0, 28px 4px, 20px 4px, 20px 8px, 16px 8px, 16px 12px, 12px 12px, 12px 16px, 4px 16px, 4px 20px, 0 20px, 0 12px, 4px 12px, 4px 4px, 8px 4px); }
+    #shop .tail i { left: 0; top: 0; background: #f6f3ea; clip-path: polygon(12px 0, 24px 0, 24px 4px, 16px 4px, 16px 8px, 12px 8px, 12px 12px, 8px 12px, 8px 4px, 12px 4px); }
+    #shop .win { position: relative; z-index: 1; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; padding: 0 14px 12px;
       background: #25272b; border: 3px solid #17181b; box-shadow: 0 0 0 3px #d3d0c3, 0 0 0 6px #17181b, 8px 8px 0 6px rgba(0,0,0,.35); }
-    #shop .head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; background: #17181b; margin: -12px -14px 0; padding: 8px 14px; border-bottom: 3px solid #efc970; }
-    #shop .head b { color: #efc970; font-size: 15px; letter-spacing: .14em; } #shop .cash { color: #efc970; font-size: 15px; white-space: nowrap; background: #33363a; padding: 3px 9px; box-shadow: inset 2px 2px 0 #44484c, inset -2px -2px 0 #1d1e21; }
-    #shop .side { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-    #shop .ava { aspect-ratio: 1; background: #e3b83a; border: 3px solid #17181b; box-shadow: 0 0 0 3px #d3d0c3; display: grid; place-items: center; overflow: hidden; }
-    #shop .ava canvas, #shop .ava img { width: 100%; height: 100%; image-rendering: pixelated; display: block; object-fit: cover; }
-    #shop .jan { background: #f6f3ea; color: #17181b; padding: 9px 10px; border: 3px solid #17181b; position: relative; min-height: 5em; font-size: 11px; line-height: 1.45; }
-    #shop .jan:before { content: ''; position: absolute; left: 22px; top: -11px; border: 8px solid transparent; border-bottom-color: #17181b; border-top: 0; } #shop .jan b { display: block; color: #8e2e25; margin-bottom: 3px; }
-    #shop .left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-    #shop canvas.bike { width: 100%; aspect-ratio: 4 / 3; background: #1d1e21; border: 3px solid #17181b; box-shadow: inset 0 0 0 2px #33363a; image-rendering: pixelated; }
-    #shop .stats { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 11px; align-items: center; } #shop .bar { height: 8px; background: #17181b; position: relative; } #shop .bar i { position: absolute; inset: 0 auto 0 0; background: #efc970; } #shop .bar s { position: absolute; top: 0; bottom: 0; text-decoration: none; }
-    #shop .right { overflow-y: auto; min-height: 0; padding-right: 4px; } #shop .cats { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    #shop .head { display: flex; justify-content: space-between; align-items: center; background: #17181b; margin: 0 -14px; padding: 8px 14px; border-bottom: 3px solid #efc970; }
+    #shop .head b { color: #efc970; font-size: 14px; letter-spacing: .14em; } #shop .cash { color: #efc970; font-size: 15px; white-space: nowrap; background: #33363a; padding: 3px 9px; box-shadow: inset 2px 2px 0 #44484c, inset -2px -2px 0 #1d1e21; }
+    #shop canvas.bike { width: 100%; aspect-ratio: 16 / 9; flex: none; background: #1d1e21; border: 3px solid #17181b; box-shadow: inset 0 0 0 2px #33363a; image-rendering: pixelated; box-sizing: border-box; }
+    #shop .stats { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; font-size: 11px; align-items: center; background: #1d1e21; padding: 8px 10px; box-shadow: inset 2px 2px 0 #17181b, inset -2px -2px 0 #33363a; }
+    #shop .blk { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; } #shop .blk i { height: 9px; background: #33363a; } #shop .blk i.f { background: #efc970; } #shop .blk i.up { background: #9fd27a; } #shop .blk i.dn { background: #cf5a3e; }
+    #shop .stats .v { min-width: 4.2em; text-align: right; color: #c9c6bb; } #shop .stats .v.up { color: #9fd27a; } #shop .stats .v.dn { color: #cf5a3e; }
+    #shop .right { flex: 1; overflow-y: auto; min-height: 60px; padding-right: 4px; } #shop .cats { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
     #shop button { all: unset; box-sizing: border-box; cursor: pointer; padding: 7px 9px; background: #33363a; border: 2px solid #17181b; box-shadow: inset 2px 2px 0 #4a4d52, inset -2px -2px 0 #1d1e21; }
     #shop button:active { box-shadow: inset -2px -2px 0 #4a4d52, inset 2px 2px 0 #1d1e21; }
     #shop button.sel { background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; } #shop button.off { opacity: .4; cursor: default; }
     #shop .tier { display: block; width: 100%; margin-bottom: 6px; } #shop .tier .n { display: flex; justify-content: space-between; gap: 8px; } #shop .tier .d { font-size: 10px; opacity: .75; margin-top: 3px; text-transform: none; } #shop .tier em { font-style: normal; color: #2f6b2a; } #shop .tier:not(.sel) em { color: #9fd27a; }
     #shop h4 { margin: 12px 0 6px; color: #efc970; font-size: 11px; letter-spacing: .12em; } #shop .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 5px; } #shop .row button { padding: 5px 8px; font-size: 11px; }
-    #shop .bottom { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 10px; } #shop .go { background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; padding: 9px 16px; }
-    #shop .bottom .chat2 { display: none; }
-    @media (max-width: 820px) { #shop .win { grid-template-columns: 1fr; grid-template-rows: auto auto auto minmax(0, 1fr) auto; overflow-y: auto; }
-      #shop .side { flex-direction: row; align-items: flex-start; } #shop .ava { width: 64px; flex: none; } #shop .jan { flex: 1; min-height: 0; } #shop .jan:before { left: -11px; top: 14px; border: 8px solid transparent; border-right-color: #17181b; border-left: 0; }
-      #shop canvas.bike { max-height: 24vh; } #shop .side .chat { display: none; } #shop .bottom .chat2 { display: inline-block; } }
+    #shop .bottom { display: flex; justify-content: flex-end; } #shop .go { background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; padding: 9px 16px; }
+    @media (max-height: 560px) { #shop canvas.bike { aspect-ratio: auto; height: 26vh; } #shop .stats { grid-template-columns: auto 1fr auto auto 1fr auto; padding: 6px 8px; } }
+    @media (max-width: 820px) { #shop .stage { grid-template-columns: 1fr; grid-template-rows: 170px minmax(0, 1fr); gap: 10px; height: calc(100vh - 16px); width: calc(100vw - 16px); }
+      #shop .fig { position: absolute; height: 100%; left: -10px; bottom: 0; } #shop .bubble { left: 128px; } #shop .bb { min-height: 0; padding: 8px 10px; font-size: 11px; } #shop .say { min-height: 3em; } #shop .tail { left: -16px; bottom: auto; top: 26px; transform: rotate(90deg) scaleX(-1); }
+      #shop canvas.bike { aspect-ratio: auto; height: 20vh; } #shop .stats { grid-template-columns: auto 1fr auto; } }
   `; document.head.appendChild(css);
-  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="win"><div class="head"><b>WARSZTAT U JANUSZA</b><span class="cash"></span></div><div class="side"><div class="ava"><canvas class="face" width="32" height="32"></canvas></div><div class="jan"><b>PAN JANUSZ</b><span class="say"></span></div><button class="chat">POGADAJ Z JANUSZEM</button></div><div class="left"><canvas class="bike"></canvas><div class="stats"></div></div><div class="right"></div><div class="bottom"><button class="chat chat2">POGADAJ</button><span></span><button class="go">JEDŹ DALEJ (ESC)</button></div></div>';
+  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="stage"><div class="janusz"><div class="fig"><img alt="" src="assets/ui/janusz.png"><canvas class="face" width="32" height="32"></canvas></div><div class="bubble"><div class="bb"><b>PAN JANUSZ</b><span class="say"></span><button class="chat">POGADAJ</button></div><span class="tail"><i></i></span></div></div><div class="win"><div class="head"><b>WARSZTAT U JANUSZA</b><span class="cash"></span></div><canvas class="bike"></canvas><div class="stats"></div><div class="right"></div><div class="bottom"><button class="go">JEDŹ DALEJ (ESC)</button></div></div></div>';
   document.body.appendChild(el);
   const cv = el.querySelector('canvas.bike'), right = el.querySelector('.right'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
   // pan Janusz: what he says (a line at the top; his talking clip while he says it), his trips with Mietek on asking
-  const AN = bag(), pick = a => a[Math.random() * a.length | 0]; let talkT = 0;
-  const say = s => { el.querySelector('.jan .say').textContent = s; talkT = Math.min(5, 1.2 + s.length * .035); game.say?.(s); };
-  el.querySelectorAll('.chat').forEach(b => b.onclick = () => say(AN.draw('janusz')));
-  // his face: a picture if there is one (assets/ui/janusz.png), else drawn here in pixels: the cap, the moustache, the chins, the tank top;
-  // the mouth moving while he talks
+  // (each pool shuffled and drawn without repeats; a fresh shuffle never starts with the line just said)
+  const AN = bag(), decks = new Map(); let talkT = 0, lastLine = '';
+  const pick = a => { let d = decks.get(a); if (!d || !d.length) { d = a.slice().sort(() => Math.random() - .5); if (d.length > 1 && d[d.length - 1] === lastLine) d.unshift(d.pop()); decks.set(a, d); } return (lastLine = d.pop()); };
+  const sayE = el.querySelector('.say'), fig = el.querySelector('.fig');
+  const say = s => { const w = s.split(/\s+/); sayE.innerHTML = w.map((x, i) => `<span style="animation-delay:${i * 85}ms">${x}</span>`).join(' '); talkT = Math.min(6, .6 + w.length * .09); game.say?.(s); };   // (word by word)
+  el.querySelector('.chat').onclick = () => say(AN.draw('janusz'));
+  // him: the picture (assets/ui/janusz.png); without it his face drawn here in pixels: the cap, the moustache, the chins, the mouth moving
   const faceC = el.querySelector('.face'), fg = faceC.getContext('2d'); let mouthT = 0;
-  { const img = new Image(); img.onload = () => { faceC.replaceWith(img); faceImg = img; }; img.src = 'assets/ui/janusz.png'; }
-  let faceImg = null;
-  function face(open) { if (faceImg) return; const P = (x, y, w, h, c) => { fg.fillStyle = c; fg.fillRect(x, y, w, h); };
+  el.querySelector('.fig img').onerror = () => fig.classList.add('noimg');
+  function face(open) { if (!fig.classList.contains('noimg')) return; const P = (x, y, w, h, c) => { fg.fillStyle = c; fg.fillRect(x, y, w, h); };
     P(0, 0, 32, 32, '#e3b83a'); P(0, 26, 32, 6, '#c9a53a');
     P(7, 24, 18, 8, '#9a9c9e'); P(5, 26, 4, 6, '#e3b08a'); P(23, 26, 4, 6, '#e3b08a'); P(10, 24, 3, 3, '#e3b08a'); P(19, 24, 3, 3, '#e3b08a');   // the tank top, his arms and shoulders
     P(9, 10, 14, 13, '#e3b08a'); P(8, 12, 1, 6, '#e3b08a'); P(23, 12, 1, 6, '#e3b08a'); P(10, 22, 12, 2, '#d49a74'); P(11, 23, 10, 2, '#e3b08a');   // the face, the chins
@@ -107,29 +121,23 @@ export function createShop({ THREE, createRider, game }) {
   // the turntable: its own little picture, the bike without the boy
   let R = null, ren = null, sc = null, cam = null, raf = 0, last = 0;
   function preview() {
-    if (!ren) { ren = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: true }); ren.setPixelRatio(1); sc = new THREE.Scene(); cam = new THREE.PerspectiveCamera(32, 4 / 3, .1, 50); cam.position.set(3.1, 1.25, -.45); cam.lookAt(0, .58, -.45);   // (the bike, and him by it)
+    if (!ren) { ren = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: true }); ren.setPixelRatio(1); sc = new THREE.Scene(); cam = new THREE.PerspectiveCamera(30, 16 / 9, .1, 50); cam.position.set(2.55, 1.05, 0); cam.lookAt(0, .52, 0);
       sc.add(new THREE.HemisphereLight('#fff3dc', '#3a3d42', 1.6)); const d = new THREE.DirectionalLight('#ffffff', 1.4); d.position.set(2, 3, 1.5); sc.add(d);
-      R = createRider(); R.boy.visible = false; sc.add(R.root);
-      new GLTFLoader().load('assets/export/belly.glb', gl => { const m = gl.scene; m.traverse(o => { if (o.isMesh) { const om = o.material; o.material = new THREE.MeshToonMaterial({ color: om.color, map: om.map || null, alphaTest: om.alphaTest || (om.transparent ? .5 : 0), side: om.transparent ? THREE.DoubleSide : THREE.FrontSide }); } });
-        const J = new THREE.Group(); J.add(m); J.position.set(-.2, 0, -1.25); J.rotation.y = Math.PI * .42; sc.add(J);
-        const stool = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .44, 10), new THREE.MeshToonMaterial({ color: '#7a4a2a' })); stool.position.set(0, .22, 0); J.add(stool);
-        const cap = new THREE.Group(), cm = new THREE.MeshToonMaterial({ color: '#c23a2e' }); const crown = new THREE.Mesh(new THREE.SphereGeometry(.105, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cm); cap.add(crown); const visor = new THREE.Mesh(new THREE.BoxGeometry(.17, .015, .12), cm); visor.position.set(0, .005, .1); cap.add(visor); sc.add(cap);
-        const mixer = new THREE.AnimationMixer(m), A = n => { const c = gl.animations.find(q => q.name === n); return c ? mixer.clipAction(c) : null; }, idle = A('idle'), talk = A('talk'); idle?.play(); if (talk) { talk.play(); talk.setEffectiveWeight(0); }
-        JAN = { J, m, mixer, idle, talk, cap, head: m.getObjectByName('head') }; }); }
+      R = createRider(); R.boy.visible = false; sc.add(R.root); }
     const w = cv.clientWidth || 400, h = cv.clientHeight || 300; ren.setSize(Math.round(w / 2), Math.round(h / 2), false); cam.aspect = w / h; cam.updateProjectionMatrix();   // (half resolution: pixels like the game's)
     R.setParts(look(hover));
   }
-  let JAN = null; const _hp = new THREE.Vector3();
   function spin(t) { if (!open_) return; const dt = Math.min(.05, (t - last) / 1000 || 0); last = t; R.root.rotation.y += dt * .55;
-    if (JAN) { talkT = Math.max(0, talkT - dt); const w = talkT > 0 ? 1 : 0; if (JAN.talk) { const cw = JAN.talk.getEffectiveWeight(), nw = cw + (w - cw) * Math.min(1, dt * 5); JAN.talk.setEffectiveWeight(nw); JAN.idle?.setEffectiveWeight(1 - nw); } JAN.mixer.update(dt);
-      if (JAN.head) { JAN.J.updateMatrixWorld(true); JAN.head.getWorldPosition(_hp); JAN.cap.position.copy(_hp).add(new THREE.Vector3(0, .1, 0)); JAN.cap.rotation.y = JAN.J.rotation.y; } }   // (the cap where his head is)
+    talkT = Math.max(0, talkT - dt); fig.classList.toggle('talk', talkT > 0);
     ren.render(sc, cam); raf = requestAnimationFrame(spin); }
   // the lists
   function draw() {
     el.querySelector('.cash').textContent = game.money + ' ZŁ';
     const m0 = mods(), m1 = hover ? mods(hover) : m0; statsE.innerHTML = '';
-    for (const [k, n, sgn = 1, max = .5] of STATS) { const f = v => k === 'bag' ? (30 + v) / 42 : Math.max(0, Math.min(1, .5 + sgn * v / max * .5)), a = f(m0[k]), b = f(m1[k]);
-      statsE.insertAdjacentHTML('beforeend', `<span>${n}</span><span class="bar"><i style="width:${Math.min(a, b) * 100}%"></i>${b !== a ? `<s style="left:${Math.min(a, b) * 100}%;width:${Math.abs(b - a) * 100}%;background:${b > a ? '#9fd27a' : '#cf5a3e'}"></s>` : ''}</span>`); }
+    for (const [k, n, sgn = 1, max = .5] of STATS) { const f = v => k === 'bag' ? (30 + v) / 42 : Math.max(0, Math.min(1, .5 + sgn * v / max * .5)), a = Math.round(f(m0[k]) * 10), b = Math.round(f(m1[k]) * 10);
+      const val = v => k === 'bag' ? String(30 + v) : (sgn * v > 0 ? '+' : '') + Math.round(sgn * v * 100) + '%', d = m1[k] === m0[k] ? '' : sgn * (m1[k] - m0[k]) > 0 ? 'up' : 'dn';
+      const bl = Array.from({ length: 10 }, (_, j) => `<i class="${j < Math.min(a, b) ? 'f' : j < Math.max(a, b) ? (b > a ? 'up' : 'dn') : ''}"></i>`).join('');
+      statsE.insertAdjacentHTML('beforeend', `<span>${n}</span><span class="blk">${bl}</span><span class="v ${d}">${val(m1[k])}</span>`); }
     right.innerHTML = `<div class="cats">${Object.keys(PARTS).map(k => `<button data-cat="${k}" class="${k === cat ? 'sel' : ''}">${PARTS[k].name}</button>`).join('')}</div>`;
     PARTS[cat].tiers.forEach((t, i) => { const has = owned[cat].has(i), isOn = on[cat] === i, afford = game.money >= t.price, b = document.createElement('button');
       b.className = 'tier' + (isOn ? ' sel' : '') + (!has && !afford ? ' off' : ''); b.innerHTML = `<div class="n"><span>${t.name}</span><span>${isOn ? 'ZAŁOŻONE' : has ? 'ZAŁÓŻ' : t.price + ' ZŁ'}</span></div><div class="d">${t.note}${Object.keys(t.mods).length ? ' · <em>' + fx(t.mods) + '</em>' : ''}</div>`;
@@ -140,8 +148,6 @@ export function createShop({ THREE, createRider, game }) {
     right.insertAdjacentHTML('beforeend', `<h4>GAZETY</h4><div class="row"><span>TORBA: ${game.papers}/${max}</span><button data-fill ${need && game.money >= cost ? '' : 'class="off"'}>DOPEŁNIJ (+${need}) ${cost} ZŁ</button></div>` +
       (game.titles || []).map(t => `<div class="row"><span style="color:${t.col}">${t.name}: ${t.n}</span><button data-tt="${t.key}" ${need >= 1 && game.money >= 3 ? '' : 'class="off"'}>+${Math.min(5, need)} · 3 ZŁ</button></div>`).join(''));
     right.querySelectorAll('[data-tt]').forEach(b => b.onclick = () => { const k = Math.min(5, need); if (k < 1 || game.money < 3) return; game.money -= 3; game.addTitle(b.dataset.tt, k); changed(); });   // (one title in particular)
-    right.insertAdjacentHTML('beforeend', `<h4>NA DROGĘ</h4><div class="row"><span>DROŻDŻÓWKA (ZDROWIE ${Math.round(game.hp)}/100)</span><button data-bun ${game.money >= 5 && game.hp < 100 ? '' : 'class="off"'}>+40 ZDROWIA · 5 ZŁ</button></div>`);
-    right.querySelector('[data-bun]').addEventListener('click', () => { if (game.money < 5 || game.hp >= 100) return; game.money -= 5; game.hp = Math.min(100, game.hp + 40); changed(); });
     right.insertAdjacentHTML('beforeend', `<h4>NA DROGĘ</h4><div class="row"><span>DROŻDŻÓWKA (ZDROWIE ${Math.round(game.hp)}/100)</span><button data-bun ${game.money >= 5 && game.hp < 100 ? '' : 'class="off"'}>+40 ZDROWIA · 5 ZŁ</button></div>`);
     right.querySelector('[data-bun]').addEventListener('click', () => { if (game.money < 5 || game.hp >= 100) return; game.money -= 5; game.hp = Math.min(100, game.hp + 40); changed(); });
     const items = game.items; if (items.length) { right.insertAdjacentHTML('beforeend', '<h4>FANTY</h4>'); items.forEach((it, i) => { const F = FINDS[it] || { sell: 3 }, fit = F.fit && !owned[F.fit[0]].has(F.fit[1]);

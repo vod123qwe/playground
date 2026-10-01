@@ -269,7 +269,7 @@ export function createHud() {
     let x = Math.round(p.x), y = Math.round(p.y);
     const bob = Math.round(Math.sin(markT * 4 + m.p.x * .7) * 1.5);
     if (m.s === 'v') { for (let r = 0; r < 6; r++) { g.fillStyle = '#17181b'; g.fillRect(x - 6 + r, y - 9 + r + bob, 13 - r * 2, 2); } for (let r = 0; r < 5; r++) { g.fillStyle = m.col; g.fillRect(x - 5 + r, y - 8 + r + bob, 11 - r * 2, 1); } }
-    else if (m.s === '!' || m.s === '?') cloud(x, y + bob, m.s);
+    else if (m.s === '!' || m.s === '?' || m.s === '$') cloud(x, y + bob, m.s);
     else if (m.s === 'sub') { const x0 = x - 5, y0 = y - 10 + bob; g.fillStyle = '#17181b'; g.fillRect(x0 - 1, y0 - 1, 12, 9); g.fillStyle = '#f6f3ea'; g.fillRect(x0, y0, 10, 7); g.fillStyle = m.col; g.fillRect(x0, y0 + 2, 10, 2); g.fillStyle = '#9a968c'; g.fillRect(x0 + 1, y0 + 5, 8, 1); }   // (a subscriber: a little paper in its title's colour)
     else if (m.s) big(m.s, x - 3, y - 12 + bob, m.col, '#17181b');
     if (m.label) { const w = width(m.label) + 6; g.fillStyle = 'rgba(23,24,27,.78)'; g.fillRect(x - (w >> 1), y + 2, w, 9); text(m.label, x - (w >> 1) + 3, y + 4, m.col, null); } }
@@ -277,7 +277,9 @@ export function createHud() {
     const sw = Math.sin(markT * 2.3 + x * .13), ox = Math.round(sw * 1.6), w = 13, h = 9, x0 = x - 6 + ox, y0 = y - 17 + Math.round(-Math.abs(sw) * .8), tx = x0 + 4 - Math.round(sw);
     g.fillStyle = '#17181b'; g.fillRect(x0 - 1, y0, w + 2, h); g.fillRect(x0, y0 - 1, w, h + 2); g.fillRect(tx - 1, y0 + h, 4, 2); g.fillRect(tx - 2 + (sw > 0 ? 0 : 3), y0 + h + 2, 2, 2);   // (its rim, a tail down to them)
     g.fillStyle = '#f6f3ea'; g.fillRect(x0, y0, w, h); g.fillRect(tx, y0 + h, 2, 1); g.fillStyle = '#d3d0c3'; g.fillRect(x0, y0 + h - 1, w, 1);
-    if (ch === '?') text('?', x0 + 5, y0 + 2, '#8e2e25', null); else { g.fillStyle = '#17181b'; for (const dx of [3, 6, 9]) g.fillRect(x0 + dx - 1, y0 + 4, 2, 2); }   // (dots: something to say; ?: waiting for you)
+    if (ch === '$') { g.fillStyle = '#17181b'; g.fillRect(x0 + 1, y0 + 1, 2, 1); g.fillRect(x0 + 3, y0 + 2, 8, 1); g.fillRect(x0 + 3, y0 + 2, 1, 3); g.fillRect(x0 + 10, y0 + 2, 1, 3); g.fillRect(x0 + 4, y0 + 5, 6, 1);   // (a shopping cart: its handle, basket, wheels)
+      g.fillStyle = '#efc970'; g.fillRect(x0 + 4, y0 + 3, 6, 2); g.fillStyle = '#17181b'; g.fillRect(x0 + 5, y0 + 7, 1, 1); g.fillRect(x0 + 9, y0 + 7, 1, 1); g.fillRect(x0 + 7, y0 + 3, 1, 2); }
+    else if (ch === '?') text('?', x0 + 5, y0 + 2, '#8e2e25', null); else { g.fillStyle = '#17181b'; for (const dx of [3, 6, 9]) g.fillRect(x0 + dx - 1, y0 + 4, 2, 2); }   // (dots: something to say; ?: waiting for you)
   }
   // a target out of the picture: an arrow at the edge on its side, pointing to it, and how far
   function edgeArrow(m, q) { const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2; let dx = q.x - cx, dy = q.y - cy; if (q.behind && Math.abs(dy) < 1) dy = 1; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;

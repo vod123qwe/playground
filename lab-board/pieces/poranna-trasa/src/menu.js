@@ -36,7 +36,8 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'button', label: 'ZACZNIJ OD NOWA', act: () => { close(); onRestart(); } },
       ...(/[?&]arena=/.test(location.search) ? [] : [{ type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } }]),
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
-    if (page === 'snd') return [...SND.map(([label, k]) => ({ type: 'slider', label, key: 'snd_' + k, min: 0, max: 1, step: .05, get: () => sound.get(k), set: v => sound.set(k, v) })), { type: 'button', label: 'WRÓĆ', act: () => show(parent) }];
+    if (page === 'snd') return [{ type: 'button', label: sound.get('mute') ? 'DŹWIĘK: WYCISZONY' : 'DŹWIĘK: WŁĄCZONY', act: () => { sound.set('mute', !sound.get('mute')); show('snd'); } }, ...SND.map(([label, k]) => ({ type: 'slider', label, key: 'snd_' + k, min: 0, max: 1, step: .05, get: () => sound.get(k), set: v => sound.set(k, v) })),
+      { type: 'button', label: 'WRÓĆ', act: () => show(parent) }];
     if (page === 'keys') { const r = sens ? [{ type: 'slider', label: 'CZUŁOŚĆ MYSZY', key: 'sens', min: .2, max: 2, step: .1, get: sens.get, set: sens.set }] : [];
       for (const sec of controls.sections()) { r.push({ type: 'head', label: sec.title });
         for (const it of sec.items) r.push(it.act ? { type: 'bind', label: it.label, act: it.act, keys: it.keys, clash: it.clash } : { type: 'info', label: it.label, value: it.value }); }

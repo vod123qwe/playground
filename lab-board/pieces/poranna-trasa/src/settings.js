@@ -7,28 +7,19 @@ const DEFAULT = 'miekki';
 export const PRESETS = {
   miekki: { name: 'Miękki', note: 'jak z rysunku: wygładzone piksele, 4 tony, delikatny kontur', pix: 280, smooth: 3, ink: 1, toon: 4, palette: true, hue: .85, dither: .012, sky: .028, exposure: 1.04, pixel: true, rim: .55 , oStr: .7, oThr: .12, palMix: 1, levels: 0, sat: 1, contrast: 1, vig: 0, crt: 0 , crease: .7 },
   klasyczny: { name: 'Klasyczny', note: 'ostre piksele, 3 tony, fioletowy kontur', pix: 240, smooth: 1, ink: 1, toon: 3, palette: true, hue: 1, dither: .02, sky: .07, exposure: 1, pixel: true, rim: .3 , oStr: .85, oThr: .12, palMix: 1, levels: 0, sat: 1, contrast: 1, vig: 0, crt: 0 , crease: .7 },
-  komiks: { name: 'Komiks', note: 'gruby czarny kontur, płaskie tony', pix: 320, smooth: 2, ink: 3, toon: 3, palette: true, hue: .6, dither: 0, sky: .04, exposure: 1.06, pixel: true, rim: .35 , oStr: 1, oThr: .07, palMix: 1, levels: 0, sat: 1.15, contrast: 1.08, vig: 0, crt: 0 , crease: .7 },
   retro: { name: 'Stary ekran', note: 'duże piksele, mniej kolorów, linie jak na kineskopie', pix: 180, smooth: 1, ink: 2, toon: 3, palette: true, hue: .9, dither: .025, sky: .08, exposure: 1.08, pixel: true, rim: .3, oStr: .9, oThr: .1, palMix: 1, levels: 6, sat: 1.1, contrast: 1.1, vig: .45, crt: .6 , crease: .7 },
   pastel: { name: 'Pastelowy poranek', note: 'miękko jak akwarela: bez twardej palety, jasno, ledwie kontur', pix: 240, smooth: 5, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: true, rim: .35, oStr: .35, oThr: .14, palMix: .55, levels: 0, sat: .82, contrast: .94, vig: 0, crt: 0 , crease: .7 },
   zlota: { name: 'Złota godzina', note: 'niskie ciepłe słońce: mocny połysk krawędzi, ciepło, cienki czarny kontur', pix: 260, smooth: 3, ink: 2, toon: 4, palette: true, hue: 1.3, dither: .01, sky: .03, exposure: 1.03, pixel: true, rim: .95, oStr: .6, oThr: .09, palMix: 1, levels: 0, sat: 1.12, contrast: 1.07, vig: 0, crt: 0 , crease: .7 },
-  gladki: { name: 'Gładki', note: 'bez pikseli: gładko i miękko, pełne tony, kolory lekko przygaszone, ledwie kontur', pix: 280, smooth: 4, ink: 1, toon: 5, palette: true, hue: .6, dither: .006, sky: .02, exposure: 1.1, pixel: false, rim: .35, oStr: .1, oThr: .1, palMix: .9, levels: 2, sat: .82, contrast: .94, vig: 0, crt: 0, crease: .7 },
-  malowany: { name: 'Malowany', note: 'jak farbą: plamy koloru (filtr Kuwahary), faktura płótna, ciemniejszy pociągnięty kontur, lekko drżący', pix: 300, smooth: 2, ink: 1, toon: 5, palette: true, hue: .9, dither: 0, sky: .02, exposure: 1.06, pixel: true, rim: .5, oStr: .15, oThr: .12, palMix: .12, levels: 0, sat: 1.12, contrast: 1.06, vig: 0, crt: 0, crease: .3, mode: 1, wob: .45 },
-  komiks: { name: 'Komiks', note: 'gruby tusz, rastrowe kropki w cieniach, płaskie jasne kolory; kreska drży jak rysowana klatka po klatce', pix: 360, smooth: 2, ink: 3, toon: 3, palette: true, hue: .6, dither: 0, sky: .02, exposure: 1.08, pixel: true, rim: .3, oStr: 1, oThr: .07, palMix: .8, levels: 0, sat: 1.18, contrast: 1.1, vig: 0, crt: 0, crease: .8, mode: 2, wob: .8 },
-  akwarela: { name: 'Akwarela', note: 'papier, barwnik zebrany na brzegach plam, światła zostawione białe, miękko', pix: 320, smooth: 4, ink: 1, toon: 5, palette: true, hue: .7, dither: 0, sky: .02, exposure: 1.1, pixel: true, rim: .3, oStr: .1, oThr: .12, palMix: 0, levels: 0, sat: .9, contrast: .95, vig: 0, crt: 0, crease: .2, mode: 3, wob: .5 },
   ostry: { name: 'Wysoka rozdzielczość', note: 'drobne piksele, cienki czarny kontur, dużo tonów', pix: 540, smooth: 2, ink: 2, toon: 5, palette: true, hue: .8, dither: .008, sky: .04, exposure: 1.02, pixel: true, rim: .5 , oStr: 1, oThr: .07, palMix: .85, levels: 0, sat: 1.05, contrast: 1.02, vig: 0, crt: 0 , crease: .7 },
 };
 for (const k in PRESETS) PRESETS[k] = { mode: 0, wob: 0, ...PRESETS[k] };   // (a style with no look laid over it says so: switching to it takes the last one off)
 // the four in the game's own menu (Esc), and the few settings each of them offers there: [label, key, min, max, step]
-export const MENU_STYLES = ['retro', 'miekki', 'pastel', 'zlota', 'gladki', 'malowany', 'komiks', 'akwarela'];
+export const MENU_STYLES = ['retro', 'miekki', 'pastel', 'zlota'];
 export const LIGHT = {
   retro: [['LINIE EKRANU', 'crt', 0, 1, .05], ['WINIETA', 'vig', 0, 1, .05], ['POZIOMY KOLORU', 'levels', 2, 16, 1]],
   miekki: [['KONTUR', 'oStr', 0, 1, .05], ['DITHERING', 'dither', 0, .04, .002], ['CIEPŁO ŚWIATŁA', 'hue', 0, 1.5, .05]],
   pastel: [['NASYCENIE', 'sat', .4, 1.4, .05], ['SIŁA PALETY', 'palMix', 0, 1, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02]],
   zlota: [['POŁYSK', 'rim', 0, 1.2, .05], ['CIEPŁO', 'hue', 0, 1.6, .05], ['KONTRAST', 'contrast', .8, 1.3, .02]],
-  malowany: [['DRŻENIE KRESKI', 'wob', 0, 1, .05], ['KONTUR', 'oStr', 0, 1, .05], ['NASYCENIE', 'sat', .4, 1.4, .05]],
-  komiks: [['DRŻENIE KRESKI', 'wob', 0, 1, .05], ['NASYCENIE', 'sat', .4, 1.4, .05], ['KONTRAST', 'contrast', .8, 1.3, .02]],
-  akwarela: [['DRŻENIE KRESKI', 'wob', 0, 1, .05], ['NASYCENIE', 'sat', .4, 1.4, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02]],
-  gladki: [['NASYCENIE', 'sat', .4, 1.4, .05], ['JASNOŚĆ', 'exposure', .8, 1.3, .02], ['KONTUR', 'oStr', 0, 1, .05]],
 };
 const KEY = 'poranna-trasa-styl', MINE = 'poranna-trasa-styl-moj', TABK = 'poranna-trasa-styl-zakladka';   // (now; the one saved as your default; the tab last open)
 
@@ -60,7 +51,7 @@ export function lookUniforms(S) { const g = k => +val(S, k), m = g('mode') | 0, 
   return U; }
 
 // ---------- the panel: tabs; in each the settings that belong together; a setting that does nothing with what is chosen greyed, with why ----------
-const GROUPS = [['Pikselowe', ['miekki', 'klasyczny', 'retro', 'zlota', 'ostry']], ['Gładkie', ['pastel', 'gladki']], ['Rysunkowe', ['komiks', 'malowany', 'akwarela']]];
+const GROUPS = [['Pikselowe', ['miekki', 'klasyczny', 'retro', 'zlota', 'ostry']], ['Gładkie', ['pastel']]];
 const SW = { miekki: ['#7fae58', '#efc970', '#cf5a3e', '#453a52'], klasyczny: ['#467537', '#e8c070', '#b3372c', '#2e2538'], retro: ['#5b8a3c', '#d8b87a', '#8e2e25', '#17181b'], zlota: ['#e3a03a', '#cf7a3e', '#7fae58', '#5d3a2e'],
   ostry: ['#6f9a45', '#f2c33a', '#c8323a', '#1d1e21'], pastel: ['#b7d3a8', '#f3d9c0', '#c9b9e0', '#e9eef5'], gladki: ['#8fb07a', '#e9dcc0', '#a9bccb', '#6b6a70'],
   komiks: ['#f2c33a', '#e0503f', '#2f5aa0', '#141316'], malowany: ['#7a9a4a', '#d8a860', '#6f8fb0', '#4a3a2e'], akwarela: ['#b9cfa8', '#f6f0e0', '#9fbcd0', '#d8a890'], olowek: ['#f1eadb', '#b8b0a0', '#6b665e', '#3d3a36'],
