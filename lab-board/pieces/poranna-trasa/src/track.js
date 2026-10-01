@@ -246,7 +246,8 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const gap = 6.5 + rnd() * 2;
     if (drv) h.add(slab(box(3.0, .04, gap + .2, driveM, dvx, .02, -D / 2 - gap / 2))); if (path) h.add(slab(box(1.1, .04, gap, pathM, dx, .025, -D / 2 - gap / 2)));
     for (let k = 0; k < 3 + (rnd() * 3 | 0); k++) { const x = (rnd() - .5) * (W - 1.5); if (Math.abs(x - dx) < 1.2 || (drv && Math.abs(x - dvx) < 1.8)) continue; bush(h, x, fz - .6 - rnd() * .4, .45 + rnd() * .3, rnd() < .45); }
-    if (rnd() < .5) { const bn = bin(); bn.position.set(garage ? gx + 2 : W / 2 - .6, 0, fz - 1.2 - rnd()); bn.rotation.y = (rnd() - .5) * .5; h.add(bn); }
+    const taken = [];                                                   // (what stands in the front garden already: [x, z, room])
+    if (rnd() < .5) { const bn = bin(); bn.position.set(garage ? gx + 2 : W / 2 - .6, 0, fz - 1.2 - rnd()); bn.rotation.y = (rnd() - .5) * .5; h.add(bn); taken.push([bn.position.x, bn.position.z, .5]); }
     // the street's furniture on the lot: the bins put out for the morning at its edge by the pavement (a mixed one and a yellow one),
     // a bed of flowers under a window, and now and then a flag on the front, white and red, on a pole out from the wall
     const extraHits = [];
@@ -254,15 +255,23 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       for (const [k, m] of [[0, m0], [1, binMs[3]]]) { const b = new THREE.Group(); b.add(box(.58, .95, .7, m, 0, .52, 0)); b.add(box(.64, .07, .76, m, 0, 1.02, .02));
         for (const x of [-.26, .26]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .06, 10), dark); w.rotation.z = Math.PI / 2; w.position.set(x, .1, .33); b.add(w); }
         b.position.set(bx + k * .72, 0, zE); b.rotation.y = Math.PI + (rr() - .5) * .3; h.add(b); binsO.push(b); }
-      extraHits.push([{ hx: .7, hz: .4, h: 1.1, kind: 'hard' }, bx + .36, zE]); }
+      extraHits.push([{ hx: .7, hz: .4, h: 1.1, kind: 'hard' }, bx + .36, zE]); taken.push([bx + .36, zE, 1]); }
     if (rr() < .45) for (const x of garage ? [-W * .3] : [-W * .32, W * .32]) { if (rr() < .3) continue; const bed = new THREE.Group(); bed.add(box(1.9, .14, .7, soilM, 0, .07, 0)); bed.add(box(1.75, .24, .55, BLOOM[rr() * BLOOM.length | 0], 0, .24, 0));
-      for (const bx2 of [-.95, .95]) bed.add(box(.08, .18, .74, stoneM, bx2, .09, 0)); bed.position.set(x, 0, fz - .75); h.add(bed); }
+      for (const bx2 of [-.95, .95]) bed.add(box(.08, .18, .74, stoneM, bx2, .09, 0)); bed.position.set(x, 0, fz - .75); h.add(bed); taken.push([x, fz - .75, 1.1]); }
     if (rr() < .22) { const fx = dx > 0 ? -W / 2 + .45 : W / 2 - .45, pole = new THREE.Group(); pole.position.set(fx, 2.45, fz - .05); pole.rotation.x = -.8; h.add(pole);
       pole.add(box(.05, 1.8, .05, white, 0, .9, 0)); const sg = fx > 0 ? -1 : 1;
       const wS = box(.95, .36, .02, flagW, sg * .5, 1.5, 0), rS = box(.95, .36, .02, flagR, sg * .5, 1.14, 0); wS.rotation.y = sg * .12; rS.rotation.y = sg * .16; pole.add(wS, rS); pole.userData.onHouse = true; }
-    // the front garden, lived in: a few things about the lawn (not on the path, the drive or the porch); now and then an old car by the house
+    // now and then a garden chair (or a lounger, striped) out on the lawn, facing the road
+    const freeAt = (x, z, r) => !((path && Math.abs(x - dx) < .9 + r) || (drv && Math.abs(x - dvx) < 1.7 + r) || (z > fz - 2.6 && Math.abs(x - dx) < 2 + r) || taken.some(([a, b, c]) => Math.hypot(a - x, b - z) < c + r));
+    const sitAt = (() => { const side = dx > 0 ? -1 : 1; for (const [x, z] of [[side * W * .28, fz - 3.2], [-side * W * .28, fz - 3.2], [side * W * .34, fz - 4.2], [-side * W * .34, fz - 4.2]]) if (freeAt(x, z, 1)) return [x, z]; return null; })();
+    if (sitAt && rnd() < .3) { const [sx, sz] = sitAt, lounger = rnd() < .4, c = new THREE.Group(), wd = toon('#9e7a4f'), cloth = toon('#ffffff', { map: STRIPE });
+      if (lounger) { c.add(box(.62, .06, 1.7, cloth, 0, .3, .05)); const bk = box(.62, .06, .8, cloth, 0, .62, -.72); bk.rotation.x = -1.0; c.add(bk); for (const x of [-.3, .3]) for (const z of [-.7, .75]) c.add(box(.04, .3, .04, wd, x, .15, z)); }
+      else { c.add(box(.5, .05, .48, wd, 0, .45, 0)); c.add(box(.5, .5, .05, wd, 0, .72, -.24)); for (const x of [-.22, .22]) for (const z of [-.2, .2]) c.add(box(.04, .45, .04, wd, x, .22, z)); for (const x of [-.26, .26]) c.add(box(.04, .04, .45, wd, x, .62, 0)); }
+      c.position.set(sx, 0, sz); c.rotation.y = Math.PI; h.add(c);                                   // (the seat faces the road: -z here)
+      seats.push({ h, chair: c, local: new THREE.Vector3(sx, lounger ? .06 : 0, sz + (lounger ? .15 : .02)), lounger, i }); hit(h, { hx: .4, hz: lounger ? .9 : .35, h: .8, kind: 'hard' }, i, sx, sz); taken.push([sx, sz, lounger ? 1.1 : .6]); }
+    // the front garden, lived in: a few things about the lawn (not on the path, the drive, the porch, nor on what stands there); now and then an old car by the house
     const yard = [];
-    { const spots = [], lawnZ0 = fz - 1, lawnZ1 = -D / 2 - gap + 1.4, pick = [['natLeaves', 2], ['natBush', 3], ['natFlowers', 3], ['natRocks', 1], ['leafPile', 1], ['gnome', 2], ['sandbox', 1], ['swing', 1], ['kidBike', 1], ['trampoline', 1], ['grill', 1], ['birdbath', 1]], tot = pick.reduce((a, b) => a + b[1], 0);
+    { const spots = [...taken], lawnZ0 = fz - 1, lawnZ1 = -D / 2 - gap + 1.4, pick = [['natLeaves', 2], ['natBush', 3], ['natFlowers', 3], ['natRocks', 1], ['leafPile', 1], ['gnome', 2], ['sandbox', 1], ['swing', 1], ['kidBike', 1], ['trampoline', 1], ['grill', 1], ['birdbath', 1]], tot = pick.reduce((a, b) => a + b[1], 0);
       for (let n = 0; n < 2 + (rnd() * 3 | 0); n++) { let r = rnd() * tot, kind = pick[0][0]; for (const [k, wgt] of pick) { if ((r -= wgt) < 0) { kind = k; break; } }
         const big = kind === 'swing' || kind === 'trampoline' || kind === 'sandbox';
         for (let tries = 0; tries < 8; tries++) { const rr = big ? 2 : .8, x = (rnd() - .5) * Math.max(0, W - 2 * (rr + .35)), z = lawnZ1 + (lawnZ0 - lawnZ1) * rnd();
@@ -289,12 +298,6 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     for (const [spec, x, z] of [...yard, ...extraHits]) hit(h, spec, i, x, z);
     if (drv) { zone(h, 1.9, (gap + .2) / 2 + .6, dvx, -D / 2 - gap / 2); zone(h, 1.9, 2.6, dvx, -D / 2 - gap - 2.6); } if (path) zone(h, .9, gap / 2, dx, -D / 2 - gap / 2); if (annex) zone(h, aw / 2 + .3, ad / 2, ax, azc);   // the drive (and across the pavement and the verge: no tree in the way out), or the path
     zone(h, 2.4, 1.7, dx, fz - 1.1);                                                                                             // the porch
-    // now and then a garden chair (or a lounger, striped) out on the lawn, facing the road
-    if (rnd() < .3) { const sx = (dx > 0 ? -1 : 1) * W * .28, sz = fz - 3.2, lounger = rnd() < .4, c = new THREE.Group(), wd = toon('#9e7a4f'), cloth = toon('#ffffff', { map: STRIPE });
-      if (lounger) { c.add(box(.62, .06, 1.7, cloth, 0, .3, .05)); const bk = box(.62, .06, .8, cloth, 0, .62, -.72); bk.rotation.x = -1.0; c.add(bk); for (const x of [-.3, .3]) for (const z of [-.7, .75]) c.add(box(.04, .3, .04, wd, x, .15, z)); }
-      else { c.add(box(.5, .05, .48, wd, 0, .45, 0)); c.add(box(.5, .5, .05, wd, 0, .72, -.24)); for (const x of [-.22, .22]) for (const z of [-.2, .2]) c.add(box(.04, .45, .04, wd, x, .22, z)); for (const x of [-.26, .26]) c.add(box(.04, .04, .45, wd, x, .62, 0)); }
-      c.position.set(sx, 0, sz); c.rotation.y = Math.PI; h.add(c);                                   // (the seat faces the road: -z here)
-      seats.push({ h, chair: c, local: new THREE.Vector3(sx, lounger ? .06 : 0, sz + (lounger ? .15 : .02)), lounger, i }); hit(h, { hx: .4, hz: lounger ? .9 : .35, h: .8, kind: 'hard' }, i, sx, sz); }
     const nrm = new THREE.Vector3(0, 0, -1).transformDirection(h.matrixWorld);
     settle(h, i, W + (annex ? 3.5 : 0), D);
     show.house.push({ o: h, label: [two ? 'piętrowy' : 'parterowy', garage ? 'z garażem' : annex ? 'z dobudówką' : ''].filter(Boolean).join(', '), note: `${W.toFixed(1)} × ${D.toFixed(1)} m`, kind: (two ? 2 : 1) + (garage ? 'g' : annex ? 'a' : '') });
