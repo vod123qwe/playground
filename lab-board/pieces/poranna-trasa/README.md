@@ -721,3 +721,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - włosy pod czapką to jedna warstwa dookoła głowy (z tyłu i po bokach), przylegająca, lekko zwężona do karku, z falistym brzegiem w pasma i jaśniejszymi i ciemniejszymi smugami; nad uszami krótko, za uszami tylko delikatne podwinięcie (wcześniej osobne kosmyki odstawały jak płatki)
 - korona czapki niższa i szersza w ramionach, bardziej płaska na górze (wcześniej półkula); szwy paneli ciemniejsze i cieńsze
+
+## Wersja 78: prawdziwe włosy zamiast plastiku
+
+- pod czapką ok. 130 cienkich pasm, zwężających się ku końcom, w kilku brązach (w pikselach dają nieregularną mozaikę jak na koncepcie), ułożonych po kształcie głowy: z tyłu dłuższe, zachodzą na kark; nad uszami krótkie i podkręcone do góry; pod spodem krótka ciemna warstwa, żeby nie prześwitywała skóra
+- włosy się ruszają: lekko falują zawsze, przy szybkiej jeździe wiatr odgina je do tyłu, przy szarpnięciu głowy podskakują (pieszo i na rowerze)

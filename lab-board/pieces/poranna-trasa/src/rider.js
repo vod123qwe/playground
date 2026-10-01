@@ -237,7 +237,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
     torso.updateMatrix(); cur.pelvis = pelvis.clone(); cur.chest = new THREE.Vector3(0, .42, 0).applyMatrix4(torso.matrix); head.position.set(0, .6, 0); cur.head = head.position.clone().applyMatrix4(torso.matrix);
     if (RG.on) { if (RG.up > 0) RG.up += dt / RG.upT; else stepRagdoll(dt);
       const w = 1 - THREE.MathUtils.smootherstep(RG.up, 0, 1); if (RG.up >= 1) RG.on = false; else applyRagdoll(w); }
-    drive();
+    drive(); if (PR) PR.P.m.userData.hair?.(dt, Math.abs(o.speed));
   }
 
   // ---------- the ragdoll: thrown off, he is fifteen points held apart by sticks (Verlet): tumbling over the bars, landing, sliding,

@@ -127,15 +127,43 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     // the hair from under it, one piece: a skirt round the back and the sides that lies on the head, narrowing a little to the nape,
     // its edge wavy in clumps (longer at the back, short over the ears so they show, the ends just turned out behind the ears), strands
     // in light and dark down it
-    { const NA = 56, NR = 6, A0 = Math.PI * .34, A1 = Math.PI * 1.66, pos = [], col = [], idx = [], dark = new THREE.Color('#3a2618'), mid = new THREE.Color('#4b3221'), lite = new THREE.Color('#6a4a30'), cc = new THREE.Color();
-      for (let i = 0; i <= NA; i++) { const th = A0 + (A1 - A0) * i / NA, c = Math.cos(th), ear = Math.max(0, 1 - Math.abs(c) / .32), flick = Math.max(0, 1 - Math.abs(c + .45) / .2), back = Math.max(0, -c - .3);
-        const clump = Math.abs(Math.sin(i * Math.PI / 3.5)), L = (.034 + back * .022 + flick * .01) * (1 - ear * .62) + clump * .009 * (1 - ear * .5), R0 = rimAt(th) - .003;
-        const strand = (i * 7) % 5, base = strand === 0 ? lite : strand === 3 ? dark : mid;
-        for (let j = 0; j <= NR; j++) { const t = j / NR, y = -L * t - .001, r = R0 * (1 - .06 * t * (.6 + back)) + flick * .012 * Math.max(0, t - .5) ** 2 * 4 + .002 * t;
-          pos.push(Math.sin(th) * r, y + flick * .006 * Math.max(0, t - .6) * 2.5, c * r); cc.copy(base).lerp(dark, t * .45); col.push(cc.r, cc.g, cc.b); } }
-      for (let i = 0; i < NA; i++) for (let j = 0; j < NR; j++) { const a0 = i * (NR + 1) + j, b0 = a0 + NR + 1; idx.push(a0, b0, a0 + 1, b0, b0 + 1, a0 + 1); }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
-      cap.add(new THREE.Mesh(g, toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide }))); }
+    { // (clumps of uneven width and length, each coming to a point, coloured each its own; two layers, the outer shorter and a little out)
+      const A0 = Math.PI * .34, A1 = Math.PI * 1.66, dark = new THREE.Color('#3a2618'), mid = new THREE.Color('#4b3221'), lite = new THREE.Color('#6a4a30'), cc = new THREE.Color();
+      let seed = 7; const rr = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      const skirt = (NA, NR, out, lenK, cols) => { const pos = [], col = [], idx = []; let cl = 0, cw = 0, cpeak = 0, ccol = mid, cdr = 0;
+        for (let i = 0; i <= NA; i++) { if (cl <= 0) { cw = 2 + Math.floor(rr() * 4); cl = cw; cpeak = .004 + rr() * .02; ccol = cols[Math.floor(rr() * cols.length)]; cdr = (rr() - .5) * .004; }
+          const u = 1 - Math.abs((cw - cl + .5) / cw * 2 - 1); cl--;   // (where in its clump: 1 at its middle, 0 at its edges)
+          const th = A0 + (A1 - A0) * i / NA, c = Math.cos(th), ear = Math.max(0, 1 - Math.abs(c) / .32), flick = Math.max(0, 1 - Math.abs(c + .45) / .2), back = Math.max(0, -c - .3);
+          const Lh = ((.034 + back * .042 + flick * .012) * (1 - ear * .62) + cpeak * u * (1 - ear * .4)) * lenK, R0 = rimAt(th) - .003 + out + cdr;
+          for (let j = 0; j <= NR; j++) { const t = j / NR, y = -Lh * t - .001, r = R0 * (1 - .06 * t * (.6 + back)) + flick * .012 * Math.max(0, t - .5) ** 2 * 4 + .002 * t;
+            pos.push(Math.sin(th) * r, y + flick * .006 * Math.max(0, t - .6) * 2.5, c * r); cc.copy(ccol).lerp(dark, t * .4 + (1 - u) * .15); col.push(cc.r, cc.g, cc.b); } }
+        for (let i = 0; i < NA; i++) for (let j = 0; j < NR; j++) { const a0 = i * (NR + 1) + j, b0 = a0 + NR + 1; idx.push(a0, b0, a0 + 1, b0, b0 + 1, a0 + 1); }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+        cap.add(new THREE.Mesh(g, toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide }))); };
+      skirt(64, 4, -.002, .72, [dark, dark, mid]);   // (a short dark mass under: no scalp between the strands)
+      // the strands: narrow, tapering, each bent to lie on the head and out at its end, in browns of their own; over the ears short and
+      // turned up; each on its own root, so they sway (see hair below)
+      const shades = ['#3a2618', '#4b3221', '#4b3221', '#5a3c26', '#6a4a30'].map(c => toon(c, { side: THREE.DoubleSide })), strands = [];
+      const strandG = (w, Ls, bend, flip) => { const g = new THREE.BufferGeometry(), N = 5, pos = [], idx = [];
+        for (let j = 0; j <= N; j++) { const t = j / N, hw = w / 2 * (1 - t * .85), z = -.003 * t + bend * t * t * t * Ls, y = -Ls * t + (flip ? Math.max(0, t - .5) ** 2 * Ls * 1.5 : 0), tw = (t - .5) * .004;
+          pos.push(-hw, y, z + tw, hw, y, z - tw); if (j) { const a = (j - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
+        g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; };
+      for (let k = 0; k < 130; k++) { const th = A0 + (A1 - A0) * rr(), c = Math.cos(th), ear = Math.abs(c) < .3, back = Math.max(0, -c - .3), flick = Math.max(0, 1 - Math.abs(c + .45) / .2);
+        const Ls = ear ? .02 + rr() * .018 : .032 + back * .045 + flick * .014 + rr() * .022, w = .01 + rr() * .009, r = rimAt(th) - .004 + rr() * .003;
+        const piv = new THREE.Group(); piv.position.set(Math.sin(th) * r, -.002 - rr() * .006, c * r); piv.rotation.set(0, th + (rr() - .5) * .25, 0); cap.add(piv);
+        const sm = new THREE.Mesh(strandG(w, Ls, ear ? .7 : .18 + flick * .4 + rr() * .2, ear), shades[Math.floor(rr() * shades.length)]); sm.rotation.x = -.05 - rr() * .12 + (ear ? -.2 : 0); sm.rotation.z = (rr() - .5) * .14; piv.add(sm);
+        strands.push({ m: sm, rx: sm.rotation.x, rz: sm.rotation.z, ph: rr() * 6.28, k: .5 + rr() * .8, len: Ls }); }
+      // the hair moving: a breath of sway always, more at speed (the wind of the ride pushing it back), a toss when the head jerks
+      let hp0 = null, hv = 0, tm = 0; const _hw = new V3();
+      m.userData.hair = (dt, speed = 0) => { tm += dt; cap.getWorldPosition(_hw); if (hp0) { const v = _hw.distanceTo(hp0) / Math.max(dt, 1e-3); hv += (Math.min(12, v) - hv) * Math.min(1, dt * 6); } hp0 = (hp0 || new V3()).copy(_hw);
+        const wind = Math.min(1, Math.max(speed, hv) / 9);
+        for (const S of strands) { const sw = Math.sin(tm * (2.2 + wind * 6) * S.k + S.ph); S.m.rotation.x = S.rx - wind * .1 * S.k + sw * (.025 + wind * .05); S.m.rotation.z = S.rz + Math.sin(tm * 1.7 * S.k + S.ph * 1.3) * (.025 + wind * .04); } };
+      // over each ear a few small locks curling out from under the edge: lying close, their tips turned up
+      const lock = (w, L) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.quadraticCurveTo(-w * .6, -L * .6, 0, -L); sh.quadraticCurveTo(w * .6, -L * .6, w / 2, 0); sh.lineTo(-w / 2, 0);
+        const lg = new THREE.ShapeGeometry(sh, 5), q = lg.attributes.position; for (let k = 0; k < q.count; k++) { const t = -q.getY(k) / L; q.setZ(k, t * t * L * .9); q.setY(k, q.getY(k) + Math.max(0, t - .5) ** 2 * L * 1.6); } lg.computeVertexNormals(); return lg; };
+      const lm = [toon('#4b3221', { side: THREE.DoubleSide }), toon('#6a4a30', { side: THREE.DoubleSide }), toon('#3a2618', { side: THREE.DoubleSide })];
+      for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) { const th = sd * Math.PI * (.42 + k * .05), r = rimAt(th) - .002, m2 = new THREE.Mesh(lock(.026 + (k % 2) * .006, .028 + (k % 3) * .006), lm[(k + (sd > 0 ? 1 : 0)) % 3]);
+        m2.position.set(Math.sin(th) * r, -.004, Math.cos(th) * r); m2.rotation.set(0, th, 0); m2.rotateZ(sd * (.25 + k * .08)); cap.add(m2); } }
     m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;
     // the satchel: low across his back, a touch right of his spine, close in; hung from a pivot at its top (it swings a little as he
     // walks, see update); its strap lies on him: from the bag's end up across his back to his right shoulder, over it, down across his
@@ -203,7 +231,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     for (const n in want) { if (!P.A[n]) continue; P.w[n] += (want[n] - P.w[n]) * Math.min(1, dt * 10); P.A[n].setEffectiveWeight(P.w[n]); }
     const ws = (PACE[P.key] || {}).walkSpeed || 1, js = (PACE[P.key] || {}).jogSpeed || 2.5;
     if (P.A.walk) P.A.walk.timeScale = sp < .05 ? 1 : pace / ws; if (P.A.jog) P.A.jog.timeScale = Math.max(.6, sp / js);
-    P.mixer.update(dt); P.m.updateMatrixWorld(true);
+    P.mixer.update(dt); P.m.userData.hair?.(dt, Math.abs(P.speed || 0)); P.m.updateMatrixWorld(true);
   }
   // the arms: where the fists want to be (the stance, a high guard, a low one), over whatever the clip does, as much as ik says
   function arms(P, f, dt) {
