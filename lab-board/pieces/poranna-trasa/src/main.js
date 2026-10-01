@@ -698,11 +698,11 @@ function stepDogs(dt, inp) {
 // ---------- the camera: five ways to see him (through his eyes ... high over the street; V goes round them), gone to smoothly ----------
 const CAMS = [
   { name: 'oczami rowerzysty', fpv: true, fov: 84 },
-  { name: 'blisko', back: 2.8, up: 1.6, ahead: 5, lookUp: 1.05, fov: 56 },
-  { name: 'średnio', back: 3.8, up: 2.2, ahead: 6, lookUp: .9, fov: 58 },
-  { name: 'daleko', back: 5.4, up: 3.1, ahead: 7, lookUp: 1.0, fov: 60 },
+  { name: 'blisko', back: 2.8, up: 1.6, ahead: 3.2, lookUp: 1.2, fov: 56 },
+  { name: 'średnio', back: 3.8, up: 2.2, ahead: 4, lookUp: 1.1, fov: 58 },
+  { name: 'daleko', back: 5.4, up: 3.1, ahead: 3.7, lookUp: 1.2, fov: 60 },
   { name: 'wysoko', back: 7.5, up: 7.2, ahead: 6, lookUp: 0, fov: 56 },
-  { name: 'bardzo daleko', back: 7.6, up: 3.9, ahead: 8, lookUp: 1.1, fov: 58 },
+  { name: 'bardzo daleko', back: 7.6, up: 3.9, ahead: 5.6, lookUp: 1.25, fov: 58 },
   { name: 'z góry (jak GTA 2)', top: true, fov: 50 },
 ];
 let camI = 3; const CP = { ...CAMS[3] };

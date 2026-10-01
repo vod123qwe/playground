@@ -675,3 +675,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - na rowerze siedzi teraz ten sam model co pieszo (ta sama głowa, twarz, fryzura, czapka, ubranie i torba): jego kości są co klatkę ustawiane według dawnej sylwetki rowerzysty, która została jako niewidoczny szkielet; nogi na pedałach, ręce na kierownicy, głowa patrzy w zakręt i za psem; rzut, kopniak, tricki i upadek działają jak dotąd, tylko na nim
 - odmłodzony (pieszo i na rowerze tak samo): głowa o 10% większa w stosunku do ciała, jak u trzynastolatka
 - rowerzyści z ruchu ulicznego i gang zostają przy dawnej, lżejszej postaci
+
+## Wersja 70: czapka na miarę, kamera
+
+- czapka zbudowana od nowa i „obciągnięta” na głowę: każdy punkt kopuły leży tuż nad głową i włosami modelu (mierzone z jego wierzchołków), przechylona jak prawdziwa czapka (z przodu na czole, z tyłu niżej przy karku), daszek, otwór z paskiem i sprzączką z tyłu, guzik na czubku
+- spod czapki wychodzą dłuższe kosmyki: płaskie, zaokrąglone, w dwóch zachodzących warstwach, dłuższe na karku i nad uszami
+- kamera na rowerze i pieszo celuje bliżej postaci: cała mieści się w kadrze, nie ucina jej dół ekranu

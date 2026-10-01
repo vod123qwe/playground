@@ -94,23 +94,34 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     m.traverse(o => { if (!o.isMesh) return; const isBody = /male1591|female1605/.test(o.name), isHair = /short|hair|bob|long|ponytail|afro|braid/.test(o.name); if (!isBody && !isHair) return;
       const pos = o.geometry.attributes.position; for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); if (v.y < hp.y + .04 || Math.hypot(v.x - hp.x, v.z - hp.z) > .2) continue;
         if (isBody) { skull = Math.max(skull, v.y); pts.push(v.clone()); } else { hair = Math.max(hair, v.y); hpts.push(v.clone()); } } });
-    // (the band it sits on: the head and the hair round it, so the hair stays under it at the back, not out over it)
-    const band = [...pts, ...hpts].filter(p => p.y > skull - .1 && p.y < skull - .02); let x0 = 9, x1 = -9, z0 = 9, z1 = -9; for (const p of band) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
-    const hw = band.length ? (x1 - x0) / 2 + .016 : .09, hd = band.length ? (z1 - z0) / 2 + .016 : .105, cx = band.length ? (x0 + x1) / 2 : hp.x, cz = band.length ? (z0 + z1) / 2 : hp.z;
+    // the head's size at the brow, from the body alone (the hair goes under the cap)
+    const band = pts.filter(p => p.y > skull - .09 && p.y < skull - .05); let x0 = 9, x1 = -9, z0 = 9, z1 = -9; for (const p of band) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
+    const hw = band.length ? (x1 - x0) / 2 : .08, hd = band.length ? (z1 - z0) / 2 : .095, cx = band.length ? (x0 + x1) / 2 : hp.x, cz = band.length ? (z0 + z1) / 2 : hp.z;
     m.userData.headFit = { hp: hp.y, skull, hair, hw, hd, n: band.length, cz: cz - hp.z };
-    const rim = skull - .065, crown = Math.max(skull + .03, Math.min(hair + .012, skull + .05)) - rim;   // (its edge on the forehead, over the ears; over the hair, pressing it)
-    const red = toon('#b3372c'), redD = toon('#9e3127'), cap = new THREE.Group(); cap.position.set(cx, rim, cz);
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), red); dome.scale.set(hw, crown, hd); cap.add(dome);
-    for (let k = 0; k < 3; k++) { const th = k * Math.PI / 3, rr = 1 / Math.sqrt((Math.cos(th) / hw) ** 2 + (Math.sin(th) / hd) ** 2), seam = new THREE.Mesh(new THREE.TorusGeometry(1, .07, 3, 20, Math.PI), redD); seam.scale.set(rr * 1.006, crown * 1.006, .1); seam.rotation.y = th; cap.add(seam); }   // (the panels' seams)
-    const ring = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .022, 20, 1, true), redD); ring.scale.set(hw + .002, 1, hd + .002); ring.position.y = .011; cap.add(ring);   // (the band round it)
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .012, 16, 1, false, -Math.PI / 2, Math.PI), red); brim.scale.set(hw * .92, 1, hd * .55 + .075); brim.position.set(0, .006, hd * .38); brim.rotation.x = .14; cap.add(brim);
-    const under = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .004, 16, 1, false, -Math.PI / 2, Math.PI), toon('#4a3a2c')); under.scale.copy(brim.scale).multiplyScalar(.97); under.scale.y = 1; under.position.set(0, -.002, hd * .38); under.rotation.x = .14; cap.add(under);   // (dark under the brim)
-    const button = new THREE.Mesh(new THREE.SphereGeometry(.011, 6, 4), redD); button.position.y = crown; cap.add(button);
-    // its back: the arch of the opening (the hair through it) and the strap over the bottom of it, with its buckle
-    { const hole = new THREE.Mesh(new THREE.CircleGeometry(hw * .36, 14, 0, Math.PI), toon('#3a2a1e')); hole.position.set(0, .004, -hd - .003); hole.rotation.y = Math.PI; hole.scale.y = 1.1; cap.add(hole);
-      const strap = new THREE.Mesh(new THREE.BoxGeometry(hw * .82, .013, .007), red); strap.position.set(0, .011, -hd - .004); cap.add(strap);
-      const buckle = new THREE.Mesh(new THREE.BoxGeometry(.014, .016, .009), toon('#c9cbc8')); buckle.position.set(hw * .26, .011, -hd - .005); cap.add(buckle); }
-    cap.rotation.x = -.04; m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;   // (the front up on the forehead, the back down to the nape)
+    // the cap, shrunk onto the head: a dome whose every point is set just over the head and the hair under it (measured from their
+    // points, in its direction), tipped as a cap sits: its front up on the brow, its back down to the nape; a brim, the strap's arch
+    // at the back, a button on top; and the hair out from under it, longer, round the back and over the ears
+    const red = toon('#b3372c'), redD = toon('#9e3127'), C = new V3(cx, skull - .072, cz), cap = new THREE.Group(); cap.position.copy(C); cap.rotation.x = -.24; cap.updateMatrixWorld(true);
+    const near = [...pts, ...hpts].map(p => p.clone().sub(C)).filter(p => p.length() > .03), uw = new V3();
+    const reach = u => { uw.copy(u).applyQuaternion(cap.quaternion); let r = 0; for (const p of near) { const d = p.length(), c = p.dot(uw) / d; if (c > .955 && d * c > r) r = d * c; } return r || Math.hypot(hw * u.x, hd * u.z, .1 * u.y); };
+    const dg = new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), dp = dg.attributes.position, u = new V3();
+    for (let k = 0; k < dp.count; k++) { u.fromBufferAttribute(dp, k).normalize(); const r = reach(u) + .01; dp.setXYZ(k, u.x * r, u.y * r, u.z * r); }
+    dg.computeVertexNormals(); cap.add(new THREE.Mesh(dg, red));
+    const rimAt = th => reach(u.set(Math.sin(th), .03, Math.cos(th)).normalize()) + .01;   // (how far out its edge is, round it: th 0 the front)
+    { const rf = rimAt(0), w = Math.min(hw * .95, .095), brim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .01, 18, 1, false, -Math.PI / 2, Math.PI), red); brim.scale.set(w, 1, .085); brim.position.set(0, .004, rf - .012); brim.rotation.x = .3; cap.add(brim);
+      const under = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .003, 18, 1, false, -Math.PI / 2, Math.PI), toon('#4a3a2c')); under.scale.set(w * .97, 1, .082); under.position.set(0, -.003, rf - .012); under.rotation.x = .3; cap.add(under); }
+    { const top = reach(u.set(0, 1, 0)) + .01, button = new THREE.Mesh(new THREE.SphereGeometry(.01, 6, 4), redD); button.position.y = top; cap.add(button); }
+    { const rb = rimAt(Math.PI), hole = new THREE.Mesh(new THREE.CircleGeometry(.03, 12, 0, Math.PI), toon('#3a2a1e')); hole.position.set(0, .006, -rb - .002); hole.rotation.y = Math.PI; cap.add(hole);
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(.06, .012, .006), red); strap.position.set(0, .012, -rb - .003); cap.add(strap);
+      const buckle = new THREE.Mesh(new THREE.BoxGeometry(.012, .015, .008), toon('#c9cbc8')); buckle.position.set(.019, .012, -rb - .004); cap.add(buckle); }
+    // the hair from under it: locks, flat, rounded at the tip, lying on the head and a little out from it, two rows overlapping; longer at
+    // the nape, over the ears (the hair's own colour is in its texture: a brown like it)
+    { const hm = toon('#4b3221', { side: THREE.DoubleSide }), hl = toon('#6a4a30', { side: THREE.DoubleSide });
+      const lockG = (w, L) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.quadraticCurveTo(-w * .62, -L * .55, -w * .08, -L); sh.quadraticCurveTo(w * .1, -L * 1.02, w * .2, -L * .92); sh.quadraticCurveTo(w * .6, -L * .5, w / 2, 0); sh.lineTo(-w / 2, 0); return new THREE.ShapeGeometry(sh, 4); };
+      let n = 0; for (const [row, dy, out] of [[0, -.001, .002], [1, -.012, .006]]) for (let th = Math.PI * (.38 + row * .03); th <= Math.PI * (1.62 - row * .03); th += Math.PI * .085) {
+        const c = Math.cos(th), back = c < -.5, side = Math.abs(Math.sin(th)) > .8, L = (back ? .06 : side ? .055 : .045) + ((n * 7) % 5) * .005 - row * .012, w = .04 + ((n * 3) % 4) * .004, r = rimAt(th) - .004 + out;
+        const lock = new THREE.Mesh(lockG(w, L), (n + row) % 3 ? hm : hl); lock.position.set(Math.sin(th) * r, dy, c * r); lock.rotation.set(0, th, 0); lock.rotateX(-.14 - row * .06); lock.rotateZ(((n * 5) % 7 - 3) * .04); cap.add(lock); n++; } }
+    m.add(cap); H.attach(cap); cap.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.cap = cap;
     // the satchel: low across his back, a touch right of his spine, close in; hung from a pivot at its top (it swings a little as he
     // walks, see update); its strap lies on him: from the bag's end up across his back to his right shoulder, over it, down across his
     // chest to his left hip, round his side back to the bag (the body's surface found from its vertices, in the rest pose)
@@ -464,8 +475,8 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
       camera.near = .04; camera.fov += (74 - camera.fov) * Math.min(1, dt * 6); camera.updateProjectionMatrix(); return f;
     }
     const fc = !foeF && camYaw !== null ? new V3(Math.sin(camYaw), 0, Math.cos(camYaw)) : fw;   // (a phone: where the camera was turned, not where he faces)
-    const lf = new V3(Math.cos(f.yaw), 0, -Math.sin(f.yaw)), back = foeF ? 2.5 : 3.1, want = new V3(f.x, f.y + (foeF ? 1.95 : 1.9 - pitch * 1.3), f.z).addScaledVector(fc, -back).addScaledVector(lf, foeF ? 1.05 : 0);   // (in a fight: over his shoulder, off to the side, both in the picture)
-    const look = foeF ? new V3(f.x + (foeF.x - f.x) * .62, f.y + 1.2, f.z + (foeF.z - f.z) * .62) : new V3(f.x, f.y + 1.3 + pitch * 2.4, f.z).addScaledVector(fc, 2.2);
+    const lf = new V3(Math.cos(f.yaw), 0, -Math.sin(f.yaw)), back = foeF ? 2.5 : 3.5, want = new V3(f.x, f.y + (foeF ? 1.95 : 2 - pitch * 1.3), f.z).addScaledVector(fc, -back).addScaledVector(lf, foeF ? 1.05 : 0);   // (in a fight: over his shoulder, off to the side, both in the picture)
+    const look = foeF ? new V3(f.x + (foeF.x - f.x) * .62, f.y + 1.2, f.z + (foeF.z - f.z) * .62) : new V3(f.x, f.y + 1.15 + pitch * 2.4, f.z).addScaledVector(fc, 1.1);   // (him whole in the picture, a little below the middle)
     if (!cam.init) { cam.pos.copy(want); cam.look.copy(look); cam.init = true; }
     cam.pos.lerp(want, 1 - Math.exp(-dt * 6)); cam.look.lerp(look, 1 - Math.exp(-dt * 8));
     { const dx = cam.pos.x - f.x, dz = cam.pos.z - f.z, l = Math.hypot(dx, dz), mn = back * .82; if (l < mn && l > 1e-3) { cam.pos.x = f.x + dx / l * mn; cam.pos.z = f.z + dz / l * mn; } } const q = track.probe(cam.pos.x, cam.pos.z, f.hint); cam.pos.y = Math.max(cam.pos.y, q.y + .5);   // (him coming at the camera: it backs off, never in its lens; never under the ground)
