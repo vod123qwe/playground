@@ -669,3 +669,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 68: czapka
 
 - czapka (pieszo i na rowerze) wyższa z tyłu i obejmuje fryzurę, więc włosy nie wystają nad nią; z tyłu półokrągły otwór (widać przez niego włosy) i pasek regulacji ze sprzączką
+
+## Wersja 69: ten sam chłopak na rowerze i pieszo
+
+- na rowerze siedzi teraz ten sam model co pieszo (ta sama głowa, twarz, fryzura, czapka, ubranie i torba): jego kości są co klatkę ustawiane według dawnej sylwetki rowerzysty, która została jako niewidoczny szkielet; nogi na pedałach, ręce na kierownicy, głowa patrzy w zakręt i za psem; rzut, kopniak, tricki i upadek działają jak dotąd, tylko na nim
+- odmłodzony (pieszo i na rowerze tak samo): głowa o 10% większa w stosunku do ciała, jak u trzynastolatka
+- rowerzyści z ruchu ulicznego i gang zostają przy dawnej, lżejszej postaci
