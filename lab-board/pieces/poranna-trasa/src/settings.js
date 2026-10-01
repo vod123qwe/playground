@@ -15,9 +15,6 @@ export const PRESETS = {
   malowany: { name: 'Malowany', note: 'jak farbą: plamy koloru (filtr Kuwahary), faktura płótna, ciemniejszy pociągnięty kontur, lekko drżący', pix: 300, smooth: 2, ink: 1, toon: 5, palette: true, hue: .9, dither: 0, sky: .02, exposure: 1.06, pixel: true, rim: .5, oStr: .15, oThr: .12, palMix: .12, levels: 0, sat: 1.12, contrast: 1.06, vig: 0, crt: 0, crease: .3, mode: 1, wob: .45 },
   komiks: { name: 'Komiks', note: 'gruby tusz, rastrowe kropki w cieniach, płaskie jasne kolory; kreska drży jak rysowana klatka po klatce', pix: 360, smooth: 2, ink: 3, toon: 3, palette: true, hue: .6, dither: 0, sky: .02, exposure: 1.08, pixel: true, rim: .3, oStr: 1, oThr: .07, palMix: .8, levels: 0, sat: 1.18, contrast: 1.1, vig: 0, crt: 0, crease: .8, mode: 2, wob: .8 },
   akwarela: { name: 'Akwarela', note: 'papier, barwnik zebrany na brzegach plam, światła zostawione białe, miękko', pix: 320, smooth: 4, ink: 1, toon: 5, palette: true, hue: .7, dither: 0, sky: .02, exposure: 1.1, pixel: true, rim: .3, oStr: .1, oThr: .12, palMix: 0, levels: 0, sat: .9, contrast: .95, vig: 0, crt: 0, crease: .2, mode: 3, wob: .5 },
-  olowek: { name: 'Ołówek', note: 'szkic na papierze: kreskowanie wg cienia, grafitowe linie, ślad koloru', pix: 360, smooth: 2, ink: 1, toon: 4, palette: true, hue: .5, dither: 0, sky: .02, exposure: 1.05, pixel: true, rim: .2, oStr: .3, oThr: .1, palMix: 0, levels: 0, sat: 1, contrast: 1.1, vig: 0, crt: 0, crease: .6, mode: 4, wob: .6 },
-  riso: { name: 'Riso', note: 'druk risograficzny: różowa, niebieska i żółta farba w rastrach pod różnymi kątami, lekko nie w pasie', pix: 300, smooth: 2, ink: 1, toon: 4, palette: true, hue: .6, dither: 0, sky: .02, exposure: 1.08, pixel: true, rim: .3, oStr: .4, oThr: .1, palMix: 0, levels: 0, sat: 1.1, contrast: 1.12, vig: 0, crt: 0, crease: .4, mode: 5, wob: .25 },
-  bit1: { name: '1 bit', note: 'dwa kolory i porządny dithering, tusz na krawędziach', pix: 240, smooth: 2, ink: 1, toon: 4, palette: true, hue: .5, dither: 0, sky: .02, exposure: 1.05, pixel: true, rim: .3, oStr: .5, oThr: .1, palMix: 0, levels: 0, sat: 1, contrast: 1.15, vig: 0, crt: 0, crease: .5, mode: 6, wob: 0 },
   ostry: { name: 'Wysoka rozdzielczość', note: 'drobne piksele, cienki czarny kontur, dużo tonów', pix: 540, smooth: 2, ink: 2, toon: 5, palette: true, hue: .8, dither: .008, sky: .04, exposure: 1.02, pixel: true, rim: .5 , oStr: 1, oThr: .07, palMix: .85, levels: 0, sat: 1.05, contrast: 1.02, vig: 0, crt: 0 , crease: .7 },
 };
 for (const k in PRESETS) PRESETS[k] = { mode: 0, wob: 0, ...PRESETS[k] };   // (a style with no look laid over it says so: switching to it takes the last one off)
@@ -63,7 +60,7 @@ export function lookUniforms(S) { const g = k => +val(S, k), m = g('mode') | 0, 
   return U; }
 
 // ---------- the panel: tabs; in each the settings that belong together; a setting that does nothing with what is chosen greyed, with why ----------
-const GROUPS = [['Pikselowe', ['miekki', 'klasyczny', 'retro', 'zlota', 'ostry']], ['Gładkie', ['pastel', 'gladki']], ['Rysunkowe', ['komiks', 'malowany', 'akwarela', 'olowek', 'riso', 'bit1']]];
+const GROUPS = [['Pikselowe', ['miekki', 'klasyczny', 'retro', 'zlota', 'ostry']], ['Gładkie', ['pastel', 'gladki']], ['Rysunkowe', ['komiks', 'malowany', 'akwarela']]];
 const SW = { miekki: ['#7fae58', '#efc970', '#cf5a3e', '#453a52'], klasyczny: ['#467537', '#e8c070', '#b3372c', '#2e2538'], retro: ['#5b8a3c', '#d8b87a', '#8e2e25', '#17181b'], zlota: ['#e3a03a', '#cf7a3e', '#7fae58', '#5d3a2e'],
   ostry: ['#6f9a45', '#f2c33a', '#c8323a', '#1d1e21'], pastel: ['#b7d3a8', '#f3d9c0', '#c9b9e0', '#e9eef5'], gladki: ['#8fb07a', '#e9dcc0', '#a9bccb', '#6b6a70'],
   komiks: ['#f2c33a', '#e0503f', '#2f5aa0', '#141316'], malowany: ['#7a9a4a', '#d8a860', '#6f8fb0', '#4a3a2e'], akwarela: ['#b9cfa8', '#f6f0e0', '#9fbcd0', '#d8a890'], olowek: ['#f1eadb', '#b8b0a0', '#6b665e', '#3d3a36'],
@@ -131,6 +128,7 @@ export function createSettings({ apply }) {
     #styl nav button { background: none; border: 0; border-bottom: 2px solid transparent; color: #a7a9a6; font: inherit; font-size: 12px; padding: 9px 5px 8px; cursor: pointer; white-space: nowrap; }
     #styl nav button[aria-selected="true"] { color: #efc970; border-bottom-color: #efc970; }
     #styl nav button:hover { color: #ecebe4; }
+    @media (max-width: 639px) { #styl nav { flex-wrap: wrap; overflow: visible; } #styl nav button { padding: 8px 7px 7px; } }   /* (a phone: the tabs in two rows, none cut off) */
     #styl .body { flex: 1; overflow-y: auto; padding: 6px 16px 18px; }
     #styl h3 { font-size: 11px; color: #8d908c; letter-spacing: .1em; text-transform: uppercase; margin: 16px 0 8px; font-weight: 700; }
     #styl .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

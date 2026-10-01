@@ -91,7 +91,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     g.clearRect(0, 0, A.W, A.H); if (!page) return; t += dt; const W = A.W, H = A.H, k = Math.min(1, t / .14), e = 1 - Math.pow(1 - k, 3), side = page === 'gfx', keysPage = page === 'keys';
     if (page === 'title') { drawTitle(dt); return; }
     g.fillStyle = '#0c0d0f'; if (!side) for (let y = 0; y < H; y++) for (let x = (y % 2); x < W; x += 2) g.fillRect(x, y, 1, 1);   // (pause: a dither over the picture; graphics: none, so the change shows)
-    const rowH = r => r.type === 'styles' ? 36 : r.type === 'button' ? 16 : r.type === 'head' ? 15 : r.type === 'bind' || r.type === 'info' ? 10 : 13, title = page === 'pause' ? 'PAUZA' : keysPage ? 'STEROWANIE' : 'GRAFIKA';
+    const rowH = r => r.type === 'styles' ? 11 + Math.ceil(r.options.length / 2) * 12 : r.type === 'button' ? 16 : r.type === 'head' ? 15 : r.type === 'bind' || r.type === 'info' ? 10 : 13, title = page === 'pause' ? 'PAUZA' : keysPage ? 'STEROWANIE' : 'GRAFIKA';
     const full = rows.reduce((a, r) => a + rowH(r), 0), view = Math.min(full, H - 60), pw = Math.min(W - 8, page === 'pause' ? 196 : keysPage ? 340 : 236), ph = 34 + view + 8;
     // scrolled so the chosen row is in view
     { let yy = 0; for (let i = 0; i < sel; i++) yy += rowH(rows[i]); const hh = rowH(rows[sel] || {}); if (yy - scrollT < 10) scrollT = Math.max(0, yy - 10); if (yy + hh - scrollT > view - 10) scrollT = Math.min(full - view, yy + hh - view + 10); scrollT = Math.max(0, Math.min(full - view, scrollT)); scroll += (scrollT - scroll) * Math.min(1, dt * 14); }
@@ -129,7 +129,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       y += hgt; });
     g.restore();
     if (full > view) { const bh = Math.max(8, view * view / full), by = top + (view - bh) * (scroll / (full - view)); g.fillStyle = '#44484c'; g.fillRect(x0 + pw - 5, top, 2, view); g.fillStyle = '#efc970'; g.fillRect(x0 + pw - 5, Math.round(by), 2, Math.round(bh)); }   // (where in the list)
-    const hint = page === 'pause' ? 'ESC: WRÓĆ DO GRY' : keysPage ? '↑ ↓ WYBÓR · ENTER: NOWY KLAWISZ · CZERWONY: KLAWISZ ZAJĘTY · ESC WRÓĆ' : '↑ ↓ WYBÓR · ← → ZMIANA · ESC WRÓĆ'; A.text(hint, side ? x0 + 2 : Math.round(W / 2 - A.width(hint) / 2), Math.min(H - 8, y0 + ph + 7), '#f6f3ea');
+    const hint = document.body.classList.contains('touch') ? (page === 'pause' ? 'DOTKNIJ, ŻEBY WYBRAĆ' : 'DOTKNIJ ALBO PRZECIĄGNIJ SUWAK') : page === 'pause' ? 'ESC: WRÓĆ DO GRY' : keysPage ? '↑ ↓ WYBÓR · ENTER: NOWY KLAWISZ · CZERWONY: KLAWISZ ZAJĘTY · ESC WRÓĆ' : '↑ ↓ WYBÓR · ← → ZMIANA · ESC WRÓĆ'; A.text(hint, side ? x0 + 2 : Math.round(W / 2 - A.width(hint) / 2), Math.min(H - 8, y0 + ph + 7), '#f6f3ea');
   }
   // the title screen: the name big over the street going by, a line under it, the buttons, a hint
   function drawTitle(dt) { const W = A.W, H = A.H, k = Math.min(1, t / .5), e = 1 - Math.pow(1 - k, 3);

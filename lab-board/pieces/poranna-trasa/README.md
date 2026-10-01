@@ -496,3 +496,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - kopniaki sięgają dalej niż pięść i mają swoje „BACH!” i „ŁUBUDU!”; działają na przechodniów, rowerzystów i złodzieja
 - nogi bez osobnych animacji: stopa prowadzona do celu (kolano w górę, wyprost, powrót), ciało lekko się odchyla
 - w solówce (bójka jeden na jeden) bez zmian: tylko pięści
+
+## Wersja 47: menu na telefonie, mniej presetów
+
+- Grafika: siatka stylów nie nachodzi już na suwaki (wiersz stylów ma tyle rzędów przycisków, ile trzeba)
+- na telefonie podpowiedzi w menu bez klawiszy („dotknij, żeby wybrać”, „dotknij albo przeciągnij suwak”)
+- panel stylu na wąskim ekranie: zakładki w dwóch rzędach, żadna nie jest ucięta
+- usunięte trzy presety: Ołówek, Riso, 1 bit (same nakładki zostają w zakładce Nakładka)
