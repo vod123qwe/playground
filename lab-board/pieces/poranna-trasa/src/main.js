@@ -138,7 +138,8 @@ drift(0);
 
 // ---------- the street, the traffic, the dogs, the rider ----------
 // (?audit: nothing merged, for the ground check, see track.audit)
-const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit') }); track.dapSun.value.copy(SUN); scene.add(track.group);
+const REGION = new URLSearchParams(location.search).get('region') || 'peryferia';   // (a region's world: built for it; another region: the page loads again)
+const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit'), region: REGION }); track.dapSun.value.copy(SUN); scene.add(track.group);
 const backdrop = createBackdrop({ THREE }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
 const traffic = createTraffic({ THREE, track, cars: track.cars, n: 6, makeRider: () => createRider({ THREE, ramp, toon }), bikes: 2 }); scene.add(traffic.group);   // (cars, and now and then a cyclist coming the other way)
 const dogs = createDogs({ THREE, toon, probe: track.probe });
@@ -200,7 +201,7 @@ const wbikes = createBikes({ THREE, scene, track, createRider, ramp, toon });
 function spawnBikes() { wbikes.clear(); let a = 77; wbikes.spawn(() => { a = (a * 16807) % 2147483647; return a / 2147483647; });   // (the same gardens each time)
   for (const b of track.home?.bikes || []) if (!b.up) wbikes.add({ type: 'bmx', parts: newParts({ kierownica: 2 }) }, b.p.x, b.p.z, b.yaw, false, { kind: 'brat' }); }
 spawnBikes();
-for (const b of track.home?.bikes || []) { if (!b.up) continue; const r = createRider({ THREE, ramp, toon }); r.boy.visible = false; scene.add(r.root); const y = track.probe(b.p.x, b.p.z, track.home.iJ).y;
+for (const b of track.home?.bikes || []) { if (!b.up) continue; const r = createRider({ THREE, ramp, toon }); r.boy.visible = false; scene.add(r.root); const y = track.probe(b.p.x, b.p.z, track.startI).y;
   r.update({ dt: 0, speed: 0, steer: 0, lean: 0, pedalling: 0, braking: 0, climbing: 0 }); r.root.position.set(b.p.x, y, b.p.z); r.root.rotation.set(0, b.yaw, 0);
   if (b.up) { r.root.rotation.z = Math.PI; r.root.position.y = y + 1.02; if (r.frontWheel) r.frontWheel.visible = false; r.setParts({ paint: '#2f4a6e' }); } else { r.lean.rotation.z = .12; r.setParts({ paint: '#3f8a4a' }); } }
 // ---------- on foot (F: off the bike, and back on by it) and the fights (onfoot.js) ----------
@@ -1180,7 +1181,7 @@ function resetGame() {
 // the court at home (hoops.js): the ball, the hoop, the challenge (a mode); the other player's throws seen
 const hoops = createHoops({ THREE, scene, track, audio, hud, game: { flash: s => flash(s), send: m => net?.send(m), pop: (at, t, c) => hud.pop(at, t, c), residents: () => residents, ghost: () => GW.G?.visible ? GW.G.position.clone().add(new THREE.Vector3(0, 1.2, 0)) : null } });
 // on foot on the court (a mode's start): the bike left on the lawn by it, him at the spot, facing the hoop
-function onFootAt(p, yaw) { if (foot.active) foot.stop(); const side = hoops.at(4.8, 1.5), q = track.probe(side.x, side.z, track.home.iJ); Object.assign(B, { x: side.x, z: side.z, yaw: yaw + Math.PI / 2, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); B.bikeDown = null; parkBike();
+function onFootAt(p, yaw) { if (foot.active) foot.stop(); const side = hoops.at(4.8, 1.5), q = track.probe(side.x, side.z, track.startI); Object.assign(B, { x: side.x, z: side.z, yaw: yaw + Math.PI / 2, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); B.bikeDown = null; parkBike();
   if (!foot.start({ x: p.x, z: p.z, yaw, hint: q.i })) return; B.parked = true; rider.boy.visible = false; C.iy = 0; }
 // the modes (modes.js): the sprint against the clock, the obstacle course; they thin the traffic (modes.flags) and pause on their end page
 const modes = createModes({ THREE, scene, track, audio, game: { get B() { return B; }, get hoops() { return hoops; }, onFootAt, restart: () => { resetGame(); C.iy = 0; }, flash: s => flash(s), pop: (at, t, c) => hud.pop(at, t, c),
@@ -1199,6 +1200,7 @@ function saveCampaign() { LVM.save({ money: B.points, bike: myBike, inv: INV.map
 function applySave() { if (!LVM.hasSave()) return; const S = LVM.load(); if (S.bike?.type) { myBike = { type: S.bike.type, parts: { ...newParts(), ...(S.bike.parts || {}) }, ...(S.bike.paint ? { paint: S.bike.paint } : {}) }; }
   if (S.owned?.licznik) cyclo.skin(S.owned.licznik); INV.splice(0, INV.length, ...(S.inv || [])); PAINTS.clear(); for (const k of [0, ...(S.paints || [])]) PAINTS.add(k); B.points = S.money || 0; applyBike(); }
 setTimeout(applySave, 0);
+{ const pz = new URLSearchParams(location.search).get('poziom'); if (pz) setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('poziom'); history.replaceState(null, '', location.pathname + '?' + q.toString().replace(/=(&|$)/g, '$1')); startLevel(pz); }, 60); }
 // the gate over the loop road: two striped posts at the kerbs, a chequered banner with META
 function clearGate() { for (const o of RUN.gate) scene.remove(o); for (const C of RUN.hits) track.dropHit(C); RUN.gate = []; RUN.hits = []; }
 function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55, yaw = Math.atan2(S0.f.x, S0.f.z);
@@ -1213,18 +1215,19 @@ function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55
     post.position.set(x, y + H / 2, z); post.rotation.y = yaw; scene.add(post); RUN.gate.push(post);
     const foot = new THREE.Object3D(); foot.position.set(x, y, z); foot.rotation.y = yaw; RUN.hits.push(track.addHit(foot, { hx: .12, hz: .12, h: H, kind: 'hard' }, i)); }
   const yM = track.probe(S0.p.x, S0.p.z, i).y, ban = new THREE.Mesh(new THREE.BoxGeometry(w * 2 + .2, .75, .06), banM); ban.position.set(S0.p.x, yM + H - .25, S0.p.z); ban.rotation.y = yaw; scene.add(ban); RUN.gate.push(ban); }
-function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
+function goRegion(region, poziom) { saveCampaign(); const q = new URLSearchParams(location.search); q.set('play', ''); if (region && region !== 'peryferia') q.set('region', region); else q.delete('region'); if (poziom) q.set('poziom', poziom); else q.delete('poziom'); location.search = q.toString().replace(/=(&|$)/g, '$1'); }
+function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if ((L0.region === 'peryferia' ? 'peryferia' : L0.region) !== track.region) { goRegion(L0.region, id); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
-  const iJ = track.home.iJ, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
+  const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   bindJobs(); { const S1 = LVM.load(); LVM.save({ runs: (S1.runs || 0) + 1 }); } Object.assign(RAD, { fin: false, cool: 6, idle: 40, gag: false }); if (LV2.cur?.box) scene.remove(LV2.cur.box); Object.assign(LV2, { offer: null, cur: null, next: 30 + Math.random() * 20 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
-  flash(`${L.name}: wyjedź z domu i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
-function goHome() { if (fin.isOpen) fin.close(); LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
+  flash(`${L.name}: ${track.home?.homeH ? 'wyjedź z domu' : 'ruszaj'} i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
+function goHome() { if (fin.isOpen) fin.close(); if (track.region !== 'peryferia') { goRegion('peryferia', null); return; } LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
 // how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
 const ahead = (i, cp) => ((((cp - i) * LV.finish.dir) % track.N) + track.N) % track.N * track.ds;
 // ---------- the jobs in the notebook (jobs.js): bound to this stretch's way at its start, watched as you ride ----------
 const JOBRUN = [];
-function bindJobs() { JOBRUN.length = 0; const S = LVM.load(), iJ = track.home.iJ, N = track.N, dir = LV.finish.dir, span = Math.round(N * LV.finish.to), along = i => ((((i - iJ) * dir) % N) + N) % N;
+function bindJobs() { JOBRUN.length = 0; const S = LVM.load(), iJ = track.startI, N = track.N, dir = LV.finish.dir, span = Math.round(N * LV.finish.to), along = i => ((((i - iJ) * dir) % N) + N) % N;
   for (const j of S.jobs || []) { const R = { j, falls0: B.falls || 0, done: false };
     if (j.kind === 'szarlotka') { const ds = track.doors.map((d, i) => ({ d, i, a: along(d.i) })).filter(q => q.a > span * .2 && q.a < span * .9); const q = ds[Math.random() * ds.length | 0]; if (!q) continue; R.door = q.d; }
     if (j.kind === 'foto' && j.k !== 'dog') { const all = (track.show?.shacks || []).filter(q => q.label === ({ kapliczka: 'kapliczka', budowa: 'budowa', przystanek: 'przystanek' })[j.k]); let best = null, bd = 1e18;
@@ -1346,7 +1349,7 @@ function faceOf(who) { if (who === 'janusz') { if (!JIMG.complete || !JIMG.natur
   const sq = Math.min(ph.width, ph.height), c = document.createElement('canvas'); c.width = c.height = sq; const cg = c.getContext('2d'); cg.drawImage(ph, (ph.width - sq) / 2, (ph.height - sq) / 2, sq, sq, 0, 0, sq, sq);
   { const d = cg.getImageData(0, 0, sq, sq).data; let m = 0, m2 = 0, n = 0; for (let i = 0; i < d.length; i += 16) { const l = d[i] + d[i + 1] + d[i + 2]; m += l; m2 += l * l; n++; } m /= n; if (m2 / n - m * m < 900) return null; }
   return c; }
-function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, dir = L.finish.dir, span = Math.round(N * L.finish.to);
+function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, dir = L.finish.dir, span = Math.round(N * L.finish.to);
   const along = i => ((((i - iJ) * dir) % N) + N) % N, onWay = i => along(i) <= span + 4, S = track.S, st = track.start;
   const route = { loop: [], home: [], way: [], cps: RUN.cps.map(i => [S[i].p.x, S[i].p.z]), doors: [], wins: [], falls: (B.fallsAt || []).slice(), homeAt: [st.x, st.z], len: span * track.ds, subs: 0 };
   for (let i = 0; i < N; i += 3) route.loop.push([S[i].p.x, S[i].p.z]); for (let k = 0; k <= span; k += 3) { const i = ((iJ + dir * k) % N + N) % N; route.way.push([S[i].p.x, S[i].p.z]); }
@@ -1418,7 +1421,7 @@ const subsNow = () => track.doors.map(d => d.sub || null);
 function applySubs(a) { if (!a) return; track.doors.forEach((d, i) => { d.sub = a[i] ?? null; }); assignSubs(false, true); }
 function mpBegin(subs, id) { use(P1); if (menu.open) menu.close(); resetGame(); C.iy = 0; if (subs) applySubs(subs);
   if (id === 'kosz') { MP.on = true; B.hoop = 0; onFootAt(hoops.at(meId() === 1 ? -1.6 : 1.6, 4.6), hoops.facing); return; }
-  const i0 = (track.home.iJ + 12) % track.N, S0 = track.S[i0], yaw0 = Math.atan2(S0.f.x, S0.f.z), d = meId() === 1 ? .95 : 2.55;   // (just out of the home street, side by side in the lane)
+  const i0 = (track.startI + 12) % track.N, S0 = track.S[i0], yaw0 = Math.atan2(S0.f.x, S0.f.z), d = meId() === 1 ? .95 : 2.55;   // (just out of the home street, side by side in the lane)
   const x = S0.p.x + S0.r.x * d, z = S0.p.z + S0.r.z * d, q = track.probe(x, z, i0); Object.assign(B, { x, z, yaw: yaw0, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null }); C.yaw = yaw0; C.init = false; MP.on = true; }
 function mpEnd() { MP.on = false; hoops?.challenge.stop(); use(P1); resetGame(); }
 const mp = createMp({ net, api: { me: meId, B: k => { const b = Bof(k); if (k === meId()) b.hoop = hoops?.challenge.pts || 0; return b; }, onRun: id => { if (id === 'kosz') hoops.challenge.start(); }, onEnd: () => hoops?.challenge.stop(), begin: mpBegin, end: mpEnd, flash: s => flash(s), audio, subs: subsNow, applySubs,

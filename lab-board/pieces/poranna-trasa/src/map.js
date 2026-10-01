@@ -9,7 +9,7 @@ const W = 320, H = 180;
 // where the regions lie (their middles: each pixel the region of the nearest, the edges wobbled) and where the points are
 const RC = { peryferia: [62, 118], wies: [150, 52], peryferia2: [176, 132], miasto: [236, 78], las: [276, 148], dalej: [300, 24] };
 const LAB = { peryferia: [56, 164], wies: [118, 22], peryferia2: [204, 166], miasto: [240, 44], las: [282, 116], dalej: [292, 12] };   // (the names: off the points)
-const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 66] };
+const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 72], w2: [126, 50], w3: [174, 50], w4: [150, 30], d1: [178, 112] };
 
 import { pxKey } from './pixui.js';
 
