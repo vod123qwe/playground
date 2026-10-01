@@ -16,7 +16,39 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   const pick = a => a[Math.random() * a.length | 0], rnd = Math.random, _v = new THREE.Vector3(), V = (x, y, z) => new THREE.Vector3(x, y, z);
   const NAMES = { granma: ['PANI HALINA', 'PANI KRYSIA', 'PANI ZOSIA', 'PANI WIESIA'], grandpa: ['PAN HENIO', 'PAN STEFAN', 'PAN ZBYSZEK', 'PAN TADEK'], belly: ['PAN MIREK', 'PAN RYSIEK', 'PAN JANEK'] };
   const FINDS = ['ŁYŻKA DO OPON', 'DZWONEK ROWEROWY', 'ŁATKI DO DĘTEK', 'STARA LAMPKA', 'KLUCZ DO SZPRYCH'];
-  const P = new Map(), active = [];
+  const P = new Map(), active = [], stage = [];   // (stage: what a story put in the world; it stays when the story is over)
+  // a mower: a deck on four wheels, the engine on it, a handle back up to the hands (pink: the neighbour's; grey, three wheels: the other one)
+  function mower(col, wheels = 4) { const g = new THREE.Group(), M = c => new THREE.MeshToonMaterial({ color: c }), bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+    const body = M(col), dark = M('#2a2c30'), steel = M('#9a9c9e'); bx(.5, .12, .62, body, 0, .2, 0); bx(.26, .18, .26, dark, 0, .34, -.02); bx(.12, .06, .12, steel, 0, .45, -.02);
+    [[-.24, .26], [.24, .26], [-.24, -.26], [.24, -.26]].slice(0, wheels).forEach(([x, z]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, .05, 10).rotateZ(Math.PI / 2), dark); w.position.set(x, .08, z); g.add(w); });
+    for (const x of [-.2, .2]) { const h = bx(.03, .03, .78, steel, x, .5, -.58); h.rotation.x = -.75; } bx(.44, .03, .03, steel, 0, .78, -.86); return g; }
+  // the neighbour out mowing his lawn in front of his house, to and fro, the pink mower before him; stopped: stands, cross, a while
+  function mowing(house, key = 'gardener') {
+    const d = track.doors[house], n = V(d.n.x, 0, d.n.z).normalize(), side = V(-n.z, 0, n.x);   // (n: the way the house faces, to the road; the lawn between)
+    // where on the lawn: a strip clear of the car on the drive, the bins, the fence, off the pavement (the colliders the track keeps)
+    const clear = (x, z) => { const q = track.probe(x, z, -1); if (Math.abs(q.d) < track.PAVE + .5) return false;
+      for (const C of track.near(q.i)) { if (C.kind === 'ramp' || C.hx == null) continue; const dx = x - C.x, dz = z - C.z, lx = dx * C.c - dz * C.s, lz = dx * C.s + dz * C.c; if (Math.abs(lx) < C.hx + .6 && Math.abs(lz) < C.hz + .6) return false; } return true; };
+    let c = null, A = 2.6;
+    find: for (const a of [2.6, 2, 1.5]) for (const sOff of [0, 1.5, -1.5, 3, -3, 4.5, -4.5]) for (const dep of [1.7, 1.2, 2.3]) { const c0 = V(d.p.x + n.x * dep + side.x * sOff, d.p.y, d.p.z + n.z * dep + side.z * sOff);
+      let ok = true; for (let k = -6; k <= 6 && ok; k++) for (const r of [-.55, 0, .55]) { const x = c0.x + side.x * a * k / 6 + n.x * r, z = c0.z + side.z * a * k / 6 + n.z * r; if (!clear(x, z)) { ok = false; break; } }
+      if (ok) { c = c0; A = a; break find; } }
+    if (!c) { c = V(d.p.x + n.x * 1.7, d.p.y, d.p.z + n.z * 1.7); A = 1.2; }
+    const S = { kind: 'mow', house, t: rnd() * 6, angry: 0, who: null, mower: mower('#e889b5'), c, A, side, n, pos: c.clone() }; S.mower.position.copy(c); scene().add(S.mower); stage.push(S);
+    residents.spawn?.(key).then(p => { if (!p) return; S.who = p; p.acts.walk?.play(); p.acts.idle?.play(); p.acts.idle?.setEffectiveWeight(0); });
+    return S;
+  }
+  const scene = () => game.scene;
+  function stepStage(dt) {
+    for (const S of stage) { if (S.kind !== 'mow') continue; S.angry = Math.max(0, S.angry - dt); const going = S.angry <= 0 && !S.stopped;
+      if (going) S.t += dt * .42; const u = Math.sin(S.t), dir = Math.cos(S.t) >= 0 ? 1 : -1, row = Math.floor(S.t / Math.PI) % 3 - 1;   // (rows across the lawn, a step over at each end)
+      const at = S.c.clone().addScaledVector(S.side, u * S.A).addScaledVector(S.n, row * .55), q = track.probe(at.x, at.z, -1); at.y = q.y; S.pos.copy(at);
+      const yaw = Math.atan2(S.side.x * dir, S.side.z * dir); S.mower.position.copy(at).addScaledVector(V(Math.sin(yaw), 0, Math.cos(yaw)), .75); S.mower.rotation.y = yaw; S.mower.position.y = at.y;
+      if (S.who) { const p = S.who; p.G.position.copy(at); const R = R0(); p.G.rotation.y = going ? yaw : Math.atan2(R.x - at.x, R.z - at.z);
+        const w = going ? 1 : 0; if (p.acts.walk) p.acts.walk.setEffectiveWeight(w); if (p.acts.idle) p.acts.idle.setEffectiveWeight(1 - w); if (p.acts.walk) p.acts.walk.timeScale = .75;
+        const far = Math.hypot(R.x - at.x, R.z - at.z) > 120; p.G.visible = !far; if (!far) p.mixer.update(dt); } }
+  }
+  const mowerOf = house => stage.find(S => S.kind === 'mow' && S.house === house);
+  const mowHead = S => V(S.pos.x, S.pos.y + 2.3, S.pos.z);
   let near = null, thiefT = 60 + rnd() * 50, flashT = 0;
 
   // ---------- the people: who they are to you ----------
@@ -90,12 +122,12 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
         active.push({ kind: 'szyba', o, r, house: hi, nb, NB, text: () => 'SZYBA U ' + NB[1], target: () => { const w = windowsOf(hi)[0] || w0[0]; return V(w.p.x, w.p.y + 1.1, w.p.z); }, mark: 'v', label: () => 'OKNO ' + NB[1] });
         game.flash(`Szyba u ${NB[1].toLowerCase()}: okno ze strzałką. Gazetą przez szybę.`); return null; } };
       const snitch = { t: 'POWIEM MU, CO PAN KOMBINUJE.', act: () => { done(o); mood(o, -2); const sp = doorSpot(hi);
-        const e = { kind: 'donos', from: 'szyba', o, r, house: hi, nb, NB, t: 0, text: () => 'POWIEDZ ' + NB[2], target: () => over(sp, 2.6), mark: 'v', label: () => NB[0], point: { p: sp, r: null } }; e.talk = () => donosTalk(e); active.push(e);
+        const mw = mowerOf(hi) || mowing(hi), e = { kind: 'donos', from: 'szyba', o, r, house: hi, nb, NB, t: 0, text: () => 'POWIEDZ ' + NB[2], target: () => mowHead(mw), mark: 'v', label: () => NB[0], point: { p: mw.pos, r: null } }; e.talk = () => donosTalk(e); active.push(e);
         say(r, 'TY KABLU... NO JEDŹ, JEDŹ.'); return null; } };
       const no = { t: 'NIE, DZIĘKI.', act: () => { o.cool = 45; say(r, pick(['MIĘCZAK!', 'ZA MOICH CZASÓW...'])); return null; } };
       talk.run({ who: o.name,
         start: { say: 'EJ, MŁODY! CHODŹ NO TU. MAM SPRAWĘ. DYSKRETNĄ.', opts: [{ t: 'JAKĄ SPRAWĘ?', go: 'story' }, { t: 'NIE MAM CZASU.', act: no.act }] },
-        story: { say: `WIDZISZ TEN DOM TAM DALEJ? MIESZKA TAM ${nb}. TRZY LATA TEMU POŻYCZYŁ ODE MNIE KOSIARKĘ. WCZORAJ WIDZĘ JĄ U NIEGO W OGRÓDKU. POMALOWANĄ NA RÓŻOWO. MYŚLI, ŻE SIĘ NIE POZNAM.`, opts: [
+        story: { enter: () => { if (!mowerOf(hi)) mowing(hi); }, say: `WIDZISZ TEN DOM TAM DALEJ? MIESZKA TAM ${nb}. TRZY LATA TEMU POŻYCZYŁ ODE MNIE KOSIARKĘ. WCZORAJ WIDZĘ JĄ U NIEGO W OGRÓDKU. POMALOWANĄ NA RÓŻOWO. O, PATRZ, ZNOWU NIĄ KOSI! MYŚLI, ŻE SIĘ NIE POZNAM.`, opts: [
           { t: 'I CO JA MAM Z TYM ZROBIĆ?', go: 'ask' }, { t: 'MOŻE PAN GO PO PROSTU ZAPYTA?', go: 'never' }] },
         never: { say: `ZAPYTAĆ?! Z ${NB[3]}?! NIE ROZMAWIAM Z NIM OD WESELA SZWAGRA. ZJADŁ MI SCHABOWEGO. Z MOJEGO TALERZA. JAK POSZEDŁEM PO SÓL.`, opts: [{ t: 'NO DOBRA. TO CO MAM ZROBIĆ?', go: 'ask' }] },
         ask: { say: 'WYBIJ MU SZYBĘ GAZETĄ. TAKĄ OSTRZEGAWCZĄ. DAM DYSZKĘ. A JAK ZAPYTA, TO MNIE NIE ZNASZ. MNIE TU NIE BYŁO. JA LEŻĘ.', opts: [job, snitch, no] } });
@@ -213,11 +245,11 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     x.talk = () => { remove(x); talk.run({ who: e.o.name,
       start: { say: 'NO I CO? KABLOWAŁEŚ, TAK?', opts: [{ t: 'ON MÓWI, ŻE PANA KOSIARKA STOI W PIWNICY.', go: 'cellar' }, { t: 'NIEWAŻNE.', go: null }] },
       cellar: { say: 'W PIWNICY?... (WSTAJE Z LEŻAKA. TRZASK DRZWI. DŁUGA CISZA. COŚ SPADA ZE SCHODÓW.)', next: 'found' },
-      found: { say: 'NO. JEST. Z TRZEMA KÓŁKAMI. CZWARTE MA KOT. ...MASZ PIĄTAKA, MŁODY. I NIKOMU. NIKOMU, SŁYSZYSZ?', enter: () => { e.o.mood = Math.max(e.o.mood, 1); e.o.flag.snitch = false; game.money(5, head(e.r), '+5 ZŁ'); e.o.cool = 70; } } }); };
+      found: { say: 'NO. JEST. Z TRZEMA KÓŁKAMI. CZWARTE MA KOT. ...MASZ PIĄTAKA, MŁODY. I NIKOMU. NIKOMU, SŁYSZYSZ?', enter: () => { e.o.mood = Math.max(e.o.mood, 1); e.o.flag.snitch = false; game.money(5, head(e.r), '+5 ZŁ'); e.o.cool = 70; if (!e.o.flag.ownMower) { e.o.flag.ownMower = true; const g = mower('#8d9295', 3), p = e.r.G.position; g.position.set(p.x + 1.2, p.y, p.z + .6); g.rotation.y = rnd() * 6; scene().add(g); } } } }); };
     active.push(x);
   }
   function sorry(e) {                                                   // gone to say sorry to the neighbour for the window
-    const sp = doorSpot(e.house), x = { kind: 'przeprosiny', from: 'szyba', o: e.o, house: e.house, t: 0, text: () => 'PRZEPROŚ ' + e.NB[1], target: () => over(sp, 2.6), mark: 'v', label: () => e.NB[0], point: { p: sp, r: null } };
+    const sp = doorSpot(e.house), mw = mowerOf(e.house), x = { kind: 'przeprosiny', from: 'szyba', o: e.o, house: e.house, t: 0, text: () => 'PRZEPROŚ ' + e.NB[1], target: () => mw ? mowHead(mw) : over(sp, 2.6), mark: 'v', label: () => e.NB[0], point: { p: mw ? mw.pos : sp, r: null } };
     x.talk = () => { remove(x); talk.run({ who: e.NB[0],
       start: { say: 'SZYBA? A, TO TY. SPOKO, MŁODY. I TAK CHCIAŁEM NOWE OKNA, A UBEZPIECZENIE PŁACI. MOŻE WYBIJESZ MI JESZCZE TO W ŁAZIENCE?', opts: [
         { t: 'A KOSIARKA?', go: 'pink' }, { t: 'TO JA JUŻ POJADĘ.', act: () => { game.money(5, over(sp, 2), '+5 ZŁ'); game.fame(-1); return null; } }] },
@@ -308,7 +340,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
 
   // ---------- each frame ----------
   function update(dt, inp) {
-    const R = R0(); flashT -= dt; for (const r of residents.list) person(r);
+    const R = R0(); flashT -= dt; for (const r of residents.list) person(r); stepStage(dt);
     for (const o of new Set(P.values())) { o.cool -= dt; if (o.flag.lied) o.flag.lieT -= dt; if (o.redo && o.cool <= 0 && !o.offer) { o.redo = false; offerFor(o, false); if (o.kind === 'shacks' && o.mood <= -3) o.offer = null; } }
     // passing by: moods acted on (a bottle, a coin, a lie found out)
     for (const [r, o] of P) { if (o.lead !== r) continue; o.passT -= dt; const d = Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z); if (d > 11 || o.passT > 0) continue;
@@ -333,7 +365,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     const consider = (p, run, prio = 0) => { const d = Math.hypot(p.x - R.x, p.z - R.z) - prio; if (d < bd) { bd = d; near = { p, run }; } };
     for (const e of active) if (e.talk) { const pt = e.point?.ped ? V(e.point.ped.x, e.point.ped.G.position.y, e.point.ped.z) : e.point?.p || (e.at && e.at.G.position); if (pt) consider(pt, e.talk, 2); }
     for (const [r, o] of P) if (o.lead === r && r.G.visible !== false) consider(r.G.position, () => converse(r), o.offer && o.cool <= 0 ? 1 : 0);
-    if (near) { near.slow = R.foot || R.v < 3.2; const ask = R.foot ? inp.talk : inp.chat; if (ask && near.slow) { near.run(); if (R.foot) inp.talk = false; } else if (ask && !near.slow && flashT <= 0) { game.flash('Zwolnij, żeby pogadać'); flashT = 2; } }
+    if (near && !talk.isOpen) { near.slow = R.foot || R.v < 3.2; const ask = R.foot ? inp.talk : inp.chat; if (ask && near.slow) { near.run(); if (R.foot) inp.talk = false; } else if (ask && !near.slow && flashT <= 0) { game.flash('Zwolnij, żeby pogadać'); flashT = 2; } }
   }
 
   // ---------- what the HUD shows ----------
@@ -354,7 +386,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   }
   function onWindow(w) {
     for (const e of [...active]) if (e.kind === 'szyba' && e.house === w.house) { e.kind = 'kasa'; e.from = 'szyba'; e.text = () => 'DYSZKA OD: ' + e.o.name; e.target = () => head(e.r); e.mark = '?'; e.at = e.r; e.talk = () => payTalk(e);
-      game.flash('Brzdęk! Po dyszkę do: ' + e.o.name.toLowerCase()); if (rnd() < .5) { const sp = doorSpot(e.house); setTimeout(() => game.grudgeAt(sp, pick(['MOJA SZYBA!!!', 'JA CI DAM SZYBY!', 'ŁAP GO!']), 'kozak'), 900); } }
+      const mw = mowerOf(e.house); if (mw) { mw.angry = 25; } game.flash('Brzdęk! Po dyszkę do: ' + e.o.name.toLowerCase()); if (rnd() < .5) { const sp = doorSpot(e.house); setTimeout(() => game.grudgeAt(sp, pick(['MOJA SZYBA!!!', 'JA CI DAM SZYBY!', 'ŁAP GO!']), 'kozak'), 900); } }
   }
   function onKnockBike() {                                             // (a cyclist off his bike: for the lads, if they asked)
     const e = active.find(q => q.kind === 'rowery'); if (!e) return; e.n++; game.flash(`Rower dla ekipy: ${e.n}/${e.need}`);
@@ -366,6 +398,6 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     e.stage = 'bag'; p.flee = 5; p.fleeNew = true; p.stun = .9; e.loot.parent?.remove(e.loot); e.glow.parent?.remove(e.glow); hud.rant(V(p.x, p.G.position.y + 1.9, p.z), pick(['AŁA! DOBRA, DOBRA!', 'MOJA NOGA!', 'TO NIE JA!']), false);
     e.drop = game.dropBag(V(p.x, p.G.position.y, p.z), () => bagPicked(e)); game.flash('Torebka na chodniku. Podnieś ją.'); return true;
   }
-  function reset() { for (const e of [...active]) if (e.kind === 'thief') endThief(e); active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
+  function reset() { for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
   return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
 }

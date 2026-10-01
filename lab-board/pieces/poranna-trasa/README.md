@@ -503,3 +503,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - na telefonie podpowiedzi w menu bez klawiszy („dotknij, żeby wybrać”, „dotknij albo przeciągnij suwak”)
 - panel stylu na wąskim ekranie: zakładki w dwóch rzędach, żadna nie jest ucięta
 - usunięte trzy presety: Ołówek, Riso, 1 bit (same nakładki zostają w zakładce Nakładka)
+
+## Wersja 48: jazda dopracowana, miasto żyje w rozmowie
+
+- skręt: płynne wejście w zakręt, szybsze oddanie kierownicy, gałka na telefonie precyzyjniejsza przy małych ruchach, odrobinę ostrzej przy prędkości
+- zakręty drogi: gdy nie skręcasz, rower łagodnie prowadzi się wzdłuż jezdni (po zmianie pasa ustawia się równo z drogą); każdy skręt od razu to wyłącza
+- pęd: mniejsze opory, rower dłużej toczy się z rozpędu (z 9 do 3 m/s ok. 9 s); mocniejszy przechył w zakrętach
+- czucie prędkości: szerszy kąt i kamera dalej przy prędkości, kamera przechyla się z rowerem, drobne drgania od nawierzchni (asfalt, krawężnik, najmocniej trawa), lekkie rozmycie brzegów obrazu przy pełnej prędkości
+- rozmowa nie zatrzymuje świata: auta, ludzie i złodziej żyją dalej, tylko rower hamuje i stoi
+- historia widać w świecie: sąsiad z „wojny o kosiarkę” naprawdę kosi swój trawnik różową kosiarką (miejsce wybrane tak, żeby nie wchodził w auto ani kosze); donos i przeprosiny mówisz mu na trawniku; po wybitej szybie przestaje kosić i stoi wściekły; gdy prawda wyjdzie na jaw, przy leżaku brzuchacza stoi odtąd jego szara kosiarka na trzech kółkach
