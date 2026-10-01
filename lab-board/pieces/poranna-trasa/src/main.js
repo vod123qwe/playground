@@ -47,7 +47,7 @@ import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, 
 import { createGarage } from './garage.js';
 import * as LVM from './levels.js';
 import { createMap } from './map.js';
-import { createPaper, NEWS, eventNews } from './paper.js';
+import { createPaper, NEWS, eventNews, CAST, ANECDOTES, printed } from './paper.js';
 import { createHoops } from './hoops.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { PARTS } from './shop.js';
@@ -1245,6 +1245,15 @@ function photoOf(label) { if (label === 'dom') { const hp = hoops?.hoop?.positio
   const all = (track.show?.shacks || []).filter(q => q.label === label); if (!all.length) return null; const o = all[Math.random() * all.length | 0].o, P = o.getWorldPosition(new THREE.Vector3()), S0 = track.S[nearSt(P.x, P.z)].p;
   const d = new THREE.Vector3(S0.x - P.x, 0, S0.z - P.z), far = d.length(); d.normalize(); const cam = new THREE.PerspectiveCamera(44, camera.aspect, .1, camera.far), back = Math.min(16, Math.max(10, far + 3));
   cam.position.set(P.x + d.x * back + d.z * 2, P.y + 3.4, P.z + d.z * back - d.x * 2); cam.lookAt(P.x, P.y + 1.6, P.z); return photo(cam); }
+// a portrait for the paper: the person's face as the game draws them (a camera before the head), or Janusz from his picture; printed
+const JIMG = new Image(); JIMG.src = 'assets/ui/janusz.png';
+function faceOf(who) { if (who === 'janusz') { if (!JIMG.complete || !JIMG.naturalWidth) return null; const w = JIMG.naturalWidth, h = JIMG.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 96;
+    const g = c.getContext('2d'); g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 96, 96); g.drawImage(JIMG, w * .29, h * .0, w * .42, w * .42, 0, 0, 96, 96); return printed(c, 56, 56); }
+  if (!['mama', 'tata', 'brat', 'sasiadka', 'sasiad', 'dzialki'].includes(who)) return null;   // (the others stand where no camera gets their face: printed without)
+  const R = (residents?.list || []).find(q => who === 'dogman' ? q.key === 'dogman' : q.lines === who); if (!R?.head) return null;
+  const hp = R.head.getWorldPosition(new THREE.Vector3()), f = new THREE.Vector3(); R.G.getWorldDirection(f); f.y = 0; f.normalize();
+  const D0 = 1.9, cam = new THREE.PerspectiveCamera(30, camera.aspect, D0 - .55, 60); cam.position.copy(hp).addScaledVector(f, D0).add(new THREE.Vector3(0, .1, 0)); cam.lookAt(hp.x, hp.y - .16, hp.z);
+  const ph = photo(cam), sq = Math.min(ph.width, ph.height), c = document.createElement('canvas'); c.width = c.height = sq; c.getContext('2d').drawImage(ph, (ph.width - sq) / 2, (ph.height - sq) / 2, sq, sq, 0, 0, sq, sq); return printed(c, 56, 56); }
 function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, dir = L.finish.dir, span = Math.round(N * L.finish.to);
   const along = i => ((((i - iJ) * dir) % N) + N) % N, onWay = i => along(i) <= span + 4, S = track.S, st = track.start;
   const route = { loop: [], home: [], way: [], cps: RUN.cps.map(i => [S[i].p.x, S[i].p.z]), doors: [], wins: [], falls: (B.fallsAt || []).slice(), homeAt: [st.x, st.z], len: span * track.ds, subs: 0 };
@@ -1254,20 +1263,28 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
   const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['granny', 'car', 'police', 'window', 'dog', 'fall'], news = [];
-  for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ ...eventNews(k, n), img: e.img || photoAt(e.x, e.z) }); }
+  for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n), img: e.img || photoAt(e.x, e.z) }); }
   if (news.length < 2 && RUN.maxStreak >= 5) news.push({ ...eventNews('streak', RUN.maxStreak), img: null });
   if (news.length < 2 && !r.falls && !r.windows) news.push({ ...eventNews('clean', 0), img: null });
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }
   const nexts = L.after.map(id => LVM.LEVEL(id)).filter(Boolean), T = nexts.find(l => l.tease)?.tease;
   const tease = T ? { head: T.head, text: T.text, img: photoOf(T.spot) } : null; if (!T) { const n = pool.pop(); if (n) news.push({ ...n, img: photoOf(n.spot) }); }
+  // the briefs: what else happened; a couple of the town's own
+  const used = new Set(news.map(n => n.head)), briefs = [];
+  for (const k of ORDER) { const n = count(k); if (!n) continue; const e = eventNews(k, n); if (news[0]?.kind !== k) briefs.push(e.head + '.'); }
+  for (const n of NEWS.slice().sort(() => Math.random() - .5)) { if (briefs.length >= 3) break; if (!used.has(n.head)) briefs.push(n.head + '.'); }
+  // who is interviewed: whoever the morning was about (the dog's owner after a chase, the neighbour after a window, mum after falls,
+  // the brother after a clean run), else anyone; the anecdote from someone else
+  const pickWho = count('dog') ? 'dogman' : count('window') ? 'sasiadka' : r.falls >= 2 ? 'mama' : (!r.falls && r.delivered >= L.goal.papers) ? 'brat' : ['janusz', 'brat', 'mama', 'tata', 'sasiadka', 'sasiad', 'dzialki', 'kapliczka', 'budowa'][Math.random() * 9 | 0];
+  const iv = { who: pickWho, img: faceOf(pickWho) }; const anPool = ANECDOTES.filter(a => a.who !== pickWho), an0 = anPool[Math.random() * anPool.length | 0], an = an0 ? { ...an0, img: faceOf(an0.who) } : null;
   const fin0 = photo(camera);
   const next = nexts.map((l, k) => ({ id: l.soon ? null : l.id, name: l.name + (l.soon ? ' (WKRÓTCE)' : ''), note: l.soon ? (LVM.REGIONS.find(q => q.id === l.region)?.note || l.note) : l.note, first: k === 0 })).filter(x => x.id || x.name);
   // Janusz's ads: parts not had yet, the cheapest first
   const parts = []; for (const k in PARTS) PARTS[k].tiers.forEach((t, i) => { if (i && t.price && myBike.parts[k] < i && !INV.some(p => p.k === k && p.tier === i) && !(k === 'lakier' && PAINTS.has(i))) parts.push({ t: 'WARSZTAT U JANUSZA', d: `${PARTS[k].name}: ${t.name.toLowerCase()}. ${t.note.charAt(0) + t.note.slice(1).toLowerCase()}`, price: t.price }); });
   parts.sort((a, b) => a.price - b.price);
   const issue = Object.values(LVM.load().best).reduce((n, b) => n + (b.runs || 0), 0) + 100;
-  return { L, r, rec, opened, photos: { finish: fin0, news }, tease, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
+  return { L, r, rec, opened, photos: { finish: fin0, news }, tease, briefs: briefs.slice(0, 3), iv, an, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
 const fin = createPaper({ game: { map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
 const map = createMap({ levels: LVM, game: { go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
 // ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
@@ -1385,5 +1402,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };

@@ -52,6 +52,35 @@ export function headline(L, r, rec) { const n = rec.g.n;
   if (r.delivered >= L.goal.papers) return pickOf(['Gazety doszły, ludzie zadowoleni', 'Skrzynki pełne, sąsiedzi spokojni']);
   return pickOf(['Dojechał. Gazety? Różnie', 'Meta zaliczona, skrzynki puste']); }
 
+// the people of the town, interviewed (two questions, their answers made of your morning where it fits) and telling their stories;
+// their portraits taken in the game (Janusz from his picture), printed in two inks with a dither
+const W_ = (n, a, b, c) => `${n} ${plural(n, a, b, c)}`;
+export const CAST = {
+  janusz: { who: 'Pan Janusz', role: 'warsztat przy głównej', qa: r => [['Panie Januszu, jak tam rower naszego gazeciarza?', r.falls ? `Po ${W_(r.falls, 'wywrotce', 'wywrotkach', 'wywrotkach')}? Trzyma się. Rower, nie chłopak.` : 'Jak nowy. No, prawie nowy. Prawie robi różnicę.'], ['Co by pan doradził na jutro?', 'Dzwonek, lampka i nie hamować przodem. Resztę załatwi charakter i moje dętki.']] },
+  brat: { who: 'Młodszy brat', role: 'koszykarz spod domu', qa: r => [['Jak oceniasz dzisiejszy kurs brata?', r.delivered >= 8 ? 'Dobry. Prawie tak dobry jak mój rzut za trzy.' : 'Słabo. Ja bym trafił więcej, i to z zamkniętymi oczami.'], ['A ty kiedy na trasę?', 'Jak mi kupią rower. I kask. I żeby mama nie widziała.']] },
+  mama: { who: 'Mama gazeciarza', role: 'z kuchni', qa: r => [['Martwi się pani, gdy syn wyjeżdża o świcie?', r.falls ? `Widziałam kolana. ${W_(r.falls, 'wywrotka', 'wywrotki', 'wywrotek')}, a on mówi, że to nic.` : 'Wrócił cały i nawet nie brudny. Zapisuję ten dzień w kalendarzu.'], ['Co na śniadanie dla zawodowca?', 'Kanapka z serem i herbata. Gazeciarz na głodno to gazeciarz w rowie.']] },
+  tata: { who: 'Tata gazeciarza', role: 'przed wyjazdem do pracy', qa: r => [['Jest pan dumny z syna?', `Czas ${mmss(r.time)}. Ja w jego wieku jeździłem wolniej. Ale za to pod górkę.`], ['Pomaga pan przy rowerze?', 'Pompuję koła. Czasem za mocno. Raz pękła dętka i pół ulicy się obudziło.']] },
+  sasiadka: { who: 'Sąsiadka zza płotu', role: 'czytelniczka od lat', qa: r => [['Gazeta dziś doszła?', r.windows ? 'Doszła. Przez szybę. Proszę to napisać drukowanymi literami.' : 'Doszła, sucha i prosto do skrzynki. Tak ma być.'], ['Co pani czyta najpierw?', 'Ogłoszenia. Tam jest prawdziwe życie. I kot pana Mietka, który ciągle ginie.']] },
+  sasiad: { who: 'Sąsiad z ogrodem', role: 'od róż i kosiarki', qa: r => [['Widział pan dziś gazeciarza?', 'Śmignął jak wiatr. Moje róże aż się pochyliły.'], ['Jakaś rada dla niego?', 'Żeby nie skracał przez mój trawnik. Wszyscy widzą ślady opon.']] },
+  dzialki: { who: 'Działkowiec', role: 'z ogródków przy torach', qa: r => [['Jak tam plony?', 'Dynie jak nigdy. Jedną wiozę taczką, drugą sąsiad koparką.'], ['A gazeta?', 'Czytam przy kompoście. Najlepiej się tam myśli.']] },
+  kapliczka: { who: 'Pani spod kapliczki', role: 'pilnuje kwiatów', qa: r => [['Często pani widzi gazeciarza?', 'Codziennie. Zawsze się żegna przy kapliczce. Jedną ręką, bo drugą rzuca.'], ['Czego mu pani życzy?', r.falls ? 'Mniej upadków. Modlę się za jego kolana.' : 'Żeby tak dalej. I żeby zwalniał przy psach.']] },
+  budowa: { who: 'Kierownik budowy', role: 'na rogu, od dwóch tygodni', qa: r => [['Kiedy ruszą prace?', 'Jak tylko przyjdzie dźwig. Dźwig czeka na kierowcę. Kierowca na pogodę.'], ['Co pan sądzi o rowerzystach?', 'Mogą jeździć, byle nie przez mój wykop. Wczoraj jeden prawie skoczył.']] },
+  dogman: { who: 'Właściciel psa', role: 'zza furtki', qa: r => [['Pana pies znów gonił gazeciarza?', 'On nie goni, on odprowadza. To różnica. Dla psa.'], ['Może smycz?', 'Smycz też gonił. Raz ją dogonił.']] } };
+export const ANECDOTES = [
+  { who: 'janusz', head: 'Z warsztatu', text: 'Pan Janusz twierdzi, że zna rower po dźwięku. Wczoraj rozpoznał składak po samym zgrzycie łańcucha, dwa bloki dalej.' },
+  { who: 'kapliczka', head: 'Spod kapliczki', text: 'Kwiaty przy kapliczce znikają co czwartek. Sprawcą okazała się koza z działek, która ma podobno religijne usposobienie.' },
+  { who: 'dzialki', head: 'Z ogródków', text: 'Działkowiec przy torach hoduje dynię tak wielką, że pociąg zwalnia, żeby ją obejrzeć. Maszynista potwierdza.' },
+  { who: 'sasiadka', head: 'Zza płotu', text: 'Sąsiadka zapisuje w zeszycie, o której przychodzi gazeta. Zeszyt ma już trzy tomy i spis treści.' },
+  { who: 'brat', head: 'Spod kosza', text: 'Brat gazeciarza trafił wczoraj czterdzieści rzutów z rzędu. Świadków brak, ale on pamięta każdy.' },
+  { who: 'budowa', head: 'Z budowy', text: 'Na placu budowy od tygodnia stoi betoniarka. Ktoś przywiązał do niej balon. Wygląda na zadowoloną.' },
+  { who: 'tata', head: 'Z garażu', text: 'Tata gazeciarza od lat naprawia w garażu ten sam motorower. Twierdzi, że brakuje jednej śrubki. Szuka jej od zeszłej wiosny.' }];
+// a picture printed: three inks (the black, a grey of the black, the paper) dithered in a 4 x 4 pattern, as a cheap press does
+export function printed(src, w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.drawImage(src, 0, 0, w, h);
+  const im = g.getImageData(0, 0, w, h), d = im.data, B4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], T = [[43, 39, 35], [138, 128, 112], [236, 227, 204]];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; let l = (d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11) / 255; l = Math.min(1, Math.max(0, (l - .5) * 1.35 + .55));
+    const v = l * 2, b = Math.min(1, Math.floor(v)), f = v - b, k = f > (B4[(y % 4) * 4 + x % 4] + .5) / 16 ? b + 1 : b; d[i] = T[k][0]; d[i + 1] = T[k][1]; d[i + 2] = T[k][2]; d[i + 3] = 255; }
+  g.putImageData(im, 0, 0); return c; }
+
 const ADS = [
   { t: 'ZGINĄŁ KOT', d: 'Rudy, odpowiada na Mruczek, nie odpowiada na nic innego. Nagroda: szarlotka.' },
   { t: 'KUPIĘ SKŁADAKA', d: 'Może być bez pedałów. Pedały mam.' },
@@ -61,6 +90,8 @@ const ADS = [
   { t: 'ZAMIENIĘ', d: 'Kasety magnetofonowe na cokolwiek, co gra.' },
   { t: 'DAM PRACĘ', d: 'Roznoszenie ulotek. Wymagany własny rower i cierpliwość do psów.' },
   { t: 'ZNALEZIONO', d: 'Dzwonek rowerowy, dzwoni. Do odebrania na posterunku.' }];
+
+import { pxKey } from './pixui.js';
 
 export function createPaper({ game }) {
   const css = document.createElement('style'); css.textContent = `
@@ -94,6 +125,13 @@ export function createPaper({ game }) {
     #paper .clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; } #paper .c3 { -webkit-line-clamp: 3; } #paper .c4 { -webkit-line-clamp: 4; } #paper .c8 { -webkit-line-clamp: 8; }
     #paper .news .ph { height: 116px; } #paper .news { display: flex; flex-direction: column; } #paper .news .cap { margin-top: 4px; }
     #paper .opts { color: #8e2e25; margin-top: 4px; }
+    #paper .pt { width: 64px; height: 64px; border: 4px solid #2b2723; flex: none; display: block; } #paper .iv .pt { float: left; margin: 2px 10px 4px 0; } #paper .iv .who { color: #6a645c; margin: 0 0 4px; } #paper .iv .who b { font-weight: normal; color: #2b2723; } #paper .pt.sm { width: 88px; height: 88px; }
+    #paper .iv .ivh { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; } #paper .iv .ivh b { font-weight: normal; display: block; } #paper .iv .ivh small { color: #6a645c; font-size: 16px; }
+    #paper .iv .q { color: #8e2e25; margin: 0 0 2px; } #paper .iv .q:before { content: '- '; } #paper .iv .a { margin: 0 0 6px; } #paper .iv .a:before { content: '- '; }
+    #paper .brief { margin-top: 8px; border-top: 4px solid #2b2723; padding-top: 6px; } #paper .brief h4 { margin: 0 0 4px; font-weight: normal; color: #8e2e25; } #paper .brief p { margin: 0 0 4px; padding-left: 12px; text-indent: -12px; } #paper .brief p:before { content: '▪ '; color: #8e2e25; }
+    #paper .anec { display: flex; gap: 12px; align-items: flex-start; } #paper .anec h3 { margin-bottom: 4px; }
+    #paper .more { float: right; font-size: 16px; text-shadow: none; letter-spacing: 0; color: #8e2e25; margin-top: 4px; } #paper .keys2 { display: flex; gap: 8px; flex-wrap: wrap; }
+    #paper .next .pxk { justify-content: flex-start; } #paper .bar { gap: 10px; align-items: flex-end; }
     #paper .box { background: #e9d9a8; border: 4px solid #2b2723; padding: 6px 8px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 6px 10px; cursor: pointer; min-height: 0; } #paper .box:hover { background: #f0e2b4; }
     #paper .box h3 { grid-column: 1 / -1; color: #8e2e25; text-shadow: 3px 0 0 #8e2e25; border-bottom: 4px solid #b8483a; padding-bottom: 4px; margin: 0; }
     #paper .kv { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; align-items: center; } #paper .kv canvas { width: 20px; height: 20px; grid-row: span 2; } #paper .kv b { font-weight: normal; font-size: 16px; line-height: 1; } #paper .kv small { color: #6a645c; font-size: 16px; }
@@ -110,11 +148,14 @@ export function createPaper({ game }) {
     #paper .next { display: grid; gap: 6px; align-content: start; overflow-y: auto; scrollbar-width: thin; }
     /* the buttons under the paper */
     #paper .bar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
-    #paper button { all: unset; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 10px; color: #f6f3ea; white-space: nowrap; }
-    #paper button:hover, #paper button.pad-focus { border-image-source: var(--px-btn-hi); } #paper button:active { border-image-source: var(--px-btn-dn); transform: translateY(2px); } #paper button.go { border-image-source: var(--px-sel); color: #17181b; }
-    #paper .face button { color: #f6f3ea; }
-    @media (max-width: 900px) { #paper .pile { height: calc(100vh - 80px); } #paper .title { font-size: 32px; text-shadow: 4px 0 0 #2b2723; letter-spacing: 3px; } #paper .index { display: none; } #paper h2 { font-size: 24px; text-shadow: 3px 0 0 #2b2723; }
-      #paper .body { overflow-y: auto; } #paper .p1, #paper .p2, #paper .p3, #paper .lead, #paper .news2, #paper .low { grid-template-columns: 1fr; grid-template-rows: none; } #paper .vr { border-left: 0; padding-left: 0; } #paper .lead { grid-column: auto; } #paper .news .ph { height: auto; aspect-ratio: 4 / 3; } #paper .lead .ph { height: auto; aspect-ratio: 4 / 3; } #paper .news2 .ph, #paper .low .ph { max-height: none; } #paper .ads { columns: 1; } #paper .p2 canvas.big { height: 300px; } }`;
+    #paper button:not(.pxk) { all: unset; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 10px; color: #f6f3ea; white-space: nowrap; }
+    #paper button:not(.pxk):hover, #paper button:not(.pxk).pad-focus { border-image-source: var(--px-btn-hi); } #paper button:not(.pxk):active { border-image-source: var(--px-btn-dn); transform: translateY(2px); } #paper button.go:not(.pxk) { border-image-source: var(--px-sel); color: #17181b; }
+    
+    @media (max-width: 1040px) { #paper .pile { width: calc(100vw - 24px); height: calc(100vh - 86px); } #paper .face { padding: 12px 14px; } #paper .title { font-size: 40px; text-shadow: 5px 0 0 #2b2723; letter-spacing: 4px; } #paper .crest { width: 48px; height: 54px; }
+      #paper .index { min-width: 0; } #paper .body { overflow-y: auto; scrollbar-width: thin; } #paper .p1 { grid-template-columns: 1fr 1fr; grid-template-rows: none; } #paper .lead { grid-column: 1 / -1; height: 230px; }
+      #paper .p1 > div { min-height: 230px; } #paper .p2, #paper .p3 { grid-template-columns: 1fr; } #paper .p2 canvas.big { height: 300px; flex: none; } #paper .vr { border-left: 0; padding-left: 0; } #paper .news .ph { height: 110px; } }
+    @media (max-width: 640px) { #paper .title { font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; } #paper .index { display: none; } #paper h2 { font-size: 24px; text-shadow: 3px 0 0 #2b2723; } #paper .p1, #paper .lead { grid-template-columns: 1fr; } #paper .lead { height: auto; } #paper .lead .ph { height: 180px; } #paper .ads { columns: 1; } #paper .bar { flex-wrap: wrap; justify-content: center; width: calc(100vw - 20px); } }
+}`;
   document.head.appendChild(css);
   // the paper's grain: a few specks on the cream
   { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); for (let k = 0; k < 70; k++) { g.fillStyle = Math.random() < .5 ? 'rgba(90,70,40,.08)' : 'rgba(255,255,255,.18)'; g.fillRect(Math.random() * 32 | 0, Math.random() * 32 | 0, 1, 1); } document.documentElement.style.setProperty('--pp-grain', `url(${c.toDataURL()})`); }
@@ -170,14 +211,17 @@ export function createPaper({ game }) {
     if (miss && n) a.push(`${miss} ${plural(miss, 'dom czeka', 'domy czekają', 'domów czeka')} na gazetę do jutra.`);
     a.push(rec.first ? `Czas na mecie: ${mmss(r.time)}.` : rec.beat.time ? `Czas ${mmss(r.time)} to nowy rekord tej trasy.` : `Czas ${mmss(r.time)}, rekord to wciąż ${mmss(rec.best.time)}.`);
     return a.join(' '); }
-  function page1() { const { r, rec } = D, nw = D.photos.news, tz = D.tease;
-    const news = (n, cl = 'c3') => n ? `<div class="col news"><h3>${n.head}</h3>${img(n.img)}<p class="cap clamp ${cl}">${n.text}</p></div>` : '<div></div>';
+  const portrait = (c, cls = 'pt') => c ? `<img class="${cls}" src="${c.toDataURL()}" alt="">` : '';
+  function interview() { const I = D.iv; if (!I) return ''; const C = CAST[I.who]; if (!C) return ''; const qa = C.qa(D.r);
+    return `<div class="col iv"><h3>Rozmowa dnia</h3>${portrait(I.img)}<p class="who"><b>${C.who}</b>, ${C.role}</p>${qa.map(([q, a]) => `<p class="q">${q}</p><p class="a">${a}</p>`).join('')}</div>`; }
+  function page1() { const { r, rec } = D, nw = D.photos.news, tz = D.tease, A = nw[0];
     return mast(0) + `<div class="body p1">
       <div class="lead"><div class="col" style="display:flex;flex-direction:column"><h2>${D.headline}</h2><p class="clamp c8" style="margin-top:8px">${story()}</p>${bars(3)}</div>${img(D.photos.finish)}</div>
-      <div class="vr" style="min-height:0;display:flex">${news(nw[0], 'c4')}</div>
-      <div class="hr" style="min-height:0;display:flex">${news(nw[1])}</div>
-      <div class="hr vr" style="min-height:0;display:flex">${tz ? `<div class="col news"><h3>${tz.head}</h3>${img(tz.img)}<p class="cap clamp c3">${tz.text}</p>${D.next.length ? `<div class="opts">JUTRO: ${D.next.map(x => x.name).join(' ALBO ')}</div>` : ''}</div>` : news(nw[2])}</div>
-      <div class="hr vr" style="min-height:0;display:flex"><div class="box" data-pg="1" style="flex:1"><h3>Twoja trasa</h3><div style="display:grid;gap:6px;align-content:start">
+      <div class="vr" style="min-height:0;display:flex;flex-direction:column">${A ? `<div class="col news"><h3>${A.head}</h3>${img(A.img)}<p class="cap clamp c3">${A.text}</p></div>` : ''}
+        ${D.briefs.length ? `<div class="brief"><h4>W SKRÓCIE</h4>${D.briefs.slice(0, 3).map(t => `<p>${t}</p>`).join('')}</div>` : ''}</div>
+      <div class="hr" style="min-height:0;display:flex">${interview() || (nw[1] ? `<div class="col news"><h3>${nw[1].head}</h3>${img(nw[1].img)}<p class="cap clamp c3">${nw[1].text}</p></div>` : '')}</div>
+      <div class="hr vr" style="min-height:0;display:flex">${tz ? `<div class="col news"><h3>${tz.head}</h3>${img(tz.img)}<p class="cap clamp c3">${tz.text}</p>${D.next.length ? `<div class="opts">JUTRO: ${D.next.map(x => x.name).join(' ALBO ')}</div>` : ''}</div>` : ''}</div>
+      <div class="hr vr" style="min-height:0;display:flex"><div class="box" data-pg="1" style="flex:1"><h3>Twoja trasa <span class="more">STR. 2 ▸</span></h3><div style="display:grid;gap:6px;align-content:start">
           <div class="kv"><canvas data-ico="dist"></canvas><b>${(D.route.len / 1000).toFixed(2)} KM</b><small>DYSTANS</small></div>
           <div class="kv"><canvas data-ico="time"></canvas><b>${mmss(r.time)}</b><small>CZAS</small></div>
           <div class="kv"><canvas data-ico="paper"></canvas><b>${r.delivered} / ${D.route.subs}</b><small>DORĘCZONE</small></div>
@@ -194,10 +238,12 @@ export function createPaper({ game }) {
           ${row('CZAS', mmss(r.time), mmss(b.time), 'time')}${row('GAZETY', r.delivered, b.delivered, 'delivered')}${row('CELNOŚĆ', Math.round(r.acc * 100) + '%', Math.round((b.acc || 0) * 100) + '%', 'acc')}
           ${row('RZUTY', r.thrown, '-')}${row('WYWROTKI', r.falls, b.falls)}${row('SZYBY', r.windows, '-')}${row('ZAROBEK', r.earned + ' ZŁ', b.earned + ' ZŁ', 'earned')}${row('PRZEJAZDY', b.runs, '')}</table>
         <h3 style="margin-top:12px">Domy na trasie</h3><p>PRENUMERATORZY: ${D.route.subs} · DORĘCZONE: ${r.delivered} · BEZ GAZETY: ${Math.max(0, D.route.subs - r.delivered)} · WSZYSTKICH DOMÓW: ${D.route.doors.length}</p></div></div>`; }
-  function page3() { return mast(2) + `<div class="body p3"><div class="col"><h2 style="margin-bottom:10px">Ogłoszenia drobne</h2><div class="ads">
-        ${D.ads.map(a => `<div class="ad ${a.j ? 'j' : ''}"><b>${a.t}</b>${a.d}${a.price ? ` <span class="pr">${a.price} ZŁ</span>` : ''}</div>`).join('')}</div></div>
-      <div class="col vr next"><h3>Dokąd dalej?</h3>${D.next.length ? D.next.map(x => `<button class="${x.first ? 'go' : ''}" data-go="${x.id}">${x.name}</button><p class="cap">${x.note}</p>`).join('') : '<p>Wszystkie odcinki w okolicy są już otwarte albo czekają na gwiazdki.</p>'}
-        <h3 style="margin-top:8px">W portfelu: ${D.money} ZŁ</h3><button data-act="shop">DO WARSZTATU JANUSZA</button><button data-act="map">MAPA TRASY</button>
+  function page3() { const N = D.an, C = N && CAST[N.who];
+    return mast(2) + `<div class="body p3"><div class="col" style="display:flex;flex-direction:column;gap:10px"><h2>Ogłoszenia drobne</h2><div class="ads">
+        ${D.ads.map(a => `<div class="ad ${a.j ? 'j' : ''}"><b>${a.t}</b>${a.d}${a.price ? ` <span class="pr">${a.price} ZŁ</span>` : ''}</div>`).join('')}</div>
+        ${C ? `<div class="anec hr">${portrait(N.img, 'pt sm')}<div><h3>Anegdota: ${N.head.toLowerCase()}</h3><p>${N.text}</p><p class="cap">Opowiedział(a): ${C.who.toLowerCase()}, ${C.role}.</p></div></div>` : ''}</div>
+      <div class="col vr next"><h3>Dokąd dalej?</h3>${D.next.length ? D.next.map(x => `${pxKey(x.name, { icon: 'play', kind: x.first ? 'gold' : '', attrs: `data-go="${x.id}"`, nudge: true })}<p class="cap">${x.note}</p>`).join('') : '<p>Wszystkie odcinki w okolicy są już otwarte albo czekają na gwiazdki.</p>'}
+        <h3 style="margin-top:8px">W portfelu: ${D.money} ZŁ</h3><div class="keys2">${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}${pxKey('MAPA', { icon: 'map', attrs: 'data-act="map"' })}</div>
         <h3 style="margin-top:10px">Tabela wyników</h3><table><tr><th>ODCINEK</th><th>GWIAZDKI</th><th>CZAS</th><th>GAZETY</th></tr>${(D.table || []).map(t => `<tr${t.on ? ' class="rec"' : ''}><td>${t.open ? t.name : '???'}</td><td>${starsH(t.stars)}</td><td>${t.best ? mmss(t.best.time) : '-'}</td><td>${t.best ? t.best.delivered : '-'}</td></tr>`).join('')}</table></div></div>`; }
   const PAGES = [page1, page2, page3];
   function render() { face.innerHTML = PAGES[page](); face.querySelectorAll('canvas.crest').forEach(c => c.getContext('2d').drawImage(crest(), 0, 0));
@@ -206,7 +252,8 @@ export function createPaper({ game }) {
     face.querySelectorAll('[data-pg]').forEach(a => a.onclick = () => turn(+a.dataset.pg));
     face.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { close(); game.go(b.dataset.go); });
     face.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { const a = b.dataset.act; if (a === 'shop') game.shop(); else { close(); game.map(); } });
-    bar.innerHTML = `<button data-b="prev" ${page ? '' : 'style="visibility:hidden"'}>◀ STRONA</button><button data-b="again">JESZCZE RAZ (R)</button><button data-b="home">DO DOMU</button><button data-b="map">MAPA (M)</button>${page < 2 ? '<button class="go" data-b="next">DALEJ ▶</button>' : ''}`;
+    bar.innerHTML = (page ? pxKey('STRONA', { icon: 'prev', key: '←', attrs: 'data-b="prev"' }) : '') + pxKey('JESZCZE RAZ', { icon: 'again', key: 'R', attrs: 'data-b="again"' }) + pxKey('DO DOMU', { icon: 'home', attrs: 'data-b="home"' }) + pxKey('MAPA', { icon: 'map', key: 'M', attrs: 'data-b="map"' }) +
+      (page < 2 ? pxKey('DALEJ', { icon: 'next', key: '→', kind: 'gold', attrs: 'data-b="next"', nudge: true }) : pxKey('NA MAPĘ', { icon: 'play', key: 'ENTER', kind: 'gold', attrs: 'data-b="map"', nudge: true }));
     bar.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { const k = b.dataset.b; if (k === 'prev') turn(page - 1); else if (k === 'next') turn(page + 1); else { close(); k === 'again' ? game.again() : k === 'home' ? game.home() : game.map(); } }); }
   function turn(p) { if (busy || p === page || p < 0 || p > 2) return; busy = true; game.sound?.('ui'); sheet.classList.add('out');
     setTimeout(() => { page = p; render(); sheet.classList.remove('out'); sheet.classList.add('in'); setTimeout(() => { sheet.classList.remove('in'); busy = false; }, 170); }, 165); }
