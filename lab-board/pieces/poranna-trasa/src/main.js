@@ -224,7 +224,8 @@ function bikeChoices(me) { const out = []; if (foot.active) { const sp = bikeSpo
   for (const b of traffic.bikes) if (b.on && b.fall) { b.bike ||= { ...strangerBike(['kolarzowka', 'skladak', 'trekking', 'ostre', 'bmx'][Math.random() * 5 | 0]), paint: '#' + b.r.materials.frame.color.getHexString() };
     out.push({ kind: 'traffic', ref: b, bike: b.bike, x: b.x, z: b.z, yaw: b.yaw, lying: true, side: b.fall.side, owner: { kind: 'cyclist' }, d: Math.hypot(me.x - b.x, me.z - b.z) - .6 }); }
   return out.sort((a, b) => a.d - b.d); }
-function takeBike() { const c = bikeChoices(foot.me)[0]; if (!c || c.d > 1.7) return false; if (c.kind === 'mine') { mount(); return true; } swapTo(c); return true; }
+function takeBike() { const all = bikeChoices(foot.me), mine = all.find(c => c.kind === 'mine'), other = all.find(c => c.kind !== 'mine');   // (his own first: someone else's only when he stands clearly nearer it)
+  const c = mine && mine.d <= 1.7 && !(other && other.d < mine.d - .5) ? mine : all[0]; if (!c || c.d > 1.7) return false; if (c.kind === 'mine') { mount(); return true; } swapTo(c); return true; }
 // on someone else's: yours left where it stood (yours to come back for), you on that one, as it lies; and they notice
 const TAKEN = { house: ['EJ! TO MÓJ ROWER!', 'ZŁODZIEJ! POLICJA!', 'ODDAWAJ ROWER, GÓWNIARZU!', 'MAMO! ON MI KRADNIE ROWER!'], cyclist: ['MÓJ ROWER!!!', 'ZŁODZIEJ! ODDAWAJ!', 'ZAPAMIĘTAM TWOJĄ GĘBĘ!'], brat: ['ODDAJ MÓJ ROWER! POWIEM MAMIE!', 'TYLKO GO NIE PORYSUJ!', 'TO MOJE BMX, NIE TWOJE!'] };
 function swapTo(c) { const old = myBike; wbikes.add(old, B.x, B.z, B.yaw, !!B.bikeDown, { kind: 'left' });
