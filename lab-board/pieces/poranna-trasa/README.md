@@ -876,3 +876,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - ponad 30 kwestii Janusza w rozmowie telefonicznej: powitania, odbiera niechcący i gada dalej do Mietka albo klientki, „jak się pan ma” (narzekania i przechwałki memicznego kolarza), mitomańskie anegdoty (gonił pociąg, prowadził w wielkim wyścigu, opony mu się stopiły), rady na jutro, kupony z wymówkami
 - czasem po „do usłyszenia” nie odkłada słuchawki i słychać, co gada dalej; trzeba ją samemu odłożyć
+
+## Wersja 96: zlecenia z ogłoszeń, persony z telefonami, notes, aparat
+
+- persony z portretami i telefonami (src/jobs.js): Babcia Stasia, Pan Redaktor, Szef spod beczki, Pani Hela z papierniczego (oraz Janusz); plan reszty w docs/zlecenia.md
+- ogłoszenia mieszkańców w gazecie: dzwonisz, persona przedstawia sprawę, bierzesz albo nie
+- notes zleceń: 2 miejsca na start; Pani Hela sprzedaje większy notes (60 zł za miejsce, do 4)
+- pierwsze zlecenia: Szarlotka dla wnuczka (dowieź do domu ze znacznikiem i zatrzymaj się; wywrotka niszczy ciasto, po dwóch porankach przepada), Zdjęcie do gazety (aparat pod Q: pies, kapliczka, budowa, przystanek), Robota dla ekipy (skop trzy skrzynki; policja Cię mniej lubi)
+- na trasie: zlecenia w pasku u góry (z odległością), znaczniki nad celami; za wykonanie od razu wypłata
+- w kolejnym wydaniu: „Z notesu gazeciarza” (co wyszło, co przepadło), zrobione zdjęcie jako „Zdjęcie czytelnika”; notes na ostatniej stronie

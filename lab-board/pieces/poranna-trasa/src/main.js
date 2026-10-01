@@ -46,6 +46,7 @@ import { createNet } from './net.js';
 import { createBikes, TYPES as BIKE_TYPES, SLOTS, newParts, bikeMods, bikeLook, strangerBike } from './bikes.js';
 import { createGarage } from './garage.js';
 import * as LVM from './levels.js';
+import * as JB from './jobs.js';
 import { createMap } from './map.js';
 import { createPaper, NEWS, eventNews, CAST, ANECDOTES, printed, badgesOf } from './paper.js';
 import { createHoops } from './hoops.js';
@@ -285,7 +286,7 @@ const ACTIONS = [
   { id: 'sprint', keys: ['ShiftLeft', 'ShiftRight'], modes: ['bike', 'walk'] },
   { id: 'throwL', keys: ['ArrowLeft', 'KeyQ'], modes: ['bike'] }, { id: 'throwR', keys: ['ArrowRight', 'KeyE'], modes: ['bike'] },
   { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyC'], modes: ['bike'] },
-  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'inv', keys: ['KeyI'], modes: ['bike', 'walk'] }, { id: 'map', keys: ['KeyM'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
+  { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'inv', keys: ['KeyI'], modes: ['bike', 'walk'] }, { id: 'map', keys: ['KeyM'], modes: ['bike', 'walk'] }, { id: 'snap', keys: ['KeyQ'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
   { id: 'punchL', keys: ['ArrowLeft'], modes: ['fight'] }, { id: 'punchR', keys: ['ArrowRight'], modes: ['fight'] }, { id: 'high', keys: ['ArrowUp'], modes: ['fight'] },
   { id: 'low', keys: ['ArrowDown'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
   { id: 'taunt', keys: ['KeyG'], modes: ['fight'] },
@@ -308,7 +309,7 @@ const clashes = (id, code) => { const A = ACTIONS.find(a => a.id === id); return
 // what each is, where (the menu's page and the help window list them so)
 const SECTIONS = [
   { title: 'NA ROWERZE', items: [['pedal', 'PEDAŁUJ'], ['brake', 'HAMUJ (NA POSTOJU: COFAJ)'], ['left', 'SKRĘĆ W LEWO'], ['right', 'SKRĘĆ W PRAWO'], ['sprint', 'SZYBCIEJ'],
-    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['inv', 'EKWIPUNEK ROWERU: CZĘŚCI, SLOTY, ROWER OBOK'], ['map', 'MAPA TRASY: ODCINKI, WYNIKI, WARSZTAT, ZAPIS'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
+    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['inv', 'EKWIPUNEK ROWERU: CZĘŚCI, SLOTY, ROWER OBOK'], ['map', 'MAPA TRASY: ODCINKI, WYNIKI, WARSZTAT, ZAPIS'], ['snap', 'APARAT (ZLECENIE NA ZDJĘCIE)'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
     ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['bell', 'DZWONEK (GDY GO MASZ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
@@ -330,6 +331,7 @@ addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') &&
   if (on('view', e.code)) { if (foot.active) foot.toggleView(); else setCam((camI + 1) % CAMS.length); }
   if (on('ink', e.code)) look.set({ ink: (look.S.ink + 1) % INKS.length });
   if (on('help', e.code)) toggleKeys();
+  if (on('snap', e.code) && LV && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !map.isOpen && !fin.isOpen) snapJob();
   if (on('map', e.code) && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !garage.isOpen && !foot.fighting) openMap();
   if (on('inv', e.code) && !menu.open && !asking && !shop.isOpen && !talk.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !foot.fighting) garage.toggle();
   if (on('full', e.code)) toggleFull();
@@ -1099,7 +1101,7 @@ function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
   touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !runUI.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
-  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks(), mpMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks(), mpMarks(), jobMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -1187,10 +1189,11 @@ const modes = createModes({ THREE, scene, track, audio, game: { get B() { return
 // push; at the finish the paper (paper.js), the stars, the best kept, the save. At home: no gate, no clock (riding free, as before).
 const lvHud = document.createElement('div'); lvHud.id = 'lvhud'; document.body.appendChild(lvHud);
 { const st = document.createElement('style'); st.textContent = `#lvhud { position: fixed; z-index: 4; left: 50%; top: 10px; transform: translateX(-50%); display: none; gap: 12px; align-items: center; white-space: nowrap; font: 16px/1.2 PTPix, ui-monospace, monospace; color: #f6f3ea;
-  border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 2px 8px; pointer-events: none; } #lvhud.on { display: flex; } #lvhud b { color: #efc970; font-weight: normal; } #lvhud .w { color: #cf5a3e; animation: lvw .5s steps(1) infinite; } @keyframes lvw { 50% { opacity: .3; } }`; document.head.appendChild(st); }
+  border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 2px 8px; pointer-events: none; } #lvhud.on { display: flex; } #lvhud b { color: #efc970; font-weight: normal; } #lvhud .job { color: #8fc3f0; } #lvhud { flex-wrap: wrap; justify-content: center; max-width: 92vw; } #lvhud .w { color: #cf5a3e; animation: lvw .5s steps(1) infinite; } @keyframes lvw { 50% { opacity: .3; } }`; document.head.appendChild(st); }
 const RUN = { t: 0, go: false, cp: 0, cps: [], done: false, gate: [], hits: [], chk: 0 };
 const seeded = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const partLabel = (k, i) => { const t = PARTS[k].tiers[i].name; return t === PARTS[k].name ? t : `${PARTS[k].name}: ${t}`; };
 function saveCampaign() { LVM.save({ money: B.points, bike: myBike, inv: INV.map(p => ({ ...p })), paints: [...PAINTS], at: LV?.id || 'dom' }); }
 function applySave() { if (!LVM.hasSave()) return; const S = LVM.load(); if (S.bike?.type) { myBike = { type: S.bike.type, parts: { ...newParts(), ...(S.bike.parts || {}) }, ...(S.bike.paint ? { paint: S.bike.paint } : {}) }; }
   INV.splice(0, INV.length, ...(S.inv || [])); PAINTS.clear(); for (const k of [0, ...(S.paints || [])]) PAINTS.add(k); B.points = S.money || 0; applyBike(); }
@@ -1212,12 +1215,35 @@ function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
   const iJ = track.home.iJ, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
-  Object.assign(RUN, { t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
+  bindJobs(); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
   flash(`${L.name}: wyjedź z domu i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
 function goHome() { if (fin.isOpen) fin.close(); LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
 // how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
 const ahead = (i, cp) => ((((cp - i) * LV.finish.dir) % track.N) + track.N) % track.N * track.ds;
+// ---------- the jobs in the notebook (jobs.js): bound to this stretch's way at its start, watched as you ride ----------
+const JOBRUN = [];
+function bindJobs() { JOBRUN.length = 0; const S = LVM.load(), iJ = track.home.iJ, N = track.N, dir = LV.finish.dir, span = Math.round(N * LV.finish.to), along = i => ((((i - iJ) * dir) % N) + N) % N;
+  for (const j of S.jobs || []) { const R = { j, falls0: B.falls || 0, done: false };
+    if (j.kind === 'szarlotka') { const ds = track.doors.map((d, i) => ({ d, i, a: along(d.i) })).filter(q => q.a > span * .2 && q.a < span * .9); const q = ds[Math.random() * ds.length | 0]; if (!q) continue; R.door = q.d; }
+    if (j.kind === 'foto' && j.k !== 'dog') { const all = (track.show?.shacks || []).filter(q => q.label === ({ kapliczka: 'kapliczka', budowa: 'budowa', przystanek: 'przystanek' })[j.k]); let best = null, bd = 1e18;
+      for (const q of all) { const P = q.o.getWorldPosition(new THREE.Vector3()), a = along(nearSt(P.x, P.z)); if (a > span + 10) continue; const d = a; if (d < bd) { bd = d; best = P; } } R.at = best || (all[0] && all[0].o.getWorldPosition(new THREE.Vector3())); }
+    if (j.kind === 'skrzynki') R.n0 = 0;
+    JOBRUN.push(R); } }
+function jobEnd(R, ok) { if (R.done) return; R.done = true; const J = JB.JOBS[R.j.kind], S = LVM.load(); S.jobs = (S.jobs || []).filter(q => q.id !== R.j.id);
+  (S.jobRes ||= []).push({ kind: R.j.kind, ok, what: R.j.what || '', pay: ok ? J.pay : 0 }); LVM.save(); if (ok) { B.points += J.pay; audio.play('trick'); flash(`Zlecenie: ${J.done} +${J.pay} zł`); } else { audio.play('miss'); flash('Zlecenie przepadło: ' + J.fail); } }
+function stepJobs() { if (!LV || RUN.done) return; const me = foot.active ? foot.me : B, sp = Math.abs(foot.active ? foot.me.vf || 0 : B.v);
+  for (const R of JOBRUN) { if (R.done) continue; const k = R.j.kind;
+    if (k === 'szarlotka') { if ((B.falls || 0) > R.falls0) { jobEnd(R, false); continue; } if (R.door && Math.hypot(me.x - R.door.p.x, me.z - R.door.p.z) < 5 && sp < 2) jobEnd(R, true); }
+    if (k === 'skrzynki' && (RUN.log || []).filter(e => e.kind === 'kick_mailbox').length >= 3) { jobEnd(R, true); if (quests.police) quests.police.rep = (quests.police.rep || 0) - 1; } } }
+// the camera (Q): a photo through the game's eye; for the photo job, its subject near and before you
+function snapJob() { const R = JOBRUN.find(q => !q.done && q.j.kind === 'foto'); audio.play('ui'); const img = photo(camera); if (!R) { flash('Pstryk! (żadne zlecenie nie czeka na zdjęcie)'); return; }
+  const f = new THREE.Vector3(); camera.getWorldDirection(f); const cand = R.j.k === 'dog' ? dogs.dogs.map(d => new THREE.Vector3(d.x, B.y + .5, d.z)) : R.at ? [R.at] : [];
+  const me = foot.active ? foot.me : B, fy = new THREE.Vector3(Math.sin(me.yaw), 0, Math.cos(me.yaw)), okAt = cand.find(P => { const v = P.clone().sub(camera.position), l = v.length(), w = new THREE.Vector3(P.x - me.x, 0, P.z - me.z), lw = w.length(); return (l < 24 && v.normalize().dot(f) > .75) || (lw < 14 && w.normalize().dot(fy) > .6); });
+  if (!okAt) { flash('Pstryk! Ale to nie to. Podjedź bliżej i wyceluj w ' + (R.j.aim || R.j.what.split(',')[0])); return; }
+  R.img = img; (RUN.shots ||= []).push({ what: R.j.what, img }); jobEnd(R, true); }
+// the marks over the jobs' targets
+function jobMarks() { const out = []; for (const R of JOBRUN) { if (R.done) continue; if (R.door) out.push({ p: new THREE.Vector3(R.door.p.x, R.door.p.y + 3.4, R.door.p.z), s: 'v', col: '#efc970' }); if (R.at) out.push({ p: R.at.clone().setY(R.at.y + 4), s: 'v', col: '#8fc3f0' }); } return out; }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
@@ -1225,21 +1251,23 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   { const g = !!quests.gang?.chase, sr = !!quests.siren; if (g && !RUN.gangOn) logEv('gang', B.x, B.z); if (sr && !RUN.sirenOn) logEv('chase', B.x, B.z); RUN.gangOn = g; RUN.sirenOn = sr; }
   { const st = quests.police?.stops || 0; if (st > (RUN.stops ?? st)) logEv('police', B.x, B.z); RUN.stops = st; RUN.maxStreak = Math.max(RUN.maxStreak || 0, B.streak || 0); }
   if (RUN.snaps?.length && RUN.t >= RUN.snaps[0].at) { const q = RUN.snaps.shift(); try { q.e.img = photo(camera); } catch { } }
-  if ((RUN.chk -= dt) > 0) return; RUN.chk = .1;
+  if ((RUN.chk -= dt) > 0) return; RUN.chk = .1; stepJobs();
   const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
   const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;
   if (passed) { RUN.cp++; RUN.minA = Infinity; RUN.prevA = 1e9; if (RUN.cp >= RUN.cps.length) { finishLevel(); return; } audio.play('pick'); flash(last ? 'Meta!' : `Punkt ${RUN.cp} z ${RUN.cps.length - 1} zaliczony`); }
   let rest = ahead(q.i, RUN.cps[RUN.cp]); for (let k = RUN.cp + 1; k < RUN.cps.length; k++) rest += ahead(RUN.cps[k - 1], RUN.cps[k]);
   const aNow = ahead(q.i, RUN.cps[RUN.cp]); if (onRoad) RUN.minA = Math.min(RUN.minA, aNow); const wrong = onRoad && aNow > RUN.minA + 25;
-  lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>`; }
+  lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>${JOBRUN.filter(q => !q.done).map(q => `<span class="job">▸ ${JB.lineOf(q.j)}${q.door ? ' ' + Math.round(Math.hypot(me.x - q.door.p.x, me.z - q.door.p.z)) + ' M' : ''}</span>`).join('')}`; }
 function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
   const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0 };
   const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
   const got = LVM.rewardsFor(L.id, before, rec.best.stars), bonus = Math.round((B.earned || 0) * LVM.modBonus(RUN.mods || [])), inc = LVM.income();
-  for (const g of got) { if (g.cash) B.points += g.cash; if (g.part) shop.grant(g.part[0], g.part[1]); g.name = g.cash ? `${g.cash} ZŁ` : `${PARTS[g.part[0]].name}: ${PARTS[g.part[0]].tiers[g.part[1]].name}`; }
+  for (const g of got) { if (g.cash) B.points += g.cash; if (g.part) shop.grant(g.part[0], g.part[1]); g.name = g.cash ? `${g.cash} ZŁ` : partLabel(g.part[0], g.part[1]); }
   B.points += bonus + inc; const pay = { earned: B.earned || 0, bonus, mods: (RUN.mods || []).map(id => LVM.MODS.find(m => m.id === id)?.t).filter(Boolean), income: inc, regulars: LVM.regulars(), got };
+  for (const R of JOBRUN) if (!R.done && R.j.kind === 'szarlotka' && (R.j.runs = (R.j.runs || 0) + 1) >= 2) jobEnd(R, false);
+  { const S = LVM.load(); for (const j of S.jobs || []) { const R = JOBRUN.find(q => q.j.id === j.id); if (R) j.runs = R.j.runs; } LVM.save(); }
   LVM.save({ mods: [] }); saveCampaign();
-  audio.play('trick'); B.v *= .3; const data = paperData(L, r, rec, opened); data.pay = pay; data.money = B.points; fin.open(data); }
+  audio.play('trick'); B.v *= .3; const data = paperData(L, r, rec, opened); data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); fin.open(data); }
 // the paper's look for its photos: one of the game's own overlays (the look panel's: comic dots, pencil, riso, 1 bit), put on for the
 // shot only, then the look as it was
 const PHOTO_LOOK = { komiks: { mode: 2, fxAmt: 1, comicDot: 4, comicAngle: 45, comicInk: 1.3, comicShade: .55 }, olowek: { mode: 4, fxAmt: 1, pencilGap: 4, pencilStr: .9, pencilColor: 0, pencilPaper: 0 },
@@ -1265,7 +1293,7 @@ const STUDIO = (() => { const sc = new THREE.Scene(); sc.background = new THREE.
 const FACES = { mama: 'mama', tata: 'tata', brat: 'brat', sasiadka: 'sasiadka', sasiad: 'sasiad', dzialki: 'dzialki', kapliczka: 'kapliczka', budowa: 'budowa', przyczepa: 'przyczepa', dogman: 'dogman' };
 function faceOf(who) { if (who === 'janusz') { if (!JIMG.complete || !JIMG.naturalWidth) return null; const w = JIMG.naturalWidth, h = JIMG.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 96;
     const g = c.getContext('2d'); g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 96, 96); g.drawImage(JIMG, w * .29, h * .0, w * .42, w * .42, 0, 0, 96, 96); return printed(c, 64, 64); }
-  if (!FACES[who]) return null; const R = (residents?.list || []).find(q => who === 'dogman' ? q.key === 'dogman' : q.lines === who); if (!R?.head) return null;
+  const byKey = who.startsWith('key:') ? who.slice(4) : null; if (!FACES[who] && !byKey) return null; const R = (residents?.list || []).find(q => byKey ? q.key === byKey : who === 'dogman' ? q.key === 'dogman' : q.lines === who); if (!R?.head) return null;
   const G = SkeletonUtils.clone(R.G); G.position.set(0, 0, 0); G.rotation.set(0, 0, 0); G.visible = true; G.traverse(o => { o.visible = true; o.frustumCulled = false; }); STUDIO.add(G); G.updateMatrixWorld(true);
   const hd = G.getObjectByName(R.head.name) || G, hp = hd.getWorldPosition(new THREE.Vector3()), cam = new THREE.PerspectiveCamera(24, camera.aspect, .1, 30);
   cam.position.set(hp.x + .3, hp.y + .1, hp.z + 1.45); cam.lookAt(hp.x, hp.y - .1, hp.z); const ph = photo(cam, photoStyle, STUDIO); STUDIO.remove(G);
@@ -1307,8 +1335,11 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   parts.sort((a, b) => a.price - b.price);
   const issue = Object.values(LVM.load().best).reduce((n, b) => n + (b.runs || 0), 0) + 100;
   return { L, r, rec, opened, photos: { finish: fin0, news }, tease, briefs: briefs.slice(0, 3), iv, an, heard, counts, badges, janusz: faceOf('janusz'), coupon: LVM.load().coupon || null, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
-const fin = createPaper({ game: { mods: () => LVM.mods(), setMod: (id, on) => LVM.setMod(id, on), MODS: LVM.MODS, modBonus: ids => LVM.modBonus(ids), rewards: id => ({ R: LVM.REWARDS[id] || {}, got: LVM.load().got || {} }), partName: (k, i) => `${PARTS[k].name}: ${PARTS[k].tiers[i].name}`, coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
-const map = createMap({ levels: LVM, game: { partName: (k, i) => `${PARTS[k].name}: ${PARTS[k].tiers[i].name}`, go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
+const fin = createPaper({ game: { JB, jobs: () => LVM.load().jobs || [], slots: () => LVM.load().slots || 2,
+  takeJob: kind => { const S = LVM.load(), slots = S.slots || 2; S.jobs ||= []; if (S.jobs.some(j => j.kind === kind)) return { ok: false, msg: 'Już to masz w notesie.' }; if (S.jobs.length >= slots) return { ok: false, msg: 'Notes pełny. Najpierw załatw, co masz, albo kup większy u pani Heli.' }; const j = JB.take(kind); S.jobs.push(j); LVM.save(); return { ok: true, j }; },
+  buyNotes: () => { const S = LVM.load(), c = JB.JOBS.notes.cost; if ((S.slots || 2) >= 4) return { ok: false, msg: 'Większego notesu nie mam. Większy to już segregator.' }; if (B.points < c) return { ok: false, msg: 'Sześćdziesiąt złotych, kochanieńki. Wróć z pieniążkami.' }; B.points -= c; S.slots = (S.slots || 2) + 1; S.money = B.points; LVM.save(); return { ok: true, msg: 'Proszę bardzo, notes z twardą okładką. Teraz zmieścisz więcej spraw.' }; },
+ mods: () => LVM.mods(), setMod: (id, on) => LVM.setMod(id, on), MODS: LVM.MODS, modBonus: ids => LVM.modBonus(ids), rewards: id => ({ R: LVM.REWARDS[id] || {}, got: LVM.load().got || {} }), partName: (k, i) => partLabel(k, i), coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
+const map = createMap({ levels: LVM, game: { partName: (k, i) => partLabel(k, i), go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
 // ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
 // ghost here: his bike and him as he rides at home, moved to where he says he is (15 times a second), between the messages carried on
 // by his speed. Each player's own (his state, his bike, his camera, his aim, ...) is in a context; use(ctx) puts one in the game's
@@ -1424,5 +1455,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };

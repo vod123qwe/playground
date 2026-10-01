@@ -205,6 +205,7 @@ export function createPaper({ game }) {
     #paper .stamps { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 2px; } #paper .stamp { border: 4px double #b8483a; color: #b8483a; padding: 4px 8px; transform: rotate(var(--r)); background: rgba(184,72,58,.06); max-width: 100%; }
     #paper .stamp b { display: block; font-weight: normal; letter-spacing: 2px; } #paper .stamp span { color: #6a3a30; }
     #paper .jad { overflow: hidden; } #paper .jad .jt { display: block; font-weight: normal; font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; } #paper .jad .js { color: #6a645c; } #paper .jad .jc { color: #8e2e25; margin: 6px 0; clear: both; }
+    #paper .ad.job { background: #efe2c4; } #paper .ad.job .pt.xs { float: right; margin: 0 0 4px 8px; } #paper .ad .js { color: #6a645c; margin: 4px 0; } #paper .notes { margin-top: 12px; }
     #paper .corner p { margin-bottom: 4px; } #paper .nx { margin-bottom: 10px; } #paper .nx .cap { margin-top: 4px; }
     /* the last page: side by side, the new day on the right */
     #paper .blk.full { height: 100%; border-bottom: 0; padding: 0; margin: 0; } #paper .jt { display: grid; gap: 16px; height: 100%; } #paper .jt.three { grid-template-columns: 1fr 1.05fr 1.15fr; } #paper .jt.two { grid-template-columns: 1fr 1.1fr; }
@@ -238,7 +239,7 @@ export function createPaper({ game }) {
     #paper .legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 6px; color: #4a4540; } #paper .legend span:before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; background: var(--c); border: 2px solid #2b2723; vertical-align: -1px; }
     #paper table { width: 100%; border-collapse: collapse; } #paper td, #paper th { padding: 2px 4px; text-align: right; font-weight: normal; } #paper td:first-child, #paper th:first-child { text-align: left; } #paper th { color: #6a645c; border-bottom: 2px solid #2b2723; } #paper tr + tr td { border-top: 1px solid #c9bfa4; } #paper .rec { color: #b8483a; }
     #paper .goal { display: grid; grid-template-columns: 22px 1fr auto; gap: 6px; align-items: center; margin-bottom: 4px; } #paper .goal .stars i { width: 16px; height: 16px; }
-    #paper .ad { border: 2px solid #2b2723; padding: 6px 8px; background: #e6dcc2; } #paper .ad b { font-weight: normal; display: block; font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; margin-bottom: 2px; } #paper .ad.j { background: #f2e6c0; border-width: 4px; } #paper .ad .pr { color: #8e2e25; }
+    #paper .ad { border: 2px solid #2b2723; padding: 6px 8px; background: #e6dcc2; } #paper .ad b { font-weight: normal; display: block; font-size: 24px; line-height: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; margin-bottom: 4px; } #paper .jad .jt { line-height: 24px; } #paper .ad.j { background: #f2e6c0; border-width: 4px; } #paper .ad .pr { color: #8e2e25; }
     #paper .next .pxk { margin: 2px 0 4px; } #paper .keys2 { display: flex; gap: 8px; flex-wrap: wrap; }
     /* the keys under the paper */
     #paper .bar { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; z-index: 2; }
@@ -321,6 +322,8 @@ export function createPaper({ game }) {
           <div class="kv"><canvas data-ico="star"></canvas><b>${rec.g.n} / 3</b><small>GWIAZDKI</small></div></div><canvas class="mini" data-map="mini"></canvas><p class="more">WIĘCEJ: TWOJA TRASA ▸</p></div>`);
       if (nw[0]) B(`<p class="kick">${KICK[nw[0].kind] || 'Z MIASTECZKA'}</p><h3>${nw[0].head}</h3>${nw[0].img ? pic(nw[0].img, 'FOT. Redakcja, na miejscu zdarzenia.') : ''}<p>${nw[0].text}</p>`);
       { const I = D.iv, C = I && CAST[I.who]; if (C) { const qa = C.qa(r); B(`<p class="kick">ROZMOWA DNIA</p><h3>${C.who}</h3>${portrait(I.img)}<p class="who">${C.role}</p><blockquote>${qa[0][1]}</blockquote>${qa.map(([q, a]) => `<p class="q">${q}</p><p class="a">${a}</p>`).join('')}`, 'iv'); } }
+      if (D.jobRes?.length) { const JB = game.JB; B(`<p class="kick">Z NOTESU GAZECIARZA</p>${D.jobRes.map(q => `<p class="li">${JB.JOBS[q.kind].title}: ${q.ok ? JB.JOBS[q.kind].done + ` <span class="pr">+${q.pay} ZŁ</span>` : JB.JOBS[q.kind].fail}</p>`).join('')}`, 'brief'); }
+      for (const sh of D.shots || []) B(`<p class="kick">ZDJĘCIE CZYTELNIKA</p><h3>${sh.what.charAt(0).toUpperCase() + sh.what.slice(1)}</h3>${pic(sh.img, 'FOT. Nasz gazeciarz, na trasie.')}`);
       if (D.heard?.length) B(`<p class="kick">PODSŁUCHANE NA TRASIE</p>${D.heard.map(h => `<div class="heard">${h.img ? portrait(h.img, 'pt xs') : ''}<p>„${h.text.charAt(0) + h.text.slice(1).toLowerCase()}”</p><p class="sig">${h.name}</p></div>`).join('')}`, 'iv');
       if (D.briefs.length) B(`<p class="kick">W SKRÓCIE</p>${D.briefs.slice(0, 3).map(t => `<p class="li">${t}</p>`).join('')}`, 'brief');
       if (tz) B(`<p class="kick">JUTRO</p><h3>${tz.head}</h3>${tz.img ? pic(tz.img) : ''}<p>${tz.text}</p>${D.next.length ? `<p class="opts">DO WYBORU: ${D.next.map(x => x.name).join(' ALBO ')}</p>` : ''}`);
@@ -339,7 +342,9 @@ export function createPaper({ game }) {
       B(`<p class="kick">DROBNE I ROZMAITOŚCI</p><h2>Ogłoszenia</h2>`, 'span');
       B(`<div class="jad">${portrait(D.janusz, 'pt')}<b class="jt">WARSZTAT U JANUSZA</b><p class="js">przy głównej · otwarte od świtu · tel. 23-45</p>${jp.map(p => `<p class="li">${p.name}: <span class="pr">${p.price} ZŁ</span></p>`).join('')}
         <p class="jc">${D.coupon ? `TWÓJ KUPON: ${D.coupon.name} -${Math.round(D.coupon.pct * 100)}%` : 'ZADZWOŃ, A MOŻE COŚ UTARGUJESZ!'}</p><div class="keys2">${pxKey('ZADZWOŃ', { icon: 'phone', kind: 'gold', attrs: 'data-act="call"', nudge: true })}${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}</div></div>`, 'ad j');
-      for (const a of D.ads.filter(a => !a.j)) B(`<b>${a.t}</b>${a.d}`, 'ad');
+      { const JB = game.JB, S = { jobs: game.jobs(), slots: game.slots() }; for (const k of JB.offers(S)) { const J = JB.JOBS[k], P = JB.PERSONAS[J.giver];
+          B(`${portrait(D.faces?.[J.giver], 'pt xs')}<b>${J.title}</b>${J.ad}<p class="js">${P.name.toUpperCase()} · TEL. ${P.tel}${J.cost ? ` · ${J.cost} ZŁ` : J.pay ? ` · PŁACI ${J.pay} ZŁ` : ''}</p><div class="keys2">${pxKey('ZADZWOŃ', { icon: 'phone', attrs: `data-job="${k}"` })}</div>`, 'ad job'); } }
+      for (const a of D.ads.filter(a => !a.j).slice(0, 3)) B(`<b>${a.t}</b>${a.d}`, 'ad');
       for (const c of corners(D)) B(`<p class="kick">${c.k}</p>${c.h}`, 'corner');
       if (C) B(`<p class="kick">ANEGDOTA</p><h3>${N.head}</h3>${portrait(N.img)}<p>${N.text}</p><p class="sig">${C.who}, ${C.role}</p>`, 'iv'); }
     if (sec === 3) { const nexts = D.next.filter(x => x.id), sel = D.pick && nexts.some(x => x.id === D.pick) ? D.pick : nexts[0]?.id, ms = game.mods?.() || [], MODS = game.MODS || [], bon = game.modBonus?.(ms) || 0;
@@ -350,15 +355,17 @@ export function createPaper({ game }) {
         ${MODS.map(m => `<button class="mod ${ms.includes(m.id) ? 'on' : ''}" data-mod="${m.id}"><i></i><b>${m.t}</b><em>+${Math.round(m.bonus * 100)}%</em><span>${m.d}</span></button>`).join('')}<p class="sum">PREMIA: <b>+${Math.round(bon * 100)}%</b> ZAROBKU</p></div>`;
       const cta = `<div class="jt-cta"><p class="kick">NOWY DZIEŃ</p><h2>Dokąd jutro?</h2>${nexts.length ? nexts.map(x => `<button class="pick ${x.id === sel ? 'on' : ''}" data-pick="${x.id}"><b>${x.name}</b><span>${x.note}</span><span class="rws">${rw(x.id)}</span></button>`).join('') : '<p>Dalej jeszcze nie pojedziesz. Zdobądź gwiazdki albo powtórz odcinek.</p>'}
         <div class="go">${sel ? pxKey('RUSZAM W TRASĘ', { icon: 'play', key: 'ENTER', kind: 'gold', attrs: `data-go="${sel}"`, nudge: true }) : ''}</div><div class="keys2">${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}${pxKey('MAPA', { icon: 'map', attrs: 'data-act="map"' })}</div><p class="wallet">W PORTFELU: ${D.money} ZŁ</p></div>`;
-      const lay = cols >= 3 ? 'three' : 'two'; B(`<div class="jt ${lay}">${lay === 'three' ? tab + deal + cta : deal + cta}</div>`, 'span full'); }
+      const js = game.jobs?.() || [], sl = game.slots?.() || 2, JB = game.JB;
+      const note = `<div class="notes"><p class="kick">TWÓJ NOTES ${js.length}/${sl}</p>${js.length ? js.map(j => `<p class="li">${JB.lineOf(j)}<br><span class="cap">${JB.JOBS[j.kind].hint}</span></p>`).join('') : '<p class="cap">Pusto. Zlecenia znajdziesz w ogłoszeniach: zadzwoń.</p>'}</div>`;
+      const lay = cols >= 3 ? 'three' : 'two'; B(`<div class="jt ${lay}">${lay === 'three' ? tab.replace('</div>', '') + note + '</div>' + deal + cta : deal.replace(/<\/div>$/, '') + note + '</div>' + cta}</div>`, 'span full'); }
     return out; }
   // ---------- the phone: a call to Janusz over the paper (his printed face, what he says typed out, what you can ask) ----------
   const call = document.createElement('div'); call.className = 'call'; el.appendChild(call); let callT = 0;
   function say(t, opts) { const sayE = call.querySelector('.say'); clearInterval(callT); let n = 0; sayE.textContent = ''; callT = setInterval(() => { n += 2; sayE.textContent = t.slice(0, n); if (n >= t.length) clearInterval(callT); }, 30);
     call.querySelector('.opts').innerHTML = (opts || []).map(([lab, act, gold]) => pxKey(lab, { kind: gold ? 'gold' : '', attrs: `data-c="${act}"` })).join('');
-    call.querySelectorAll('[data-c]').forEach(b => b.onclick = () => callAct(b.dataset.c)); }
+    if (!call.onclick) call.querySelectorAll('[data-c]').forEach(b => b.onclick = () => callAct(b.dataset.c)); }
   const MENU = () => [['Co polecasz na jutro?', 'tip'], ['Masz coś taniej?', 'deal'], ['Jak się pan ma?', 'how'], ['Opowiedz coś', 'story'], ['Wpadnę do warsztatu', 'shop'], ['Na razie, panie Januszu', 'bye', true]];
-  function callJanusz() { game.sound?.('ui'); call.innerHTML = `<div class="phone"><div class="ph-h"><i class="ic" style="--ic: var(--ic-phone)"></i><b>WARSZTAT U JANUSZA</b><span>TEL. 23-45</span></div><div class="ph-b">${portrait(D.janusz, 'pt big')}<div><p class="ring">DRYŃ... DRYŃ...</p><p class="say"></p></div></div><div class="opts"></div></div>`;
+  function callJanusz() { game.sound?.('ui'); call.onclick = null; call.innerHTML = `<div class="phone"><div class="ph-h"><i class="ic" style="--ic: var(--ic-phone)"></i><b>WARSZTAT U JANUSZA</b><span>TEL. 23-45</span></div><div class="ph-b">${portrait(D.janusz, 'pt big')}<div><p class="ring">DRYŃ... DRYŃ...</p><p class="say"></p></div></div><div class="opts"></div></div>`;
     call.classList.add('on'); setTimeout(() => { call.querySelector('.ring').textContent = 'PAN JANUSZ:'; say(pickOf(Math.random() < .35 ? CALL.unaware : CALL.hello), MENU()); }, 900); }
   function callAct(a) { game.sound?.('ui');
     if (a === 'tip') say(CALL.tip(D.parts?.[0]?.name), MENU());
@@ -368,6 +375,13 @@ export function createPaper({ game }) {
     else if (a === 'shop') { endCall(); game.shop(); }
     else if (a === 'bye') { say(pickOf(CALL.bye), []); if (Math.random() < .45) setTimeout(() => { call.querySelector('.ring').textContent = 'SŁUCHAWKA:'; say(pickOf(CALL.hangOn), [['Odłóż słuchawkę', 'end', true]]); }, 1900); else setTimeout(endCall, 1700); }
     else if (a === 'end') endCall(); }
+  function personaCall(kind) { const JB = game.JB, J = JB.JOBS[kind], P = JB.PERSONAS[J.giver]; game.sound?.('ui');
+    call.innerHTML = `<div class="phone"><div class="ph-h"><i class="ic" style="--ic: var(--ic-phone)"></i><b>${P.name.toUpperCase()}</b><span>TEL. ${P.tel}</span></div><div class="ph-b">${portrait(D.faces?.[J.giver], 'pt big')}<div><p class="ring">DRYŃ... DRYŃ...</p><p class="say"></p></div></div><div class="opts"></div></div>`;
+    call.classList.add('on'); const j0 = JB.take(kind), pitch = (P.hello ? pickOf(P.hello) + ' ' : '') + JB.pitchOf(j0);
+    const yes = J.shop ? [[`Kupuję (${J.cost} zł)`, 'buy', true], ['Może innym razem', 'end']] : [['Biorę to zlecenie', 'take', true], ['Nie tym razem', 'end']];
+    setTimeout(() => { call.querySelector('.ring').textContent = P.name.toUpperCase() + ':'; say(pitch, yes); }, 800);
+    call.onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; const a = b.dataset.c; if (a === 'take') { const r = game.takeJob(kind); say(r.ok ? 'Umowa stoi. Zapisz w notesie i nie zawiedź.' : r.msg, [['Rozłącz się', 'end', true]]); }
+      else if (a === 'buy') { const r = game.buyNotes(); if (r.ok) D.money = game.money?.() ?? D.money; say(r.msg, [['Rozłącz się', 'end', true]]); } else if (a === 'end') { call.onclick = null; endCall(); } }; }
   function endCall() { clearInterval(callT); call.classList.remove('on'); if (open_) build(); }
   // a page drawn into a face: its head, its columns, its corners (to turn on, to turn back), its number
   function draw(f, p) { const P = pages[p];
@@ -381,6 +395,7 @@ export function createPaper({ game }) {
     f.querySelectorAll('[data-sec]').forEach(a => a.onclick = () => turn(pages.findIndex(q => q.sec === +a.dataset.sec)));
     f.querySelectorAll('[data-turn]').forEach(a => a.onclick = () => turn(page + +a.dataset.turn));
     f.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { close(); game.go(b.dataset.go); });
+    f.querySelectorAll('[data-job]').forEach(b => b.onclick = () => personaCall(b.dataset.job));
     f.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { game.setMod?.(b.dataset.mod, !b.classList.contains('on')); game.sound?.('ui'); build(); });
     f.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { D.pick = b.dataset.pick; game.sound?.('ui'); build(); });
     f.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { const a = b.dataset.act; if (a === 'shop') game.shop(); else if (a === 'call') callJanusz(); else { close(); game.map(); } }); }
