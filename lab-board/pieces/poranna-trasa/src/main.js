@@ -1209,11 +1209,11 @@ function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55
     post.position.set(x, y + H / 2, z); post.rotation.y = yaw; scene.add(post); RUN.gate.push(post);
     const foot = new THREE.Object3D(); foot.position.set(x, y, z); foot.rotation.y = yaw; RUN.hits.push(track.addHit(foot, { hx: .12, hz: .12, h: H, kind: 'hard' }, i)); }
   const yM = track.probe(S0.p.x, S0.p.z, i).y, ban = new THREE.Mesh(new THREE.BoxGeometry(w * 2 + .2, .75, .06), banM); ban.position.set(S0.p.x, yM + H - .25, S0.p.z); ban.rotation.y = yaw; scene.add(ban); RUN.gate.push(ban); }
-function startLevel(id) { const L = LVM.LEVEL(id); if (!L || L.soon) return; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
+function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
   const iJ = track.home.iJ, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   Object.assign(RUN, { t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
-  flash(`${L.name}: wyjedź z domu i dojedź do mety`); }
+  flash(`${L.name}: wyjedź z domu i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
 function goHome() { if (fin.isOpen) fin.close(); LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
 // how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
@@ -1234,8 +1234,12 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>`; }
 function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
   const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0 };
-  const rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
-  audio.play('trick'); B.v *= .3; fin.open(paperData(L, r, rec, opened)); }
+  const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
+  const got = LVM.rewardsFor(L.id, before, rec.best.stars), bonus = Math.round((B.earned || 0) * LVM.modBonus(RUN.mods || [])), inc = LVM.income();
+  for (const g of got) { if (g.cash) B.points += g.cash; if (g.part) shop.grant(g.part[0], g.part[1]); g.name = g.cash ? `${g.cash} ZŁ` : `${PARTS[g.part[0]].name}: ${PARTS[g.part[0]].tiers[g.part[1]].name}`; }
+  B.points += bonus + inc; const pay = { earned: B.earned || 0, bonus, mods: (RUN.mods || []).map(id => LVM.MODS.find(m => m.id === id)?.t).filter(Boolean), income: inc, regulars: LVM.regulars(), got };
+  LVM.save({ mods: [] }); saveCampaign();
+  audio.play('trick'); B.v *= .3; const data = paperData(L, r, rec, opened); data.pay = pay; data.money = B.points; fin.open(data); }
 // the paper's look for its photos: one of the game's own overlays (the look panel's: comic dots, pencil, riso, 1 bit), put on for the
 // shot only, then the look as it was
 const PHOTO_LOOK = { komiks: { mode: 2, fxAmt: 1, comicDot: 4, comicAngle: 45, comicInk: 1.3, comicShade: .55 }, olowek: { mode: 4, fxAmt: 1, pencilGap: 4, pencilStr: .9, pencilColor: 0, pencilPaper: 0 },
@@ -1303,8 +1307,8 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   parts.sort((a, b) => a.price - b.price);
   const issue = Object.values(LVM.load().best).reduce((n, b) => n + (b.runs || 0), 0) + 100;
   return { L, r, rec, opened, photos: { finish: fin0, news }, tease, briefs: briefs.slice(0, 3), iv, an, heard, counts, badges, janusz: faceOf('janusz'), coupon: LVM.load().coupon || null, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
-const fin = createPaper({ game: { coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
-const map = createMap({ levels: LVM, game: { go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
+const fin = createPaper({ game: { mods: () => LVM.mods(), setMod: (id, on) => LVM.setMod(id, on), MODS: LVM.MODS, modBonus: ids => LVM.modBonus(ids), rewards: id => ({ R: LVM.REWARDS[id] || {}, got: LVM.load().got || {} }), partName: (k, i) => `${PARTS[k].name}: ${PARTS[k].tiers[i].name}`, coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
+const map = createMap({ levels: LVM, game: { partName: (k, i) => `${PARTS[k].name}: ${PARTS[k].tiers[i].name}`, go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
 // ---------- two players over the network (net.js: the link; mp.js: the lobby, the ways to play, the scores). The other player is a
 // ghost here: his bike and him as he rides at home, moved to where he says he is (15 times a second), between the messages carried on
 // by his speed. Each player's own (his state, his bike, his camera, his aim, ...) is in a context; use(ctx) puts one in the game's
