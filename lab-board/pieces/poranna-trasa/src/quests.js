@@ -52,7 +52,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   }
   const mowerOf = house => stage.find(S => S.kind === 'mow' && S.house === house);
   const mowHead = S => V(S.pos.x, S.pos.y + 2.3, S.pos.z);
-  let near = null, thiefT = 60 + rnd() * 50, flashT = 0;
+  let near = null, thiefT = 60 + rnd() * 50, flashT = 0, offerT = 25 + rnd() * 20;   // (offerT: till the director gives someone a matter)
 
   // ---------- the people: who they are to you ----------
   const head = r => { if (r.head) r.head.getWorldPosition(_v); else _v.copy(r.G.position).setY(r.G.position.y + 1.4); return _v.clone().setY(_v.y + .6); };
@@ -63,7 +63,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     o = { lead: r, kind, mood: 0, cool: 0, offer: null, passT: 0, flag: {} };
     o.name = kind === 'shacks' ? 'EKIPA SPOD BECZKI' : kind === 'lump' ? 'PAN Z ŁAWKI' : kind === 'stop' ? (r.key === 'granma' ? 'PANI Z PRZYSTANKU' : 'PAN Z PRZYSTANKU') : pick(NAMES[kind] || ['SĄSIAD']);
     o.she = kind === 'granma' || (kind === 'stop' && r.key === 'granma');
-    offerFor(o, true); P.set(r, o); return o;
+    P.set(r, o); return o;                                              // (no matter yet: the director hands them out, few and ahead of you)
   }
   function offerFor(o, first) {                                         // (what matter they have, if any; not all of them have one)
     const k = o.kind; o.offer = k === 'belly' ? (rnd() < (first ? .75 : .5) ? 'szyba' : null) : (k === 'granma' || k === 'grandpa') ? (rnd() < (first ? .6 : .45) ? 'list' : null)
@@ -344,7 +344,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   // ---------- each frame ----------
   function update(dt, inp) {
     const R = R0(); flashT -= dt; byeT = Math.max(0, byeT - dt); for (const r of residents.list) person(r); stepStage(dt);
-    for (const o of new Set(P.values())) { o.cool -= dt; if (o.flag.lied) o.flag.lieT -= dt; if (o.redo && o.cool <= 0 && !o.offer) { o.redo = false; offerFor(o, false); if (o.kind === 'shacks' && o.mood <= -3) o.offer = null; } }
+    for (const o of new Set(P.values())) { o.cool -= dt; if (o.flag.lied) o.flag.lieT -= dt; o.redo = false; }
     // passing by: moods acted on (a bottle, a coin, a lie found out)
     for (const [r, o] of P) { if (o.lead !== r) continue; o.passT -= dt; const d = Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z); if (d > 11 || o.passT > 0) continue;
       if (o.flag.lied && o.flag.lieT <= 0) { o.flag.lied = false; mood(o, -4); say(r, o.she ? 'OKŁAMAŁEŚ MNIE! ON MA INNĄ!' : 'OKŁAMAŁEŚ MNIE! ONA MA INNEGO!'); o.passT = 20; continue; }   // (the lie found out)
@@ -353,6 +353,13 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
       o.passT = 8; }
     // an errand left long enough: let go (you are never made to go back for one); its giver may have another later
     for (const e of [...active]) { if (e.kind === 'thief') continue; e.age = (e.age || 0) + dt; if (e.age > 300) { remove(e); if (e.o) e.o.cool = Math.min(e.o.cool, 60); game.flash('Sprawa przepadła: ' + e.text().toLowerCase()); } }
+    // the director: now and then (about a minute apart, never more than two at once) someone ahead of you gets a matter; one you rode
+    // past is let go (another, later, further on)
+    { const fx = Math.sin(R.yaw), fz = Math.cos(R.yaw), ahead = r => { const dx = r.G.position.x - R.x, dz = r.G.position.z - R.z, l = Math.hypot(dx, dz) || 1; return [l, (dx * fx + dz * fz) / l]; };
+      let open = 0; for (const [r, o] of P) { if (o.lead !== r || !o.offer) continue; const [l, dot] = ahead(r); if (dot < -.3 && l > 45 && !busy(o.offer)) { o.offer = null; o.cool = Math.max(o.cool, 60); } else open++; }
+      if ((offerT -= dt) <= 0) { offerT = 6;
+        if (open < 2 && !talk.isOpen) { const c = []; for (const [r, o] of P) { if (o.lead !== r || o.offer || o.cool > 0) continue; const [l, dot] = ahead(r); if (l < 50 || l > 220 || dot < .3) continue; offerFor(o, true); if (o.offer && !busy(o.offer)) c.push(o); o.offer = null; }
+          if (c.length) { const o = pick(c); offerFor(o, true); while (!o.offer) offerFor(o, true); if (o.kind === 'shacks' && o.mood <= -3) o.offer = null; offerT = 50 + rnd() * 45; } } } }
     // the thief
     const th = active.find(e => e.kind === 'thief');
     if (!th) { if (R.v > 1.5 && (thiefT -= dt) <= 0) { if (!startThief()) thiefT = 6; } }
