@@ -564,3 +564,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - ekipa spod beczki chce gazet z różnych powodów: na rozpałkę, na ściółkę dla psa Komornika, na czapki na urodziny Ziutka, na zakład o krzyżówkę
 - dymki z tekstem łamią się na linijki, gdy nie mieszczą się w szerokości ekranu (telefon), a długie zostają dłużej
 - plan: tryb „czysta jazda” na wynik zapisany w docs/wizja.md
+
+## Wersja 56: sklep rowerowy
+
+- dwa warsztaty rowerowe przy trasie (szyld ROWERY · CZĘŚCI, otwarta brama, rower na stojaku); zatrzymaj się przy drzwiach i „T: SKLEP” (telefon: GADAJ); w sklepie gra czeka
+- ekran sklepu (`src/shop.js`): rower bez rowerzysty obraca się na podglądzie i od razu pokazuje część, na którą najedziesz; paski: prędkość, przyspieszenie, skręt, na trawie, pod górkę, kondycja, torba (zielone i czerwone: co by się zmieniło)
+- części (każda z kilkoma wersjami, ceną i krótkim opisem): koła (szosowe, terenowe „Kozica”, wyczynowe złote), siodełko (skórzane, żelowe „Kanapa”), kierownica (sportowe chwyty, BMX), przerzutki (3 i 7 biegów), lakier (miętowy, granatowy, cytrynowy, czarny mat), dzwonek (piesi schodzą z drogi wcześniej), lampka (policja szybciej zapomina), torba (26 i 32 gazety)
+- działają w jeździe: prędkość maksymalna i rozpędzanie, opór trawy, podjazdy, skręt, sprint (kondycja), szybkość tricków, pojemność torby (więcej się nie zmieści: „Torba pełna”)
+- fanty z zadań: sprzedaż, a dzwonek i lampka do zamontowania od ręki; dopełnienie torby gazetami (2 gazety za złotówkę)
+- części zostają do końca przejazdu (od nowa: rower fabryczny)

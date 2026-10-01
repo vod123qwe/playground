@@ -67,6 +67,9 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
   const nearStop = (i, sd, m) => stops.some(q => q.sd === sd && Math.abs(((i - q.i) % N + N + N / 2) % N - N / 2) * ds < m);
   // two police stations by the road (a lost handbag can be handed in there; later: the patrol's base)
   const posts = [.33, .7].map((f, k) => { const i = Math.round(N * f); return { i, sd: k % 2 ? 1 : -1, id: k, door: null }; });
+  // two bike shops by the road (a stop on the way: parts for the bike, papers for the bag)
+  const shops = [.11, .6].map((f, k) => { const i = Math.round(N * f); return { i, sd: k % 2 ? -1 : 1, id: k, door: null }; });
+  const nearShop = (i, sd, m) => shops.some(q => q.sd === sd && Math.abs(((i - q.i) % N + N + N / 2) % N - N / 2) * ds < m);
   const nearPost = (i, sd, m) => posts.some(q => q.sd === sd && Math.abs(((i - q.i) % N + N + N / 2) % N - N / 2) * ds < m);
   const cvT = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
   const bikeIcon = cvT(16, 16, g => { g.fillStyle = '#fff'; for (const cx of [4, 12]) for (let a = 0; a < 24; a++) g.fillRect(Math.round(cx + Math.cos(a / 24 * 6.283) * 3.2), Math.round(10 + Math.sin(a / 24 * 6.283) * 3.2), 1, 1);
@@ -474,13 +477,26 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
       put(h, q.i, q.sd * (PAVE + 4.6), 0, q.sd > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true);
       hit(h, { hx: 3.5, hz: 2.5, h: 3.5, kind: 'hard' }, q.i); zone(h, 4.6, 3.8, 0, -.5);
       q.door = h.localToWorld(new THREE.Vector3(0, 0, -3.4)); q.lamp = h.localToWorld(new THREE.Vector3(0, 3.9, -2.2));
-      show.shacks.push({ o: h, label: 'posterunek policji', note: '7 × 5 m' }); } }
+      show.shacks.push({ o: h, label: 'posterunek policji', note: '7 × 5 m' }); }
+    // the bike shops: a small workshop, its door open (a dark inside), a sign on the front, a bike on a stand outside, a tyre hung up
+    const wallS = toon('#d9c7a0'), roofS2 = toon('#5a3d27'), darkS = toon('#1d1e21'), redS = toon('#c23a2e'), steelS = toon('#9a9c9e');
+    const wordS = cvT(80, 14, g => { g.fillStyle = '#e3b83a'; g.fillRect(0, 0, 80, 14); g.fillStyle = '#17181b'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ROWERY · CZĘŚCI', 40, 7.5); });
+    for (const q of shops) { const h = new THREE.Group();
+      h.add(box(6, 3, 4.5, wallS, 0, 1.5, 0)); h.add(box(6.6, .24, 5.1, roofS2, 0, 3.12, 0)); h.add(box(2.6, 2.3, .08, darkS, -.8, 1.15, -2.27)); h.add(box(2.9, .5, .08, toon('#ffffff', { map: wordS }), -.8, 2.65, -2.3));
+      h.add(box(1.2, .9, .06, toon('#9fc0cc'), 1.9, 1.5, -2.27));
+      { const st = new THREE.Group(); st.position.set(1.7, 0, -3.1); h.add(st); for (const z of [-.5, .5]) { const w = new THREE.Mesh(new THREE.TorusGeometry(.3, .035, 8, 20), darkS); w.rotation.y = Math.PI / 2; w.position.set(0, .36, z); st.add(w); }
+        st.add(box(.05, .05, .9, redS, 0, .55, 0)); st.add(box(.05, .45, .05, redS, 0, .55, -.15)); st.add(box(.04, .06, .3, darkS, 0, .82, .45)); st.add(box(.2, .35, .05, steelS, 0, .18, 0)); }
+      { const t = new THREE.Mesh(new THREE.TorusGeometry(.32, .05, 8, 20), darkS); t.position.set(-2.6, 2.1, -2.3); h.add(t); }
+      put(h, q.i, q.sd * (PAVE + 4.4), 0, q.sd > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true);
+      hit(h, { hx: 3, hz: 2.25, h: 3.2, kind: 'hard' }, q.i); zone(h, 4, 3.6, 0, -.5);
+      q.door = h.localToWorld(new THREE.Vector3(-.8, 0, -3.3));
+      show.shacks.push({ o: h, label: 'sklep rowerowy', note: '6 × 4,5 m' }); } }
   // the paths, planned before the houses: where one leaves the pavement there is a meadow (no house there, no fence across it), and
   // its first stretch is kept clear (no tree, no tuft of grass on it)
-  const trailPlans = []; for (let i0 = Math.round(40 / ds); i0 < N - 40; i0 += Math.round((42 + nr() * 40) / ds)) { const sd = nr() < .5 ? -1 : 1; if (nearStop(i0, sd, 25) || nearPost(i0, sd, 24)) continue;
+  const trailPlans = []; for (let i0 = Math.round(40 / ds); i0 < N - 40; i0 += Math.round((42 + nr() * 40) / ds)) { const sd = nr() < .5 ? -1 : 1; if (nearStop(i0, sd, 25) || nearPost(i0, sd, 24) || nearShop(i0, sd, 22)) continue;
     trailPlans.push({ i0, sd }); zone({ position: at(i0, sd * (PAVE + 13)), rotation: { y: yawOf(i0) } }, 13, 3.2); }
   const nearTrail = (i, s, m) => trailPlans.some(t => t.sd === s && Math.abs((((i - t.i0) % N) + N + N / 2) % N - N / 2) * ds < m);
-  const lot = (i, s) => nearStop(i, s, 16) || nearPost(i, s, 15) || nearTrail(i, s, 11) ? null : rnd() < .07 ? shacks(i, s) : house(i, s);
+  const lot = (i, s) => nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11) ? null : rnd() < .07 ? shacks(i, s) : house(i, s);
   for (let i = 30; i < N - 40; i += Math.round((20 + rnd() * 10) / ds)) { lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1; tree(i, side * (PAVE + 1.6 + rnd() * 3)); if (rnd() < .25) tree(i + 7, (rnd() < .5 ? -1 : 1) * (VERGE - .6)); }
   const poles = []; for (let i = 10; i < N; i += Math.round(38 / ds)) poles.push(pole(i));
@@ -771,6 +787,6 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     return { i: best, d: off, y: cy + hAt(off, best), f: s.f, slope: (b.p.y - a.p.y) / ds, s: best * ds + t * ds };
   }
   const bins = binsO.map(b => b.getWorldPosition(new THREE.Vector3()));
-  return { group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
+  return { group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: { x: S[0].p.x, z: S[0].p.z, yaw: Math.atan2(S[0].f.x, S[0].f.z) }, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

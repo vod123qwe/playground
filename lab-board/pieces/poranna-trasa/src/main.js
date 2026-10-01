@@ -34,6 +34,7 @@ import { createHudBag } from './hudbag.js';
 import { makeBag } from './bag.js';
 import { createTalk } from './talk.js';
 import { createQuests } from './quests.js';
+import { createShop } from './shop.js';
 // people animated as if drawn, on so many frames a second (0: smoothly): each mixer keeps the time and moves on only a whole frame at
 // a time (the bike, the camera and the game itself stay smooth)
 const STEP = { fps: 0 }, FXK = { blur: 1 };   // (FXK: the look's knobs the game itself uses: how strong the sprint's blur)
@@ -122,6 +123,9 @@ const residents = createResidents({ THREE, toon, track, hud, scene });   // (peo
 const peds = createPedestrians({ THREE, toon, track }); scene.add(peds.group);
 // a word with people, and the errands that come of it (talk.js: the box; quests.js: who wants what, and what came of it)
 const talk = createTalk();
+let MOD = { top: 0, acc: 0, steer: 0, grass: 0, hill: 0, stam: 0, bag: 0, trick: 0, bell: 0, lamp: 0 };   // (what the bike's parts do: shop.js)
+const shop = createShop({ THREE, createRider: () => createRider({ THREE, ramp, toon }), game: { get money() { return B.points; }, set money(v) { B.points = Math.max(0, v); }, get papers() { return B.papers; }, set papers(v) { B.papers = v; },
+  get items() { return (B.items ||= []); }, flash: s => flash(s), onChange: (m, look) => { MOD = m; B.bagMax = 20 + m.bag; rider.setParts(look); } } });
 const money = (n, at, label) => { B.points = Math.max(0, B.points + n); hud.pop(at, label, n >= 0 ? '#efc970' : '#cf5a3e'); }; money.has = n => B.points >= n;
 const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   rider: () => foot.active ? { x: foot.me.x, z: foot.me.z, y: foot.me.y, yaw: foot.me.yaw, v: Math.hypot(foot.me.vf, foot.me.vs), foot: true } : { x: B.x, z: B.z, y: B.y, yaw: B.yaw, v: Math.abs(B.v), foot: false },
@@ -130,7 +134,7 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   flash: s => flash(s), fame: n => { B.fame = Math.max(0, (B.fame || 0) + n); },
   bottle: () => { if (foot.active || B.crash) return; hud.impact(rider.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'BRZDĘK!'); B.v *= .6; B.rattled = (B.rattled || 0) + 1.5; shake = Math.max(shake, .25); },
   grudgeAt: (at, line, kind) => foot.grudgeAt(at, line, kind),
-  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick), scene, traffic, fameNow: () => B.fame || 0, endRun: msg => { flash(msg); resetGame(); },
+  dropBag: (at, onPick) => dropLoot(at, 'bag', onPick), scene, openShop: () => shop.open(), lamp: () => MOD.lamp > 0, traffic, fameNow: () => B.fame || 0, endRun: msg => { flash(msg); resetGame(); },
   talkKey: () => touch.on ? 'GADAJ' : (foot.active ? keysOf('talk') : keysOf('chat')) + ': GADAJ' } });
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
@@ -233,7 +237,7 @@ addEventListener('mousemove', e => { if (mouse.mh) return; mouse.nx = e.clientX 
   if (document.pointerLockElement || (!menu.open && !asking)) { mouse.dx += e.movementX; mouse.dy += e.movementY; if (foot.active) mouse.used = true; } });
 document.addEventListener('mouseleave', () => { mouse.inside = false; });
 document.addEventListener('pointerlockerror', () => { if (!mouse.failed) { mouse.failed = true; flash('Mysz: ruszaj nią, a przy krawędzi ekranu obracasz się dalej'); } });
-addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button')) return;
+addEventListener('mousedown', e => { if (menu.open || asking || talk.isOpen || shop.isOpen || e.target.closest?.('#styl, #stylBtn, #pix, #ink, #talk, button')) return;
   lockPointer(); if (foot.active) mouse.used = true;
   if (e.button === 0) { mouse.l = true; mouse.lh = true; } if (e.button === 2) { mouse.r = true; mouse.rh = true; }
   if (e.button === 1) { e.preventDefault(); if (e.detail >= 2) { camUser.dist = 1; camUser.tilt = 0; camUser.yaw = 0; saveCam(); flash('Kamera: jak była'); } else mouse.mh = true; } });
@@ -424,16 +428,16 @@ function ride(dt, inp) {
   const off = Math.abs(q.d) > track.PAVE;
   // the push: strong from standing, falling off towards 9 m/s (a little more with Shift); the brake; the air, the tyres, the grass; the hill; a dog
   // (B.v is signed: held at a stop, the brake walks him backwards, slowly)
-  const push = inp.pedal * (inp.sprint ? 1.35 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) - Math.max(0, B.v) * (inp.sprint ? .33 : .36));
+  const accK = 1 + MOD.acc, topK = 1 + MOD.top, push = inp.pedal * (inp.sprint ? 1.35 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) * accK - Math.max(0, B.v) * (inp.sprint ? .33 : .36) * accK / topK);   // (the parts: shop.js)
   const back = inp.brake > .1 && B.v < .15 && inp.pedal < .1, brk = B.v > .05 ? inp.brake * 6.5 : 0;
-  let a = push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
+  let a = push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * Math.max(.2, 1 + MOD.grass) * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 * (slope > 0 ? 1 - MOD.hill : 1) - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
   if (inp.pedal < .05 && !B.air && Math.abs(B.v) < 1.3) a -= Math.sign(B.v) * (1.2 - Math.abs(B.v) * .7);   // (coasting slowly: the tyres drag him to a stop)
   if (back) a = -1.6 * inp.brake - .6 * B.v;
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
   const v0 = B.v; B.v = Math.max(-1.4, B.v + a * dt); if (!back && inp.pedal < .05 && !B.air && (Math.abs(B.v) < .1 || B.v < 0 || (v0 !== 0 && Math.sign(B.v) !== Math.sign(v0)))) B.v = 0;   // (crawling: he stops, a foot on the ground, on a hill too; back only if he walks it back)
   // steering (hardly any in the air)
   const sIn = Math.sign(inp.steer) * Math.pow(Math.abs(inp.steer), 1.4);   // (a stick: small pushes finer; a key is all or nothing anyway)
-  const lock = .62 / (1 + Math.abs(B.v) * .24), want = sIn * lock * (B.air ? .25 : 1), outOf = Math.abs(want) < Math.abs(B.steer) || Math.sign(want) !== Math.sign(B.steer);
+  const lock = .62 * (1 + MOD.steer) / (1 + Math.abs(B.v) * .24), want = sIn * lock * (B.air ? .25 : 1), outOf = Math.abs(want) < Math.abs(B.steer) || Math.sign(want) !== Math.sign(B.steer);
   const rate = (outOf ? 4.6 : 2.4 + 1.6 * (1 - Math.min(1, Math.abs(B.steer) / Math.max(.05, lock)))) * dt;   // (in: quick at first, easing as it comes to full lock; out: quicker)
   B.steer += THREE.MathUtils.clamp(want - B.steer, -rate, rate);
   B.yaw += -B.v * Math.tan(B.steer) / L * dt;
@@ -573,7 +577,7 @@ function stepDogs(dt, inp) {
       if (need > base * 1.1) T.pulled = true; T.p = Math.min(1, T.p + rate * dt); } }
   if (inp.kick && B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)) { const big = B.airRamp === 'big', st = inp.steer, left = airLeft();
     if (left > .2) { if (B.trick) { B.done = [...(B.done || []), B.trick]; } else B.done = [];
-      const fit = (lo, hi) => THREE.MathUtils.clamp(left * .8, lo, hi), mk = o => ({ ...o, t: 0, p: 0, pulled: false });   // (its pace: most of what is left of the flight)
+      const fit = (lo, hi) => THREE.MathUtils.clamp(left * .8, lo, hi) * (1 - MOD.trick), mk = o => ({ ...o, t: 0, p: 0, pulled: false });   // (its pace: most of what is left of the flight)
       B.trick = Math.abs(st) > .3 ? mk({ kind: 'spin', dir: -Math.sign(st), dur: fit(.34, big ? .9 : .7), pts: 3, name: '360' })
         : big && inp.pedal > .3 ? mk({ kind: 'flip', dir: 1, dur: fit(.5, 1.1), pts: 6, name: 'SALTO' })
         : mk({ kind: 'table', dir: Math.random() < .5 ? -1 : 1, dur: fit(.3, .7), pts: 2, name: 'STÓŁ' });
@@ -700,7 +704,7 @@ function stamina(dt, inp) {
   const want = inp.sprint && inp.pedal > .1 && B.v > 1.5 && !B.crash;
   if (B.spent && B.stam > .45) B.spent = false;
   const use = want && !B.spent;
-  if (use) { B.stam = Math.max(0, B.stam - dt / 5.5); B.rest = 0; if (B.stam === 0) { B.spent = true; flash('Zadyszka!'); } }
+  if (use) { B.stam = Math.max(0, B.stam - dt / (5.5 * (1 + MOD.stam))); B.rest = 0; if (B.stam === 0) { B.spent = true; flash('Zadyszka!'); } }
   else { B.rest = (B.rest || 0) + dt; if (B.rest > .7) B.stam = Math.min(1, B.stam + dt / (B.spent ? 5 : 3.5)); }
   inp.sprint = use; if (B.spent) inp.pedal *= .8;
   const tired = B.spent ? 1 : use ? Math.max(0, Math.min(1, 1 - B.stam / .35)) : Math.max(0, B.tired - dt * .8);
@@ -719,7 +723,7 @@ function step(dt, inp) {
   if (foot.active) return stepFoot(dt, inp);
   stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor });
-  { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash });   // someone walking: ridden into, over he goes
+  { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
   { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16, road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
     if (ev === 'shout') hud.rant(granny.mouth, 'NIE PO SIONYM!', true);
@@ -849,7 +853,7 @@ function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : n
 function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
-  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
+  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
   hud.draw(dt, project, { bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks(), quests: quests.tracker(), projEdge: projectEdge, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
@@ -870,6 +874,7 @@ const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../',
 const menu = createMenu({ hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
+  if (shop.isOpen && shop.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
   if (talk.isOpen && talk.key(e)) { if (!talk.isLight) keys.clear(); e.stopImmediatePropagation(); return; }   // (a talk open: its keys (a light one: just the numbers))
   if (menu.open && !asking) { menu.key(e); e.stopImmediatePropagation(); keys.clear(); return; }
   if (!asking && e.code === 'Escape') { menu.show('pause'); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
@@ -903,7 +908,7 @@ addEventListener('keydown', e => { if (e.repeat) return;
     else if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Tab'].includes(e.code)) hud.askSel = 1 - hud.askSel; else if (e.code === 'Enter' || e.code === 'Space') answer(hud.askSel === 0); e.preventDefault(); } });
 function resetGame() {
   if (foot.active) foot.stop(); foot.reset(); B.parked = false; rider.boy.visible = true;
-  granny.reset(); quests.reset(); rider.root.visible = true; B.rattled = 0;
+  granny.reset(); quests.reset(); shop.reset(); rider.root.visible = true; B.rattled = 0;
   rider.ragdollOff();
   const q = track.probe(track.start.x, track.start.z, 0);
   Object.assign(B, { x: track.start.x, z: track.start.z, y: q.y, vy: 0, air: false, gPrev: q.y, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
@@ -926,17 +931,18 @@ function attract(dt) {                                                  // (the 
   sun.position.copy(fly.pos).addScaledVector(SUN, 60); sun.target.position.copy(fly.pos); sun.target.updateMatrixWorld(); }
 function frame(now) {
   const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;   // (the first frame can be stamped before the start)
-  if ((menu.open || asking || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
-  document.body.classList.toggle('walk', !menu.open && !asking && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
-  if (!asking && !menu.open && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
+  if ((menu.open || asking || shop.isOpen || (talk.isOpen && !talk.isLight)) && document.pointerLockElement) { mouse.hadLock = false; document.exitPointerLock(); }   // (the menu wants the pointer)
+  document.body.classList.toggle('walk', !menu.open && !asking && !shop.isOpen && !(talk.isOpen && !talk.isLight));                          // (in the game: no cursor; the menu and the question have one)
+  if (!asking && !menu.open && !shop.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
   drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
-  talkCam(dt); hudBag.update(dt, B.papers, 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); px.render(scene, camera, hudBag); drawHud(dt);
+  talkCam(dt); if (B.papers > (B.bagMax || 20)) { B.papers = B.bagMax || 20; if (!(B.fullT > 0)) { flash('Torba pełna'); B.fullT = 4; } } B.fullT = (B.fullT || 0) - dt;   // (no more than the bag holds)
+  hudBag.update(dt, B.papers, B.bagMax || 20, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); px.render(scene, camera, hudBag); drawHud(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, scene, camera, hudBag, quests, talk, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, scene, camera, hudBag, quests, talk, shop, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };
