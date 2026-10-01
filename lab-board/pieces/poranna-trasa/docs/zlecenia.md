@@ -2,6 +2,10 @@
 
 Stan: projekt z Jarkiem (2026-10-01), budowane paczkami. Zasada: na trasie dynamika, między rundami głębia (gazeta, telefony, wybory), która ma odbicie na trasie.
 
+## Zasada humoru (Jarek)
+
+Nie przepalać gagów: kwestie losowane jak z talii (bez powtórek, dopóki nie padną wszystkie; nie dwa razy z rzędu), scenki Janusza najwyżej raz na odcinek i nie w dwóch odcinkach z rzędu, różne zakończenia tej samej sytuacji. Nowe gagi dopisywać jako kolejne warianty, nie wzmacniać jednego.
+
 ## Persony (każda z portretem, charakterem, telefonem i funkcjami)
 
 | Persona | Kim jest | Co robi w grze |

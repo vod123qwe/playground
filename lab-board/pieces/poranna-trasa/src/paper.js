@@ -13,6 +13,10 @@
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const DAYS = ['NIEDZIELA', 'PONIEDZIAŁEK', 'WTOREK', 'ŚRODA', 'CZWARTEK', 'PIĄTEK', 'SOBOTA'], MONTHS = ['STYCZNIA', 'LUTEGO', 'MARCA', 'KWIETNIA', 'MAJA', 'CZERWCA', 'LIPCA', 'SIERPNIA', 'WRZEŚNIA', 'PAŹDZIERNIKA', 'LISTOPADA', 'GRUDNIA'];
 const pickOf = (a, r = Math.random) => a[r() * a.length | 0];
+// Janusz on the phone: each of his sets of lines a deck (none again till all said, not twice running; kept across reloads)
+const DK = (() => { try { return JSON.parse(localStorage.getItem('pt.decks2') || '{}'); } catch { return {}; } })();
+function deal(key, arr) { let d = DK[key]; if (!Array.isArray(d) || !d.length || d.some(i => i >= arr.length)) { d = arr.map((_, i) => i).sort(() => Math.random() - .5); if (d.length > 1 && d[d.length - 1] === DK['l:' + key]) d.unshift(d.pop()); }
+  const i = d.pop(); DK[key] = d; DK['l:' + key] = i; try { localStorage.setItem('pt.decks2', JSON.stringify(DK)); } catch { } return arr[i]; }
 const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? few : many;
 
 // the local news, each with the place its photo is taken at (a label of the track's shacks, or home)
@@ -128,9 +132,9 @@ export const CALL = {
   how: ['Dobrze. Wczoraj ktoś mi powiedział na ulicy kochaniutki. Takim głosem, że mi się szprychy powyginały. Nieważne.', 'Jak ja się mam? Jakbyś spotkał po latach kogoś, komu kiedyś sprowadzałeś części. Znaczy, ona tobie. Nieważne, dobrze się mam.', 'Jak ja się mam? Jak łańcuch po zimie: zgrzytam, ale jadę. Wczoraj zrobiłem sto kilometrów przed śniadaniem. No, może dziesięć. Ale pod wiatr.', 'Dobrze, tylko kolano mi skrzypi. Lekarz mówi: panie Januszu, mniej roweru. Ja mu na to: panie doktorze, mniej doktora.',
     'Kiedyś to były rowery. Stal, chłopie. Spadłeś, rower cały, ty w gipsie. A teraz? Wszystko plastik. I ludzie z plastiku.', 'Nie ma złej pogody, młody, są tylko słabe opony. I słabi kolarze. Ale ty nie jesteś słaby. Jeszcze.',
     'Świetnie! Ubrałem dziś nowe obcisłe spodenki. Sąsiad mówi, że wyglądam jak parówka. Aerodynamiczna parówka, mówię mu.'],
-  tip: p => p ? pickOf([`Na jutro? Weź ${p.toLowerCase()}. Mówię ci, różnica jak między składakiem a kolarzówką.`, `${p}. Bez tego nawet nie wyjeżdżaj. Ja bez tego nie wyjeżdżałem nawet do kiosku.`, `Słuchaj starego: ${p.toLowerCase()}. Zawodowcy tak robią. Ja tak robiłem. Ja byłem zawodowcem. Prawie.`])
-    : pickOf(['Masz już wszystko, co trzeba. Teraz tylko nogi i głowa. Z głową może być gorzej.', 'Rower masz jak z katalogu. Teraz tylko trenuj. Pięćset przysiadów i surowe jajko. Tak robiłem przed każdym wyścigiem.']),
-  coupon: c => pickOf([`Dobra, dla stałego klienta: ${c.name.toLowerCase()} taniej o ${Math.round(c.pct * 100)} procent. Kupon czeka w warsztacie, tylko nie mów nikomu.`, `Masz szczęście, dziś mam gest. ${c.name} o ${Math.round(c.pct * 100)} procent taniej. Mietek, zapisz! Mietek nie zapisał. Ja zapamiętam.`,
+  tip: p => p ? deal('tip', [`Na jutro? Weź ${p.toLowerCase()}. Mówię ci, różnica jak między składakiem a kolarzówką.`, `${p}. Bez tego nawet nie wyjeżdżaj. Ja bez tego nie wyjeżdżałem nawet do kiosku.`, `Słuchaj starego: ${p.toLowerCase()}. Zawodowcy tak robią. Ja tak robiłem. Ja byłem zawodowcem. Prawie.`])
+    : deal('tipNone', ['Masz już wszystko, co trzeba. Teraz tylko nogi i głowa. Z głową może być gorzej.', 'Rower masz jak z katalogu. Teraz tylko trenuj. Pięćset przysiadów i surowe jajko. Tak robiłem przed każdym wyścigiem.']),
+  coupon: c => deal('coupon', [`Dobra, dla stałego klienta: ${c.name.toLowerCase()} taniej o ${Math.round(c.pct * 100)} procent. Kupon czeka w warsztacie, tylko nie mów nikomu.`, `Masz szczęście, dziś mam gest. ${c.name} o ${Math.round(c.pct * 100)} procent taniej. Mietek, zapisz! Mietek nie zapisał. Ja zapamiętam.`,
     `Wiesz co, za tę gazetę o tobie dam ci rabat. ${Math.round(c.pct * 100)} procent na ${c.name.toLowerCase()}. Ale jak mnie opiszesz w wywiadzie, to piszesz, że jestem wysoki.`]),
   couponHad: ['Kupon już masz, młody. Jeden na raz, bo zbankrutuję.', 'Drugi kupon? Ja nie jestem bank, ja jestem warsztat. Najpierw wykorzystaj pierwszy.', 'Mietek mówi, że już masz kupon. Mietek nic nie zapisuje, ale to akurat pamięta.'],
   // his stories: every one true, he says
@@ -366,14 +370,14 @@ export function createPaper({ game }) {
     if (!call.onclick) call.querySelectorAll('[data-c]').forEach(b => b.onclick = () => callAct(b.dataset.c)); }
   const MENU = () => [['Co polecasz na jutro?', 'tip'], ['Masz coś taniej?', 'deal'], ['Jak się pan ma?', 'how'], ['Opowiedz coś', 'story'], ['Wpadnę do warsztatu', 'shop'], ['Na razie, panie Januszu', 'bye', true]];
   function callJanusz() { game.sound?.('ui'); call.onclick = null; call.innerHTML = `<div class="phone"><div class="ph-h"><i class="ic" style="--ic: var(--ic-phone)"></i><b>WARSZTAT U JANUSZA</b><span>TEL. 23-45</span></div><div class="ph-b">${portrait(D.janusz, 'pt big')}<div><p class="ring">DRYŃ... DRYŃ...</p><p class="say"></p></div></div><div class="opts"></div></div>`;
-    call.classList.add('on'); setTimeout(() => { call.querySelector('.ring').textContent = 'PAN JANUSZ:'; say(pickOf(Math.random() < .35 ? CALL.unaware : CALL.hello), MENU()); }, 900); }
+    call.classList.add('on'); setTimeout(() => { call.querySelector('.ring').textContent = 'PAN JANUSZ:'; say((Math.random() < .35 ? deal('unaware', CALL.unaware) : deal('hello', CALL.hello)), MENU()); }, 900); }
   function callAct(a) { game.sound?.('ui');
     if (a === 'tip') say(CALL.tip(D.parts?.[0]?.name), MENU());
-    else if (a === 'deal') { const c = game.coupon?.(D.parts?.[0]?.k); if (c) { D.coupon = c; say(CALL.coupon(c), MENU()); } else say(pickOf(CALL.couponHad), MENU()); }
-    else if (a === 'how') say(pickOf(CALL.how), MENU());
-    else if (a === 'story') say(pickOf(CALL.story), MENU());
+    else if (a === 'deal') { const c = game.coupon?.(D.parts?.[0]?.k); if (c) { D.coupon = c; say(CALL.coupon(c), MENU()); } else say(deal('couponHad', CALL.couponHad), MENU()); }
+    else if (a === 'how') say(deal('how', CALL.how), MENU());
+    else if (a === 'story') say(deal('story', CALL.story), MENU());
     else if (a === 'shop') { endCall(); game.shop(); }
-    else if (a === 'bye') { say(pickOf(CALL.bye), []); if (Math.random() < .45) setTimeout(() => { call.querySelector('.ring').textContent = 'SŁUCHAWKA:'; say(pickOf(CALL.hangOn), [['Odłóż słuchawkę', 'end', true]]); }, 1900); else setTimeout(endCall, 1700); }
+    else if (a === 'bye') { say(deal('bye', CALL.bye), []); if (Math.random() < .45) setTimeout(() => { call.querySelector('.ring').textContent = 'SŁUCHAWKA:'; say(deal('hangOn', CALL.hangOn), [['Odłóż słuchawkę', 'end', true]]); }, 1900); else setTimeout(endCall, 1700); }
     else if (a === 'end') endCall(); }
   function personaCall(kind) { const JB = game.JB, J = JB.JOBS[kind], P = JB.PERSONAS[J.giver]; game.sound?.('ui');
     call.innerHTML = `<div class="phone"><div class="ph-h"><i class="ic" style="--ic: var(--ic-phone)"></i><b>${P.name.toUpperCase()}</b><span>TEL. ${P.tel}</span></div><div class="ph-b">${portrait(D.faces?.[J.giver], 'pt big')}<div><p class="ring">DRYŃ... DRYŃ...</p><p class="say"></p></div></div><div class="opts"></div></div>`;
