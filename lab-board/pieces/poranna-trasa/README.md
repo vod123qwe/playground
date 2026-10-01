@@ -736,3 +736,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - wjazd z uliczki w trasę: zaokrąglone narożniki z krawężnikiem, chodnik trasy przechodzi łukiem w chodnik uliczki, przerywana linia krawędzi, „ząbki” ustąp pierwszeństwa i znak; bez trawy i liści na środku wjazdu
 - ujęcie startowe: kamera z przodu pokazuje chłopaka na tle domu i garażu, a gdy ruszy, płynnie obiega go do tyłu
 - poprawki: podwórko nie jest już „poza mapą” (granica 28 m od trasy nie wypycha z osiedla, babka nie okrada przed domem); kałuże nie wywalają gry; dźwięk odporny na błędne położenie
+
+## Wersja 80: wygodne rzucanie, seria, poziomy
+
+- **szybki rzut**: krótkie kliknięcie (LPM/PPM, Q/E, LB/RB) samo posyła gazetę do najlepszego celu po tej stronie: skrzynki prenumeratora (najlepiej) albo przed jego drzwi; gazeta leci łukiem prosto w cel. Cel w zasięgu kliknięcia ma nad sobą migającą ramkę i podpis przycisku
+- **przytrzymanie** działa jak dotąd (siła i celowanie myszą), ale gdy kółko upadku jest blisko celu, przykleja się do niego i gazeta tam doleci
+- jedna gazeta w locie do domu blokuje drugi rzut w ten sam dom; doręczenie do skrzynki zalicza cały dom (nie da się już dostać punktów drugi raz z ganku)
+- **seria**: kolejni prenumeratorzy obsłużeni bez błędu; co 3 punkty liczą się razy więcej (x2, x3, x4). Serię przerywa zły tytuł, dom bez prenumeraty, gazeta rzucona obok czekającego domu albo minięcie prenumeratora bez gazety. Licznik pod licznikiem rowerowym
+- **poziomy co kilometr** (do 6): na starcie tylko 2 auta i autobus, z każdym kilometrem dochodzi auto, ruch trochę przyspiesza, psy są czujniejsze; awans ogłaszany
+- mniej zaczepek: mieszkańcy wołają z bliska, rzadziej, nie wszyscy i nie jeden po drugim
+- jeden salon rowerowy na pętli zamiast dwóch
+- okolice domu: kosz do koszykówki nad garażem, klasy kredą na podjeździe, żywopłoty między ogrodami, ławka i kosz na rondku, tabliczka „UL. PORANNA”

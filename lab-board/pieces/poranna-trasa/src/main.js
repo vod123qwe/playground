@@ -148,7 +148,7 @@ function speakerAt(at) { if (!at) return 'voice'; const d = (x, z) => Math.hypot
   for (const p of peds.list) { const l = d(p.x, p.z); if (l < bd) { bd = l; best = PED_V[p.P.key] || 'voice'; } }
   for (const c of quests.policeCars()) { const l = d(c.g.position.x, c.g.position.z); if (l < Math.max(bd, 4)) { bd = l; best = 'police'; } }
   for (const g of quests.gangTargets) { const l = d(g.x, g.z); if (l < bd) { bd = l; best = 'gang'; } }
-  for (const t of traffic.list) { const l = d(t.car.group.position.x, t.car.group.position.z); if (l < Math.max(bd, 3)) { bd = l; best = 'voice'; } }
+  for (const t of traffic.list) { if (t.off) continue; const l = d(t.car.group.position.x, t.car.group.position.z); if (l < Math.max(bd, 3)) { bd = l; best = 'voice'; } }
   for (const s of track.shops || []) if (s.door && d(s.door.x, s.door.z) < 4.5 && bd > 1) best = 'janusz';
   return best; }
 hud.hooks.onSay = (text, at) => { const k = speakerAt(at); audio.say(text, k, { ...where(at), id: k }); };
@@ -246,7 +246,7 @@ const clashes = (id, code) => { const A = ACTIONS.find(a => a.id === id); return
 // what each is, where (the menu's page and the help window list them so)
 const SECTIONS = [
   { title: 'NA ROWERZE', items: [['pedal', 'PEDAŁUJ'], ['brake', 'HAMUJ (NA POSTOJU: COFAJ)'], ['left', 'SKRĘĆ W LEWO'], ['right', 'SKRĘĆ W PRAWO'], ['sprint', 'SZYBCIEJ'],
-    ['throwL', 'RZUT W LEWO (TRZYMAJ: SIŁA, PUŚĆ: RZUT)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
+    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
     ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['bell', 'DZWONEK (GDY GO MASZ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
@@ -335,22 +335,36 @@ const aim = (() => { const G = new THREE.Group(), dots = [];   // (the dots: few
 function throwVel(p, side, c = {}) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, a = (c.ay || 0) * .52, sp = (2.6 + p * 9) * (1 + (c.ax || 0) * .25);
   const dx = rx * out * Math.cos(a) + fx * Math.sin(a), dz = rz * out * Math.cos(a) + fz * Math.sin(a);
   return new THREE.Vector3(fx * B.v * .9 + dx * sp, 1.9 + p * 3.3, fz * B.v * .9 + dz * sp); }
+// what a paper can be sent to on a side: a subscriber's mailbox (best), the spot before its door; ahead or just level, out on that side,
+// within reach. The current title's subscribers first. → [{ p (on the ground), door }], the best first
+function throwTargets(side) { const now = performance.now(), fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, cur = curTitle(), list = [];
+  const consider = (x, z, val, d) => { const dx = x - B.x, dz = z - B.z, fw = dx * fx + dz * fz, lat = (dx * rx + dz * rz) * out, l = Math.hypot(dx, dz); if (fw < -1.5 || fw > 15 || lat < .8 || l > 16) return;
+    list.push({ p: new THREE.Vector3(x, track.probe(x, z, B.hint).y, z), door: d, score: l - val - (d.sub === cur ? 6 : 0) }); };
+  for (const mb of track.mailboxes) { if (mb.done) continue; const w = mb.o.position; if (Math.abs(w.x - B.x) + Math.abs(w.z - B.z) > 24) continue; const hi = mb.house ?? (mb.house = nearestDoor(w)), d = track.doors[hi]; if (!d || !d.sub || d.done || now - (d.pending || -9e9) < 2500) continue;
+    const l = Math.hypot(B.x - w.x, B.z - w.z) || 1; consider(w.x + (B.x - w.x) / l * .45, w.z + (B.z - w.z) / l * .45, 3, d); }   // (just before it, on his side: it drops in)
+  for (const d of track.doors) { if (!d.sub || d.done || now - (d.pending || -9e9) < 2500 || Math.abs(d.p.x - B.x) + Math.abs(d.p.z - B.z) > 24) continue; consider(d.p.x - d.n.x * 1.3, d.p.z - d.n.z * 1.3, 0, d); }
+  return list.sort((a, b) => a.score - b.score); }
+const hot = { L: null, R: null };   // (where a tap would send it, each side: shown over the house)
+function stepHot() { hot.L = hot.R = null; if (foot.active || B.crash || !B.papers) return; hot.L = throwTargets(1)[0] || null; hot.R = throwTargets(-1)[0] || null; }
 function stepAim() {                                                    // (while a throw is held: where it would go)
   aim.on = !!B.charge && !foot.active && !B.crash; aim.G.visible = aim.on; if (!aim.on) return;
   const side = B.charge.side, p = B.charge.p, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side;
   const pos = new THREE.Vector3(B.x - rx * out * -.3, B.y + 1.25, B.z - rz * out * -.3), v = throwVel(p, side, B.charge), h = 1 / 30;
   let k = 0, n = 0, land = null; for (; n < 90; n++) { v.y -= g * h; pos.addScaledVector(v, h); const gy = track.probe(pos.x, pos.z, B.hint).y; if (pos.y <= gy) { pos.y = gy; land = pos; break; } if (n % 3 === 1 && k < aim.dots.length) aim.dots[k++].position.copy(pos); }
   for (let j = 0; j < aim.dots.length; j++) aim.dots[j].visible = j < k;
-  if (land) { aim.ring.visible = true; aim.ring.position.copy(land).setY(land.y + .04); aim.at.copy(land); const good = track.mailboxes.some(mb => !mb.done && mb.o.position.distanceTo(land) < 1.6) || track.doors.some(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - land.x, d.p.z - d.n.z * 1.3 - land.z) < 1.6);
+  // (near enough a target: the ring takes to it, and the paper will go there)
+  aim.snap = aim.snapDoor = null; if (land) { const near = throwTargets(side).filter(t => Math.hypot(t.p.x - land.x, t.p.z - land.z) < 2.6).sort((a, b) => a.p.distanceToSquared(land) - b.p.distanceToSquared(land))[0]; if (near) { aim.snap = near.p; aim.snapDoor = near.door; land = near.p.clone(); } }
+  if (land) { aim.ring.visible = true; aim.ring.position.copy(land).setY(land.y + .04); aim.at.copy(land); const good = !!aim.snap || track.mailboxes.some(mb => !mb.done && mb.o.position.distanceTo(land) < 1.6) || track.doors.some(d => !d.done && Math.hypot(d.p.x - d.n.x * 1.3 - land.x, d.p.z - d.n.z * 1.3 - land.z) < 1.6);
     const col = good ? '#7fae58' : '#efc970'; aim.ring.material.color.set(col); aim.ring.children[1].children[1].material.color.set(col); const k2 = (.9 + Math.sin(performance.now() / 120) * .1) * Math.max(1, camera.position.distanceTo(land) / 8); aim.ring.scale.setScalar(k2);   // (the farther, the bigger: about the same on the screen)
     const ar = aim.ring.children[1]; ar.position.y = 1.1 + Math.sin(performance.now() / 160) * .15; ar.rotation.y += .05; } else aim.ring.visible = false; }
 function throwing(dt, inp) {
   if (B.crash) { B.charge = null; return; }
   const held = inp.holdL ? 1 : inp.holdR ? -1 : 0;
-  if (!B.charge && held && B.papers > 0 && !rider.throwing) B.charge = { side: held, p: 0 };
-  if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge;
+  if (!B.charge && held && B.papers > 0 && !rider.throwing) B.charge = { side: held, p: 0, t: 0 };
+  if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge; c.t += dt;
     c.ay = THREE.MathUtils.clamp((c.ay || 0) - (inp.dy || 0) * .005, -1, 1); c.ax = THREE.MathUtils.clamp((c.ax || 0) - (inp.dx || 0) * .005 * c.side, -1, 1);
-    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { B.throwP = B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; audio.play('throw', { vol: .8 }); } B.charge = null; } }
+    const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { const tap = c.t < .22, T0 = tap ? (c.side > 0 ? hot.L : hot.R) : null;   // (a tap: straight to the best on that side; held: where it was aimed, taken to a target near it)
+      B.throwAt = tap ? T0?.p || null : aim.snap || null; B.throwDoor = tap ? T0?.door : aim.snapDoor; B.throwP = tap && !B.throwAt ? Math.max(.45, B.charge.p) : B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; audio.play('throw', { vol: .8 }); } B.charge = null; } }
 }
 const paperG = new THREE.CylinderGeometry(.035, .035, .26, 10), paperM = toon('#ece5d0'), bandM = toon('#b3372c');
 // ---------- the titles: papers (made up), each house takes one or none; the bag holds some of each, X picks which is thrown. The run starts
@@ -378,20 +392,36 @@ function assignSubs(keepNear) { const A = ACT();
     const b = new THREE.Mesh(new THREE.BoxGeometry(.34, .24, .03), toon('#f6f3ea')); pl.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(.28, .08, .035), bandOf[d.sub]); c.position.y = .04; pl.add(c);
     pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; } }
 assignSubs();
+// the streak: subscribers served one after another (no wrong ones, none passed by, no paper thrown wide of one): every 3 more, the points
+// count once more (to x4); shown under the speed
+const streakMult = () => Math.min(4, 1 + Math.floor((B.streak || 0) / 3));
+const streakEl = document.createElement('div'); streakEl.id = 'streak'; document.body.appendChild(streakEl);
+{ const st = document.createElement('style'); st.textContent = `#streak { position: fixed; left: 16px; top: 128px; z-index: 3; pointer-events: none; font: 700 11px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: .08em; color: #17181b; background: #9fd27a; padding: 4px 6px; box-shadow: 0 0 0 2px #17181b; opacity: 0; transition: opacity .25s; }
+  #streak.on { opacity: 1; } #streak.x1 { background: #efc970; } #streak.lost { background: #cf5a3e; color: #f6f3ea; } @media (max-width: 639px) { #streak { top: 92px; } }`; document.head.appendChild(st); }
+function drawStreak(lost) { const n = B.streak || 0; streakEl.className = lost ? 'on lost' : n ? 'on' + (streakMult() > 1 ? '' : ' x1') : ''; streakEl.textContent = lost ? 'SERIA PRZERWANA' : `SERIA ${n}` + (streakMult() > 1 ? ` · x${streakMult()}` : ` · x2 ZA ${3 - n % 3}`); if (lost) setTimeout(() => { if (!(B.streak > 0)) streakEl.className = ''; }, 1400); }
+function breakStreak() { const had = (B.streak || 0) >= 2; B.streak = 0; if (had) { drawStreak(true); audio.play('miss', { vol: .6 }); } else if (!streakEl.classList.contains('lost')) streakEl.className = ''; }
+// a subscriber ridden past without a paper: the streak goes (counted once each time by)
+function stepPassed() { if (foot.active) return; const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw);
+  for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - B.x, dz = d.p.z - B.z; if (Math.abs(dx) + Math.abs(dz) > 40) { d.seen = false; continue; } const fw = dx * fx + dz * fz, l = Math.hypot(dx, dz);
+    if (fw > 3 && l < 26) d.seen = true; else if (d.seen && fw < -9 && B.v > 2) { d.seen = false; if (B.streak > 0) { breakStreak(); flash('Minąłeś prenumeratora bez gazety'); } } } }
 // a paper come down by a house: the right title for its subscriber (paid in full), the wrong one (a little, and words), or a house that takes none
 function deliver(hi, base, at, how, title) {
   const d = track.doors[hi], sub = d && d.sub, up = at.clone().setY(at.y + 1.3);
-  if (!sub) { hud.rant(up, pickOf(['NIE ZAMAWIAŁEM!', 'ZA DARMO? NO TO BIORĘ.', 'ZNOWU ULOTKI?!', 'JA NIE CZYTAM, JA OGLĄDAM!']), false); flash('Ten dom nic nie prenumeruje'); return false; }
-  if (sub === title) { B.delivered = (B.delivered || 0) + 1; score(base, at, '+' + base, '#efc970'); flash(`${how}: ${TITLES[title].short.toLowerCase()} dla prenumeratora! +${base}`); return true; }
-  const n = Math.max(1, base >> 1); score(n, at, '+' + n, '#cf5a3e'); hud.rant(up, pickOf([`JA CZYTAM ${TITLES[sub].short}!`, 'TO NIE MOJA GAZETA!', 'POMYLIŁEŚ GAZETY, MŁODY!']), false); flash(`Zły tytuł: tu czytają ${TITLES[sub].short.toLowerCase()}. +${n}`); return false;
+  if (!sub) { breakStreak(); hud.rant(up, pickOf(['NIE ZAMAWIAŁEM!', 'ZA DARMO? NO TO BIORĘ.', 'ZNOWU ULOTKI?!', 'JA NIE CZYTAM, JA OGLĄDAM!']), false); flash('Ten dom nic nie prenumeruje'); return false; }
+  if (sub === title) { B.delivered = (B.delivered || 0) + 1; B.streak = (B.streak || 0) + 1; const mult = streakMult(), pts = base * mult; score(pts, at, '+' + pts + (mult > 1 ? ' x' + mult : ''), mult > 1 ? '#9fd27a' : '#efc970');
+    if (B.streak % 3 === 0 && mult > 1) { hud.impact(at.clone().setY(at.y + 1.2), 'SERIA x' + mult + '!'); audio.play('trick'); }
+    flash(`${how}: ${TITLES[title].short.toLowerCase()} dla prenumeratora! +${pts}${mult > 1 ? ` (seria ${B.streak}, x${mult})` : ''}`); drawStreak(); return true; }
+  breakStreak(); const n = Math.max(1, base >> 1); score(n, at, '+' + n, '#cf5a3e'); hud.rant(up, pickOf([`JA CZYTAM ${TITLES[sub].short}!`, 'TO NIE MOJA GAZETA!', 'POMYLIŁEŚ GAZETY, MŁODY!']), false); flash(`Zły tytuł: tu czytają ${TITLES[sub].short.toLowerCase()}. +${n}`); return false;
 }
 const dotG = new THREE.CircleGeometry(.16, 12).rotateX(-Math.PI / 2), dotM = new THREE.MeshBasicMaterial({ color: '#1b1510', transparent: true, opacity: .45, depthWrite: false });
 const papers = [];
 function release(at, side) {                                          // (from the rider, at the moment the hand lets go)
   const title = B.throwT || curTitle(), m = new THREE.Mesh(paperG, paperM); m.castShadow = true; m.add(new THREE.Mesh(new THREE.CylinderGeometry(.036, .036, .04, 10), bandOf[title] || bandM)); scene.add(m); m.position.copy(at);
-  const v = throwVel(B.throwP, side, B.throwC || {});                   // (from a lob to a hard throw, turned as it was aimed)
+  let v = throwVel(B.throwP, side, B.throwC || {});                   // (from a lob to a hard throw, turned as it was aimed)
+  const A = B.throwAt; B.throwAt = null; if (A && B.throwDoor) B.throwDoor.pending = performance.now(); if (A) {   // (a paper on its way to it: not sent another)
+    const dx = A.x - at.x, dz = A.z - at.z, l = Math.hypot(dx, dz), T = THREE.MathUtils.clamp(.5 + l * .04, .6, 1.05); v = new THREE.Vector3(dx / T, (A.y + .05 - at.y) / T + .5 * g * T, dz / T); }   // (sent to a target: the arc that comes down on it)
   const dot = new THREE.Mesh(dotG, dotM); dot.renderOrder = 1; scene.add(dot);
-  papers.push({ m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false, title });
+  papers.push({ m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false, title, guided: !!A });
 }
 // a broken window: a pane of cracks over it, a spray of glass
 const crackT = (() => { const c = document.createElement('canvas'); c.width = 48; c.height = 44; const x = c.getContext('2d'); x.fillStyle = '#1b2a33'; x.fillRect(0, 0, 48, 44);
@@ -426,11 +456,12 @@ function stepPapers(dt) {
     // through a window: the pane's plane crossed from outside, within its frame
     for (const w of track.windows) { if (w.broken || Math.abs(w.p.x - p.m.position.x) + Math.abs(w.p.z - p.m.position.z) > 6) continue;
       const a = (p.prev.x - w.p.x) * w.n.x + (p.prev.y - w.p.y) * w.n.y + (p.prev.z - w.p.z) * w.n.z, b = (p.m.position.x - w.p.x) * w.n.x + (p.m.position.y - w.p.y) * w.n.y + (p.m.position.z - w.p.z) * w.n.z;
-      if (!p.landed && b > .05 && b < 3.5) magnet(p, w, b, dt);
+      if (!p.landed && !p.guided && b > .05 && b < 3.5) magnet(p, w, b, dt);   // (one sent to a door or a mailbox is not drawn to a window)
       if (a > 0 && b <= 0) { const t = a / (a - b), hx = p.prev.x + (p.m.position.x - p.prev.x) * t, hy = p.prev.y + (p.m.position.y - p.prev.y) * t, hz = p.prev.z + (p.m.position.z - p.prev.z) * t;
         if (Math.hypot(hx - w.p.x, hz - w.p.z) < w.hw + .22 && Math.abs(hy - w.p.y) < w.hh + .18) { breakWindow(w); p.v.multiplyScalar(.15); p.v.addScaledVector(w.n, 1.2); p.m.position.set(hx, hy, hz).addScaledVector(w.n, .05); } } }
     // against walls, fences, cars: back off, bounce weakly
-    for (const C of track.near(p.hint)) { if (C.kind !== 'hard' || p.m.position.y > C.y0 + C.h) continue; if (boxHit(C, p.m.position.x, p.m.position.z, .05)) { p.m.position.x = p.prev.x; p.m.position.z = p.prev.z; p.v.x *= -.3; p.v.z *= -.3; } }
+    for (const C of track.near(p.hint)) { if (C.kind !== 'hard' || p.guided || p.m.position.y > C.y0 + C.h) continue;   // (one sent to a target: its arc clears what is on the way, and it drops into the box)
+      if (boxHit(C, p.m.position.x, p.m.position.z, .05)) { p.m.position.x = p.prev.x; p.m.position.z = p.prev.z; p.v.x *= -.3; p.v.z *= -.3; } }
     const hgt = p.m.position.y - q.y; p.dot.position.set(p.m.position.x, q.y + .02, p.m.position.z); p.dot.scale.setScalar(Math.max(.5, 1.3 - hgt * .25));
     if (p.m.position.y < q.y + .035) { p.m.position.y = q.y + .035;
       if (!p.landed) { p.landed = true; p.landT = p.t; quests.onLand(p.m.position); aud('land', p.m.position);                                // where it came down: by a door, at a mailbox
@@ -439,10 +470,11 @@ function stepPapers(dt) {
         const under = () => track.windows.find(w => { if (track.doors[w.house]?.done) return false; const dx = P.x - w.p.x, dz = P.z - w.p.z, out = dx * w.n.x + dz * w.n.z, side = Math.abs(dx * -w.n.z + dz * w.n.x); return out > -.3 && out < 2.2 && side < 1.3; });
         let w0 = null, boxed = false;
         if (door) { door.done = true; aud('porch', at); deliver(track.doors.indexOf(door), 2, at, 'Na ganek', p.title); }
-        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; boxed = true; mb.flag.rotation.x = -Math.PI / 2; aud('mailbox', w); const hi = mb.house ?? (mb.house = nearestDoor(w)); if (!deliver(hi, 5, w.clone().setY(w.y + 1.5), 'Do skrzynki', p.title)) break;
+        else for (const mb of track.mailboxes) { const w = mb.o.position; if (!mb.done && Math.hypot(w.x - p.m.position.x, w.z - p.m.position.z) < 1.4) { mb.done = true; boxed = true; mb.flag.rotation.x = -Math.PI / 2; aud('mailbox', w); const hi = mb.house ?? (mb.house = nearestDoor(w)); if (track.doors[hi]) track.doors[hi].done = true; if (!deliver(hi, 5, w.clone().setY(w.y + 1.5), 'Do skrzynki', p.title)) break;
             const win = track.windows.filter(o => !o.broken).sort((a, b) => a.p.distanceToSquared(w) - b.p.distanceToSquared(w))[0];   // (thanks from the nearest window of the house)
             hud.praise(win && win.p.distanceTo(w) < 16 ? win.p.clone().add(new THREE.Vector3(0, .9, 0)) : w.clone().setY(w.y + 2.6)); break; } }
-        if (!door && !boxed && (w0 = under())) { track.doors[w0.house].done = true; deliver(w0.house, 1, at, 'Pod okno', p.title); } }
+        if (!door && !boxed && (w0 = under())) { track.doors[w0.house].done = true; deliver(w0.house, 1, at, 'Pod okno', p.title); }
+        else if (!door && !boxed && track.doors.some(d => d.sub && !d.done && Math.hypot(d.p.x - P.x, d.p.z - P.z) < 9)) breakStreak(); }   // (wide of one waiting for it)
       if (Math.abs(p.v.y) < 1.2) { p.v.multiplyScalar(Math.pow(.02, dt)); p.v.y = 0; p.spin.multiplyScalar(Math.pow(.05, dt)); if (p.v.length() < .15) { p.rest = true; scene.remove(p.dot); } }
       else { p.v.y *= -.3; p.v.x *= .6; p.v.z *= .6; } }
   }
@@ -467,6 +499,10 @@ function rampAt(x, z) {                                              // how high
 // ---------- the ride ----------
 // the run: how hard it is by now (0..1 over 8 km), hurt (a run ends at nothing), its end (the summary, the lottery), its start (what the lottery kept)
 const difficulty = () => Math.min(1, trip.dist / 8000);
+// the run's level: up one every kilometre (to 6): more cars out and a little quicker, dogs keener; said when it goes up
+const level = () => Math.min(6, 1 + Math.floor(trip.dist / 1000)), carsAt = l => Math.min(6, l + 1), heat = l => .55 + (l - 1) * .13;
+const LVL_SAY = ['', '', 'Więcej aut na drodze', 'Psy coraz bardziej czujne', 'Ruch jak w godzinach szczytu', 'Kierowcy się spieszą', 'Pełny poranek! Trzymaj się'];
+function stepLevel() { const l = level(); if (l === B.lvl) return; if (B.lvl) { flash(`POZIOM ${l}: ${LVL_SAY[l]}`); audio.play('trick'); } B.lvl = l; }
 function hurt(n, why) { if (endT > 0) return; audio.play('hurt', { vol: .6 }); B.hp = Math.max(0, (B.hp ?? 100) - n); if (B.hp <= 0) { endT = 2.4; endWhy = why || 'Zdrowie się skończyło.'; } }
 let endT = 0, endWhy = '';
 const runUI = createRun({ onAgain: () => { resetGame(); fromAccount(); } });
@@ -663,7 +699,7 @@ function stepPuddles(me) { let P0 = null; for (const P of track.puddles || []) i
 let barkers = [];
 const nearDog = () => barkers.find(n => n.dist < 2.9);
 function stepDogs(dt, inp) {
-  barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw });
+  barkers = dogs.update(dt, { x: B.x, z: B.z, v: B.v, yaw: B.yaw, heat: heat(level()) }); stepLevel();
   for (const n of barkers) { const d = n.dog; d.sndT = (d.sndT || 0) - dt; if (d.sndT <= 0) { d.sndT = 1 + Math.random() * 1.4; aud('bark', d); } }   // (a dog at him: a bark now and then)
   // a dog into a car or a tree (running at him, or kicked through the air): it goes over, and home
   const cars = traffic.boxes();
@@ -790,7 +826,9 @@ function talkCam(dt) {
 }
 // over the subscribers ahead (near, not served yet): a little paper in their title's colour
 function subMarks() { const out = [], P = foot.active ? foot.me : B, fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
-  for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - P.x, dz = d.p.z - P.z, l = Math.hypot(dx, dz); if (l > 38 || l < 2 || (dx * fx + dz * fz) / l < -.2) continue; out.push({ p: new THREE.Vector3(d.p.x, d.p.y + 3, d.p.z), s: 'sub', col: TITLES[d.sub].col }); } return out; }
+  for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - P.x, dz = d.p.z - P.z, l = Math.hypot(dx, dz); if (l > 38 || l < 2 || (dx * fx + dz * fz) / l < -.2) continue; const h = hot.L?.door === d ? 1 : hot.R?.door === d ? -1 : 0;   // (in reach of a tap: which button sends it there)
+    const H = h > 0 ? hot.L : h < 0 ? hot.R : null;   // (in reach: over where it would go, the mailbox or the door step)
+    out.push({ p: H ? H.p.clone().setY(H.p.y + 1.9) : new THREE.Vector3(d.p.x, d.p.y + 3, d.p.z), s: 'sub', col: TITLES[d.sub].col, hot: h, label: h ? (h > 0 ? (pad.active ? 'LB' : 'LPM') : (pad.active ? 'RB' : 'PPM')) : null }); } return out; }
 function project(w) { _v.copy(w).project(camera); if (_v.z > 1) return null; const [W, H] = px.size; return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H }; }
 // the same, for a mark at the picture's edge: behind the camera too (turned round: which side it is on)
 function projectEdge(w) { _v.copy(w).project(camera); const [W, H] = px.size, b = _v.z > 1; if (b) { _v.x = -_v.x; _v.y = -_v.y; } return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H, behind: b }; }
@@ -852,8 +890,8 @@ function step(dt, inp) {
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
   rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
-  stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
+  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: carsAt(level()), s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
+  stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
 const TALK = ['DZIEŃ DOBRY! GAZETKA?', 'ŁADNA POGODA, CO?', 'MASZ MOŻE DYCHĘ?', 'WIDZIAŁ PAN MÓJ ROWER?', 'PAN TU CZĘSTO SPACERUJE?', 'KUPI PAN GAZETĘ? ŚWIEŻA!', 'CO TAK SMUTNO?', 'PAN WIE, KTÓRA GODZINA?'];
@@ -954,7 +992,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
-  traffic.update(dt, { pace: 1 + .35 * difficulty(), s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
+  traffic.update(dt, { pace: 1 + .35 * difficulty(), cars: carsAt(level()), s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
@@ -1037,7 +1075,7 @@ function resetGame() {
   rider.ragdollOff();
   const q = track.probe(track.start.x, track.start.z, 0); C.iy = Math.PI; C.iyGo = false;
   Object.assign(B, { x: track.start.x, z: track.start.z, y: q.y, vy: 0, air: false, gPrev: q.y, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
-    stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null });
+    stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, lvl: 0, streak: 0 }); drawStreak();
   for (const p of papers) scene.remove(p.m, p.dot); papers.length = 0; for (const s of shards) scene.remove(s.m); shards.length = 0; for (const m of cracks) scene.remove(m); cracks.length = 0;
   for (const w of track.windows) w.broken = false; for (const d of track.doors) d.done = false;
   for (const mb of track.mailboxes) { mb.done = false; mb.flag.rotation.x = 0; }
@@ -1091,4 +1129,4 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 window.PT = { THREE, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
-  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame };
+  tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers };
