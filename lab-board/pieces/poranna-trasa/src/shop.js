@@ -11,6 +11,7 @@ import { bikeMods, bikeLook } from './bikes.js';
 import { icon, TIER_COL } from './garage.js';
 import { pixUI } from './pixui.js';
 import { pixFont } from './pixfont.js';
+import { pxKey } from './pixui.js';
 export const PARTS = {
   kola: { name: 'KOŁA', tiers: [
     { name: 'ZWYKŁE', price: 0, look: { tyre: '#26272a', rim: '#c9cbc8', tyreW: 1 }, mods: {}, note: 'JEŻDŻĄ. TYLE DOBREGO.' },
@@ -93,11 +94,11 @@ export function createShop({ THREE, createRider, game }) {
     #shop .cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; flex: none; }
     #shop .cats button { display: flex; align-items: center; gap: 6px; padding: 1px 2px; font-size: 16px; white-space: nowrap; overflow: hidden; } #shop .cats canvas { width: 32px; height: 32px; flex: none; }
     #shop .list { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 6px 2px 2px; scrollbar-width: thin; scrollbar-color: #efc970 #1d1e21; }
-    #shop button { all: unset; box-sizing: border-box; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 6px; color: #f6f3ea; }
-    #shop button:hover, #shop button.pad-focus { border-image-source: var(--px-btn-hi); }
-    #shop button:active { border-image-source: var(--px-btn-dn); transform: translateY(2px); }
-    #shop button.sel { border-image-source: var(--px-sel); color: #17181b; } #shop button.sel:active { border-image-source: var(--px-sel-dn); }
-    #shop button.off { opacity: .45; cursor: default; } #shop button.off:active { transform: none; border-image-source: var(--px-btn); }
+    #shop button:not(.pxk) { all: unset; box-sizing: border-box; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 6px; color: #f6f3ea; }
+    #shop button:not(.pxk):hover, #shop button:not(.pxk).pad-focus { border-image-source: var(--px-btn-hi); }
+    #shop button:not(.pxk):active { border-image-source: var(--px-btn-dn); transform: translateY(2px); }
+    #shop button:not(.pxk).sel { border-image-source: var(--px-sel); color: #17181b; } #shop button:not(.pxk).sel:active { border-image-source: var(--px-sel-dn); }
+    #shop button:not(.pxk).off { opacity: .45; cursor: default; } #shop button:not(.pxk).off:active { transform: none; border-image-source: var(--px-btn); }
     #shop .tier { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 10px; align-items: center; width: 100%; margin-bottom: 4px; padding: 4px 8px 4px 4px; position: relative; }
     #shop .tier canvas { width: 32px; height: 32px; grid-row: span 2; }
     #shop .tier .nm { display: flex; align-items: center; gap: 8px; min-width: 0; } #shop .tier .pips { display: inline-flex; gap: 2px; } #shop .tier .pips i { width: 6px; height: 6px; background: #17181b; } #shop .tier .pips i.on { background: currentColor; }
@@ -117,16 +118,16 @@ export function createShop({ THREE, createRider, game }) {
       #shop .fig { position: absolute; height: 100%; left: -10px; bottom: 0; } #shop .bb { min-height: 0; padding: 9px 12px; } #shop .say { min-height: 2.6em; } #shop .tail { left: -16px; bottom: auto; top: 26px; transform: rotate(90deg) scaleX(-1); }
       #shop .body { grid-template-columns: 1fr; overflow-y: auto; align-content: start; } #shop .lft, #shop .rgt { min-height: auto; } #shop .lft { order: 2; } #shop .cats { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } #shop canvas.bike { height: 22vh; flex: none; } #shop .list { overflow: visible; } }
   `; document.head.appendChild(css);
-  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="stage"><div class="janusz"><div class="fig"><img alt="" src="assets/ui/janusz.png"><canvas class="face" width="32" height="32"></canvas></div><div class="bubble"><div class="bb"><b>PAN JANUSZ</b><span class="say"></span><button class="chat">POGADAJ</button></div><span class="tail"><i></i></span></div></div><div class="win"><div class="head"><b>WARSZTAT U JANUSZA</b><span class="cash"><i class="coin"></i><span></span></span></div><div class="body"><div class="lft"><canvas class="bike"></canvas><div class="stats"></div></div><div class="rgt"><div class="cats"></div><div class="list"></div></div></div><div class="bottom"><small>NAJEDŹ: PODGLĄD · KLIK: KUP / ZAŁÓŻ</small><button class="go">JEDŹ DALEJ (ESC)</button></div></div></div>';
+  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = `<div class="stage"><div class="janusz"><div class="fig"><img alt="" src="assets/ui/janusz.png"><canvas class="face" width="32" height="32"></canvas></div><div class="bubble"><div class="bb"><b>PAN JANUSZ</b><span class="say"></span>${pxKey('POGADAJ', { attrs: 'data-chat' })}</div><span class="tail"><i></i></span></div></div><div class="win"><div class="head"><b>WARSZTAT U JANUSZA</b><span class="cash"><i class="coin"></i><span></span></span></div><div class="body"><div class="lft"><canvas class="bike"></canvas><div class="stats"></div></div><div class="rgt"><div class="cats"></div><div class="list"></div></div></div><div class="bottom"><small>NAJEDŹ: PODGLĄD · KLIK: KUP / ZAŁÓŻ</small>${pxKey('JEDŹ DALEJ', { icon: 'play', key: 'ESC', kind: 'gold', attrs: 'data-go', nudge: true })}</div></div></div>`;
   document.body.appendChild(el);
-  const cv = el.querySelector('canvas.bike'), right = el.querySelector('.list'), catsE = el.querySelector('.cats'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
+  const cv = el.querySelector('canvas.bike'), right = el.querySelector('.list'), catsE = el.querySelector('.cats'), statsE = el.querySelector('.stats'); el.querySelector('[data-go]').onclick = () => close();
   // pan Janusz: what he says (a line at the top; his talking clip while he says it), his trips with Mietek on asking
   // (each pool shuffled and drawn without repeats; a fresh shuffle never starts with the line just said)
   const AN = bag(), decks = new Map(); let talkT = 0, lastLine = '';
   const pick = a => { let d = decks.get(a); if (!d || !d.length) { d = a.slice().sort(() => Math.random() - .5); if (d.length > 1 && d[d.length - 1] === lastLine) d.unshift(d.pop()); decks.set(a, d); } return (lastLine = d.pop()); };
   const sayE = el.querySelector('.say'), fig = el.querySelector('.fig');
   const say = s => { const w = s.split(/\s+/); sayE.innerHTML = w.map((x, i) => `<span style="animation-delay:${i * 85}ms">${x}</span>`).join(' '); talkT = Math.min(6, .6 + w.length * .09); game.say?.(s); if (open_) requestAnimationFrame(placeBubble); };   // (a longer line: the bubble taller, kept by his mouth)   // (word by word)
-  el.querySelector('.chat').onclick = () => say(AN.draw('janusz'));
+  el.querySelector('[data-chat]').onclick = () => say(AN.draw('janusz'));
   // him: the picture (assets/ui/janusz.png); without it his face drawn here in pixels: the cap, the moustache, the chins, the mouth moving
   const faceC = el.querySelector('.face'), fg = faceC.getContext('2d'); let mouthT = 0;
   el.querySelector('.fig img').onerror = () => fig.classList.add('noimg');

@@ -11,6 +11,8 @@ const RC = { peryferia: [62, 118], wies: [150, 52], peryferia2: [176, 132], mias
 const LAB = { peryferia: [56, 164], wies: [118, 22], peryferia2: [204, 166], miasto: [240, 44], las: [282, 116], dalej: [292, 12] };   // (the names: off the points)
 const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 66] };
 
+import { pxKey } from './pixui.js';
+
 export function createMap({ levels: LV, game }) {
   const { REGIONS, LEVELS, LEVEL } = LV;
   const css = document.createElement('style'); css.textContent = `
@@ -28,18 +30,18 @@ export function createMap({ levels: LV, game }) {
     #map .goals, #map .best { border: 6px solid transparent; border-image: var(--px-inset) 3 fill / 6px; padding: 4px 6px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; }
     #map .goals .s { width: 12px; height: 12px; background: #44484c; clip-path: inherit; } #map .goals .s.on { background: #efc970; } #map .goals .v, #map .best .v { color: #efc970; text-align: right; } #map .best .k { grid-column: 1 / 3; color: #a9a69b; }
     #map h4 { margin: 4px 0 0; color: #efc970; font-size: 16px; font-weight: normal; }
-    #map button { all: unset; box-sizing: border-box; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 8px; color: #f6f3ea; text-align: center; }
-    #map button:hover, #map button.pad-focus { border-image-source: var(--px-btn-hi); } #map button:active { border-image-source: var(--px-btn-dn); transform: translateY(2px); }
-    #map button.go { border-image-source: var(--px-sel); color: #17181b; padding: 6px 10px; font-size: 24px; } #map button.go:hover { filter: brightness(1.08); } #map button.off { opacity: .4; cursor: default; }
-    #map .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } #map .acts .wide { grid-column: 1 / -1; }
+    #map button:not(.pxk) { all: unset; box-sizing: border-box; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 8px; color: #f6f3ea; text-align: center; }
+    #map button:not(.pxk):hover, #map button:not(.pxk).pad-focus { border-image-source: var(--px-btn-hi); } #map button:not(.pxk):active { border-image-source: var(--px-btn-dn); transform: translateY(2px); }
+    #map button.go:not(.pxk) { border-image-source: var(--px-sel); color: #17181b; padding: 6px 10px; font-size: 24px; } #map button.go:not(.pxk):hover { filter: brightness(1.08); } #map button.off:not(.pxk) { opacity: .4; cursor: default; }
+    #map .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } #map .acts > :first-child { grid-column: 1 / -1; } #map .acts { align-items: end; }
     #map .hint { color: #8d8a80; }
     @media (max-width: 860px) { #map .stage { grid-template-columns: 1fr; grid-template-rows: minmax(200px, 1fr) auto; height: calc(100vh - 16px); width: calc(100vw - 16px); } #map .info { max-height: 34vh; } }`;
   document.head.appendChild(css);
   const el = document.createElement('div'); el.id = 'map';
   el.innerHTML = `<div class="stage"><div class="win"><div class="head"><b>MAPA TRASY</b><span class="chip tot"></span></div><div class="land"><canvas width="${W}" height="${H}"></canvas></div></div>
-    <div class="win side"><div class="info"></div><div class="acts"><button class="go wide">JEDŹ</button><button class="home">DO DOMU</button><button class="shop">WARSZTAT</button><button class="save">ZAPISZ</button><button class="close">ZAMKNIJ</button></div><div class="hint">STRZAŁKI: WYBÓR · ENTER: JEDŹ · ESC: ZAMKNIJ</div></div></div>`;
+    <div class="win side"><div class="info"></div><div class="acts">${pxKey('JEDŹ', { icon: 'play', key: 'ENTER', kind: 'gold big', attrs: 'data-a="go"', nudge: true })}${pxKey('DO DOMU', { icon: 'home', attrs: 'data-a="home"' })}${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-a="shop"' })}${pxKey('ZAPISZ', { icon: 'save', attrs: 'data-a="save"' })}${pxKey('ZAMKNIJ', { icon: 'close', key: 'ESC', attrs: 'data-a="close"' })}</div><div class="hint">STRZAŁKI: WYBÓR · ENTER: JEDŹ · ESC: ZAMKNIJ</div></div></div>`;
   document.body.appendChild(el);
-  const cv = el.querySelector('canvas'), g = cv.getContext('2d'), info = el.querySelector('.info'), goB = el.querySelector('.go');
+  const cv = el.querySelector('canvas'), g = cv.getContext('2d'), info = el.querySelector('.info'), goB = el.querySelector('[data-a="go"]'), goL = goB.querySelector('span');
   let open_ = false, sel = 'p1', t0 = 0, raf = 0;
 
   // ---------- the land (drawn once, then the points over it each frame) ----------
@@ -89,15 +91,15 @@ export function createMap({ levels: LV, game }) {
   // ---------- the side: what the chosen point is ----------
   const mmss = s => s == null ? '-' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   function side() { const tot = LV.totalStars(); el.querySelector('.tot').textContent = `★ ${tot} / ${LEVELS.filter(l => !l.soon).length * 3}`;
-    if (sel === 'dom') { info.innerHTML = `<div class="reg">PERYFERIA</div><div class="ttl">DOM</div><div class="note">Twoja baza. Kosz z bratem, garaż, rodzina. Jeździsz swobodnie, bez mety i bez zegara.</div>`; goB.textContent = 'DO DOMU'; goB.classList.remove('off'); return; }
+    if (sel === 'dom') { info.innerHTML = `<div class="reg">PERYFERIA</div><div class="ttl">DOM</div><div class="note">Twoja baza. Kosz z bratem, garaż, rodzina. Jeździsz swobodnie, bez mety i bez zegara.</div>`; goL.textContent = 'DO DOMU'; goB.classList.remove('off'); return; }
     const L = LEVEL(sel), R = REGIONS.find(r => r.id === L.region), open = !L.soon && LV.isOpen(sel), b = LV.bestOf(sel), n = LV.starsOf(sel);
-    if (L.soon) { info.innerHTML = `<div class="reg">${R.name}</div><div class="ttl">${L.name}</div><div class="note">${R.note}</div><div class="note" style="color:#8d8a80">Ten region jest jeszcze w budowie.</div>`; goB.textContent = 'WKRÓTCE'; goB.classList.add('off'); return; }
+    if (L.soon) { info.innerHTML = `<div class="reg">${R.name}</div><div class="ttl">${L.name}</div><div class="note">${R.note}</div><div class="note" style="color:#8d8a80">Ten region jest jeszcze w budowie.</div>`; goL.textContent = 'WKRÓTCE'; goB.classList.add('off'); return; }
     const gl = L.goal, st = b ? [b.time <= gl.time, (b.acc || 0) >= gl.acc && (b.delivered || 0) >= gl.papers, (b.falls ?? 99) === 0] : [false, false, false];
     info.innerHTML = `<div class="reg">${R.name}</div><div class="ttl">${L.name}</div><div class="stars">${[0, 1, 2].map(k => `<i class="${k < n ? 'on' : ''}"></i>`).join('')}</div><div class="note">${L.note}</div>
       <h4>GWIAZDKI</h4><div class="goals"><i class="s ${st[0] ? 'on' : ''}"></i><span>CZAS DO</span><span class="v">${mmss(gl.time)}</span><i class="s ${st[1] ? 'on' : ''}"></i><span>${gl.papers} GAZET, CELNOŚĆ</span><span class="v">${Math.round(gl.acc * 100)}%</span><i class="s ${st[2] ? 'on' : ''}"></i><span>BEZ WYWROTKI</span><span class="v"></span></div>
       <h4>NAJLEPSZE WYNIKI</h4>${b ? `<div class="best"><span class="k">CZAS</span><span class="v">${mmss(b.time)}</span><span class="k">GAZETY</span><span class="v">${b.delivered}</span><span class="k">CELNOŚĆ</span><span class="v">${Math.round((b.acc || 0) * 100)}%</span><span class="k">NAJMNIEJ WYWROTEK</span><span class="v">${b.falls}</span><span class="k">ZAROBEK</span><span class="v">${b.earned} ZŁ</span><span class="k">PRZEJAZDY</span><span class="v">${b.runs}</span></div>` : '<div class="note" style="color:#8d8a80">Jeszcze nie jechane.</div>'}
       <h4>NA DRODZE</h4><div class="note">AUTA: ${'▪'.repeat(L.cars)} · PSY: ${'▪'.repeat(Math.round(L.heat * 3))} · W TORBIE: ${L.papers}</div>`;
-    goB.textContent = open ? (b ? 'JEDŹ JESZCZE RAZ' : 'JEDŹ') : 'ZAMKNIĘTE'; goB.classList.toggle('off', !open);
+    goL.textContent = open ? (b ? 'JEDŹ JESZCZE RAZ' : 'JEDŹ') : 'ZAMKNIĘTE'; goB.classList.toggle('off', !open);
     if (!open) info.insertAdjacentHTML('beforeend', `<div class="note" style="color:#cf5a3e">Najpierw ukończ poprzedni odcinek.</div>`); }
 
   // ---------- choosing ----------
@@ -105,8 +107,8 @@ export function createMap({ levels: LV, game }) {
   function go() { if (sel === 'dom') { close(); game.home(); return; } const L = LEVEL(sel); if (!L || L.soon || !LV.isOpen(sel)) { game.sound?.('miss'); return; } close(); game.go(sel); }
   cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(), k = Math.min(r.width / W, r.height / H), ox = r.left + (r.width - W * k) / 2, oy = r.top + (r.height - H * k) / 2, x = (e.clientX - ox) / k, y = (e.clientY - oy) / k;
     let best = null, bd = 12; for (const id of nodes()) { const [px, py] = PTS[id], d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = id; } } if (best) { if (best === sel) go(); else pick(best); } });
-  goB.onclick = go; el.querySelector('.home').onclick = () => { close(); game.home(); }; el.querySelector('.shop').onclick = () => game.shop();
-  el.querySelector('.save').onclick = () => { game.save?.(); game.flash('Zapisane'); }; el.querySelector('.close').onclick = () => close();
+  goB.onclick = go; el.querySelector('[data-a="home"]').onclick = () => { close(); game.home(); }; el.querySelector('[data-a="shop"]').onclick = () => game.shop();
+  el.querySelector('[data-a="save"]').onclick = () => { game.save?.(); game.flash('Zapisane'); }; el.querySelector('[data-a="close"]').onclick = () => close();
   // the arrows: to the nearest point that way
   function step(dx, dy) { const [x0, y0] = PTS[sel]; let best = null, bd = 1e9; for (const id of nodes()) { if (id === sel) continue; const [x, y] = PTS[id], vx = x - x0, vy = y - y0, along = vx * dx + vy * dy; if (along <= 0) continue; const d = Math.hypot(vx, vy) + Math.abs(vx * dy - vy * dx) * 1.5; if (d < bd) { bd = d; best = id; } } if (best) pick(best); }
   function key(e) { if (!open_) return false; const c = e.code;

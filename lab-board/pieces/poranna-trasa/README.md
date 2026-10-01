@@ -833,3 +833,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - strona 1 PORANEK: artykuł o Twoim poranku (nagłówek i tekst z tego, co zrobiłeś), zdjęcie z mety zrobione w grze, dwa newsy o zdarzeniach z trasy (wywrotka, auto, babcia, policja, szyby, pies, seria) ze zdjęciem z chwili zdarzenia, a gdy nic się nie stało: lokalne newsy ze zdjęciem z miejsca (posterunek, warsztat, kapliczka, buda z psem, budowa...); zapowiedź jutra z odcinków, które się otwierają; ramka „Twoja trasa” z liczbami i mapką
 - strona 2 TWOJA TRASA: duża mapka trasy z każdym domem (doręczone, prenumerator bez gazety, bez prenumeraty), szybami i wywrotkami; gwiazdki i ich cele; dziś obok najlepszych, rekordy
 - strona 3 OGŁOSZENIA: drobne ogłoszenia (części od Janusza z cenami i zabawne z miasteczka), dokąd dalej (od razu na kolejny odcinek), warsztat, mapa, tabela wyników wszystkich odcinków
+
+## Wersja 91: wywiady i portrety w gazecie, przyciski jak pikselowe klawisze
+
+- „Rozmowa dnia”: wywiad z kimś z okolicy (Janusz, brat, mama, tata, sąsiadka, sąsiad, działkowiec, pani spod kapliczki, kierownik budowy, właściciel psa); kto, zależy od poranka (po pościgu psa jego właściciel, po szybie sąsiadka, po wywrotkach mama, po czystej jeździe brat), odpowiedzi biorą liczby z Twojej jazdy
+- anegdoty z miasteczka na stronie ogłoszeń
+- portrety postaci zrobione w grze (kamera przed twarzą) albo z obrazka (Janusz), wydrukowane „po gazetowemu”: dwa kolory farby i kropkowany raster
+- „W skrócie”: inne zdarzenia z trasy i lokalne krótkie wiadomości
+- gazeta w wąskim oknie: dwa łamy zamiast jednej długiej kolumny
+- nowe przyciski w całej grze (gazeta, mapa, warsztat, garaż): pikselowe klawisze z grubością, które wciskają się przy kliknięciu, z ikonką i podpowiedzią klawisza; najważniejszy złoty z drgającą strzałką

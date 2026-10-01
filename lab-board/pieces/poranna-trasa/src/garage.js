@@ -10,6 +10,7 @@
 
 import { pixUI } from './pixui.js';
 import { pixFont } from './pixfont.js';
+import { pxKey } from './pixui.js';
 export const TIER_COL = ['#9a968c', '#9fd27a', '#8fc3f0', '#efc970'];
 const SLOT_NAME = { kola: 'KOŁA', siodelko: 'SIODEŁKO', kierownica: 'KIEROWNICA', biegi: 'PRZERZUTKI', lakier: 'LAKIER', dzwonek: 'DZWONEK', lampka: 'LAMPKA', torba: 'TORBA' };
 const STATS = [['top', 'PRĘDKOŚĆ', 1, .45], ['acc', 'PRZYSPIESZENIE', 1, .45], ['steer', 'SKRĘT', 1, .45], ['grass', 'TEREN', -1, .6], ['hill', 'POD GÓRKĘ', 1, .6], ['stam', 'KONDYCJA', 1, .5], ['trick', 'TRIKI', 1, .5], ['bag', 'TORBA']];
@@ -89,11 +90,11 @@ export function createGarage({ THREE, createRider, PARTS, SLOTS, TYPES, bikeMods
   document.head.appendChild(css);
   const el = document.createElement('div'); el.id = 'gar';
   el.innerHTML = `<div class="stage"><div class="win main"><div class="head"><div><b class="ttl">EKWIPUNEK</b><br><small class="note"></small></div><span class="tag typ"></span></div><div class="bench"><canvas class="bike"></canvas><canvas class="lines"></canvas><div class="lock">JEDZIESZ: ZATRZYMAJ SIĘ, ŻEBY PRZEKŁADAĆ CZĘŚCI</div></div></div>
-    <div class="win side"><div class="head"><b>CO DAJE ROWER</b><span class="tag inv"></span></div><div class="scroll"><div class="stats"></div><div class="det"></div><h4>CZĘŚCI ZAPASOWE <span class="cnt"></span></h4><div class="grid spare"></div></div><div class="foot"><button class="big close">ZAMKNIJ</button></div></div>
-    <div class="win near"><div class="row"><div class="who"></div><div class="grid nparts" style="display:flex;gap:8px;flex:1"></div><button class="big blue take">PRZESIĄDŹ SIĘ</button></div></div></div><div class="tip"></div>`;
+    <div class="win side"><div class="head"><b>CO DAJE ROWER</b><span class="tag inv"></span></div><div class="scroll"><div class="stats"></div><div class="det"></div><h4>CZĘŚCI ZAPASOWE <span class="cnt"></span></h4><div class="grid spare"></div></div><div class="foot">${pxKey('ZAMKNIJ', { icon: 'close', key: 'I', attrs: 'data-close' })}</div></div>
+    <div class="win near"><div class="row"><div class="who"></div><div class="grid nparts" style="display:flex;gap:8px;flex:1"></div>${pxKey('PRZESIĄDŹ SIĘ', { icon: 'play', kind: 'gold', attrs: 'data-take', nudge: true })}</div></div></div><div class="tip"></div>`;
   document.body.appendChild(el);
   const $ = q => el.querySelector(q), bench = $('.bench'), cv = $('canvas.bike'), lc = $('canvas.lines'), lg = lc.getContext('2d'), tip = $('.tip');
-  $('.close').onclick = () => close(); $('.take').onclick = () => { const w = game.near(); if (w && game.stopped()) { close(); game.takeNear(w); } };
+  $('[data-close]').onclick = () => close(); $('[data-take]').onclick = () => { const w = game.near(); if (w && game.stopped()) { close(); game.takeNear(w); } };
   let open_ = false, sel = null, hover = null, raf = 0, ren = null, sc = null, cam = null, R = null, slotEls = {}, seen = new Set();
   const B = () => game.bike, can = () => game.stopped(), tierOf = (k, i) => PARTS[k].tiers[i] || PARTS[k].tiers[0];
   const partCol = (k, i) => k === 'lakier' ? '#c9cbc8' : TIER_COL[Math.min(3, i)];
@@ -172,7 +173,7 @@ export function createGarage({ THREE, createRider, PARTS, SLOTS, TYPES, bikeMods
     for (const k of list) { const i = w.bike.parts[k], t = tierOf(k, i), b = document.createElement('button'); b.className = 'tile'; b.appendChild(icon(k, partCol(k, i)));
       b.onmouseenter = e => tipShow(e, `<b>${SLOT_NAME[k]}: ${t.name}</b><span>${t.note}${Object.keys(t.mods).length ? ' · ' + fx(t.mods) : ''}<br>KLIKNIJ: ZDEJMIJ DO ZAPASOWYCH</span>`); b.onmouseleave = tipHide;
       b.onclick = () => { if (!can()) { game.flash('Zatrzymaj się, żeby przekładać części'); return; } game.inv.push({ k, tier: i }); w.bike.parts[k] = 0; w.r.setParts(bikeLook(w.bike)); game.stripped?.(w); tipHide(); game.sound?.('pick'); draw(); }; np.appendChild(b); }
-    $('.take').classList.toggle('off', !can()); }
+    $('[data-take]').classList.toggle('off', !can()); }
   function draw(light) { const T = TYPES[B().type] || TYPES.moj; $('.ttl').textContent = 'TWÓJ ROWER: ' + T.name; $('.note').textContent = T.note; $('.typ').textContent = 'TORBA ' + (30 + bikeMods(B()).bag);
     $('.stats').innerHTML = statsHtml(); $('.lock').classList.toggle('on', !can()); if (light) return; drawSlots(); detail(); spares(); nearBar(); }
 
