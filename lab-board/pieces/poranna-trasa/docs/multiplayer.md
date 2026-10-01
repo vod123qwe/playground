@@ -4,7 +4,7 @@ Stan (v81): **działa wersja bez serwera**: WebRTC z ręczną wymianą dwóch ko
 
 ## Co jest zrobione (v81)
 
-- łączenie: KOD 1 (oferta) i KOD 2 (odpowiedź), ok. 650 znaków każdy, przez czat; STUN Google tylko do ustalenia adresów, dane gry idą bezpośrednio
+- łączenie (v82): link zaproszenia (oferta w #dolacz=, na publiczną stronę) i link zwrotny (odpowiedź w #odpowiedz=, na adres gospodarza; karta z nim przekazuje kod przez BroadcastChannel do czekającej gry); można też wkleić link lub kod; STUN Google tylko do ustalenia adresów, dane gry idą bezpośrednio
 - `me` 15/s (pozycja, prędkość, pochylenie, kopnięcie, upadek, gazety, punkty, seria), `done` (dom/skrzynka obsłużone), `paper` (rzut do zobaczenia), `win` (szyba), `kick`, `start` (tryb + prenumeratorzy gospodarza), `it` (berek), `bye`
 - każdy liczy swoją fizykę i swój świat (auta, psy, przechodnie są u każdego swoje); wspólne są domy i gracze
 - czego brak: krótkiego kodu (wymaga serwera pokojów, droga A), wspólnych aut i psów (krok 3), gry z telefonu przez sieć komórkową nie zawsze się połączy (brak TURN)

@@ -44,26 +44,39 @@ export function createMp({ api, net }) {
   // ---------- the lobby: make a game / join one, the codes, the way to play ----------
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function view(html, wire) { box.innerHTML = html; wire?.(); page = 'lobby'; lob.classList.add('on'); }
+  // (the links: the invitation opens the game where the friend can reach it, the public page; the answer opens the host's own, where
+  // his game waits: a tab opened by it hands the code over to that one and is done)
+  const PUBLIC = 'https://vod123qwe.github.io/playground/lab-board/pieces/poranna-trasa/', here = () => location.origin + location.pathname;
+  const local = /^(localhost|127\.|\[::1\])/.test(location.hostname), inviteBase = () => local && !new URLSearchParams(location.search).has('lokalnie') ? PUBLIC : here();
+  const codeOf = (s, key) => { s = s.trim(); const i = s.indexOf('#' + key + '='); if (i >= 0) s = s.slice(i + key.length + 2); return s.split('&')[0]; };
+  let answerCh = null; const stopAnswer = () => { answerCh?.close(); answerCh = null; };
   function openLobby() { if (net.on) return chooseMode(); const bcq = new URLSearchParams(location.search).get('bc');
-    view(`<h2>GRA PRZEZ SIEĆ</h2><div class="why">Każdy gra u siebie, widzicie się nawzajem. Połączenie idzie prosto między waszymi przeglądarkami: wymieniacie się dwoma kodami (np. na czacie).</div>
-      <button class="mk">ZAŁÓŻ GRĘ<small>dostaniesz KOD 1 dla znajomego</small></button><button class="jn">DOŁĄCZ DO GRY<small>wklej KOD 1 od znajomego</small></button>${bcq ? `<button class="bc">TEST: DWIE KARTY (${esc(bcq)})</button>` : ''}<button class="dim out">WRÓĆ (ESC)</button>`, () => {
+    view(`<h2>GRA PRZEZ SIEĆ</h2><div class="why">Każdy gra u siebie, widzicie się nawzajem. Połączenie idzie prosto między waszymi przeglądarkami, bez serwera: wysyłacie sobie dwa linki (np. na czacie).</div>
+      <button class="mk">ZAŁÓŻ GRĘ<small>dostaniesz link dla znajomego</small></button><button class="jn">MAM LINK OD ZNAJOMEGO<small>albo wklej go tutaj</small></button>${bcq ? `<button class="bc">TEST: DWIE KARTY (${esc(bcq)})</button>` : ''}<button class="dim out">WRÓĆ (ESC)</button>`, () => {
       box.querySelector('.mk').onclick = () => hostFlow(); box.querySelector('.jn').onclick = () => joinFlow(); box.querySelector('.out').onclick = () => closeLobby();
       if (bcq) box.querySelector('.bc').onclick = () => { net.bc(bcq, !sessionStorage.getItem('pt.bcguest')); waitLink(); }; }); }
-  const copyBtn = () => { const ta = box.querySelector('textarea.code'), b = box.querySelector('.cp'); b.onclick = async () => { ta.select(); try { await navigator.clipboard.writeText(ta.value); b.textContent = 'SKOPIOWANO!'; } catch { document.execCommand?.('copy'); b.textContent = 'ZAZNACZONO: CTRL+C'; } }; };
+  const copyBtn = () => { const ta = box.querySelector('textarea.code'), b = box.querySelector('.cp'), lbl = b.textContent; b.onclick = async () => { ta.select(); try { await navigator.clipboard.writeText(ta.value); b.textContent = 'SKOPIOWANO!'; } catch { document.execCommand?.('copy'); b.textContent = 'ZAZNACZONO: CTRL+C'; } setTimeout(() => { b.textContent = lbl; }, 2000); }; };
   async function hostFlow() { view('<h2>ZAKŁADAM GRĘ...</h2><div class="why">Chwila, szukam drogi do Ciebie.</div>');
     let code; try { code = await net.host(); } catch (e) { return fail('Nie udało się przygotować połączenia.'); }
-    view(`<h2>KOD 1</h2><div class="why"><b>1.</b> Skopiuj ten kod i wyślij znajomemu.<br><b>2.</b> On wklei go w „Dołącz do gry” i odeśle Ci KOD 2.<br><b>3.</b> Wklej KOD 2 niżej.</div>
-      <textarea class="code" readonly>${esc(code)}</textarea><button class="cp">KOPIUJ KOD 1</button><textarea class="in" placeholder="Tu wklej KOD 2 od znajomego"></textarea><button class="go">POŁĄCZ</button><button class="dim out">ANULUJ</button>`, () => {
-      copyBtn(); box.querySelector('.out').onclick = () => { net.close(); openLobby(); };
-      box.querySelector('.go').onclick = async () => { const c = box.querySelector('.in').value.trim(); if (!c) return; try { await net.accept(c); waitLink(); } catch { fail('To nie wygląda na KOD 2. Skopiuj go jeszcze raz w całości.'); } }; }); }
-  function joinFlow() { view(`<h2>DOŁĄCZ</h2><div class="why">Wklej <b>KOD 1</b> od znajomego, który założył grę.</div><textarea class="in" placeholder="Tu wklej KOD 1"></textarea><button class="go">DALEJ</button><button class="dim out">ANULUJ</button>`, () => {
+    const link = inviteBase() + '#dolacz=' + code + '&do=' + encodeURIComponent(here());
+    view(`<h2>ZAPROSZENIE</h2><div class="why"><b>1.</b> Skopiuj link i wyślij znajomemu.<br><b>2.</b> Gdy go kliknie, gra da mu link zwrotny dla Ciebie.<br><b>3.</b> Kliknij link od niego (otworzy nową kartę, ta przekaże go tutaj). Ta karta musi zostać otwarta.</div>
+      <textarea class="code" readonly>${esc(link)}</textarea><button class="cp">KOPIUJ LINK</button><textarea class="in" placeholder="Albo wklej tu link zwrotny od znajomego"></textarea><button class="go">POŁĄCZ</button><button class="dim out">ANULUJ</button>`, () => {
+      copyBtn(); box.querySelector('.out').onclick = () => { stopAnswer(); net.close(); openLobby(); };
+      const take = async c => { stopAnswer(); try { await net.accept(codeOf(c, 'odpowiedz')); waitLink(); } catch { fail('To nie wygląda na link zwrotny. Skopiuj go jeszcze raz w całości.'); } };
+      box.querySelector('.go').onclick = () => { const c = box.querySelector('.in').value.trim(); if (c) take(c); };
+      stopAnswer(); answerCh = new BroadcastChannel('pt-answer'); answerCh.onmessage = e => { if (!e.data?.code) return; answerCh.postMessage({ ok: true }); take(e.data.code); }; }); }
+  // (the friend: from the invitation's link straight here, or with it pasted)
+  function joinFlow(pre, hostAt) { if (pre) return joinWith(pre, hostAt);
+    view(`<h2>DOŁĄCZ</h2><div class="why">Wklej <b>link</b> (albo kod) od znajomego, który założył grę.</div><textarea class="in" placeholder="Tu wklej link od znajomego"></textarea><button class="go">DALEJ</button><button class="dim out">ANULUJ</button>`, () => {
       box.querySelector('.out').onclick = () => openLobby();
-      box.querySelector('.go').onclick = async () => { const c = box.querySelector('.in').value.trim(); if (!c) return; let code; view('<h2>CHWILA...</h2>');
-        try { code = await net.join(c); } catch { return fail('To nie wygląda na KOD 1. Skopiuj go jeszcze raz w całości.'); }
-        view(`<h2>KOD 2</h2><div class="why">Skopiuj ten kod i odeślij go znajomemu. Gdy go wklei, połączycie się.</div><textarea class="code" readonly>${esc(code)}</textarea><button class="cp">KOPIUJ KOD 2</button><button class="dim out">ANULUJ</button>`, () => {
-          copyBtn(); box.querySelector('.out').onclick = () => { net.close(); openLobby(); }; waitLink(true); }); }; }); }
+      box.querySelector('.go').onclick = () => { const c = box.querySelector('.in').value.trim(); if (!c) return; const m = c.match(/[#&]do=([^&]+)/); joinWith(codeOf(c, 'dolacz'), m ? decodeURIComponent(m[1]) : null); }; }); }
+  async function joinWith(c, hostAt) { let code; view('<h2>DOŁĄCZAM...</h2><div class="why">Chwila.</div>');
+    try { code = await net.join(c); } catch { return fail('Ten link nie zadziałał. Poproś o nowy (każde zaproszenie działa raz).'); }
+    const link = (hostAt || inviteBase()) + '#odpowiedz=' + code;
+    view(`<h2>PRAWIE!</h2><div class="why">Skopiuj ten <b>link zwrotny</b> i odeślij go znajomemu. Gdy go kliknie, połączycie się.</div><textarea class="code" readonly>${esc(link)}</textarea><button class="cp">KOPIUJ LINK ZWROTNY</button><button class="dim out">ANULUJ</button>`, () => {
+      copyBtn(); box.querySelector('.out').onclick = () => { net.close(); openLobby(); }; waitLink(true); }); }
   function waitLink(quiet) { if (!quiet) view('<h2>ŁĄCZĘ...</h2><div class="why">Czekam na drugą stronę.</div><button class="dim out">ANULUJ</button>', () => { box.querySelector('.out').onclick = () => { net.close(); openLobby(); }; });
-    const t0 = performance.now(), poll = () => { if (net.on) return chooseMode(); if (net.status === 'failed') return fail('Nie udało się połączyć. Niektóre sieci (firmowe, komórkowe) nie przepuszczają połączeń bezpośrednich. Spróbujcie z innej sieci.'); if (page !== 'lobby') return; if (performance.now() - t0 < 60000) setTimeout(poll, 300); }; poll(); }
+    const t0 = performance.now(), poll = () => { if (net.on) { stopAnswer(); return chooseMode(); } if (net.status === 'failed') return fail('Nie udało się połączyć. Niektóre sieci (firmowe, komórkowe) nie przepuszczają połączeń bezpośrednich. Spróbujcie z innej sieci.'); if (page !== 'lobby') return; if (performance.now() - t0 < 600000) setTimeout(poll, 300); }; poll(); }   // (ten minutes: the friend may take a while to answer)
   function fail(msg) { view(`<h2>NIE WYSZŁO</h2><div class="why">${esc(msg)}</div><button class="again">SPRÓBUJ JESZCZE RAZ</button><button class="dim out">WRÓĆ</button>`, () => { box.querySelector('.again').onclick = () => openLobby(); box.querySelector('.out').onclick = () => { net.close(); closeLobby(); }; }); }
   function chooseMode() { if (net.role !== 'host') return view(`<h2>POŁĄCZONO!</h2><div class="why">Jesteś <b class="p2">GRACZEM 2</b>. Gospodarz wybiera, w co gracie.</div><button class="dim out">ROZŁĄCZ</button>`, () => { box.querySelector('.out').onclick = () => leave(); });
     view(`<h2>POŁĄCZONO!</h2><div class="why">Jesteś <b>GRACZEM 1</b>. W co gracie?</div>${Object.entries(MP_MODES).map(([id, m]) => `<button data-id="${id}">${m.name}<small>${m.info}</small></button>`).join('')}<button class="dim out">ROZŁĄCZ</button>`, () => {
@@ -115,5 +128,5 @@ export function createMp({ api, net }) {
     if (m.k === 'bye') { stopLocal(); net.close(); api.flash('Drugi gracz się rozłączył'); return; } }
   function key(e) { if (page === 'end') { if (e.code === 'Enter') { again(); return true; } if (e.code === 'Escape') { toLobby(); return true; } return false; }
     if (page === 'lobby') { if (e.code === 'Escape') { if (net.on && M) closeLobby(); else if (net.on) leave(); else { net.close(); closeLobby(); } return true; } return e.target?.tagName === 'TEXTAREA'; } return false; }
-  return { leaveRound: stopLocal, openLobby, start, onMsg, update, key, kick, get on() { return !!M; }, get id() { return M?.id || null; }, get isOpen() { return !!page; }, get counting() { return M?.phase === 'count'; }, get it() { return M?.it || 0; }, get linked() { return net.on; } };
+  return { leaveRound: stopLocal, openLobby, joinFlow, start, onMsg, update, key, kick, get on() { return !!M; }, get id() { return M?.id || null; }, get isOpen() { return !!page; }, get counting() { return M?.phase === 'count'; }, get it() { return M?.it || 0; }, get linked() { return net.on; } };
 }

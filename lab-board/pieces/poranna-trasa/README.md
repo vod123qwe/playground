@@ -761,3 +761,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
   - tryby (wybiera gospodarz): WSPÓLNA JAZDA (bez zegara), WYŚCIG GAZECIARZY (4 min, kto więcej zarobi; kopnięcie zrzuca drugiego z roweru), RAZEM (20 gazet we dwóch w 5 min; kopnięcie tylko popycha), BEREK NA ROWERACH (3 min, kopnięcie oddaje berka, potem 3 s ochrony; wygrywa ten, kto był berkiem krócej)
   - wspólny start obok siebie na trasie przy wyjeździe z uliczki, odliczanie u obu naraz, tablica wyników na górze, ekran końca z porównaniem (zarobione, doręczone, kopniaki, upadki)
   - zerwane połączenie kończy rundę; do testów na jednym komputerze: dwie karty z `?bc=KOD` w adresie
+
+## Wersja 82: zaproszenie linkiem, bez niewidzialnej ściany
+
+- gra przez sieć bez kopiowania kodów: ZAŁÓŻ GRĘ daje **link zaproszenia** (zawsze na publiczną stronę gry, także gdy gospodarz gra lokalnie); znajomy klika i od razu dostaje **link zwrotny**; gospodarz klika link zwrotny, otwiera się karta, która przekazuje go do czekającej gry i sama się zamyka. Bez serwera, kod jest w części adresu po „#”, więc nie trafia na żaden serwer
+- można też wkleić link (albo sam kod) w okno gry; zaproszenie czeka 10 minut
+- poprawka: przy wyjeździe z osiedla na trasę stała niewidzialna ściana (granica podwórka sięgała na trasę); teraz granica działa tylko za domami
