@@ -180,7 +180,7 @@ const clashes = (id, code) => { const A = ACTIONS.find(a => a.id === id); return
 // what each is, where (the menu's page and the help window list them so)
 const SECTIONS = [
   { title: 'NA ROWERZE', items: [['pedal', 'PEDAŁUJ'], ['brake', 'HAMUJ (NA POSTOJU: COFAJ)'], ['left', 'SKRĘĆ W LEWO'], ['right', 'SKRĘĆ W PRAWO'], ['sprint', 'SZYBCIEJ'],
-    ['throwL', 'RZUT W LEWO (TRZYMAJ: SIŁA, PUŚĆ: RZUT)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (TRZYMAJ)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
+    ['throwL', 'RZUT W LEWO (TRZYMAJ: SIŁA, PUŚĆ: RZUT)'], ['throwR', 'RZUT W PRAWO'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
     ['talk', 'ZAGADAJ DO KOGOŚ'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
@@ -419,8 +419,10 @@ function ride(dt, inp) {
   if (inp.hop && !B.air) { B.air = true; B.vy = 3.8 + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : null; }   // (hopped off a ramp: higher, and a trick allowed)
   if (B.air) { B.vy -= g * dt; B.y += B.vy * dt; if (B.y <= ground) { B.airRamp = null;
     if (B.trick) { const T = B.trick; B.trick = null;
-      if (T.held || !T.clean) { B.y = ground; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; flash(T.held ? 'Puść wcześniej!' : T.p < 1 ? 'Za krótko!' : 'Za długo!'); crash(0); return; }
-      const n = T.pts + (T.perfect ? 1 : 0), lab = T.name + (T.perfect ? ' CZYSTO' : ''); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
+      if (T.p < .7) { B.y = ground; B.air = false; B.vy = 0; B.airRamp = null; B.done = []; flash('Za późno! Trik od razu po wybiciu'); crash(0); return; }
+      if (T.p < 1) T.pulled = true; const all = [...(B.done || []), T]; B.done = [];
+      const clean = all.every(o => !o.pulled), n = all.reduce((a, o) => a + o.pts, 0) + (clean ? 1 : 0) + (all.length - 1) * 2;
+      const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
     if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; } }
   else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else B.y = ground; }
   B.onRamp = !B.air && rp.h > .05 ? rp.on : null;   // (the ground fell away as he rose: he flies)
@@ -528,17 +530,23 @@ function stepDogs(dt, inp) {
   B.rattled = B.crash ? 0 : slow > .25 ? (B.rattled || 0) + dt : Math.max(0, (B.rattled || 0) - dt * .7);
   if (B.rattled > 6.5 && !B.crash) { B.rattled = 0; for (const n of barkers) dogs.kick(n.dog); crash(); flash('Pies Cię dopadł!'); }
   // the kick: at whatever is nearest by him (a dog, someone walking, a cyclist, a car, the old woman, a hydrant), with the leg on its side
-  // off a ramp, in the air: Space does a trick. A or D held: a 360 that way; W held on the big ramp: a backflip; else a tabletop
-  //   hold Space: it goes round; let go when it is round (a little either side is forgiven and rounded off; spot on: CZYSTO +1).
-  //   Let go too soon: it stays short; hold too long: it goes past; still holding as he lands: no time to land it. Any of those: down.
+  // off a ramp, in the air: Space (a phone: the kick button) does a trick. A or D held: a 360 that way; W held on the big ramp: a backflip; else a tabletop.
+  //   One press: it goes round by itself, at a pace fitted to the time left in the air, and is pulled in faster if it must be, to be round
+  //   for the landing (no timing to hit). Round in its own time: CZYSTO +1; pulled in at the end: NA STYK. Round and still flying: press
+  //   again, another one (a combo, +2 for each one more). Begun far too late (not even most of the way round as he lands): down.
+  const airLeft = () => { const h = Math.max(0, B.y - track.probe(B.x, B.z, B.hint).y); return (B.vy + Math.sqrt(B.vy * B.vy + 2 * g * h)) / g; };   // (seconds till he is down)
   if (B.trick) { const T = B.trick; T.t += dt;
-    if (T.held) { if (inp.kickHold) T.p += dt / T.dur; else { T.held = false; const err = T.p - 1; T.clean = Math.abs(err) <= .18; T.perfect = Math.abs(err) <= .06; } }
-    else if (T.clean) T.p += (1 - T.p) * Math.min(1, dt * 12); }
-  if (inp.kick && B.air && B.airRamp && !B.trick && !B.crash) { const big = B.airRamp === 'big', st = inp.steer, mk = (o) => ({ ...o, t: 0, p: 0, held: true, clean: false, perfect: false });
-    B.trick = Math.abs(st) > .3 ? mk({ kind: 'spin', dir: -Math.sign(st), dur: big ? .6 : .46, pts: 3, name: '360' })
-      : big && inp.pedal > .3 ? mk({ kind: 'flip', dir: 1, dur: .72, pts: 6, name: 'SALTO' })
-      : mk({ kind: 'table', dir: Math.random() < .5 ? -1 : 1, dur: .4, pts: 2, name: 'STÓŁ' });
+    if (T.p < 1) { const base = 1 / T.dur, need = (1 - T.p) / Math.max(.03, airLeft() - .05), rate = Math.min(base * 2.8, Math.max(base, need));
+      if (need > base * 1.1) T.pulled = true; T.p = Math.min(1, T.p + rate * dt); } }
+  if (inp.kick && B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)) { const big = B.airRamp === 'big', st = inp.steer, left = airLeft();
+    if (left > .2) { if (B.trick) { B.done = [...(B.done || []), B.trick]; } else B.done = [];
+      const fit = (lo, hi) => THREE.MathUtils.clamp(left * .8, lo, hi), mk = o => ({ ...o, t: 0, p: 0, pulled: false });   // (its pace: most of what is left of the flight)
+      B.trick = Math.abs(st) > .3 ? mk({ kind: 'spin', dir: -Math.sign(st), dur: fit(.34, big ? .9 : .7), pts: 3, name: '360' })
+        : big && inp.pedal > .3 ? mk({ kind: 'flip', dir: 1, dur: fit(.5, 1.1), pts: 6, name: 'SALTO' })
+        : mk({ kind: 'table', dir: Math.random() < .5 ? -1 : 1, dur: fit(.3, .7), pts: 2, name: 'STÓŁ' });
+      hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 2.1, 0)), B.trick.name + (B.done.length ? ' +' : '!'), '#efc970'); }
     inp = { ...inp, kick: false }; }
+  touch.trick(!!(B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)));   // (a phone: the kick button says TRIK while one can be done)
   if (inp.kick && !B.crash && !B.kick && !B.air) { const tg = kickTargets()[0]; let side = 1;
     if (tg) { const rx = -Math.cos(B.yaw), rz = Math.sin(B.yaw); side = ((tg.x - B.x) * rx + (tg.z - B.z) * rz) > 0 ? -1 : 1; }   // (+1: his left)
     B.kick = { t: 0, side, target: tg || null }; }
