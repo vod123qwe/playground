@@ -8,7 +8,7 @@
 export const REGIONS = [
   { id: 'peryferia', name: 'PERYFERIA', note: 'Tu mieszkasz. Domki, ogródki, psy za płotem.', col: '#7fae5a', built: true },
   { id: 'wies', name: 'WIEŚ', note: 'Polne drogi, gospodarstwa, górki i błoto. Gęsi nie ustępują.', col: '#c9b25a', built: true },
-  { id: 'peryferia2', name: 'DRUGA STRONA', note: 'Nowe osiedle za torami. Budowy, roboty drogowe, ciężarówki.', col: '#9aa36a', built: false },
+  { id: 'peryferia2', name: 'DRUGA STRONA', note: 'Nowe osiedle za torami. Budowy, roboty drogowe, magazyny.', col: '#9aa36a', built: true },
   { id: 'miasto', name: 'MIASTO', note: 'Kamienice, rynek, autobus. Krawężniki, schody i duży ruch.', col: '#b8a090', built: false },
   { id: 'las', name: 'LEŚNA DROGA', note: 'Ścieżki między drzewami, domki letniskowe, namioty.', col: '#4f8a52', built: false },
   { id: 'dalej', name: '???', note: 'Jeszcze dalej. Inny teren.', col: '#6a6f78', built: false }];
@@ -34,7 +34,13 @@ export const LEVELS = [
     goal: { time: 165, acc: .65, papers: 9 }, after: ['w4'], tease: { head: 'Żniwa na całego', text: 'Na drogach maszyny, w polu kurz. Kto jedzie rowerem, niech trzyma się pobocza.', spot: 'przystanek' } },
   { id: 'w4', region: 'wies', name: 'TARGOWY PORANEK', note: 'Dzień targowy: wszyscy jadą do miasteczka. Ruch, psy i pośpiech.', finish: { to: 1, dir: 1 }, cars: 4, pace: 1.15, heat: 1.15, papers: 28, seed: 504, cross: [.18, .42],
     goal: { time: 155, acc: .7, papers: 10 }, after: ['d1'], tease: { head: 'Targ w miasteczku', text: 'Od rana kolejka furmanek i aut. Gazeciarz musi zdążyć, zanim wszyscy odjadą na targ.', spot: 'przystanek' } },
-  { id: 'd1', region: 'peryferia2', name: 'NOWE OSIEDLE', note: 'Wkrótce.', soon: true, after: [] }];
+  { id: 'd1', region: 'peryferia2', name: 'NOWE OSIEDLE', note: 'Pół osiedla: szeregowce jeden przy drugim, ciasne zakręty, dziury.', finish: { to: .5, dir: 1 }, cars: 2, pace: 1, heat: .9, papers: 20, seed: 601,
+    goal: { time: 100, acc: .65, papers: 6 }, after: ['d2', 'd3'], tease: { head: 'Za torami rośnie osiedle', text: 'Nowi mieszkańcy pytają o prenumeratę. Deweloper obiecał im ciszę, a dostali budowę pod oknem.', spot: 'budowa' } },
+  { id: 'd2', region: 'peryferia2', name: 'PLAC BUDOWY', note: 'Całe osiedle przez budowy: roboty drogowe, zwężenia, piach i przejazd przez tory.', finish: { to: 1, dir: -1 }, cars: 3, pace: 1, heat: 1, papers: 26, seed: 602, cross: [.33],
+    goal: { time: 175, acc: .65, papers: 9 }, after: ['d4'], tease: { head: 'Roboty drogowe na Nowej', text: 'Koparka stoi na pasie od tygodnia. Kierownik budowy mówi, że „jeszcze trochę”. Mieszkańcy mówią co innego.', spot: 'budowa' } },
+  { id: 'd3', region: 'peryferia2', name: 'MAGAZYNY', note: 'Długie proste wzdłuż hal, dużo ruchu o świcie. Szybko, ale uważaj na rampy i wózki.', finish: { to: 1, dir: 1 }, cars: 5, pace: 1.15, heat: 1.05, papers: 26, seed: 603,
+    goal: { time: 160, acc: .7, papers: 9 }, after: ['d4'], tease: { head: 'Hale przy bocznicy', text: 'Magazynierzy czytają gazetę na przerwie. Kto dowiezie przed szóstą, ten ma u nich kawę.', spot: 'przystanek' } },
+  { id: 'd4', region: 'peryferia2', name: 'WOJNA GAZET', note: 'Wkrótce: kurierzy Kuriera Osiedlowego na Twojej trasie.', soon: true, after: [] }];
 export const LEVEL = id => LEVELS.find(l => l.id === id);
 
 // ---------- the save ----------

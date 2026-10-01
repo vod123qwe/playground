@@ -1010,3 +1010,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
   - Wyścig z traktorzystą (40 zł): meta w czasie lepszym niż jego (85% czasu na gwiazdkę)
 - poprawka: ogłoszenia w gazecie znają teraz kupione rzeczy (po słuchawce pojawiają się liczniki) i otwarte regiony
 - poprawka: komunikaty o błocie i przejeździe pojawiają się raz na każdy odcinek, nie raz na całą sesję
+
+## Wersja 114: region 3 „Druga strona”
+
+- nowy region za torami (otwiera się po Targowym poranku): płaska pętla osiedla z ciaśniejszymi zakrętami, krawężniki i linie, domy gęsto jeden przy drugim w nowoczesnych szarościach i bielach, ciemne dachy
+- budowy na działkach: betonowy szkielet, ściany do połowy, rusztowanie od frontu, kupa piasku (hamuje jak błoto), betoniarka, palety bloczków, siatka z bramą, tablica TEREN BUDOWY
+- dwa odcinki magazynów: hale z blachy z czerwonym pasem, brama rolowana, rampa, palety, wózek widłowy
+- roboty drogowe na jezdni: zamknięty pas za barierkami, pachołki zwężające, koparka w wykopie, znaki; auta objeżdżają
+- dźwigi wieżowe nad dachami
+- trasy: Nowe osiedle (pół pętli), Plac budowy (cała pętla w drugą stronę, przejazd kolejowy), Magazyny (cała pętla, większy ruch); Wojna gazet zapowiedziana (v115)
+- mapa: nowe punkty tras w regionie, region w kolorze
