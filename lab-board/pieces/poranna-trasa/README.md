@@ -600,3 +600,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - notes gazeciarza pod Tabem (telefon: przycisk z notesem u góry), gra czeka: co o tobie mówią poszczególne grupy (pasek i jedno, dwa zdania), stan (zdrowie, kasa, sława, dystans), torba po tytułach, części roweru, fanty, rzeczy na koncie z loterii
 - pan Janusz, właściciel warsztatów: w kąpielówkach, klapkach, za małej koszulce i czapeczce; siedzi na taborecie przed warsztatem i zaczepia („JAPOŃSKI OSPRZĘT, MŁODY!”), a w sklepie siedzi obok roweru i komentuje każdą kategorię, zakup, brak kasy i sprzedaż; „Pogadaj z Januszem”: anegdoty z wypraw z Mietkiem (nad morze w klapkach, guma załatana kanapką z serem, zlot tydzień po zlocie...)
 - długie linijki zadań u góry ekranu łamią się na wąskim ekranie
+
+## Wersja 60: dźwięk i muzyka
+
+- wszystko grane w przeglądarce (`src/audio.js`: oscylatory, szum, filtry), bez plików i bez pobierania; rusza po pierwszym kliknięciu albo klawiszu
+- efekty: rzut gazety, lądowanie, ganek, skrzynka, szyba, kasa, dzwonek (B, gdy masz go na rowerze; piesi schodzą z drogi), wywrotka, kopniak, cios, psy, klakson, syrena patrolu (głośniej, gdy bliżej), podniesienie łupu, szelest paczki, trick, au, kliknięcia w menu i rozmowie; szum jazdy rośnie z prędkością (na trawie szorstszy); dźwięki ze świata cichsze z daleka i z właściwej strony
+- mowa bez lektora: każdy dymek i każda rozmowa to bełkot sylab w głosie postaci (jak w bajkach): babcie wysoko i drżąco, dziadkowie niżej, brzuchacz basem, ekipa szybko, policja sucho, pan Janusz podskakująco, gang zadziornie, a lump mamrocze nisko, bełkotliwie i z czkawką; pytanie idzie w górę, wykrzyknik mocniej
+- muzyka: pogodny poranek w trakcie jazdy, pościg (gang albo policja za tobą) z płynnym przejściem, spokojna na ekranie tytułowym i podsumowaniu
+- menu (pauza i ekran tytułowy): DŹWIĘK z suwakami głośności, muzyki, efektów i głosów (zapamiętane)
+- Warsztat: kategoria „Dźwięki” do odsłuchu każdego efektu, głosu i muzyki, z suwakami

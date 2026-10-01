@@ -4,7 +4,7 @@
 //   name, or null: the end), act() (done on choosing; what it returns, if not undefined, is where to go), off() (a reason it cannot
 //   be chosen now, or nothing); bye (on an answer or a node): what they say after it is over. A node without opts: one answer, DALEJ, to node.next (or the end).
 // createTalk() → { run(nodes, start, onEnd), key(e) → true if it took the key, isOpen }
-export function createTalk() {
+export function createTalk({ onSay, onPick } = {}) {
   const css = document.createElement('style'); css.textContent = `
     #talk { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); box-sizing: border-box;
       z-index: 7; display: none; padding: 12px 14px 12px; background: rgba(23,24,27,.94); border: 2px solid #efc970; box-shadow: 0 0 0 2px #17181b, 0 8px 0 rgba(0,0,0,.25);
@@ -35,13 +35,13 @@ export function createTalk() {
   }
   function go(id) {
     if (id == null) return close(); node = typeof id === 'object' ? id : nodes[id]; if (!node) return close();
-    node.enter?.(); if (node.bye) bye = node.bye; full = String(str(node.say) || ''); shown = 0; whoE.textContent = str(node.who ?? nodes.who ?? '') || '';
+    node.enter?.(); if (node.bye) bye = node.bye; full = String(str(node.say) || ''); shown = 0; whoE.textContent = str(node.who ?? nodes.who ?? '') || ''; onSay?.(whoE.textContent, full);   // (said aloud: a burble in their voice)
     opts = node.opts ? node.opts.filter(o => !o.if || o.if()) : [{ t: 'DALEJ', go: node.next ?? null }]; sel = 0; draw();
     clearInterval(timer); timer = setInterval(() => { shown = Math.min(full.length, shown + 2); draw(); if (shown >= full.length) clearInterval(timer); }, 16);
   }
   function choose(i) {
     if (!node) return; if (shown < full.length) { shown = full.length; clearInterval(timer); draw(); return; }   // (a press while it writes: all of it at once)
-    const o = opts[i]; if (!o || o.off?.()) return; if (o.bye) bye = o.bye; const r = o.act ? o.act() : undefined; go(r !== undefined ? r : o.go);
+    const o = opts[i]; if (!o || o.off?.()) return; onPick?.(); if (o.bye) bye = o.bye; const r = o.act ? o.act() : undefined; go(r !== undefined ? r : o.go);
   }
   function close() { clearInterval(timer); box.classList.remove('on'); node = nodes = null; const f = onEnd, b = bye; onEnd = null; bye = null; f?.(b); }   // (onEnd(bye): the last word said after it)
   let autoT = 0;
