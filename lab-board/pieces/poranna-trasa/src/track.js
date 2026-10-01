@@ -871,6 +871,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
 
   const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)
   for (const i of bigAt) { const o = P.ramp(rnd, 'big'); put(o.group, i, 1.4, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: 1.4 }); }   // (the traffic goes round it)
+  { const i = Math.round(N * .51), o = P.ramp(rnd, 'mega'); put(o.group, i, -1.3, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: -1.3 }); }   // (and one mega ramp on the other half of the road, half way round)
   for (let i = 90; i < N - 30; i += Math.round((26 + rnd() * 30) / ds)) {
     const r = rnd(), sd = rnd() < .5 ? -1 : 1;
     if (bigAt.some(b => Math.abs(b - i) * ds < 14)) continue;             // (the big ones' run up and landing kept clear)
