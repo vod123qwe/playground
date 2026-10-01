@@ -645,7 +645,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 65: świat reaguje na kopniaki
 
 - naprawione: wersja 64 nie uruchamiała się (błąd w obsłudze pada)
-- kopniak (pieszo albo z roweru) w skrzynkę pocztową: drży, chorągiewka podskakuje, trzecie kopnięcie łamie ją i przewraca na trawnik (sława u policji lekko w górę)
+- kopniak (pieszo albo z roweru) w skrzynkę pocztową: drży, chorągiewka podskakuje, trzecie kopnięcie łamie ją i przewraca zawsze od strony jezdni, w stronę domu (sława u policji lekko w górę, sąsiedzi komentują)
 - słup: ledwie widoczny obłoczek kurzu; drzewo: chwieje się i sypią się liście, im więcej kopniaków, tym więcej (jesienne pomarańczowe, zielone, igły ze świerków); krzak: opadają zielone listki (z kwitnącego płatki); liście zostają na ziemi
 - huśtawka: każdy kopniak rozbuja ją mocniej, potem powoli się uspokaja
 - pachołki: wjechane albo kopnięte przewracają się i odjeżdżają po asfalcie, zamiast stać jak ściana
