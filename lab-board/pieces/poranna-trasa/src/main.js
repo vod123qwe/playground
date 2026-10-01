@@ -584,7 +584,7 @@ function endRun(why) { if (runUI.isOpen) return; endT = 0; runUI.open({ reason: 
 function fromAccount() { const all = kept(); for (const k of all) { if (k.keep.part) shop.grant(k.keep.part, k.keep.tier); else if (k.keep.item) (B.items ||= []).push(k.keep.item); } if (all.length) flash('Z konta: ' + all.map(k => k.label.toLowerCase()).join(', ')); }
 setTimeout(() => fromAccount(), 0);   // (the first run too)
 function crash(side, push, robbed) {                                 // push: what hit him (a car's velocity), if anything; robbed: the old woman got him
-  if (B.crash) return; B.falls = (B.falls || 0) + 1; (B.fallsAt ||= []).push({ x: B.x, z: B.z }); logEv(push ? 'car' : robbed ? 'granny' : 'fall', B.x, B.z); audio.play('crash'); hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
+  if (B.crash) return; B.falls = (B.falls || 0) + 1; (B.fallsAt ||= []).push({ x: B.x, z: B.z }); logEv(push ? 'car' : robbed ? 'granny' : 'fall', B.x, B.z); if (RAD.fall <= 0) { RAD.fall = 10; setTimeout(() => radioSay('fall'), 900); } audio.play('crash'); hurt(push ? 30 : 15, push ? 'Auto było twardsze.' : 'Za dużo wywrotek na jeden poranek.'); B.crash = { t: 0, side: side || (B.lean >= 0 ? 1 : -1), up: false, robbed }; B.charge = null; aim.on = false; aim.G.visible = false; flash('Wywrotka!');
   // he comes off: a ragdoll, flung on the way he was going (over the bars), a little to the side he falls, and with whatever hit him
   const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)), vel = f.clone().multiplyScalar(B.v * .55).addScaledVector(new THREE.Vector3(-f.z, 0, f.x), B.crash.side * .5);
   if (push) vel.addScaledVector(push, .45); vel.y += B.air ? B.vy : 0;
@@ -633,7 +633,7 @@ function ride(dt, inp) {
   const off = Math.abs(q.d) > track.PAVE && !track.home?.paved(B.x, B.z);   // (the home's street: asphalt, though off the loop)
   // the push: strong from standing, falling off towards 9 m/s (a little more with Shift); the brake; the air, the tyres, the grass; the hill; a dog
   // (B.v is signed: held at a stop, the brake walks him backwards, slowly)
-  const accK = 1 + MOD.acc, topK = 1 + MOD.top, push = inp.pedal * (inp.sprint ? 1.35 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) * accK - Math.max(0, B.v) * (inp.sprint ? .33 : .36) * accK / topK);   // (the parts: shop.js)
+  const accK = 1 + MOD.acc, topK = 1 + MOD.top, push = inp.pedal * (inp.sprint ? 1.35 : 1) * (RAD.turbo > 0 ? 1.3 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) * accK - Math.max(0, B.v) * (inp.sprint ? .33 : .36) * accK / topK);   // (the parts: shop.js)
   const back = inp.brake > .1 && B.v < .15 && inp.pedal < .1, brk = B.v > .05 ? inp.brake * 6.5 : 0;
   let a = push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * Math.max(.2, 1 + MOD.grass) * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 * (slope > 0 ? 1 - MOD.hill : 1) - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
   if (inp.pedal < .05 && !B.air && Math.abs(B.v) < 1.3) a -= Math.sign(B.v) * (1.2 - Math.abs(B.v) * .7);   // (coasting slowly: the tyres drag him to a stop)
@@ -937,7 +937,7 @@ function stamina(dt, inp) {
   const want = inp.sprint && inp.pedal > .1 && B.v > 1.5 && !B.crash;
   if (B.spent && B.stam > .45) B.spent = false;
   const use = want && !B.spent;
-  if (use) { B.stam = Math.max(0, B.stam - dt / (5.5 * (1 + MOD.stam))); B.rest = 0; if (B.stam === 0) { B.spent = true; flash('Zadyszka!'); } }
+  if (use) { B.stam = Math.max(0, B.stam - dt / (5.5 * (1 + MOD.stam) * (RAD.turbo > 0 ? 2.5 : 1))); B.rest = 0; if (B.stam === 0) { B.spent = true; flash('Zadyszka!'); } }
   else { B.rest = (B.rest || 0) + dt; if (B.rest > .7) B.stam = Math.min(1, B.stam + dt / (B.spent ? 5 : 3.5)); }
   inp.sprint = use; if (B.spent) inp.pedal *= .8;
   const tired = B.spent ? 1 : use ? Math.max(0, Math.min(1, 1 - B.stam / .35)) : Math.max(0, B.tired - dt * .8);
@@ -966,7 +966,7 @@ function step(dt, inp) {
       toFirst: () => { if (foot.view !== 'first') foot.toggleView(); }, toThird: () => { if (foot.view === 'first') foot.toggleView(); }, talkKey: keysOf('talk') });
     if (was || hoops.holding) inp = { ...inp, lmb: false, rmb: false }; }
   if (foot.active) return stepFoot(dt, inp);
-  stamina(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
+  stamina(dt, inp); stepRadio(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor, said: (r, t) => logEv('said', r.G.position.x, r.G.position.z, { who: r.lines || r.key, text: t }) });
   { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 && (B.bellT = (B.bellT || 0) - dt) > -4 });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
@@ -1196,7 +1196,7 @@ const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2
 const partLabel = (k, i) => { const t = PARTS[k].tiers[i].name; return t === PARTS[k].name ? t : `${PARTS[k].name}: ${t}`; };
 function saveCampaign() { LVM.save({ money: B.points, bike: myBike, inv: INV.map(p => ({ ...p })), paints: [...PAINTS], at: LV?.id || 'dom' }); }
 function applySave() { if (!LVM.hasSave()) return; const S = LVM.load(); if (S.bike?.type) { myBike = { type: S.bike.type, parts: { ...newParts(), ...(S.bike.parts || {}) }, ...(S.bike.paint ? { paint: S.bike.paint } : {}) }; }
-  INV.splice(0, INV.length, ...(S.inv || [])); PAINTS.clear(); for (const k of [0, ...(S.paints || [])]) PAINTS.add(k); B.points = S.money || 0; applyBike(); }
+  if (S.owned?.licznik) cyclo.skin(S.owned.licznik); INV.splice(0, INV.length, ...(S.inv || [])); PAINTS.clear(); for (const k of [0, ...(S.paints || [])]) PAINTS.add(k); B.points = S.money || 0; applyBike(); }
 setTimeout(applySave, 0);
 // the gate over the loop road: two striped posts at the kerbs, a chequered banner with META
 function clearGate() { for (const o of RUN.gate) scene.remove(o); for (const C of RUN.hits) track.dropHit(C); RUN.gate = []; RUN.hits = []; }
@@ -1215,7 +1215,7 @@ function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
   const iJ = track.home.iJ, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
-  bindJobs(); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
+  bindJobs(); Object.assign(RAD, { fin: false, cool: 6, idle: 40 }); Object.assign(RUN, { shots: [], t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
   flash(`${L.name}: wyjedź z domu i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
 function goHome() { if (fin.isOpen) fin.close(); LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
@@ -1244,6 +1244,20 @@ function snapJob() { const R = JOBRUN.find(q => !q.done && q.j.kind === 'foto');
   R.img = img; (RUN.shots ||= []).push({ what: R.j.what, img }); jobEnd(R, true); }
 // the marks over the jobs' targets
 function jobMarks() { const out = []; for (const R of JOBRUN) { if (R.done) continue; if (R.door) out.push({ p: new THREE.Vector3(R.door.p.x, R.door.p.y + 3.4, R.door.p.z), s: 'v', col: '#efc970' }); if (R.at) out.push({ p: R.at.clone().setY(R.at.y + 4), s: 'v', col: '#8fc3f0' }); } return out; }
+// ---------- Janusz on the earpiece (bought from Żaneta): his voice in a box under the bike computer, typed out. A sprint after a while: his
+// pep talk and a turbo (more push, less breath) for a few seconds; a car close behind; a fall; a checkpoint; the finish near; his talk now and then ----------
+const RAD = { t: 0, cool: 6, idle: 50, turbo: 0, sprint: false, fin: false, behind: 0, fall: 0, face: null, el: null, typ: 0 };
+{ const st = document.createElement('style'); st.textContent = `#radio { position: fixed; z-index: 4; left: 12px; top: 128px; width: min(360px, 60vw); display: none; gap: 8px; align-items: flex-start; font: 16px/20px PTPix, ui-monospace, monospace; color: #f6f3ea; border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 4px 8px; pointer-events: none; }
+  #radio.on { display: flex; } #radio img { width: 40px; height: 40px; image-rendering: pixelated; border: 2px solid #17181b; flex: none; } #radio b { display: block; font-weight: normal; color: #efc970; } #radio b i { display: inline-block; width: 8px; height: 8px; background: #cf5a3e; margin-right: 6px; animation: rad-on .6s steps(1) infinite; } @keyframes rad-on { 50% { opacity: 0; } }
+  #radio.turbo { border-image-source: var(--px-sel); color: #17181b; } #radio.turbo b { color: #8e2e25; } @media (max-width: 640px) { #radio { top: 96px; } }`; document.head.appendChild(st); }
+function radioSay(kind) { const S = LVM.load(); if (!S.owned?.sluchawka) return; if (!RAD.el) { RAD.el = document.createElement('div'); RAD.el.id = 'radio'; document.body.appendChild(RAD.el); }
+  if (!RAD.face) { const f = faceOf('janusz'); if (f) RAD.face = f.toDataURL(); } const t = pickOf(JB.RADIO[kind]); RAD.el.innerHTML = `${RAD.face ? `<img src="${RAD.face}" alt="">` : ''}<div><b><i></i>SŁUCHAWKA · JANUSZ</b><span></span></div>`;
+  RAD.el.classList.add('on'); RAD.el.classList.toggle('turbo', kind === 'turbo'); const sp = RAD.el.querySelector('span'); clearInterval(RAD.typ); let n = 0; RAD.typ = setInterval(() => { n += 2; sp.textContent = t.slice(0, n); if (n >= t.length) clearInterval(RAD.typ); }, 35); RAD.t = 2.6 + t.length * .045; }
+function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.classList.remove('on'); RAD.turbo = Math.max(0, RAD.turbo - dt); RAD.cool -= dt; RAD.behind -= dt; RAD.fall -= dt;
+  if (!LVM.load().owned?.sluchawka || foot.active || menu.open) { RAD.sprint = !!inp.sprint; return; }
+  if (inp.sprint && !RAD.sprint && RAD.cool <= 0 && B.v > 3) { RAD.turbo = 3.5; RAD.cool = 22; radioSay('turbo'); audio.play('trick', { vol: .4 }); } RAD.sprint = !!inp.sprint;
+  if (RAD.behind <= 0) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw); for (const t of traffic.list || []) { const p = t.car?.group?.position; if (!p) continue; const dx = p.x - B.x, dz = p.z - B.z, l = Math.hypot(dx, dz); if (l < 9 && (dx * fx + dz * fz) / l < -.6) { RAD.behind = 30; radioSay('behind'); break; } } }
+  if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; radioSay('idle'); } }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
@@ -1254,8 +1268,9 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   if ((RUN.chk -= dt) > 0) return; RUN.chk = .1; stepJobs();
   const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
   const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;
-  if (passed) { RUN.cp++; RUN.minA = Infinity; RUN.prevA = 1e9; if (RUN.cp >= RUN.cps.length) { finishLevel(); return; } audio.play('pick'); flash(last ? 'Meta!' : `Punkt ${RUN.cp} z ${RUN.cps.length - 1} zaliczony`); }
+  if (passed) { RUN.cp++; RUN.minA = Infinity; RUN.prevA = 1e9; if (RUN.cp >= RUN.cps.length) { finishLevel(); return; } audio.play('pick'); flash(last ? 'Meta!' : `Punkt ${RUN.cp} z ${RUN.cps.length - 1} zaliczony`); if (!last) radioSay('check'); }
   let rest = ahead(q.i, RUN.cps[RUN.cp]); for (let k = RUN.cp + 1; k < RUN.cps.length; k++) rest += ahead(RUN.cps[k - 1], RUN.cps[k]);
+  if (rest < 130 && !RAD.fin && RUN.go) { RAD.fin = true; radioSay('finish'); }
   const aNow = ahead(q.i, RUN.cps[RUN.cp]); if (onRoad) RUN.minA = Math.min(RUN.minA, aNow); const wrong = onRoad && aNow > RUN.minA + 25;
   lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>${JOBRUN.filter(q => !q.done).map(q => `<span class="job">▸ ${JB.lineOf(q.j)}${q.door ? ' ' + Math.round(Math.hypot(me.x - q.door.p.x, me.z - q.door.p.z)) + ' M' : ''}</span>`).join('')}`; }
 function finishLevel() { RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
@@ -1286,13 +1301,15 @@ function photoOf(label) { if (label === 'dom') { const hp = hoops?.hoop?.positio
   const d = new THREE.Vector3(S0.x - P.x, 0, S0.z - P.z), far = d.length(); d.normalize(); const cam = new THREE.PerspectiveCamera(44, camera.aspect, .1, camera.far), back = Math.min(16, Math.max(10, far + 3));
   cam.position.set(P.x + d.x * back + d.z * 2, P.y + 3.4, P.z + d.z * back - d.x * 2); cam.lookAt(P.x, P.y + 1.6, P.z); return photo(cam); }
 // a portrait for the paper: the person's face as the game draws them (a camera before the head), or Janusz from his picture; printed
-const JIMG = new Image(); JIMG.src = 'assets/ui/janusz.png';
+const JIMG = new Image(); JIMG.src = 'assets/ui/janusz.png'; const ZIMG = new Image(); ZIMG.src = 'assets/ui/npc/zaneta.webp';
 // the portrait studio: a copy of the person (as they stand now) alone before a plain wall, lit from the front, the camera at their face;
 // Janusz from his picture. Each through the paper's overlay, as the photos
 const STUDIO = (() => { const sc = new THREE.Scene(); sc.background = new THREE.Color('#d9d0b8'); sc.add(new THREE.HemisphereLight('#fff6e4', '#8a8070', 1.5)); const d = new THREE.DirectionalLight('#ffffff', 1.6); d.position.set(1.2, 2.2, 3); sc.add(d); return sc; })();
 const FACES = { mama: 'mama', tata: 'tata', brat: 'brat', sasiadka: 'sasiadka', sasiad: 'sasiad', dzialki: 'dzialki', kapliczka: 'kapliczka', budowa: 'budowa', przyczepa: 'przyczepa', dogman: 'dogman' };
 function faceOf(who) { if (who === 'janusz') { if (!JIMG.complete || !JIMG.naturalWidth) return null; const w = JIMG.naturalWidth, h = JIMG.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 96;
     const g = c.getContext('2d'); g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 96, 96); g.drawImage(JIMG, w * .29, h * .0, w * .42, w * .42, 0, 0, 96, 96); return printed(c, 64, 64); }
+  if (who === 'img:zaneta') { if (!ZIMG.complete || !ZIMG.naturalWidth) return null; const w = ZIMG.naturalWidth, h = ZIMG.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 96;
+    const g = c.getContext('2d'); g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 96, 96); g.drawImage(ZIMG, w * .3, h * .0, w * .42, w * .42, 0, 0, 96, 96); return printed(c, 64, 64); }
   const byKey = who.startsWith('key:') ? who.slice(4) : null; if (!FACES[who] && !byKey) return null; const R = (residents?.list || []).find(q => byKey ? q.key === byKey : who === 'dogman' ? q.key === 'dogman' : q.lines === who); if (!R?.head) return null;
   const G = SkeletonUtils.clone(R.G); G.position.set(0, 0, 0); G.rotation.set(0, 0, 0); G.visible = true; G.traverse(o => { o.visible = true; o.frustumCulled = false; }); STUDIO.add(G); G.updateMatrixWorld(true);
   const hd = G.getObjectByName(R.head.name) || G, hp = hd.getWorldPosition(new THREE.Vector3()), cam = new THREE.PerspectiveCamera(24, camera.aspect, .1, 30);
@@ -1335,8 +1352,11 @@ function paperData(L, r, rec, opened) { const iJ = track.home.iJ, N = track.N, d
   parts.sort((a, b) => a.price - b.price);
   const issue = Object.values(LVM.load().best).reduce((n, b) => n + (b.runs || 0), 0) + 100;
   return { L, r, rec, opened, photos: { finish: fin0, news }, tease, briefs: briefs.slice(0, 3), iv, an, heard, counts, badges, janusz: faceOf('janusz'), coupon: LVM.load().coupon || null, route, next: next.filter(x => x.id).length ? next : next, parts: parts.slice(0, 2), table: LVM.LEVELS.filter(l => !l.soon).map(l => ({ name: l.name, stars: LVM.starsOf(l.id), best: LVM.bestOf(l.id), open: LVM.isOpen(l.id), on: l.id === L.id })), money: B.points, region: LVM.REGIONS.find(q => q.id === L.region)?.name || '', issue }; }
-const fin = createPaper({ game: { JB, jobs: () => LVM.load().jobs || [], slots: () => LVM.load().slots || 2,
+const fin = createPaper({ game: { JB,  jobs: () => LVM.load().jobs || [], slots: () => LVM.load().slots || 2,
   takeJob: kind => { const S = LVM.load(), slots = S.slots || 2; S.jobs ||= []; if (S.jobs.some(j => j.kind === kind)) return { ok: false, msg: 'Już to masz w notesie.' }; if (S.jobs.length >= slots) return { ok: false, msg: 'Notes pełny. Najpierw załatw, co masz, albo kup większy u pani Heli.' }; const j = JB.take(kind); S.jobs.push(j); LVM.save(); return { ok: true, j }; },
+  buy: kind => { const J = JB.JOBS[kind]; if (kind === 'notes') return fin.buyNotes(); const S = LVM.load(); S.owned ||= {}; if (J.item === 'sluchawka' && S.owned.sluchawka) return { ok: false, msg: 'Już masz. Drugiej nie sprzedam, bo by się kłóciły w uszach.' };
+    if (B.points < J.cost) return { ok: false, msg: 'Bez pieniędzy to ja ci mogę najwyżej powiedzieć dzień dobry, kochaniutki.' }; B.points -= J.cost; if (J.item === 'sluchawka') S.owned.sluchawka = true; if (J.item === 'licznik') { S.owned.licznik = J.skin; cyclo.skin(J.skin); }
+    S.money = B.points; LVM.save(); return { ok: true, msg: J.done + ' ' + pickOf(['I nie mów nikomu, skąd masz.', 'Interes zrobiony. Nie znamy się.', 'Proszę bardzo. Paragonu nie będzie, bo paragon to papier, a papier się pali.']) }; },
   buyNotes: () => { const S = LVM.load(), c = JB.JOBS.notes.cost; if ((S.slots || 2) >= 4) return { ok: false, msg: 'Większego notesu nie mam. Większy to już segregator.' }; if (B.points < c) return { ok: false, msg: 'Sześćdziesiąt złotych, kochanieńki. Wróć z pieniążkami.' }; B.points -= c; S.slots = (S.slots || 2) + 1; S.money = B.points; LVM.save(); return { ok: true, msg: 'Proszę bardzo, notes z twardą okładką. Teraz zmieścisz więcej spraw.' }; },
  mods: () => LVM.mods(), setMod: (id, on) => LVM.setMod(id, on), MODS: LVM.MODS, modBonus: ids => LVM.modBonus(ids), rewards: id => ({ R: LVM.REWARDS[id] || {}, got: LVM.load().got || {} }), partName: (k, i) => partLabel(k, i), coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
 const map = createMap({ levels: LVM, game: { partName: (k, i) => partLabel(k, i), go: id => startLevel(id), home: () => goHome(), shop: () => { map.close(); reMap = true; shop.open(); }, flash: s => flash(s), sound: n => audio.play(n), current: () => LV?.id || 'dom', save: () => saveCampaign() } });
