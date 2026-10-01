@@ -664,3 +664,4 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - las po wewnętrznej stronie pętli nie wychodzi już poza trawę (drzewa wisiały tam nad pustką)
 - naprawione: kopane pachołki i huśtawki naprawdę się ruszają (wcześniej były wtopione w nieruchome siatki), drzewo kopnięte brzmi jak uderzenie, nie jak szelest
 - narzędzie: `?audit` buduje trasę bez łączenia siatek i `PT.track.audit()` wypisuje, co wisi w powietrzu, co jest pod trawą, co się zapada
+- poprawka 67.1: trasa znowu widać (w 67 przez błąd nie trafiała do sceny i jechało się po pustce); kamera pieszo znowu nie wchodzi pod ziemię; obrót podstawki w Warsztacie
