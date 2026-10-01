@@ -542,28 +542,54 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   function startGang(R) {
     const q = track.probe(R.x, R.z, -1), dir = Math.sign(Math.sin(R.yaw) * q.f.x + Math.cos(R.yaw) * q.f.z) || 1, n = GA.rep <= -5 ? 3 : 2, m = [];
     for (let k = 0; k < n; k++) { const r = game.makeRider(); r.setLook({ shirt: '#2a2c30', cap: '#17181b', jeans: '#26272a' }); r.setParts({ paint: '#17181b', rim: '#cf5a3e' }); scene().add(r.root);
-      m.push({ r, s: q.s - dir * (32 + k * 5), d: q.d, off: (k % 2 ? .9 : -.9), v: R.v + 2, x: 0, z: 0, down: false, downT: 0 }); }
-    GA.chase = { m, dir, t: 0, far: 0, done: null }; game.flash(onTurf(R) ? 'Gang rowerowy na swoim rewirze! Kopnij ich z rowerów albo uciekaj.' : 'Gang rowerowy za tobą! Kopnij ich z rowerów albo uciekaj.');
+      m.push({ r, s: q.s - dir * (32 + k * 5), d: q.d, off: (k % 2 ? 1.6 : -1.6) * (1 + (k >> 1) * .5), v: R.v + 2, x: 0, z: 0, down: false, downT: 0, hp: 3, atkT: .6 + k * 1.6 + rnd() * 1.2, lunge: 0, stag: 0 }); }
+    GA.chase = { m, dir, t: 0, far: 0, done: null, hits: 0, near: 0 }; game.flash(onTurf(R) ? 'Gang rowerowy na swoim rewirze! Kopnij ich z rowerów albo uciekaj.' : 'Gang rowerowy za tobą! Kopnij ich z rowerów albo uciekaj.');
     setTimeout(() => { const a = m[0]; if (a && GA.chase) hud.rant(V(a.x, (a.r.root.position.y || 0) + 1.9, a.z), pick(['TO TEN, CO KOPIE NASZYCH!', 'BIERZEMY GO!', 'MASZ PRZEJAZD PŁATNY, MŁODY!']), false); }, 900);
   }
   function endGang(how) { const C = GA.chase; if (!C) return; GA.chase = null; GA.cool = 240 + rnd() * 180;
     game.flash(how === 'down' ? 'Gang leży na asfalcie. Na jakiś czas spokój.' : how === 'caught' ? 'Gang cię dopadł. Na razie wyrównane.' : 'Zgubiłeś gang.');
     if (how === 'down') GA.rep += 1.5; if (how === 'caught') GA.rep += 1;   // (all of them down: a grudging respect; caught: square for now)
     setTimeout(() => { for (const g of C.m) g.r.root.parent?.remove(g.r.root); }, 4000); }
+  // what stands on the road, for the gang to see coming: its place along and across the road and its size (a ramp they ride over)
+  const roadOf = C => C.road || (C.road = (() => { const q = track.probe(C.x, C.z, C.i), r = track.S[q.i].r, ax = Math.abs(C.c * r.x - C.s * r.z), az = Math.abs(C.s * r.x + C.c * r.z); return { s: q.s, d: q.d, half: C.hx * ax + C.hz * az }; })());   // (its half width across the road)
+  const inBox = (C, x, z, m) => { const dx = x - C.x, dz = z - C.z, lx = dx * C.c - dz * C.s, lz = dx * C.s + dz * C.c; return Math.abs(lx) < C.hx + m && Math.abs(lz) < C.hz + m; };
+  // the nearest thing on his line ahead (to 9 m): looked for at points along the way he rides, against each thing's own box
+  function ahead(g, dir) { const q = track.probe(g.x, g.z, g.i ?? -1), list = [...track.near(q.i)].filter(C => !C.used && C.kind !== 'ramp' && C.kind !== 'bundle' && C.kind !== 'soft' && C.h > .25);
+    for (let ds = .8; ds <= 9; ds += .8) { const p = along(g.s + dir * ds, g.d); for (const C of list) if (inBox(C, p.x, p.z, .45)) return { o: roadOf(C), ds, C }; } return null; }
   function stepGang(dt, R) {
     GA.cool -= dt * (onTurf(R) ? 2 : 1);
     if (!GA.chase) { if (GA.rep <= -3 && GA.cool <= 0 && !R.foot && R.v > 3 && !talk.isOpen) startGang(R); return; }
-    const C = GA.chase, q = track.probe(R.x, R.z, -1); C.t += dt; let left = 0, near = 1e9; C.hitT = (C.hitT || 0) - dt;
+    // (one of them at a time swings in, with a breath between: lungeT)
+    const C = GA.chase, q = track.probe(R.x, R.z, -1); C.t += dt; C.lungeT = (C.lungeT || 0) - dt; let left = 0, near = 1e9; C.hitT = (C.hitT || 0) - dt;
+    // first they ride up and keep alongside, at his speed, a few seconds of words; then one at a time they swing in to kick him and
+    // fall back; five kicks and he is off; two kicks and one of them is (the first: he wobbles away, slower, and comes back)
     for (const g of C.m) {
       if (g.down) { g.v = Math.max(0, g.v - dt * 8); g.s += C.dir * g.v * dt; g.r.update({ ...still0, dt, fallen: 1 }); continue; } left++;
-      const gap = wrapD(q.s - g.s, 0) * C.dir, want = Math.min(12.5, Math.max(0, R.v + (gap - 1.2) * 1.3)); g.v += (want - g.v) * Math.min(1, dt * 2); g.d += ((THREE.MathUtils.clamp(q.d, -2, 2) + g.off * Math.min(1, gap / 6)) - g.d) * Math.min(1, dt * 1.4);
-      g.s += C.dir * g.v * dt; const a = along(g.s, g.d), y = track.probe(a.x, a.z, a.i).y; g.r.root.position.set(a.x, y, a.z); g.r.root.rotation.set(0, Math.atan2(a.f.x * C.dir, a.f.z * C.dir), 0, 'YXZ');
-      g.r.update({ ...still0, dt, speed: g.v, pedalling: 1 }); g.x = a.x; g.z = a.z; const dist = Math.hypot(a.x - R.x, a.z - R.z); near = Math.min(near, dist);
-      if (dist < 1.3 && !R.foot && C.t > 2 && !(C.hitT > 0) && !C.done) { C.hitT = 3; C.done = 'caught'; game.shove(V(R.x - a.x, 0, R.z - a.z)); hud.rant(V(a.x, y + 1.9, a.z), pick(['NA NASZYM REWIRZE?!', 'POZDRÓW ASFALT!', 'TO ZA KOLEGĘ!']), false); setTimeout(() => endGang('caught'), 2000); } }
+      g.stag = Math.max(0, g.stag - dt); const gap = wrapD(q.s - g.s, 0) * C.dir, beside = Math.abs(gap) < 3.5 && Math.hypot(g.x - R.x, g.z - R.z) < 4.5;
+      if (beside) C.near += dt / C.m.length;
+      if (beside && !g.stag && C.near > 5) { if ((g.atkT -= dt) <= 0 && !g.lunge && !(C.lungeT > 0)) { g.lunge = 1.6; C.lungeT = 3.2 + rnd() * 1.6; } }
+      const lunging = g.lunge > 0; if (lunging) g.lunge -= dt;
+      const sideOff = g.stag ? Math.sign(g.off) * 3 : lunging ? Math.sign(g.off) * .55 : g.off, back = g.stag ? 4 : 0;
+      const want = Math.min(13, Math.max(0, R.v + (gap - .2 - back) * 1.2)); g.v += (want - g.v) * Math.min(1, dt * 2);
+      g.d += ((THREE.MathUtils.clamp(q.d + sideOff * Math.min(1, Math.max(.2, 4 / Math.max(1, Math.abs(gap)))), -3.2, 3.2)) - g.d) * Math.min(1, dt * (lunging ? 3.2 : 1.6));
+      { const ob = g.x || g.z ? ahead(g, C.dir) : null;   // (something in his way ahead: round it, on the side with the more room; too close, he brakes)
+        if (ob) { const o = ob.o, lo = o.d - o.half - .75, hi = o.d + o.half + .75, pass = Math.abs(g.d - lo) < Math.abs(g.d - hi) && lo > -3.4 || hi > 3.4 ? lo : hi; g.d += (THREE.MathUtils.clamp(pass, -3.4, 3.4) - g.d) * Math.min(1, dt * 4.5); if (ob.ds < 2.4) g.v *= Math.pow(.5, dt); }
+        const hit = g.x || g.z ? [...track.near(g.i ?? 0)].find(C => !C.used && C.kind !== 'ramp' && C.kind !== 'bundle' && C.kind !== 'soft' && C.h > .25 && inBox(C, g.x, g.z, .25)) : null;   // (ridden into it after all)
+        if (hit && !(g.bumpT > 0)) { const ob2 = { C: hit }; g.bumpT = 1.5; g.hp -= 1; g.stag = 1.8; g.v *= .4; ob2.C.thing?.kind === 'cone' && game.bump?.(ob2.C.thing, C.dir * 2, 0);
+          if (g.hp <= 0) { g.down = true; GA.rep -= .2; hud.rant(V(g.x, (g.r.root.position.y || 0) + 1.7, g.z), pick(['MOJE ZĘBY!', 'KTO TO TU POSTAWIŁ?!', 'AŁAAA!']), false); } else hud.rant(V(g.x, (g.r.root.position.y || 0) + 1.7, g.z), pick(['UWAŻAJ!', 'O RANY!', 'KTO TO TU POSTAWIŁ?!']), false); }
+        g.bumpT = (g.bumpT || 0) - dt; }
+      g.s += C.dir * g.v * dt; const a = along(g.s, g.d), y = track.probe(a.x, a.z, a.i).y; g.r.root.position.set(a.x, y, a.z); g.i = a.i; g.r.root.rotation.set(0, Math.atan2(a.f.x * C.dir, a.f.z * C.dir), 0, 'YXZ');
+      g.r.update({ ...still0, dt, speed: g.v, pedalling: 1, kick: lunging && g.lunge < .8 ? { side: Math.sign(g.off) * C.dir, t: 1 - g.lunge / .8 } : null }); g.x = a.x; g.z = a.z; const dist = Math.hypot(a.x - R.x, a.z - R.z); near = Math.min(near, dist);
+      if (lunging && dist < 1.25 && !R.foot && !(C.hitT > 0) && !C.done) { C.hitT = .8; g.lunge = 0; g.atkT = 4 + rnd() * 3; C.hits++;
+        if (C.hits >= 5) { C.done = 'caught'; game.shove(V(R.x - a.x, 0, R.z - a.z)); hud.rant(V(a.x, y + 1.9, a.z), pick(['POZDRÓW ASFALT!', 'TO ZA KOLEGĘ!', 'NA NASZYM REWIRZE?!']), false); setTimeout(() => endGang('caught'), 2000); }
+        else { game.jostle?.(V(R.x - a.x, 0, R.z - a.z), C.hits); if (rnd() < .6) hud.rant(V(a.x, y + 1.9, a.z), pick(['MASZ!', 'I JESZCZE!', 'TRZYMAJ SIĘ, MŁODY!', 'ZJEŻDŻAJ Z NASZEJ DROGI!']), false); } }
+      else if (lunging && g.lunge <= 0) g.atkT = 2 + rnd() * 2; }
     if (C.done) return; C.far = near > 60 ? C.far + dt : 0;
-    if (!left) endGang('down'); else if (C.far > 8 || C.t > 75 || R.foot) endGang('away');
+    if (!left) endGang('down'); else if (C.far > 8 || C.t > 160 || R.foot) endGang('away');
   }
-  function onKickGang(g) { if (g.down) return; g.down = true; GA.rep -= .5; hud.rant(V(g.x, g.r.root.position.y + 1.7, g.z), pick(['AŁA! ZAPAMIĘTAMY CIĘ!', 'MOJE KOŁO!', 'TY...!']), false); }
+  function onKickGang(g) { if (g.down) return; g.hp = (g.hp ?? 1) - 1; g.lunge = 0;
+    if (g.hp > 0) { g.stag = 2.2; g.v = Math.max(0, g.v - 3); g.atkT = 3 + rnd() * 2; hud.rant(V(g.x, g.r.root.position.y + 1.7, g.z), pick(['TO BOLAŁO!', 'EJ!', 'ZARAZ CI ODDAM!']), false); return; }   // (the first kick: he wobbles off, and comes back)
+    g.down = true; GA.rep -= .5; hud.rant(V(g.x, g.r.root.position.y + 1.7, g.z), pick(['AŁA! ZAPAMIĘTAMY CIĘ!', 'MOJE KOŁO!', 'TY...!']), false); }
   // the groups' standing with you, -6..6: the police, the lads by the drums, the gang, the neighbours, the bus-stop lot
   function reps() { const sum = kinds => { let s = 0; for (const o of new Set(P.values())) if (kinds.includes(o.kind)) s += o.mood; return s; }, cl = v => Math.max(-6, Math.min(6, v));
     return { policja: cl(PO.rep), ekipa: cl(sum(['shacks'])), gang: cl(GA.rep), sasiedzi: cl(sum(['belly', 'granma', 'grandpa']) / 2), przystanek: cl(sum(['stop', 'lump']) / 1.5) }; }
