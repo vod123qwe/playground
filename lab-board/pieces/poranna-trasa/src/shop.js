@@ -46,31 +46,59 @@ const STATS = [['top', 'PRĘDKOŚĆ'], ['acc', 'PRZYSPIESZENIE'], ['steer', 'SKR
 const HELLO_OLD = ['ROMAN, WARSZTAT: CO DLA CIEBIE? TYLKO NIE PYTAJ O RATY.', 'ROMAN, WARSZTAT: ROWER JAK KOŃ. TRZEBA GO KARMIĆ. CZĘŚCIAMI.', 'ROMAN, WARSZTAT: ZNOWU TY? DOBRZE, KASA SIĘ ZGADZA.', 'ROMAN, WARSZTAT: W TYM TYGODNIU PROMOCJA: NIC NIE JEST TAŃSZE, ALE JEST PROMOCJA.'];
 
 export function createShop({ THREE, createRider, game }) {
+  // the look: the game dimmed under a dither (as in the pause), a window of pixel blocks; on its left pan Janusz (his face, what he says)
   const css = document.createElement('style'); css.textContent = `
-    #shop { position: fixed; inset: 0; z-index: 8; display: none; background: rgba(14,15,17,.94); color: #f6f3ea; font: 700 12px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: uppercase; letter-spacing: .02em; }
-    #shop.on { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px 14px; padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); box-sizing: border-box; }
-    #shop .top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 2px solid #efc970; padding-bottom: 7px; }
-    #shop .top b { color: #efc970; font-size: 15px; letter-spacing: .1em; } #shop .cash { color: #efc970; font-size: 15px; white-space: nowrap; }
-    #shop .jan { grid-column: 1 / -1; background: #f6f3ea; color: #17181b; padding: 8px 11px; border: 2px solid #17181b; box-shadow: 0 0 0 2px #efc970; position: relative; min-height: 2.8em; } #shop .jan b { color: #8e2e25; margin-right: 6px; }
-    #shop .jan:after { content: ''; position: absolute; left: 22%; bottom: -10px; border: 8px solid transparent; border-top-color: #f6f3ea; border-bottom: 0; }
-    #shop.on { grid-template-rows: auto auto minmax(0, 1fr) auto; } #shop .chat { margin-right: auto; }
-    #shop .left { display: flex; flex-direction: column; gap: 8px; min-height: 0; } #shop canvas { width: 100%; aspect-ratio: 4 / 3; max-height: 46vh; background: radial-gradient(#3a3d42, #1d1e21 70%); border: 1.5px solid #44484c; image-rendering: pixelated; }
-    #shop .stats { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 11px; align-items: center; } #shop .bar { height: 8px; background: #2a2c30; position: relative; } #shop .bar i { position: absolute; inset: 0 auto 0 0; background: #efc970; } #shop .bar s { position: absolute; top: 0; bottom: 0; text-decoration: none; }
+    #shop { position: fixed; inset: 0; z-index: 8; display: none; place-items: center; color: #f6f3ea; font: 700 12px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: uppercase; letter-spacing: .03em;
+      background-color: rgba(10,11,13,.5); background-image: linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%), linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%); background-size: 4px 4px; background-position: 0 0, 2px 2px; }
+    #shop.on { display: grid; }
+    #shop .win { width: min(1040px, calc(100vw - 24px)); max-height: calc(100vh - 24px); box-sizing: border-box; display: grid; grid-template-columns: 210px minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px 14px; padding: 12px 14px;
+      background: #25272b; border: 3px solid #17181b; box-shadow: 0 0 0 3px #d3d0c3, 0 0 0 6px #17181b, 8px 8px 0 6px rgba(0,0,0,.35); }
+    #shop .head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; background: #17181b; margin: -12px -14px 0; padding: 8px 14px; border-bottom: 3px solid #efc970; }
+    #shop .head b { color: #efc970; font-size: 15px; letter-spacing: .14em; } #shop .cash { color: #efc970; font-size: 15px; white-space: nowrap; background: #33363a; padding: 3px 9px; box-shadow: inset 2px 2px 0 #44484c, inset -2px -2px 0 #1d1e21; }
+    #shop .side { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    #shop .ava { aspect-ratio: 1; background: #e3b83a; border: 3px solid #17181b; box-shadow: 0 0 0 3px #d3d0c3; display: grid; place-items: center; overflow: hidden; }
+    #shop .ava canvas, #shop .ava img { width: 100%; height: 100%; image-rendering: pixelated; display: block; object-fit: cover; }
+    #shop .jan { background: #f6f3ea; color: #17181b; padding: 9px 10px; border: 3px solid #17181b; position: relative; min-height: 5em; font-size: 11px; line-height: 1.45; }
+    #shop .jan:before { content: ''; position: absolute; left: 22px; top: -11px; border: 8px solid transparent; border-bottom-color: #17181b; border-top: 0; } #shop .jan b { display: block; color: #8e2e25; margin-bottom: 3px; }
+    #shop .left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    #shop canvas.bike { width: 100%; aspect-ratio: 4 / 3; background: #1d1e21; border: 3px solid #17181b; box-shadow: inset 0 0 0 2px #33363a; image-rendering: pixelated; }
+    #shop .stats { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 11px; align-items: center; } #shop .bar { height: 8px; background: #17181b; position: relative; } #shop .bar i { position: absolute; inset: 0 auto 0 0; background: #efc970; } #shop .bar s { position: absolute; top: 0; bottom: 0; text-decoration: none; }
     #shop .right { overflow-y: auto; min-height: 0; padding-right: 4px; } #shop .cats { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-    #shop button { all: unset; box-sizing: border-box; cursor: pointer; border: 1.5px solid rgba(246,243,234,.25); padding: 7px 9px; background: rgba(246,243,234,.04); }
-    #shop button.sel { border-color: #efc970; color: #efc970; background: rgba(239,201,112,.08); } #shop button.off { opacity: .4; cursor: default; }
-    #shop .tier { display: block; width: 100%; margin-bottom: 6px; } #shop .tier .n { display: flex; justify-content: space-between; gap: 8px; } #shop .tier .d { font-size: 10px; opacity: .7; margin-top: 3px; text-transform: none; } #shop .tier em { font-style: normal; color: #9fd27a; }
+    #shop button { all: unset; box-sizing: border-box; cursor: pointer; padding: 7px 9px; background: #33363a; border: 2px solid #17181b; box-shadow: inset 2px 2px 0 #4a4d52, inset -2px -2px 0 #1d1e21; }
+    #shop button:active { box-shadow: inset -2px -2px 0 #4a4d52, inset 2px 2px 0 #1d1e21; }
+    #shop button.sel { background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; } #shop button.off { opacity: .4; cursor: default; }
+    #shop .tier { display: block; width: 100%; margin-bottom: 6px; } #shop .tier .n { display: flex; justify-content: space-between; gap: 8px; } #shop .tier .d { font-size: 10px; opacity: .75; margin-top: 3px; text-transform: none; } #shop .tier em { font-style: normal; color: #2f6b2a; } #shop .tier:not(.sel) em { color: #9fd27a; }
     #shop h4 { margin: 12px 0 6px; color: #efc970; font-size: 11px; letter-spacing: .12em; } #shop .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 5px; } #shop .row button { padding: 5px 8px; font-size: 11px; }
-    #shop .bottom { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; } #shop .go { border-color: #efc970; color: #efc970; padding: 9px 16px; }
-    @media (max-width: 720px) { #shop.on { grid-template-columns: 1fr; grid-template-rows: auto auto auto minmax(0, 1fr) auto; } #shop canvas { max-height: 26vh; } #shop .jan { font-size: 11px; } }
+    #shop .bottom { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 10px; } #shop .go { background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; padding: 9px 16px; }
+    #shop .bottom .chat2 { display: none; }
+    @media (max-width: 820px) { #shop .win { grid-template-columns: 1fr; grid-template-rows: auto auto auto minmax(0, 1fr) auto; overflow-y: auto; }
+      #shop .side { flex-direction: row; align-items: flex-start; } #shop .ava { width: 64px; flex: none; } #shop .jan { flex: 1; min-height: 0; } #shop .jan:before { left: -11px; top: 14px; border: 8px solid transparent; border-right-color: #17181b; border-left: 0; }
+      #shop canvas.bike { max-height: 24vh; } #shop .side .chat { display: none; } #shop .bottom .chat2 { display: inline-block; } }
   `; document.head.appendChild(css);
-  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="top"><b>WARSZTAT U JANUSZA</b><span class="cash"></span></div><div class="jan"><b>PAN JANUSZ:</b><span class="say"></span></div><div class="left"><canvas></canvas><div class="stats"></div></div><div class="right"></div><div class="bottom"><button class="chat">POGADAJ Z JANUSZEM</button><button class="go">JEDŹ DALEJ (ESC)</button></div>';
+  const el = document.createElement('div'); el.id = 'shop'; el.innerHTML = '<div class="win"><div class="head"><b>WARSZTAT U JANUSZA</b><span class="cash"></span></div><div class="side"><div class="ava"><canvas class="face" width="32" height="32"></canvas></div><div class="jan"><b>PAN JANUSZ</b><span class="say"></span></div><button class="chat">POGADAJ Z JANUSZEM</button></div><div class="left"><canvas class="bike"></canvas><div class="stats"></div></div><div class="right"></div><div class="bottom"><button class="chat chat2">POGADAJ</button><span></span><button class="go">JEDŹ DALEJ (ESC)</button></div></div>';
   document.body.appendChild(el);
-  const cv = el.querySelector('canvas'), right = el.querySelector('.right'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
+  const cv = el.querySelector('canvas.bike'), right = el.querySelector('.right'), statsE = el.querySelector('.stats'); el.querySelector('.go').onclick = () => close();
   // pan Janusz: what he says (a line at the top; his talking clip while he says it), his trips with Mietek on asking
   const AN = bag(), pick = a => a[Math.random() * a.length | 0]; let talkT = 0;
   const say = s => { el.querySelector('.jan .say').textContent = s; talkT = Math.min(5, 1.2 + s.length * .035); game.say?.(s); };
-  el.querySelector('.chat').onclick = () => say(AN.draw('janusz'));
+  el.querySelectorAll('.chat').forEach(b => b.onclick = () => say(AN.draw('janusz')));
+  // his face: a picture if there is one (assets/ui/janusz.png), else drawn here in pixels: the cap, the moustache, the chins, the tank top;
+  // the mouth moving while he talks
+  const faceC = el.querySelector('.face'), fg = faceC.getContext('2d'); let mouthT = 0;
+  { const img = new Image(); img.onload = () => { faceC.replaceWith(img); faceImg = img; }; img.src = 'assets/ui/janusz.png'; }
+  let faceImg = null;
+  function face(open) { if (faceImg) return; const P = (x, y, w, h, c) => { fg.fillStyle = c; fg.fillRect(x, y, w, h); };
+    P(0, 0, 32, 32, '#e3b83a'); P(0, 26, 32, 6, '#c9a53a');
+    P(7, 24, 18, 8, '#9a9c9e'); P(5, 26, 4, 6, '#e3b08a'); P(23, 26, 4, 6, '#e3b08a'); P(10, 24, 3, 3, '#e3b08a'); P(19, 24, 3, 3, '#e3b08a');   // the tank top, his arms and shoulders
+    P(9, 10, 14, 13, '#e3b08a'); P(8, 12, 1, 6, '#e3b08a'); P(23, 12, 1, 6, '#e3b08a'); P(10, 22, 12, 2, '#d49a74'); P(11, 23, 10, 2, '#e3b08a');   // the face, the chins
+    P(7, 13, 2, 3, '#d49a74'); P(23, 13, 2, 3, '#d49a74');                                                                                       // the ears
+    P(8, 5, 16, 6, '#c23a2e'); P(9, 4, 14, 1, '#c23a2e'); P(8, 10, 19, 2, '#8e2e25'); P(15, 6, 2, 2, '#f6f3ea');                                 // the cap, its visor, its badge
+    P(11, 14, 3, 1, '#5b3a22'); P(18, 14, 3, 1, '#5b3a22'); P(12, 15, 2, 2, '#17181b'); P(18, 15, 2, 2, '#17181b'); P(12, 15, 1, 1, '#f6f3ea'); P(18, 15, 1, 1, '#f6f3ea');   // brows, eyes
+    P(15, 16, 2, 3, '#d49a74');                                                                                                                  // the nose
+    P(11, 19, 10, 2, '#5b3a22'); P(10, 20, 2, 1, '#5b3a22'); P(20, 20, 2, 1, '#5b3a22');                                                       // the moustache
+    if (open) { P(14, 21, 4, 2, '#5e1c17'); P(15, 22, 2, 1, '#cf5a3e'); } else P(14, 21, 4, 1, '#5e1c17');                                       // the mouth
+    for (const [x, y] of [[12, 22], [19, 22], [16, 23], [13, 18], [20, 18]]) P(x, y, 1, 1, '#c98a6a'); }                                          // stubble
+  face(false); setInterval(() => { if (!open_) return; const talking = talkT > 0; mouthT += .12; face(talking && Math.sin(mouthT * 9) > 0); }, 110);
   // what you have: per part, the tiers owned and the one on
   const owned = {}, on = {}; const reset = () => { for (const k in PARTS) { owned[k] = new Set([0]); on[k] = 0; } }; reset();
   let cat = 'kola', hover = null, open_ = false;
