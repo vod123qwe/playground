@@ -125,7 +125,7 @@ export const CALL = {
   unaware: ['...MIETEK, PODAJ MI SZESNASTKĘ. NIE TĘ, TĘ DRUGĄ. NO TĘ ZE ŚLADAMI ZĘBÓW... A? Halo? To ktoś dzwoni? Mów, młody, mów.', '...i wtedy mówię mu: panie, ja na tym rowerze zjechałem z Kasprowego, bez hamulców, z ciastem na kierownicy... Halo? Długo tam wisisz?',
     '...nie, proszę pani, dzwonek nie dzwoni, bo jest do ozdoby. Co? A, to telefon dzwoni. Halo! Warsztat!', '...osiem, dziewięć, dziesięć... szprych mi brakuje, Mietek. Kto liczył szprychy? Halo? Młody? Ty mi nie liczyłeś szprych?'],
   // what he says when asked how he is: a rant, a boast
-  how: ['Jak ja się mam? Jak łańcuch po zimie: zgrzytam, ale jadę. Wczoraj zrobiłem sto kilometrów przed śniadaniem. No, może dziesięć. Ale pod wiatr.', 'Dobrze, tylko kolano mi skrzypi. Lekarz mówi: panie Januszu, mniej roweru. Ja mu na to: panie doktorze, mniej doktora.',
+  how: ['Dobrze. Wczoraj ktoś mi powiedział na ulicy kochaniutki. Takim głosem, że mi się szprychy powyginały. Nieważne.', 'Jak ja się mam? Jakbyś spotkał po latach kogoś, komu kiedyś sprowadzałeś części. Znaczy, ona tobie. Nieważne, dobrze się mam.', 'Jak ja się mam? Jak łańcuch po zimie: zgrzytam, ale jadę. Wczoraj zrobiłem sto kilometrów przed śniadaniem. No, może dziesięć. Ale pod wiatr.', 'Dobrze, tylko kolano mi skrzypi. Lekarz mówi: panie Januszu, mniej roweru. Ja mu na to: panie doktorze, mniej doktora.',
     'Kiedyś to były rowery. Stal, chłopie. Spadłeś, rower cały, ty w gipsie. A teraz? Wszystko plastik. I ludzie z plastiku.', 'Nie ma złej pogody, młody, są tylko słabe opony. I słabi kolarze. Ale ty nie jesteś słaby. Jeszcze.',
     'Świetnie! Ubrałem dziś nowe obcisłe spodenki. Sąsiad mówi, że wyglądam jak parówka. Aerodynamiczna parówka, mówię mu.'],
   tip: p => p ? pickOf([`Na jutro? Weź ${p.toLowerCase()}. Mówię ci, różnica jak między składakiem a kolarzówką.`, `${p}. Bez tego nawet nie wyjeżdżaj. Ja bez tego nie wyjeżdżałem nawet do kiosku.`, `Słuchaj starego: ${p.toLowerCase()}. Zawodowcy tak robią. Ja tak robiłem. Ja byłem zawodowcem. Prawie.`])
@@ -134,7 +134,7 @@ export const CALL = {
     `Wiesz co, za tę gazetę o tobie dam ci rabat. ${Math.round(c.pct * 100)} procent na ${c.name.toLowerCase()}. Ale jak mnie opiszesz w wywiadzie, to piszesz, że jestem wysoki.`]),
   couponHad: ['Kupon już masz, młody. Jeden na raz, bo zbankrutuję.', 'Drugi kupon? Ja nie jestem bank, ja jestem warsztat. Najpierw wykorzystaj pierwszy.', 'Mietek mówi, że już masz kupon. Mietek nic nie zapisuje, ale to akurat pamięta.'],
   // his stories: every one true, he says
-  story: ['Raz goniłem pociąg na rowerze. Dogoniłem. Maszynista zatrzymał się i pyta, czy chcę podwózkę. Odmówiłem. Wygrałem z nim do następnej stacji.', 'W osiemdziesiątym którymś jechałem w wielkim wyścigu. Prowadziłem przez trzy etapy. Potem mi mama kazała wracać na obiad.',
+  story: ['Miałem kiedyś dziewczynę, która załatwiała części zza granicy. Takie, że nikt w mieście nie miał. Mówiła, że niekradzione. Wierzyłem jej. Wierzyłem jej we wszystko. No, ale to było dawno.', 'Raz goniłem pociąg na rowerze. Dogoniłem. Maszynista zatrzymał się i pyta, czy chcę podwózkę. Odmówiłem. Wygrałem z nim do następnej stacji.', 'W osiemdziesiątym którymś jechałem w wielkim wyścigu. Prowadziłem przez trzy etapy. Potem mi mama kazała wracać na obiad.',
     'Kiedyś przejechałem całe miasto na jednym kole. Drugie koło miał Mietek. Do dziś nie wiem, po co mu było.', 'Znam faceta, który zjechał rowerem po schodach w wieżowcu. Z dziesiątego piętra. To byłem ja. Ale mówię, że znam faceta, bo skromny jestem.',
     'Mój pierwszy rower zrobiłem sam. Z łóżka. Babcia spała wtedy na podłodze, ale mówiła, że warto było.', 'Raz mnie wyprzedził kolarz w obcisłym stroju. Na podjeździe. Dogoniłem go na zjeździe i powiedziałem, że ma rozwiązane sznurowadło. Nie miał sznurówek. Do dziś jest w szoku.',
     'Mam w garażu rower, na którym jeździł prezes jakiegoś klubu. Albo jego listonosz. W każdym razie ktoś ważny.', 'Raz trenowałem tak ostro, że opony się stopiły. Jechałem dalej na obręczach. Iskry było widać z kosmosu, tak mówili w telewizji. W lokalnej.'],
@@ -378,10 +378,10 @@ export function createPaper({ game }) {
   function personaCall(kind) { const JB = game.JB, J = JB.JOBS[kind], P = JB.PERSONAS[J.giver]; game.sound?.('ui');
     call.innerHTML = `<div class="phone"><div class="ph-h"><i class="ic" style="--ic: var(--ic-phone)"></i><b>${P.name.toUpperCase()}</b><span>TEL. ${P.tel}</span></div><div class="ph-b">${portrait(D.faces?.[J.giver], 'pt big')}<div><p class="ring">DRYŃ... DRYŃ...</p><p class="say"></p></div></div><div class="opts"></div></div>`;
     call.classList.add('on'); const j0 = JB.take(kind), pitch = (P.hello ? pickOf(P.hello) + ' ' : '') + JB.pitchOf(j0);
-    const yes = J.shop ? [[`Kupuję (${J.cost} zł)`, 'buy', true], ['Może innym razem', 'end']] : [['Biorę to zlecenie', 'take', true], ['Nie tym razem', 'end']];
+    const yes = J.shop ? [[`Kupuję (${J.cost} zł)`, 'buy', true], ['Może innym razem', 'end']] : [['Biorę to zlecenie', 'take', true], ['Nie tym razem', 'end']];   // (a shop's call: buy it)
     setTimeout(() => { call.querySelector('.ring').textContent = P.name.toUpperCase() + ':'; say(pitch, yes); }, 800);
     call.onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; const a = b.dataset.c; if (a === 'take') { const r = game.takeJob(kind); say(r.ok ? 'Umowa stoi. Zapisz w notesie i nie zawiedź.' : r.msg, [['Rozłącz się', 'end', true]]); }
-      else if (a === 'buy') { const r = game.buyNotes(); if (r.ok) D.money = game.money?.() ?? D.money; say(r.msg, [['Rozłącz się', 'end', true]]); } else if (a === 'end') { call.onclick = null; endCall(); } }; }
+      else if (a === 'buy') { const r = game.buy(kind); if (r.ok) D.money = game.money?.() ?? D.money; say(r.msg, [['Rozłącz się', 'end', true]]); } else if (a === 'end') { call.onclick = null; endCall(); } }; }
   function endCall() { clearInterval(callT); call.classList.remove('on'); if (open_) build(); }
   // a page drawn into a face: its head, its columns, its corners (to turn on, to turn back), its number
   function draw(f, p) { const P = pages[p];
@@ -423,5 +423,5 @@ export function createPaper({ game }) {
     else if (c === 'Enter' || c === 'Space') { if (page < pages.length - 1) turn(page + 1); else { const g = A.face.querySelector('.jt [data-go]'); if (g) g.click(); else { close(); game.map(); } } } else if (c === 'KeyR') { close(); game.again(); } else if (c === 'Escape' || c === 'KeyM') { close(); game.map(); }
     e.preventDefault(); return true; }
   const reopen = () => { if (!D) return; D.money = game.money?.() ?? D.money; open_ = true; el.classList.add('on'); build(); };
-  return { open, close, reopen, key, get isOpen() { return open_; } };
+  return { open, close, reopen, key, get isOpen() { return open_; }, buyNotes: () => game.buyNotes() };
 }

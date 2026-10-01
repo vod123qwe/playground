@@ -885,3 +885,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - pierwsze zlecenia: Szarlotka dla wnuczka (dowieź do domu ze znacznikiem i zatrzymaj się; wywrotka niszczy ciasto, po dwóch porankach przepada), Zdjęcie do gazety (aparat pod Q: pies, kapliczka, budowa, przystanek), Robota dla ekipy (skop trzy skrzynki; policja Cię mniej lubi)
 - na trasie: zlecenia w pasku u góry (z odległością), znaczniki nad celami; za wykonanie od razu wypłata
 - w kolejnym wydaniu: „Z notesu gazeciarza” (co wyszło, co przepadło), zrobione zdjęcie jako „Zdjęcie czytelnika”; notes na ostatniej stronie
+
+## Wersja 97: Pani Żaneta, słuchawka z Januszem na linii, liczniki z zagranicy
+
+- nowa persona: Pani Żaneta (obrazek w assets/ui/npc/zaneta.webp), oschła pani z PRL-u, „ma znajomości na mieście”, sprowadza „niekradzione” rzeczy z zagranicy; dzwonisz z ogłoszenia
+- słuchaweczka z Zachodu (80 zł): w jeździe Janusz jest na linii; sprint po chwili przerwy to jego tekst i turbo (mocniejsze pedałowanie, mniej zadyszki przez kilka sekund); ostrzega przed autem za plecami, podnosi po wywrotce, chwali na punktach, krzyczy przed metą, gada od czasu do czasu
+- liczniki do zmiany: ze Wschodu (czerwona obudowa, bursztynowy ekran) i z Zachodu (niebieskie podświetlenie); zostają w zapisie
+- Janusz i Żaneta subtelnie o sobie: on o „pani w czerwonej chustce” i dziewczynie, która załatwiała części zza granicy; ona pyta, czy „ten od rowerów jeszcze żyje”
