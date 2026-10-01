@@ -204,6 +204,7 @@ function loseFight() {
 }
 const foot = createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx: { score: (n, at, l, c) => score(n, at, l, c), flash: t => flash(t), shake: v => { shake = Math.max(shake, v); }, slow: v => { slowmo = Math.max(slowmo, v); },
   rant: (at, t) => hud.rant(at, t, true), pop: (at, t, c) => hud.pop(at, t, c), tip: t => hud.tip(t), impact: (at, t) => hud.impact(at, t || undefined), take: () => loseFight(), drop: at => dropLoot(at) } });
+const bikeSpot = () => { const me = foot.me, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), t = THREE.MathUtils.clamp((me.x - B.x) * fx + (me.z - B.z) * fz, -.9, .9); return { x: B.x + fx * t, z: B.z + fz * t }; };   // (the nearest of the bike, front wheel to back)
 function parkBike() { rider.root.position.set(B.x, B.y, B.z); rider.root.rotation.set(0, B.yaw, .2, 'YXZ'); }   // (the bike on its stand, leaning a little)
 function dismount(why) {
   const lf = { x: Math.cos(B.yaw), z: -Math.sin(B.yaw) };
@@ -892,7 +893,7 @@ function step(dt, inp) {
   mp.update(dt); if (mp.counting) inp = still(inp); stepNet(dt, inp);
   if (foot.fighting) { dt *= foot.tempo; if (inp.skip) foot.skipTraining(); }   // (his punch's green moment slowed; Enter: no training)
   if (inp.mount && !B.crash && !B.air) { if (!foot.active) { if (Math.abs(B.v) < 2.2) dismount(); else flash('Zwolnij, żeby zsiąść'); }
-    else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(B)) mount(); else flash('Rower jest dalej'); }
+    else if (foot.fighting) flash('Najpierw bójka!'); else if (foot.nearBike(bikeSpot())) mount(); else { const d = Math.round(Math.hypot(foot.me.x - B.x, foot.me.z - B.z)); flash(`Twój rower jest ${d} m stąd: idź za strzałką na dole`); } }
   if (inp.bell && !foot.active) { if (MOD.bell > 0) { audio.play('bell'); B.bellT = 2.5; } else flash('Dzwonek kupisz u Janusza'); }
   syncMix(); if (inp.title) { const A = ACT(); if (A.length < 2) flash('Na razie wozisz jedną gazetę: ' + TITLES[A[0]].name.toLowerCase());
     else { for (let k = 1; k <= A.length; k++) { const t = A[(B.sel + k) % A.length]; if (B.mix[t] > 0 || k === A.length) { B.sel = (B.sel + k) % A.length; break; } } flash('Rzucasz: ' + TITLES[TK[B.sel]].name.toLowerCase()); } }
@@ -1016,11 +1017,11 @@ function stepFoot(dt, inp) {                                           // (on fo
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
-  if (!foot.fighting && foot.nearBike(B) && !B.hintShown) { B.hintShown = true; flash(touch.on ? 'ROWER: wsiądź' : keysOf('mount') + ': wsiądź na rower'); } if (!foot.nearBike(B)) B.hintShown = false;
+  if (!foot.fighting && foot.nearBike(bikeSpot()) && !B.hintShown) { B.hintShown = true; flash(touch.on ? 'ROWER: wsiądź' : keysOf('mount') + ': wsiądź na rower'); } if (!foot.nearBike(bikeSpot())) B.hintShown = false;
   foot.follow(dt); sun.position.set(me.x, me.y, me.z).addScaledVector(SUN, 60); sun.target.position.set(me.x, me.y, me.z); sun.target.updateMatrixWorld();
 }
 // on foot: where the bike is (an arrow at the top, turned the way it is from where you look; its distance; a mark over it when seen)
-function bikeMark() { if (!foot.active || foot.fighting) return null; const me = foot.me, dist = Math.hypot(me.x - B.x, me.z - B.z); if (dist < 2.2) return null;
+function bikeMark() { if (!foot.active || foot.fighting) return null; const me = foot.me, sp = bikeSpot(), dist = Math.hypot(me.x - B.x, me.z - B.z); if (Math.hypot(me.x - sp.x, me.z - sp.z) < 1.7) return null;   // (gone only once it is in reach to get on)
   const at = new THREE.Vector3(B.x, B.y + 1.35, B.z), v = at.clone().applyMatrix4(camera.matrixWorldInverse); return { at, dist, angle: Math.atan2(v.x, -v.z) }; }
 const hurtFx = { hp: 100, flash: 0, t: 0 };
 function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : null, hp = me ? me.hp : 100;

@@ -767,3 +767,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - gra przez sieć bez kopiowania kodów: ZAŁÓŻ GRĘ daje **link zaproszenia** (zawsze na publiczną stronę gry, także gdy gospodarz gra lokalnie); znajomy klika i od razu dostaje **link zwrotny**; gospodarz klika link zwrotny, otwiera się karta, która przekazuje go do czekającej gry i sama się zamyka. Bez serwera, kod jest w części adresu po „#”, więc nie trafia na żaden serwer
 - można też wkleić link (albo sam kod) w okno gry; zaproszenie czeka 10 minut
 - poprawka: przy wyjeździe z osiedla na trasę stała niewidzialna ściana (granica podwórka sięgała na trasę); teraz granica działa tylko za domami
+
+## Wersja 83: wsiadanie przy leżącym rowerze
+
+- poprawka: przy leżącym rowerze była martwa strefa (wsiadało się tylko do 1,7 m od jednego punktu roweru, a strzałka do roweru znikała już od 2,2 m), więc stojąc przy przednim kole nie dało się wsiąść i nie było strzałki; teraz liczy się odległość do całego roweru, od koła do koła, i strzałka znika dopiero, gdy da się wsiąść
+- gdy rower jest dalej (np. po przegranej bójce przeciwnik rzucił go przy drodze), komunikat mówi, ile metrów i żeby iść za strzałką na dole
