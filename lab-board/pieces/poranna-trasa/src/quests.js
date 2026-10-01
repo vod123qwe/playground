@@ -12,11 +12,12 @@
 // createQuests({ THREE, track, residents, peds, hud, talk, game }) → { update(dt, inp), marks(), tracker(), onLand(p), onWindow(w),
 //   onHitPed(p) → true if it was the errand's, get canChat, reset() }
 // game: { rider(), money(n, at, label), papers (get/set), item(name, at), flash(s), jolt(), grudgeAt(at, line, kind), dropBag(at, onPick), talkKey() }
+import { bag } from './stories.js';
 export function createQuests({ THREE, track, residents, peds, hud, talk, game }) {
   const pick = a => a[Math.random() * a.length | 0], rnd = Math.random, _v = new THREE.Vector3(), V = (x, y, z) => new THREE.Vector3(x, y, z);
   const NAMES = { granma: ['PANI HALINA', 'PANI KRYSIA', 'PANI ZOSIA', 'PANI WIESIA'], grandpa: ['PAN HENIO', 'PAN STEFAN', 'PAN ZBYSZEK', 'PAN TADEK'], belly: ['PAN MIREK', 'PAN RYSIEK', 'PAN JANEK'] };
   const FINDS = ['ŁYŻKA DO OPON', 'DZWONEK ROWEROWY', 'ŁATKI DO DĘTEK', 'STARA LAMPKA', 'KLUCZ DO SZPRYCH'];
-  const P = new Map(), active = [], stage = [];
+  const P = new Map(), active = [], stage = [], AN = bag();
   let focusAt = null, byeAt = null, byeT = 0;   // (byeAt, byeT: the camera kept on them a moment for their last word)                                                   // (who the talk is with: a function to their head; the camera looks there)
   const strOf = v => typeof v === 'function' ? v() : v;
   function run(nodes, o) { const at = focusAt; talk.run(nodes, 'start', b => { focusAt = null; if (b && at) { byeAt = at; byeT = 1.8; setTimeout(() => hud.rant(at(), strOf(b), false), 120); } }, o); }   // (stage: what a story put in the world; it stays when the story is over)
@@ -108,10 +109,13 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     if (o.kind === 'shacks' && o.flag.sells) return shacksShop(o, r);
     if (o.mood <= -3 && o.kind !== 'lump') return sorryTalk(o, r);
     if (o.mood >= 4 && !o.flag.gift) return giftTalk(o, r);
-    // nothing to talk over: a word back, as their mood is (the game goes on)
+    // nothing to talk over: now and then a story of theirs (a light box at the top that closes by itself; you ride on), else a word back
+    const pool = o.kind === 'belly' ? 'belly' : (o.kind === 'granma' || o.kind === 'grandpa') ? 'old' : o.kind === 'shacks' ? 'lads' : o.kind === 'stop' ? 'stop' : null;
+    if (pool && o.mood > -2 && !(o.taleT > 0) && rnd() < .6) { o.taleT = 45; tale(o, pool); return; }
     say(r, o.mood >= 3 ? pick(['O, NASZ BOHATER!', 'DZIEŃ DOBRY, MŁODY!', 'SZACUNEK, MŁODY.']) : o.mood <= -3 ? pick(['NIE GADAM Z TOBĄ.', 'SPADAJ.', 'JESZCZE TU JESTEŚ?']) : pick(['DZIEŃ DOBRY.', 'NO HEJ.', 'CO TAM?', 'NIE MAM CZASU, MŁODY.', 'SPIESZ SIĘ, GAZETY STYGNĄ!']));
     o.cool = Math.max(o.cool, 3);
   }
+  function tale(o, pool) { run({ who: o.name, start: { say: greet(o) + AN.draw(pool), opts: [{ t: pick(['HEHE.', 'NO NIEŹLE.', 'DOBRE!', 'SERIO?', 'NIE WIERZĘ.']), go: null }] } }, { light: true, auto: 10 }); }
   function sorryTalk(o, r) {
     const tried = o.flag.sorryT > 0; run({ who: o.name,
       start: { say: o.flag.snitched ? 'CZEGO, KAPUSIU? JESZCZE CO NA MNIE NADASZ?' : o.flag.liar ? 'O, KŁAMCZUCH. CO TYM RAZEM WYMYŚLISZ?' : pick(['CZEGO?', 'NO CO? JESZCZE CI MAŁO?', 'NIE MAM Z TOBĄ O CZYM GADAĆ.']), opts: [
@@ -208,6 +212,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   };
   function lumpTalk(o, r) {
     if (!(r.awakeT > 0) && !o.flag.met) { run({ who: o.name, start: { say: 'ZZZ... CHRRR... (ŚPI. MOŻE GAZETA GO OBUDZI?)' } }); return; }
+    if (o.flag.met && o.mood > -2 && !(o.taleT > 0) && rnd() < .6) { o.taleT = 45; tale(o, 'lump'); return; }
     if (o.flag.met) { say(r, o.mood > 0 ? pick(['MŁODY! MÓJ SPONSOR!', 'JA TU WSZYSTKO WIDZĘ. WSZYSTKO.']) : pick(['ZZZ...', 'CZEGO?'])); return; }
     o.flag.met = true;
     run({ who: o.name,
@@ -433,15 +438,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   }
   // a police car kicked: a word from inside, then (a few kicks on) out he gets: the fine, no fine (then it is a fight), a bribe, or a
   // story of his. Well liked by the police (rep): he looks the other way, and you lose a little of it.
-  const ANEGDOTY = ['WCZORAJ GONILIŚMY KURĘ PRZEZ TRZY OSIEDLA. KURA WYGRAŁA. KOMENDANT KAZAŁ NIE WPISYWAĆ DO RAPORTU.',
-    'MÓJ KOLEGA WYPISAŁ MANDAT SAM SOBIE. ZAPARKOWAŁ NA KOPERCIE I SIĘ NIE ZAUWAŻYŁ. ZAPŁACIŁ. RATALNIE.',
-    'TEN RADIOWÓZ PALI TYLE CO CZOŁG, A JEŹDZI WOLNIEJ NIŻ TWÓJ ROWER. JAK GONIMY, TO DZWONIMY, ŻEBY ZACZEKALI.',
-    'RAZ ZATRZYMAŁEM BABCIĘ ZA PRĘDKOŚĆ. NA CHODZIKU. Z GÓRKI. SZEŚĆDZIESIĄT NA GODZINĘ. POUCZENIE DOSTAŁEM JA.',
-    'KOMENDANT KAZAŁ NAM BIEGAĆ DLA KONDYCJI. TO TERAZ BIEGAMY. DO SKLEPU. CZĘŚCIEJ.',
-    'PODOBNO W BARAKACH MAJĄ WIĘCEJ ROWERÓW, NIŻ MY MAMY SPRAWNYCH RADIOWOZÓW. JA TAM NIE SPRAWDZAŁEM. BOJĘ SIĘ PSA.',
-    'NA POSTERUNKU MIESZKA KOT. NIKT NIE WIE CZYJ. MA WŁASNĄ SZAFKĘ. I LEPSZE KRZESŁO NIŻ JA.',
-    'TRZY LATA TEMU KTOŚ UKRADŁ NAM SYRENĘ. Z RADIOWOZU. JAK GO GONILIŚMY, TO ON MIAŁ SYGNAŁ, A MY NIE.'];
-  const anegdota = () => pick(ANEGDOTY);
+  const anegdota = () => AN.draw('police');   // (the stories: stories.js, drawn without repeats)
   function policeCars() { return [PO.car?.car, ...PO.parked.map(p => p.car)].filter(Boolean); }
   function policeNear(x, z, r) { return policeCars().find(c => Math.hypot(c.g.position.x - x, c.g.position.z - z) < r) || null; }
   function onKickPolice(c) {
@@ -510,7 +507,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   // ---------- each frame ----------
   function update(dt, inp) {
     const R = R0(); flashT -= dt; byeT = Math.max(0, byeT - dt); for (const r of residents.list) person(r); stepStage(dt); stepPolice(dt, R);
-    for (const o of new Set(P.values())) { o.cool -= dt; if (o.flag.lied) o.flag.lieT -= dt; if (o.flag.sorryT > 0) o.flag.sorryT -= dt; o.redo = false; }
+    for (const o of new Set(P.values())) { o.cool -= dt; if (o.flag.lied) o.flag.lieT -= dt; if (o.flag.sorryT > 0) o.flag.sorryT -= dt; if (o.taleT > 0) o.taleT -= dt; o.redo = false; }
     // passing by: moods acted on (a bottle, a coin, a lie found out)
     for (const [r, o] of P) { if (o.lead !== r) continue; o.passT -= dt; const d = Math.hypot(r.G.position.x - R.x, r.G.position.z - R.z); if (d > 11 || o.passT > 0) continue;
       if (o.flag.lied && o.flag.lieT <= 0) { o.flag.lied = false; o.flag.liar = true; mood(o, -4); say(r, o.she ? 'OKŁAMAŁEŚ MNIE! ON MA INNĄ!' : 'OKŁAMAŁEŚ MNIE! ONA MA INNEGO!'); o.passT = 20; continue; }   // (the lie found out)
@@ -584,6 +581,6 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     e.stage = 'bag'; p.flee = 5; p.fleeNew = true; p.stun = .9; e.loot.parent?.remove(e.loot); e.glow.parent?.remove(e.glow); hud.rant(V(p.x, p.G.position.y + 1.9, p.z), pick(['AŁA! DOBRA, DOBRA!', 'MOJA NOGA!', 'TO NIE JA!']), false);
     e.drop = game.dropBag(V(p.x, p.G.position.y, p.z), () => bagPicked(e)); game.flash('Torebka na chodniku. Podnieś ją.'); return true;
   }
-  function reset() { PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null, rep: 0 }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
-  return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, policeCars, policeNear, onKickPolice, lineFor, get siren() { return !!PO.car && PO.car.stage === 'chase'; }, police: PO, people: P, get focus() { return talk.isOpen && focusAt ? focusAt() : byeT > 0 && byeAt ? byeAt() : null; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
+  function reset() { AN.reset(); PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null, rep: 0 }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
+  return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, policeCars, policeNear, onKickPolice, lineFor, get siren() { return !!PO.car && PO.car.stage === 'chase'; }, police: PO, people: P, get focus() { return talk.isOpen && !talk.isLight && focusAt ? focusAt() : byeT > 0 && byeAt ? byeAt() : null; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
 }

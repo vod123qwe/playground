@@ -44,7 +44,8 @@ export function createTalk() {
     const o = opts[i]; if (!o || o.off?.()) return; if (o.bye) bye = o.bye; const r = o.act ? o.act() : undefined; go(r !== undefined ? r : o.go);
   }
   function close() { clearInterval(timer); box.classList.remove('on'); node = nodes = null; const f = onEnd, b = bye; onEnd = null; bye = null; f?.(b); }   // (onEnd(bye): the last word said after it)
-  function run(n, start = 'start', end = null, o = {}) { nodes = n; onEnd = end; bye = null; light = !!o.light; box.classList.toggle('light', light); box.classList.add('on'); go(start); }
+  let autoT = 0;
+  function run(n, start = 'start', end = null, o = {}) { nodes = n; onEnd = end; bye = null; light = !!o.light; box.classList.toggle('light', light); clearTimeout(autoT); if (o.auto) { const mine = n; autoT = setTimeout(() => { if (nodes === mine) close(); }, o.auto * 1000); } box.classList.add('on'); go(start); }
   function key(e) {
     if (!node) return false; const c = e.code; if (light && !/^(Digit|Numpad)[1-9]$/.test(c)) return false;   // (light: only the numbers; the rest drives on)
     if (/^Digit[1-9]$/.test(c) || /^Numpad[1-9]$/.test(c)) choose(+c.slice(-1) - 1);
