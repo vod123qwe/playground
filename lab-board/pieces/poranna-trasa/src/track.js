@@ -16,6 +16,7 @@ import { createCars } from './cars.js';
 import { createProps } from './props.js';
 import { createNature } from './nature.js';
 import { createPlots } from './plots.js';
+import { createEstate } from './estate.js';
 
 // the regions (docs/regiony.md): each its own loop and its own look. peryferia: the suburb (home off it, kerbs, pavements, lines, bus
 // stops, bike lanes, police, houses close); wies: the village (a longer hilly loop, no kerbs or lines, a gravel shoulder and a dirt path,
@@ -25,7 +26,12 @@ export const REGION_T = {
     roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false },
   wies: { id: 'wies', home: false, ctrl: [[0, 0, 0], [10, 2, 70], [-10, 5, 140], [30, 8, 200], [100, 9, 235], [175, 6, 220], [225, 3, 165], [235, 0, 95], [270, 2, 30], [255, 5, -45], [195, 7, -95], [125, 4, -110], [70, 1, -85], [25, -1, -45]],
     roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [30, 26], houseP: .5, farms: true,
-    walls: ['#e8e4dc', '#d9d4c8', '#c9c2b0', '#e6dcc4', '#bfb8a8', '#d8cfb8'], roofs: ['#5a5f66', '#6d4a3a', '#7a7f86', '#4a4038'] } };
+    walls: ['#e8e4dc', '#d9d4c8', '#c9c2b0', '#e6dcc4', '#bfb8a8', '#d8cfb8'], roofs: ['#5a5f66', '#6d4a3a', '#7a7f86', '#4a4038'] },
+  // peryferia2 ("Druga strona"): the new estate over the tracks: a flat loop with tighter corners, kerbs and lines, houses close in a row
+  // (modern greys and whites, dark roofs), lots with a house going up, two stretches of warehouses, road works, cranes over it all
+  peryferia2: { id: 'peryferia2', home: false, ctrl: [[0, 0, 0], [5, 1, 55], [40, 1, 95], [95, 2, 100], [140, 1, 70], [150, 0, 20], [190, 1, -10], [235, 2, -5], [255, 1, -55], [225, 0, -110], [160, -1, -125], [100, 0, -100], [55, 1, -110], [15, 0, -70]],
+    roll: .45, kerb: true, lines: true, bike: false, stops: [.3, .78], posts: [.55], shops: [[.62, -1]], gap: [11, 4], houseP: 1, farms: false, estate: true, site: .22, wh: [[.12, .24], [.66, .76]], works: [[.4, 1], [.88, -1]],
+    walls: ['#e9e6df', '#d6d2ca', '#c9c4ba', '#b9b4ab', '#e3dccf', '#f0eee8'], roofs: ['#3f4246', '#4a4e55', '#5a5f66', '#34373b'] } };
 
 export function createTrack({ THREE, toon, tex, showcase = false, region = 'peryferia' }) {   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
   const RG = REGION_T[region] || REGION_T.peryferia;   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
@@ -700,8 +706,11 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   // the plots in place of a house now and then (see plots.js): each kind in turn, so all of them are along the way
   const pr = mulberry(97), puddle = (h, x, z, r, mud) => { h.updateMatrixWorld(true); const p = h.localToWorld(new THREE.Vector3(x, 0, z)); puddles.push({ x: p.x, z: p.z, r, mud }); };
   const plots = createPlots({ THREE, toon, tex, P, box, rep, hit, put, zone, things, seats, show, ramps, PAVE, rnd: pr, puddle, settle, groundAt }), plotOrder = [...plots.kinds].sort(() => pr() - .5); let plotK = 0;
-  const farmLots = [], fieldLots = [];
-  const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null; if (RG.farms) { const k = rnd(); if (k > RG.houseP + .28) { fieldLots.push({ i, s }); return null; } if (k > RG.houseP) { farmLots.push({ i, s }); return null; } }
+  const farmLots = [], fieldLots = []; const whLast = {};
+  // (the estate: warehouses on their stretches, a site now and then; its road works and cranes further down)
+  const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211) }) : null;
+  const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
+    if (EST) { const f = i / N; if (RG.wh.some(([a, b]) => f >= a && f <= b)) { if ((i - (whLast[s] ?? -1e9)) * ds < 17.5) return null; whLast[s] = i; return EST.warehouse(i, s); } if (rnd() < RG.site) return EST.site(i, s); } if (RG.farms) { const k = rnd(); if (k > RG.houseP + .28) { fieldLots.push({ i, s }); return null; } if (k > RG.houseP) { farmLots.push({ i, s }); return null; } }
     return rnd() < .07 ? shacks(i, s) : pr() < (RG.farms ? .12 : .2) ? plots.build(plotOrder[plotK++ % plotOrder.length], i, s) : house(i, s); };
   for (let i = 30; i < N - 40; i += Math.round((RG.gap[0] + rnd() * RG.gap[1]) / ds)) { lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1; tree(i, side * (PAVE + 1.6 + rnd() * 3)); if (rnd() < .25) tree(i + 7, (rnd() < .5 ? -1 : 1) * (VERGE - .6)); }
@@ -872,8 +881,10 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)
   for (const i of bigAt) { const o = P.ramp(rnd, 'big'); put(o.group, i, 1.4, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: 1.4 }); }   // (the traffic goes round it)
   { const i = Math.round(N * .51), o = P.ramp(rnd, 'mega'); put(o.group, i, -1.3, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: -1.3 }); }   // (and one mega ramp on the other half of the road, half way round)
+  if (EST) { for (const [f, sd] of RG.works) EST.works(Math.round(N * f), sd); const cr = mulberry(223); for (let k = 0; k < 5; k++) EST.crane(Math.round(N * (k + cr() * .6) / 5), (cr() < .5 ? -1 : 1) * (PAVE + 34 + cr() * 40)); }   // (the road works, the cranes over the roofs)
   for (let i = 90; i < N - 30; i += Math.round((26 + rnd() * 30) / ds)) {
     const r = rnd(), sd = rnd() < .5 ? -1 : 1;
+    if (EST && RG.works.some(([f]) => Math.abs(i - N * f) * ds < 45)) continue;   // (not in the road works)
     if (bigAt.some(b => Math.abs(b - i) * ds < 14)) continue;             // (the big ones' run up and landing kept clear)
     if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride
     else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); const C = hit(o.group, o.hit, ii); o.group.userData.keep = true; C.thing = { kind: 'cone', o: o.group, C, r: .18 }; things.push(C.thing); } }
