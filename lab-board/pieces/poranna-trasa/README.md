@@ -693,3 +693,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 72: chłopak bez prześwitów
 
 - naprawione: rowerzysta (i chłopak pieszo) prześwitywał nakrapianą dziurą i tracił głowę: prześwietlanie przeszkód między kamerą a postacią łapało jego samego (nowy model jest wyższy niż dawna sylwetka); teraz jego materiały, czapka, włosy i torba są z tego wyłączone, a drzewa i dachy dalej się prześwietlają
+
+## Wersja 73: znaczniki zadań nie zasłaniają drogi
+
+- napis nad celem zadania (POSZUKIWANY, ZŁODZIEJ i inne) z odległością pokazuje się tylko, gdy cel jest dalej niż 22 m; z bliska sama strzałka; gdy cel jest poza ekranem, strzałka przy krawędzi dalej mówi, co to i jak daleko

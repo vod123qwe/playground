@@ -286,7 +286,7 @@ export function createHud() {
     const mx = cx - 14, my = cy - 22, k = Math.min(mx / Math.max(1e-3, Math.abs(dx)), my / Math.max(1e-3, Math.abs(dy))), x = Math.round(cx + dx * k), y = Math.round(cy + dy * k), pulse = ((markT * 3) | 0) % 2;
     for (let r = 0; r <= 7; r++) for (let s = -(7 - r) * .6; s <= (7 - r) * .6; s += .5) { const px = Math.round(x + dx * (r - 2) - dy * s), py = Math.round(y + dy * (r - 2) + dx * s); g.fillStyle = '#17181b'; g.fillRect(px - 1, py - 1, 3, 3); }
     for (let r = 0; r <= 6; r++) for (let s = -(6 - r) * .55; s <= (6 - r) * .55; s += .5) { g.fillStyle = pulse ? m.col : '#f6f3ea'; g.fillRect(Math.round(x + dx * (r - 1.5) - dy * s), Math.round(y + dy * (r - 1.5) + dx * s), 1, 1); }
-    const lab = (m.label || '') .trim() || (m.dist + ' M'), w = width(lab) + 6, lx = Math.max(2, Math.min(W - w - 2, x - (w >> 1) - Math.round(dx * 14))), ly = Math.max(2, Math.min(H - 11, y - 4 - Math.round(dy * 12)));
+    const lab = (m.edgeLabel || m.label || '').trim() || (m.dist + ' M'), w = width(lab) + 6, lx = Math.max(2, Math.min(W - w - 2, x - (w >> 1) - Math.round(dx * 14))), ly = Math.max(2, Math.min(H - 11, y - 4 - Math.round(dy * 12)));
     g.fillStyle = 'rgba(23,24,27,.8)'; g.fillRect(lx, ly, w, 9); text(lab, lx + 3, ly + 2, m.col, null); }
   // fame (with the police): a little light and pips under the purse, one per point (from three a patrol may come); the light flashes
   // red and blue while one is after you
