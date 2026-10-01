@@ -86,6 +86,18 @@ Dziś „Okrążenie od tyłu” to ta sama pętla w drugą stronę, bez własne
 - finał odcinka: ostatnie metry jako tor przeszkód (skocznie, rampy), przejazd przez bramę z zwolnionym tempem, błysk aparatu i to zdjęcie na pierwszej stronie gazety;
 - zadania z gazety: ogłoszenia jako zlecenia na następny przejazd (znajdź kota, dowieź paczkę), nagroda w kolejnym wydaniu.
 
+## Zlecenia z ogłoszeń (etap 2, do zaprojektowania z Jarkiem)
+
+Z tyłu gazety ogłoszenia mieszkańców; dzwonisz, bierzesz zlecenie (mało miejsc w notesie, więc trzeba wybierać), robisz je na trasie, nagroda i ciąg dalszy w kolejnym wydaniu. Zlecenia różne, czasem z historią w kilku częściach.
+
+## Utrudnienia na poziomach (Jarek: każdy poziom z innymi, także nowymi)
+
+Do rozkładania po poziomach i regionach, obok umowy na jutro: roboty drogowe z objazdem, deszcz i kałuże, mgła, wiatr, festyn na ulicy, śmieciarka cofająca, przejazd kolejowy z rogatką, gęsi, stado owiec, wąskie mostki, rozkopy, zamknięta ulica, korek, kontrola policji, psy w sforze, ciemno przed świtem (latarnie).
+
+## Tor i finał odcinka (etap 3)
+
+Ostatnie metry jako tor przeszkód ze skoczniami, przejazd przez metę w zwolnionym tempie z błyskiem aparatu (zdjęcie na pierwszą stronę).
+
 ## Pomysły na później
 
 - **Kopanie w skrzynki konkurencji** (Jarek): domy z prenumeratą innej gazety mają swoje skrzynki; można w nie kopnąć (mniej klientów dla konkurencji), ale to czasem wywołuje zdarzenie (sąsiad widział, pościg, zła sława, odwet konkurencji).

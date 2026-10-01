@@ -871,3 +871,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - stali prenumeratorzy (farma): gwiazdki na odcinkach dają stałych klientów (1, 2, 3 gwiazdki: 2, 4, 7 osób), każdy płaci 2 zł abonamentu za każdą ukończoną metę
 - nagrody za gwiazdki: za pierwszą gwiazdkę gotówka, za trzecią część od Janusza (dzwonek, skórzane siodełko, szosowe koła, 3 biegi); każda raz, widać je na mapie i na ostatniej stronie
 - wypłata na stronie trasy: zarobek, premia za umowę, abonament, nagrody
+
+## Wersja 95: Janusz przez telefon
+
+- ponad 30 kwestii Janusza w rozmowie telefonicznej: powitania, odbiera niechcący i gada dalej do Mietka albo klientki, „jak się pan ma” (narzekania i przechwałki memicznego kolarza), mitomańskie anegdoty (gonił pociąg, prowadził w wielkim wyścigu, opony mu się stopiły), rady na jutro, kupony z wymówkami
+- czasem po „do usłyszenia” nie odkłada słuchawki i słychać, co gada dalej; trzeba ją samemu odłożyć
