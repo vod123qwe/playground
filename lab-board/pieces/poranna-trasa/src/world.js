@@ -43,7 +43,8 @@ export function createWorld({ THREE, scene, track, toon, audio, onBreak }) {
   function hit(T, dx, dz, power = 1) {
     if (!ready) init(); const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; T.axis = V(dz, 0, -dx);   // (it leans away from the kick: about the line across it)
     if (T.kind === 'mailbox') { if (T.broken) return; T.hits++; T.wv += 4.5 * power; T.mb.flag.rotation.x = -.9; T.flagT = .5; puff(T.x - dx * .15, T.y + 1.05, T.z - dz * .15, 3, '#b8b8ae', .7); audio?.play('mailbox', { vol: .45 });
-      if (T.hits >= 3) { T.broken = true; T.fall = { t: 0, dx, dz }; T.mb.done = true; if (T.C) T.C.used = true; audio?.play('crash', { vol: .35 }); onBreak?.(T); } return; }
+      if (T.hits >= 3) { const q = track.probe(T.x, T.z, -1), R = track.S[q.i].r, sg = Math.sign(q.d) || 1, ox = R.x * sg, oz = R.z * sg;   // (off the road: onto the lawn behind it)
+        T.axis = V(oz, 0, -ox); T.broken = true; T.fall = { t: 0, dx: ox, dz: oz }; T.mb.done = true; if (T.C) T.C.used = true; audio?.play('crash', { vol: .35 }); onBreak?.(T); } return; }
     if (T.kind === 'pole') { T.hits++; T.wv += .25 * power; puff(T.x - dx * .16, T.y + .5 + Math.random() * .4, T.z - dz * .16, 4, '#d8d0bf', .8); audio?.play('kick', { vol: .25 }); return; }
     if (T.kind === 'tree') { T.hits++; T.wv += (T.spruce ? .5 : 1.1) * power; const n = Math.min(46, (T.spruce ? 2 : 6) + T.hits * (T.spruce ? 1 : 4));
       const c = T.reach ? V(T.x + T.reach * T.crown * .35, 0, T.z) : V(T.x, 0, T.z);   // (a street tree's crown leans over the road)
