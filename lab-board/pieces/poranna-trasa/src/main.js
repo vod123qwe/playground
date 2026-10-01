@@ -1277,12 +1277,12 @@ function stepLive(dt) { if (!LV || RUN.done || !LVM.load().owned?.sluchawka) { i
   if (J.kind === 'rush' && RUN.cp > J.cp) liveEnd(true);
   if (J.kind === 'dog' && J.snapped) liveEnd(true); }
 // a scene on the earpiece: Janusz, you, Janusz (each in turn, the box his or yours)
-function radioScene(lines) { let k = 0; const next = () => { if (k >= lines.length) return; const mine = k % 2 === 1; radioSay('', lines[k], mine ? 'ty' : 'janusz'); if (mine) RAD.el.querySelector('b').innerHTML = '<i></i>TY'; k++; setTimeout(next, 900 + lines[k - 1].length * 45); }; next(); }
+function radioScene(lines, solo) { let k = 0; const next = () => { if (k >= lines.length) return; const mine = !solo && k % 2 === 1; radioSay('', lines[k], mine ? 'ty' : 'janusz'); if (mine) RAD.el.querySelector('b').innerHTML = '<i></i>TY'; k++; setTimeout(next, 900 + lines[k - 1].length * 45); }; next(); }
 function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.classList.remove('on'); RAD.turbo = Math.max(0, RAD.turbo - dt); RAD.cool -= dt; RAD.behind -= dt; RAD.fall -= dt;
   if (!LVM.load().owned?.sluchawka || foot.active || menu.open) { RAD.sprint = !!inp.sprint; return; }
   if (inp.sprint && !RAD.sprint && RAD.cool <= 0 && B.v > 3) { RAD.turbo = 3.5; RAD.cool = 22; radioSay('turbo'); audio.play('trick', { vol: .4 }); } RAD.sprint = !!inp.sprint;
   if (RAD.behind <= 0) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw); for (const t of traffic.list || []) { const p = t.car?.group?.position; if (!p) continue; const dx = p.x - B.x, dz = p.z - B.z, l = Math.hypot(dx, dz); if (l < 9 && (dx * fx + dz * fz) / l < -.6) { RAD.behind = 30; radioSay('behind'); break; } } }
-  if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; if (Math.random() < .3) { audio.play('ui'); radioScene(pickOf(JB.MIXUP)); } else radioSay('idle'); } }
+  if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; if (Math.random() < .35) { audio.play('ui'); if (Math.random() < .5) radioScene(pickOf(JB.MIXUP)); else radioScene(pickOf(JB.POCKET), true); } else radioSay('idle'); } }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
