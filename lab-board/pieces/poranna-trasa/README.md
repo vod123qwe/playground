@@ -726,3 +726,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - pod czapką ok. 130 cienkich pasm, zwężających się ku końcom, w kilku brązach (w pikselach dają nieregularną mozaikę jak na koncepcie), ułożonych po kształcie głowy: z tyłu dłuższe, zachodzą na kark; nad uszami krótkie i podkręcone do góry; pod spodem krótka ciemna warstwa, żeby nie prześwitywała skóra
 - włosy się ruszają: lekko falują zawsze, przy szybkiej jeździe wiatr odgina je do tyłu, przy szarpnięciu głowy podskakują (pieszo i na rowerze)
+
+## Wersja 79: start spod domu
+
+- gra zaczyna się przed domem: krótka uliczka od trasy (w lewo albo w prawo), małe rondko z wysepką, drzewkiem i kwiatkami, chodniki dookoła, dwie latarnie
+- dom piętrowy z gankiem i otwartym garażem: w środku półki z puszkami i pudłami, warsztat z tablicą narzędzi, zapasowe koło na ścianie, światło; obok dwa rowery, jeden do góry kołami bez przedniego koła; rodzinne auto stoi na rondku przy krawężniku
+- rodzina: mama przy ścieżce, tata przy warsztacie w garażu, brat przy rowerach; każde rzuca swoje teksty
+- dwoje sąsiadów przed domami po bokach rondka (pan przy żywopłocie, pani przy furtce), ze swoimi tekstami
+- wjazd z uliczki w trasę: zaokrąglone narożniki z krawężnikiem, chodnik trasy przechodzi łukiem w chodnik uliczki, przerywana linia krawędzi, „ząbki” ustąp pierwszeństwa i znak; bez trawy i liści na środku wjazdu
+- ujęcie startowe: kamera z przodu pokazuje chłopaka na tle domu i garażu, a gdy ruszy, płynnie obiega go do tyłu
+- poprawki: podwórko nie jest już „poza mapą” (granica 28 m od trasy nie wypycha z osiedla, babka nie okrada przed domem); kałuże nie wywalają gry; dźwięk odporny na błędne położenie

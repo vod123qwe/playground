@@ -174,6 +174,10 @@ const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.door
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
   for (const d of track.doors) if (r() < .2) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
 const rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
+// his other bikes, by the garage at home: one leant there, one upside down, its front wheel off (being mended)
+for (const b of track.home?.bikes || []) { const r = createRider({ THREE, ramp, toon }); r.boy.visible = false; scene.add(r.root); const y = track.probe(b.p.x, b.p.z, track.home.iJ).y;
+  r.update({ dt: 0, speed: 0, steer: 0, lean: 0, pedalling: 0, braking: 0, climbing: 0 }); r.root.position.set(b.p.x, y, b.p.z); r.root.rotation.set(0, b.yaw, 0);
+  if (b.up) { r.root.rotation.z = Math.PI; r.root.position.y = y + 1.02; if (r.frontWheel) r.frontWheel.visible = false; r.setParts({ paint: '#2f4a6e' }); } else { r.lean.rotation.z = .12; r.setParts({ paint: '#3f8a4a' }); } }
 // ---------- on foot (F: off the bike, and back on by it) and the fights (onfoot.js) ----------
 function solid(x, z, r, hint, feet = null) {                           // (what a walker is pushed out of: the hard things near; feet: in the air, over the lower ones)
   let sx = 0, sz = 0, any = false;
@@ -518,7 +522,7 @@ function ride(dt, inp) {
     if (c.moved) { B.lean = 0; B.leanV = 0; B.v = 0; }
     B.y += (q.y - B.y) * Math.min(1, dt * 12); pose(dt, 0, 0, slope, Math.min(1, Math.abs(B.lean) / 1.3)); return;
   }
-  const off = Math.abs(q.d) > track.PAVE;
+  const off = Math.abs(q.d) > track.PAVE && !track.home?.paved(B.x, B.z);   // (the home's street: asphalt, though off the loop)
   // the push: strong from standing, falling off towards 9 m/s (a little more with Shift); the brake; the air, the tyres, the grass; the hill; a dog
   // (B.v is signed: held at a stop, the brake walks him backwards, slowly)
   const accK = 1 + MOD.acc, topK = 1 + MOD.top, push = inp.pedal * (inp.sprint ? 1.35 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) * accK - Math.max(0, B.v) * (inp.sprint ? .33 : .36) * accK / topK);   // (the parts: shop.js)
@@ -582,7 +586,9 @@ function ride(dt, inp) {
       if (hard) { crash(0, bv.multiplyScalar(.5)); return; } B.x = nx + h.nx * (h.pen + .02); B.z = nz + h.nz * (h.pen + .02); B.v *= .55; B.jolt = .12; return pose(dt, 0, 0, slope, 0); }
     if (h) { C.t.stop = 2.5; if (Math.abs(B.v) > 2.2 || C.t.v > 2.5) { crash(0, new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.v)); return; } B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01); B.v *= .4; return pose(dt, 0, 0, slope, 0); } }
   B.x = nx; B.z = nz;
-  const q2 = track.probe(B.x, B.z, B.hint); if (Math.abs(q2.d) > 28) { B.x -= q2.d > 0 ? -q2.f.z * (Math.abs(q2.d) - 28) : q2.f.z * (Math.abs(q2.d) - 28); B.v *= .95; }
+  // (round the home's circle the yards go further out than the loop's 28 m: there the edge is a ring round the circle)
+  const q2 = track.probe(B.x, B.z, B.hint), H0 = track.home; if (H0?.yard(B.x, B.z)) { const dx = B.x - H0.C0.x, dz = B.z - H0.C0.z, r = Math.hypot(dx, dz); if (r > H0.C0R) { B.x = H0.C0.x + dx / r * H0.C0R; B.z = H0.C0.z + dz / r * H0.C0R; B.v *= .95; } }
+  else if (Math.abs(q2.d) > 28) { B.x -= q2.d > 0 ? -q2.f.z * (Math.abs(q2.d) - 28) : q2.f.z * (Math.abs(q2.d) - 28); B.v *= .95; }
   pose(dt, inp.pedal, inp.brake, slope, 0);
 }
 function pose(dt, pedal, brake, slope, fallen) {
@@ -709,7 +715,7 @@ const CAMS = [
 ];
 let camI = 3; const CP = { ...CAMS[3] };
 function setCam(i) { camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
-const C = { yaw: B.yaw, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0 };
+const C = { yaw: B.yaw, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: Math.PI, iyGo: false };   // (iy: the opening shot, from in front of him, the house behind him; it swings round behind him as he sets off)
 const _eye = new THREE.Vector3();
 // a paper thrown: the camera eases into a wider view of it (back, up, a little aside from the throw's side), looking between him and
 // the paper, so he stays in the picture; it holds where the paper came down a moment (the +1, the glass), then eases back
@@ -744,8 +750,10 @@ function follow(dt) {
     CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov * PK(); camera.updateProjectionMatrix();
     sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); return; }
   const ch = aim.on && B.charge ? THREE.MathUtils.smoothstep(B.charge.p, 0, 1) : 0, back = CP.back + Math.max(0, B.v) * .13 + tw * 2.3 + rush * 1.3 + ch * 2.8, aside = -throwCam.side * tw * .5;   // (a throw: a wider, higher view, hardly turned)   // (a throw: further back and up, a little away from its side)
-  const [bk, upU] = userCam(back, CP.up), cy = C.yaw + camUser.yaw, want = new THREE.Vector3(B.x - Math.sin(cy) * bk - Math.cos(cy) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(cy) * bk + Math.sin(cy) * aside);   // (cy: turned round him as he set it)   // (far and high enough to see the houses, and a window go)
+  if (C.iy) { if (B.v > .4 || Math.abs(B.steer) > .05 || B.crash || foot.active) C.iyGo = true; if (C.iyGo) { C.iy *= Math.exp(-dt * 1.9); if (C.iy < .01) C.iy = 0; } }
+  const ik = C.iy / Math.PI, [bk0, upU0] = userCam(back, CP.up), bk = bk0 * (1 - ik * .2), upU = upU0 * (1 - ik * .45), cy = C.yaw + camUser.yaw + C.iy, want = new THREE.Vector3(B.x - Math.sin(cy) * bk - Math.cos(cy) * aside, C.gy + upU + tw * 1.4 + ch * 1.8, B.z - Math.cos(cy) * bk + Math.sin(cy) * aside);   // (cy: turned round him as he set it)   // (far and high enough to see the houses, and a window go)
   const look = new THREE.Vector3(B.x + Math.sin(B.yaw) * CP.ahead - Math.cos(B.yaw) * mlook.x * 2.6, C.gy + CP.lookUp - mlook.y * 1.2, B.z + Math.cos(B.yaw) * CP.ahead + Math.sin(B.yaw) * mlook.x * 2.6);   // (the mouse turns it a little)
+  if (ik > 0) look.lerp(_mid.set(B.x, C.gy + 1.3, B.z), THREE.MathUtils.smoothstep(ik, 0, .6));   // (the opening shot: at him)
   if (tw > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(throwCam.at, .5), .2 * tw);
   if (ch > 0) look.lerp(_mid.set(B.x, C.gy + 1, B.z).lerp(aim.at, .5), .35 * ch);   // (holding a throw: wider, higher, turned a little to where it will come down)   // (between him and the paper)
   if (!C.init) { C.gy = B.y; C.pos.copy(camI === 0 ? want : camera.position.lengthSq() ? camera.position : want); C.look.copy(look); C.init = true; }
@@ -753,7 +761,7 @@ function follow(dt) {
   const q = track.probe(C.pos.x, C.pos.z, B.hint); C.pos.y = Math.max(C.pos.y, q.y + .6);
   camera.position.copy(C.pos); camera.up.set(0, 1, 0); camera.lookAt(C.look); camera.rotateZ(-B.lean * .2 * (B.crash ? .3 : 1) - mlook.x * .04);
   if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.y += (Math.random() - .5) * a; }
-  { const sp = Math.min(1, Math.max(0, B.v) / 9), rum = (Math.abs(gq.d) > track.PAVE ? .035 : Math.abs(gq.d) > track.KERB ? .014 : .006) * sp * (B.air || B.crash ? 0 : 1), t = performance.now() / 1000;
+  { const sp = Math.min(1, Math.max(0, B.v) / 9), rum = (Math.abs(gq.d) > track.PAVE && !track.home?.paved(B.x, B.z) ? .035 : Math.abs(gq.d) > track.KERB ? .014 : .006) * sp * (B.air || B.crash ? 0 : 1), t = performance.now() / 1000;
     camera.position.y += (Math.sin(t * 47) * .6 + Math.sin(t * 71) * .4) * rum; camera.position.x += Math.sin(t * 39) * rum * .5; }   // (the ground under the wheels: asphalt, the kerb, the grass)
   camera.fov = (CP.fov + Math.max(0, B.v) * .75 + rush * 7 + THREE.MathUtils.smootherstep(throwCam.w, 0, 1) * 8) * PK(); camera.updateProjectionMatrix();
   sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld();
@@ -838,7 +846,7 @@ function step(dt, inp) {
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor });
   { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 && (B.bellT = (B.bellT || 0) - dt) > -4 });   // someone walking: ridden into, over he goes
     if (p) { crash(0, new THREE.Vector3(B.x - p.x, 0, B.z - p.z).setLength(1.5)); hud.rant(p.G.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'UWAŻAJ!'); } }
-  { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16, road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
+  { const q = track.probe(B.x, B.z, B.hint), ev = granny.update(dt, { x: B.x, z: B.z, far: Math.abs(q.d) > 16 && !track.home?.yard(B.x, B.z), road: Math.abs(q.d) < track.KERB + .4, busy: !!B.crash, hint: B.hint });
     if (ev === 'shout') hud.rant(granny.mouth, 'NIE PO SIONYM!', true);
     if (ev === 'caught') { const n = B.points; B.points = 0; hud.rant(granny.mouth, 'MAM CIE!', true);
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
@@ -1027,7 +1035,7 @@ function resetGame() {
   if (foot.active) foot.stop(); foot.reset(); B.parked = false; rider.boy.visible = true;
   granny.reset(); quests.reset(); shop.reset(); rider.root.visible = true; B.rattled = 0;
   rider.ragdollOff();
-  const q = track.probe(track.start.x, track.start.z, 0);
+  const q = track.probe(track.start.x, track.start.z, 0); C.iy = Math.PI; C.iyGo = false;
   Object.assign(B, { x: track.start.x, z: track.start.z, y: q.y, vy: 0, air: false, gPrev: q.y, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
     stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null });
   for (const p of papers) scene.remove(p.m, p.dot); papers.length = 0; for (const s of shards) scene.remove(s.m); shards.length = 0; for (const m of cracks) scene.remove(m); cracks.length = 0;

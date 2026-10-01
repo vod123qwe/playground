@@ -56,7 +56,7 @@ export function createAudio() {
     splash: (d, t) => { hiss(d, t, .32, { f: 1100, to: 380, q: .7, vol: .3 }); for (let k = 0; k < 4; k++) tone(d, R(420, 820), t + R(.02, .18), .05, { vol: .05, to: R(1100, 1700) }); },
     whistle: (d, t) => { tone(d, 1800, t, .12, { vol: .08, to: 2400 }); tone(d, 2400, t + .14, .25, { vol: .08, to: 1500 }); },
   };
-  function play(name, o = {}) { if (!ctx || !FX[name] || (o.vol ?? 1) < .02) return; const g = ctx.createGain(); g.gain.value = o.vol ?? 1; g.connect(panner(o.pan, bus.sfx)); FX[name](g, now() + .005); }
+  function play(name, o = {}) { if (!ctx || !FX[name] || !((o.vol ?? 1) >= .02) || !isFinite(o.pan ?? 0)) return; const g = ctx.createGain(); g.gain.value = o.vol ?? 1; g.connect(panner(o.pan, bus.sfx)); FX[name](g, now() + .005); }
   // ---------- voices: no words, a burble ----------
   // base pitch (Hz), how far it wanders, syllables a second, the wave, the formant's colour, a slur (the man on the bench), a wobble
   const VOICES = {
