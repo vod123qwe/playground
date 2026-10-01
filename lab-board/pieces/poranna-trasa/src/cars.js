@@ -166,10 +166,21 @@ export function createCars({ THREE, toon }) {
     const blink = (side, on) => { for (const k of [-1, 1]) amb[k].emissive.set(k === side && on ? '#ff9a1f' : '#000000'); };
     return { group: G, wheels, half: [W / 2, L / 2], kind: kindName, R: K.R, blink };
   }
-  function spin(car, metres) { for (const w of car.wheels) w.rotation.x += metres / car.R; }
+  // a tractor (the village's): a green body and bonnet, an orange seat under a cab of four posts and a roof, a pipe, big rear wheels
+  // and small front ones (each turned at its own rate: kept with its radius)
+  function makeTractor() { const G = new THREE.Group(), M = c => toon(c), body = M('#3f8a4a'), dark = M('#1d1e21'), orange = M('#d9782a'), steel = M('#9a9c9e'), wheels = [];
+    const bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; G.add(o); return o; };
+    bx(1.1, .7, 2.0, body, 0, 1.0, .5); bx(.9, .55, 1.0, body, 0, 1.15, 1.45); bx(.95, .12, 1.05, dark, 0, 1.46, 1.45); bx(.5, .5, .6, orange, 0, 1.55, -.2);
+    for (const x of [-.55, .55]) for (const z of [-.75, .35]) bx(.06, 1.25, .06, dark, x, 2.1, z); bx(1.3, .08, 1.3, body, 0, 2.75, -.2); bx(.08, .8, .08, steel, .3, 1.9, 1.7);
+    const wheel = (r, w, x, z) => { const g = new THREE.Group(), t = new THREE.Mesh(new THREE.CylinderGeometry(r, r, w, 14).rotateZ(Math.PI / 2), dark), h = new THREE.Mesh(new THREE.CylinderGeometry(r * .5, r * .5, w + .02, 10).rotateZ(Math.PI / 2), orange);
+      g.add(t, h); for (let k = 0; k < 6; k++) { const l = new THREE.Mesh(new THREE.BoxGeometry(w + .04, .09, .16), dark); l.position.y = r; const q = new THREE.Group(); q.rotation.x = k / 6 * Math.PI * 2; q.add(l); g.add(q); }
+      g.position.set(x, r, z); G.add(g); wheels.push({ g, r }); };
+    for (const sd of [-1, 1]) { wheel(.72, .45, sd * .8, -.5); wheel(.38, .25, sd * .62, 1.45); }
+    return { group: G, wheels: wheels.map(w => w.g), radii: wheels.map(w => w.r), half: [1.05, 1.7], kind: 'tractor', R: .55, blink: null }; }
+  function spin(car, metres) { car.wheels.forEach((w, k) => { w.rotation.x += metres / (car.radii ? car.radii[k] : car.R); }); }
   const COLOURS = { bus: ['#c8323a', '#e3b83a', '#3f6b35', '#e9e3d1'], common: ['#c9b77a', '#7b5836', '#8e2e25', '#34465a', '#9aa0a4', '#e9e3d1', '#355f31', '#8fb0bd', '#a3322a', '#5a5f66'], wedge: ['#cf5a3e', '#efc970', '#f6f3ea', '#17181b'],
     micro: ['#e9e3d1', '#8e2e25', '#efc970', '#8fb0bd', '#355f31', '#c9b77a', '#cf5a3e'], twostroke: ['#b7c4a0', '#8fb0bd', '#e9e3d1', '#c9b77a', '#9aa0a4', '#d9c9a0'], van: ['#5f7a4e', '#8e2e25', '#9aa0a4', '#34465a', '#e9e3d1'], barge: ['#e9e3d1', '#34465a', '#7b5836', '#17181b', '#9aa0a4'] };
   const MIX = [['liftback', .18], ['pickup', .14], ['estate', .14], ['saloon', .11], ['fastback', .12], ['micro', .1], ['barge', .08], ['twostroke', .06], ['van', .05], ['hatch', .02], ['wedge', .03]];   // (how often each is on the street)
   const random = r => { let x = r() * MIX.reduce((a, [, w]) => a + w, 0), k = MIX[0][0]; for (const [n, w] of MIX) { if ((x -= w) < 0) { k = n; break; } } const pal = COLOURS[COLOURS[k] ? k : 'common']; return makeCar(k, pal[r() * pal.length | 0]); };
-  return { makeCar, random, spin, KINDS, COLOURS };
+  return { makeCar, makeTractor, random, spin, KINDS, COLOURS };
 }

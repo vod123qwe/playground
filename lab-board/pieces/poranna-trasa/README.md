@@ -930,3 +930,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - „rowerzysta w czerwonej czapce”: Twoje wybryki (szyby, skrzynki, kopniaki, babcia, radiowóz, pościgi) nabijają policyjny wątek: wandal, poszukiwania, nagroda za wskazanie sprawcy; spokojne poranki go wyciszają
 - zdarzenia z trasy opisane jak w lokalnej gazecie, bez gazeciarza w roli głównej („nieznany rowerzysta...”)
 - Twoje liczby, raport z trasy i wyniki zleceń przeniesione do wkładki „Twoja trasa”
+
+## Wersja 104: życie na Wsi, kluczowe postacie wszędzie
+
+- gęsi (src/geese.js): stada na poboczach w kilku miejscach wsi; gdy nadjeżdżasz, przechodzą gęsiego przez drogę; wjazd z rozpędem to wywrotka (i gęś w powietrzu), powoli: syczy i hamuje; w gazecie „Gęsi kontra rower”
+- traktory na wiejskiej drodze: dwa, po jednym w każdą stronę, jadą wolno, auta za nimi czekają i wyprzedzają
+- topole: rzędy wysokich, smukłych drzew wzdłuż odcinków drogi na Wsi
+- kluczowe postacie i ich wątki jadą z Tobą do każdego regionu (Janusz i koszulka, Kurier, Hela), lokalne wątki zostają w swoim regionie
