@@ -98,70 +98,66 @@ export function createPaper({ game }) {
     #paper { position: fixed; inset: 0; z-index: 9; display: none; place-items: center; font: 16px/1.25 PTPix, ui-monospace, Consolas, monospace; color: #2b2723; overflow: hidden;
       background-color: rgba(10,11,13,.6); background-image: linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%), linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%); background-size: 4px 4px; background-position: 0 0, 2px 2px; }
     #paper.on { display: grid; } #paper * { image-rendering: pixelated; box-sizing: border-box; }
-    #paper .pile { position: relative; width: min(1060px, calc(100vw - 40px)); height: min(700px, calc(100vh - 90px)); transform: rotate(-1.2deg); animation: pp-in .4s steps(6) both; }
-    @keyframes pp-in { from { transform: translateY(110%) rotate(-9deg); } }
+    #paper .pile { position: relative; width: min(80vw, 1120px); height: min(calc(100vh - 104px), 820px); margin-bottom: 56px; transform: rotate(-1deg); animation: pp-in .42s steps(5) both; }
+    @keyframes pp-in { from { transform: translateY(115%) rotate(-10deg); } }
     #paper .under, #paper .sheet { position: absolute; inset: 0; clip-path: polygon(8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px, calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px, 100% calc(100% - 8px), calc(100% - 4px) calc(100% - 8px), calc(100% - 4px) calc(100% - 4px), calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 4px), 4px calc(100% - 4px), 4px calc(100% - 8px), 0 calc(100% - 8px), 0 8px, 4px 8px, 4px 4px, 8px 4px); }
     #paper .under { background: #17181b; } #paper .under i { position: absolute; inset: 4px; background: #cfc4a6; clip-path: inherit; }
-    #paper .u1 { transform: translate(10px, 12px) rotate(1.6deg); } #paper .u2 { transform: translate(18px, 20px) rotate(2.6deg); } #paper .u2 i { background: #bfb393; }
-    #paper .sheet { background: #17181b; } #paper .face { position: absolute; inset: 4px; clip-path: inherit; background-color: #ece3cc; background-image: var(--pp-grain); background-size: 64px 64px; padding: 18px 24px 16px; display: flex; flex-direction: column; }
+    #paper .u1 { transform: translate(8px, 10px) rotate(1.4deg); } #paper .u2 { transform: translate(15px, 17px) rotate(2.4deg); } #paper .u2 i { background: #bfb393; }
+    #paper .sheet { background: #17181b; transform-origin: 100% 100%; } #paper .sheet.nxt { display: none; } #paper .sheet.nxt.on { display: block; }
+    #paper .face { position: absolute; inset: 4px; clip-path: inherit; background-color: #ece3cc; background-image: var(--pp-grain); background-size: 64px 64px; padding: 14px 20px 10px; display: flex; flex-direction: column; overflow: hidden; }
     #paper .face:after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; pointer-events: none; background: linear-gradient(rgba(0,0,0,.07), rgba(0,0,0,.02) 40%, rgba(255,255,255,.25) 50%, rgba(0,0,0,.03) 60%, transparent); }   /* the fold */
-    #paper .sheet.out { animation: pp-out .16s steps(3) both; } #paper .sheet.in { animation: pp-flip .16s steps(3) both; }
-    @keyframes pp-out { to { transform: scaleX(0) skewY(2deg); } } @keyframes pp-flip { from { transform: scaleX(0) skewY(-2deg); } }
-    /* the masthead */
-    #paper .mast { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
-    #paper .crest { width: 64px; height: 72px; } #paper .title { font-size: 56px; line-height: 1.2; text-shadow: 7px 0 0 #2b2723; letter-spacing: 6px; white-space: nowrap; min-width: 0; }
-    #paper .index { border: 4px solid #2b2723; background: #d8cfb6; padding: 4px 8px; display: grid; gap: 2px; min-width: 190px; }
-    #paper .index a { cursor: pointer; color: #4a4540; } #paper .index a:hover, #paper .index a.on { color: #b8483a; } #paper .index a.on:before { content: '▸ '; }
-    #paper .rule { display: flex; justify-content: space-between; gap: 10px; border-top: 4px solid #b8483a; border-bottom: 2px solid #2b2723; padding: 3px 0 2px; margin: 8px 0 10px; color: #4a4540; flex-wrap: wrap; }
-    #paper .body { flex: 1; min-height: 0; display: grid; gap: 14px; }
-    #paper h2, #paper h3 { margin: 0; font-weight: normal; line-height: 1.02; } #paper h2 { font-size: 32px; text-shadow: 4px 0 0 #2b2723; letter-spacing: 4px; } #paper h3 { font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; margin-bottom: 6px; }
-    #paper p { margin: 0 0 6px; } #paper .ph { display: block; width: 100%; border: 4px solid #2b2723; background: #9a968c; object-fit: cover; filter: sepia(.18) contrast(1.04); }
-    #paper .cap { color: #6a645c; margin-top: 2px; }
-    #paper .bars { display: grid; gap: 5px; margin-top: 6px; } #paper .bars i { height: 6px; background: #b9b09a; } #paper .bars i:nth-child(4n) { width: 72%; } #paper .bars i:nth-child(5n+2) { width: 88%; }
-    #paper .col { min-height: 0; overflow: hidden; } #paper .vr { border-left: 2px solid #2b2723; padding-left: 14px; } #paper .hr { border-top: 2px solid #2b2723; padding-top: 10px; }
-    /* page 1 */
-    #paper .p1 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr); }
-    #paper .lead { grid-column: span 2; display: grid; grid-template-columns: 1fr 1.05fr; gap: 14px; min-height: 0; } #paper .lead .ph { height: 100%; min-height: 0; }
-    #paper .clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; } #paper .c3 { -webkit-line-clamp: 3; } #paper .c4 { -webkit-line-clamp: 4; } #paper .c8 { -webkit-line-clamp: 8; }
-    #paper .news .ph { height: 116px; } #paper .news { display: flex; flex-direction: column; } #paper .news .cap { margin-top: 4px; }
-    #paper .opts { color: #8e2e25; margin-top: 4px; }
-    #paper .pt { width: 64px; height: 64px; border: 4px solid #2b2723; flex: none; display: block; } #paper .iv .pt { float: left; margin: 2px 10px 4px 0; } #paper .iv .who { color: #6a645c; margin: 0 0 4px; } #paper .iv .who b { font-weight: normal; color: #2b2723; } #paper .pt.sm { width: 88px; height: 88px; }
-    #paper .iv .ivh { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; } #paper .iv .ivh b { font-weight: normal; display: block; } #paper .iv .ivh small { color: #6a645c; font-size: 16px; }
-    #paper .iv .q { color: #8e2e25; margin: 0 0 2px; } #paper .iv .q:before { content: '- '; } #paper .iv .a { margin: 0 0 6px; } #paper .iv .a:before { content: '- '; }
-    #paper .brief { margin-top: 8px; border-top: 4px solid #2b2723; padding-top: 6px; } #paper .brief h4 { margin: 0 0 4px; font-weight: normal; color: #8e2e25; } #paper .brief p { margin: 0 0 4px; padding-left: 12px; text-indent: -12px; } #paper .brief p:before { content: '▪ '; color: #8e2e25; }
-    #paper .anec { display: flex; gap: 12px; align-items: flex-start; } #paper .anec h3 { margin-bottom: 4px; }
-    #paper .more { float: right; font-size: 16px; text-shadow: none; letter-spacing: 0; color: #8e2e25; margin-top: 4px; } #paper .keys2 { display: flex; gap: 8px; flex-wrap: wrap; }
-    #paper .next .pxk { justify-content: flex-start; } #paper .bar { gap: 10px; align-items: flex-end; }
-    #paper .box { background: #e9d9a8; border: 4px solid #2b2723; padding: 6px 8px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 6px 10px; cursor: pointer; min-height: 0; } #paper .box:hover { background: #f0e2b4; }
-    #paper .box h3 { grid-column: 1 / -1; color: #8e2e25; text-shadow: 3px 0 0 #8e2e25; border-bottom: 4px solid #b8483a; padding-bottom: 4px; margin: 0; }
-    #paper .kv { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; align-items: center; } #paper .kv canvas { width: 20px; height: 20px; grid-row: span 2; } #paper .kv b { font-weight: normal; font-size: 16px; line-height: 1; } #paper .kv small { color: #6a645c; font-size: 16px; }
-    #paper .box canvas.mini { width: 100%; height: 100%; min-height: 0; border: 2px solid #2b2723; background: #cfd8a8; }
+    /* the turn: few frames (as the game moves), the page off by its corner; back: it lands */
+    #paper .sheet.fly { animation: pp-fly .5s steps(5) forwards; } #paper .sheet.land { animation: pp-land .5s steps(5) both; }
+    @keyframes pp-fly { 0% { transform: none; } 25% { transform: translate(-3%, -5%) rotate(-3deg) skewX(4deg); } 100% { transform: translate(-125%, -22%) rotate(-26deg) skewX(10deg); } }
+    @keyframes pp-land { 0% { transform: translate(-125%, -22%) rotate(-26deg) skewX(10deg); } 75% { transform: translate(-3%, -5%) rotate(-3deg) skewX(4deg); } 100% { transform: none; } }
+    /* the corners: a dog-ear to lift the page by */
+    #paper .ear { position: absolute; bottom: 0; width: 48px; height: 48px; cursor: pointer; z-index: 3; }
+    #paper .ear.r { right: 0; } #paper .ear.l { left: 0; transform: scaleX(-1); }
+    #paper .ear i { position: absolute; inset: 0; background: #17181b; clip-path: polygon(100% 0, 100% 100%, 0 100%, 0 calc(100% - 4px), 4px calc(100% - 4px), 4px calc(100% - 8px), 8px calc(100% - 8px), 8px calc(100% - 12px), 12px calc(100% - 12px), 12px calc(100% - 16px), 16px calc(100% - 16px), 16px calc(100% - 20px), 20px calc(100% - 20px), 20px calc(100% - 24px), 24px calc(100% - 24px), 24px calc(100% - 28px), 28px calc(100% - 28px), 28px calc(100% - 32px), 32px calc(100% - 32px), 32px calc(100% - 36px), 36px calc(100% - 36px), 36px calc(100% - 40px), 40px calc(100% - 40px), 40px calc(100% - 44px), 44px calc(100% - 44px), 44px 0); }
+    #paper .ear i:after { content: ''; position: absolute; inset: 4px 0 0 4px; background: linear-gradient(135deg, #f6efdc 0 46%, #c9bc9a 47% 100%); clip-path: inherit; }
+    #paper .ear { transition: none; } #paper .ear:hover { width: 60px; height: 60px; } #paper .ear:hover i:after { background: linear-gradient(135deg, #fff8e6 0 46%, #d8a02a 47% 100%); }
+    #paper .ear.r:before { content: '▸'; position: absolute; right: 54px; bottom: 6px; color: #8e2e25; animation: pp-hint 1s steps(2) infinite; } #paper .ear.l:before { content: '▸'; position: absolute; right: 54px; bottom: 6px; color: #8e2e25; transform: scaleX(-1); }
+    @keyframes pp-hint { 50% { transform: translateX(-4px); } }
+    /* the masthead (page 1), the slim head (the rest), the foot */
+    #paper .mast { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; }
+    #paper .crest { width: 56px; height: 63px; } #paper .title { font-size: 48px; line-height: 1.2; text-shadow: 6px 0 0 #2b2723; letter-spacing: 5px; white-space: nowrap; min-width: 0; overflow: hidden; }
+    #paper .index { border: 4px solid #2b2723; background: #d8cfb6; padding: 3px 8px; display: grid; gap: 1px; } #paper .index a, #paper .idx a { cursor: pointer; color: #4a4540; } #paper .index a:hover, #paper .index a.on, #paper .idx a.on, #paper .idx a:hover { color: #b8483a; } #paper .index a.on:before { content: '▸ '; }
+    #paper .rule { display: flex; justify-content: space-between; gap: 4px 12px; border-top: 4px solid #b8483a; border-bottom: 2px solid #2b2723; padding: 3px 0 2px; margin: 6px 0 10px; color: #4a4540; flex-wrap: wrap; }
+    #paper .slim { display: flex; align-items: center; gap: 12px; border-bottom: 4px solid #b8483a; padding-bottom: 6px; margin-bottom: 10px; } #paper .slim .crest { width: 28px; height: 32px; } #paper .slim b { font-weight: normal; font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; white-space: nowrap; }
+    #paper .slim span { color: #8e2e25; } #paper .slim .idx { margin-left: auto; display: flex; gap: 6px; } #paper .slim .idx a { border: 2px solid #2b2723; padding: 0 5px; } #paper .slim .idx a.on { background: #2b2723; color: #ece3cc; }
+    #paper .foot { display: flex; justify-content: center; gap: 18px; border-top: 2px solid #2b2723; padding-top: 4px; margin-top: 6px; color: #6a645c; }
+    /* the columns */
+    #paper .body { flex: 1 1 0; min-height: 0; columns: var(--cols); column-gap: 18px; column-rule: 2px solid #2b2723; column-fill: auto; overflow: hidden; }
+    #paper .blk { break-inside: avoid; margin: 0 0 12px; } #paper .blk.txt { break-inside: auto; } #paper .blk.span { column-span: all; margin-bottom: 10px; }
+    #paper h2, #paper h3, #paper h4 { margin: 0; font-weight: normal; line-height: 1.05; } #paper h2 { font-size: 32px; text-shadow: 4px 0 0 #2b2723; letter-spacing: 3px; } #paper h3 { font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; margin-bottom: 6px; } #paper h4 { color: #8e2e25; margin-bottom: 4px; }
+    #paper p { margin: 0 0 6px; } #paper .lede:first-letter { font-size: 48px; float: left; line-height: .9; margin: 2px 6px 0 0; text-shadow: 5px 0 0 #2b2723; }
+    #paper .ph { display: block; width: 100%; aspect-ratio: 4 / 3; height: auto; border: 4px solid #2b2723; background: #9a968c; object-fit: cover; filter: sepia(.18) contrast(1.04); margin-bottom: 4px; }
+    #paper .cap { color: #6a645c; } #paper .opts { color: #8e2e25; }
+    #paper .pt { width: 64px; height: 64px; border: 4px solid #2b2723; display: block; float: left; margin: 2px 10px 4px 0; } #paper .who { color: #6a645c; } #paper .who b { font-weight: normal; color: #2b2723; }
+    #paper .iv .q { color: #8e2e25; margin: 0 0 2px; } #paper .iv .q:before, #paper .iv .a:before { content: '- '; } #paper .iv:after { content: ''; display: block; clear: both; }
+    #paper .brief { border-top: 4px solid #2b2723; padding-top: 6px; } #paper .brief p { padding-left: 12px; text-indent: -12px; margin-bottom: 4px; } #paper .brief p:before { content: '▪ '; color: #8e2e25; }
+    #paper .box { background: #e9d9a8; border: 4px solid #2b2723; padding: 6px 8px; cursor: pointer; } #paper .box:hover { background: #f0e2b4; }
+    #paper .box h3 { color: #8e2e25; text-shadow: 3px 0 0 #8e2e25; border-bottom: 4px solid #b8483a; padding-bottom: 4px; } #paper .kvs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-bottom: 6px; }
+    #paper .kv { display: grid; grid-template-columns: 22px 1fr; gap: 0 6px; align-items: center; } #paper .kv canvas { width: 20px; height: 20px; grid-row: span 2; } #paper .kv b { font-weight: normal; line-height: 1; } #paper .kv small { color: #6a645c; font-size: 16px; }
+    #paper canvas.mini { aspect-ratio: 16 / 9; } #paper canvas.mini, #paper canvas.big { display: block; width: 100%; border: 2px solid #2b2723; background: #cfd8a8; } #paper canvas.big { border-width: 4px; aspect-ratio: 4 / 3; } #paper .more { color: #8e2e25; text-align: right; margin: 4px 0 0; }
     #paper .stars { display: inline-flex; gap: 4px; vertical-align: middle; } #paper .stars i { width: 18px; height: 18px; background: #b9b09a; clip-path: polygon(40% 0, 60% 0, 60% 30%, 100% 30%, 100% 50%, 80% 60%, 90% 100%, 70% 100%, 50% 80%, 30% 100%, 10% 100%, 20% 60%, 0 50%, 0 30%, 40% 30%); } #paper .stars i.on { background: #d8a02a; }
-    /* page 2 */
-    #paper .p2 { grid-template-columns: 1.35fr 1fr; } #paper .p2 canvas.big { width: 100%; height: 100%; min-height: 0; border: 4px solid #2b2723; background: #cfd8a8; }
-    #paper .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; color: #4a4540; } #paper .legend span:before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; background: var(--c); border: 2px solid #2b2723; vertical-align: -1px; }
+    #paper .legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 6px; color: #4a4540; } #paper .legend span:before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; background: var(--c); border: 2px solid #2b2723; vertical-align: -1px; }
     #paper table { width: 100%; border-collapse: collapse; } #paper td, #paper th { padding: 2px 4px; text-align: right; font-weight: normal; } #paper td:first-child, #paper th:first-child { text-align: left; } #paper th { color: #6a645c; border-bottom: 2px solid #2b2723; } #paper tr + tr td { border-top: 1px solid #c9bfa4; } #paper .rec { color: #b8483a; }
     #paper .goal { display: grid; grid-template-columns: 22px 1fr auto; gap: 6px; align-items: center; margin-bottom: 4px; } #paper .goal .stars i { width: 16px; height: 16px; }
-    /* page 3 */
-    #paper .p3 { grid-template-columns: 1.4fr 1fr; } #paper .ads { columns: 2; column-gap: 14px; column-rule: 2px solid #2b2723; } #paper .ad { break-inside: avoid; border: 2px solid #2b2723; padding: 6px 8px; margin-bottom: 10px; background: #e6dcc2; } #paper .ad b { font-weight: normal; display: block; font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; margin-bottom: 2px; }
-    #paper .ad.j { background: #f2e6c0; border-width: 4px; } #paper .ad .pr { color: #8e2e25; }
-    #paper .next { display: grid; gap: 6px; align-content: start; overflow-y: auto; scrollbar-width: thin; }
-    /* the buttons under the paper */
-    #paper .bar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
-    #paper button:not(.pxk) { all: unset; cursor: pointer; border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; padding: 2px 10px; color: #f6f3ea; white-space: nowrap; }
-    #paper button:not(.pxk):hover, #paper button:not(.pxk).pad-focus { border-image-source: var(--px-btn-hi); } #paper button:not(.pxk):active { border-image-source: var(--px-btn-dn); transform: translateY(2px); } #paper button.go:not(.pxk) { border-image-source: var(--px-sel); color: #17181b; }
-    
-    @media (max-width: 1040px) { #paper .pile { width: calc(100vw - 24px); height: calc(100vh - 86px); } #paper .face { padding: 12px 14px; } #paper .title { font-size: 40px; text-shadow: 5px 0 0 #2b2723; letter-spacing: 4px; } #paper .crest { width: 48px; height: 54px; }
-      #paper .index { min-width: 0; } #paper .body { overflow-y: auto; scrollbar-width: thin; } #paper .p1 { grid-template-columns: 1fr 1fr; grid-template-rows: none; } #paper .lead { grid-column: 1 / -1; height: 230px; }
-      #paper .p1 > div { min-height: 230px; } #paper .p2, #paper .p3 { grid-template-columns: 1fr; } #paper .p2 canvas.big { height: 300px; flex: none; } #paper .vr { border-left: 0; padding-left: 0; } #paper .news .ph { height: 110px; } }
-    @media (max-width: 640px) { #paper .title { font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; } #paper .index { display: none; } #paper h2 { font-size: 24px; text-shadow: 3px 0 0 #2b2723; } #paper .p1, #paper .lead { grid-template-columns: 1fr; } #paper .lead { height: auto; } #paper .lead .ph { height: 180px; } #paper .ads { columns: 1; } #paper .bar { flex-wrap: wrap; justify-content: center; width: calc(100vw - 20px); } }
-}`;
+    #paper .ad { border: 2px solid #2b2723; padding: 6px 8px; background: #e6dcc2; } #paper .ad b { font-weight: normal; display: block; font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; margin-bottom: 2px; } #paper .ad.j { background: #f2e6c0; border-width: 4px; } #paper .ad .pr { color: #8e2e25; }
+    #paper .next .pxk { margin: 2px 0 4px; } #paper .keys2 { display: flex; gap: 8px; flex-wrap: wrap; }
+    /* the keys under the paper */
+    #paper .bar { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; z-index: 2; }
+    @media (max-width: 980px) { #paper .bar { gap: 6px; } #paper .bar .pxk span { display: none; } #paper .bar .pxk.gold span { display: inline; } }
+    @media (max-width: 760px) { #paper .pile { width: 86vw; } #paper .title { font-size: 32px; text-shadow: 4px 0 0 #2b2723; letter-spacing: 3px; } #paper .crest { width: 40px; height: 45px; } #paper .face { padding: 10px 12px 8px; } #paper .bar { gap: 6px; } #paper .bar .pxk span { display: none; } #paper .bar .pxk.gold span { display: inline; } }
+    @media (max-width: 560px) { #paper .index { display: none; } #paper .title { font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; } #paper .slim b { font-size: 16px; } }
+`;
   document.head.appendChild(css);
   // the paper's grain: a few specks on the cream
   { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); for (let k = 0; k < 70; k++) { g.fillStyle = Math.random() < .5 ? 'rgba(90,70,40,.08)' : 'rgba(255,255,255,.18)'; g.fillRect(Math.random() * 32 | 0, Math.random() * 32 | 0, 1, 1); } document.documentElement.style.setProperty('--pp-grain', `url(${c.toDataURL()})`); }
-  const el = document.createElement('div'); el.id = 'paper'; el.innerHTML = '<div class="pile"><div class="under u2"><i></i></div><div class="under u1"><i></i></div><div class="sheet"><div class="face"></div></div></div><div class="bar"></div>';
+  const el = document.createElement('div'); el.id = 'paper'; el.innerHTML = '<div class="pile"><div class="under u2"><i></i></div><div class="under u1"><i></i></div><div class="sheet nxt"><div class="face"></div></div><div class="sheet top"><div class="face"></div></div></div><div class="bar"></div>';
   document.body.appendChild(el);
-  const sheet = el.querySelector('.sheet'), face = el.querySelector('.face'), bar = el.querySelector('.bar');
+  const sh = q => { const e = el.querySelector(q); return { el: e, face: e.querySelector('.face') }; }, A = sh('.sheet.top'), Bs = sh('.sheet.nxt'), bar = el.querySelector('.bar');   // (A: the page on top; Bs: the one under it while turning)
   let open_ = false, page = 0, D = null, busy = false;
 
   // ---------- little pictures ----------
@@ -198,10 +194,15 @@ export function createPaper({ game }) {
     { const [hx, hz] = R.homeAt, x = X(hx), y = Z(hz); P(x - 4, y - 5, 9, 8, '#2b2723'); P(x - 3, y - 1, 7, 3, '#f2ece0'); P(x - 3, y - 4, 7, 3, '#b8483a'); }
     return c; }
 
-  // ---------- the pages ----------
-  function mast(tab) { const d = new Date(); return `<div class="mast"><canvas class="crest" width="16" height="18"></canvas><div class="title">WIEŚCI ZZA PŁOTU</div>
-      <div class="index">${['1 PORANEK', '2 TWOJA TRASA', '3 OGŁOSZENIA'].map((t, k) => `<a data-pg="${k}" class="${k === tab ? 'on' : ''}">${t}</a>`).join('')}</div></div>
-      <div class="rule"><span>NR ${D.issue}</span><span>${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}</span><span>${D.region} · ${D.L.name}</span><span>CENA: 1 ZŁ</span></div>`; }
+  // ---------- the pages: blocks poured into columns, a page full (the columns would run off its side) → the next page; never a scroll ----------
+  const DATA = new Map(), url = c => { if (!c) return ''; if (!DATA.has(c)) DATA.set(c, c.toDataURL()); return DATA.get(c); };
+  const pic = (c, cap) => `<img class="ph" src="${url(c)}" alt="">${cap ? `<p class="cap">${cap}</p>` : ''}`;
+  const SEC = ['PORANEK', 'TWOJA TRASA', 'OGŁOSZENIA'];
+  function head(p) { const d = new Date(), P = pages[p];
+    if (P.first) return `<div class="mast"><canvas class="crest" width="16" height="18"></canvas><div class="title">WIEŚCI ZZA PŁOTU</div>
+      <div class="index">${SEC.map((t, k) => `<a data-sec="${k}" class="${k === P.sec ? 'on' : ''}">${k + 1} ${t}</a>`).join('')}</div></div>
+      <div class="rule"><span>NR ${D.issue}</span><span>${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}</span><span>${D.region} · ${D.L.name}</span><span>CENA: 1 ZŁ</span></div>`;
+    return `<div class="slim"><canvas class="crest" width="16" height="18"></canvas><b>WIEŚCI ZZA PŁOTU</b><span>${SEC[P.sec]}</span><span class="idx">${SEC.map((t, k) => `<a data-sec="${k}" class="${k === P.sec ? 'on' : ''}">${k + 1}</a>`).join('')}</span></div>`; }
   function story() { const { L, r, rec } = D, n = r.delivered, sub = D.route.subs, miss = Math.max(0, sub - n);
     const a = [`Dziś rano trasą ${L.name.toLowerCase()} przejechał nasz gazeciarz.`];
     a.push(n ? `Do skrzynek trafiło ${n} ${plural(n, 'gazeta', 'gazety', 'gazet')}${sub ? ` na ${sub} ${plural(sub, 'prenumeratora', 'prenumeratorów', 'prenumeratorów')} po drodze` : ''}.` : 'Skrzynki zostały dziś puste. Sąsiedzi pytają, co się stało.');
@@ -211,58 +212,74 @@ export function createPaper({ game }) {
     if (miss && n) a.push(`${miss} ${plural(miss, 'dom czeka', 'domy czekają', 'domów czeka')} na gazetę do jutra.`);
     a.push(rec.first ? `Czas na mecie: ${mmss(r.time)}.` : rec.beat.time ? `Czas ${mmss(r.time)} to nowy rekord tej trasy.` : `Czas ${mmss(r.time)}, rekord to wciąż ${mmss(rec.best.time)}.`);
     return a.join(' '); }
-  const portrait = (c, cls = 'pt') => c ? `<img class="${cls}" src="${c.toDataURL()}" alt="">` : '';
-  function interview() { const I = D.iv; if (!I) return ''; const C = CAST[I.who]; if (!C) return ''; const qa = C.qa(D.r);
-    return `<div class="col iv"><h3>Rozmowa dnia</h3>${portrait(I.img)}<p class="who"><b>${C.who}</b>, ${C.role}</p>${qa.map(([q, a]) => `<p class="q">${q}</p><p class="a">${a}</p>`).join('')}</div>`; }
-  function page1() { const { r, rec } = D, nw = D.photos.news, tz = D.tease, A = nw[0];
-    return mast(0) + `<div class="body p1">
-      <div class="lead"><div class="col" style="display:flex;flex-direction:column"><h2>${D.headline}</h2><p class="clamp c8" style="margin-top:8px">${story()}</p>${bars(3)}</div>${img(D.photos.finish)}</div>
-      <div class="vr" style="min-height:0;display:flex;flex-direction:column">${A ? `<div class="col news"><h3>${A.head}</h3>${img(A.img)}<p class="cap clamp c3">${A.text}</p></div>` : ''}
-        ${D.briefs.length ? `<div class="brief"><h4>W SKRÓCIE</h4>${D.briefs.slice(0, 3).map(t => `<p>${t}</p>`).join('')}</div>` : ''}</div>
-      <div class="hr" style="min-height:0;display:flex">${interview() || (nw[1] ? `<div class="col news"><h3>${nw[1].head}</h3>${img(nw[1].img)}<p class="cap clamp c3">${nw[1].text}</p></div>` : '')}</div>
-      <div class="hr vr" style="min-height:0;display:flex">${tz ? `<div class="col news"><h3>${tz.head}</h3>${img(tz.img)}<p class="cap clamp c3">${tz.text}</p>${D.next.length ? `<div class="opts">JUTRO: ${D.next.map(x => x.name).join(' ALBO ')}</div>` : ''}</div>` : ''}</div>
-      <div class="hr vr" style="min-height:0;display:flex"><div class="box" data-pg="1" style="flex:1"><h3>Twoja trasa <span class="more">STR. 2 ▸</span></h3><div style="display:grid;gap:6px;align-content:start">
-          <div class="kv"><canvas data-ico="dist"></canvas><b>${(D.route.len / 1000).toFixed(2)} KM</b><small>DYSTANS</small></div>
-          <div class="kv"><canvas data-ico="time"></canvas><b>${mmss(r.time)}</b><small>CZAS</small></div>
-          <div class="kv"><canvas data-ico="paper"></canvas><b>${r.delivered} / ${D.route.subs}</b><small>DORĘCZONE</small></div>
-          <div class="kv"><canvas data-ico="star"></canvas><b>${rec.g.n} / 3</b><small>GWIAZDKI</small></div></div><canvas class="mini" data-map="mini" width="150" height="150"></canvas></div></div></div>`; }
-  function page2() { const { L, r, rec } = D, b = rec.best, gl = L.goal, st = rec.g.st;
-    const row = (k, v, bv, rk) => `<tr><td>${k}</td><td>${v}${rec.beat[rk] ? ' <span class="rec">REKORD</span>' : ''}</td><td>${bv}</td></tr>`;
-    return mast(1) + `<div class="body p2"><div class="col" style="display:flex;flex-direction:column"><h2 style="margin-bottom:6px">Twoja trasa: ${L.name.toLowerCase()}</h2><canvas class="big" data-map="big" width="320" height="230"></canvas>
-        <div class="legend"><span style="--c:#4f9a3e">DORĘCZONE</span><span style="--c:#cf5a3e">PRENUMERATOR BEZ GAZETY</span><span style="--c:#e8e2d2">BEZ PRENUMERATY</span><span style="--c:#b8483a">TRASA I PUNKTY</span><span style="--c:#8e2e25">WYWROTKA</span><span style="--c:#2b2723">STŁUCZONA SZYBA</span></div></div>
-      <div class="col vr" style="overflow-y:auto"><h3>Gwiazdki ${starsH(rec.g.n)}</h3>
-        <div class="goal">${starsH(st[0] ? 1 : 0, 1)}<span>CZAS DO ${mmss(gl.time)}</span><span>${mmss(r.time)}</span></div>
-        <div class="goal">${starsH(st[1] ? 1 : 0, 1)}<span>${gl.papers} GAZET, ${Math.round(gl.acc * 100)}% CELNIE</span><span>${r.delivered}, ${Math.round(r.acc * 100)}%</span></div>
-        <div class="goal">${starsH(st[2] ? 1 : 0, 1)}<span>BEZ WYWROTKI</span><span>${r.falls}</span></div>
-        <h3 style="margin-top:12px">Dziś i najlepiej</h3><table><tr><th></th><th>DZIŚ</th><th>NAJLEPIEJ</th></tr>
-          ${row('CZAS', mmss(r.time), mmss(b.time), 'time')}${row('GAZETY', r.delivered, b.delivered, 'delivered')}${row('CELNOŚĆ', Math.round(r.acc * 100) + '%', Math.round((b.acc || 0) * 100) + '%', 'acc')}
-          ${row('RZUTY', r.thrown, '-')}${row('WYWROTKI', r.falls, b.falls)}${row('SZYBY', r.windows, '-')}${row('ZAROBEK', r.earned + ' ZŁ', b.earned + ' ZŁ', 'earned')}${row('PRZEJAZDY', b.runs, '')}</table>
-        <h3 style="margin-top:12px">Domy na trasie</h3><p>PRENUMERATORZY: ${D.route.subs} · DORĘCZONE: ${r.delivered} · BEZ GAZETY: ${Math.max(0, D.route.subs - r.delivered)} · WSZYSTKICH DOMÓW: ${D.route.doors.length}</p></div></div>`; }
-  function page3() { const N = D.an, C = N && CAST[N.who];
-    return mast(2) + `<div class="body p3"><div class="col" style="display:flex;flex-direction:column;gap:10px"><h2>Ogłoszenia drobne</h2><div class="ads">
-        ${D.ads.map(a => `<div class="ad ${a.j ? 'j' : ''}"><b>${a.t}</b>${a.d}${a.price ? ` <span class="pr">${a.price} ZŁ</span>` : ''}</div>`).join('')}</div>
-        ${C ? `<div class="anec hr">${portrait(N.img, 'pt sm')}<div><h3>Anegdota: ${N.head.toLowerCase()}</h3><p>${N.text}</p><p class="cap">Opowiedział(a): ${C.who.toLowerCase()}, ${C.role}.</p></div></div>` : ''}</div>
-      <div class="col vr next"><h3>Dokąd dalej?</h3>${D.next.length ? D.next.map(x => `${pxKey(x.name, { icon: 'play', kind: x.first ? 'gold' : '', attrs: `data-go="${x.id}"`, nudge: true })}<p class="cap">${x.note}</p>`).join('') : '<p>Wszystkie odcinki w okolicy są już otwarte albo czekają na gwiazdki.</p>'}
-        <h3 style="margin-top:8px">W portfelu: ${D.money} ZŁ</h3><div class="keys2">${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}${pxKey('MAPA', { icon: 'map', attrs: 'data-act="map"' })}</div>
-        <h3 style="margin-top:10px">Tabela wyników</h3><table><tr><th>ODCINEK</th><th>GWIAZDKI</th><th>CZAS</th><th>GAZETY</th></tr>${(D.table || []).map(t => `<tr${t.on ? ' class="rec"' : ''}><td>${t.open ? t.name : '???'}</td><td>${starsH(t.stars)}</td><td>${t.best ? mmss(t.best.time) : '-'}</td><td>${t.best ? t.best.delivered : '-'}</td></tr>`).join('')}</table></div></div>`; }
-  const PAGES = [page1, page2, page3];
-  function render() { face.innerHTML = PAGES[page](); face.querySelectorAll('canvas.crest').forEach(c => c.getContext('2d').drawImage(crest(), 0, 0));
-    face.querySelectorAll('canvas[data-ico]').forEach(c => { c.width = 10; c.height = 10; c.getContext('2d').drawImage(ico(c.dataset.ico), 0, 0); });
-    face.querySelectorAll('canvas[data-map]').forEach(c => { const big = c.dataset.map === 'big'; c.width = Math.max(60, c.clientWidth / 2 | 0); c.height = Math.max(50, c.clientHeight / 2 | 0); c.getContext('2d').drawImage(routeMap(c.width, c.height, big), 0, 0); });
-    face.querySelectorAll('[data-pg]').forEach(a => a.onclick = () => turn(+a.dataset.pg));
-    face.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { close(); game.go(b.dataset.go); });
-    face.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { const a = b.dataset.act; if (a === 'shop') game.shop(); else { close(); game.map(); } });
-    bar.innerHTML = (page ? pxKey('STRONA', { icon: 'prev', key: '←', attrs: 'data-b="prev"' }) : '') + pxKey('JESZCZE RAZ', { icon: 'again', key: 'R', attrs: 'data-b="again"' }) + pxKey('DO DOMU', { icon: 'home', attrs: 'data-b="home"' }) + pxKey('MAPA', { icon: 'map', key: 'M', attrs: 'data-b="map"' }) +
-      (page < 2 ? pxKey('DALEJ', { icon: 'next', key: '→', kind: 'gold', attrs: 'data-b="next"', nudge: true }) : pxKey('NA MAPĘ', { icon: 'play', key: 'ENTER', kind: 'gold', attrs: 'data-b="map"', nudge: true }));
+  const portrait = (c, cls = 'pt') => c ? `<img class="${cls}" src="${url(c)}" alt="">` : '';
+  // the sections' blocks, in their order
+  function blocks(sec) { const { L, r, rec } = D, nw = D.photos.news, tz = D.tease, out = [], B = (h, cls = '') => out.push(`<div class="blk ${cls}">${h}</div>`);
+    if (sec === 0) {
+      B(`<h2>${D.headline}</h2>`, 'span');
+      B(pic(D.photos.finish, `Na mecie: ${L.name.toLowerCase()}, ${mmss(r.time)}.`));
+      B(`<p class="lede">${story()}</p>`, 'txt');
+      B(`<div class="box" data-sec="1"><h3>Twoja trasa</h3><div class="kvs"><div class="kv"><canvas data-ico="dist"></canvas><b>${(D.route.len / 1000).toFixed(2)} KM</b><small>DYSTANS</small></div>
+          <div class="kv"><canvas data-ico="time"></canvas><b>${mmss(r.time)}</b><small>CZAS</small></div><div class="kv"><canvas data-ico="paper"></canvas><b>${r.delivered} / ${D.route.subs}</b><small>DORĘCZONE</small></div>
+          <div class="kv"><canvas data-ico="star"></canvas><b>${rec.g.n} / 3</b><small>GWIAZDKI</small></div></div><canvas class="mini" data-map="mini"></canvas><p class="more">WIĘCEJ: TWOJA TRASA ▸</p></div>`);
+      if (nw[0]) B(`<h3>${nw[0].head}</h3>${nw[0].img ? pic(nw[0].img) : ''}<p>${nw[0].text}</p>`);
+      { const I = D.iv, C = I && CAST[I.who]; if (C) B(`<h3>Rozmowa dnia</h3>${portrait(I.img)}<p class="who"><b>${C.who}</b>, ${C.role}</p>${C.qa(r).map(([q, a]) => `<p class="q">${q}</p><p class="a">${a}</p>`).join('')}`, 'iv'); }
+      if (D.briefs.length) B(`<h4>W SKRÓCIE</h4>${D.briefs.slice(0, 3).map(t => `<p>${t}</p>`).join('')}`, 'brief');
+      if (tz) B(`<h3>${tz.head}</h3>${tz.img ? pic(tz.img) : ''}<p>${tz.text}</p>${D.next.length ? `<p class="opts">JUTRO: ${D.next.map(x => x.name).join(' ALBO ')}</p>` : ''}`);
+      else if (nw[1]) B(`<h3>${nw[1].head}</h3>${nw[1].img ? pic(nw[1].img) : ''}<p>${nw[1].text}</p>`);
+    }
+    if (sec === 1) { const b = rec.best, gl = L.goal, st = rec.g.st, row = (k, v, bv, rk) => `<tr><td>${k}</td><td>${v}${rec.beat[rk] ? ' <span class="rec">REKORD</span>' : ''}</td><td>${bv}</td></tr>`;
+      B(`<h2>Twoja trasa: ${L.name.toLowerCase()}</h2>`, 'span');
+      B(`<canvas class="big" data-map="big"></canvas><div class="legend"><span style="--c:#4f9a3e">DORĘCZONE</span><span style="--c:#cf5a3e">BEZ GAZETY</span><span style="--c:#e8e2d2">BEZ PRENUMERATY</span><span style="--c:#b8483a">TRASA</span><span style="--c:#8e2e25">WYWROTKA</span><span style="--c:#2b2723">SZYBA</span></div>`);
+      B(`<h3>Gwiazdki ${starsH(rec.g.n)}</h3><div class="goal">${starsH(st[0] ? 1 : 0, 1)}<span>CZAS DO ${mmss(gl.time)}</span><span>${mmss(r.time)}</span></div>
+        <div class="goal">${starsH(st[1] ? 1 : 0, 1)}<span>${gl.papers} GAZET, ${Math.round(gl.acc * 100)}% CELNIE</span><span>${r.delivered}, ${Math.round(r.acc * 100)}%</span></div><div class="goal">${starsH(st[2] ? 1 : 0, 1)}<span>BEZ WYWROTKI</span><span>${r.falls}</span></div>`);
+      B(`<h3>Dziś i najlepiej</h3><table><tr><th></th><th>DZIŚ</th><th>NAJLEPIEJ</th></tr>${row('CZAS', mmss(r.time), mmss(b.time), 'time')}${row('GAZETY', r.delivered, b.delivered, 'delivered')}${row('CELNOŚĆ', Math.round(r.acc * 100) + '%', Math.round((b.acc || 0) * 100) + '%', 'acc')}
+        ${row('RZUTY', r.thrown, '-')}${row('WYWROTKI', r.falls, b.falls)}${row('SZYBY', r.windows, '-')}${row('ZAROBEK', r.earned + ' ZŁ', b.earned + ' ZŁ', 'earned')}${row('PRZEJAZDY', b.runs, '')}</table>`);
+      B(`<h3>Domy na trasie</h3><p>PRENUMERATORZY: ${D.route.subs}<br>DORĘCZONE: ${r.delivered}<br>BEZ GAZETY: ${Math.max(0, D.route.subs - r.delivered)}<br>WSZYSTKICH DOMÓW: ${D.route.doors.length}</p>`); }
+    if (sec === 2) { const N = D.an, C = N && CAST[N.who];
+      B('<h2>Ogłoszenia drobne</h2>', 'span');
+      for (const a of D.ads) B(`<b>${a.t}</b>${a.d}${a.price ? ` <span class="pr">${a.price} ZŁ</span>` : ''}`, 'ad' + (a.j ? ' j' : ''));
+      if (C) B(`<h3>Anegdota: ${N.head.toLowerCase()}</h3>${portrait(N.img)}<p>${N.text}</p><p class="cap">Opowiedział(a): ${C.who.toLowerCase()}, ${C.role}.</p>`, 'iv');
+      B(`<h3>Dokąd dalej?</h3>${D.next.length ? D.next.map(x => `${pxKey(x.name, { icon: 'play', kind: x.first ? 'gold' : '', attrs: `data-go="${x.id}"`, nudge: true })}<p class="cap">${x.note}</p>`).join('') : '<p>Wszystkie odcinki w okolicy są już otwarte albo czekają na gwiazdki.</p>'}`, 'next');
+      B(`<h3>W portfelu: ${D.money} ZŁ</h3><div class="keys2">${pxKey('WARSZTAT', { icon: 'shop', attrs: 'data-act="shop"' })}${pxKey('MAPA', { icon: 'map', attrs: 'data-act="map"' })}</div>`);
+      B(`<h3>Tabela wyników</h3><table><tr><th>ODCINEK</th><th>★</th><th>CZAS</th></tr>${(D.table || []).map(t => `<tr${t.on ? ' class="rec"' : ''}><td>${t.open ? t.name : '???'}</td><td>${starsH(t.stars)}</td><td>${t.best ? mmss(t.best.time) : '-'}</td></tr>`).join('')}</table>`); }
+    return out; }
+  // a page drawn into a face: its head, its columns, its corners (to turn on, to turn back), its number
+  function draw(f, p) { const P = pages[p];
+    f.innerHTML = head(p) + `<div class="body" style="--cols:${cols}">${P.html.join('')}</div><div class="foot"><span>STR. ${p + 1} / ${pages.length}</span><span>${SEC[P.sec]}</span></div>` +
+      (p < pages.length - 1 ? '<a class="ear r" data-turn="1" title="Następna strona"><i></i></a>' : '') + (p > 0 ? '<a class="ear l" data-turn="-1" title="Poprzednia strona"><i></i></a>' : ''); }
+  // the masthead's name as big as fits (whole pixels of its letters: 48, 40, 32, 24)
+  function fitTitle(f) { const t = f.querySelector('.title'); if (!t) return; for (const z of [48, 40, 32, 24, 16]) { t.style.fontSize = z + 'px'; t.style.textShadow = `${z / 8}px 0 0 #2b2723`; t.style.letterSpacing = `${z / 8 * .8}px`; if (t.scrollWidth <= t.clientWidth + 1) break; } }
+  function finish(f) { fitTitle(f); f.querySelectorAll('canvas.crest').forEach(c => c.getContext('2d').drawImage(crest(), 0, 0));
+    f.querySelectorAll('canvas[data-ico]').forEach(c => { c.width = 10; c.height = 10; c.getContext('2d').drawImage(ico(c.dataset.ico), 0, 0); });
+    f.querySelectorAll('canvas[data-map]').forEach(c => { const big = c.dataset.map === 'big'; c.width = Math.max(60, c.clientWidth / 2 | 0); c.height = Math.max(50, c.clientHeight / 2 | 0); c.getContext('2d').drawImage(routeMap(c.width, c.height, big), 0, 0); });
+    f.querySelectorAll('[data-sec]').forEach(a => a.onclick = () => turn(pages.findIndex(q => q.sec === +a.dataset.sec)));
+    f.querySelectorAll('[data-turn]').forEach(a => a.onclick = () => turn(page + +a.dataset.turn));
+    f.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { close(); game.go(b.dataset.go); });
+    f.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { if (b.dataset.act === 'shop') game.shop(); else { close(); game.map(); } }); }
+  // pour: each section from a new page; a block that makes the columns run over goes to the next page (alone on a page, it stays)
+  let pages = [], cols = 2;
+  function paginate() { const w = A.face.clientWidth; cols = w < 520 ? 1 : w < 900 ? 2 : 3; pages = [];
+    for (let sec = 0; sec < 3; sec++) { let cur = null; const fresh = () => { cur = { sec, html: [], first: pages.length === 0 }; pages.push(cur); }; fresh();
+      for (const b of blocks(sec)) { cur.html.push(b); draw(A.face, pages.length - 1); fitTitle(A.face); const body = A.face.querySelector('.body');
+        if (body.scrollWidth > body.clientWidth + 2 && cur.html.length > 1 && !(cur.html.length === 2 && cur.html[0].includes(' span'))) { cur.html.pop(); fresh(); cur.html.push(b); } } } }
+  // ---------- turning: the page lifts by its corner and flies off (a few frames, as the game moves), the next one under it; back: it lands ----------
+  function show(p) { draw(A.face, p); finish(A.face); keysBar(); }
+  function turn(p) { if (busy || p === page || p < 0 || p >= pages.length) return; busy = true; game.sound?.('ui');
+    const fwd = p > page; if (fwd) { draw(Bs.face, p); finish(Bs.face); Bs.el.classList.add('on'); A.el.classList.add('fly'); }
+    else { draw(Bs.face, page); finish(Bs.face); Bs.el.classList.add('on'); page = p; show(p); A.el.classList.add('land'); }
+    setTimeout(() => { if (fwd) { page = p; show(p); } A.el.classList.remove('fly', 'land'); Bs.el.classList.remove('on'); busy = false; }, 520); }
+  function keysBar() { bar.innerHTML = (page ? pxKey('STRONA', { icon: 'prev', key: '←', attrs: 'data-b="prev"' }) : '') + pxKey('JESZCZE RAZ', { icon: 'again', key: 'R', attrs: 'data-b="again"' }) + pxKey('DO DOMU', { icon: 'home', attrs: 'data-b="home"' }) + pxKey('MAPA', { icon: 'map', key: 'M', attrs: 'data-b="map"' }) +
+      (page < pages.length - 1 ? pxKey('DALEJ', { icon: 'next', key: '→', kind: 'gold', attrs: 'data-b="next"', nudge: true }) : pxKey('NA MAPĘ', { icon: 'play', key: 'ENTER', kind: 'gold', attrs: 'data-b="map"', nudge: true }));
     bar.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { const k = b.dataset.b; if (k === 'prev') turn(page - 1); else if (k === 'next') turn(page + 1); else { close(); k === 'again' ? game.again() : k === 'home' ? game.home() : game.map(); } }); }
-  function turn(p) { if (busy || p === page || p < 0 || p > 2) return; busy = true; game.sound?.('ui'); sheet.classList.add('out');
-    setTimeout(() => { page = p; render(); sheet.classList.remove('out'); sheet.classList.add('in'); setTimeout(() => { sheet.classList.remove('in'); busy = false; }, 170); }, 165); }
-  function open(data) { D = data; D.headline ||= headline(D.L, D.r, D.rec); D.ads = [...(D.parts || []).map(p => ({ ...p, j: true })), ...ADS.slice().sort(() => Math.random() - .5).slice(0, 5)]; page = 0; open_ = true; el.classList.add('on'); render(); game.sound?.(data.rec.g.n ? 'trick' : 'coin'); }
+  function build() { paginate(); page = Math.min(page, pages.length - 1); show(page); }
+  function open(data) { D = data; DATA.clear(); D.headline ||= headline(D.L, D.r, D.rec); D.ads = [...(D.parts || []).map(p => ({ ...p, j: true })), ...ADS.slice().sort(() => Math.random() - .5).slice(0, 5)]; page = 0; open_ = true; el.classList.add('on'); build(); game.sound?.(data.rec.g.n ? 'trick' : 'coin'); }
   function close() { open_ = false; el.classList.remove('on'); }
+  addEventListener('resize', () => { if (open_ && !busy) build(); });
   function key(e) { if (!open_) return false; const c = e.code;
     if (c === 'ArrowRight' || c === 'KeyD' || c === 'PageDown') turn(page + 1); else if (c === 'ArrowLeft' || c === 'KeyA' || c === 'PageUp') turn(page - 1);
-    else if (c === 'Enter' || c === 'Space') { if (page < 2) turn(page + 1); else { close(); game.map(); } } else if (c === 'KeyR') { close(); game.again(); } else if (c === 'Escape' || c === 'KeyM') { close(); game.map(); }
+    else if (c === 'Enter' || c === 'Space') { if (page < pages.length - 1) turn(page + 1); else { close(); game.map(); } } else if (c === 'KeyR') { close(); game.again(); } else if (c === 'Escape' || c === 'KeyM') { close(); game.map(); }
     e.preventDefault(); return true; }
-  const reopen = () => { if (!D) return; D.money = game.money?.() ?? D.money; open_ = true; el.classList.add('on'); render(); };
+  const reopen = () => { if (!D) return; D.money = game.money?.() ?? D.money; open_ = true; el.classList.add('on'); build(); };
   return { open, close, reopen, key, get isOpen() { return open_; } };
 }
