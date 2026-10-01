@@ -982,3 +982,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - kwestie gęsi z talii (bez powtórek pod rząd), jeden dymek naraz zamiast całego stada
 - gazeta: kopnięta gęś, pościg stada, gęś-przyjaciółka (anonimowo, w dziale Z GMINY); kopnięcie gęsi liczy się jako drobny wybryk
 - poprawka: po wstaniu z wywrotki albo podniesieniu roweru masz 2,5 s ochrony; uderzenie w tym czasie tylko Cię przyhamuje, zamiast od razu znowu zrzucić (dotyczyło gęsi, psów, przeszkód, aut)
+
+## Wersja 111: wieś do jeżdżenia i rzucania
+
+- przejazd kolejowy (Przez sady, Za traktorem, Targowy poranek ma dwa): krzyż, migające czerwone lampy z dzwonkiem, szlabany w paski; czasem (i zawsze za pierwszym razem) szlabany idą w dół i przejeżdża pociąg towarowy; wjazd w opuszczony szlaban z prędkością = przez kierownicę, pociąg = dużo gorzej; pieszo można przejść pod szlabanem; auta czekają
+- błoto na wiejskiej drodze: hamuje i chlapie, przeskoczone (podskok) nic nie robi
+- daleki rzut: gazeta trafiona z 10 m daje +2, z 14 m +4 i „SNAJPER!” (na wsi domy stoją daleko od drogi)
+- gazeta wrzucona traktorzyście do kabiny w biegu: +4, rolnik dziękuje (raz na traktor)
+- gazeta: pociąg, szlaban, gazeta w kabinie (anonimowo); szlaban i pociąg to drobne wybryki
+- kamera: ujęcie od przodu tylko przy pierwszym starcie z domu, kolejne odcinki startują z kamerą zza pleców
+- plan Wsi i regionu 3 w docs/plan-wies-druga-strona.md
