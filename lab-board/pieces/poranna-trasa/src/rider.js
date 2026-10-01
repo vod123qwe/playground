@@ -174,7 +174,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   //   look (rad: a head turn wanted, as at a dog; null: into the turn), nervous (0..1), kick ({ side +1 left / -1 right, t 0..1 } or null),
   //   air (in the air: legs drawn up), fallen (0..1: slumped, on the ground), charge ({ side, p } a throw held back, or null) }
   function update(o) {
-    const dt = o.dt;
+    const dt = o.dt; st.pedalK = Math.min(1, (o.pedalling || 0) * Math.min(1, Math.abs(o.speed) / 2));
     rearW.rotation.x += o.speed * dt / R; frontW.rotation.x += o.speed * dt / R;
     if (o.pedalling > .05) st.crank += o.speed * dt / R / 2.3 + (o.speed < 1 ? dt * 2.2 * o.pedalling : 0);    // (a gear of 2.3; a push from standing still)
     else st.crank += (Math.round(st.crank / Math.PI) * Math.PI - st.crank) * Math.min(1, dt * 3);             // coasting: the cranks settle level
@@ -322,12 +322,21 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   function aim(bone, child, target) {
     bone.getWorldPosition(_w); child.getWorldPosition(_w2); const cur = _w2.sub(_w).normalize(), want = target.clone().sub(_w).normalize();
     _qq.setFromUnitVectors(cur, want); bone.getWorldQuaternion(_qw); _qw.premultiply(_qq); bone.parent.getWorldQuaternion(_qp); bone.quaternion.copy(_qp.invert().multiply(_qw)); bone.updateMatrixWorld(true); }
+  function turnW(bone, axis, ang) { if (!ang) return; bone.getWorldQuaternion(_qw); _qw.premultiply(_qq.setFromAxisAngle(axis, ang)); bone.parent.getWorldQuaternion(_qp); bone.quaternion.copy(_qp.invert().multiply(_qw)); bone.updateMatrixWorld(true); }
   function setWorldQ(bone, qBoy) { boy.getWorldQuaternion(_bq); _qw.copy(_bq).multiply(qBoy); bone.parent.getWorldQuaternion(_qp); bone.quaternion.copy(_qp.invert().multiply(_qw)); bone.updateMatrixWorld(true); }
   function drive() {
     if (!PR) return; const { B, G, rest, k, pel } = PR; for (const [b, q] of rest) b.quaternion.copy(q);
     // the model where the torso is, turned as it is (its pelvis on the figure's)
-    G.quaternion.copy(torso.quaternion); G.position.copy(torso.position).sub(pel.clone().multiplyScalar(k).applyQuaternion(torso.quaternion)); G.updateMatrixWorld(true);
+    // (taller than the figure: leant over as far, his head would be over the bar; so less forward, the rest of the turn as it is)
+    if (RG.on) G.quaternion.copy(torso.quaternion); else G.quaternion.setFromEuler(new THREE.Euler(torso.rotation.x * .6, torso.rotation.y, torso.rotation.z, torso.rotation.order)); G.position.copy(torso.position).sub(pel.clone().multiplyScalar(k).applyQuaternion(torso.quaternion)); G.updateMatrixWorld(true);
     const toW = v => boy.localToWorld(v.clone());
+    // not a board: the rest of the lean bent into his back, two vertebrae; with each stroke his hips and shoulders rock a little and
+    // turn, and he bobs (the head kept steady, as a rider's is)
+    if (!RG.on) { G.updateMatrixWorld(true); const gq = G.getWorldQuaternion(new THREE.Quaternion()), side = new THREE.Vector3(1, 0, 0).applyQuaternion(gq), fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(gq), up = new THREE.Vector3(0, 1, 0).applyQuaternion(gq);
+      const bendA = torso.rotation.x * .25, ph = st.crank, pk = st.pedalK || 0, roll = Math.sin(ph) * .06 * pk, twist = Math.sin(ph) * .05 * pk;
+      for (const [b, k] of [[B.spine_02, .45], [B.spine_03, .55]]) if (b) { turnW(b, side, bendA * k); turnW(b, fwd, -roll * k); turnW(b, up, twist * k); }
+      if (B.pelvis) { turnW(B.pelvis, fwd, roll * .6); }
+      G.position.y += Math.abs(Math.sin(ph)) * .012 * pk; G.updateMatrixWorld(true); }
     // the head: as the figure's (the turn to look, to throw), over the shoulders it has; out of sight in the eyes' view
     head.updateWorldMatrix(true, false); boy.getWorldQuaternion(_bq); const hq = head.getWorldQuaternion(new THREE.Quaternion()).premultiply(_bq.clone().invert()).multiply(PR.headW.q);
     setWorldQ(B.head, hq); B.head.scale.setScalar(head.visible ? PR.P.headS || 1 : .001); if (PR.P.m.userData.cap) PR.P.m.userData.cap.visible = head.visible;
@@ -342,6 +351,9 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
       const el = new THREE.Vector3(); ik(sh, hand, PR.L.up, PR.L.lo, epole, el);
       aim(B['upperarm_' + sd], B['lowerarm_' + sd], toW(el)); aim(B['lowerarm_' + sd], B['hand_' + sd], toW(hand)); }
   }
+  // where his eyes are (the camera's place in the eyes' view): the model's head, a little forward and up from its bone, or the figure's
+  function eye(out) { if (!PR) { head.updateMatrixWorld(true); return head.getWorldPosition(out); } const H = PR.P.bones.head; H.updateWorldMatrix(true, false); H.getWorldPosition(out);
+    const q = H.getWorldQuaternion(new THREE.Quaternion()).multiply(PR.headW.q.clone().invert()), lift = new THREE.Vector3(0, .09, .1).multiplyScalar(PR.k).applyQuaternion(q); return out.add(lift); }
   function throwPaper(side) { if (st.throwT >= 0) return false; st.throwT = 0; st.side = side; st.released = false; return true; }
   root.traverse(o => { if (o.isMesh) o.castShadow = true; });
   // ---------- the parts (the bike shop): paint, tyres and rims, the saddle, the grips; a bell, a lamp, gears; a bigger bag ----------
@@ -359,5 +371,5 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   }
   // the clothes' colours (a gang: black tees, black caps)
   function setLook(o) { if (o.shirt) M.shirt.color.set(o.shirt); if (o.cap) M.cap.color.set(o.cap); if (o.jeans) { M.jeans.color.set(o.jeans); M.jeansD.color.set(o.jeans); } }
-  return { root, head, boy, bike, setParts, setLook, bagFill: k => PR && PR.P.m.userData.bagFill ? PR.P.m.userData.bagFill(k) : satchel.setFill(k), setPerson, get person() { return PR && PR.P; }, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
+  return { root, head, boy, bike, setParts, setLook, bagFill: k => PR && PR.P.m.userData.bagFill ? PR.P.m.userData.bagFill(k) : satchel.setFill(k), setPerson, eye, get person() { return PR && PR.P; }, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
 }

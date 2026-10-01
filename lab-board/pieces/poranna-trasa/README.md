@@ -681,3 +681,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - czapka zbudowana od nowa i „obciągnięta” na głowę: każdy punkt kopuły leży tuż nad głową i włosami modelu (mierzone z jego wierzchołków), przechylona jak prawdziwa czapka (z przodu na czole, z tyłu niżej przy karku), daszek, otwór z paskiem i sprzączką z tyłu, guzik na czubku
 - spod czapki wychodzą dłuższe kosmyki: płaskie, zaokrąglone, w dwóch zachodzących warstwach, dłuższe na karku i nad uszami
 - kamera na rowerze i pieszo celuje bliżej postaci: cała mieści się w kadrze, nie ucina jej dół ekranu
+
+## Wersja 71: czapka i włosy jak na koncepcie, widok z oczu, mniej sztywno
+
+- czapka pełniejsza i okrągła z tyłu (dopasowana do głowy, ale z koroną jak prawdziwa czapka), sześć szwów paneli, ciemniejsza obwódka u dołu, dziurki wentylacyjne, większy otwór z tyłu z obszyciem, pasek z końcówką i sprzączką
+- włosy: gęsta warstwa pod czapką dookoła głowy, na niej falujące kosmyki lekko podwinięte na końcach, w trzech warstwach, dłuższe na karku i nad uszami (uszy lekko spod nich widać)
+- torba czytelniejsza z daleka: grubsze jasne przeszycia, ciemna lamówka klapy, szersze ciemne paski, jaśniejsze klamry, skórzane rogi u dołu
+- widok z oczu rowerzysty: kamera na oczach nowego modelu (wcześniej siedziała w szyi), na dole kierownica i dłonie
+- na rowerze mniej sztywno: model pochylony mniej niż dawna sylwetka (jest wyższy, głowa wypadała nad kierownicą), reszta pochylenia w zgięciu pleców; biodra i barki kołyszą się w rytm korby, lekkie podskakiwanie, głowa spokojna
