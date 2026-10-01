@@ -126,5 +126,5 @@ export function createWorld({ THREE, scene, track, toon, audio, onBreak, say, on
     for (let n = puffs.length - 1; n >= 0; n--) { const P = puffs[n]; P.t += dt; const u = P.t / P.life; if (u >= 1) { scene.remove(P.m); P.m.material.dispose(); puffs.splice(n, 1); continue; }
       if (P.g) P.vy -= 9 * dt; P.m.position.x += P.vx * dt; P.m.position.y += P.vy * dt; P.m.position.z += P.vz * dt; P.m.scale.setScalar((1 + u * 2.4) * P.s); P.m.material.opacity = .45 * (1 - u); }
   }
-  return { strike, hit, near, bump, update, things };
+  return { strike, hit, near, bump, splash, update, things };
 }
