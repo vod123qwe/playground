@@ -8,12 +8,14 @@
 //   game: { bike (the one ridden), inv ([{ k, tier }]), paints (Set), near() (a bike stood by you: { bike, r, owner, ... } or null),
 //     stopped(), onChange(), takeNear(w), flash(s), sound(name), keyName (the key that opens it) }
 
-const TIER_COL = ['#9a968c', '#9fd27a', '#8fc3f0', '#efc970'];
+import { pixUI } from './pixui.js';
+import { pixFont } from './pixfont.js';
+export const TIER_COL = ['#9a968c', '#9fd27a', '#8fc3f0', '#efc970'];
 const SLOT_NAME = { kola: 'KOŁA', siodelko: 'SIODEŁKO', kierownica: 'KIEROWNICA', biegi: 'PRZERZUTKI', lakier: 'LAKIER', dzwonek: 'DZWONEK', lampka: 'LAMPKA', torba: 'TORBA' };
 const STATS = [['top', 'PRĘDKOŚĆ', 1, .45], ['acc', 'PRZYSPIESZENIE', 1, .45], ['steer', 'SKRĘT', 1, .45], ['grass', 'TEREN', -1, .6], ['hill', 'POD GÓRKĘ', 1, .6], ['stam', 'KONDYCJA', 1, .5], ['trick', 'TRIKI', 1, .5], ['bag', 'TORBA']];
 
 // the icons: 16 x 16 pixels each, drawn in the part's colour (its tier's: plain grey, then green, blue, gold)
-function icon(slot, col, paint) { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'), P = (x, y, w = 1, h = 1, k = col) => { g.fillStyle = k; g.fillRect(x, y, w, h); }, D = '#17181b';
+export function icon(slot, col, paint) { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'), P = (x, y, w = 1, h = 1, k = col) => { g.fillStyle = k; g.fillRect(x, y, w, h); }, D = '#17181b';
   if (slot === 'kola') { for (let a = 0; a < 40; a++) { const t = a / 40 * 6.283; P(Math.round(8 + Math.cos(t) * 6.5), Math.round(8 + Math.sin(t) * 6.5)); P(Math.round(8 + Math.cos(t) * 5.5), Math.round(8 + Math.sin(t) * 5.5), 1, 1, D); }
     for (let r = 1; r < 5; r++) { P(8 + r, 8, 1, 1, '#d3d0c3'); P(8 - r, 8, 1, 1, '#d3d0c3'); P(8, 8 + r, 1, 1, '#d3d0c3'); P(8, 8 - r, 1, 1, '#d3d0c3'); } P(7, 7, 2, 2); }
   else if (slot === 'siodelko') { P(2, 5, 12, 1, D); P(2, 6, 12, 3); P(3, 9, 6, 1); P(1, 6, 1, 2); P(12, 5, 3, 2); P(7, 10, 2, 5, '#9a9c9e'); P(5, 14, 6, 1, '#9a9c9e'); P(3, 6, 4, 1, '#f6f3ea'); }
@@ -26,6 +28,7 @@ function icon(slot, col, paint) { const c = document.createElement('canvas'); c.
   return c; }
 
 export function createGarage({ THREE, createRider, PARTS, SLOTS, TYPES, bikeMods, bikeLook, game }) {
+  pixUI(); pixFont();
   const css = document.createElement('style'); css.textContent = `
     #gar { position: fixed; inset: 0; z-index: 8; display: none; place-items: center; color: #f6f3ea; font: 700 12px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: uppercase; letter-spacing: .03em;
       background-color: rgba(10,11,13,.5); background-image: linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%), linear-gradient(45deg, rgba(10,11,13,.6) 25%, transparent 25%, transparent 75%, rgba(10,11,13,.6) 75%); background-size: 4px 4px; background-position: 0 0, 2px 2px; }
@@ -66,7 +69,23 @@ export function createGarage({ THREE, createRider, PARTS, SLOTS, TYPES, bikeMods
     #gar button.big { all: unset; cursor: pointer; padding: 9px 14px; background: #efc970; color: #17181b; box-shadow: inset 2px 2px 0 #f6e2a8, inset -2px -2px 0 #b8902e; white-space: nowrap; } #gar button.big.blue { background: #8fc3f0; box-shadow: inset 2px 2px 0 #c9e3f8, inset -2px -2px 0 #4f7fa8; }
     #gar button.big:hover, #gar button.big.pad-focus { filter: brightness(1.08); outline: 3px solid #f6f3ea; } #gar .foot { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 14px; border-top: 3px solid #17181b; background: #1d1e21; }
     #gar .tip { position: fixed; z-index: 9; pointer-events: none; display: none; max-width: 240px; padding: 6px 8px; background: #f6f3ea; color: #17181b; box-shadow: 0 0 0 3px #17181b, 5px 5px 0 3px rgba(0,0,0,.35); font-size: 10px; } #gar .tip.on { display: block; } #gar .tip b { display: block; font-size: 11px; } #gar .tip span { text-transform: none; }
-    @media (max-width: 860px) { #gar .stage { grid-template-columns: 1fr; grid-template-rows: minmax(250px, 1fr) minmax(0, 1fr) auto; height: calc(100vh - 16px); width: calc(100vw - 16px); gap: 10px; } }`;
+    @media (max-width: 860px) { #gar .stage { grid-template-columns: 1fr; grid-template-rows: minmax(250px, 1fr) minmax(0, 1fr) auto; height: calc(100vh - 16px); width: calc(100vw - 16px); gap: 10px; } }
+    /* the pixel look (pixui.js, pixfont.js): the letters, the windows' and buttons' frames */
+    #gar { font: 16px/1.25 PTPix, ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: 0; } #gar * { image-rendering: pixelated; }
+    #gar .win { border: 12px solid transparent; border-image: var(--px-win) 4 fill / 12px; background: none; box-shadow: none; filter: drop-shadow(8px 8px 0 rgba(0,0,0,.35)); }
+    #gar .head { background: linear-gradient(#efc970, #efc970) left bottom / 100% 4px no-repeat; border: 0; padding: 4px 6px 10px; } #gar .head b { font-size: 24px; font-weight: normal; letter-spacing: 0; } #gar .head small { font-size: 16px; color: #a9a69b; opacity: 1; }
+    #gar .tag { border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; box-shadow: none; background: none; padding: 1px 6px; }
+    #gar .stats { border: 6px solid transparent; border-image: var(--px-inset) 3 fill / 6px; box-shadow: none; background: none; padding: 6px; gap: 6px 10px; font-size: 16px; } #gar .blk i { height: 10px; }
+    #gar h4 { font-size: 16px; font-weight: normal; letter-spacing: 0; } #gar .empty, #gar .help, #gar button.opt .d, #gar .tip, #gar .tip b, #gar .near .who small, #gar button.opt .act { font-size: 16px; }
+    #gar .help { border: 6px solid transparent; border-image: var(--px-inset) 3 fill / 6px; background: none; padding: 4px 6px; line-height: 1.3; }
+    #gar button.opt { border: 6px solid transparent; border-image: var(--px-btn) 3 fill / 6px; background: none; box-shadow: none; padding: 2px 6px 2px 2px; margin-bottom: 4px; }
+    #gar button.opt:hover, #gar button.opt.pad-focus { background: none; border-image-source: var(--px-btn-hi); } #gar button.opt:active { border-image-source: var(--px-btn-dn); transform: translateY(2px); }
+    #gar button.opt.on { background: none; border-image-source: var(--px-tab-on); } #gar button.opt .d { color: #a9a69b; opacity: 1; }
+    #gar .tile { border: 6px solid transparent; border-image: var(--px-inset) 3 fill / 6px; box-shadow: none; background: none; box-sizing: border-box; } #gar .tile:hover, #gar .tile.pad-focus { box-shadow: none; border-image-source: var(--px-btn-hi); } #gar .tile .n { font-size: 16px; top: -4px; right: -2px; }
+    #gar .slot .nm { font-size: 12px; padding: 1px 4px; } #gar .slot:hover .nm, #gar .slot.sel .nm { z-index: 5; } #gar .near .who b { font-size: 16px; font-weight: normal; }
+    #gar button.big { border: 6px solid transparent; border-image: var(--px-sel) 3 fill / 6px; background: none; box-shadow: none; padding: 3px 12px; } #gar button.big.blue { background: none; box-shadow: none; border-image-source: var(--px-blue); }
+    #gar button.big:hover, #gar button.big.pad-focus { outline: 0; filter: brightness(1.1); } #gar button.big:active { transform: translateY(2px); }
+    #gar .foot { background: none; border-top: 4px solid #17181b; padding: 10px 6px 4px; } #gar .lock { font-size: 16px; } #gar .tip { box-shadow: 0 0 0 4px #17181b, 6px 6px 0 4px rgba(0,0,0,.35); max-width: 300px; }`;
   document.head.appendChild(css);
   const el = document.createElement('div'); el.id = 'gar';
   el.innerHTML = `<div class="stage"><div class="win main"><div class="head"><div><b class="ttl">EKWIPUNEK</b><br><small class="note"></small></div><span class="tag typ"></span></div><div class="bench"><canvas class="bike"></canvas><canvas class="lines"></canvas><div class="lock">JEDZIESZ: ZATRZYMAJ SIĘ, ŻEBY PRZEKŁADAĆ CZĘŚCI</div></div></div>

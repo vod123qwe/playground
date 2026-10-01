@@ -804,3 +804,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - zielone „daszki” nad niektórymi autami to była plandeka na starym aucie w naprawie (stoi na klockach, bez koła), zrobiona jako płaska płyta z klapami. Teraz to prawdziwa płachta: każdy jej punkt opuszczony z góry na karoserię, po bokach zwisa, ma fałdy (ciemniejsze w zagnieceniach) i dwa sznurki; kolor: niebieska folia, płótno albo szara
 - auto przy domu (na podjeździe albo stare przy ścianie), w które po zbudowaniu wszystkiego wchodzi coś innego (płotek między ogrodami, przybudówka sąsiada, szopa), znika zamiast stać przecięte
 - F pieszo: gdy obok leży Twój rower i cudzy, najpierw podnosisz swój; cudzy weźmiesz, stając wyraźnie bliżej niego (wcześniej cudzy był liczony jako bliższy i F brało go zamiast Twojego)
+
+## Wersja 88: pikselowy warsztat i garaż, zakup działa za pierwszym kliknięciem
+
+- własne pikselowe litery gry (src/pixfont.js): narysowane piksel po pikselu, z polskimi znakami, zamieniane w pamięci na prawdziwą czcionkę, więc tekst dalej jest tekstem
+- pikselowe ramki okien i przycisków (src/pixui.js): ścięte rogi, jasna krawędź u góry, cień u dołu, wciśnięcie przy kliku
+- warsztat ułożony od nowa: po lewej rower i paski, po prawej zakładki z ikonkami i lista części na całą wysokość; gazety, drożdżówka i fanty w osobnej zakładce GAZETY
+- każda część z ikonką w kolorze poziomu, kropkami poziomu i ceną z monetą (czerwoną, gdy nie stać)
+- naprawione: najechanie myszką przebudowywało całą listę, więc przycisk znikał pod kursorem w trakcie kliknięcia (zakup „nie działał”) i lista skakała do góry; teraz najechanie zmienia tylko podgląd roweru i paski
+- dymek pana Janusza obok jego głowy, nie na oknie
+- garaż (I) w tym samym stylu: litery, ramki, przyciski
