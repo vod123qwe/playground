@@ -724,7 +724,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   }
   function streetTree(i, side) {
     if (!free(i, side * (VERGE - .55), .6)) return;
-    const t = new THREE.Group(), H = 3.6 + rnd() * 1.4, autumn = rnd() < .22;   // (its limbs reaching over the road: its +x, as it stands)
+    const t = new THREE.Group(), H = 7.2 + rnd() * 2.8, autumn = rnd() < .22;   // (twice the old height, so the crowns clear the road and the camera) (its limbs reaching over the road: its +x, as it stands)
     grow(t, H, { x: side, z: (rnd() - .5) * .4 }, 3 + rnd() * .8, autumn ? autumnPal() : greenPal(), true);
     put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i); things.push({ kind: 'tree', o: t, H, autumn, crown: 1.8 + H * .2, reach: side }); show.tree.push({ o: t, label: 'drzewo nad jezdnią', note: H.toFixed(1) + ' m' });   // (turned with the road: its +x is the road's left, -x its right)
     dapple(i + Math.round((rnd() - .5) * 4 / ds), side * (VERGE - 3.2));
