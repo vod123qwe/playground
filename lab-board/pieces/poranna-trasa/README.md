@@ -649,3 +649,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - słup: ledwie widoczny obłoczek kurzu; drzewo: chwieje się i sypią się liście, im więcej kopniaków, tym więcej (jesienne pomarańczowe, zielone, igły ze świerków); krzak: opadają zielone listki (z kwitnącego płatki); liście zostają na ziemi
 - huśtawka: każdy kopniak rozbuja ją mocniej, potem powoli się uspokaja
 - pachołki: wjechane albo kopnięte przewracają się i odjeżdżają po asfalcie, zamiast stać jak ściana
+
+## Wersja 66: chodzenie po werandach, niewidzialne ściany
+
+- pieszo stoisz na werandzie, jej stopniach i stopniu posterunku zamiast zapadać się w nie po kolana (podłogi chodzenia zapisane osobno od gruntu)
+- naprawione: szopy, beczka i stary samochód przy barakach oraz krzesła i leżaki w ogródkach miały kolizje w jednym punkcie mapy zamiast u siebie (przy barakach przejeżdżało się przez szopy, a w tamtym miejscu stały niewidzialne ściany)
