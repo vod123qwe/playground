@@ -798,3 +798,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - **czucie rzutu**: siła rośnie płynnie, póki trzymasz (szybko, potem wolniej pod górę paska), a na pełnej drga; krótka prowadnica z kropek pokazuje początek lotu (resztę oceniasz sam); dalsze rzuty mają zielone pole w połowie paska, nie na samej górze; trafienie bez dotknięcia obręczy: CZYSTO +1; rzut w wyskoku (skok z piłką): Z WYSKOKU +1
 - **brat**: przy nim klawisz rozmowy (E) i biegnie po piłkę, podnosi ją, obraca się do Ciebie, podskakuje i podaje; lekkie podanie w jego stronę łapie i odrzuca; po wszystkim wraca na swoje miejsce przy linii; komentuje trafienia
 - **podania przez sieć**: lekki rzut do kolegi: on łapie (u niego piłka w rękach, u Ciebie znika), a jego podanie łapiesz Ty. Kolega pieszo jest wreszcie widoczny w sieci: kopia Twojej postaci z niebieską czapką, chodzi i biega jak on, ze znacznikiem G1/G2 i piłką w rękach, gdy ją trzyma
+
+## Wersja 87: plandeki na starych autach, auta bez przecinania, F najpierw Twój rower
+
+- zielone „daszki” nad niektórymi autami to była plandeka na starym aucie w naprawie (stoi na klockach, bez koła), zrobiona jako płaska płyta z klapami. Teraz to prawdziwa płachta: każdy jej punkt opuszczony z góry na karoserię, po bokach zwisa, ma fałdy (ciemniejsze w zagnieceniach) i dwa sznurki; kolor: niebieska folia, płótno albo szara
+- auto przy domu (na podjeździe albo stare przy ścianie), w które po zbudowaniu wszystkiego wchodzi coś innego (płotek między ogrodami, przybudówka sąsiada, szopa), znika zamiast stać przecięte
+- F pieszo: gdy obok leży Twój rower i cudzy, najpierw podnosisz swój; cudzy weźmiesz, stając wyraźnie bliżej niego (wcześniej cudzy był liczony jako bliższy i F brało go zamiast Twojego)

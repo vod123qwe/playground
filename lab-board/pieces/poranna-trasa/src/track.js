@@ -196,6 +196,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     for (const x of [-.26, .26]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .06, 10), dark); w.rotation.z = Math.PI / 2; w.position.set(x, .1, .33); b.add(w); } return b; }
   const hedgeM = toon('#3f6b35', { map: (() => { const t = tex.leaves().clone(); t.repeat.set(5, 1.2); t.needsUpdate = true; return t; })() });
   const seats = [], binsO = [];                                        // (binsO: the bins by the road, at the stops, in the parks: something can go in them)                                                   // (chairs and loungers in the front gardens, for the people who sit out)
+  const standCars = [];   // (the cars stood by the houses: looked over once all is built, see below)
   const mailboxes = [], lots = [], CARS = createCars({ THREE, toon }), P = createProps({ THREE, toon, tex }), NAT = createNature({ THREE, toon, tex }), nr = mulberry(83);   // (nr: the nature's own random)
   const NATK = { natBush: r => NAT.bush(r, ['round', 'round', 'box', 'flower', 'fern', 'tall'][r() * 6 | 0]), natFlowers: r => NAT.flowers(r, ['tulip', 'daisy', 'lupin', 'sunflower'][r() * 4 | 0]), natRocks: r => NAT.rocks(r), natLeaves: r => NAT.leaves(r) };
   // the ground's height at a point off the road (the station nearest along the road, the distance across it), as the ground is made
@@ -237,6 +238,21 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     for (const c of h.children) { if (!(c.isGroup || (c.isMesh && c.geometry.type === 'IcosahedronGeometry')) || c.userData.onHouse) continue;   // (onHouse: fixed to the house, as a flag on its wall)
       c.getWorldPosition(v); c.userData.dy = groundAt(v.x, v.z, i) - top; c.position.y += c.userData.dy; }
     for (const q of seats) if (q.h === h && q.chair) q.local.y += q.chair.userData.dy || 0; }
+  // a tarpaulin thrown over a car's back: a sheet laid on the car (each point of it dropped from above onto the body), past its sides
+  // hanging down, creased (darker in the folds), two ropes over it. In the car's own space; the car still at its origin
+  function tarpOver(car, r) { const g0 = car.group; g0.updateMatrixWorld(true); const rc = new THREE.Raycaster(), hx = car.half[0], hz = car.half[1], NX = 12, NZ = 14, z0 = -hz * 1.02, z1 = hz * .25, pos = [], col = [], idx = [], cc = new THREE.Color(), base = new THREE.Color(['#3f6fb0', '#8a7650', '#6b737a'][r() * 3 | 0]), dark = base.clone().multiplyScalar(.62);   // (a blue plastic one, canvas, or grey)
+    const top = (x, z) => { rc.set(new THREE.Vector3(x, 4, z), new THREE.Vector3(0, -1, 0)); const hit = rc.intersectObject(g0, true).find(q => q.object.visible); return hit ? hit.point.y : null; };
+    const ph = r() * 6.28; for (let a = 0; a <= NZ; a++) for (let b = 0; b <= NX; b++) { const z = z0 + (z1 - z0) * a / NZ, u = b / NX * 2 - 1, x = u * (hx + .22);
+      let y = top(Math.max(-hx * .97, Math.min(hx * .97, x)), z); if (y == null) y = .5; const over = Math.max(0, Math.abs(x) - hx * .9) / .32;   // (past the body's side: hanging)
+      y = y * (1 - Math.min(1, over)) + (.42 + (1 - Math.min(1, over)) * .1) * Math.min(1, over); const crease = Math.sin(x * 7 + z * 3.1 + ph) * Math.sin(z * 5.3 - x * 2 + ph * 2);
+      y += .03 + crease * .018 - (a === NZ ? .05 : 0); pos.push(x * (1 + over * .04), y, z); cc.copy(base).lerp(dark, Math.max(0, -crease) * .7 + over * .25); col.push(cc.r, cc.g, cc.b); }
+    for (let a = 0; a < NZ; a++) for (let b = 0; b < NX; b++) { const p0 = a * (NX + 1) + b, p1 = p0 + NX + 1; idx.push(p0, p1, p0 + 1, p0 + 1, p1, p1 + 1); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const tarp = new THREE.Group(), sheet = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide })); sheet.castShadow = true; tarp.add(sheet);
+    // the ropes: over it and down each side, where it is tied
+    const rope = toon('#c9b98a'); for (const zr of [z0 + (z1 - z0) * .3, z0 + (z1 - z0) * .75]) { let prev = null; for (let b = 0; b <= NX; b++) { const k = Math.round((zr - z0) / (z1 - z0) * NZ) * (NX + 1) + b, p = new THREE.Vector3(pos[k * 3], pos[k * 3 + 1] + .012, pos[k * 3 + 2]);
+        if (prev) { const l = prev.distanceTo(p), m = new THREE.Mesh(new THREE.BoxGeometry(.018, .018, l), rope); m.position.copy(prev).lerp(p, .5); m.lookAt(p); tarp.add(m); } prev = p; } }
+    return tarp; }
   function house(i, side, spot = null) {   // spot: { x, z, n (the way it faces), two, garage, open, porch, car } (a house off the loop: the home's street)                                          // side +1 right, -1 left; its front towards the road
     const yard = [];   // (what stands on the lot and stops a bike: made into colliders once the house stands where it does)
     const h = new THREE.Group(), W = 8 + rnd() * 3, D = 7 + rnd() * 2, H = 2.9 + rnd() * .6, wallC = WALLS[rnd() * WALLS.length | 0], roof = ROOFS[rnd() * ROOFS.length | 0];
@@ -330,13 +346,12 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
           if (kind === 'swing') o.group.userData.keep = true; if (kind === 'swing') things.push({ kind: 'swing', o: o.group, pivot: o.group.userData.pivot, r: 1.1 }); else if (kind === 'natBush') things.push({ kind: 'bush', o: o.group, parts: [o.group], r: .6, top: 1 });
           if (o.hit) yard.push([o.hit, x, z]); spots.push([x, z, rr]); break; } } }
     if (!annex && rnd() < .18) { const old = CARS.makeCar(rnd() < .5 ? 'saloon' : 'estate', ['#8a9a8c', '#b39b7a', '#7a6a5a', '#9aa0a4'][rnd() * 4 | 0]), sx = (rnd() < .5 ? -1 : 1) * (W / 2 + 1.9);
-      old.group.position.set(sx, .06, -.5); old.group.rotation.set(0, rnd() < .5 ? 0 : Math.PI, .03); h.add(old.group); old.wheels[0].visible = false;             // on blocks, a wheel off
-      const wp = old.wheels[0].position; for (let k = 0; k < 2; k++) old.group.add(box(.3, .12, .25, toon('#9d9a92'), wp.x * .8, .06 + k * .13, wp.z));
-      const tarp = box(old.half[0] * 2 + .1, .05, old.half[1] * 1.1, toon('#5f6a35'), 0, 1.45, -old.half[1] * .4); tarp.rotation.x = .05; old.group.add(tarp);   // a tarp over the back of it
-      for (const sd of [-1, 1]) { const flap = box(.04, .7, old.half[1] * 1.1, tarp.material, sd * (old.half[0] + .07), 1.1, -old.half[1] * .4); flap.rotation.z = sd * .12; old.group.add(flap); }
-      yard.push([{ hx: old.half[0], hz: old.half[1], h: 1.5, kind: 'hard' }, sx, -.5]); }
+      old.wheels[0].visible = false; const wp = old.wheels[0].position; for (let k = 0; k < 2; k++) old.group.add(box(.3, .12, .25, toon('#9d9a92'), wp.x * .8, .06 + k * .13, wp.z));   // on blocks, a wheel off
+      old.group.add(tarpOver(old, rnd));   // (a tarp over the back of it: laid on its shape, hanging down its sides)
+      old.group.position.set(sx, .06, -.5); old.group.rotation.set(0, rnd() < .5 ? 0 : Math.PI, .03); h.add(old.group);
+      yard.push([{ hx: old.half[0], hz: old.half[1], h: 1.5, kind: 'hard', car: old.group }, sx, -.5]); standCars.push({ o: old.group, h, i }); }
     // a car on the drive, now and then
-    if (drv && (spot?.car ?? rnd() < .6)) { const c = CARS.random(rnd); c.group.position.set(dvx, 0, -D / 2 - 2.8 - rnd() * 1.5); c.group.rotation.y = Math.PI + (rnd() - .5) * .1; h.add(c.group); h.userData.car = c; }
+    if (drv && (spot?.car ?? rnd() < .6)) { const c = CARS.random(rnd); c.group.position.set(dvx, 0, -D / 2 - 2.8 - rnd() * 1.5); c.group.rotation.y = Math.PI + (rnd() - .5) * .1; h.add(c.group); h.userData.car = c; standCars.push({ o: c.group, h, i }); }
     if (spot) { const n = spot.n; h.rotation.y = Math.atan2(-n.x, -n.z); h.position.set(spot.x - n.x * (D / 2 + gap), 0, spot.z - n.z * (D / 2 + gap)); G.add(h); h.traverse(c => { if (c.isMesh && !c.userData.noShadow) { c.castShadow = true; c.receiveShadow = true; } }); spot.onHouse?.(h); }
     else put(h, i, side * (PAVE + gap + D / 2), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2);
     h.updateMatrixWorld(true); hit(h, { hx: W / 2, hz: D / 2, h: HH + 2, kind: 'hard' }, i);
@@ -347,7 +362,7 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     { const kb = rr(), zb = D / 2 + 3.2 + rr() * 1.5, x0 = -W / 2 - 1 - (annex && as < 0 ? 3.5 : 0), x1 = W / 2 + 1 + (annex && as > 0 ? 3.5 : 0), len = x1 - x0;
       if (kb < .85) { const f = kb < .5 ? P.boardFence(len) : P.wireFence(len); f.group.position.set((x0 + x1) / 2, 0, zb); f.group.rotation.y = Math.PI / 2; h.add(f.group); f.group.updateMatrixWorld(true);
         f.group.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } }); hit(h, { hx: len / 2, hz: .1, h: 1.5, kind: 'hard' }, i, (x0 + x1) / 2, zb); } }
-    for (const [spec, x, z] of [...yard, ...extraHits]) hit(h, spec, i, x, z);
+    for (const [spec, x, z] of [...yard, ...extraHits]) { const C = hit(h, spec, i, x, z); if (spec.car) spec.car.userData.hitC = C; }
     if (drv) { zone(h, 1.9, (gap + .2) / 2 + .6, dvx, -D / 2 - gap / 2); zone(h, 1.9, 2.6, dvx, -D / 2 - gap - 2.6); } if (path) zone(h, .9, gap / 2, dx, -D / 2 - gap / 2); if (annex) zone(h, aw / 2 + .3, ad / 2, ax, azc);   // the drive (and across the pavement and the verge: no tree in the way out), or the path
     zone(h, 2.4, 1.7, dx, fz - 1.1);                                                                                             // the porch
     const nrm = new THREE.Vector3(0, 0, -1).transformDirection(h.matrixWorld);
@@ -740,6 +755,16 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     const extras = [P.shed, P.washing, P.logs, P.sandbox, P.birdbath]; for (let n = 0; n < 1 + (rnd() * 2 | 0); n++) { const e = extras[rnd() * extras.length | 0](rnd), off = (rnd() < .5 ? -1 : 1) * (2.5 + rnd() * 2);
       const ii = mid + Math.round(off / ds), dd = sd * (PAVE + 8 + rnd() * 9); put(e.group, ii, dd, 0, rnd() < .5 ? 0 : Math.PI / 2); hit(e.group, e.hit, ii); }
     if (rnd() < .35) tree(mid + Math.round((rnd() - .5) * 6 / ds), sd * (PAVE + 12 + rnd() * 6)); }
+  // ---------- a car stood by a house that something else stands in after all (the next house's annex, a shed, a fence between the
+  //   gardens): taken away (each house places its own things, not knowing its neighbours'). A box's overlap: a corner, an edge's middle or
+  //   the middle of one inside the other ----------
+  { const _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
+    const pts = (x, z, c, s, hx, hz) => { const o = []; for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [1, 0], [0, 1], [-1, 0], [0, 0]]) { const lx = a * hx, lz = b * hz; o.push([x + lx * c + lz * s, z - lx * s + lz * c]); } return o; };
+    const inBox = (x, z, cx, cz, c, s, hx, hz) => { const dx = x - cx, dz = z - cz, lx = dx * c - dz * s, lz = dx * s + dz * c; return Math.abs(lx) < hx && Math.abs(lz) < hz; };
+    for (const sc of standCars) { const o = sc.o; if (!o.parent) continue; o.updateMatrixWorld(true); o.getWorldPosition(_p); o.getWorldQuaternion(_q); const yw = _e.setFromQuaternion(_q, 'YXZ').y, c = Math.cos(yw), sn = Math.sin(yw), hx = .85, hz = 2.1, own = o.userData.hitC;
+      let bad = false; for (const C of near(sc.i)) { if (C === own || C.o === sc.h || ['ramp', 'bundle', 'hole', 'manhole'].includes(C.kind) || C.used) continue; if (Math.abs(C.x - _p.x) + Math.abs(C.z - _p.z) > 14) continue;
+        if (pts(C.x, C.z, C.c, C.s, C.hx, C.hz).some(([x, z]) => inBox(x, z, _p.x, _p.z, c, sn, hx, hz)) || pts(_p.x, _p.z, c, sn, hx, hz).some(([x, z]) => inBox(x, z, C.x, C.z, C.c, C.s, C.hx, C.hz))) { bad = true; break; } }
+      if (bad) { o.parent.remove(o); if (own) { own.kind = 'gone'; own.used = true; } standCars.removed = (standCars.removed || 0) + 1; } } }
   // ---------- grass and flowers along it: tufts at the verge's edge by the kerb and the pavement, and along the lawns' edge; a clump of
   //   flowers now and then (never on a drive, a path, a porch) ----------
   for (let i = 0; i < N; i += Math.max(1, Math.round((1.6 + nr() * 2.2) / ds))) for (const sd of [-1, 1]) { if (nr() < .35) continue;
@@ -993,6 +1018,6 @@ export function createTrack({ THREE, toon, tex, showcase = false }) {   // (show
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, ROAD, KERB, PAVE };
+  return { standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
