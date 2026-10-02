@@ -405,7 +405,7 @@ function input() {
     sprint = sprint || t.sprint; holdL = holdL || t.holdL; holdR = holdR || t.holdR; kickK = kickK || e.kick; kickHold = kickHold || !!t.kickHeld; hop = hop || e.hop;
     tDx = e.lookDx * .9; tDy = e.lookDy * .9; }   // (on foot: the stick walks him, the right finger turns the camera, see onfoot)
   if (!foot.active) { holdL = holdL || mouse.lh; holdR = holdR || mouse.rh; }   // (on the bike: the left button throws left, the right one right)
-  if (track.classic && !foot.active) { hop = hop || hit('kick'); kickK = hit('view'); kickHold = !!held('view'); }   // (the Classic: Space jumps, V kicks)
+  if (track.classic && !foot.active) { const sp = hit('kick'); hop = hop || (sp && !B.air); kickK = hit('view') || (sp && B.air); kickHold = !!held('view'); }   // (the Classic: Space jumps, and in the air a trick; V kicks)
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
@@ -778,10 +778,10 @@ function ride(dt, inp) {
   if (B.onCar && !B.air) { const t = B.onCar, cv = t.stop > 0 ? 0 : t.v; B.x += Math.sin(t.yaw) * cv * dt; B.z += Math.cos(t.yaw) * cv * dt; }
   const nx = B.x + Math.sin(B.yaw) * B.v * dt, nz = B.z + Math.cos(B.yaw) * B.v * dt;
   // up and down: the ground (and a ramp on it); a hop; off a ramp's lip into the air; the landing
-  const rp = rampAt(nx, nz), g0 = track.probe(nx, nz, B.hint).y + rp.h, roof = carRoofAt(nx, nz), ground = roof !== null && B.y >= roof - .35 ? Math.max(g0, roof) : g0;
+  const rp = rampAt(nx, nz), g0 = track.probe(nx, nz, B.hint).y + rp.h, roof = carRoofAt(nx, nz), RS = track.classic ? .62 : .35, ground = roof !== null && B.y >= roof - RS ? Math.max(g0, roof) : g0;   // (RS: how far short of a roof he is still pulled up onto it; the Classic: a little kinder)
   if (rp.wall && B.v > (track.classic ? 4.3 : 7) && !B.air) { B.x = nx; B.z = nz; crash(); return; } else if (rp.wall && B.v > 2 && !B.air && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .35; B.jolt = .22; }   // (into a ramp's side: a fall only at speed)
   B.staggerT = (B.staggerT || 0) - dt;
-  if (inp.hop && !B.air) { B.air = true; B.vy = (track.classic ? 4.5 : 3.8) + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : null; }   // (hopped off a ramp: higher, and a trick allowed)
+  if (inp.hop && !B.air) { B.air = true; B.vy = (track.classic ? 5.2 : 3.8) + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : track.classic ? 'hop' : null; }   // (the Classic: a hop high enough for a car's roof, timed well; and a trick off it)   // (hopped off a ramp: higher, and a trick allowed)
   if (B.air) { B.vy -= g * dt; B.y += B.vy * dt; if (B.y <= ground) { B.airRamp = null;
     if (B.trick) { const T = B.trick; B.trick = null;
       if (T.p < .7) { B.y = ground; B.air = false; B.vy = 0; B.airRamp = null; B.done = []; flash('Za późno! Trik od razu po wybiciu'); crash(0); return; }
@@ -805,7 +805,7 @@ function ride(dt, inp) {
     if (C.kind === 'hole') { if (!B.air && !C.cool) { B.jolt = .12; B.v *= .82; C.cool = true; setTimeout(() => { C.cool = false; }, 900); } continue; }
     if (C.kind === 'bundle') { pickBundle(C); continue; }
     if (clear(C)) { if (track.classic && C.kind === 'hard' && !C.car && !C.thing && C.h > .6 && C.h < 2 && !(C.jumpT > performance.now())) { C.jumpT = performance.now() + 4000; score(1, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'PRZESKOK! +1', '#efc970'); } continue; }   // (the Classic: over a fence, a bale, a bench: a point)
-    if (C.car && C.roof && B.y >= C.roof - .35) continue;   // (up on that car's roof)
+    if (C.car && C.roof && B.y >= C.roof - (track.classic ? .62 : .35)) continue;   // (up on that car's roof)
     if (C.thing?.kind === 'cone') { if (C.thing.gnome && !C.thing.scored && Math.abs(B.v) > .4) gnomeDown(C.thing); if (Math.abs(B.v) > .4) { stuff.bump(C.thing, Math.sin(B.yaw) * B.v * .9 + (Math.random() - .5), Math.cos(B.yaw) * B.v * .9 + (Math.random() - .5)); B.v *= .9; B.jolt = .06; } continue; }   // (a cone: it goes over, not him)
     if (C.kind === 'soft') { B.v *= Math.pow(.08, dt); continue; }
     if (C.hyd && Math.abs(B.v) > .8 && water.spray(new THREE.Vector3(C.x, C.y0 || 0, C.z), 4.5)) hud.pop(new THREE.Vector3(C.x, (C.y0 || 0) + 1.6, C.z), 'PSSS!', '#9ccad8');   // a hydrant knocked: it gushes
