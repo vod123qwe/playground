@@ -13,12 +13,16 @@
 //   a window broken: its owner runs out after him; caught, he gets a kick (pedal hard: they give up)
 //   events: { kind: 'shout' | 'driveway' | 'wet' | 'truck' | 'bump' | 'honk' | 'tyre' | 'overhead' | 'leash' | 'ball' | 'owner', p?, text? }
 
-export function createClassic({ THREE, toon, track, scene, cars, traffic = () => [] }) {
+export function createClassic({ THREE, toon, track, scene, cars, traffic = () => [], residents = null }) {
   let a = 1709; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const { S, N, ds } = track, L = N * ds, wrap = i => ((i % N) + N) % N, V = (x, y, z) => new THREE.Vector3(x, y, z), M = c => toon(c), hs = track.oneSide || -1;
   const gy = (x, z, i) => track.probe(x, z, i ?? -1).y, at = (i, d) => { const A = S[wrap(i)]; return V(A.p.x + A.r.x * d, 0, A.p.z + A.r.z * d); };
   const deck = lines => { let left = []; return () => { if (!left.length) left = lines.slice().sort(() => rnd() - .5); return left.pop(); }; };
   const people = [], lights = [], events = [];
+  // (the stand-in blocks dressed as the town's people once their models are loaded: walking, running (the walk sped up), sitting)
+  const mixers = [], dress = (f, key, act = 'walk', speed = 1, tint = null, lift = 0) => { residents?.spawn(key).then(o => { if (!o) return; for (const c of f.g.children) c.visible = false; f.g.add(o.G); o.G.position.set(0, lift, 0); o.G.rotation.set(0, f.flip ? Math.PI : 0, 0);
+      if (tint) o.m.traverse(q => { if (q.isMesh && !/skin|body|eye|teeth|tongue|brow|lash|hair/i.test(q.material.name + q.name)) q.material.color.set(/pant|jean|trous|leg/i.test(q.material.name + q.name) ? '#3b4a5e' : tint); });
+      const a = o.acts[act] || o.acts.walk || o.acts.idle; if (a) { a.play(); a.timeScale = speed; a.time = rnd() * 2; } f.dressed = o; mixers.push(o.mixer); }); };
   const SORRY = deck(['OJ, NIE WIDZIAŁEM CIĘ!', 'PRZEPRASZAM, SPIESZĘ SIĘ DO PRACY!', 'GAZETA NA SZYBIE? NO DOBRA, ZASŁUŻYŁEM.', 'LUSTERKA MAM, TYLKO NIE PATRZĘ.']);
   const BINMEN = deck(['UWAGA, KUBEŁ JEDZIE!', 'Z DROGI, MŁODY, ŚMIECI CZEKAJĄ!', 'TY ROZNOSISZ, MY ZBIERAMY. KOŁO ŻYCIA.', 'RZUĆ GAZETĘ, PRZECZYTAM W KABINIE!']);
   const BINPAPER = deck(['DZIĘKI! NA DRUGIE ŚNIADANIE JAK ZNALAZŁ.', 'O, PROGNOZA POGODY. BĘDZIE ŚMIERDZIAŁO.', 'ZŁAPANE! LEPIEJ NIŻ KUBEŁ.']);
@@ -51,7 +55,8 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     const man = () => { const m = new THREE.Group(), vest = M('#e8742e'), b = new THREE.Mesh(new THREE.BoxGeometry(.44, .62, .28), vest); b.position.y = 1.12; m.add(b); const h = new THREE.Mesh(new THREE.BoxGeometry(.22, .22, .22), M('#d9a07a')); h.position.y = 1.6; m.add(h);
       const legs = [-1, 1].map(sd => { const l = new THREE.Group(), lm = new THREE.Mesh(new THREE.BoxGeometry(.14, .78, .16), M('#3b4a5e')); lm.position.y = -.39; l.add(lm); l.position.set(sd * .1, .8, 0); m.add(l); return l; });
       const bin = new THREE.Mesh(new THREE.BoxGeometry(.6, .9, .6), M('#5a6b4a')); bin.position.set(0, .45, .55); bin.visible = false; m.add(bin); scene.add(m); return { g: m, legs, bin, d: 0, ph: 0, sayT: 0, hitT: 0, paperT: 0 }; };
-    const men = [man(), man()]; for (const m of men) people.push({ g: m.g, x: 0, z: 0, kind: 'binman', P: null, m });
+    const men = [man(), man()]; for (const m of men) { dress(m, 'gardener', 'walk', 1.3, '#e8742e'); }
+    for (const m of men) people.push({ g: m.g, x: 0, z: 0, kind: 'binman', P: null, m });
     const P0 = { s: L * .3, d: 1.6, len: 7 }; track.parked.push(P0);   // (in the lane of the way it drives)
     cart = { g, beacon, men, s: L * .3, v: 0, stop: 0, go: 30, P0, hitT: 0, sayT: 0 }; }
 
@@ -73,23 +78,23 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     { coat: '#6a5a4a', hat: '#3a3d42', talk: ['ZA MOICH CZASÓW GAZETĘ PRZYNOSIŁ LISTONOSZ. PIESZO. POD GÓRĘ.', 'SIEDZĘ TU OD SZÓSTEJ. LICZĘ SAMOCHODY. DZIŚ JUŻ CZTERDZIEŚCI DWA.', 'TEN ZRASZACZ U SĄSIADA LEJE NA CHODNIK OD TRZECH LAT. NIKT NIC.'], paper: 'DZIĘKUJĘ. KRZYŻÓWKA JEST? TO DZIEŃ URATOWANY.' },
     { coat: '#8a4a6a', hat: null, talk: ['UWAŻAJ NA TEGO Z PSEM. PIES MIŁY, PAN GORZEJ.', 'GOŁĘBIE KARMIĘ. ONE MNIE NIE KARMIĄ, ALE PRZYCHODZĄ.', 'MÓJ WNUK TEŻ JEŹDZI NA ROWERZE. W TELEFONIE.'], paper: 'O, GAZETKA! PRZECZYTAM I POŻYCZĘ PANU OBOK. ON NIE ODDA.' },
     { coat: '#3b4a5e', hat: '#8a6a44', talk: ['SZYBĘ ZBIJESZ, TO CIĘ GONIĆ BĘDĄ. JA BYM GONIŁ. GDYBYM MÓGŁ.', 'NA TEJ ULICY NIC SIĘ NIE DZIEJE. POZA WSZYSTKIM.', 'ŚMIECIARKA JEŹDZI WOLNIEJ NIŻ JA CHODZĘ. A JA CHODZĘ Z LASKĄ.'], paper: 'POŁÓŻ OBOK, MŁODY. OKULARY MAM W DOMU, A DOM MAM DALEKO.' }];
-  (track.benches || []).filter((_, k) => k % 2 === 0).forEach((Bn, k) => { const P = OLD[k % OLD.length], f = fig(P.coat, P.hat), A = S[wrap(Bn.i)]; f.g.position.set(Bn.p.x, Bn.p.y - .45, Bn.p.z); f.g.rotation.y = Math.atan2(A.r.x * hs, A.r.z * hs); for (const l of f.legs) l.rotation.x = -1.4;
+  (track.benches || []).filter((_, k) => k % 2 === 0).forEach((Bn, k) => { const P = OLD[k % OLD.length], f = fig(P.coat, P.hat), A = S[wrap(Bn.i)]; f.g.position.set(Bn.p.x, Bn.p.y - .45, Bn.p.z); f.g.rotation.y = Math.atan2(A.r.x * hs, A.r.z * hs); for (const l of f.legs) l.rotation.x = -1.4; f.flip = true; dress(f, ['grandpa', 'granma', 'grandpa'][k % 3], 'idle', 1, null, .45);
     people.push({ g: f.g, x: Bn.p.x, z: Bn.p.z, kind: 'old', P, talks: 0, m: { paperT: 0 } }); });
   // (joggers on the far pavement, up and down a stretch each)
-  const joggers = [0, 1, 2].map(k => { const f = fig(['#cf3a2c', '#3f8a4a', '#3b6fa0'][k], k === 1 ? '#f6f3ea' : null); return { ...f, s: L * (.15 + k * .3), dir: k % 2 ? -1 : 1, lo: L * (.1 + k * .3), hi: L * (.1 + k * .3) + 120, ph: 0, hitT: 0, sayT: 0 }; });
+  const joggers = [0, 1, 2].map(k => { const f = fig(['#cf3a2c', '#3f8a4a', '#3b6fa0'][k], k === 1 ? '#f6f3ea' : null); dress(f, 'jogger', 'walk', 1.9, ['#cf3a2c', '#3f8a4a', '#3b6fa0'][k]); return { ...f, s: L * (.15 + k * .3), dir: k % 2 ? -1 : 1, lo: L * (.1 + k * .3), hi: L * (.1 + k * .3) + 120, ph: 0, hitT: 0, sayT: 0 }; });
   const JOG = deck(['Z LEWEJ!', 'UWAGA, BIEGNĘ!', 'DZIEŃ DOBRY! UFF!', 'PIĄTY KILOMETR!']);
   // (a man and his dog on a long lead, across the pavement: the dog sniffs the lawn, he keeps to the kerb)
-  const walk = (() => { const man = fig('#5a5f66', '#24190f'), dog = new THREE.Group(), dm = M('#b88a5a'); const bd = new THREE.Mesh(new THREE.BoxGeometry(.25, .3, .6), dm); bd.position.y = .35; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .22), dm); hd.position.set(0, .5, .38); dog.add(bd, hd); scene.add(dog);
+  const walk = (() => { const man = fig('#5a5f66', '#24190f'); dress(man, 'suit', 'walk', .7); const dog = new THREE.Group(), dm = M('#b88a5a'); const bd = new THREE.Mesh(new THREE.BoxGeometry(.25, .3, .6), dm); bd.position.y = .35; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .22), dm); hd.position.set(0, .5, .38); dog.add(bd, hd); scene.add(dog);
     const lead = new THREE.Mesh(new THREE.BoxGeometry(.03, .03, 1), M('#cf3a2c')); scene.add(lead); return { man, dog, lead, s: L * .45, dir: 1, ph: 0, hitT: 0, sayT: 0 }; })();
   const LEAD = deck(['UWAŻAJ NA SMYCZ!', 'BURKUŚ, DO NOGI!', 'NIE PRZEZ SMYCZ, PANIE!']);
   // (the kids at football on the far lawn; now and then the ball goes out onto the road)
   const balls = [], ballM = M('#f6f3ea'); let ballT = 7;
   // (a window broken: the owner out after him)
   const chasers = [], OWNER = deck(['WRACAJ TU!', 'ZA SZYBĘ ZAPŁACISZ!', 'STÓJ, GAZECIARZU!', 'JA CI DAM GAZETĘ!', 'MAM CIĘ NA NAGRANIU!']);
-  function angry(w) { if (chasers.length > 1) return; const f = fig(['#8e2e25', '#3b5670', '#6b4a2e'][chasers.length % 3], null), p = w.p.clone().addScaledVector(w.n, 2); f.g.position.set(p.x, gy(p.x, p.z), p.z); chasers.push({ ...f, x: p.x, z: p.z, t: 0, ph: 0, sayT: 0 }); }
+  function angry(w) { if (chasers.length > 1) return; const f = fig(['#8e2e25', '#3b5670', '#6b4a2e'][chasers.length % 3], null); dress(f, ['suit', 'gardener', 'shopper'][chasers.length % 3], 'walk', 2.4); const p = w.p.clone().addScaledVector(w.n, 2); f.g.position.set(p.x, gy(p.x, p.z), p.z); chasers.push({ ...f, x: p.x, z: p.z, t: 0, ph: 0, sayT: 0 }); }
 
   let clock = 0;
-  function update(dt, R) { clock += dt; const ev = events.splice(0);
+  function update(dt, R) { clock += dt; const ev = events.splice(0); for (const mx of mixers) mx.update(dt);
     // (the joggers)
     for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
       J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }

@@ -1403,3 +1403,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - podskok w Klasyku wyższy: dobrze wymierzony wnosi na dach stojącego auta (przy toczeniu 1,4–3,2 m przed autem, na gazie 2–4,4 m), za wcześnie albo za późno: w auto; przy dachu lekkie podciągnięcie, kiedy brakuje niewiele
 - triki w Klasyku: spacja na ziemi skacze, w powietrzu robi trik (z wychyleniem 360, na dużej skoczni z gazem salto, bez niczego STÓŁ; kolejne naciśnięcie w locie: następny, kombo), także z samego podskoku, nie tylko ze skoczni
+
+## Wersja 168: Klasyk: żwawsza jazda, prawdziwi ludzie zamiast klocków
+
+- rower w Klasyku szybciej przyspiesza (0 → 6 m/s w ~1,2 s), skręca żwawiej; czyste lądowanie po triku daje kopa: ODPAŁ! (chwilowo szybciej, ponad zwykły gaz)
+- postacie Klasyka z modeli ludzi zamiast klocków: emeryci siedzą na ławkach, biegacze biegną, pan z psem idzie, śmieciarze w pomarańczowym, właściciel za szybę biegnie za tobą (klocki zostają tylko na chwilę, zanim model się wczyta)
