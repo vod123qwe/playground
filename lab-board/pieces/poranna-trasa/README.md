@@ -1385,3 +1385,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - po drugiej stronie: emeryci na co drugiej ławce, każdy po swojemu (zagadać, gazeta do rąk +1), trzech biegaczy na chodniku, pan z psem na długiej smyczy w poprzek chodnika (smycz: przeskocz albo objedź, inaczej szarpnie), dzieciaki z piłką, która co jakiś czas wylatuje na jezdnię, trzy place zabaw (piaskownica, huśtawki, zjeżdżalnia)
 - przy krawężniku po drugiej stronie zaparkowane auta, przed większością skocznia na jezdni: nad autem albo na dach
 - bez drzew po drugiej stronie przy drodze (kamera wisi nad tą stroną, zasłaniały pół ekranu)
+
+## Wersja 164: R od nowa, w Klasyku spacja skacze, V kopie
+
+- R w trakcie trasy od razu zaczyna ją od nowa (od startu, z pełną torbą); pełny reset całej gry został w menu (Esc, ZACZNIJ OD NOWA)
+- w Klasyku: spacja skacze, kopnięcie pod V (kamera jest tam jedna, więc V było wolne); zapisane przypisania klawiszy bez zmian

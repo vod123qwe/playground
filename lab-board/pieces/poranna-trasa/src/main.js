@@ -348,7 +348,7 @@ const keys = new Set(), edge = new Set();
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat) return; keys.add(e.code); edge.add(e.code);
   if (on('pixel', e.code)) look.set({ pixel: !look.S.pixel });
   const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].indexOf(e.code); if (n >= 0) look.set({ pix: SIZES[n] });
-  if (on('view', e.code)) { if (foot.active) foot.toggleView(); else setCam((camI + 1) % CAMS.length); }
+  if (on('view', e.code)) { if (foot.active) foot.toggleView(); else if (!track.classic) setCam((camI + 1) % CAMS.length); }   // (the Classic: one camera; V kicks there)
   if (on('ink', e.code)) look.set({ ink: (look.S.ink + 1) % INKS.length });
   if (on('help', e.code)) toggleKeys();
   if (on('chat', e.code) && LV2.offer && liveTake()) { e.stopImmediatePropagation(); return; }
@@ -405,6 +405,7 @@ function input() {
     sprint = sprint || t.sprint; holdL = holdL || t.holdL; holdR = holdR || t.holdR; kickK = kickK || e.kick; kickHold = kickHold || !!t.kickHeld; hop = hop || e.hop;
     tDx = e.lookDx * .9; tDy = e.lookDy * .9; }   // (on foot: the stick walks him, the right finger turns the camera, see onfoot)
   if (!foot.active) { holdL = holdL || mouse.lh; holdR = holdR || mouse.rh; }   // (on the bike: the left button throws left, the right one right)
+  if (track.classic && !foot.active) { hop = hop || hit('kick'); kickK = hit('view'); kickHold = !!held('view'); }   // (the Classic: Space jumps, V kicks)
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
@@ -1439,7 +1440,7 @@ const toPx = e => [e.clientX / innerWidth * hud.canvas.width, e.clientY / innerH
 addEventListener('pointerdown', e => { if (!asking) return; const i = hud.askAt(...toPx(e)); if (i >= 0) answer(i === 0); e.preventDefault(); e.stopPropagation(); }, true);
 addEventListener('pointermove', e => { if (!asking || e.pointerType === 'touch') return; const i = hud.askAt(...toPx(e)); if (i >= 0) hud.askSel = i; document.body.classList.toggle('over', i >= 0); }, true);   // (a hand over a button)
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat) return;
-  if (!asking && on('reset', e.code)) { askReset(true); e.preventDefault(); return; }
+  if (!asking && on('reset', e.code)) { if (LV && !MP.on) { startLevel(LV.id); flash('Od nowa: ' + LV.name); } else askReset(true); e.preventDefault(); return; }   // (on a route: straight back to its start; the whole game's reset is in the menu)
   if (asking) { if (e.code === 'KeyY' || e.code === 'KeyT') answer(true); else if (e.code === 'KeyN' || e.code === 'Escape') answer(false);
     else if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'Tab'].includes(e.code)) hud.askSel = 1 - hud.askSel; else if (e.code === 'Enter' || e.code === 'Space') answer(hud.askSel === 0); e.preventDefault(); } });
 function resetGame() {

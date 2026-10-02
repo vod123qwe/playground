@@ -36,6 +36,7 @@ Rytm ulicy, odcinki po ~150 m, każdy z innym charakterem (do zbudowania etapami
 - **Kamera:** skośna, z drogą, ustawiona nad stroną przeszkód i patrząca po skosie na domy i drogę przed rowerzystą.
 - **Upadki:** jak w Porannej Trasie od v155 (zachwianie przy średnich, upadek przy mocnych), ale bez wstawania pieszo: chwila leżenia i rowerzysta z rowerem wraca na pas, mrugając ~2,5 s bez przewracania (v157).
 - **Kamera:** jedna, bez przełączania, zoomu i obrotu (v157).
+- **Klawisze w Klasyku:** spacja skacze, V kopie, R od razu od nowa (v164).
 
 ## Przeszkody i zdarzenia (katalog z oceną)
 
