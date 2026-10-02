@@ -130,7 +130,7 @@ export function createCars({ THREE, toon }) {
       G.add(box(.05, .1, K.WB - 2 * R - .05, shared.dark, sd * (W / 2 - .01), K.R + .06, fz - K.OF - K.WB / 2));    // the sill between the wheels
       G.add(box(.1, .09, .16, paint, sd * (W / 2 + .06), base + .08, fz - a0 - .15)); }   // the mirrors
     for (const zz of [frontX, rearX]) G.add(box(W - .34, R * 1.3, R * 1.9, shared.well, 0, K.R + .12, fz - zz));        // dark in the arches
-    { const sh = new THREE.Mesh(new THREE.PlaneGeometry(W + .5, L + .5), shadeM); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; sh.renderOrder = 1; G.add(sh); sh.userData.noShadow = true; }   // the shade under it
+    { const sh = new THREE.Mesh(new THREE.PlaneGeometry(W + .5, L + .5), shadeM); sh.rotation.x = -Math.PI / 2; sh.position.y = .06; sh.renderOrder = 1; G.add(sh); sh.userData.noShadow = true; }   // the shade under it
     if (K.wing) { const wm = paint; G.add(box(W - .2, .04, .32, wm, 0, 1.02, -L / 2 + .25)); for (const sd of [-1, 1]) G.add(box(.05, .2, .18, wm, sd * (W / 2 - .3), .9, -L / 2 + .28));   // the rear wing on its stands
       for (let k = 0; k < 5; k++) G.add(box(W * .6, .015, .05, shared.dark, 0, .78, -L / 2 + .7 + k * .09)); }                                                     // (louvres over the engine)
     if (K.bed) { const bx0 = K.gh[1] + .03, bl = L - bx0 - .04, zc = fz - (bx0 + bl / 2), bedM = shared.trim;   // the bed: from the cab's back wall to the tail

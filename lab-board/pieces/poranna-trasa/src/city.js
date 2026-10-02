@@ -22,8 +22,17 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     g.add(box(.06, h + .16, w + .16, frame, fx + o, y, z), box(.08, h, w, lit ? glassLit : glass, fx + o * 1.5, y, z), box(.18, .08, w + .3, stone, fx + sg * .09, y - h / 2 - .1, z));
     if (reg) reg.push({ y, z, w, h }); }
   // the letterbox on the wall by a stairwell's door: a little steel box with its flap (the flag the game turns when a paper is in)
-  // (a block's letterbox out by the pavement on a post, before its stairwell: in reach from the road)
-  function postBox(g, x, sg, z) { g.add(box(.08, 1.15, .08, dark, x - sg * .12, .58, z)); const mb = townBox(sg); mb.position.set(x, 1.25, z); g.add(mb); return { mb, flag: mb.userData.flag }; }
+// (a block's letterboxes: a bank of little lockers on the wall beside the stairwell's door, out from the wall, in a bright frame,
+  // the subscriber's one red with an envelope; a lit strip over it at night: one big target that reads from the road)
+  function lockers(g, fx, sg, z) { const mb = new THREE.Group(), steel = M('#9aa3ab'), seam = M('#5d646b'), W = 1.1, H = 1.75;
+    mb.add(box(.5, H + .12, W + .12, M('#f2c12e'), 0, 0, 0), box(.52, H - .04, W - .04, seam, 0, 0, 0));
+    const tc = rnd() * 3 | 0, tr = 1 + (rnd() * 2 | 0);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { const yy = H / 2 - (r + .5) * H / 4, zz = -W / 2 + (c + .5) * W / 3, tg = r === tr && c === tc;
+      mb.add(box(.04, H / 4 - .05, W / 3 - .05, tg ? M('#d23a2c') : steel, sg * .26, yy, zz), box(.05, .03, .08, seam, sg * .27, yy, zz + W / 6 - .07));
+      if (tg) mb.add(box(.02, .14, .22, M('#f6f3ea'), sg * .285, yy, zz)); }
+    if (night) mb.add(box(.3, .05, W, new THREE.MeshBasicMaterial({ color: '#ffe6b0' }), sg * .08, H / 2 + .1, 0));
+    const flag = new THREE.Group(); flag.add(box(.03, .26, .03, M('#efc930'), 0, .13, 0), box(.03, .1, .12, M('#efc930'), 0, .23, -.06)); flag.position.set(sg * .26, H / 2 + .02, W / 2 - .04); mb.add(flag);
+    mb.userData.flag = flag; mb.userData.hx = .26; mb.userData.hz = W / 2; mb.position.set(fx + sg * .25, .3 + H / 2, z); g.add(mb); return { mb, flag }; }
   function letterbox(g, fx, sg, z) { const mb = townBox(sg); mb.position.set(fx + sg * .1, 1.25, z); g.add(mb); return { mb, flag: mb.userData.flag }; }
   // (the town's letterbox: big and red in a white frame, so it reads on brick and on plaster alike; a white envelope on it, a yellow flag)
   function townBox(sg) { const mb = new THREE.Group(); mb.add(box(.04, .82, .78, M('#f0ece2'), -sg * .1, 0, 0), box(.18, .64, .58, M('#d23a2c'), 0, 0, 0), box(.24, .06, .64, M('#8e2219'), 0, .34, 0), box(.19, .04, .38, dark, 0, .2, 0));
@@ -34,7 +43,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     for (const st of stairs) { const fp = g.localToWorld(new THREE.Vector3(st.fx, 0, st.z)), hi = doors.length; doors.push({ p: fp.clone().addScaledVector(n, 2.6), n: n.clone(), done: false, i });
       for (const w of st.wins || wins.filter(q => Math.abs(q.z - st.z) < 4.5)) windows.push({ p: g.localToWorld(new THREE.Vector3(st.fx + s * .1, w.y, w.z)), n: n.clone(), hw: w.w / 2, hh: w.h / 2, broken: false, i, house: hi });
       if (st.box) { st.box.mb.userData.keep = true; G.attach(st.box.mb);   // (out of the building into the world's group: its position is then the world's, as a street letterbox's is)
-        const M0 = { o: st.box.mb, i, side: s, flag: st.box.flag, house: hi, wall: true }; mailboxes.push(M0); const wp = st.box.mb.getWorldPosition(new THREE.Vector3()); hit(st.box.mb, { hx: .12, hz: .25, h: 1.5, kind: 'hard' }, i); things.push({ kind: 'mailbox', o: st.box.mb, mb: M0, C: colliders[colliders.length - 1], side: s, wall: true, at: wp }); } } }
+        const M0 = { o: st.box.mb, i, side: s, flag: st.box.flag, house: hi, wall: true }; mailboxes.push(M0); const wp = st.box.mb.getWorldPosition(new THREE.Vector3()); hit(st.box.mb, { hx: st.box.mb.userData.hx ?? .12, hz: st.box.mb.userData.hz ?? .25, h: 1.5, kind: 'hard' }, i); things.push({ kind: 'mailbox', o: st.box.mb, mb: M0, C: colliders[colliders.length - 1], side: s, wall: true, at: wp }); } } }
 
   // ---------- a tenement: right at the pavement ----------
   function tenement(i, s) { const g = new THREE.Group(), D = 10, W = 11 + (rnd() * 3 | 0), fl = 3 + (rnd() < .3 ? 1 : 0), H = 4 + fl * 3.1, fx = s * D / 2, wall = M(WALLS[rnd() * WALLS.length | 0]);
@@ -68,15 +77,15 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     if (!night && rnd() < .12) { g.updateMatrixWorld(true); const front = g.localToWorld(new THREE.Vector3(fx, 0, 0)), n = new THREE.Vector3(s, 0, 0).transformDirection(g.matrixWorld).setY(0).normalize(); scaffolds.push({ i, s, W, H, front, n }); }   // (under scaffolding: the network puts it up)
     register(g, i, s, stairs, reg); return g; }
 
-  // ---------- a block of flats of big panels: five floors, set back behind a lawn, three stairwells ----------
+  // ---------- a block of flats of big panels: five floors, set back behind a short lawn, three stairwells ----------
   const panelT = cv(16, 16, x => { x.fillStyle = '#d9d4c8'; x.fillRect(0, 0, 16, 16); x.fillStyle = '#b8b2a4'; x.fillRect(0, 15, 16, 1); x.fillRect(15, 0, 1, 16); x.fillStyle = '#cfc9bc'; x.fillRect(2, 2, 3, 2); x.fillRect(9, 7, 2, 2); });
   function block(i, s) { const g = new THREE.Group(), D = 11, W = 34, fl = 5, H = fl * 2.8 + .6, fx = s * D / 2, t = panelT.clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(W / 3.6, H / 2.8); t.needsUpdate = true;
     const wallM = M('#ffffff'); wallM.map = t; g.add(box(D, H, W, wallM, 0, H / 2, 0), box(D + .2, .4, W + .2, roofM, 0, H + .2, 0));
     const band = [M('#cf8a5e'), M('#7fa6b3'), M('#9fb36a')][rnd() * 3 | 0], reg = [];
     for (let f = 0; f < fl; f++) for (let c = 0; c < 10; c++) { const z = -W / 2 + (c + .5) * W / 10, y = 1.6 + f * 2.8; if (f === 0 && c % 3 === 1) continue; win(g, fx, s, y, z, 1.4, 1.3, rnd() < .1, f <= 1 ? reg : null); }
     for (let f = 1; f < fl; f++) g.add(box(1.1, .9, W * .9, band, fx + s * .55, .6 + f * 2.8, 0));   // (the balconies' bands)
-    const stairs = []; for (const z of [-W / 3, 0, W / 3]) { g.add(box(.1, 2.3, 1.4, M('#5a5f66'), fx + s * .05, 1.15, z), box(1.4, .15, 2, M('#9aa0a4'), fx + s * .7, 2.5, z)); if (night) g.add(box(.3, .1, .5, porchLit, fx + s * .9, 2.4, z)); stairs.push({ fx, z, box: postBox(g, s * (D / 2 + 5.6), s, z + 1.4) }); }
-    put(g, i, s * (PAVE + 7 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 7, W / 2 + 1);
+    const stairs = []; for (const z of [-W / 3, 0, W / 3]) { g.add(box(.1, 2.3, 1.4, M('#5a5f66'), fx + s * .05, 1.15, z), box(1.4, .15, 2, M('#9aa0a4'), fx + s * .7, 2.5, z)); if (night) g.add(box(.3, .1, .5, porchLit, fx + s * .9, 2.4, z)); stairs.push({ fx, z, box: lockers(g, fx, s, z + 1.52) }); }
+    put(g, i, s * (PAVE + 3.6 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 3.6, W / 2 + 1);
     register(g, i, s, stairs, reg); return g; }
 
   // ---------- a row of garages (the Bronx): four boxes by the road, ribbed metal doors, graffiti, one open now and then (a light in it, a car

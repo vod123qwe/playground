@@ -35,7 +35,7 @@ export function createIndustry({ THREE, toon, track, scene, residents }) {
   // ---------- the building site's gantries over the road: a mast each side, a beam across, a trolley running on it with a load of bricks ----------
   const loads = [];
   if (kind === 'budowa') { const steel = M('#cf5a3e'), dark = M('#2a2c30'), shM = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: .35, depthWrite: false });
-    for (const f of [.12, .4, .9]) { const i = wrap(Math.round(N * f)), A = S[i], W = track.ROAD + 2.4, g = new THREE.Group(), yaw = Math.atan2(A.f.x, A.f.z);
+    for (const f of track.gantryF || [.12, .4, .9]) { const i = wrap(Math.round(N * f)), A = S[i], W = track.ROAD + 2.4, g = new THREE.Group(), yaw = Math.atan2(A.f.x, A.f.z);
       for (const sd of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(.4, 8, .4), steel); m.position.set(sd * W, 4, 0); g.add(m); }
       const beam = new THREE.Mesh(new THREE.BoxGeometry(W * 2 + .4, .5, .5), steel); beam.position.y = 8; g.add(beam);
       g.position.set(A.p.x, gy(A.p.x, A.p.z, i), A.p.z); g.rotation.y = yaw; scene.add(g); g.updateMatrixWorld(true);
@@ -49,7 +49,7 @@ export function createIndustry({ THREE, toon, track, scene, residents }) {
   // ---------- the sidings' forklifts: across the road between the halls and back, a pause each side, a beep as they go ----------
   const lifts = [];
   if (kind === 'bocznica') { const orange = M('#e8a020'), dark = M('#2a2c30'), steel = M('#8a9094');
-    for (const f of [.15, .35, .62, .82]) { const i = wrap(Math.round(N * f)), sd = rnd() < .5 ? -1 : 1, g = new THREE.Group();
+    for (const f of track.liftF || [.15, .35, .62, .82]) { const i = wrap(Math.round(N * f)), sd = rnd() < .5 ? -1 : 1, g = new THREE.Group();
       g.add(new THREE.Mesh(new THREE.BoxGeometry(1.1, .9, 1.8), orange)); g.children[0].position.y = .65; const cab = new THREE.Mesh(new THREE.BoxGeometry(1, 1, .9), dark); cab.position.set(0, 1.55, -.2); g.add(cab);
       const mast = new THREE.Mesh(new THREE.BoxGeometry(.9, 2.2, .1), steel); mast.position.set(0, 1.3, 1); g.add(mast); for (const x of [-.3, .3]) { const fk = new THREE.Mesh(new THREE.BoxGeometry(.1, .06, 1.1), steel); fk.position.set(x, .2, 1.55); g.add(fk); }
       const pal = new THREE.Mesh(new THREE.BoxGeometry(1, .5, 1), M('#c9a96a')); pal.position.set(0, .5, 1.6); g.add(pal); scene.add(g);
