@@ -513,8 +513,12 @@ const glowT = (() => { const c = document.createElement('canvas'); c.width = c.h
 const subGlows = [];
 function nightGlows() { for (const G of subGlows) G.s.parent?.remove(G.s); subGlows.length = 0; if (!track.night) return;
   const mat = new THREE.SpriteMaterial({ map: glowT, color: '#ffc46a', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
-  for (const mb of track.mailboxes) { const hi = mb.house; const d = hi != null ? track.doors[hi] : null; if (!d || !d.sub) continue; const s = new THREE.Sprite(mat); s.scale.setScalar(2.6); mb.o.getWorldPosition(s.position); s.position.y += .15; scene.add(s); subGlows.push({ s, mb, d }); } }
-function stepGlows(t) { for (const G of subGlows) { const on = !G.d.done && !G.mb.done; G.s.visible = on; if (on) G.s.scale.setScalar(2.4 + Math.sin(t * 3 + G.d.i) * .5); } }
+  for (const mb of track.mailboxes) { const hi = mb.house; const d = hi != null ? track.doors[hi] : null; if (!d || !d.sub) continue; const s = new THREE.Sprite(mat.clone()); s.scale.setScalar(1.3); s.visible = false; mb.o.getWorldPosition(s.position); s.position.y += .15; scene.add(s); subGlows.push({ s, mb, d }); } }
+// (only the ones to deliver to now: not done, a paper in the bag of its title, the nearest three ahead of him within 45 m; soft, fading in)
+function stepGlows(t, dt) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), want = [];
+  for (const G of subGlows) { G.want = false; if (G.d.done || G.mb.done || !(B.mix?.[G.d.sub] > 0)) continue; const dx = G.s.position.x - B.x, dz = G.s.position.z - B.z, l = Math.hypot(dx, dz); if (l > 45 || (dx * fx + dz * fz) / (l || 1) < -.1) continue; want.push([G, l]); }
+  want.sort((a, b) => a[1] - b[1]).slice(0, 3).forEach(([G]) => { G.want = true; });
+  for (const G of subGlows) { G.k = Math.max(0, Math.min(1, (G.k || 0) + (G.want ? dt * 2 : -dt * 3))); G.s.visible = G.k > .02; if (G.s.visible) { G.s.material.opacity = .45 * G.k; G.s.scale.setScalar(1.3 + Math.sin(t * 2 + G.d.i) * .15); } } }
 var GLOWS_READY = true; nightGlows();
 // the streak: subscribers served one after another (no wrong ones, none passed by, no paper thrown wide of one): every 3 more, the points
 // count once more (to x4); shown under the speed
@@ -1927,7 +1931,7 @@ function frame(now) {
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
-  drift(dt); stepNight(B.x, B.z); stepBlood(Math.min(dt, .05)); if (subGlows.length) stepGlows(performance.now() / 1000);
+  drift(dt); stepNight(B.x, B.z); stepBlood(Math.min(dt, .05)); if (subGlows.length) stepGlows(performance.now() / 1000, Math.min(dt, .05));
   for (const e of director.update(Math.min(dt, .05), { x: B.x, z: B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint, busy: !!B.crash || !LV || (FIN.on && FIN.entered) || CROSS.some(X => Math.hypot(X.center.x - B.x, X.center.z - B.z) < 50) })) dirEvent(e); if (locals) for (const e of locals.update(Math.min(dt, .05), { x: foot.active ? foot.me?.x ?? B.x : B.x, z: foot.active ? foot.me?.z ?? B.z : B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint })) localEvent(e); { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? { x: foot.me?.x ?? B.x, z: foot.me?.z ?? B.z, v: 0, vs: 0, yaw: 0, foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), vs: B.v, yaw: B.yaw, foot: false }); if (sh) hud.rant(sh.g.position, pickOf(sh.kind === 'mason' ? MASON_SHOUT : WORK_SHOUT), true, 1.95 + sh.y);
     for (const e of track.net?.events?.splice(0) || []) netEvent(e); } life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
