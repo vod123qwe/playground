@@ -46,14 +46,27 @@ export function createIndustry({ THREE, toon, track, scene, residents }) {
       const sh = new THREE.Mesh(new THREE.CircleGeometry(.85, 12).rotateX(-Math.PI / 2), shM); scene.add(sh);
       loads.push({ g, tro, pal, sh, i, W, ph: rnd() * 6, sp: .35 + rnd() * .2, hit: 0 }); } }
 
-  // ---------- the sidings' forklifts: across the road between the halls and back, a pause each side, a beep as they go ----------
+  // ---------- the sidings' forklifts: across the road between the halls and back, a pause each side, a beep as they go; a real forklift
+  // to see (the cage over the driver in his vest, the mast, the forks with a pallet of boxes, an amber light on top that flashes as it goes),
+  // never thinned away when it is between the camera and him; a dashed yellow track painted across the road where they cross ----------
   const lifts = [];
-  if (kind === 'bocznica') { const orange = M('#e8a020'), dark = M('#2a2c30'), steel = M('#8a9094');
+  if (kind === 'bocznica') { const MF = c => { const m = toon(c); m.userData.noFade = true; return m; }, orange = MF('#e8a020'), dark = MF('#2a2c30'), steel = MF('#8a9094'), vest = MF('#c8e03a'), skin = MF('#e3b08a'), helm = MF('#f6f3ea'), card = MF('#c9a96a'), wood = MF('#9e7a4f'), tape = MF('#e9dcc0');
+    const beaconM = new THREE.MeshBasicMaterial({ color: '#ffb020' }), paint = toon('#efc930'), bx = (g, w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); g.add(o); return o; };
     for (const f of track.liftF || [.15, .35, .62, .82]) { const i = wrap(Math.round(N * f)), sd = rnd() < .5 ? -1 : 1, g = new THREE.Group();
-      g.add(new THREE.Mesh(new THREE.BoxGeometry(1.1, .9, 1.8), orange)); g.children[0].position.y = .65; const cab = new THREE.Mesh(new THREE.BoxGeometry(1, 1, .9), dark); cab.position.set(0, 1.55, -.2); g.add(cab);
-      const mast = new THREE.Mesh(new THREE.BoxGeometry(.9, 2.2, .1), steel); mast.position.set(0, 1.3, 1); g.add(mast); for (const x of [-.3, .3]) { const fk = new THREE.Mesh(new THREE.BoxGeometry(.1, .06, 1.1), steel); fk.position.set(x, .2, 1.55); g.add(fk); }
-      const pal = new THREE.Mesh(new THREE.BoxGeometry(1, .5, 1), M('#c9a96a')); pal.position.set(0, .5, 1.6); g.add(pal); scene.add(g);
-      lifts.push({ g, i, side: sd, u: sd, wait: 2 + rnd() * 8, beepT: 0 }); } }
+      bx(g, 1.1, .7, 1.5, orange, 0, .62, .05); bx(g, 1.12, .62, .42, dark, 0, .66, -.82);
+      for (const x of [-.56, .56]) for (const z of [-.5, .55]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.27, .27, .22, 12).rotateZ(Math.PI / 2), dark); w.position.set(x, .27, z); g.add(w); }
+      for (const x of [-.5, .5]) for (const z of [-.55, .4]) bx(g, .07, 1.3, .07, dark, x, 1.6, z);
+      for (const x of [-.5, .5]) bx(g, .08, .08, 1.05, dark, x, 2.25, -.07); for (const z of [-.55, -.07, .4]) bx(g, 1.08, .08, .08, dark, 0, 2.25, z);
+      bx(g, .5, .12, .5, dark, 0, 1.02, -.25); bx(g, .44, .52, .28, vest, 0, 1.36, -.3); bx(g, .24, .24, .24, skin, 0, 1.76, -.28); bx(g, .3, .12, .3, helm, 0, 1.92, -.28);
+      bx(g, .12, .1, .45, vest, -.2, 1.42, .0); bx(g, .12, .1, .45, vest, .2, 1.42, .0);
+      for (const x of [-.36, .36]) bx(g, .09, 2.4, .09, steel, x, 1.25, .88); bx(g, .82, .09, .09, steel, 0, 2.42, .88); bx(g, .8, .3, .08, dark, 0, .5, .95);
+      for (const x of [-.26, .26]) bx(g, .1, .05, 1.05, steel, x, .32, 1.5);
+      bx(g, 1, .12, 1, wood, 0, .42, 1.5); bx(g, .88, .56, .88, card, 0, .76, 1.5); bx(g, .9, .06, .14, tape, 0, 1.05, 1.5);
+      const beacon = bx(g, .16, .14, .16, beaconM, .3, 2.36, -.4);
+      scene.add(g);
+      // (the painted track across the road: two dashed yellow lines, a dash at a time laid on the asphalt where it is)
+      { const A = S[i], W = track.ROAD + 3.2; for (const off of [-1.3, 1.3]) for (let d = -track.ROAD + .3; d < track.ROAD - .2; d += .9) { const x = A.p.x + A.r.x * d + A.f.x * off, z = A.p.z + A.r.z * d + A.f.z * off, o = new THREE.Mesh(new THREE.BoxGeometry(.5, .02, .14), paint); o.position.set(x, gy(x, z, i) + .035, z); o.rotation.y = Math.atan2(A.r.x, A.r.z) + Math.PI / 2; o.userData.noShadow = true; scene.add(o); } void W; }
+      lifts.push({ g, i, beacon, u: sd, dir: -sd, yaw: null, wait: 2 + rnd() * 8, beepT: 0, t: 0 }); } }
 
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0);
@@ -62,10 +75,14 @@ export function createIndustry({ THREE, toon, track, scene, residents }) {
     for (const L of loads) { const x = Math.sin(clock * L.sp + L.ph) * (L.W - 1.2), sw = Math.sin(clock * 1.7 + L.ph) * .08; L.tro.position.x = x; L.pal.rotation.z = sw; L.g.updateMatrixWorld(true);
       const p = L.pal.getWorldPosition(new THREE.Vector3()); L.sh.position.set(p.x, gy(p.x, p.z, L.i) + .05, p.z); L.hit = Math.max(0, L.hit - dt);
       if (!R.foot && !L.hit && (R.x - p.x) ** 2 + (R.z - p.z) ** 2 < .9) { L.hit = 3; ev.push({ kind: 'load' }); } }
-    for (const F of lifts) { const A = S[F.i], yaw = Math.atan2(A.f.x, A.f.z), W = track.ROAD + 3.2;
-      if (F.wait > 0) { F.wait -= dt; } else { const dir = -Math.sign(F.u) || 1; F.u += dir * 2.4 * dt / W; F.beepT -= dt; if (F.beepT <= 0) { F.beepT = .6; if (Math.hypot(R.x - F.g.position.x, R.z - F.g.position.z) < 30) ev.push({ kind: 'beep' }); } if (Math.abs(F.u) >= 1) { F.u = Math.sign(F.u); F.wait = 6 + rnd() * 8; } }
-      const d = F.u * W, x = A.p.x + A.r.x * d, z = A.p.z + A.r.z * d; F.g.position.set(x, gy(x, z, F.i), z); F.g.rotation.y = yaw + (F.u > 0 ? -Math.PI / 2 : Math.PI / 2) * (F.wait > 0 ? 1 : -1);
-      if (F.wait <= 0 && !R.foot && (R.x - x) ** 2 + (R.z - z) ** 2 < 1.6 && !(F.hitT > 0)) { F.hitT = 3; ev.push({ kind: 'forklift' }); } F.hitT = Math.max(0, (F.hitT || 0) - dt); }
+    for (const F of lifts) { const A = S[F.i], W = track.ROAD + 3.2; F.t += dt;
+      const want = Math.atan2(A.r.x * F.dir, A.r.z * F.dir); if (F.yaw == null) F.yaw = want; let dy = ((want - F.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      const moving = F.wait <= 0 && Math.abs(dy) < .25;
+      if (F.wait > 0) { F.wait -= dt; if (F.wait <= 0) F.dir = -Math.sign(F.u) || 1; }
+      else if (Math.abs(dy) >= .25) F.yaw += Math.sign(dy) * Math.min(Math.abs(dy), 1.8 * dt);
+      else { F.yaw = want; F.u += F.dir * 2.4 * dt / W; F.beepT -= dt; if (F.beepT <= 0) { F.beepT = .6; if (Math.hypot(R.x - F.g.position.x, R.z - F.g.position.z) < 30) ev.push({ kind: 'beep' }); } if (Math.abs(F.u) >= 1) { F.u = Math.sign(F.u); F.wait = 6 + rnd() * 8; } }
+      const d = F.u * W, x = A.p.x + A.r.x * d, z = A.p.z + A.r.z * d; F.g.position.set(x, gy(x, z, F.i), z); F.g.rotation.y = F.yaw; F.beacon.visible = F.wait > 0 || (F.t * 3 | 0) % 2 === 0;
+      if (moving && !R.foot && (R.x - x) ** 2 + (R.z - z) ** 2 < 2.2 && !(F.hitT > 0)) { F.hitT = 3; ev.push({ kind: 'forklift' }); } F.hitT = Math.max(0, (F.hitT || 0) - dt); }
     return ev; }
   function kick(p) { return KICK(); }
   function talk(p) { p.talks++; return p.P.talk[(p.talks - 1) % p.P.talk.length]; }
