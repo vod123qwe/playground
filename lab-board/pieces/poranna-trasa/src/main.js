@@ -500,9 +500,18 @@ function unlockTitle(n) { B.nt = n; const A = ACT(), tot = TK.reduce((a, t) => a
 // the subscribers: about half the houses, each its title; a plaque by the door in its colour (and a mark over it as you come)
 const plaques = [];
 function assignSubs(keepNear, fixed) { const A = ACT();   // (fixed: the subscribers as they are, given by the other player; only their plaques made anew)
-  for (const d of track.doors) { if (keepNear && (d.done || Math.hypot(d.p.x - B.x, d.p.z - B.z) < 70)) continue;
+  const kept = d => keepNear && (d.done || Math.hypot(d.p.x - B.x, d.p.z - B.z) < 70);
+  if (!fixed) { const rate = track.region === 'wies' ? .7 : .55; for (const d of track.doors) if (!kept(d)) d.sub = SUBR() < rate ? A[SUBR() * A.length | 0] : null;
+    // (no long stretch without a paper to throw: where the subscribers leave more than ~55 m empty, the door nearest the middle of it takes one)
+    const L0 = track.N * track.ds, at = track.doors.map(d => ({ d, s: d.s0 ?? (d.s0 = track.probe(d.p.x, d.p.z, d.i ?? -1).s) })).sort((x, y) => x.s - y.s);
+    for (let pass = 0; pass < 6; pass++) { const subs = at.filter(o => o.d.sub); if (!subs.length) break; let added = 0;
+      for (let k = 0; k < subs.length; k++) { const a0 = subs[k].s, b0 = k + 1 < subs.length ? subs[k + 1].s : subs[0].s + L0; if (b0 - a0 < 55) continue; const mid = (a0 + b0) / 2;
+        let best = null, bd = 1e9; for (const o of at) { if (o.d.sub || kept(o.d)) continue; let ds_ = o.s; if (ds_ < a0) ds_ += L0; if (ds_ <= a0 + 8 || ds_ >= b0 - 8) continue; const e = Math.abs(ds_ - mid); if (e < bd) { bd = e; best = o; } }
+        if (best) { best.d.sub = A[SUBR() * A.length | 0]; added++; } }
+      if (!added) break; } }
+  for (const d of track.doors) { if (kept(d)) continue;
     if (d.plaque) { scene.remove(d.plaque); plaques.splice(plaques.indexOf(d.plaque), 1); d.plaque = null; }
-    if (!fixed) d.sub = SUBR() < .55 ? A[SUBR() * A.length | 0] : null; if (!d.sub) continue;
+    if (!d.sub) continue;
     const n = d.n, fa = d.p.clone().addScaledVector(n, -2.6), side = new THREE.Vector3(-n.z, 0, n.x), pl = new THREE.Group();
     const b = new THREE.Mesh(new THREE.BoxGeometry(.34, .24, .03), toon('#f6f3ea')); pl.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(.28, .08, .035), bandOf[d.sub]); c.position.y = .04; pl.add(c);
     pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; }

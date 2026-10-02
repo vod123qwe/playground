@@ -1297,3 +1297,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - skocznia przed przejazdem celuje wzdłuż drogi tam, gdzie wylądujesz, a nie prosto przed siebie: na zakręcie lot zostaje nad jezdnią; drzewa przy drodze na torze lotu zdjęte na ten przejazd (pień złapany w powietrzu był upadkiem z niczego)
 - auta przy opadającym szlabanie: pierwsze staje przy samej linii, reszta za nim; jadące twoim pasem czekają przed żółtymi paskami rozpędu, więc rozbieg do skoczni zostaje wolny
 - menu pauzy znika od razu po wybraniu MAPA TRASY (zostawał pod mapą jego ostatni obraz)
+
+## Wersja 152: wieś pełna gazet
+
+- wieś gęściej zabudowana (domy co ~33 m zamiast ~43 m, mniej samych pól), abonentem jest 70% domów zamiast 55%
+- przy większości pól brama gospodarstwa: drewniana furtka z ukośną belką, skrzynka na słupku przy drodze, dom w głębi za polem; pole też ma gazetę do rzucenia
+- na każdej mapie pilnowany odstęp: gdzie między abonentami robi się ponad ~55 m pustki, dom najbliżej środka dziury dostaje prenumeratę
+- wieś: 1,1 → 3,2 abonenta na 100 m, najdłuższy odcinek bez gazety 199 → 74 m; peryferia: najdłuższy 100 → 65 m
