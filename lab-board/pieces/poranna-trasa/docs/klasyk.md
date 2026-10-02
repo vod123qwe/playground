@@ -116,3 +116,11 @@ Miasto za dnia (mapa klasyk2, poziom k2). Kamienice ze sklepami tylko po lewej; 
 Mechaniki: dwie prenumeraty (Trąbka i Wieści, abonent chce swoją, X przełącza, zły tytuł psuje serię), kurier konkurencji, PILNE (też na Kasztanowej: abonent przed tobą chce gazetę w 12 s, +5), seria trafień z mnożnikiem (była w grze), finał w korytarzu barierek z falą opon i piłek (v169).
 
 Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, kelner z tacą (gazeta na tacę), gołębie na placu.
+
+## Poziomy 2 i 3: Wieś i Park (v176)
+
+Śródmieście odstawione (za dużo skręcania, same skrytki, betonowo i pusto). Zostaje w kodzie jako mapa `miasto/klasyk2`, poziom `k9` oznaczony jako „wkrótce”.
+
+- **Kamera Klasyka patrzy na stronę domów**: druga strona to wąski pas przy krawężniku, więc to, co ma budować klimat, stoi po stronie domów, a po drugiej tylko to, co widać i co przeszkadza (żywopłoty, bele, ptaki, spacerowicze).
+- **k2 Wieś** (`wies/klasyk`): własna pętla z długimi łukami, chałupy przeplatane polami i gospodarstwami (bramy ze skrzynką), pastwisko za płotem z krowami, studnia, staw, kapliczki i bele przy krawężniku, gęsi, stada kur na poboczu (wjazd: KO-KO-KO! +1).
+- **k3 Park** (`peryferia/park`): wille, co 150 m 50 m parku bez domów (żwirowa alejka, klomby, latarnie, staw, fontanna, altana, drzewa w głębi), wózek z lodami, żywopłoty przy drugim krawężniku, spacerowicze na obu chodnikach (wpadnięcie = zderzenie), stada gołębi (wjazd: GOŁĘBIE! +1). Dwie prenumeraty.

@@ -93,8 +93,30 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
   const chasers = [], OWNER = deck(['WRACAJ TU!', 'ZA SZYBĘ ZAPŁACISZ!', 'STÓJ, GAZECIARZU!', 'JA CI DAM GAZETĘ!', 'MAM CIĘ NA NAGRANIU!']);
   function angry(w) { if (chasers.length > 1) return; const f = fig(['#8e2e25', '#3b5670', '#6b4a2e'][chasers.length % 3], null); dress(f, ['suit', 'gardener', 'shopper'][chasers.length % 3], 'walk', 2.4); const p = w.p.clone().addScaledVector(w.n, 2); f.g.position.set(p.x, gy(p.x, p.z), p.z); chasers.push({ ...f, x: p.x, z: p.z, t: 0, ph: 0, sayT: 0 }); }
 
+  // ---------- the park's people: strollers wandering its paths; flocks pecking about (pigeons in the park, hens in the village) that go up
+  // as he rides through them (a point each flock) ----------
+  const strollers = [], flocks = [], VIL = track.region === 'wies' && track.classic;
+  if (track.park || VIL) { const keys = VIL ? ['gardener', 'shopper'] : ['shopper', 'suit', 'gardener', 'jogger'];
+    for (let k = 0; k < (VIL ? 6 : 22); k++) { const f = fig(['#3b5670', '#8e2e25', '#44484c', '#6b4a2e', '#467537', '#c9b8a0'][k % 6], k % 4 === 0 ? '#24190f' : null); dress(f, keys[k % keys.length], 'walk', .85 + rnd() * .3);
+      const sd0 = k % 2 ? os : hs, s0 = rnd() * L, d0 = sd0 * (track.KERB + .8 + rnd() * 1.6); strollers.push({ ...f, sd0, s: s0, d: d0, ts: s0, td: d0, hitT: 0, wait: rnd() * 4 }); }
+    const bodyM = VIL ? [M('#f6f3ea'), M('#a8643a')] : [M('#8a9094'), M('#9aa0a4')], headM = VIL ? M('#cf3a2c') : M('#5d646b');
+    for (let k = 0; k < 9; k++) { const birds = []; for (let b = 0; b < 8; b++) { const g = new THREE.Group(), sz = VIL ? 1.5 : 1, bd = new THREE.Mesh(new THREE.BoxGeometry(.16 * sz, .14 * sz, .26 * sz), bodyM[b % 2]), hd = new THREE.Mesh(new THREE.BoxGeometry(.09 * sz, .09 * sz, .09 * sz), headM); bd.position.y = .1 * sz; hd.position.set(0, .2 * sz, .14 * sz); g.add(bd, hd); scene.add(g); birds.push({ g, ox: (rnd() - .5) * 3, oz: (rnd() - .5) * 3, vy: 0, up: 0, vx: 0, vz: 0 }); }
+      flocks.push({ s: L * (k + .5) / 9, d: (k % 2 ? os : hs) * (track.KERB + 1.2 + rnd() * .8), birds, up: false, t: 0 }); } }
+  const FLOCK = VIL ? deck(['KO-KO-KO! +1', 'KURY W GÓRĘ! +1', 'KOGUT SIĘ OBRAZIŁ! +1']) : deck(['GOŁĘBIE! +1', 'FRRR! +1', 'PŁOSZYCIEL! +1']);
+
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0), W0 = api.wave; for (const mx of mixers) mx.update(dt);
+    // (the strollers: to a spot along the path and on to the next; ridden into, a bump)
+    for (const P of strollers) { const i0 = wrap(Math.round(P.s / ds)), p0 = pv(i0, P.d);
+      if (P.wait > 0) P.wait -= dt; else { const dS = ((P.ts - P.s + L * 1.5) % L) - L / 2, dd = P.td - P.d, l = Math.hypot(dS, dd); if (l < .3) { P.wait = 1 + rnd() * 4; P.ts = ((P.s + (rnd() - .5) * 50) % L + L) % L; P.td = P.sd0 * (track.KERB + .8 + rnd() * 1.6); } else { const sp = 1.1 * dt; P.s = ((P.s + dS / l * sp) % L + L) % L; P.d += dd / l * sp; } }
+      const i = wrap(Math.round(P.s / ds)), p = pv(i, P.d); if (Math.hypot(p.x - p0.x, p.z - p0.z) > 1e-4) P.g.rotation.y = Math.atan2(p.x - p0.x, p.z - p0.z); P.g.position.copy(p);
+      P.hitT = Math.max(0, P.hitT - dt); if (!R.foot && !R.air && !P.hitT && Math.abs(R.v) > 2 && Math.hypot(R.x - p.x, R.z - p.z) < .6) { P.hitT = 3; ev.push({ kind: 'bump', p: { g: P.g } }); } }
+    // (the flocks: pecking about; him within 4 m, up they go (hens only flutter); back down once he is well away)
+    for (const Fk of flocks) { const c = pv(wrap(Math.round(Fk.s / ds)), Fk.d); Fk.t += dt;
+      if (!Fk.up && !R.foot && Math.hypot(R.x - c.x, R.z - c.z) < 4.2) { Fk.up = true; Fk.t = 0; ev.push({ kind: 'flock', at: c.clone(), text: FLOCK() }); for (const b of Fk.birds) { b.vy = VIL ? 1.6 + rnd() : 3 + rnd() * 2; b.vx = (rnd() - .5) * 5; b.vz = (rnd() - .5) * 5; } }
+      for (const b of Fk.birds) { if (Fk.up) { if (VIL) { b.vy -= 6 * dt; } else b.vy -= .6 * dt; b.ox += b.vx * dt; b.oz += b.vz * dt; b.up = Math.max(0, b.up + b.vy * dt); if (VIL && !b.up) { b.vx *= .9; b.vz *= .9; } b.g.position.set(c.x + b.ox, c.y + b.up, c.z + b.oz); if (b.up) b.g.rotation.y += dt * 4; }
+        else { b.g.position.set(c.x + b.ox, c.y, c.z + b.oz); if (rnd() < dt * 1.5) b.g.rotation.y = rnd() * 6.28; b.g.children[1].position.y = b.g.children[0].position.y * 2 - Math.max(0, Math.sin(clock * 9 + b.ox * 7)) * .06; } }
+      if (Fk.up && Fk.t > 12 && Math.hypot(R.x - c.x, R.z - c.z) > 30) { Fk.up = false; for (const b of Fk.birds) { b.up = 0; b.ox = (rnd() - .5) * 3; b.oz = (rnd() - .5) * 3; } } }
     // (the joggers)
     for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
       J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }
@@ -165,5 +187,5 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     for (const K of backers) { if (!(K.st === 'out' || K.st === 'lights' || K.st === 'wait') || Math.hypot(K.g.position.x - Pp.x, K.g.position.z - Pp.z) > 1.8) continue; K.st = 'wait'; K.t = 0; return { p: { g: K.g }, text: SORRY(), who: 'driver', pts: 2, label: 'NA SZYBĘ! +2' }; }
     for (const W of sprinklers) { if (W.flipT || Math.hypot(W.p.x - Pp.x, W.p.z - Pp.z) > 1) continue; W.flipT = 2; W.dir *= -1; return { p: { g: W.g }, text: 'PSSST!', who: 'sprinkler', pts: 1, label: 'ZRASZACZ! +1' }; }
     return null; }
-  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart }; return api;
+  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers }; return api;
 }

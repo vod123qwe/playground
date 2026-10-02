@@ -1447,3 +1447,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - gra nazywa się teraz GAZECIARZ (tytuł na ekranie startowym i w karcie przeglądarki); dwie wersje pod nią: PORANNA TRASA i KLASYK (podtytuł według wersji)
 - przełączenie wersji na ekranie startowym bez ekranu ładowania: tło płynnie przechodzi w ulicę drugiej wersji (zapamiętany obraz jej tła), menu zmienia się od razu; mapa wczytuje się dopiero po GRAJ albo wyborze trasy; tylko za pierwszym razem, zanim gra zobaczy tło drugiej wersji, jedno przeładowanie (z wygaszeniem)
+
+## Wersja 176: Klasyk, poziom 2 Wieś i poziom 3 Park
+
+- Śródmieście odstawione z Klasyka (zostaje w kodzie, na mapie jako „wkrótce”); poziomy Klasyka: Ulica Kasztanowa, Wieś, Park
+- Wieś: własna pętla z długimi łukami, chałupy przeplatane polami i gospodarstwami, pastwisko z krowami, studnia, staw, kapliczki i bele siana przy krawężniku, gęsi i stada kur (wjazd w kury: KO-KO-KO! +1)
+- Park: wille przy parku, co 150 m kawałek parku bez domów (alejka, klomby, latarnie, staw, fontanna, altana, drzewa), wózek z lodami, żywopłoty, spacerowicze na obu chodnikach, stada gołębi (wjazd: GOŁĘBIE! +1), dwie prenumeraty
+- wszystko, co buduje klimat, stoi po stronie domów, bo tam patrzy kamera Klasyka
