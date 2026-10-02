@@ -778,7 +778,7 @@ function ride(dt, inp) {
   const nx = B.x + Math.sin(B.yaw) * B.v * dt, nz = B.z + Math.cos(B.yaw) * B.v * dt;
   // up and down: the ground (and a ramp on it); a hop; off a ramp's lip into the air; the landing
   const rp = rampAt(nx, nz), g0 = track.probe(nx, nz, B.hint).y + rp.h, roof = carRoofAt(nx, nz), ground = roof !== null && B.y >= roof - .35 ? Math.max(g0, roof) : g0;
-  if (rp.wall && B.v > 7 && !B.air) { B.x = nx; B.z = nz; crash(); return; } else if (rp.wall && B.v > 2 && !B.air && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .35; B.jolt = .22; }   // (into a ramp's side: a fall only at speed)
+  if (rp.wall && B.v > (track.classic ? 4.3 : 7) && !B.air) { B.x = nx; B.z = nz; crash(); return; } else if (rp.wall && B.v > 2 && !B.air && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .35; B.jolt = .22; }   // (into a ramp's side: a fall only at speed)
   B.staggerT = (B.staggerT || 0) - dt;
   if (inp.hop && !B.air) { B.air = true; B.vy = (track.classic ? 4.5 : 3.8) + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : null; }   // (hopped off a ramp: higher, and a trick allowed)
   if (B.air) { B.vy -= g * dt; B.y += B.vy * dt; if (B.y <= ground) { B.airRamp = null;
@@ -809,8 +809,9 @@ function ride(dt, inp) {
     if (C.kind === 'soft') { B.v *= Math.pow(.08, dt); continue; }
     if (C.hyd && Math.abs(B.v) > .8 && water.spray(new THREE.Vector3(C.x, C.y0 || 0, C.z), 4.5)) hud.pop(new THREE.Vector3(C.x, (C.y0 || 0) + 1.6, C.z), 'PSSS!', '#9ccad8');   // a hydrant knocked: it gushes
     const into = -(h.nx * Math.sin(B.yaw) + h.nz * Math.cos(B.yaw)) * Math.sign(B.v || 1);   // (how squarely: 1 head on, 0 grazing)
-    if (B.v * into > 7.2 && into > .75 && (C.h ?? 1) > .6) { const side = (h.nx * -Math.cos(B.yaw) + h.nz * Math.sin(B.yaw)) > 0 ? 1 : -1; B.x = nx; B.z = nz; crash(side); return; }   // (head on into something hard at speed: he goes over away from what he hit)
-    if (B.v * into > 3.6 && into > .55 && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .4; B.jolt = .26; B.leanV += (Math.random() < .5 ? -1 : 1) * 3; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.8, 0)), pickOf(['OJ!', 'UPS!', 'HOP!', 'UFF!']), '#f6f3ea'); audio.play('kick', { vol: .3 }); }   // (less than that: a stagger, he keeps his seat)
+    // (the Classic is slower: its own thresholds for a fall and for a stagger)
+    if (B.v * into > (track.classic ? 3.4 : 7.2) && into > (track.classic ? .65 : .75) && (C.h ?? 1) > .6) { const side = (h.nx * -Math.cos(B.yaw) + h.nz * Math.sin(B.yaw)) > 0 ? 1 : -1; B.x = nx; B.z = nz; crash(side); return; }   // (head on into something hard at speed: he goes over away from what he hit)
+    if (B.v * into > (track.classic ? 2.2 : 3.6) && into > .55 && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .4; B.jolt = .26; B.leanV += (Math.random() < .5 ? -1 : 1) * 3; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.8, 0)), pickOf(['OJ!', 'UPS!', 'HOP!', 'UFF!']), '#f6f3ea'); audio.play('kick', { vol: .3 }); }   // (less than that: a stagger, he keeps his seat)
     B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01);   // pushed clear...
     if (into > .02) { let tx = -h.nz, tz = h.nx; if (tx * Math.sin(B.yaw) + tz * Math.cos(B.yaw) < 0) { tx = -tx; tz = -tz; }   // ...turned along it (the way he was going), losing only what went into it
       const dyaw = Math.atan2(tx, tz) - B.yaw; B.yaw += Math.atan2(Math.sin(dyaw), Math.cos(dyaw)) * (B.v >= 0 ? .75 : 0); B.v *= 1 - into * .6; }

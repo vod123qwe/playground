@@ -66,7 +66,7 @@ export function createDirector({ THREE, toon, track, scene }) {
         if (L.t > 4) { scene.remove(L.g); L.K.o.userData.doorOpen = false; live.splice(k, 1); } continue; }
       // (a roller)
       L.d += L.v * dt; const p = at(L.i, L.d); L.g.position.set(p.x, gy(p.x, p.z, L.i) + (L.kind === 'cart' ? 0 : L.r) + (L.kind === 'ball' ? Math.abs(Math.sin(L.t * 6)) * .25 : 0), p.z); if (L.rolling) L.g.children[0].rotation.z += L.v / L.r * dt * (L.kind === 'ball' ? 1 : 0); if (L.kind !== 'ball' && L.kind !== 'cart') L.g.children[0].rotation.y += L.v / L.r * dt;
-      if (!L.hit && !R.foot && !R.air && (R.x - p.x) ** 2 + (R.z - p.z) ** 2 < (L.r + .45) ** 2) { L.hit = true; if (L.kind === 'ball') { L.v *= -1.8; ev.push({ kind: 'wobble', at: V(p.x, p.y + .5, p.z), text: 'PAC!' }); } else ev.push({ kind: Math.abs(R.v) > 7 ? 'crash' : 'wobble', at: V(p.x, p.y + .5, p.z), text: L.kind === 'cart' ? 'WÓZEK!' : 'BUM!' }); }   // (a fall only at speed; slower, a wobble)
+      if (!L.hit && !R.foot && !R.air && (R.x - p.x) ** 2 + (R.z - p.z) ** 2 < (L.r + .45) ** 2) { L.hit = true; if (L.kind === 'ball') { L.v *= -1.8; ev.push({ kind: 'wobble', at: V(p.x, p.y + .5, p.z), text: 'PAC!' }); } else ev.push({ kind: Math.abs(R.v) > (track.classic ? 4.3 : 7) ? 'crash' : 'wobble', at: V(p.x, p.y + .5, p.z), text: L.kind === 'cart' ? 'WÓZEK!' : 'BUM!' }); }   // (a fall only at speed; slower, a wobble)
       if (L.t > 7 || Math.abs(L.d) > track.ROAD + 9) { scene.remove(L.g); live.splice(k, 1); } }
     return ev; }
   return { update, poke };
