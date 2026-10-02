@@ -124,3 +124,9 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - **Kamera Klasyka patrzy na stronę domów**: druga strona to wąski pas przy krawężniku, więc to, co ma budować klimat, stoi po stronie domów, a po drugiej tylko to, co widać i co przeszkadza (żywopłoty, bele, ptaki, spacerowicze).
 - **k2 Wieś** (`wies/klasyk`): własna pętla z długimi łukami, chałupy przeplatane polami i gospodarstwami (bramy ze skrzynką), pastwisko za płotem z krowami, studnia, staw, kapliczki i bele przy krawężniku, gęsi, stada kur na poboczu (wjazd: KO-KO-KO! +1).
 - **k3 Park** (`peryferia/park`): wille, co 150 m 50 m parku bez domów (żwirowa alejka, klomby, latarnie, staw, fontanna, altana, drzewa w głębi), wózek z lodami, żywopłoty przy drugim krawężniku, spacerowicze na obu chodnikach (wpadnięcie = zderzenie), stada gołębi (wjazd: GOŁĘBIE! +1). Dwie prenumeraty.
+
+## Abonenci i medale (v177)
+
+- Abonent widoczny z daleka: drzwi w kolorze jego gazety (nieoświetlony kolor, biała ramka) i skrzynka na słupku w tym kolorze z czerwoną chorągiewką. Nieabonent: ciemne drzwi (cel na szybę).
+- Medal z gwiazdek: 1 = brąz, 2 = srebro, 3 = złoto (czas, gazety i celność, bez wywrotki). Na mecie w „W liczbach”: medal i punkty z przejazdu (przyrost od startu) z rekordem.
+- Menu Klasyka: przyciski otwartych poziomów z medalem (np. KLASYK 2: WIEŚ · SREBRO).

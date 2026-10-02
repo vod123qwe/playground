@@ -193,6 +193,7 @@ const ADS = [
   { t: 'ZNALEZIONO', d: 'Dzwonek rowerowy, dzwoni. Do odebrania na posterunku.' }];
 
 import { pxKey, pxStars, pxStar } from './pixui.js';
+import { MEDALS } from './levels.js';
 
 export function createPaper({ game }) {
   const css = document.createElement('style'); css.textContent = `
@@ -371,7 +372,7 @@ export function createPaper({ game }) {
       B(`<p class="kick">WKŁADKA DLA DORĘCZYCIELA</p><h2>Twoja trasa: ${L.name.toLowerCase()}</h2><p class="deck">${D.headline}</p>`, 'span');
       B(`<div class="box" data-sec="1"><h3>W liczbach</h3><div class="kvs"><div class="kv"><canvas data-ico="dist"></canvas><b>${(D.route.len / 1000).toFixed(2)} KM</b><small>DYSTANS</small></div>
           <div class="kv"><canvas data-ico="time"></canvas><b>${mmss(r.time)}</b><small>CZAS</small></div><div class="kv"><canvas data-ico="paper"></canvas><b>${r.delivered} / ${D.route.subs}</b><small>DORĘCZONE</small></div>
-          <div class="kv"><canvas data-ico="star"></canvas><b>${rec.g.n} / 3</b><small>GWIAZDKI</small></div></div></div>`);
+          <div class="kv"><canvas data-ico="star"></canvas><b>${rec.g.n} / 3</b><small>GWIAZDKI</small></div>${L.classic ? `<div class="kv"><canvas data-ico="star"></canvas><b style="color:${MEDALS[rec.g.n].col};text-shadow:2px 2px 0 #17181b">${MEDALS[rec.g.n].name}</b><small>MEDAL</small></div><div class="kv"><canvas data-ico="paper"></canvas><b>${r.pts || 0} PKT${rec.beat.pts || rec.first ? ' <span class="rec">REKORD</span>' : ''}</b><small>PUNKTY (NAJLEPIEJ ${b.pts || 0})</small></div>` : ''}</div></div>`);
       B(`<p class="kick">RAPORT Z TRASY</p><p>${story()}</p>`, 'txt');
       if (D.jobRes?.length) { const JB = game.JB; B(`<p class="kick">Z NOTESU</p>${D.jobRes.map(q => `<p class="li">${JB.JOBS[q.kind].title}: ${q.ok ? JB.JOBS[q.kind].done + ` <span class="pr">+${q.pay} ZŁ</span>` : JB.JOBS[q.kind].fail}</p>`).join('')}`, 'brief'); }
       if (D.heat >= 3) B(`<p class="kick">UWAGA</p><p>Policja szuka rowerzysty w czerwonej czapce. Im więcej szkód, tym więcej patroli na trasie.</p>`, 'brief');

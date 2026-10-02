@@ -1454,3 +1454,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - Wieś: własna pętla z długimi łukami, chałupy przeplatane polami i gospodarstwami, pastwisko z krowami, studnia, staw, kapliczki i bele siana przy krawężniku, gęsi i stada kur (wjazd w kury: KO-KO-KO! +1)
 - Park: wille przy parku, co 150 m kawałek parku bez domów (alejka, klomby, latarnie, staw, fontanna, altana, drzewa), wózek z lodami, żywopłoty, spacerowicze na obu chodnikach, stada gołębi (wjazd: GOŁĘBIE! +1), dwie prenumeraty
 - wszystko, co buduje klimat, stoi po stronie domów, bo tam patrzy kamera Klasyka
+
+## Wersja 177: Klasyk, widoczni abonenci i medale
+
+- domy abonentów widać z daleka: drzwi w kolorze gazety z białą ramką i skrzynka na słupku z czerwoną chorągiewką; nieabonenci mają ciemne drzwi
+- na mecie medal (brąz, srebro, złoto za 1, 2 i 3 gwiazdki) i punkty z przejazdu z rekordem
+- w menu Klasyka otwarte poziomy z medalem przy nazwie
