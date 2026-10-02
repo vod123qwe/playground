@@ -297,9 +297,11 @@ export function createHud() {
   // words broken into lines of at most n signs (a word longer than that: cut)
   function wrapTo(s, n) { if (s.length <= n) return [s]; const out = []; let ln = ''; for (const w of s.split(' ')) { const t = ln ? ln + ' ' + w : w; if (t.length > n && ln) { out.push(ln); ln = w.slice(0, n); } else ln = t.slice(0, n); } if (ln) out.push(ln); return out; }
   // health: a heart and a bar under the purse (a run ends at nothing); low: the heart beats
-  function health(h, rx, y) { const w = 42, x0 = rx - w, low = h < 30, beat = low && ((markT * 4) | 0) % 2;
-    g.fillStyle = '#17181b'; g.fillRect(x0 - 10, y - 1, w + 11, 7); heart(x0 - 9, y - (beat ? 1 : 0), low ? '#ff5a4a' : '#cf5a3e', '#5e1c17');
-    g.fillStyle = '#3a3c40'; g.fillRect(x0, y + 1, w, 3); g.fillStyle = low ? '#e0473a' : h < 60 ? '#efc970' : '#9fd27a'; g.fillRect(x0, y + 1, Math.round(w * Math.max(0, h) / 100), 3); }
+  function health(h, rx, y) { const n = 10, cw = 4, w = n * (cw + 1) - 1, x0 = rx - w - 1, low = h < 30, beat = low && ((markT * 4) | 0) % 2, P = (x, y2, w2, h2, c) => { g.fillStyle = c; g.fillRect(x, y2, w2, h2); };
+    const bx = x0 - 11, bw = w + 14; P(bx + 1, y - 2, bw - 2, 10, '#17181b'); P(bx, y - 1, bw, 8, '#17181b'); P(bx + 1, y - 1, bw - 2, 1, '#3a3d42'); P(bx + 1, y - 1, 1, 7, '#2a2c30'); P(bx + 1, y + 6, bw - 2, 1, '#101113');   // (the box: dark edge, its corners cut, a light rim)
+    heart(x0 - 9, y - (beat ? 1 : 0), low ? '#ff5a4a' : '#cf5a3e', '#5e1c17');
+    const C3 = low ? ['#ff8a7a', '#e0473a', '#8e2e25'] : h < 60 ? ['#f8e6b0', '#efc970', '#b8902e'] : ['#d2f0b8', '#9fd27a', '#5f9a3e'], on = Math.ceil(Math.max(0, h) / 100 * n - .001);
+    for (let k = 0; k < n; k++) { const x = x0 + k * (cw + 1); if (k < on) { P(x, y, cw, 4, C3[1]); P(x, y, cw, 1, C3[0]); P(x, y + 3, cw, 1, C3[2]); } else { P(x, y, cw, 4, '#2a2c30'); P(x, y, cw, 1, '#33363a'); } } }
   function questList(L) { const W = cv.width, y0 = document.body.classList.contains('touch') ? Math.round(cv.height * .17) : 5;
     let y = y0; L.slice(0, 3).forEach((s0, i) => { for (const s of wrapTo(s0, Math.max(10, Math.floor((W - 16) / 4)))) { const w = width(s) + 9, x = Math.round(W / 2 - w / 2); g.fillStyle = 'rgba(23,24,27,.74)'; g.fillRect(x, y, w, 10); g.fillStyle = '#efc970'; g.fillRect(x, y, 1, 10); text(s, x + 5, y + 2, i ? '#f6f3ea' : '#efc970', null); y += 10; } y += 1; }); }   // (a line too wide for the picture: broken)
   // a tip: words in a box over the bottom of the picture, broken into lines that fit
