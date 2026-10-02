@@ -1216,7 +1216,7 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
 const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
-const menu = createMenu({ assist: assistMenu, onMap: () => openMap(), onPlay: () => flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'), modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
+const menu = createMenu({ assist: assistMenu, tests: () => testRows(), onMap: () => openMap(), onPlay: () => flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'), modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (book.isOpen && book.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
@@ -1489,6 +1489,23 @@ function carRoofAt(x, z) { let y = null; for (const C of track.near(B.hint)) if 
 let stepAcc = 0; function stepSteps(dt) { const me = foot.me; if (!me || me.air || foot.fighting && !me.vf) { stepAcc = 0; return; } const sp = Math.abs(me.vf || 0); if (sp < .4) { stepAcc = Math.min(stepAcc, .3); return; }
   const run = sp > 3, stride = run ? 1.15 : .72; stepAcc += sp * dt; if (stepAcc < stride) return; stepAcc -= stride; const q = track.probe(me.x, me.z, me.hint ?? B.hint), grass = Math.abs(q.d) > track.ROAD + .4 && !(Math.abs(q.d) > 4.9 && Math.abs(q.d) < track.PAVE + .1);
   audio.play('step', { vol: (run ? .07 : .045) * (grass ? .8 : 1), grass }); }
+// ---------- the menu's TESTY page (for trying things quickly; to go later): every stretch by region, and the states to jump to ----------
+function tpTo(x, z, along = 1) { const q = track.probe(x, z, -1), A = track.S[q.i], dir = LV?.finish.dir || 1; if (foot.active) mount(); Object.assign(B, { x: A.p.x + A.r.x * 1.4 * dir, z: A.p.z + A.r.z * 1.4 * dir, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null, air: false, yaw: Math.atan2(A.f.x * dir * along, A.f.z * dir * along) }); C.yaw = B.yaw; C.init = false; C.iy = 0; }
+function aheadOf(x, z, m) { const q = track.probe(x, z, -1), dir = LV?.finish.dir || 1, i = ((q.i - dir * Math.round(m / track.ds)) % track.N + track.N) % track.N; return track.S[i].p; }
+function testRows() { const out = [];
+  for (const R of LVM.REGIONS) { const ls = LVM.LEVELS.filter(l => l.region === R.id && !l.soon); if (!ls.length) continue; out.push({ head: 'TRASY · ' + R.name });
+    for (const l of ls) out.push({ label: l.name + (LV?.id === l.id ? ' (TERAZ)' : ''), act: () => startLevel(l.id) }); }
+  const here = LVM.LEVELS.find(l => (l.region === 'peryferia' ? 'peryferia' : l.region) === track.region && !l.soon);
+  const needLV = f => () => { if (!LV && here) { startLevel(here.id); setTimeout(f, 700); } else f(); };
+  out.push({ head: 'STANY' },
+    { label: 'GAZETA PO TRASIE', act: needLV(() => finishLevel()) },
+    { label: 'MAPA TRASY', act: () => openMap() },
+    { label: 'SKLEP JANUSZA', act: () => shop.open() },
+    { label: 'FINAŁOWA PROSTA', act: needLV(() => { const c = FIN.cones[0] || FIN.targets[0]?.c; if (c) { const p = aheadOf(c.x, c.z, 18); tpTo(p.x, p.z); } }) },
+    ...(CROSS.length ? [{ label: 'PRZEJAZD KOLEJOWY', act: () => { const p = aheadOf(CROSS[0].center.x, CROSS[0].center.z, 16); tpTo(p.x, p.z); } }] : []),
+    { label: 'WSIĄDŹ NA ROWER', act: () => { if (foot.active) mount(); } },
+    { label: '+100 ZŁ', act: () => { B.points += 100; flash('+100 zł (test)'); } });
+  return out; }
 const BOOT = { drawn: false };   // (the loader in index.html: away once the first frames are in and the shaders made)
 const CULL = { t: 0, list: [], listT: 0, own: new Set() };
 function cullPeople(dt) { if ((CULL.t -= dt) > 0) return; CULL.t = .25; if ((CULL.listT -= .25) <= 0) { CULL.listT = 3; CULL.own.clear(); rider.root.traverse(o => CULL.own.add(o)); if (net.on) P2.rider.root.traverse(o => CULL.own.add(o)); CULL.list = []; scene.traverse(o => { if (o.isSkinnedMesh && !CULL.own.has(o)) CULL.list.push(o); }); }
@@ -1746,7 +1763,7 @@ function frame(now) {
   talkCam(dt); if (B.papers > (B.bagMax || 30)) { B.papers = B.bagMax || 30; if (!(B.fullT > 0)) { flash('Torba pełna'); B.fullT = 4; } } B.fullT = (B.fullT || 0) - dt;   // (no more than the bag holds)
   cullPeople(dt);
   if (!BOOT.drawn) { BOOT.drawn = true; requestAnimationFrame(() => document.body.classList.add('drawn')); renderer.compileAsync(scene, camera).catch(() => { }).finally(() => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('booted'))), 300)); }
-  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { px.render(scene, camera, hudBag); drawHud(dt); }
+  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { hud.clear(); const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { px.render(scene, camera, hudBag); drawHud(dt); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

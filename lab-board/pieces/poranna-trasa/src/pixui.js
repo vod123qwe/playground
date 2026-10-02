@@ -15,7 +15,14 @@ const win = (fill = '#25272b') => url(9, P => { const D = '#17181b'; P(1, 0, 7, 
 const inset = (fill = '#1d1e21') => url(7, P => { P(0, 0, 7, 7, '#17181b'); P(1, 1, 5, 5, fill); P(6, 1, 1, 6, '#3a3c40'); P(1, 6, 6, 1, '#3a3c40'); P(0, 0, 1, 1, 'rgba(0,0,0,0)'); P(6, 6, 1, 1, 'rgba(0,0,0,0)'); P(6, 0, 1, 1, 'rgba(0,0,0,0)'); P(0, 6, 1, 1, 'rgba(0,0,0,0)'); });
 
 let done = false;
+const STAR = ['...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '.#...#.'];
+const star = (fill, lit) => url(9, P => { const on = (x, y) => STAR[y]?.[x] === '#'; for (let y = -1; y <= 7; y++) for (let x = -1; x <= 7; x++) if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) P(x + 1, y + 1, 1, 1, '#17181b');
+  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (on(x, y)) P(x + 1, y + 1, 1, 1, fill); P(4, 2, 1, 1, lit); P(3, 4, 1, 1, lit); });
+export const pxStars = (n, of = 3) => `<span class="pxs">${Array.from({ length: of }, (_, k) => `<i class="${k < n ? 'on' : ''}"></i>`).join('')}</span>`;
+export const pxStar = (on = true) => `<span class="pxs"><i class="${on ? 'on' : ''}"></i></span>`;
 export function pixUI() { if (done) return; done = true; const r = document.documentElement.style;
+  r.setProperty('--px-star-on', star('#efc970', '#fbe9b4')); r.setProperty('--px-star-off', star('#4a4e55', '#5a5f66'));
+  { const st = document.createElement('style'); st.textContent = '.pxs{display:inline-flex;gap:1px;vertical-align:-.12em}.pxs i{display:inline-block;width:.9em;height:.9em;background:var(--px-star-off) center/100% 100% no-repeat;image-rendering:pixelated;font-style:normal}.pxs i.on{background-image:var(--px-star-on)}'; document.head.appendChild(st); }
   r.setProperty('--px-btn', btn('#33363a', '#4c5055', '#232528'));
   r.setProperty('--px-btn-hi', btn('#40444a', '#5c6067', '#2a2c30'));
   r.setProperty('--px-btn-dn', btn('#2a2c30', '#1d1e21', '#3a3d42'));

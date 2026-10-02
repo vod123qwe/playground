@@ -168,7 +168,7 @@ const ADS = [
   { t: 'DAM PRACĘ', d: 'Roznoszenie ulotek. Wymagany własny rower i cierpliwość do psów.' },
   { t: 'ZNALEZIONO', d: 'Dzwonek rowerowy, dzwoni. Do odebrania na posterunku.' }];
 
-import { pxKey } from './pixui.js';
+import { pxKey, pxStars, pxStar } from './pixui.js';
 
 export function createPaper({ game }) {
   const css = document.createElement('style'); css.textContent = `
@@ -282,7 +282,7 @@ export function createPaper({ game }) {
     else if (kind === 'paper') { P(g, 1, 2, 8, 7, K); P(g, 2, 3, 6, 5, '#f2ece0'); P(g, 3, 4, 4, 1, '#b8483a'); P(g, 3, 6, 4, 1, K); }
     else if (kind === 'fall') { P(g, 4, 1, 2, 8, '#b8483a'); P(g, 1, 4, 8, 2, '#b8483a'); }
     else if (kind === 'aim') { P(g, 1, 1, 8, 8, K); P(g, 2, 2, 6, 6, '#e9d9a8'); P(g, 3, 3, 4, 4, '#b8483a'); P(g, 4, 4, 2, 2, '#e9d9a8'); } });
-  const starsH = (n, of = 3) => `<span class="stars">${Array.from({ length: of }, (_, k) => `<i class="${k < n ? 'on' : ''}"></i>`).join('')}</span>`;
+  const starsH = (n, of = 3) => pxStars(n, of);
   const bars = n => `<div class="bars">${Array.from({ length: n }, () => '<i></i>').join('')}</div>`;
   const img = (c, cls = 'ph') => c ? `<img class="${cls}" src="${c.toDataURL ? c.toDataURL() : c}" alt="">` : `<div class="${cls}"></div>`;
 
@@ -354,7 +354,7 @@ export function createPaper({ game }) {
       B(`<canvas class="big" data-map="big"></canvas><div class="legend"><span style="--c:#4f9a3e">DORĘCZONE</span><span style="--c:#cf5a3e">BEZ GAZETY</span><span style="--c:#e8e2d2">BEZ PRENUMERATY</span><span style="--c:#b8483a">TRASA</span><span style="--c:#8e2e25">WYWROTKA</span><span style="--c:#2b2723">SZYBA</span></div>`);
       B(`<h3>Gwiazdki ${starsH(rec.g.n)}</h3><div class="goal">${starsH(st[0] ? 1 : 0, 1)}<span>CZAS DO ${mmss(gl.time)}</span><span>${mmss(r.time)}</span></div>
         <div class="goal">${starsH(st[1] ? 1 : 0, 1)}<span>${gl.papers} GAZET, ${Math.round(gl.acc * 100)}% CELNIE</span><span>${r.delivered}, ${Math.round(r.acc * 100)}%</span></div><div class="goal">${starsH(st[2] ? 1 : 0, 1)}<span>BEZ WYWROTKI</span><span>${r.falls}</span></div>`);
-      { const P = D.pay; if (P) B(`<h3>Wypłata</h3><table><tr><td>ZAROBEK NA TRASIE</td><td>${P.earned} ZŁ</td></tr>${P.bonus ? `<tr><td>PREMIA ZA UMOWĘ</td><td>+${P.bonus} ZŁ</td></tr>` : ''}${P.finale?.of ? `<tr><td>FINAŁ: TARCZE ${P.finale.targets}/${P.finale.of}, OBRĘCZE ${P.finale.rings || 0}, PRZESKOKI ${P.finale.trenches || 0}${P.finale.combo > 1 ? ', KOMBO x' + P.finale.combo : ''}${P.finale.cones ? '' : ', CZYSTY SLALOM'}</td><td>+${P.finale.bonus} ZŁ</td></tr>` : ''}<tr><td>ABONAMENT (${P.regulars} STAŁYCH)</td><td>+${P.income} ZŁ</td></tr>${P.got.map(g => `<tr class="rec"><td>NAGRODA ZA ${'★'.repeat(g.stars)}</td><td>${g.name}</td></tr>`).join('')}</table>${P.mods.length ? `<p class="cap">Umowa: ${P.mods.join(', ').toLowerCase()}.</p>` : ''}`); }
+      { const P = D.pay; if (P) B(`<h3>Wypłata</h3><table><tr><td>ZAROBEK NA TRASIE</td><td>${P.earned} ZŁ</td></tr>${P.bonus ? `<tr><td>PREMIA ZA UMOWĘ</td><td>+${P.bonus} ZŁ</td></tr>` : ''}${P.finale?.of ? `<tr><td>FINAŁ: TARCZE ${P.finale.targets}/${P.finale.of}, OBRĘCZE ${P.finale.rings || 0}, PRZESKOKI ${P.finale.trenches || 0}${P.finale.combo > 1 ? ', KOMBO x' + P.finale.combo : ''}${P.finale.cones ? '' : ', CZYSTY SLALOM'}</td><td>+${P.finale.bonus} ZŁ</td></tr>` : ''}<tr><td>ABONAMENT (${P.regulars} STAŁYCH)</td><td>+${P.income} ZŁ</td></tr>${P.got.map(g => `<tr class="rec"><td>NAGRODA ZA ${pxStars(g.stars, g.stars)}</td><td>${g.name}</td></tr>`).join('')}</table>${P.mods.length ? `<p class="cap">Umowa: ${P.mods.join(', ').toLowerCase()}.</p>` : ''}`); }
       if (bd.length) B(`<h3>Odznaki poranka</h3><div class="stamps">${bd.map((x, k) => `<div class="stamp" style="--r:${(k % 2 ? 3 : -4)}deg"><b>${x.t}</b><span>${x.d}</span></div>`).join('')}</div>`);
       B(`<h3>Dziś i najlepiej</h3><table><tr><th></th><th>DZIŚ</th><th>NAJLEPIEJ</th></tr>${row('CZAS', mmss(r.time), mmss(b.time), 'time')}${row('GAZETY', r.delivered, b.delivered, 'delivered')}${row('CELNOŚĆ', Math.round(r.acc * 100) + '%', Math.round((b.acc || 0) * 100) + '%', 'acc')}
         ${row('RZUTY', r.thrown, '-')}${row('WYWROTKI', r.falls, b.falls)}${row('SZYBY', r.windows, '-')}${row('ZAROBEK', r.earned + ' ZŁ', b.earned + ' ZŁ', 'earned')}${row('PRZEJAZDY', b.runs, '')}</table>`);
@@ -369,8 +369,8 @@ export function createPaper({ game }) {
       for (const c of corners(D)) B(`<p class="kick">${c.k}</p>${c.h}`, 'corner');
       if (C) B(`<p class="kick">ANEGDOTA</p><h3>${N.head}</h3>${portrait(N.img)}<p>${N.text}</p><p class="sig">${C.who}, ${C.role}</p>`, 'iv'); }
     if (sec === 3) { const nexts = D.next.filter(x => x.id), sel = D.pick && nexts.some(x => x.id === D.pick) ? D.pick : nexts[0]?.id, ms = game.mods?.() || [], MODS = game.MODS || [], bon = game.modBonus?.(ms) || 0;
-      const rw = id => { const { R, got } = game.rewards?.(id) || { R: {} }; return [1, 3].filter(k => R[k]).map(k => `<span class="rw ${got?.[id + ':' + k] ? 'had' : ''}">${'★'.repeat(k)} ${R[k].cash ? R[k].cash + ' ZŁ' : game.partName(...R[k].part)}</span>`).join(''); };
-      const tab = `<div class="jt-tab"><p class="kick">TABELA WYNIKÓW</p><table><tr><th>ODCINEK</th><th>★</th><th>CZAS</th></tr>${(D.table || []).map(t => `<tr${t.on ? ' class="rec"' : ''}><td>${t.open ? t.name : '???'}</td><td>${starsH(t.stars)}</td><td>${t.best ? mmss(t.best.time) : '-'}</td></tr>`).join('')}</table>
+      const rw = id => { const { R, got } = game.rewards?.(id) || { R: {} }; return [1, 3].filter(k => R[k]).map(k => `<span class="rw ${got?.[id + ':' + k] ? 'had' : ''}">${pxStars(k, k)} ${R[k].cash ? R[k].cash + ' ZŁ' : game.partName(...R[k].part)}</span>`).join(''); };
+      const tab = `<div class="jt-tab"><p class="kick">TABELA WYNIKÓW</p><table><tr><th>ODCINEK</th><th>${pxStar()}</th><th>CZAS</th></tr>${(D.table || []).map(t => `<tr${t.on ? ' class="rec"' : ''}><td>${t.open ? t.name : '???'}</td><td>${starsH(t.stars)}</td><td>${t.best ? mmss(t.best.time) : '-'}</td></tr>`).join('')}</table>
         <p class="kick" style="margin-top:12px">STALI PRENUMERATORZY</p><p><b class="big">${D.pay?.regulars ?? 0}</b> stałych klientów płaci <b>${D.pay?.income ?? 0} zł</b> abonamentu za każdą metę. Więcej gwiazdek na odcinkach, więcej stałych klientów.</p></div>`;
       const deal = `<div class="jt-deal"><p class="kick">UMOWA NA JUTRO</p><h3>Utrudnienia za premię</h3><p class="cap">Redaktor dopłaci, jeśli weźmiesz trudniejszy poranek.</p>
         ${MODS.map(m => `<button class="mod ${ms.includes(m.id) ? 'on' : ''}" data-mod="${m.id}"><i></i><b>${m.t}</b><em>+${Math.round(m.bonus * 100)}%</em><span>${m.d}</span></button>`).join('')}<p class="sum">PREMIA: <b>+${Math.round(bon * 100)}%</b> ZAROBKU</p></div>`;
