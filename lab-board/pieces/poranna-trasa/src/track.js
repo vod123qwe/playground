@@ -28,11 +28,11 @@ import { createCityNet } from './citynet.js';
 export const REGION_T = {
   peryferia: { id: 'peryferia', home: true, ctrl: [[0, 0, 0], [0, 1, 60], [18, 3, 120], [60, 5, 160], [115, 4, 170], [160, 2, 150], [185, 0, 105], [180, -1, 50], [150, -2, 5], [150, -1, -45], [175, 1, -90], [160, 3, -140], [110, 4, -165], [55, 2, -150], [15, 0, -110], [-5, -1, -55]],
     roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false,
-    // (the Classic's street (docs/klasyk.md): a long loop of gentle bends, the houses only on his left as he rides it, his home among them
-    // at its own little street; on the right the pavement,
+    // (the Classic's street (docs/klasyk.md): a long loop of gentle bends, the houses only on his left as he rides it, his home one of them
+    // (a board says so), the start on the street itself under a START banner, as on the old machines; on the right the pavement,
     // a strip of lawn with benches and the paper bundles; the street trees on the houses' side)
     maps: {
-      klasyk: { classic: true, oneSide: -1, homeSide: -1, ctrl: [[0, 0, 0], [6, 1, 80], [30, 2, 160], [85, 3, 225], [165, 3, 250], [240, 2, 225], [285, 1, 160], [295, 0, 80], [275, -1, 0], [225, 0, -60], [150, 1, -90], [75, 0, -85], [20, 0, -50]],
+      klasyk: { classic: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [6, 1, 80], [30, 2, 160], [85, 3, 225], [165, 3, 250], [240, 2, 225], [285, 1, 160], [295, 0, 80], [275, -1, 0], [225, 0, -60], [150, 1, -90], [75, 0, -85], [20, 0, -50]],
         gap: [11, 5], stops: [.86], posts: [], shops: [], trees: 0, roll: .12 } } },   // (flat ground round it: the camera hangs over the right side)
   wies: { id: 'wies', home: false, ctrl: [[0, 0, 0], [10, 2, 70], [-10, 5, 140], [30, 8, 200], [100, 9, 235], [175, 6, 220], [225, 3, 165], [235, 0, 95], [270, 2, 30], [255, 5, -45], [195, 7, -95], [125, 4, -110], [70, 1, -85], [25, -1, -45]],
     roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [24, 18], houseP: .56, farms: true,
@@ -123,7 +123,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   }
   const INNER = Math.sign((90 - S[0].p.x) * S[0].r.x + (0 - S[0].p.z) * S[0].r.z) || 1;   // (which side the loop's inside is on)
   // where the home's street leaves the loop (see homeStreet): no tufts, leaves or flowers across it, the edge line broken there
-  const MOUTH = { i: 14, sd: RG.homeSide || -INNER, half: RG.home ? 8.5 : -1 }, inMouth = (i, d, far = 13) => Math.sign(d) === MOUTH.sd && Math.abs(d) > ROAD - .5 && Math.abs(d) < far && Math.abs((((i - MOUTH.i) % N) + N + N / 2) % N - N / 2) * ds < MOUTH.half;
+  const MOUTH = { i: 14, sd: -INNER, half: RG.home ? 8.5 : -1 }, inMouth = (i, d, far = 13) => Math.sign(d) === MOUTH.sd && Math.abs(d) > ROAD - .5 && Math.abs(d) < far && Math.abs((((i - MOUTH.i) % N) + N + N / 2) % N - N / 2) * ds < MOUTH.half;
   const EDGE_OUT = [0, ROAD - .32, ROAD, KERB, KERB + .18, VERGE, PAVE, 14, 20, 28, 38, 52, 72, 84, 88, 100, 135, 170, 200], EDGE_IN = [0, ROAD - .32, ROAD, KERB, KERB + .18, VERGE, PAVE, 14, 20, 28, 40];
   strip(-ROAD + .32, ROAD - .32, '#3f4246', .1, .25, tex.asphalt(), 2.4);   // the asphalt: patchy, grainy
   for (const s of [-1, 1]) {
@@ -1049,6 +1049,13 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         const body = new THREE.Mesh(new THREE.ConeGeometry(.15, .32, 8), gCoat); body.position.y = .16; const face = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), gFace); face.position.y = .36; const beard = new THREE.Mesh(new THREE.ConeGeometry(.07, .14, 6), gBeard); beard.rotation.x = Math.PI; beard.position.set(0, .3, .05); const hat = new THREE.Mesh(new THREE.ConeGeometry(.08, .2, 8), gHat); hat.position.y = .5; g.add(body, face, beard, hat);
         g.position.set(p.x, groundAt(p.x, p.z, d.i), p.z); g.rotation.y = Math.atan2(d.n.x, d.n.z); g.userData.keep = true; G.add(g); g.updateMatrixWorld(true); const C = hit(g, { hx: .15, hz: .15, h: .55, kind: 'hard' }, d.i);
         const T0 = { kind: 'cone', o: g, C, r: .15, gnome: true, door: doors.indexOf(d) }; C.thing = T0; things.push(T0); gnomes.push(T0); });
+      // (the start: a banner across the street just ahead of him; his own house, the first by it, a board on the lawn: DOM)
+      { const i = 6 + Math.round(4 / ds), W = ROAD + 2.7, g = new THREE.Group(), red = toon('#cf3a2c'); for (const x of [-W, W]) g.add(box(.14, 4.6, .14, toon('#f6f3ea'), x, 2.3, 0));
+        const ban = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, .9), new THREE.MeshBasicMaterial({ map: pixSign(THREE, 'START', '#cf3a2c', '#f6f3ea'), side: THREE.DoubleSide })); ban.position.y = 4.1; ban.rotation.y = Math.PI; g.add(ban); g.add(box(W * 2, .08, .08, red, 0, 4.6, 0));
+        put(g, i, 0, 0, 0); for (const x of [-W, W]) hit(g, { hx: .08, hz: .08, h: 4.6, kind: 'hard' }, i, x, 0);
+        const mine = ds0.find(d => d.i >= 4) || ds0[0]; if (mine) { mine.mine = true; const sd = new THREE.Vector3(-mine.n.z, 0, mine.n.x), p = mine.p.clone().addScaledVector(mine.n, -1.2).addScaledVector(sd, -1.8), b = new THREE.Group();
+          b.add(box(.08, 1.2, .08, toon('#8a6a44'), 0, .6, 0)); const t = new THREE.Mesh(new THREE.PlaneGeometry(.9, .4), new THREE.MeshBasicMaterial({ map: pixSign(THREE, 'DOM', '#f6f3ea', '#cf3a2c'), side: THREE.DoubleSide })); t.position.y = 1.25; b.add(t);
+          b.position.set(p.x, groundAt(p.x, p.z, mine.i), p.z); b.rotation.y = Math.atan2(mine.n.x, mine.n.z); G.add(b); } }
       // (bin day: wheelie bins out at the kerb before most houses; ridden into, over they go and roll)
       const binM = [toon('#3f7a4a'), toon('#3b5670'), toon('#5a5f66')], lidM = toon('#2a2c30');
       ds0.forEach(d => { if (fr() > .6) return; const i = d.i + Math.round((fr() < .5 ? 3 : -3) / ds), dd = RG.oneSide * (KERB + .55); if (!free(i, dd, .9)) return; const g = new THREE.Group(), m = binM[fr() * 3 | 0];
