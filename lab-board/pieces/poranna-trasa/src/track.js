@@ -26,7 +26,12 @@ import { createCityNet } from './citynet.js';
 // fewer houses in plaster, farms and fields right by the road, one bus stop)
 export const REGION_T = {
   peryferia: { id: 'peryferia', home: true, ctrl: [[0, 0, 0], [0, 1, 60], [18, 3, 120], [60, 5, 160], [115, 4, 170], [160, 2, 150], [185, 0, 105], [180, -1, 50], [150, -2, 5], [150, -1, -45], [175, 1, -90], [160, 3, -140], [110, 4, -165], [55, 2, -150], [15, 0, -110], [-5, -1, -55]],
-    roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false },
+    roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false,
+    // (the Classic's street (docs/klasyk.md): a long loop of gentle bends, the houses only on his left as he rides it, on the right the pavement,
+    // a strip of lawn with benches and the paper bundles; the street trees on the houses' side)
+    maps: {
+      klasyk: { classic: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [6, 1, 80], [30, 2, 160], [85, 3, 225], [165, 3, 250], [240, 2, 225], [285, 1, 160], [295, 0, 80], [275, -1, 0], [225, 0, -60], [150, 1, -90], [75, 0, -85], [20, 0, -50]],
+        gap: [15, 6], stops: [.86], posts: [], shops: [], trees: .5, roll: .12 } } },   // (flat ground round it: the camera hangs over the right side)
   wies: { id: 'wies', home: false, ctrl: [[0, 0, 0], [10, 2, 70], [-10, 5, 140], [30, 8, 200], [100, 9, 235], [175, 6, 220], [225, 3, 165], [235, 0, 95], [270, 2, 30], [255, 5, -45], [195, 7, -95], [125, 4, -110], [70, 1, -85], [25, -1, -45]],
     roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [24, 18], houseP: .56, farms: true,
     walls: ['#e8e4dc', '#d9d4c8', '#c9c2b0', '#e6dcc4', '#bfb8a8', '#d8cfb8'], roofs: ['#5a5f66', '#6d4a3a', '#7a7f86', '#4a4038'],
@@ -763,14 +768,14 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked, townBox: s => CITY.townBox(s), scaffoldsOf: () => CITY.scaffolds, probe, stops, night: !!RG.night, tourist: !!RG.tourist, cen: { x: CEN.x, z: CEN.z, r: REACH } }) : null;   // (the town's other streets: shortcuts, side streets)
   const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G , night: !!RG.night , tourist: !!RG.tourist , walls: RG.tourist ? RG.walls : null , P }) : null, cityLast = {};
   const inFair = i => RG.fair && i >= N * RG.fair[0] - 6 / ds && i <= N * RG.fair[1] + 6 / ds;
-  const lot = (i, s) => { if (inFair(i) || home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
+  const lot = (i, s) => { if (inFair(i) || (RG.oneSide && s !== RG.oneSide) || home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
     if (NET?.blocked(i, s)) return null;
     if (CITY) { const f = i / N, gapM = (i - (cityLast[s] ?? -1e9)) * ds; if (RG.market.some(([a, b]) => f >= a && f <= b)) { if (s < 0 || gapM < 11) return null; cityLast[s] = i; return CITY.stalls(i, s); }
       if (RG.garages?.some(([a, b]) => f >= a && f <= b)) { if (gapM < 21) return null; cityLast[s] = i; return CITY.garages(i, s); }
       if (RG.blocks.some(([a, b]) => f >= a && f <= b)) { if (gapM < 38) return null; cityLast[s] = i; return CITY.block(i, s); } if (gapM < 12.2) return null; cityLast[s] = i; return CITY.tenement(i, s); }
     if (EST) { const f = i / N; if (RG.wh.some(([a, b]) => f >= a && f <= b)) { if ((i - (whLast[s] ?? -1e9)) * ds < 17.5) return null; whLast[s] = i; return EST.warehouse(i, s); } if (rnd() < RG.site) return EST.site(i, s); } if (RG.farms) { const k = rnd(); if (k > RG.houseP + .28) { fieldLots.push({ i, s }); return null; } if (k > RG.houseP) { farmLots.push({ i, s }); return null; } }
-    return rnd() < .07 ? shacks(i, s) : pr() < (RG.farms ? .12 : .2) ? plots.build(plotOrder[plotK++ % plotOrder.length], i, s) : house(i, s); };
-  for (let i = 30; i < N - 40; i += Math.round((RG.gap[0] + rnd() * RG.gap[1]) / ds)) { lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }
+    return rnd() < (RG.classic ? 0 : .07) ? shacks(i, s) : pr() < (RG.farms ? .12 : RG.classic ? .04 : .2) ? plots.build(plotOrder[plotK++ % plotOrder.length], i, s) : house(i, s); };
+  for (let i = 30; i < N - 40; i += Math.round((RG.gap[0] + rnd() * RG.gap[1]) / ds)) { if (RG.oneSide) { lot(i, RG.oneSide); continue; } lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }   // (the Classic: a house at every step, on its one side)
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1; tree(i, side * (PAVE + 1.6 + rnd() * 3)); if (rnd() < .25) tree(i + 7, (rnd() < .5 ? -1 : 1) * (VERGE - .6)); }
   const poles = []; if (!RG.city) for (let i = 10; i < N; i += Math.round(38 / ds)) poles.push(pole(i));   // (the town: no wooden poles and wires)
   for (const p of poles) p.updateMatrixWorld(true);                   // (the wires hang from where the poles are)
@@ -803,7 +808,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i); things.push({ kind: 'tree', o: t, H, autumn, crown: 1.8 + H * .2, reach: side }); show.tree.push({ o: t, label: 'drzewo nad jezdnią', note: H.toFixed(1) + ' m' });   // (turned with the road: its +x is the road's left, -x its right)
     dapple(i + Math.round((rnd() - .5) * 4 / ds), side * (VERGE - 3.2));
   }
-  for (let i = 60; i < N - 20; i += Math.round((10 + rnd() * 7) / ds)) { if (inFair(i)) continue; if (rnd() < (RG.trees ?? .82)) streetTree(i, rnd() < .5 ? 1 : -1); }   // (thick along the road: the crowns close over it here and there)
+  for (let i = 60; i < N - 20; i += Math.round((10 + rnd() * 7) / ds)) { if (inFair(i)) continue; if (rnd() < (RG.trees ?? .82)) { const sd = rnd() < .5 ? 1 : -1; streetTree(i, RG.oneSide || sd); } }   // (the Classic: on the houses' side only)   // (thick along the road: the crowns close over it here and there)
   // the village's poplars: rows along stretches of the road, tall and slim, at the dirt path's far edge
   if (RG.farms) { const popM = toon('#4f7a3a', { map: rep(tex.leaves(), 1, 3) }), pr2 = mulberry(77); let i = Math.round(pr2() * 60 / ds);
     while (i < N - 30) { const run = Math.round((50 + pr2() * 80) / ds), sd = pr2() < .5 ? -1 : 1;
@@ -1026,6 +1031,10 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         const dH = F.s * (PAVE + 42); if (free(i, dH, 6)) farmhouse(i, dH); }
       if (RG.harvest) { const hayM = toon('#e2c25e'), hayE = toon('#c49a3e'); for (const F of fieldLots) for (let k = 0; k < 3 + (fr() * 4 | 0); k++) { const i = F.i + Math.round((fr() * 22 - 6) / ds), d = F.s * (PAVE + 8 + fr() * 24);
         const b = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, 1.2, 14).rotateZ(Math.PI / 2), [hayM, hayE, hayE]); b.position.y = .75; const g = new THREE.Group(); g.add(b); put(g, i, d, 0, fr() * 6); } } }
+    // (the Classic: on the side away from the houses, the bundles of papers by the kerb (the only papers there are), benches on the lawn)
+    if (RG.oneSide) { const os = -RG.oneSide, benchM = toon('#8a6a44'), legM = toon('#3a3d42');
+      for (let i = Math.round(60 / ds); i < N - Math.round(30 / ds); i += Math.round(110 / ds)) { const o = P.bundle(), d = os * (VERGE + .6); if (!free(i, d, 1.5)) continue; o.group.userData.keep = true; put(o.group, i, d, 0, 0); bundles.push(hit(o.group, o.hit, i)); }
+      for (let i = Math.round(40 / ds); i < N - Math.round(20 / ds); i += Math.round((34 + fr() * 20) / ds)) { const d = os * (PAVE + 2.2); if (!free(i, d, 2)) continue; const g = new THREE.Group(); g.add(box(.5, .08, 1.8, benchM, 0, .48, 0), box(.08, .5, 1.8, benchM, os * .24, .78, 0)); for (const z of [-.75, .75]) g.add(box(.45, .45, .08, legM, 0, .22, z)); put(g, i, d, 0, 0); hit(g, { hx: .3, hz: .95, h: 1, kind: 'hard' }, i); } }
     if (RG.fair) FAIR = createFair({ THREE, toon, put, box, hit, at, S, N, ds, doors, rnd: fr, ROAD, PAVE, i0: Math.round(N * RG.fair[0]), i1: Math.round(N * RG.fair[1]), side: RG.fairSide || 1 });   // (the church fair: its square, its stalls)
     if (CITY) { CITY.skyline(CEN.x, CEN.z, REACH); CITY.rails(); NET.build(); }   // (the town: a skyline round it, not fields; the tram's rails in the road)
     for (const sd of CITY ? [] : [-INNER]) {                                        // (the outside of the loop only)
@@ -1087,10 +1096,10 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       train.update(0); train.rail = { pts, len: RL, d: dR }; }
     // hills round it all, and mountains behind them, bluer the farther (low enough not to hide the lake and the town beyond)
     { const hillM = ['#467537', '#5b8a3c', '#5f6a35', '#355f31'].map(c => toon(c, { map: rep(tex.grass(1), 8, 8) })), mtM = ['#5e7c86', '#6f8e97', '#4f6b75'].map(c => toon(c)), snowM = toon('#e9e3d1');
-      const cx = 90, cz = 0;
-      for (let k = 0; k < 34; k++) { const a = k / 34 * 6.283 + fr() * .12, R = 285 + fr() * 50, h = 16 + fr() * 22, w = 40 + fr() * 40;
+      const cx = RG.classic ? CEN.x : 90, cz = RG.classic ? CEN.z : 0, R0 = RG.classic ? REACH + 140 : 285, R1 = RG.classic ? REACH + 230 : 380;   // (the Classic's street is wider: the ring round its own middle)
+      for (let k = 0; k < 34; k++) { const a = k / 34 * 6.283 + fr() * .12, R = R0 + fr() * 50, h = 16 + fr() * 22, w = 40 + fr() * 40;
         const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), hillM[fr() * 4 | 0]); m.scale.set(w, h, w * (.7 + fr() * .5)); m.position.set(cx + Math.cos(a) * R, -h * .35, cz + Math.sin(a) * R); m.rotation.y = fr() * 6; G.add(m); }
-      for (let k = 0; k < 14; k++) { const a = k / 14 * 6.283 + fr() * .25, R = 380 + fr() * 35, h = 30 + fr() * 34, w = 55 + fr() * 45, i = fr() * 3 | 0;   // (inside the painted panorama, low: its lake and town still show)
+      for (let k = 0; k < 14; k++) { const a = k / 14 * 6.283 + fr() * .25, R = R1 + fr() * 35, h = 30 + fr() * 34, w = 55 + fr() * 45, i = fr() * 3 | 0;   // (inside the painted panorama, low: its lake and town still show)
         const m = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 6 + (fr() * 3 | 0)), mtM[i]); m.scale.set(w, h, w); m.position.set(cx + Math.cos(a) * R, h * .5 - 12, cz + Math.sin(a) * R); m.rotation.y = fr() * 6; G.add(m);
         if (h > 56) { const c = new THREE.Mesh(new THREE.ConeGeometry(1, 1, m.geometry.parameters.radialSegments), snowM); c.scale.set(w * .28, h * .28, w * .28); c.position.set(m.position.x, m.position.y + h * .36, m.position.z); c.rotation.y = m.rotation.y; G.add(c); } }
     } }
@@ -1153,6 +1162,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { harvest: !!RG.harvest, fair: FAIR, gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
+  return { classic: !!RG.classic, oneSide: RG.oneSide || 0, harvest: !!RG.harvest, fair: FAIR, gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

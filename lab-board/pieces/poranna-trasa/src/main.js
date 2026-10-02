@@ -83,6 +83,7 @@ const hud = createHud();
 // toon: three tones, as the rider has
 const ramp = (() => { const t = new THREE.DataTexture(new Uint8Array([80, 165, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 // a glint of light on the edges that face the sun: a hard, warm band where a thing turns away from the eye (its strength in the look's settings)
+// (the radius: wide enough to see him behind a crown or a car, wider from the high skewed cameras)
 // what stands between the camera and him (a tree's crown, a roof's edge) thins away round the line to him, in a dither: FADE the
 // camera's place, his (his chest), the radius (0: off, as through his eyes)
 const FADE = { cam: { value: new THREE.Vector3() }, tgt: { value: new THREE.Vector3() }, r: { value: 0 } };
@@ -475,6 +476,8 @@ function stepAim() {                                                    // (whil
     const ar = aim.ring.children[1]; ar.position.y = 1.1 + Math.sin(performance.now() / 160) * .15; ar.rotation.y += .05; } else aim.ring.visible = false; }
 function throwing(dt, inp) {
   if (B.crash) { B.charge = null; return; }
+  // (the Classic: any throw, towards the houses: his left or his right, as the houses are for him now)
+  if (track.classic) { const A = track.S[B.hint] || track.S[0], hl = (A.r.x * track.oneSide) * Math.cos(B.yaw) - (A.r.z * track.oneSide) * Math.sin(B.yaw) > 0, any = inp.holdL || inp.holdR; inp = { ...inp, holdL: hl && any, holdR: !hl && any }; }
   const held = inp.holdL ? 1 : inp.holdR ? -1 : 0;
   if (!B.charge && held && B.papers > 0 && !rider.throwing) B.charge = { side: held, p: 0, t: 0 };
   if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge; c.t += dt;
@@ -578,7 +581,7 @@ const shards = [];
 const cracks = [];
 function breakWindow(w, remote) {
   if (!remote) net.send({ k: 'win', i: track.windows.indexOf(w) });
-  w.broken = true; aud('glass', w.p); if (!remote) { B.windows = (B.windows || 0) + 1; logEv('window', w.p.x, w.p.z); } { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
+  w.broken = true; aud('glass', w.p); if (!remote) { B.windows = (B.windows || 0) + 1; logEv('window', w.p.x, w.p.z); if (track.classic && !track.doors[w.house]?.sub) score(2, w.p.clone().add(new THREE.Vector3(0, .8, 0)), 'SZYBA! +2', '#efc970'); } { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
   for (let k = 0; k < 12; k++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.07, .06), shardM); s.position.copy(w.p).add(new THREE.Vector3((Math.random() - .5) * .8, (Math.random() - .5) * .6, (Math.random() - .5) * .8)); scene.add(s);
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
@@ -753,6 +756,7 @@ function ride(dt, inp) {
   B.flatT = Math.max(0, (B.flatT || 0) - dt);   // (a tyre cut on glass: it drags a while)
   let a = -(B.flatT > 0 ? .55 * B.v : 0) + push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * Math.max(.2, 1 + MOD.grass) * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 * (slope > 0 ? 1 - MOD.hill : 1) - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
   if (inp.pedal < .05 && !B.air && Math.abs(B.v) < 1.3) a -= Math.sign(B.v) * (1.2 - Math.abs(B.v) * .7);   // (coasting slowly: the tyres drag him to a stop)
+  if (track.classic && !B.air && !back && inp.brake < .1 && B.v > -.2) a = ((inp.pedal > .05 ? 8.2 * (inp.sprint ? 1.2 : 1) : 5) - B.v) * (inp.pedal > .05 ? .9 : .7) - g * Math.sin(Math.atan(slope)) * .4;   // (the Classic: rolling on at 5 m/s by himself, up to 8 with the pedal)
   if (back) a = -1.6 * inp.brake - .6 * B.v;
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
   const v0 = B.v; B.v = Math.max(-1.4, B.v + a * dt); if (!back && inp.pedal < .05 && !B.air && (Math.abs(B.v) < .1 || B.v < 0 || (v0 !== 0 && Math.sign(B.v) !== Math.sign(v0)))) B.v = 0;   // (crawling: he stops, a foot on the ground, on a hill too; back only if he walks it back)
@@ -1018,8 +1022,9 @@ const CAMS = [
   { name: 'z góry (jak GTA 2)', top: true, fov: 50 },
   { name: 'skośna, z drogą', oblique: 'road', fov: 46 },
   { name: 'skośna, stała', oblique: 'fixed', fov: 46 },
+  { name: 'klasyk', oblique: 'road', classic: true, fov: 46 },
 ];
-let camI = 3; const CP = { ...CAMS[3] };
+let camI = track.classic ? CAMS.findIndex(c => c.classic) : 3; const CP = { ...CAMS[camI] };   // (the Classic: its own camera)
 function setCam(i) { camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
 // (the opening shot from in front of him: only leaving home, in the suburb, till the first stretch is done; anywhere else from behind)
 const openShot = () => track.region === 'peryferia' && !(LVM.load().done || {}).p1 ? Math.PI : 0;
@@ -1062,8 +1067,9 @@ function follow(dt) {
   //   one angle for the whole run (the road's at the start)
   if (T.oblique) { const sg = Math.sign(Math.sin(B.yaw) * gq.f.x + Math.cos(B.yaw) * gq.f.z) || 1, Y0 = Math.atan2(gq.f.x * sg, gq.f.z * sg);
     if (T.oblique === 'fixed') { if (C.fixY == null || !C.init) C.fixY = Y0; C.oy = C.fixY; } else { if (C.oy == null || !C.init) C.oy = Y0; C.oy += Math.atan2(Math.sin(Y0 - C.oy), Math.cos(Y0 - C.oy)) * Math.min(1, dt * 1.6); }
-    const Y = C.oy + camUser.yaw, fx = Math.sin(Y), fz = Math.cos(Y), rx = -fz, rz = fx, k = camUser.dist * (1 + Math.max(0, B.v) * .025 + tw * .15), h = 9 * k, bk = 5.5 * k, sd = 8.5 * k;
-    const want = new THREE.Vector3(B.x - fx * bk - rx * sd, C.gy + h, B.z - fz * bk - rz * sd), look = new THREE.Vector3(B.x + fx * 6.5 + rx * 1.2, C.gy + .4, B.z + fz * 6.5 + rz * 1.2);
+    const Y = C.oy + camUser.yaw, fx = Math.sin(Y), fz = Math.cos(Y), A0 = track.S[gq.i], hs = T.classic && track.oneSide ? Math.sign(-(A0.r.x * track.oneSide) * fz + (A0.r.z * track.oneSide) * fx) || 1 : 1, rx = -fz * hs, rz = fx * hs, k = camUser.dist * (1 + Math.max(0, B.v) * .025 + tw * .15), h = (T.classic ? 7.2 : 9) * k, bk = (T.classic ? 4.2 : 5.5) * k, sd = (T.classic ? 6.8 : 8.5) * k, lk = T.classic ? 3.2 : 1.2;   // (the Classic: lower, nearer, turned more to the houses)
+    const want = new THREE.Vector3(B.x - fx * bk - rx * sd, C.gy + h, B.z - fz * bk - rz * sd), look = new THREE.Vector3(B.x + fx * 6.5 + rx * lk, C.gy + .4, B.z + fz * 6.5 + rz * lk);
+    { const gw = track.probe(want.x, want.z, gq.i).y; if (want.y < gw + 3) want.y = gw + 3; }   // (never in a hill)
     if (!C.init) { C.gy = B.y; C.pos.copy(want); C.init = true; }
     C.pos.lerp(want, 1 - Math.exp(-dt * 5)); camera.position.copy(C.pos); camera.up.set(0, 1, 0); camera.lookAt(look);
     if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
@@ -1380,7 +1386,11 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
 const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
-const menu = createMenu({ assist: assistMenu, gore: goreMenu, radio: radioMenu, tests: () => testRows(), onMap: () => openMap(), onPlay: () => flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'), modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
+// (which game: Poranna Trasa, or the Classic (docs/klasyk.md): chosen on the title screen, kept in this browser)
+const EDITIONS = { trasa: 'PORANNA TRASA', klasyk: 'KLASYK' };
+let editionK = (() => { try { return EDITIONS[localStorage.getItem('pt.edition')] ? localStorage.getItem('pt.edition') : 'trasa'; } catch { return 'trasa'; } })();
+const editionMenu = { name: () => EDITIONS[editionK], next: () => { editionK = editionK === 'trasa' ? 'klasyk' : 'trasa'; try { localStorage.setItem('pt.edition', editionK); } catch { } } };
+const menu = createMenu({ assist: assistMenu, gore: goreMenu, radio: radioMenu, edition: editionMenu, tests: () => testRows(), onMap: () => openMap(), onPlay: () => { if (editionK === 'klasyk') { if (LV?.id !== 'k1') startLevel('k1'); return; } if (track.classic) { goRegion('peryferia'); return; } flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'); }, modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (book.isOpen && book.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
@@ -1978,7 +1988,7 @@ function frame(now) {
   if (!asking && !menu.open && !map.isOpen && !fin.isOpen && !shop.isOpen && !garage.isOpen && !runUI.isOpen && !modes.isOpen && !mp.isOpen && !book.isOpen && !window.PT?.hold) { step(dt, talk.isOpen && !talk.isLight ? still(input()) : input()); stepArena(dt); const me = foot.active ? { x: foot.me.x, z: foot.me.z, v: Math.abs(foot.me.vf || 0), foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), foot: false }; stuff.update(dt, me); stepPuddles(me); } else { input(); if (menu.page === 'title') attract(dt); }   // (asked, or in the menu: the game waits; PT.hold: held from the console)
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
-  { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
+  { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : CAMS[camI].oblique ? 3.8 : 3; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
   drift(dt); stepNight(B.x, B.z); stepBlood(Math.min(dt, .05)); if (subGlows.length) stepGlows(performance.now() / 1000, Math.min(dt, .05));
   for (const e of director.update(Math.min(dt, .05), { x: B.x, z: B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint, busy: !!B.crash || !LV || (FIN.on && FIN.entered) || CROSS.some(X => Math.hypot(X.center.x - B.x, X.center.z - B.z) < 50) })) dirEvent(e); if (locals) for (const e of locals.update(Math.min(dt, .05), { x: foot.active ? foot.me?.x ?? B.x : B.x, z: foot.active ? foot.me?.z ?? B.z : B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, h: B.air ? B.y - track.probe(B.x, B.z, B.hint).y : 0, hint: B.hint })) localEvent(e);
   // (a combine at the level crossing: it waits while the barrier is down, as the cars do)
