@@ -1319,3 +1319,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - tłum na poboczach, który co chwilę przechodzi przez drogę (nie, gdy jedzie auto), orkiestra dęta maszeruje jezdnią tam i z powrotem (tuba, bęben, trąbki), kapelmistrz woła; wjedziesz w kogoś: zwalniasz i słyszysz, co o tym myśli
 - kramarze, proboszcz, chórzystka, babcie z różańcem i kapelmistrz: każdy mówi po swojemu; gazeta na tacę proboszcza: +3 i notka w gazecie
 - psy dobiegają szybciej (szybsze niż rower w normalnej jeździe, wolniejsze niż sprint), jest ich mniej (wieś 20 → 15% domów, osiedle 10 → 8%, miasto 4 → 3%), żaden nie mieszka na kramie
+
+## Wersja 155: kamera skośna, dachy aut, mniej wywrotek
+
+- dwie nowe kamery pod V (eksperyment z benchmarku, docs/benchmark-grywalnosc.md): SKOŚNA, Z DROGĄ (wysoko, z boku i z tyłu, droga po przekątnej ekranu, obraca się płynnie z drogą) i SKOŚNA, STAŁA (jeden kąt na cały przejazd); widać domy i skrzynki dwa, trzy domy naprzód po obu stronach
+- zderzenia na trzy sposoby: z ukosa odbija i obraca, średnio mocno to zachwianie (zwalniasz, „OJ!”, siedzisz dalej), upadek dopiero czołowo w coś twardego od ~8 m/s; bok skoczni i drobne zdarzenia (beczka, bela, wózek) przewracają tylko przy dużej prędkości
+- dachy aut do wskoczenia ze skoczni: zaparkowanych (+2) i jadących, także autobusu i przyczepy traktora (+4, kierowca ma coś do powiedzenia); na jadącym jedziesz razem z nim, zjeżdżasz z jego prędkością; auto nie hamuje przed tobą, kiedy jesteś na jego dachu albo lecisz nad nim
+- poprawka: po wjechaniu na stopień (dach) nie wystrzeliwało już w górę przy zjeździe
+- nowa notka w gazecie: rowerem po dachach

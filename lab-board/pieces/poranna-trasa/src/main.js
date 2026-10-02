@@ -767,10 +767,13 @@ function ride(dt, inp) {
     if (Math.abs(d) < .5 && k > 0) B.yaw += d * Math.min(1, dt * 1.7) * k * (1 - Math.abs(d) / .5 * .5); }
   const leanT = THREE.MathUtils.clamp(Math.atan(B.v * Math.abs(B.v) * Math.tan(B.steer) / (L * g)) * .78, -.44, .44);
   B.leanV += (42 * (leanT - B.lean) - 12 * B.leanV) * dt; B.lean += B.leanV * dt;
+  // (on a moving car's roof: he goes along with it)
+  if (B.onCar && !B.air) { const t = B.onCar, cv = t.stop > 0 ? 0 : t.v; B.x += Math.sin(t.yaw) * cv * dt; B.z += Math.cos(t.yaw) * cv * dt; }
   const nx = B.x + Math.sin(B.yaw) * B.v * dt, nz = B.z + Math.cos(B.yaw) * B.v * dt;
   // up and down: the ground (and a ramp on it); a hop; off a ramp's lip into the air; the landing
   const rp = rampAt(nx, nz), g0 = track.probe(nx, nz, B.hint).y + rp.h, roof = carRoofAt(nx, nz), ground = roof !== null && B.y >= roof - .35 ? Math.max(g0, roof) : g0;
-  if (rp.wall && B.v > 2 && !B.air) { B.x = nx; B.z = nz; crash(); return; }
+  if (rp.wall && B.v > 7 && !B.air) { B.x = nx; B.z = nz; crash(); return; } else if (rp.wall && B.v > 2 && !B.air && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .35; B.jolt = .22; }   // (into a ramp's side: a fall only at speed)
+  B.staggerT = (B.staggerT || 0) - dt;
   if (inp.hop && !B.air) { B.air = true; B.vy = 3.8 + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : null; }   // (hopped off a ramp: higher, and a trick allowed)
   if (B.air) { B.vy -= g * dt; B.y += B.vy * dt; if (B.y <= ground) { B.airRamp = null;
     if (B.trick) { const T = B.trick; B.trick = null;
@@ -778,10 +781,13 @@ function ride(dt, inp) {
       if (T.p < 1) T.pulled = true; const all = [...(B.done || []), T]; B.done = [];
       const clean = all.every(o => !o.pulled), n = all.reduce((a, o) => a + o.pts, 0) + (clean ? 1 : 0) + (all.length - 1) * 2;
       const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); logEv('trick', B.x, B.z, { name: lab, clean }); if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
-    if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; } }
+    if (roof !== null && ground === roof && !(B.roofT > 0)) { B.roofT = 4; const n = roofCar ? 4 : 2; logEv('roof', B.x, B.z); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), (roofCar ? 'NA DACH AUTA! +' : 'NA DACH! +') + n, '#efc970'); if (roofCar) { const cv = roofCar.stop > 0 ? 0 : roofCar.v; B.v = Math.max(0, B.v - cv * Math.cos(roofCar.yaw - B.yaw)); } if (roofCar) hud.rant(roofCar.car.group.position, pickOf(['ZŁAŹ Z DACHU!', 'TO NIE TAKSÓWKA!', 'LAKIER MI PORYSUJESZ!', 'CO TY ROBISZ?!']), true, 1.7); }   // (landed on a car's roof: a bonus; a moving one, more)
+    if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; B.landed = true; } }
   else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'mega' ? 2.2 : R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else if (ground < B.y - .35) { B.air = true; B.vy = 0; B.airRamp = null; } else B.y = ground; }   // (off a car's roof, a step: he drops)
   B.onRamp = !B.air && rp.h > .05 ? rp.on : null;   // (the ground fell away as he rose: he flies)
-  B.gVel = B.air ? 0 : (ground - B.gPrev) / dt; B.gPrev = ground;
+  B.onCar = !B.air && roof !== null && ground === roof ? roofCar : null; B.roofT = (B.roofT || 0) - dt;
+  if (B.onCarPrev && B.onCar !== B.onCarPrev) { const t = B.onCarPrev, cv = t.stop > 0 ? 0 : t.v; B.v += cv * Math.cos(t.yaw - B.yaw); } B.onCarPrev = B.onCar;   // (off its roof: he keeps the car's speed; on it, he rode at his own over it)
+  B.gVel = B.air || B.landed ? 0 : Math.min(9, (ground - B.gPrev) / dt); B.gPrev = ground; B.landed = false;   // (just landed, on a roof as on the road: no lift from the step up)
   // kerbs, potholes, bags and hedges, bundles; what throws him off
   const kerbNow = Math.abs(q.d) > track.ROAD + .05, kerbWas = Math.abs(B.lastD) > track.ROAD + .05; if (!B.air && kerbNow !== kerbWas && B.v > 1.5) { B.jolt = .08; B.v *= .92; } B.lastD = q.d;
   const clear = C => B.air && B.y - (C.y0 || 0) > C.h - .05;          // (over it, in the air)
@@ -797,7 +803,8 @@ function ride(dt, inp) {
     if (C.kind === 'soft') { B.v *= Math.pow(.08, dt); continue; }
     if (C.hyd && Math.abs(B.v) > .8 && water.spray(new THREE.Vector3(C.x, C.y0 || 0, C.z), 4.5)) hud.pop(new THREE.Vector3(C.x, (C.y0 || 0) + 1.6, C.z), 'PSSS!', '#9ccad8');   // a hydrant knocked: it gushes
     const into = -(h.nx * Math.sin(B.yaw) + h.nz * Math.cos(B.yaw)) * Math.sign(B.v || 1);   // (how squarely: 1 head on, 0 grazing)
-    if (B.v * into > 3.6 && into > .55) { const side = (h.nx * -Math.cos(B.yaw) + h.nz * Math.sin(B.yaw)) > 0 ? 1 : -1; B.x = nx; B.z = nz; crash(side); return; }   // (he goes over away from what he hit)
+    if (B.v * into > 7.2 && into > .75 && (C.h ?? 1) > .6) { const side = (h.nx * -Math.cos(B.yaw) + h.nz * Math.sin(B.yaw)) > 0 ? 1 : -1; B.x = nx; B.z = nz; crash(side); return; }   // (head on into something hard at speed: he goes over away from what he hit)
+    if (B.v * into > 3.6 && into > .55 && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .4; B.jolt = .26; B.leanV += (Math.random() < .5 ? -1 : 1) * 3; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.8, 0)), pickOf(['OJ!', 'UPS!', 'HOP!', 'UFF!']), '#f6f3ea'); audio.play('kick', { vol: .3 }); }   // (less than that: a stagger, he keeps his seat)
     B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01);   // pushed clear...
     if (into > .02) { let tx = -h.nz, tz = h.nx; if (tx * Math.sin(B.yaw) + tz * Math.cos(B.yaw) < 0) { tx = -tx; tz = -tz; }   // ...turned along it (the way he was going), losing only what went into it
       const dyaw = Math.atan2(tx, tz) - B.yaw; B.yaw += Math.atan2(Math.sin(dyaw), Math.cos(dyaw)) * (B.v >= 0 ? .75 : 0); B.v *= 1 - into * .6; }
@@ -809,6 +816,7 @@ function ride(dt, inp) {
       traffic.knock(C.t, mv, hard); if (hard) { quests.onKnockBike(C.t); C.t.ghostUntil = performance.now() + 7000; if (Math.random() < .3) foot.grudge(C.t); }
       if (!(C.t.rantAt > performance.now())) { C.t.rantAt = performance.now() + 2500; hud.rant(C.t.r.root.position, hard ? pickOf(OUCH) : pickOf(SWEARS), true, 2); if (hard) witness(C.t.x, C.t.z); }
       if (hard) { crash(0, bv.multiplyScalar(.5)); return; } B.x = nx + h.nx * (h.pen + .02); B.z = nz + h.nz * (h.pen + .02); B.v *= .55; B.jolt = .12; return pose(dt, 0, 0, slope, 0); }
+    if (h && C.t.car && B.y >= (C.y0 || 0) + (C.trailer ? 1.55 : Math.min(C.t.car.roofH ?? 1.5, 3.2)) - .35) continue;   // (up on its roof)
     if (h) { C.t.stop = 2.5; if (Math.abs(B.v) > 2.2 || C.t.v > 2.5) { crash(0, new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.v)); return; } B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01); B.v *= .4; return pose(dt, 0, 0, slope, 0); } }
   B.x = nx; B.z = nz;
   // (round the home's circle the yards go further out than the loop's 28 m: there the edge is a ring round the circle; on the loop
@@ -1008,6 +1016,8 @@ const CAMS = [
   { name: 'wysoko', back: 7.5, up: 7.2, ahead: 6, lookUp: 0, fov: 56 },
   { name: 'bardzo daleko', back: 7.6, up: 3.9, ahead: 5.6, lookUp: 1.25, fov: 58 },
   { name: 'z góry (jak GTA 2)', top: true, fov: 50 },
+  { name: 'skośna, z drogą', oblique: 'road', fov: 46 },
+  { name: 'skośna, stała', oblique: 'fixed', fov: 46 },
 ];
 let camI = 3; const CP = { ...CAMS[3] };
 function setCam(i) { camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
@@ -1029,7 +1039,7 @@ function follow(dt) {
   const tw = THREE.MathUtils.smootherstep(watchPaper(dt), 0, 1);
   const k = 1 - Math.exp(-dt * 3.2), dy = Math.atan2(Math.sin(B.yaw - C.yaw), Math.cos(B.yaw - C.yaw)); C.yaw += dy * k;
   const gq = track.probe(B.x, B.z, B.hint); C.gy += ((B.air ? gq.y : B.y) - C.gy) * Math.min(1, dt * (B.air ? 1.5 : 8));   // (the ground under him, not his wheels: so a hop is seen as one)
-  const T = CAMS[camI], ke = 1 - Math.exp(-dt * 4); if (T.top) { } else if (!T.fpv) for (const k of ['back', 'up', 'ahead', 'lookUp', 'fov']) CP[k] = (CP[k] ?? T[k]) + (T[k] - (CP[k] ?? T[k])) * ke; else CP.fov += (T.fov - CP.fov) * ke;
+  const T = CAMS[camI], ke = 1 - Math.exp(-dt * 4); if (T.top || T.oblique) { } else if (!T.fpv) for (const k of ['back', 'up', 'ahead', 'lookUp', 'fov']) CP[k] = (CP[k] ?? T[k]) + (T[k] - (CP[k] ?? T[k])) * ke; else CP.fov += (T.fov - CP.fov) * ke;
   rider.head.visible = !T.fpv;
   if (T.fpv) {                                                         // through his eyes: from his head, looking where he rides, rolling with him
     rider.eye(_eye); const f = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw));
@@ -1044,6 +1054,18 @@ function follow(dt) {
     const want = new THREE.Vector3(B.x + fx * 3.5, C.gy + h, B.z + fz * 3.5);
     if (!C.init) { C.gy = B.y; C.pos.copy(want); C.init = true; }
     C.pos.lerp(want, 1 - Math.exp(-dt * 6)); camera.position.copy(C.pos); camera.up.set(fx, 0, fz); camera.lookAt(C.pos.x, C.gy, C.pos.z);
+    if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
+    CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov * PK(); camera.updateProjectionMatrix();
+    if (CUR === P1) { sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); } return; }
+  // skew (oblique), as the old street games: high, behind him and off to his right, looking ahead past him and to the left over the road and
+  //   the houses, so a target is in view two or three houses before it comes; 'road': turned with the road (smoothly on the bends), 'fixed':
+  //   one angle for the whole run (the road's at the start)
+  if (T.oblique) { const sg = Math.sign(Math.sin(B.yaw) * gq.f.x + Math.cos(B.yaw) * gq.f.z) || 1, Y0 = Math.atan2(gq.f.x * sg, gq.f.z * sg);
+    if (T.oblique === 'fixed') { if (C.fixY == null || !C.init) C.fixY = Y0; C.oy = C.fixY; } else { if (C.oy == null || !C.init) C.oy = Y0; C.oy += Math.atan2(Math.sin(Y0 - C.oy), Math.cos(Y0 - C.oy)) * Math.min(1, dt * 1.6); }
+    const Y = C.oy + camUser.yaw, fx = Math.sin(Y), fz = Math.cos(Y), rx = -fz, rz = fx, k = camUser.dist * (1 + Math.max(0, B.v) * .025 + tw * .15), h = 9 * k, bk = 5.5 * k, sd = 8.5 * k;
+    const want = new THREE.Vector3(B.x - fx * bk - rx * sd, C.gy + h, B.z - fz * bk - rz * sd), look = new THREE.Vector3(B.x + fx * 6.5 + rx * 1.2, C.gy + .4, B.z + fz * 6.5 + rz * 1.2);
+    if (!C.init) { C.gy = B.y; C.pos.copy(want); C.init = true; }
+    C.pos.lerp(want, 1 - Math.exp(-dt * 5)); camera.position.copy(C.pos); camera.up.set(0, 1, 0); camera.lookAt(look);
     if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; }
     CP.fov += (T.fov - CP.fov) * ke; camera.fov = CP.fov * PK(); camera.updateProjectionMatrix();
     if (CUR === P1) { sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); } return; }
@@ -1161,7 +1183,7 @@ function step(dt, inp) {
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
   rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
-  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: peds.crossing(), s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
+  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: peds.crossing(), onCar: B.onCar, high: B.air && B.y - q.y > 1.2, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
@@ -1660,8 +1682,14 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
   // the lanes joined: a swinging target, a double trench (a half each, apart: round it or hop), pop-ups, a pad to the line
   swing(.3); trench(u(.24), 2, W * .55, W * .45); trench(u(.24) - 7, 2, W * .55, -W * .45); target(.2, 1, 'pop'); target(.17, -1, 'pop'); if (D > .5) slalom(.12, 4, 5, 1.3); target(.08, 1, 'pop'); target(.06, -1, 'pop'); pad(u(.03));
   FIN.on = true; FIN.entered = false; FIN.combo = 0; FIN.comboT = 0; FIN.res = { targets: 0, of: FIN.targets.length, cones: 0, rings: 0, trenches: 0, combo: 0, score: 0 }; }
-// a parked car's roof under (x, z): its height, or null
-function carRoofAt(x, z) { let y = null; for (const C of track.near(B.hint)) if (C.car && C.roof && !C.used && boxHit(C, x, z, 0)) y = Math.max(y ?? -1e9, C.roof); return y; }
+// a car's roof under (x, z): its height, or null; a parked car's, or one going by (its roof measured once), or a tractor's hay trailer
+// (roofCar: the moving one it was, if any)
+let roofCar = null;
+function carRoofAt(x, z) { let y = null; roofCar = null; for (const C of track.near(B.hint)) if (C.car && C.roof && !C.used && boxHit(C, x, z, 0)) y = Math.max(y ?? -1e9, C.roof);
+  for (const C of traffic.boxes()) { if (C.t.r || Math.abs(C.x - x) + Math.abs(C.z - z) > 8 || !boxHit(C, x, z, 0)) continue; const c = C.t.car;
+    if (c.roofH == null) { c.group.updateMatrixWorld(true); c.roofH = new THREE.Box3().setFromObject(c.group).max.y - c.group.position.y; }
+    const top = (C.y0 || 0) + (C.trailer ? 1.55 : Math.min(c.roofH, 3.2)); if (y == null || top > y) { y = top; roofCar = C.t; } }
+  return y; }
 // ---------- the far people not drawn: every person is ~9 skinned meshes (~40 thousand triangles, skinned again for the shadow); beyond
 // 60 m one is a few pixels in this picture. Each such mesh goes to layer 1 (the camera and the shadow draw layer 0 only), back near.
 // The list (all skinned meshes but his own) refreshed now and then; nothing else about them changes ----------
@@ -1803,7 +1831,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'combine', 'tray', 'reverse', 'train_jump', 'dooring', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'combine', 'tray', 'roof', 'reverse', 'train_jump', 'dooring', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }
@@ -1979,5 +2007,5 @@ function dynAudit() { const N = track.N, ds = track.ds, bin = Math.max(1, Math.r
   const run = f => { let best = 0, cur = 0; for (let k = 0; k < nb * 2; k++) { if (f(k % nb)) { cur++; best = Math.max(best, cur); } else cur = 0; } return Math.min(best, nb) * bin * ds | 0; };
   const nSub = subs.reduce((a, b) => a + b, 0);
   return { len: track.len | 0, subsPer100m: +(nSub / track.len * 100).toFixed(1), feats: feats.reduce((a, b) => a + b, 0), folk: folk.reduce((a, b) => a + b, 0), noSubM: run(k => !subs[k]), quietM: run(k => !feats[k] && !folk[k]), emptyM: run(k => !subs[k] && !feats[k] && !folk[k]) }; }
-window.PT = { THREE, FIN, CROSS, crossJumps, crossHidden, stepRivals, lateFinish, stepNight, locals, dynAudit, director, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, FIN, CROSS, crossJumps, crossHidden, carRoofAt, get roofCar() { return roofCar; }, stepRivals, lateFinish, stepNight, locals, dynAudit, director, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };

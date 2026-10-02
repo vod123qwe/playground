@@ -43,7 +43,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       t.stop = Math.max(0, t.stop - dt);
       const mine = t.dir * LANE, other = -mine;
       // what is ahead of it in a lane (d), and how near, and how fast it goes our way
-      const lead = d => { let best = null; for (const o of things) { if (o.t === t || Math.abs(o.d - d) > (o.rider ? .8 : 1.5)) continue; const g = ahead(t.s, o.s, t.dir); if (g > 0 && g < 40 && (!best || g < best.g)) best = { g, v: o.v * t.dir, o }; } return best; };
+      const lead = d => { let best = null; for (const o of things) { if (o.t === t || (o.rider && (R.onCar === t || R.high)) || Math.abs(o.d - d) > (o.rider ? .8 : 1.5)) continue; const g = ahead(t.s, o.s, t.dir); if (g > 0 && g < 40 && (!best || g < best.g)) best = { g, v: o.v * t.dir, o }; } return best; };
       const coming = () => { let near = 1e9; for (const o of list) { if (o === t || o.dir === t.dir) continue; const g = ahead(t.s, o.s, t.dir); if (g > -2 && g < near) near = g; } return near; };   // (the nearest one coming the other way)
       const L = lead(t.lane), inMine = Math.abs(t.lane - mine) < .5;
       // the rider in its way: a driver waits a moment (slows, hoots) before going round him; a swerve over a moment's wobble is not how they drive
