@@ -1390,3 +1390,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - R w trakcie trasy od razu zaczyna ją od nowa (od startu, z pełną torbą); pełny reset całej gry został w menu (Esc, ZACZNIJ OD NOWA)
 - w Klasyku: spacja skacze, kopnięcie pod V (kamera jest tam jedna, więc V było wolne); zapisane przypisania klawiszy bez zmian
+
+## Wersja 165: w Klasyku znów się przewracasz
+
+- progi upadku w Klasyku pod jego wolniejszą jazdę (próg z v155 był pod 9 m/s Porannej Trasy, w Klasyku nic nie przewracało): czołowo w coś twardego już przy toczeniu (~4 m/s) leżysz, przy bardzo wolnej jeździe nic, z ukosa zachwianie; bok skoczni i beczki, bele, wózki z ulicy przewracają od ~4,3 m/s; w Porannej Trasie bez zmian
