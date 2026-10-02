@@ -1327,3 +1327,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - dachy aut do wskoczenia ze skoczni: zaparkowanych (+2) i jadących, także autobusu i przyczepy traktora (+4, kierowca ma coś do powiedzenia); na jadącym jedziesz razem z nim, zjeżdżasz z jego prędkością; auto nie hamuje przed tobą, kiedy jesteś na jego dachu albo lecisz nad nim
 - poprawka: po wjechaniu na stopień (dach) nie wystrzeliwało już w górę przy zjeździe
 - nowa notka w gazecie: rowerem po dachach
+
+## Wersja 156: Klasyk (pierwszy szkielet) i większy prześwit
+
+- nowa wersja gry do wyboru na ekranie startowym: WERSJA: PORANNA TRASA / KLASYK (koncept i etapy: docs/klasyk.md); Klasyk ma na razie jedną własną mapę, ULICĘ KASZTANOWĄ
+- domy tylko po lewej stronie ulicy, po prawej chodnik, trawnik z ławkami i paczki z gazetami przy krawężniku (jedyne źródło gazet; na start 10)
+- rower toczy się sam (~5 m/s), gaz przyspiesza do ~8, hamulec zwalnia; każdy rzut (oba klawisze, oba przyciski myszy) leci w stronę domów, w którą stronę byś nie jechał
+- własna kamera Klasyka: skośna, nad stroną przeszkód, patrzy na domy i drogę przed tobą; wzgórza z tła odsunięte, żeby kamera w nie nie wjeżdżała
+- szyba nieabonenta w Klasyku: +2 (u abonenta dalej: rezygnuje)
+- w obu wersjach: większy prześwit wokół postaci, gdy zasłania ją drzewo, auto albo dach (3 m, przy kamerach skośnych 3,8 m)
