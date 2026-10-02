@@ -88,7 +88,7 @@ export function createDogs({ THREE, toon, probe }) {
       if (d.state === 'home') { if (dist < 17 && d.cool <= 0 && R.v > .5) { d.cool = 3; if (Math.random() < d.eager * (R.heat ?? 1)) { d.state = 'chase'; d.t = 0; } } d.v *= Math.pow(.02, dt);
         const hx = d.home.x - d.x, hz = d.home.z - d.z; if (Math.hypot(hx, hz) > .3) { d.v = 2; d.yaw = Math.atan2(hx, hz); } }
       else if (d.state === 'chase') {
-        // run to a point at his side, a little behind; faster than a bike at an easy pace, slower than one flat out
+        // run to a point at his side, a little behind; quick to get there, faster than a bike at an easy pace, slower than one flat out
         // it keeps to one side of him a while (the side it came up on), then drops back behind the wheel and goes round to the other
         const fx = Math.sin(R.yaw), fz = Math.cos(R.yaw), rx = -fz, rz = fx, now = (-dx * rx - dz * rz) > 0 ? 1 : -1;   // (the side of him it is on now: +1 his right)
         if (d.keep == null) { d.keep = now; d.keepT = 3 + Math.random() * 3.5; }
@@ -96,8 +96,8 @@ export function createDogs({ THREE, toon, probe }) {
         d.cross = Math.max(0, (d.cross || 0) - dt); const backOff = .6 + (d.cross > 0 ? 1.4 : 0);   // (going round: farther behind)
         const tx = R.x - fx * backOff + rx * d.keep * .95, tz = R.z - fz * backOff + rz * d.keep * .95, ax = tx - d.x, az = tz - d.z, ad = Math.hypot(ax, az);
         const side = d.keep;                                            // (+1 his right)
-        const want = Math.min(8.4, 2.4 + ad * 2.4), yawT = ad > .4 ? Math.atan2(ax, az) : R.yaw; d.yaw += Math.atan2(Math.sin(yawT - d.yaw), Math.cos(yawT - d.yaw)) * Math.min(1, dt * 3.2);   // (turning less sharply)
-        d.v += (want - d.v) * Math.min(1, dt * 3);
+        const want = Math.min(10.2, 3 + ad * 3.2), yawT = ad > .4 ? Math.atan2(ax, az) : R.yaw; d.yaw += Math.atan2(Math.sin(yawT - d.yaw), Math.cos(yawT - d.yaw)) * Math.min(1, dt * 3.2);   // (turning less sharply)
+        d.v += (want - d.v) * Math.min(1, dt * 4.5);   // (quick off the mark: it gets to him fast)
         if (dist < 2.6) { if (Math.random() < dt * 5) d.bark = .35; near.push({ dog: d, dist, side: -side }); }   // (given as +1 his left, as the game wants it)
         if (d.t > 18 || dist > 30) { d.state = 'back'; d.t = 0; d.keep = null; }
       } else if (d.state === 'flee' || d.state === 'back') {

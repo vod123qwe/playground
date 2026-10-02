@@ -1,0 +1,8 @@
+// A sign's texture in a 3 x 5 pixel font, drawn at once (the game's own font may not be loaded yet when the world is built).
+// pixSign(THREE, text, bg, fg) → a CanvasTexture, nearest-filtered
+const F = { A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010', K: '101110100110101', L: '100100100100111', M: '101111111101101',
+  N: '110101101101101', O: '010101101101010', P: '110101110100100', R: '110101110110101', S: '011100010001110', T: '111010010010010', U: '101101101101111', W: '101101111111101', Y: '101101010010010', Z: '111001010100111', Ł: '100110100100111', Ó: '010010101101010', Ż: '010111001010111', ' ': '000000000000000', '.': '000000000000010', '·': '000000010000000',
+  0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111' };
+export function pixSign(THREE, text, bg, fg) { const c = document.createElement('canvas'); c.width = text.length * 4 + 3; c.height = 9; const g = c.getContext('2d');
+  g.fillStyle = bg; g.fillRect(0, 0, c.width, 9); g.fillStyle = fg; [...text].forEach((ch, k) => { const r = F[ch] || F[' ']; for (let q = 0; q < 15; q++) if (r[q] === '1') g.fillRect(2 + k * 4 + q % 3, 2 + (q / 3 | 0), 1, 1); });
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; }
