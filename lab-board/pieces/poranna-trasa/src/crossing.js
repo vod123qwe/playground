@@ -58,8 +58,8 @@ export function createCrossing({ THREE, toon, track, at }) {
     if (st.mode === 'train' && Math.abs(al) < 1.7) { const lo = Math.min(st.x, st.x - st.dir * TLEN), hi = Math.max(st.x, st.x - st.dir * TLEN); if (ac > lo - 1.4 && ac < hi + 1.4) { if ((me.h || 0) > 2.9) { if (!st.over) { st.over = true; out = { hit: 'over' }; } } else out = { hit: 'train', push: r.clone().multiplyScalar(st.dir * 9) }; } }   // (high enough: over the wagons' roofs)
     if (st.mode !== 'train') st.over = false;
     if (!out && !me.onFoot && !((me.h || 0) > 1.1) && st.down > .7 && Math.abs(ac) < ROAD + .4) for (const b of bars) if (Math.abs(al - b.al) < .45 && Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) === -Math.sign(b.al)) { out = { hit: 'barrier', push: f.clone().multiplyScalar(-Math.sign(b.al) * 1.5) }; break; }
-    // the cars wait at it (down, or about to be)
-    if (traffic && st.mode !== 'idle') for (const q of traffic) { if (!q.t || q.t.stop === undefined) continue; const a2 = along(q.x, q.z); if (Math.abs(a2) < 14 && Math.abs(a2) > 3 && Math.abs(across(q.x, q.z)) < ROAD + 1) q.t.stop = Math.max(q.t.stop, .4); }
+    // the cars wait at it (down, or about to be): the first at the line, the rest behind it
+    if (traffic && st.mode !== 'idle') for (const q of traffic) { if (!q.t || q.t.stop === undefined) continue; const a2 = along(q.x, q.z); if (Math.abs(a2) < 7.5 && Math.abs(a2) > 3 && Math.abs(across(q.x, q.z)) < ROAD + 1) q.t.stop = Math.max(q.t.stop, .4); }   // (at the line, the others queue behind: not stopped all over the ramp's run up)
     return out; }
   return { group: G, center: c, update, state: st, along, get ringing() { return st.blink >= 0; } };
 }
