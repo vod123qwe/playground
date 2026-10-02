@@ -17,6 +17,7 @@ import { createProps } from './props.js';
 import { createNature } from './nature.js';
 import { createPlots } from './plots.js';
 import { createEstate } from './estate.js';
+import { createCity } from './city.js';
 
 // the regions (docs/regiony.md): each its own loop and its own look. peryferia: the suburb (home off it, kerbs, pavements, lines, bus
 // stops, bike lanes, police, houses close); wies: the village (a longer hilly loop, no kerbs or lines, a gravel shoulder and a dirt path,
@@ -31,7 +32,13 @@ export const REGION_T = {
   // (modern greys and whites, dark roofs), lots with a house going up, two stretches of warehouses, road works, cranes over it all
   peryferia2: { id: 'peryferia2', home: false, ctrl: [[0, 0, 0], [5, 1, 55], [40, 1, 95], [95, 2, 100], [140, 1, 70], [150, 0, 20], [190, 1, -10], [235, 2, -5], [255, 1, -55], [225, 0, -110], [160, -1, -125], [100, 0, -100], [55, 1, -110], [15, 0, -70]],
     roll: .45, kerb: true, lines: true, bike: false, stops: [.3, .78], posts: [.55], shops: [[.62, -1]], gap: [11, 4], houseP: 1, farms: false, estate: true, site: .22, wh: [[.12, .24], [.66, .76]], works: [[.4, 1], [.88, -1]],
-    walls: ['#e9e6df', '#d6d2ca', '#c9c4ba', '#b9b4ab', '#e3dccf', '#f0eee8'], roofs: ['#3f4246', '#4a4e55', '#5a5f66', '#34373b'] } };
+    walls: ['#e9e6df', '#d6d2ca', '#c9c4ba', '#b9b4ab', '#e3dccf', '#f0eee8'], roofs: ['#3f4246', '#4a4e55', '#5a5f66', '#34373b'] },
+  // miasto: the town: a loop of streets with corners (blocks of the old town, the market, the estate of panel blocks), kerbs, lines, a
+  // bike lane, many stops; tenements in rows right at the pavement, the market's stalls on one stretch, blocks of flats on another,
+  // tram rails, fewer street trees, no poles; round it no fields: a skyline
+  miasto: { id: 'miasto', home: false, ctrl: [[0, 0, 0], [0, 0, 60], [6, 0, 100], [45, 1, 108], [100, 1, 108], [140, 1, 100], [148, 1, 60], [150, 2, 10], [158, 2, -30], [200, 2, -36], [240, 1, -40], [250, 1, -80], [244, 0, -120], [200, 0, -128], [120, 0, -126], [60, 0, -122], [8, 0, -112], [-2, 0, -60]],
+    roll: .25, kerb: true, lines: true, bike: true, stops: [.12, .34, .56, .78], posts: [.46], shops: [[.3, 1], [.84, -1]], gap: [13, 1.5], houseP: 1, farms: false, city: true, market: [[.2, .28]], blocks: [[.6, .74]], trees: .3,
+    walls: ['#d8c0a8', '#e3c77e', '#c9b8a0', '#b7c29a'], roofs: ['#4a4e55', '#5a5f66', '#8e3b2c'] } };
 
 export function createTrack({ THREE, toon, tex, showcase = false, region = 'peryferia' }) {   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
   const RG = REGION_T[region] || REGION_T.peryferia;   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
@@ -75,10 +82,12 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     strip(s * (ROAD - .32), s * ROAD, '#323437', .16, .5, tex.asphalt(), 2.4);   // the gutter: darker, dirtier
     if (RG.kerb) { strip(s * ROAD, s * KERB, '#9c9a91', .05, .35, tex.kerbBlock(), [1, 4]); strip(s * KERB, s * (KERB + .18), '#cbc8bd', .05, .35, tex.kerbBlock(), [1, 4]); }   // the kerb in metre blocks: its face in shade, its top lit
     else { strip(s * ROAD, s * KERB, '#8f877a', .14, .9, null, 1); strip(s * KERB, s * (KERB + .18), '#a39a88', .16, .9, null, 1); }   // (the village: a gravel shoulder)
-    strip(s * (KERB + .18), s * VERGE, RG.kerb ? '#6f8f3e' : '#a39a88', .14, .6, RG.kerb ? tex.grass(0) : null, 1.3);   // the verge (the village: the gravel on)
+    if (RG.city) strip(s * (KERB + .18), s * VERGE, '#a9a393', .05, .5, tex.slabs(), 3.2);   // (the town: slabs right from the kerb)
+    else strip(s * (KERB + .18), s * VERGE, RG.kerb ? '#6f8f3e' : '#a39a88', .14, .6, RG.kerb ? tex.grass(0) : null, 1.3);   // the verge (the village: the gravel on)
     if (RG.kerb) strip(s * VERGE, s * PAVE, '#bcb6a6', .05, .5, tex.slabs(), 3.2);        // the pavement, in slabs
     else strip(s * VERGE, s * PAVE, '#8a7a5a', .2, .7, tex.grass(0), 1.6);                 // (the village: a trodden dirt path)
-    strip(s * PAVE, s * 14, RG.kerb ? '#7c9a45' : '#86a04a', .16, .12, tex.grass(6), 1.6);         // the lawns (a few flowers)
+    if (RG.city) strip(s * PAVE, s * 14, '#b3ad9d', .05, .5, tex.slabs(), 3.2);   // (the town: the pavement up to the walls)
+    else strip(s * PAVE, s * 14, RG.kerb ? '#7c9a45' : '#86a04a', .16, .12, tex.grass(6), 1.6);         // the lawns (a few flowers)
     for (const [a, b] of (s === INNER ? [[14, 20], [20, 28], [28, 40]] : [[14, 20], [20, 28], [28, 38], [38, 52], [52, 72], [72, 84], [88, 100], [100, 135], [135, 170], [170, 200]])) strip(s * a, s * b, '#78963f', .2, .08, tex.grass(2), 2.2);
     if (s !== INNER) { strip(s * 84, s * 88, '#55595e', .06, .5, tex.asphalt(), 3); strip(s * 83.4, s * 84, '#a8a08a', .1, .5, null, 1); strip(s * 88, s * 88.6, '#a8a08a', .1, .5, null, 1); }   // (a country road out there, gravel edges)   // the land beyond, rolling (inside the loop: not so far, the other side of it is there)
   }
@@ -134,7 +143,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       for (let b = 0; b < 3; b++) { const o = (b - 1) * .025 + (r() - .5) * .02, bx = x + fx * o, bz = z + fz * o, hh = h * (.7 + r() * .5), ln = lean + (r() - .5) * .05, tw = (r() - .5) * .05;
         const w = .022, root = ROOT[r() * 2 | 0], tip = TIP[r() < .08 ? 4 : (r() * 4 | 0)];
         tri([bx - fx * w, y, bz - fz * w], [bx + fx * w, y, bz + fz * w], [bx + rx * ln + fx * tw, y + hh, bz + rz * ln + fz * tw], root, root, tip); } }
-    for (const sd of [-1, 1]) {
+    for (const sd of RG.city ? [] : [-1, 1]) {
       for (let i = 0; i < N; i += .09 / ds * (.6 + r() * .8)) tuft(i, sd * (KERB + .2 + r() * .1), .11 + r() * .12, -sd * (.06 + r() * .08));   // over the kerb's top, leaning out to the road
       for (let i = 0; i < N; i += .3 / ds * (.5 + r())) tuft(i, sd * (VERGE - .03 - r() * .05), .06 + r() * .07, sd * .02);                  // the verge against the pavement
       for (let i = 0; i < N; i += .3 / ds * (.5 + r())) tuft(i, sd * (PAVE + .03 + r() * .06), .07 + r() * .08, sd * .03);                   // the lawn against the pavement
@@ -710,12 +719,15 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const farmLots = [], fieldLots = []; const whLast = {};
   // (the estate: warehouses on their stretches, a site now and then; its road works and cranes further down)
   const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211) }) : null;
+  const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G }) : null, cityLast = {};
   const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
+    if (CITY) { const f = i / N, gapM = (i - (cityLast[s] ?? -1e9)) * ds; if (RG.market.some(([a, b]) => f >= a && f <= b)) { if (s < 0 || gapM < 11) return null; cityLast[s] = i; return CITY.stalls(i, s); }
+      if (RG.blocks.some(([a, b]) => f >= a && f <= b)) { if (gapM < 38) return null; cityLast[s] = i; return CITY.block(i, s); } if (gapM < 12.2) return null; cityLast[s] = i; return CITY.tenement(i, s); }
     if (EST) { const f = i / N; if (RG.wh.some(([a, b]) => f >= a && f <= b)) { if ((i - (whLast[s] ?? -1e9)) * ds < 17.5) return null; whLast[s] = i; return EST.warehouse(i, s); } if (rnd() < RG.site) return EST.site(i, s); } if (RG.farms) { const k = rnd(); if (k > RG.houseP + .28) { fieldLots.push({ i, s }); return null; } if (k > RG.houseP) { farmLots.push({ i, s }); return null; } }
     return rnd() < .07 ? shacks(i, s) : pr() < (RG.farms ? .12 : .2) ? plots.build(plotOrder[plotK++ % plotOrder.length], i, s) : house(i, s); };
   for (let i = 30; i < N - 40; i += Math.round((RG.gap[0] + rnd() * RG.gap[1]) / ds)) { lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1; tree(i, side * (PAVE + 1.6 + rnd() * 3)); if (rnd() < .25) tree(i + 7, (rnd() < .5 ? -1 : 1) * (VERGE - .6)); }
-  const poles = []; for (let i = 10; i < N; i += Math.round(38 / ds)) poles.push(pole(i));
+  const poles = []; if (!RG.city) for (let i = 10; i < N; i += Math.round(38 / ds)) poles.push(pole(i));   // (the town: no wooden poles and wires)
   for (const p of poles) p.updateMatrixWorld(true);                   // (the wires hang from where the poles are)
   { const pos = []; for (let k = 0; k < poles.length; k++) { const a = poles[k], b = poles[(k + 1) % poles.length]; for (const [x, y] of [[-.8, 7.95], [.8, 7.95], [0, 7.35]]) {
       const pa = a.localToWorld(new THREE.Vector3(x, y, 0)), pb = b.localToWorld(new THREE.Vector3(x, y, 0)); for (let j = 0; j < 8; j++) { const t0 = j / 8, t1 = (j + 1) / 8, sag = t => Math.sin(t * Math.PI) * .5;
@@ -739,7 +751,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     put(t, i, side * (VERGE - .55), 0, 0); hit(t, { hx: .32, hz: .32, h: H, kind: 'hard' }, i); things.push({ kind: 'tree', o: t, H, autumn, crown: 1.8 + H * .2, reach: side }); show.tree.push({ o: t, label: 'drzewo nad jezdnią', note: H.toFixed(1) + ' m' });   // (turned with the road: its +x is the road's left, -x its right)
     dapple(i + Math.round((rnd() - .5) * 4 / ds), side * (VERGE - 3.2));
   }
-  for (let i = 60; i < N - 20; i += Math.round((10 + rnd() * 7) / ds)) { if (rnd() < .82) streetTree(i, rnd() < .5 ? 1 : -1); }   // (thick along the road: the crowns close over it here and there)
+  for (let i = 60; i < N - 20; i += Math.round((10 + rnd() * 7) / ds)) { if (rnd() < (RG.trees ?? .82)) streetTree(i, rnd() < .5 ? 1 : -1); }   // (thick along the road: the crowns close over it here and there)
   // the village's poplars: rows along stretches of the road, tall and slim, at the dirt path's far edge
   if (RG.farms) { const popM = toon('#4f7a3a', { map: rep(tex.leaves(), 1, 3) }), pr2 = mulberry(77); let i = Math.round(pr2() * 60 / ds);
     while (i < N - 30) { const run = Math.round((50 + pr2() * 80) / ds), sd = pr2() < .5 ? -1 : 1;
@@ -941,7 +953,8 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     for (const F of farmLots) { if (!free(F.i, F.s * (PAVE + 10), 5)) continue; const h = farmhouse(F.i, F.s * (PAVE + 10)); h.updateMatrixWorld(true); const n = new THREE.Vector3(0, 0, -1).applyQuaternion(h.quaternion); n.y = 0; n.normalize();
       const p = h.localToWorld(new THREE.Vector3(0, 0, -3.5 - 2.6)); if (n.x * (S[F.i].p.x - p.x) + n.z * (S[F.i].p.z - p.z) > 0) doors.push({ p, n, done: false, i: F.i }); barn(F.i + Math.round(15 / ds), F.s * (PAVE + 17)); }
     for (const F of fieldLots) field(F.i - Math.round(8 / ds), F.i + Math.round(16 / ds), F.s * (PAVE + 2), F.s * (PAVE + 34), FIELDS[fr() * FIELDS.length | 0], fr() < .5);
-    for (const sd of [-INNER]) {                                        // (the outside of the loop only)
+    if (CITY) { CITY.skyline(110, -10); CITY.rails(); }   // (the town: a skyline round it, not fields; the tram's rails in the road)
+    for (const sd of CITY ? [] : [-INNER]) {                                        // (the outside of the loop only)
       for (const [r0, r1] of [[46, 54], [100, 110]]) { let i = Math.round(fr() * 60 / ds);        // (two rows of them: near, and far)
       while (i < N - 20) { const lenM = 30 + fr() * 40, i1 = Math.min(N - 1, i + Math.round(lenM / ds)), d0 = r0 + fr() * (r1 - r0), d1r = d0 + 28 + fr() * (r0 > 60 ? 50 : 38), d1 = r0 < 60 ? Math.min(d1r, 82) : d1r, kind = fr();   // (the near row stops short of the country road)
         if (kind < .5) { field(i, i1, sd * d0, sd * d1, FIELDS[fr() * FIELDS.length | 0], fr() < .5);                            // a field, a hedge along its near edge now and then

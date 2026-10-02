@@ -1060,3 +1060,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
   - Łatwa: nad domem ikonka prenumeratora i ramka momentu (narożniki zaciskają się: szara, żółta, zielona) z podpisem klawisza, szerokie okno, mały rozrzut, mocne przyciąganie przy celowaniu
   - Średnia (domyślna): sama ikonka prenumeratora, bez ramki; zwykłe okno, słabe przyciąganie
   - Trudna: ikonka dopiero z bliska (20 m), wąskie okno, większy rozrzut, bez przyciągania
+
+## Wersja 120: region 4 „Miasto”
+
+- nowy region (otwiera się po Wojnie gazet): pętla ulic z narożnikami, krawężniki, linie, pas rowerowy, cztery przystanki, tory tramwajowe w jezdni, mniej drzew, bez słupów; chodnik z płyt aż pod ściany; wokół panorama: wieżowce, wieża kościoła, maszt telewizyjny
+- kamienice ciągiem tuż przy chodniku: 3–4 piętra nad wysokim parterem, okna w obramieniach, gzyms, kominy, czasem balkony; na parterze sklep z szyldem (Piekarnia, Apteka, Kiosk Ruch, Kwiaciarnia, Fryzjer, Bar mleczny, Zegarmistrz, Spożywczy, Obuwie), czasem z daszkiem, albo brama na podwórko; drzwi klatki z numerem i skrzynką na ścianie
+- bloki z wielkiej płyty na jednym odcinku: 5 pięter, płyty z fugami, pasy balkonów, trzy klatki ze skrzynkami, trawnik przed nimi
+- rynek: rząd straganów z pasiastymi daszkami i skrzynkami owoców i warzyw
+- wszystko grywalne jak domy: gazeta do skrzynki na ścianie, pod drzwi klatki, okna parteru i pierwszego piętra da się wybić
+- trasy: Stare Miasto (pół pętli), Dzień targowy (cała pętla w drugą stronę przez rynek), Blokowisko (cała pętla, bloki); Godzina szczytu zapowiedziana
