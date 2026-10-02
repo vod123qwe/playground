@@ -1,4 +1,4 @@
-// The paperboy's notebook (Tab, or the button on a phone): the game waits. Who thinks what of you (each group's standing, and a line or
+// The paper lad's notebook (Tab, or the button on a phone): the game waits. Who thinks what of you (each group's standing, and a line or
 // two of what they say about you), the bike as it is (the parts on it), what you carry (finds, what the lottery keeps for you), and how
 // you are (health, money, the papers by title, how far). createBook({ data }) → { toggle(), close(), key(e), isOpen }
 // data() → { reps: { policja, ekipa, gang, sasiedzi, przystanek } (-6..6), parts: [{ cat, name }], items: [], kept: [], hp, money, fame, papers: [{ name, n, col }], dist }

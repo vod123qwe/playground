@@ -349,7 +349,7 @@ export function createPaper({ game }) {
   const BYS = ['R. KOWAL', 'M. WRÓBEL', 'J. SIKORA', 'A. DZIĘCIOŁ'];
   function blocks(sec) { const { L, r, rec } = D, nw = D.photos.news, tz = D.tease, out = [], B = (h, cls = '') => out.push(`<div class="blk ${cls}">${h}</div>`), by = pickOf(BYS);
     // the front: the town's stories (the lead the freshest of them, the police's first when there is one); what happened on the
-    // streets (the cyclist unnamed); the interview; what was heard; tomorrow. The paperboy's own numbers are inside (Twoja trasa)
+    // streets (the cyclist unnamed); the interview; what was heard; tomorrow. The paper lad's own numbers are inside (Twoja trasa)
     if (sec === 0) { const st = (D.stories || []).filter(q => q.fresh), lead = st.find(q => q.lead) || st[0], rest = st.filter(q => q !== lead), ev = nw.filter(n => n.kind);
       const story = (q, big) => `<p class="kick">${q.kicker}</p>${big ? `<h2>${q.head}</h2>` : `<h3>${q.head}</h3>`}`;
       if (lead) { B(`${story(lead, true)}<p class="by">TEKST: ${by} · FOT.: REDAKCJA</p>`, 'span'); if (lead.img || lead.faceImg) B(pic(lead.img || lead.faceImg, `FOT. ${lead.kicker.charAt(0) + lead.kicker.slice(1).toLowerCase()}.`));

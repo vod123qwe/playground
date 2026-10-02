@@ -1,4 +1,4 @@
-// The town's stories (the paper is about them, not about the paperboy): threads that go on issue by issue, each a few stages, each
+// The town's stories (the paper is about them, not about the paper lad): threads that go on issue by issue, each a few stages, each
 // about its people (their portraits, their photos, a quote of theirs). Up to three run at once in a region; each issue one or two of them
 // go a step on, a new one starts when one ends. The key people's threads (Janusz, the papers' war, Hela) go with you to every region;
 // a region's own ones only there. And one thread grows out of what you do: the cyclist in the red cap (the windows, the
