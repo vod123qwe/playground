@@ -1114,3 +1114,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - kamienice: szyldy wystające z elewacji nad sklepami, więcej balkonów
 - menu TESTY: PLAC POD BIUROWCEM i POSTÓJ TAXI
 
+## Wersja 126: skrzynki w mieście widać, mniej psów
+
+- miejska skrzynka na listy: duża, jaskrawoczerwona, w białej ramce na ścianie (widać ją i na cegle, i na tynku), biała koperta z przodu, żółta chorągiewka; przy klatkach kamienic, bloków i domów przy skrótach
+- psy: w mieście pies przy co 25. drzwiach (było co 5.), na Drugiej stronie przy co 10.
+

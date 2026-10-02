@@ -9,7 +9,7 @@
 // createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI })
 //   → { blocked(i, side), build(), paved(x, z), shortcuts, stubs }
 
-export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked }) {
+export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox }) {
   const M = c => toon(c), wrap = i => ((i % N) + N) % N, O = 30;
   // ---------- where: two straight stretches for the shortcuts (none of them across a checkpoint: a quarter of the loop from the start),
   // four spots for the side streets on the outside ----------
@@ -53,7 +53,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   function house(i, d, s, w, dd, h, col, door = true) { const g = new THREE.Group(), fx = s * dd / 2;   // (its front: towards the way, the loop's side of it)
     g.add(box(dd, h, w, M(col), 0, h / 2, 0), box(dd + .2, .25, w + .2, M('#4a4e55'), 0, h + .12, 0));
     const wins = []; for (let f = 0; f < Math.floor((h - .8) / 2.8); f++) for (const z of [-w / 3, 0, w / 3]) { if (f === 0 && Math.abs(z) < .1 && door) continue; const y = 1.6 + f * 2.8; g.add(box(.06, 1.3, .9, M('#f0ece2'), fx + s * .02, y, z), box(.08, 1.1, .7, M(rnd() < .15 ? '#c9b77a' : '#3f5566'), fx + s * .04, y, z)); if (f < 2) wins.push({ y, z }); }
-    let mb = null; if (door) { g.add(box(.08, 2.2, 1.1, M('#5a3a24'), fx + s * .04, 1.1, 0)); mb = new THREE.Group(); mb.add(box(.12, .32, .4, M('#8a3a2e'), 0, 0, 0)); const flag = new THREE.Group(); flag.add(box(.02, .1, .02, M('#efc970'), 0, .05, 0)); flag.position.set(s * .07, .17, .15); mb.add(flag); mb.userData.flag = flag; mb.position.set(fx + s * .07, 1.2, .9); g.add(mb); }
+    let mb = null; if (door) { g.add(box(.08, 2.2, 1.1, M('#5a3a24'), fx + s * .04, 1.1, 0)); mb = townBox ? townBox(s) : new THREE.Group(); mb.position.set(fx + s * .1, 1.25, 1); g.add(mb); }
     put(g, i, d, 0, 0); hit(g, { hx: dd / 2, hz: w / 2, h, kind: 'hard' }, wrap(i)); zone(g, dd / 2 + .5, w / 2 + .5);
     if (door) { g.updateMatrixWorld(true); const n = new THREE.Vector3(s, 0, 0).transformDirection(g.matrixWorld).setY(0).normalize(), fp = g.localToWorld(new THREE.Vector3(fx, 0, 0)), hi = doors.length; doors.push({ p: fp.clone().addScaledVector(n, 2.6), n, done: false, i: wrap(i) });
       for (const q of wins) windows.push({ p: g.localToWorld(new THREE.Vector3(fx + s * .1, q.y, q.z)), n: n.clone(), hw: .45, hh: .55, broken: false, i: wrap(i), house: hi });

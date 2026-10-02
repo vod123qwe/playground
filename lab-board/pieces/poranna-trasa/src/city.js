@@ -22,8 +22,11 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     g.add(box(.06, h + .16, w + .16, frame, fx + o, y, z), box(.08, h, w, lit ? glassLit : glass, fx + o * 1.5, y, z), box(.18, .08, w + .3, stone, fx + sg * .09, y - h / 2 - .1, z));
     if (reg) reg.push({ y, z, w, h }); }
   // the letterbox on the wall by a stairwell's door: a little steel box with its flap (the flag the game turns when a paper is in)
-  function letterbox(g, fx, sg, z) { const mb = new THREE.Group(); mb.add(box(.12, .34, .44, M('#8a3a2e'), 0, 0, 0), box(.13, .05, .3, dark, 0, .08, 0)); const flag = new THREE.Group(); flag.add(box(.02, .12, .02, M('#efc970'), 0, .06, 0)); flag.position.set(sg * .07, .18, .16); mb.add(flag);
-    mb.position.set(fx + sg * .07, 1.2, z); g.add(mb); return { mb, flag }; }
+  function letterbox(g, fx, sg, z) { const mb = townBox(sg); mb.position.set(fx + sg * .1, 1.25, z); g.add(mb); return { mb, flag: mb.userData.flag }; }
+  // (the town's letterbox: big and red in a white frame, so it reads on brick and on plaster alike; a white envelope on it, a yellow flag)
+  function townBox(sg) { const mb = new THREE.Group(); mb.add(box(.04, .82, .78, M('#f0ece2'), -sg * .1, 0, 0), box(.18, .64, .58, M('#d23a2c'), 0, 0, 0), box(.24, .06, .64, M('#8e2219'), 0, .34, 0), box(.19, .04, .38, dark, 0, .2, 0));
+    mb.add(box(.02, .16, .26, M('#f6f3ea'), sg * .095, -.1, 0), box(.022, .03, .2, M('#c9c4ba'), sg * .1, -.06, 0));
+    const flag = new THREE.Group(); flag.add(box(.03, .22, .03, M('#efc930'), 0, .11, 0), box(.03, .08, .1, M('#efc930'), 0, .2, -.05)); flag.position.set(sg * .1, .18, .26); mb.add(flag); mb.userData.flag = flag; return mb; }
   // after the building is placed: its doors, windows and letterboxes into the game's lists
   function register(g, i, s, stairs, wins) { g.updateMatrixWorld(true); const n = new THREE.Vector3(1, 0, 0).transformDirection(g.matrixWorld).multiplyScalar(s).setY(0).normalize();
     for (const st of stairs) { const fp = g.localToWorld(new THREE.Vector3(st.fx, 0, st.z)), hi = doors.length; doors.push({ p: fp.clone().addScaledVector(n, 2.6), n: n.clone(), done: false, i });
@@ -83,5 +86,5 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#5a5f66' })); m.userData.noShadow = true; m.renderOrder = 1; G.add(m); }
 
-  return { tenement, block, stalls, skyline, rails };
+  return { townBox, tenement, block, stalls, skyline, rails };
 }
