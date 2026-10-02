@@ -48,10 +48,10 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
 
   // ---------- the dustcart and its two bin men ----------
   let cart = null;
-  { const g = new THREE.Group(), green = M('#3f7a4a'), dark = M('#2a2c30'), bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  { const g = new THREE.Group(), green = M(track.winter ? '#e8742e' : '#3f7a4a'), dark = M('#2a2c30'), bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
     bx(2.3, 1.7, 2, M('#e8e4dc'), 0, 1.65, 2.6); bx(2.2, .8, .06, M('#3f5566'), 0, 2.05, 3.62); bx(2.4, 2.6, 5, green, 0, 2.1, -1.2); bx(2.42, .3, 5.02, M('#efc930'), 0, 1.2, -1.2); bx(2.2, 1.2, .6, dark, 0, 1.4, -3.9);
     for (const x of [-1.1, 1.1]) for (const z of [2.4, -.4, -2.6]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .35, 12).rotateZ(Math.PI / 2), dark); w.position.set(x, .5, z); g.add(w); }
-    const beacon = bx(.25, .18, .25, new THREE.MeshBasicMaterial({ color: '#ffb020' }), 0, 2.6, 3.2); scene.add(g);
+    const beacon = bx(.25, .18, .25, new THREE.MeshBasicMaterial({ color: '#ffb020' }), 0, 2.6, 3.2); if (track.winter) { const bl = bx(3.1, .9, .15, M('#efc930'), 0, .55, 4.1); bl.rotation.y = .35; } scene.add(g);
     const man = () => { const m = new THREE.Group(), vest = M('#e8742e'), b = new THREE.Mesh(new THREE.BoxGeometry(.44, .62, .28), vest); b.position.y = 1.12; m.add(b); const h = new THREE.Mesh(new THREE.BoxGeometry(.22, .22, .22), M('#d9a07a')); h.position.y = 1.6; m.add(h);
       const legs = [-1, 1].map(sd => { const l = new THREE.Group(), lm = new THREE.Mesh(new THREE.BoxGeometry(.14, .78, .16), M('#3b4a5e')); lm.position.y = -.39; l.add(lm); l.position.set(sd * .1, .8, 0); m.add(l); return l; });
       const bin = new THREE.Mesh(new THREE.BoxGeometry(.6, .9, .6), M('#5a6b4a')); bin.position.set(0, .45, .55); bin.visible = false; m.add(bin); scene.add(m); return { g: m, legs, bin, d: 0, ph: 0, sayT: 0, hitT: 0, paperT: 0 }; };
@@ -62,7 +62,8 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
 
   // ---------- tyres rolling across the road: from the far side, over to the houses ----------
   const tyres = [], tyreM = M('#24262a'), hubM = M('#9a9c9e'); let tyreT = 5;
-  const tyre = () => { const g = new THREE.Group(), w = new THREE.Mesh(new THREE.TorusGeometry(.32, .13, 6, 12), tyreM), h = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .2, 8).rotateX(Math.PI / 2), hubM); g.add(w, h); scene.add(g); return g; };
+  const tyre = () => { if (track.winter) { const g = new THREE.Group(), r = M('#cf3a2c'), k = M(['#3b6fa0', '#3f8a4a', '#e070b0'][rnd() * 3 | 0]); const sl = new THREE.Mesh(new THREE.BoxGeometry(.5, .1, 1.1), r); sl.position.y = -.3; const b = new THREE.Mesh(new THREE.BoxGeometry(.36, .42, .3), k); b.position.set(0, .02, -.1); const h = new THREE.Mesh(new THREE.BoxGeometry(.22, .22, .22), M('#e3b08a')); h.position.set(0, .34, -.08); const ht = new THREE.Mesh(new THREE.BoxGeometry(.24, .1, .24), r); ht.position.set(0, .48, -.08); g.add(sl, b, h, ht); g.userData.sled = true; scene.add(g); return g; }
+    const g = new THREE.Group(), w = new THREE.Mesh(new THREE.TorusGeometry(.32, .13, 6, 12), tyreM), h = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .2, 8).rotateX(Math.PI / 2), hubM); g.add(w, h); scene.add(g); return g; };
   // ---------- jump over the kids: a ramp on the far lawn, three of them sitting in a row behind it, cheering ----------
   const shows = [], CHEER = deck(['DAWAJ!', 'SKACZ!', 'NAD NAMI!', 'JESZCZE RAZ!', 'ALE ODLOT!']);
   for (const f of track.city ? [] : [.27, .5, .73]) { const i = wrap(Math.round(N * f)), A = S[i], d = -hs * (track.PAVE + 3.4), o = track.props.ramp(rnd, 'big'), pr = pv(i, d); o.group.position.copy(pr); o.group.rotation.y = Math.atan2(A.f.x, A.f.z); scene.add(o.group); o.group.updateMatrixWorld(true); const C = track.addHit(o.group, o.hit, i); track.ramps?.push(C);
@@ -129,6 +130,9 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       f.g.add(bk); bk.scale.setScalar(1 / (lead ? 1 : .62) * (lead ? 1 : .8)); for (const c of f.g.children) if (c !== bk) c.position.y += .45; f.g.visible = false; scene.add(f.g); trip.kids.push({ ...f, k }); } }
   const TRIP = deck(['DZIECI, GĘSIEGO!', 'PROSZĘ NAS WYPRZEDZAĆ OSTROŻNIE!', 'PANIE, A GAZETĘ MOGĘ?', 'JEDZIEMY DO ZOO!']);
 
+  const flakes = track.winter ? (() => { const n = 900, pos = new Float32Array(n * 3); for (let k = 0; k < n; k++) { pos[k * 3] = (rnd() - .5) * 44; pos[k * 3 + 1] = rnd() * 18; pos[k * 3 + 2] = (rnd() - .5) * 44; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ color: '#ffffff', size: .09, transparent: true, opacity: .9, depthWrite: false })); p.frustumCulled = false; scene.add(p); return p; })() : null;
+
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0), W0 = api.wave; for (const mx of mixers) mx.update(dt);
     // (the strollers: to a spot along the path and on to the next; ridden into, a bump)
@@ -179,6 +183,8 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
         const lead = rel(T.s, R) * T.dir, tail = rel(((T.s - T.dir * 6 * 2.1) % L + L) % L, R) * T.dir;
         if (!T.done && !T.hit && lead < -3) { T.done = true; ev.push({ kind: 'pts', n: 3, at: R, text: 'WYCIECZKA WYPRZEDZONA! +3' }); }
         if (tail < -60 || lead > 90) { T.on = false; T.t = 28 + rnd() * 16; for (const K of T.kids) K.g.visible = false; } } }
+    if (flakes) { const a = flakes.geometry.attributes.position, P = a.array; flakes.position.set(R.x, track.probe(R.x, R.z, R.hint).y, R.z);
+      for (let k = 0; k < P.length; k += 3) { P[k + 1] -= dt * (1 + (k % 7) * .08); P[k] += Math.sin(clock + k) * dt * .3; if (P[k + 1] < 0) P[k + 1] += 18; } a.needsUpdate = true; }
     // (the joggers)
     for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
       J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }
@@ -203,7 +209,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       if (dist < .9 && !R.foot && !((R.h || 0) > 1)) { ev.push({ kind: 'owner', p: { g: Ch.g } }); scene.remove(Ch.g); chasers.splice(k, 1); } }
     // (a tyre now and then, 18-30 m ahead of him, rolling across from the far side; it bounces a little; gone past the houses' kerb)
     tyreT -= dt; if (tyreT <= 0 && Math.abs(R.v) > 2 && R.s != null && tyres.length < (W0 ? 6 : 3)) { tyreT = W0 ? .9 + rnd() * .7 : 4 + rnd() * 5; const i = wrap(Math.round((R.s + (R.along || 1) * (14 + rnd() * 12)) / ds)), sg = W0 && rnd() < .5 ? -hs : hs; tyres.push({ g: tyre(), i, sg, d: -sg * (track.PAVE + 1), v: (W0 ? 4.4 : 3.6) + rnd() * 1.4, spin: 0, hitT: 0 }); }   // (the finale's wave: from both sides, one after another)
-    for (let k = tyres.length - 1; k >= 0; k--) { const T0 = tyres[k], A = S[T0.i]; T0.d += (T0.sg || hs) * T0.v * dt; T0.spin += T0.v * dt / .4; const p = pv(T0.i, T0.d); T0.g.position.set(p.x, p.y + .45 + Math.abs(Math.sin(T0.spin * .7)) * .12, p.z); T0.g.rotation.set(0, Math.atan2(A.f.x, A.f.z), 0); T0.g.rotateX(T0.spin);
+    for (let k = tyres.length - 1; k >= 0; k--) { const T0 = tyres[k], A = S[T0.i]; T0.d += (T0.sg || hs) * T0.v * dt; T0.spin += T0.v * dt / .4; const p = pv(T0.i, T0.d); T0.g.position.set(p.x, p.y + .45 + Math.abs(Math.sin(T0.spin * .7)) * .12, p.z); T0.g.rotation.set(0, Math.atan2(A.f.x, A.f.z), 0); if (T0.g.userData.sled) T0.g.rotation.y = Math.atan2(A.r.x * (T0.sg || hs), A.r.z * (T0.sg || hs)); else T0.g.rotateX(T0.spin);
       T0.hitT = Math.max(0, T0.hitT - dt); if (!R.foot && !T0.hitT && Math.hypot(R.x - p.x, R.z - p.z) < .55 && !((R.h || 0) > .55)) { T0.hitT = 3; ev.push({ kind: 'tyre' }); }
       if (Math.abs(T0.d) > track.PAVE + 3 && Math.sign(T0.d) === (T0.sg || hs)) { scene.remove(T0.g); tyres.splice(k, 1); } }
     // (the kids behind the ramp: they bob and wave; him over their heads in the air: a bonus; into them on the ground: a bump)

@@ -152,3 +152,9 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 
 - Wieś: co 22–36 s stado 4 krów z rolnikiem przechodzi przez drogę 24–32 m przed nim (MUU!). Przemknięcie blisko (< 2,6 m) bez zderzenia, kiedy stado jest na jezdni: MIĘDZY KROWAMI +2. Wpadnięcie: zderzenie.
 - Park: co 28–44 s wycieczka (pani i 6 dzieci na rowerkach) jedzie gęsiego przy dalszym krawężniku 2,8 m/s. Wyprzedzenie całej bez zderzenia: WYCIECZKA WYPRZEDZONA +3.
+
+## Poziom 5: Zima (v183)
+
+- Mapa `peryferia/zima` (flaga `winter`): po budowie wszystko, co zielone, przechodzi w śnieg (materiały i kolory wierzchołków; trawa bez tekstury), dachy białe, liście w rynsztokach jako zaspy, szare niebo i jasna mgła, pada śnieg (900 płatków wokół niego).
+- Lód: plamy co 30–60 m na jezdni (`track.iceAt`). Na lodzie: przyspieszanie i hamowanie ×0,12, skręt ×0,2, bez prowadzenia wzdłuż drogi. ŚLIZG! przy wjeździe, PO LODZIE +1 przy zjeździe bez wywrotki.
+- Bałwany zamiast krasnali (ta sama zasada punktów), sanki z dziećmi zamiast opon (kolizja: wywrotka, przeskok: bez kary), śmieciarka jako pomarańczowy pług z lemieszem.
