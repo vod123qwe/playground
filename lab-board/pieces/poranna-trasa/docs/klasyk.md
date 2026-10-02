@@ -107,3 +107,11 @@ Deski przed podjazdami (przeskok nad cofającym autem albo lądowanie na dachu),
 ## Zrobione (v163)
 
 Pościg właściciela po zbitej szybie (5,6 m/s: toczysz się, dogoni; na gazie uciekniesz), emeryci na ławkach, biegacze, pies na smyczy w poprzek chodnika, piłka z trawnika na jezdnię, place zabaw, zaparkowane auta ze skoczniami po drugiej stronie, bez drzew po stronie kamery.
+
+## Poziom 2: Śródmieście (v170)
+
+Miasto za dnia (mapa klasyk2, poziom k2). Kamienice ze sklepami tylko po lewej; po prawej brukowany plac: kioski i budki, ogródki kawiarniane, fontanny, donice, ławki z emerytami, zaparkowane auta ze skoczniami. Życie miasta z Porannej Trasy (przejścia dla pieszych, roboty, taksówki, rusztowania z cegłami) plus Klasyk (śmieciarka, biegacze, pies na smyczy, piłki, opony, pościg za szybę). Bez zraszaczy, podjazdów i krasnali (nie pasują do miasta).
+
+Mechaniki: dwie prenumeraty (Trąbka i Wieści, abonent chce swoją, X przełącza, zły tytuł psuje serię), kurier konkurencji, PILNE (też na Kasztanowej: abonent przed tobą chce gazetę w 12 s, +5), seria trafień z mnożnikiem (była w grze), finał w korytarzu barierek z falą opon i piłek (v169).
+
+Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, kelner z tacą (gazeta na tacę), gołębie na placu.

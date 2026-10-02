@@ -20,7 +20,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   function build() {
     const S = look.S;
     if (page === 'title') return [
-      ...(edition ? [{ type: 'button', label: 'WERSJA: ' + edition.name(), act: () => { edition.next(); rows = build(); } }] : []),
+      ...(edition ? [{ type: 'button', label: 'WERSJA: ' + edition.name(), act: () => { edition.next(); rows = build(); } }, ...(edition.extra?.() || []).map(o => ({ type: 'button', label: o.label, act: () => { close(); o.act(); } }))] : []),
       { type: 'button', label: 'GRAJ', act: () => { close(); onPlay?.(); } },
       ...(onMap ? [{ type: 'button', label: 'MAPA TRASY', act: () => { close(); onMap(); } }] : []),
       ...(modes ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),

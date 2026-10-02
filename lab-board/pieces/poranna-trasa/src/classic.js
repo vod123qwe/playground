@@ -30,7 +30,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
 
   // ---------- cars on the drives (the houses' side), nose to the house, backing out when he comes ----------
   const backers = [];
-  if (cars) { const doors = track.doors.slice().sort((x, y) => x.i - y.i); let last = -1e9;
+  if (cars && !track.city) { const doors = track.doors.slice().sort((x, y) => x.i - y.i); let last = -1e9;   // (in town: no drives)
     for (const d of doors) { if ((d.i - last) * ds < 40 || rnd() < .25) continue; last = d.i; const i = wrap(d.i + Math.round(5 / ds)), A = S[i], c = cars.random(rnd);
       const g = c.group, d0 = hs * (track.PAVE + 4.2), yawIn = Math.atan2(A.r.x * hs, A.r.z * hs); g.userData.keep = true; scene.add(g);
       const lamps = []; for (const x of [-.55, .55]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.22, .14, .05), new THREE.MeshBasicMaterial({ color: '#f6f3ea' })); l.position.set(x, .75, -(c.half[1] + .02)); l.visible = false; g.add(l); lamps.push(l); }
@@ -41,7 +41,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
 
   // ---------- sprinklers on the lawns: a jet of water sweeping to and fro over the pavement ----------
   const sprinklers = [], waterM = new THREE.MeshBasicMaterial({ color: '#cfe8f5', transparent: true, opacity: .55, depthWrite: false });
-  for (const d of track.doors.filter((_, k) => k % 3 === 1)) { const i = wrap(d.i - Math.round(4 / ds)), p = pv(i, hs * (track.PAVE + 1.2)), g = new THREE.Group();
+  for (const d of track.city ? [] : track.doors.filter((_, k) => k % 3 === 1)) { const i = wrap(d.i - Math.round(4 / ds)), p = pv(i, hs * (track.PAVE + 1.2)), g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .18, 8), M('#3a3d42'))); g.children[0].position.y = .09; const jet = new THREE.Group(); jet.position.y = .2; g.add(jet);
     for (let k = 0; k < 9; k++) { const dr = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, .5), waterM); const u = k / 8; dr.position.set(0, Math.sin(u * Math.PI) * 1.3, u * 4.2); dr.rotation.x = -Math.cos(u * Math.PI) * .7; jet.add(dr); }
     g.position.copy(p); scene.add(g); const A = S[i]; sprinklers.push({ g, jet, i, p, base: Math.atan2(A.r.x * -hs, A.r.z * -hs), sw: 0, dir: 1, wetT: 0, flipT: 0 }); }
@@ -65,7 +65,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
   const tyre = () => { const g = new THREE.Group(), w = new THREE.Mesh(new THREE.TorusGeometry(.32, .13, 6, 12), tyreM), h = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .2, 8).rotateX(Math.PI / 2), hubM); g.add(w, h); scene.add(g); return g; };
   // ---------- jump over the kids: a ramp on the far lawn, three of them sitting in a row behind it, cheering ----------
   const shows = [], CHEER = deck(['DAWAJ!', 'SKACZ!', 'NAD NAMI!', 'JESZCZE RAZ!', 'ALE ODLOT!']);
-  for (const f of [.27, .5, .73]) { const i = wrap(Math.round(N * f)), A = S[i], d = -hs * (track.PAVE + 3.4), o = track.props.ramp(rnd, 'big'), pr = pv(i, d); o.group.position.copy(pr); o.group.rotation.y = Math.atan2(A.f.x, A.f.z); scene.add(o.group); o.group.updateMatrixWorld(true); const C = track.addHit(o.group, o.hit, i); track.ramps?.push(C);
+  for (const f of track.city ? [] : [.27, .5, .73]) { const i = wrap(Math.round(N * f)), A = S[i], d = -hs * (track.PAVE + 3.4), o = track.props.ramp(rnd, 'big'), pr = pv(i, d); o.group.position.copy(pr); o.group.rotation.y = Math.atan2(A.f.x, A.f.z); scene.add(o.group); o.group.updateMatrixWorld(true); const C = track.addHit(o.group, o.hit, i); track.ramps?.push(C);
     const kids = []; for (let k = 0; k < 3; k++) { const ik = wrap(i + Math.round((6.5 + k * .9) / ds)), p = pv(ik, d), g = new THREE.Group(), b = new THREE.Mesh(new THREE.BoxGeometry(.34, .4, .26), M(['#cf3a2c', '#3b6fa0', '#efc930'][k])); b.position.y = .32; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .2), M('#e3b08a')); hd.position.y = .62; g.add(b, hd); g.position.copy(p); g.rotation.y = Math.atan2(A.r.x * hs, A.r.z * hs); scene.add(g); kids.push({ g, p, ph: rnd() * 6 }); }
     shows.push({ kids, done: 0, sayT: 0 }); }
 

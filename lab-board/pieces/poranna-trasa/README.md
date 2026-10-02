@@ -1413,3 +1413,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - finał Klasyka dłuższy (do 380 m zamiast 300), wzdłuż obu krawędzi drogi biało-czerwone barierki: jedziesz korytarzem; w poprzek pół drogi niskie płotki do przeskoczenia (spacja); slalom, rowy, skocznie, tarcze jak dotąd
 - fala zdarzeń na finale: opony i piłki z obu stron drogi, jedna za drugą (opona co ~1 s, do kilku naraz)
+
+## Wersja 170: Klasyk 2: Śródmieście, dwie prenumeraty, PILNE
+
+- drugi poziom Klasyka: KLASYK 2: ŚRÓDMIEŚCIE (na ekranie startowym przy wersji KLASYK, albo po Ulicy Kasztanowej): miasto za dnia, kamienice ze sklepami tylko po lewej, po prawej brukowany plac wzdłuż całej ulicy: kioski i budki (KIOSK, KWIATY, LODY, ZAPIEKANKI, GAZETY, KEBAB), ogródki kawiarniane ze stolikami i parasolami, fontanny, donice z kwiatami, ławki z emerytami, zaparkowane auta ze skoczniami; do tego życie miasta: przejścia dla pieszych z ludźmi, roboty drogowe, taksówki, rusztowania z cegłami, śmieciarka, biegacze, pies na smyczy, piłki, opony
+- dwie prenumeraty: abonent czyta Trąbkę albo Wieści i chce tylko swoją; w torbie pół na pół, X przełącza tytuł; zły tytuł: połowa punktów i koniec serii
+- kurier konkurencji podbiera skrzynki
+- PILNE (oba poziomy Klasyka): co 14–22 s jeden abonent 35–90 m przed tobą chce gazetę na już, nad drzwiami miga czerwone PILNE!; 12 s na dowiezienie właściwego tytułu: +5
+- notka w gazecie: gazeta na już

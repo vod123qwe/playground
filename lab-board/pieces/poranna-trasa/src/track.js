@@ -68,7 +68,9 @@ export const REGION_T = {
       // turystyczna: the tourist quarter: old tenements in pastels round a big park inside the loop (both shortcuts through it: narrow
       // paths, no cars, people everywhere), a church and a monument where the town has its office tower, food trucks, a skatepark
       turystyczna: { tourist: true, ctrl: [[0, 0, 0], [0, 1, 70], [15, 2, 130], [60, 2, 160], [120, 1, 165], [170, 1, 140], [190, 0, 90], [230, 0, 60], [250, 0, 0], [230, 0, -60], [170, 0, -80], [100, 0, -75], [45, 0, -60], [10, 0, -30]],
-        stops: [.2, .5, .8], posts: [.5], shops: [[.3, 1], [.75, -1]], market: [], blocks: [], trees: .75, walls: ['#e8c8c0', '#f0dca8', '#c8dcc0', '#c0d0e0', '#e8d0e0', '#f0e0c8'] } } },
+        stops: [.2, .5, .8], posts: [.5], shops: [[.3, 1], [.75, -1]], market: [], blocks: [], trees: .75, walls: ['#e8c8c0', '#f0dca8', '#c8dcc0', '#c0d0e0', '#e8d0e0', '#f0e0c8'] },
+      // (the Classic's second street: the town by day, tenements with their shops only on his left, the other side for the street's life)
+      klasyk2: { classic: true, oneSide: -1, home: false, market: [], blocks: [], trees: 0, stops: [.3, .72], shops: [] } } },
   // bronx: the estate of panel blocks after dark (docs/trasy-tematyczne.md): its own loop of streets between the blocks, blocks nearly
   // all the way, a few tenements; the night: lamps along it (some flickering), lit windows, dark passages, a shop open all night
   bronx: { id: 'bronx', home: false, city: true, night: true, ctrl: [[0, 0, 0], [0, 0, 80], [-20, 0, 140], [10, 0, 190], [70, 0, 205], [115, 0, 175], [125, 0, 115], [165, 0, 92], [222, 0, 102], [262, 0, 70], [258, 0, 0], [212, 0, -42], [150, 0, -52], [92, 0, -32], [42, 0, -44]],
@@ -1051,11 +1053,11 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         const sl = box(.7, .08, 3, toon('#efc930'), -.2, 1, 3.2); sl.rotation.x = .5; g.add(sl, box(.7, 1.9, .7, red, -.2, .95, 1.6)); put(g, i, d, 0, 0); hit(g, { hx: 4.5, hz: 3, h: 2.4, kind: 'hard' }, i); }
       // (between the houses: a ramp on the front lawn now and then, the lawns all rideable (as in the old street games))
       const ds0 = doors.slice().sort((x, y) => x.i - y.i);
-      for (let k = 0; k + 1 < ds0.length; k++) { const a0 = ds0[k].i, b0 = ds0[k + 1].i; if ((b0 - a0) * ds < 10 || fr() > .65) continue; const i = Math.round((a0 + b0) / 2), d = RG.oneSide * (PAVE + 2.8); if (!free(i, d, 2.2)) continue;
+      for (let k = 0; k + 1 < ds0.length; k++) { const a0 = ds0[k].i, b0 = ds0[k + 1].i; if (RG.city || (b0 - a0) * ds < 10 || fr() > .65) continue; const i = Math.round((a0 + b0) / 2), d = RG.oneSide * (PAVE + 2.8); if (!free(i, d, 2.2)) continue;
         const o = P.ramp(fr, fr() < .5 ? 'plank' : 'kicker'); put(o.group, i, d, 0, (RG.rideDir || 1) < 0 ? Math.PI : 0); ramps.push(hit(o.group, o.hit, i)); }
       // (garden gnomes on the lawns: knocked over at a house that does not take the paper, points; at a subscriber's, he is not pleased)
       const gHat = toon('#cf3a2c'), gCoat = toon('#3b6fa0'), gBeard = toon('#f6f3ea'), gFace = toon('#e3b08a');
-      ds0.forEach(d => { if (fr() > .7) return; const sd = new THREE.Vector3(-d.n.z, 0, d.n.x), p = d.p.clone().addScaledVector(d.n, -.9).addScaledVector(sd, (fr() < .5 ? 1 : -1) * 2.4), g = new THREE.Group();
+      ds0.forEach(d => { if (RG.city || fr() > .7) return; const sd = new THREE.Vector3(-d.n.z, 0, d.n.x), p = d.p.clone().addScaledVector(d.n, -.9).addScaledVector(sd, (fr() < .5 ? 1 : -1) * 2.4), g = new THREE.Group();
         const body = new THREE.Mesh(new THREE.ConeGeometry(.15, .32, 8), gCoat); body.position.y = .16; const face = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), gFace); face.position.y = .36; const beard = new THREE.Mesh(new THREE.ConeGeometry(.07, .14, 6), gBeard); beard.rotation.x = Math.PI; beard.position.set(0, .3, .05); const hat = new THREE.Mesh(new THREE.ConeGeometry(.08, .2, 8), gHat); hat.position.y = .5; g.add(body, face, beard, hat);
         g.position.set(p.x, groundAt(p.x, p.z, d.i), p.z); g.rotation.y = Math.atan2(d.n.x, d.n.z); g.userData.keep = true; G.add(g); g.updateMatrixWorld(true); const C = hit(g, { hx: .15, hz: .15, h: .55, kind: 'hard' }, d.i);
         const T0 = { kind: 'cone', o: g, C, r: .15, gnome: true, door: doors.indexOf(d) }; C.thing = T0; things.push(T0); gnomes.push(T0); });
@@ -1066,6 +1068,21 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         const mine = ds0.find(d => d.i >= 4) || ds0[0]; if (mine) { mine.mine = true; const sd = new THREE.Vector3(-mine.n.z, 0, mine.n.x), p = mine.p.clone().addScaledVector(mine.n, -1.2).addScaledVector(sd, -1.8), b = new THREE.Group();
           b.add(box(.08, 1.2, .08, toon('#8a6a44'), 0, .6, 0)); const t = new THREE.Mesh(new THREE.PlaneGeometry(.9, .4), new THREE.MeshBasicMaterial({ map: pixSign(THREE, 'DOM', '#f6f3ea', '#cf3a2c'), side: THREE.DoubleSide })); t.position.y = 1.25; b.add(t);
           b.position.set(p.x, groundAt(p.x, p.z, mine.i), p.z); b.rotation.y = Math.atan2(mine.n.x, mine.n.z); G.add(b); } }
+      // (the Classic in town: the far side a square all along the street, low so the camera sees over it: paving, kiosks and stalls,
+      // café gardens with tables and parasols, fountains, flower boxes)
+      if (RG.city) { const pave = toon('#b9b2a4'), pave2 = toon('#a8a091'), wood = toon('#8a6a44'), steel = toon('#9aa0a4'), water = new THREE.MeshBasicMaterial({ color: '#8fc3e0' });
+        for (let i = 0; i < N; i += Math.round(6 / ds)) { const g = new THREE.Group(); g.add(box(14, .05, 6.1, (i / Math.round(6 / ds)) % 2 ? pave : pave2, 0, .03, 0)); put(g, i, os * (PAVE + 7.4), 0, 0); g.traverse(q => { if (q.isMesh) q.userData.noShadow = true; }); }
+        const KIO = [['KIOSK', '#3b6fa0'], ['KWIATY', '#3f8a4a'], ['LODY', '#e070b0'], ['ZAPIEKANKI', '#cf5a3e'], ['GAZETY', '#efc930'], ['KEBAB', '#8e2e25']]; let kk = 0;
+        for (let i = Math.round(30 / ds); i < N - Math.round(20 / ds); i += Math.round((48 + fr() * 30) / ds)) { const d = os * (PAVE + 4.2); if (!free(i, d, 2.2)) continue; const [name, col] = KIO[kk++ % KIO.length], g = new THREE.Group();
+          g.add(box(2.2, 2.3, 2.6, toon('#e8e4dc'), 0, 1.15, 0), box(2.5, .15, 2.9, toon(col), 0, 2.35, 0), box(.06, .9, 1.8, toon('#3f5566'), -os * 1.12, 1.4, 0), box(.5, .9, 1.8, wood, -os * 1.35, .45, 0));
+          const t = new THREE.Mesh(new THREE.PlaneGeometry(2.2, .45), new THREE.MeshBasicMaterial({ map: pixSign(THREE, name, '#f6f3ea', col), side: THREE.DoubleSide })); t.position.set(-os * 1.15, 2.05, 0); t.rotation.y = os > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(t);
+          put(g, i, d, 0, 0); hit(g, { hx: 1.6, hz: 1.45, h: 2.4, kind: 'hard' }, i); }
+        for (let i = Math.round(55 / ds); i < N - Math.round(20 / ds); i += Math.round((70 + fr() * 40) / ds)) { const d = os * (PAVE + 9); if (!free(i, d, 4)) continue; const g = new THREE.Group();
+          for (let k = 0; k < 3; k++) { const z = (k - 1) * 2.6; g.add(box(.8, .06, .8, toon('#f6f3ea'), 0, .75, z), box(.08, .75, .08, steel, 0, .37, z), box(.05, 2.2, .05, steel, 0, 1.1, z)); const um = new THREE.Mesh(new THREE.ConeGeometry(1.1, .45, 8), toon(['#cf3a2c', '#3f8a4a', '#efc930'][k])); um.position.set(0, 2.25, z); g.add(um);
+            for (const x of [-.6, .6]) g.add(box(.4, .45, .4, wood, x, .22, z)); }
+          put(g, i, d, 0, 0); hit(g, { hx: .9, hz: 3.6, h: 1, kind: 'hard' }, i); }
+        for (const f of [.18, .45, .8]) { const i = Math.round(N * f), d = os * (PAVE + 11); if (!free(i, d, 4)) continue; const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, .5, 18), toon('#cfc8b8')); b.position.y = .25; const w = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, .06, 18), water); w.position.y = .48; const c = new THREE.Mesh(new THREE.CylinderGeometry(.25, .35, 1.6, 10), toon('#cfc8b8')); c.position.y = 1; const top = new THREE.Mesh(new THREE.SphereGeometry(.35, 10, 8), water); top.position.y = 1.9; g.add(b, w, c, top); put(g, i, d, 0, 0); hit(g, { hx: 2.4, hz: 2.4, h: .5, kind: 'hard' }, i); }
+        for (let i = Math.round(20 / ds); i < N; i += Math.round(23 / ds)) { const d = os * (PAVE + 1.4); if (!free(i, d, 1)) continue; const g = new THREE.Group(); g.add(box(.7, .45, 1.6, toon('#8a6a44'), 0, .22, 0)); for (let k = 0; k < 4; k++) { const fl = new THREE.Mesh(new THREE.SphereGeometry(.2, 6, 5), toon(['#cf3a2c', '#efc930', '#e070b0', '#f6f3ea'][k])); fl.position.set((Math.random() - .5) * .3, .55, (k - 1.5) * .35); g.add(fl); } put(g, i, d, 0, 0); hit(g, { hx: .35, hz: .8, h: .5, kind: 'hard' }, i); } }
       // (bin day: wheelie bins out at the kerb before most houses; ridden into, over they go and roll)
       const binM = [toon('#3f7a4a'), toon('#3b5670'), toon('#5a5f66')], lidM = toon('#2a2c30');
       ds0.forEach(d => { if (fr() > .6) return; const i = d.i + Math.round((fr() < .5 ? 3 : -3) / ds), dd = RG.oneSide * (KERB + .55); if (!free(i, dd, .9)) return; const g = new THREE.Group(), m = binM[fr() * 3 | 0];
