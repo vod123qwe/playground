@@ -20,10 +20,10 @@ export const PERSONAS = {
   brat: { name: 'Brat', role: 'spod kosza', tel: 'domowy', face: 'brat' },
   soltys: { name: 'Pan Sołtys', role: 'tablica przy przystanku PKS', tel: '3-12', face: 'key:belly', region: 'wies',
     hello: ['Sołtys, słucham. Tylko szybko, bo zebranie wiejskie o dziesiątej, a ja jeszcze nie wiem, o czym.', 'Halo? A, to ten od gazet z miasta. Dobrze, że jesteś. Gmina ma sprawę.', 'Słucham. Jak w sprawie gęsi, to nie moje. Jak w sprawie gminy, to moje.'] },
-  gospodyni: { name: 'Pani Krysia', role: 'gospodarstwo pod lasem', tel: '5-40', face: 'key:lady', region: 'wies',
-    hello: ['Halo, halo! Krysia przy telefonie. Kury znowu się niosą jak szalone, nie mam gdzie jajek dawać.', 'Słucham, synku. Mów głośniej, bo krowa mi ryczy nad uchem.'] },
-  traktorzysta: { name: 'Zdzichu z traktora', role: 'pole za przejazdem', tel: '7-77', face: 'key:gardener', region: 'wies',
-    hello: ['Zdzichu. Słyszę, że jakiś miastowy na rowerze szybki. No, to zobaczymy.', 'Halo, ja z traktora dzwonię, więc krzyczę. CZEGO?!'] },
+  gospodyni: { name: 'Pani Beata', role: 'gospodarstwo pod lasem', tel: '5-40', face: 'key:lady', region: 'wies',
+    hello: ['Halo, halo! Beata przy telefonie. Kury znowu się niosą jak szalone, nie mam gdzie jajek dawać.', 'Słucham, synku. Mów głośniej, bo krowa mi ryczy nad uchem.'] },
+  traktorzysta: { name: 'Bogdan „Turbo”', role: 'pole za przejazdem', tel: '7-77', face: 'key:gardener', region: 'wies',
+    hello: ['Turbo. Znaczy Bogdan, ale Turbo, odkąd na tym traktorze wyprzedziłem karetkę. Na sygnale. Słyszę, że jakiś miastowy na rowerze szybki. No, to zobaczymy.', 'Halo, ja z traktora dzwonię, więc krzyczę. CZEGO?!'] },
   hela: { name: 'Pani Hela', role: 'papierniczy na rogu', tel: '20-20', face: 'key:shopper',
     hello: ['Papierniczy, Hela przy telefonie. Zeszyty, długopisy, znaczki. I plotki, ale te za darmo.', 'Słucham, kochanieńki. Notesik się skończył? Mam takie, że się ich nie da zapisać do końca.'] } };
 
@@ -34,25 +34,25 @@ export const MIXUP = [
   ['Halo? No słucham, młody, po co dzwonisz?', 'Ale to pan dzwoni, panie Januszu.', 'Co ty gadasz? Ale ty głupi, młody. Nie zajmuj linii. *klik*'],
   ['Tak? Kto mówi? Czego chcesz o tej porze?', 'To pan do mnie zadzwonił...', 'Ja? Ja nie dzwonię do ludzi, ludzie dzwonią do mnie. Głupi jesteś, młody. *klik*'],
   ['No co tam, młody? Coś się stało, że dzwonisz?', 'Nic, to pan zadzwonił.', 'Aha. No to dobrze, że nic. Ale nie dzwoń bez powodu, bo mi klej zasycha. *klik*'],
-  ['Halo, warsztat! Mów szybko, bo mam klienta.', 'Panie Januszu, to ja, jadę. Pan dzwonił.', 'Młody, ja nie mam czasu na twoje telefony! Mietek, kto mu dał mój numer? *klik*'],
+  ['Halo, warsztat! Mów szybko, bo mam klienta.', 'Panie Januszu, to ja, jadę. Pan dzwonił.', 'Młody, ja nie mam czasu na twoje telefony! Szprycha, kto mu dał mój numer? *klik*'],
   ['Halo? Halo! Słyszysz mnie? Bo ja ciebie nie.', 'Słyszę. Pan dzwoni?', 'Nie słyszę, młody, nie słyszę! Zadzwoń później! *klik*'] ];
 // Janusz rings by mistake: he talks on (to someone else, about nothing), then sees who he got, and is gone
 export const POCKET = [
   ['Krysiu, słuchaj, ten schab to musi być z kością, bo bez kości to nie schab, tylko kotlet...', '...i powiedz szwagrowi, że pompkę mi odda, bo ja wiem, że to on ją ma...'],
   ['No więc mówię mu, panie, ja mam w nogach tyle kilometrów, że do Paryża i z powrotem. Dwa razy. Pod wiatr.', 'A on mi na to, że to niemożliwe. To ja mu na to, że możliwe, bo byłem. W Paryżu. Prawie.'],
-  ['...dwa kilo ziemniaków, cebula, masło, i te, no, takie żółte...', '...nie banany, Mietek, banany są żółte, ale ja mówię o tych drugich żółtych...'],
+  ['...dwa kilo ziemniaków, cebula, masło, i te, no, takie żółte...', '...nie banany, Szprycha, banany są żółte, ale ja mówię o tych drugich żółtych...'],
   ['Panie doktorze, kolano mnie boli tylko jak chodzę, jak jadę rowerem, to nie boli, więc ja będę tylko jeździł.', 'Do sklepu rowerem, do łóżka rowerem, do kościoła... no, do kościoła piechotą, ale szybko.'] ];
 // how such a call ends: seldom the same way twice
-export const POCKET_END = ['Halo? Czekaj... o kurwa, do młodego mi się wykręciło. *klik*', '*klik*', '...Mietek, a czemu ten telefon świeci? *szum* *klik*', 'O, młody? Ty to słyszałeś? To zapomnij. Nie znamy się. *klik*',
-  '*bateria pada w pół słowa*', 'Halo? Kto tam? A, nieważne. *klik*', '...i to by było na tyle. Krysia? Krysia?! *długi sygnał*'];
+export const POCKET_END = ['Halo? Czekaj... o kurwa, do młodego mi się wykręciło. *klik*', '*klik*', '...Szprycha, a czemu ten telefon świeci? *szum* *klik*', 'O, młody? Ty to słyszałeś? To zapomnij. Nie znamy się. *klik*',
+  '*bateria pada w pół słowa*', 'Halo? Kto tam? A, nieważne. *klik*', '...i to by było na tyle. Beata? Beata?! *długi sygnał*'];
 export const RADIO = {
-  turbo: ['Dawaj, młody! Teraz albo nigdy! Pedał w podłogę!', 'Jak ja w osiemdziesiątym trzecim na wyścigu dookoła Polski pod Maciejowicami! Kręć!', 'Ty to młody głupi jednak. Ale szybki głupi! Jedź!', 'Wyobraź sobie, że goni cię Mietek z rachunkiem! Szybciej!', 'Turbo, młody, turbo! Jak w kolarzówce z dopalaczem!', 'Nie myśl, kręć! Myślenie spowalnia, mówię z doświadczenia!'],
+  turbo: ['Dawaj, młody! Teraz albo nigdy! Pedał w podłogę!', 'Jak ja w osiemdziesiątym trzecim na wyścigu dookoła Polski pod Maciejowicami! Kręć!', 'Ty to młody głupi jednak. Ale szybki głupi! Jedź!', 'Wyobraź sobie, że goni cię komornik! Szybciej!', 'Turbo, młody, turbo! Jak w kolarzówce z dopalaczem!', 'Nie myśl, kręć! Myślenie spowalnia, mówię z doświadczenia!'],
   behind: ['Uważaj, młody, za tobą!', 'Auto na ogonie! Nie oglądaj się, tylko zjedź!', 'Coś ci siedzi na plecach, młody. I to nie ja.'],
   fall: ['Wstawaj! Ja w osiemdziesiątym z obojczykiem jechałem jeszcze dwa etapy!', 'Asfalt nie gryzie. Gryzie trochę. Wstawaj!', 'Spokojnie, rower cały? To dobrze. Ty się zagoisz.'],
-  check: ['Dobrze idzie! Jeszcze kawałek i będziesz jak ja. Prawie.', 'Punkt zaliczony. Wiesz, ile ja punktów zaliczyłem? Nikt nie liczył, ale dużo.', 'Ładnie, młody. Mietek, widzisz? Mówiłem, że ma talent.'],
+  check: ['Dobrze idzie! Jeszcze kawałek i będziesz jak ja. Prawie.', 'Punkt zaliczony. Wiesz, ile ja punktów zaliczyłem? Nikt nie liczył, ale dużo.', 'Ładnie, młody. Szprycha, widzisz? Mówiłem, że ma talent.'],
   finish: ['Ostatnia prosta! Tu się wygrywa wyścigi i traci zęby!', 'Meta blisko! Ręce na kierownicy, uśmiech do zdjęcia!', 'Jeszcze chwila! Tak finiszowałem pod Maciejowicami. Bez zęba, ale finiszowałem!'],
-  idle: ['Wiesz, młody, kiedyś pewna pani w czerwonej chustce powiedziała, że jestem za szybki. Do dziś nie wiem, o rower jej chodziło czy o co.', 'Słyszysz to? To Mietek. Znowu je moje pączki.', 'Jak ktoś ci powie kochaniutki takim głosem jak kawa bez cukru, to uciekaj. Albo nie uciekaj. Ja nie uciekłem.',
-    'Pamiętaj: nie ma złej pogody, są tylko słabe opony.', 'Kiedyś to były rowery. Stal. I kobiety, co sprowadzały części zza granicy. Nieważne. Jedź.', 'Gdybym miał twoje nogi i moją głowę, to byłbym... no, mną, ale młodszym.', 'Halo? Słyszysz mnie? Bo ja siebie słabo. Mietek, zabierz tę szlifierkę!'] };
+  idle: ['Wiesz, młody, kiedyś pewna pani w czerwonej chustce powiedziała, że jestem za szybki. Do dziś nie wiem, o rower jej chodziło czy o co.', 'Słyszysz to? To Szprycha. Śpiewa. Przy klientach mu nie pozwalam.', 'Jak ktoś ci powie kochaniutki takim głosem jak kawa bez cukru, to uciekaj. Albo nie uciekaj. Ja nie uciekłem.',
+    'Pamiętaj: nie ma złej pogody, są tylko słabe opony.', 'Kiedyś to były rowery. Stal. I kobiety, co sprowadzały części zza granicy. Nieważne. Jedź.', 'Gdybym miał twoje nogi i moją głowę, to byłbym... no, mną, ale młodszym.', 'Halo? Słyszysz mnie? Bo ja siebie słabo. Szprycha, zabierz tę szlifierkę!'] };
 
 // the calls on the earpiece while you ride: someone needs something now. T takes it; then a clock. kind: what it asks (main.js does it)
 export const LIVE = [
@@ -89,9 +89,9 @@ export const JOBS = {
   jajka: { giver: 'gospodyni', pay: 30, region: 'wies', title: 'JAJKA DLA SĄSIADKI', ad: 'Jajka świeże, od szczęśliwych kur. Kto dowiezie sąsiadce? Ostrożnie!',
     pitch: 'Zawieziesz sąsiadce dwie mendle jajek? Tylko ostrożnie, synku. Wywrotka albo skok z tych waszych skoczni i będzie jajecznica w torbie.',
     hint: 'na wsi: dowieź do domu z gwiazdką; wywrotka albo długi skok tłucze jajka', fail: 'Jajka zrobiły się jajecznicą.', done: 'Jajka całe. Sąsiadka zrobiła z nich ciasto i podzieliła się z gospodynią.' },
-  wyscig: { giver: 'traktorzysta', pay: 40, region: 'wies', title: 'WYŚCIG Z TRAKTORZYSTĄ', ad: 'Zdzichu z traktora mówi, że żaden rower go nie przegoni. Zakład stoi.',
+  wyscig: { giver: 'traktorzysta', pay: 40, region: 'wies', title: 'WYŚCIG Z TRAKTORZYSTĄ', ad: 'Bogdan „Turbo” z traktora mówi, że żaden rower go nie przegoni. Zakład stoi.',
     pitch: 'Ja do młyna jadę codziennie i jeszcze nikt mnie nie przegonił. Przejedź trasę przez wieś szybciej niż ja, to postawię. Nie dasz rady, to stawiasz ty.',
-    hint: 'na wsi: dojedź do mety w czasie lepszym niż traktorzysta', fail: 'Traktorzysta był pierwszy przy młynie i śmiał się do obiadu.', done: 'Wygrany zakład. Zdzichu płaci i mówi, że jutro rewanż.' },
+    hint: 'na wsi: dojedź do mety w czasie lepszym niż traktorzysta', fail: 'Traktorzysta był pierwszy przy młynie i śmiał się do obiadu.', done: 'Wygrany zakład. Turbo płaci i mówi, że jutro rewanż.' },
   notes: { giver: 'hela', pay: 0, cost: 60, title: 'WIĘKSZY NOTES', ad: 'Notesy z twardą okładką. Więcej miejsca na sprawy do załatwienia.',
     pitch: 'Mam notes, w którym zmieścisz jedną sprawę więcej. Sześćdziesiąt złotych, ale okładka twarda jak życie.', shop: true } };
 const FOTO = [{ k: 'dog', what: 'pies, który goni rowery', aim: 'psa' }, { k: 'kapliczka', what: 'odnowiona kapliczka', aim: 'kapliczkę' }, { k: 'budowa', what: 'budowa na rogu, co stoi', aim: 'budowę' }, { k: 'przystanek', what: 'przystanek, na którym nikt się nie doczekał autobusu', aim: 'przystanek' }];
