@@ -32,6 +32,8 @@ export const REGION_T = {
     // (a board says so), the start on the street itself under a START banner, as on the old machines; on the right the pavement,
     // a strip of lawn with benches and the paper bundles; the street trees on the houses' side)
     maps: {
+      deptak: { classic: true, sea: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [4, 0, 100], [30, 0, 190], [90, 0, 250], [180, 0, 272], [270, 0, 262], [340, 0, 215], [372, 0, 140], [366, 0, 60], [326, 0, 0], [256, 0, -36], [170, 0, -50], [90, 0, -46], [30, 0, -28]],
+        gap: [12, 5], stops: [.5], posts: [], shops: [], trees: 0, roll: .06, walls: ['#f4e1c1', '#cfe3e8', '#f2c9c0', '#e9f0d8', '#f6f3ea', '#d8d0ec'], roofs: ['#8e3b2c', '#3b6fa0', '#5a5f66'] },
       park: { classic: true, park: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [10, 0, 90], [44, 1, 168], [110, 1, 226], [192, 1, 246], [268, 0, 222], [314, 0, 160], [324, 0, 85], [300, 0, 12], [244, 0, -40], [168, 0, -62], [92, 0, -66], [30, 0, -42]],
         gap: [12, 5], stops: [.4], posts: [], shops: [], trees: 0, roll: .1, walls: ['#f0eee8', '#e8dcc8', '#d8e0d0', '#e8d8d0', '#f0e8d0'], roofs: ['#8e3b2c', '#5a5f66', '#6d4a3a'] },
       klasyk: { classic: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [6, 1, 80], [30, 2, 160], [85, 3, 225], [165, 3, 250], [240, 2, 225], [285, 1, 160], [295, 0, 80], [275, -1, 0], [225, 0, -60], [150, 1, -90], [75, 0, -85], [20, 0, -50]],
@@ -110,7 +112,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const KR = RG.kerb ? .14 : .03;
   function hAt(d, i = 0) { const a = Math.abs(d); return (a <= ROAD ? 0 : a <= KERB ? (a - ROAD) / (KERB - ROAD) * KR : KR + Math.min(.02, (a - KERB) * .01)) + terr(d, i); }
   function terr(d, i) {                                                // (nothing near the road and the lots, to 30 m; then rolling land, rising the farther out)
-    const a = Math.abs(d); if (a < 30) return 0; const w = Math.min(1, (a - 30) / 28), sd = d < 0 ? 1.7 : 4.1, u = (((i % N) + N) % N) * ds, Lp = N * ds, t = u / Lp;
+    const a = Math.abs(d); if (a < 30 || (RG.sea && d * RG.oneSide > 0)) return 0; const w = Math.min(1, (a - 30) / 28), sd = d < 0 ? 1.7 : 4.1, u = (((i % N) + N) % N) * ds, Lp = N * ds, t = u / Lp;
     const f = u => w * w * (3.2 * vnoise(u * .016, sd) + 1.4 * vnoise(u * .045 + a * .02, sd + 5) - 1.2) + Math.max(0, a - 42) * (.04 + .05 * vnoise(u * .01, sd + 9));
     return f(u) * (1 - t) + f(u - Lp) * t; }                            // (blended with itself a loop back: the same where the loop closes)
   const noise = (x, z) => { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); };
@@ -143,9 +145,18 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     else strip(s * VERGE, s * PAVE, '#8a7a5a', .2, .7, tex.grass(0), 1.6);                 // (the village: a trodden dirt path)
     if (RG.city) strip(s * PAVE, s * 14, '#b3ad9d', .05, .5, tex.slabs(), 3.2);   // (the town: the pavement up to the walls)
     else strip(s * PAVE, s * 14, RG.kerb ? '#7c9a45' : '#86a04a', .16, .12, tex.grass(6), 1.6);         // the lawns (a few flowers)
-    for (const [a, b] of (s === INNER ? (RG.city ? [[14, 20], [20, 28], [28, 40], [40, 52]] : [[14, 20], [20, 28], [28, 40]]) : [[14, 20], [20, 28], [28, 38], [38, 52], [52, 72], [72, 84], [88, 100], [100, 135], [135, 170], [170, 200]])) strip(s * a, s * b, '#78963f', .2, .08, tex.grass(2), 2.2);
+    for (const [a, b] of (s === INNER && RG.sea ? [] : s === INNER ? (RG.city ? [[14, 20], [20, 28], [28, 40], [40, 52]] : [[14, 20], [20, 28], [28, 40]]) : [[14, 20], [20, 28], [28, 38], [38, 52], [52, 72], [72, 84], [88, 100], [100, 135], [135, 170], [170, 200]])) strip(s * a, s * b, '#78963f', .2, .08, tex.grass(2), 2.2);
     if (s !== INNER) { strip(s * 84, s * 88, '#55595e', .06, .5, tex.asphalt(), 3); strip(s * 83.4, s * 84, '#a8a08a', .1, .5, null, 1); strip(s * 88, s * 88.6, '#a8a08a', .1, .5, null, 1); }   // (a country road out there, gravel edges)   // the land beyond, rolling (inside the loop: not so far, the other side of it is there)
   }
+  // (the water's edge: well back behind the guesthouses, close in on the beaches (a cove each), so the camera sees the sea there)
+  const SEA = { y: 0, d: i => { const t = ((((i % N) + N) % N) * ds % 120 - 75) / 45; return PAVE + 24 - (t > 0 ? 13 * Math.pow(Math.sin(Math.PI * t), .6) : 0); } };
+  if (RG.sea) { const hd = RG.oneSide, d0 = PAVE + 7.4; SEA.y = Math.min(...S.map(s => s.p.y)) - .3;
+    const pos = [], idx = []; for (let i = 0; i <= N; i++) { const s = S[i % N]; for (const [d, y] of [[d0, s.p.y + hAt(hd * d0, i)], [SEA.d(i) + 6, SEA.y - .5]]) pos.push(s.p.x + s.r.x * hd * d, y, s.p.z + s.r.z * hd * d); }
+    for (let i = 0; i < N; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const sand = new THREE.Mesh(g, toon('#e3cf9a', { side: THREE.DoubleSide })); sand.receiveShadow = true; sand.userData.ground = true; G.add(sand);
+    const sh = new THREE.Shape(); for (let i = 0; i < N; i += 2) { const s = S[i], x = s.p.x + s.r.x * hd * SEA.d(i), z = s.p.z + s.r.z * hd * SEA.d(i); if (i) sh.lineTo(x, -z); else sh.moveTo(x, -z); }
+    const w = new THREE.Mesh(new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2), toon('#3d8fc0')); w.position.y = SEA.y; w.userData.noShadow = true; G.add(w); }
   // the road's stretches: three bus stops (painted bays, a shelter on the pavement's far side), bike lanes by the kerb on a few long
   // stretches (red, a white line, a bike painted every so often), and quiet streets with no line down the middle
   const stops = RG.stops.map((f, k) => { const i = Math.round(N * f); return { i, s: i * ds, sd: k % 2 ? -1 : 1, id: k }; });
@@ -669,7 +680,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   // the paths, planned before the houses: where one leaves the pavement there is a meadow (no house there, no fence across it), and
   // its first stretch is kept clear (no tree, no tuft of grass on it)
   const home = RG.home ? homeStreet() : (() => { const i0 = 6, s0 = S[i0], d0 = INNER * 2.2, p0 = at(i0, d0, 0); return { start: { x: p0.x, z: p0.z, yaw: Math.atan2(s0.f.x, s0.f.z) }, iJ: i0, near: () => false, paved: () => false, yard: () => false, bikes: [], C0: p0, C0R: 0 }; })();
-  const trailPlans = []; for (let i0 = Math.round(40 / ds); i0 < N - 40; i0 += Math.round((42 + nr() * 40) / ds)) { const sd = nr() < .5 ? -1 : 1; if (home.near(i0, sd, 30)) continue; if (nearStop(i0, sd, 25) || nearPost(i0, sd, 24) || nearShop(i0, sd, 22)) continue;
+  const trailPlans = []; for (let i0 = Math.round(40 / ds); i0 < N - 40; i0 += Math.round((42 + nr() * 40) / ds)) { const sd = nr() < .5 ? -1 : 1; if (home.near(i0, sd, 30) || (RG.sea && sd === RG.oneSide)) continue; if (nearStop(i0, sd, 25) || nearPost(i0, sd, 24) || nearShop(i0, sd, 22)) continue;
     trailPlans.push({ i0, sd }); zone({ position: at(i0, sd * (PAVE + 13)), rotation: { y: yawOf(i0) } }, 13, 3.2); }
   const nearTrail = (i, s, m) => trailPlans.some(t => t.sd === s && Math.abs((((i - t.i0) % N) + N + N / 2) % N - N / 2) * ds < m);
 
@@ -786,7 +797,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       if (RG.blocks.some(([a, b]) => f >= a && f <= b)) { if (gapM < 38) return null; cityLast[s] = i; return CITY.block(i, s); } if (gapM < 12.2) return null; cityLast[s] = i; return CITY.tenement(i, s); }
     if (EST) { const f = i / N; if (RG.wh.some(([a, b]) => f >= a && f <= b)) { if ((i - (whLast[s] ?? -1e9)) * ds < 17.5) return null; whLast[s] = i; return EST.warehouse(i, s); } if (rnd() < RG.site) return EST.site(i, s); } if (RG.farms) { const k = rnd(); if (k > RG.houseP + .28) { fieldLots.push({ i, s }); return null; } if (k > RG.houseP) { farmLots.push({ i, s }); return null; } }
     return rnd() < (RG.classic ? 0 : .07) ? shacks(i, s) : pr() < (RG.farms ? .12 : RG.classic ? .04 : .2) ? plots.build(plotOrder[plotK++ % plotOrder.length], i, s) : house(i, s); };
-  for (let i = 30; i < N - 40; i += Math.round((RG.gap[0] + rnd() * RG.gap[1]) / ds)) { if (RG.oneSide) { if (RG.park && (i * ds) % 150 > 100) continue; lot(i, RG.oneSide); continue; } lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }   // (the Classic: a house at every step, on its one side)
+  for (let i = 30; i < N - 40; i += Math.round((RG.gap[0] + rnd() * RG.gap[1]) / ds)) { if (RG.oneSide) { if ((RG.park && (i * ds) % 150 > 100) || (RG.sea && (i * ds) % 120 > 75)) continue; lot(i, RG.oneSide); continue; } lot(i, 1); if (rnd() < .9) lot(i + Math.round(8 / ds), -1); }   // (the Classic: a house at every step, on its one side)
   // (the Classic: none on the far side, where its camera hangs: they were all crown in its view)
   const treeOK = sd => !(RG.oneSide && sd === -RG.oneSide);
   for (let i = 0; i < N; i += Math.round((9 + rnd() * 12) / ds)) { const side = rnd() < .5 ? -1 : 1, d1 = side * (PAVE + 1.6 + rnd() * 3); if (treeOK(side)) tree(i, d1); if (rnd() < .25) { const s2 = rnd() < .5 ? -1 : 1; if (treeOK(s2)) tree(i + 7, s2 * (VERGE - .6)); } }
@@ -1103,6 +1114,33 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         { const i = Math.round(275 / ds), d = hd * (PAVE + 14); if (i < N && free(i, d, 5)) { const g = new THREE.Group(), wood = toon('#f6f3ea'); g.add(box(7, .5, 7, toon('#cfc8b8'), 0, .25, 0)); for (let k = 0; k < 8; k++) { const a = k / 8 * 6.28; g.add(box(.18, 3, .18, wood, Math.cos(a) * 3, 2, Math.sin(a) * 3)); } const rf = new THREE.Mesh(new THREE.ConeGeometry(4.2, 1.6, 8), toon('#3f8a4a')); rf.position.y = 4.3; g.add(rf); put(g, i, d, 0, 0); hit(g, { hx: 3.5, hz: 3.5, h: 4, kind: 'hard' }, i); } }
         for (let i0 = Math.round(150 / ds); i0 < N; i0 += Math.round(450 / ds)) { const i = i0 + Math.round(125 / ds), d = hd * (PAVE + 12); if (i < N && free(i, d, 4)) { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, .5, 18), toon('#cfc8b8')); b.position.y = .25; const w = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, .06, 18), water); w.position.y = .48; const c = new THREE.Mesh(new THREE.CylinderGeometry(.25, .35, 1.6, 10), toon('#cfc8b8')); c.position.y = 1; const top = new THREE.Mesh(new THREE.SphereGeometry(.35, 10, 8), water); top.position.y = 1.9; g.add(b, w, c, top); put(g, i, d, 0, 0); hit(g, { hx: 2.4, hz: 2.4, h: .5, kind: 'hard' }, i); } }
         for (let i = 0; i < N; i += Math.round((4 + fr() * 4) / ds)) { const d = hd * (PAVE + (inPark(i) ? 17 : 24) + fr() * 14); if (free(i, d, 2)) farTree(i, d, 1.1 + fr() * .5); } }
+      // (the seaside: sand over the lawns on the beach stretches, windbreaks, parasols and deckchairs down the beach, a lifeguards' tower,
+      // a pier into the sea, sailing boats; kiosks along the promenade)
+      if (RG.sea) { const hd = RG.oneSide, onBeach = i => (i * ds) % 120 > 75, sand = toon('#e3cf9a'), wood = toon('#8a6a44'), white = toon('#f6f3ea'), steel = toon('#9aa0a4');
+        const sy = (i, a) => { const s = S[((i % N) + N) % N], y0 = s.p.y + hAt(hd * (PAVE + 7.4), i); return a <= PAVE + 7.4 ? y0 : y0 + (SEA.y - .5 - y0) * Math.min(1, (a - PAVE - 7.4) / (SEA.d(i) + 6 - PAVE - 7.4)); };
+        const onSand = (g, i, a, yaw = 0) => { put(g, i, hd * a, 0, yaw); g.position.y = sy(i, a); };
+        const STR = [['#cf3a2c', '#f6f3ea'], ['#3b6fa0', '#f6f3ea'], ['#efc930', '#3f8a4a'], ['#e070b0', '#f6f3ea'], ['#e8742e', '#3b6fa0']].map(([a, b]) => [toon(a), toon(b)]);
+        for (let i = 0; i < N; i += Math.round(6 / ds)) { if (!onBeach(i)) continue; const g = new THREE.Group(); g.add(box(7.4, .05, 6.1, sand, 0, .04, 0)); put(g, i, hd * (PAVE + 3.9), 0, 0); g.traverse(q => { if (q.isMesh) q.userData.noShadow = true; }); }
+        for (let i = 0; i < N; i += Math.round((4 + fr() * 4) / ds)) { if (!onBeach(i)) continue; const a = PAVE + 8 + fr() * Math.max(.5, SEA.d(i) - PAVE - 9.5), g = new THREE.Group(), [c1, c2] = STR[fr() * STR.length | 0], k = fr();
+          if (k < .45) { for (let p = 0; p < 4; p++) { g.add(box(.05, 1.3, .05, wood, 0, .65, (p - 1.5) * 1.1)); if (p < 3) g.add(box(.03, 1, 1.1, p % 2 ? c2 : c1, 0, .6, (p - 1) * 1.1)); } }
+          else { g.add(box(.05, 2.2, .05, white, 0, 1.1, 0)); const u = new THREE.Mesh(new THREE.ConeGeometry(1.3, .5, 8), c1); u.position.y = 2.2; g.add(u); for (const z of [-.6, .6]) { const ch = box(.6, .05, 1.5, c2, .9, .35, z); ch.rotation.z = .35; g.add(ch, box(.05, .3, 1.4, wood, .9, .15, z)); } }
+          onSand(g, i, a, fr() * .6 - .3); if (a < PAVE + 12) hit(g, { hx: .5, hz: k < .45 ? 2 : 1.3, h: 1.3, kind: 'hard' }, i); }
+        for (let i0 = 0; i0 < N; i0 += Math.round(240 / ds)) { const i = i0 + Math.round(84 / ds), a = PAVE + 8.6; if (i >= N) continue; const g = new THREE.Group(), red = toon('#cf3a2c');
+          for (const x of [-.8, .8]) for (const z of [-.8, .8]) g.add(box(.12, 2.8, .12, white, x, 1.4, z)); g.add(box(2, .12, 2, wood, 0, 2.8, 0), box(1.8, 1.2, 1.8, red, 0, 3.45, 0), box(1.9, .5, 1.9, white, 0, 3.6, 0), box(2.1, .1, 2.1, red, 0, 4.1, 0), box(.05, 1.4, .05, white, 0, 4.8, 0));
+          const t = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .38), new THREE.MeshBasicMaterial({ map: pixSign(THREE, 'WOPR', '#cf3a2c', '#f6f3ea'), side: THREE.DoubleSide })); t.position.set(-hd * .93, 3.6, 0); t.rotation.y = Math.PI / 2; g.add(t); onSand(g, i, a); }
+        { const i = Math.round(345 / ds) % N, g = new THREE.Group(), len = 64; for (let z = 0; z < len; z += 1.2) g.add(box(2.8, .1, 1.1, wood, 0, 0, z));
+          for (let z = 3; z < len; z += 4) for (const x of [-1.3, 1.3]) g.add(box(.2, 2.4, .2, wood, x, -1.2, z)); for (const x of [-1.4, 1.4]) g.add(box(.06, .9, len, white, x, .5, len / 2));
+          g.add(box(5, .15, 5, wood, 0, 0, len + 2), box(.15, 2.6, .15, white, -2.2, 1.3, len), box(.15, 2.6, .15, white, 2.2, 1.3, len), box(5.4, .3, 5.4, toon('#cf3a2c'), 0, 2.7, len + 2));
+          const s = S[i]; g.position.set(s.p.x + s.r.x * hd * (PAVE + 8.5), SEA.y + .9, s.p.z + s.r.z * hd * (PAVE + 8.5)); g.rotation.y = Math.atan2(s.r.x * hd, s.r.z * hd); G.add(g); }
+        const sailM = new THREE.MeshBasicMaterial({ color: '#f6f3ea', side: THREE.DoubleSide }), sailG = new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(0, 3.2), new THREE.Vector2(1.8, 0)]));
+        for (let k = 0; k < 10; k++) { const i = fr() * N | 0, a = SEA.d(i) + 6 + fr() * 40, s = S[i], g = new THREE.Group(); g.add(box(1.2, .5, 3.4, [toon('#f6f3ea'), toon('#3b6fa0'), toon('#cf3a2c')][k % 3], 0, .2, 0), box(.07, 3.6, .07, wood, 0, 2.2, 0)); const sl = new THREE.Mesh(sailG, sailM); sl.position.set(0, .6, -.2); sl.rotation.y = Math.PI / 2; g.add(sl);
+          g.position.set(s.p.x + s.r.x * hd * a, SEA.y, s.p.z + s.r.z * hd * a); g.rotation.y = fr() * 6.28; G.add(g); }
+        const KIO = [['GOFRY', '#e8742e'], ['LODY', '#e070b0'], ['RYBA', '#3b6fa0'], ['KUKURYDZA', '#efc930'], ['PAMIĄTKI', '#3f8a4a'], ['FRYTKI', '#cf3a2c']]; let kk = 0;
+        for (let i = Math.round(30 / ds); i < N - Math.round(20 / ds); i += Math.round((40 + fr() * 25) / ds)) { const d = hd * (PAVE + 2); if (!free(i, d, 2)) continue; const [name, col] = KIO[kk++ % KIO.length], g = new THREE.Group();
+          g.add(box(2, 2.2, 2.4, white, 0, 1.1, 0), box(2.4, .15, 2.8, toon(col), 0, 2.3, 0), box(.06, .8, 1.6, toon('#3f5566'), -hd * 1.02, 1.4, 0), box(.5, .9, 1.7, wood, -hd * 1.25, .45, 0));
+          const awn = box(.9, .06, 2.6, toon(col), -hd * 1.4, 2.05, 0); awn.rotation.z = hd * .3; g.add(awn);
+          const t = new THREE.Mesh(new THREE.PlaneGeometry(2, .42), new THREE.MeshBasicMaterial({ map: pixSign(THREE, name, '#f6f3ea', col), side: THREE.DoubleSide })); t.position.set(-hd * 1.05, 2.0, 0); t.rotation.y = hd > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(t);
+          put(g, i, d, 0, 0); hit(g, { hx: 1.4, hz: 1.4, h: 2.4, kind: 'hard' }, i); } }
       // (the Classic's village, on the far side: bales about the verge, a pasture behind a fence with cows, shrines, a well, a pond)
       if (RG.classic && RG.id === 'wies') { const hd = RG.oneSide, hay = toon('#e2c25e'), hayE = toon('#c49a3e'), wood = toon('#8a6a44'), cowW = toon('#f6f3ea'), cowB = toon('#24190f');
         for (let i = Math.round(25 / ds); i < N - Math.round(10 / ds); i += Math.round((18 + fr() * 16) / ds)) { const d = os * (PAVE - .8 + fr() * 2.4); if (!free(i, d, 1.6)) continue; const g = new THREE.Group(), n = fr() < .3 ? 2 : 1;
@@ -1149,11 +1187,11 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       for (let k = 0; k < 220; k++) farTree(fr() * N | 0, sd * (178 + fr() * 18), 1.6 + fr() * .8);                                  // and a wall of them at the far edge
     }
     // small ponds on the meadows inside the loop, by the woods (the woods keep off them)
-    for (let k = 0; k < 5; k++) { const i = Math.round((k + .3 + nr() * .4) / 5 * N), dd = INNER * (36 + nr() * 10); if (!free(i, dd, 3)) continue;
+    for (let k = 0; k < (RG.sea ? 0 : 5); k++) { const i = Math.round((k + .3 + nr() * .4) / 5 * N), dd = INNER * (36 + nr() * 10); if (!free(i, dd, 3)) continue;
       const o = NAT.pond(nr); put(o.group, i, dd, 0, nr() * 6); o.group.updateMatrixWorld(true); zone(o.group, o.radius, o.radius * .8); show.farm.push({ o: o.group, label: 'staw', note: 'z trzcinami' }); }
     // inside the loop, behind the houses: woods, thick ones, here and there (leafy trees and spruces, bushes under them)
     { const wr = mulberry(47); let i = Math.round(wr() * 40 / ds);
-      while (i < N - 10) { const lenM = 25 + wr() * 25, i1 = Math.min(N - 1, i + Math.round(lenM / ds));
+      while (i < N - 10 && !RG.sea) { const lenM = 25 + wr() * 25, i1 = Math.min(N - 1, i + Math.round(lenM / ds));
         // (the woods within the land: past 40 m on the inside there is none)
         for (let n = 0; n < 16 + (wr() * 16 | 0); n++) { const ii = i + Math.round(wr() * (i1 - i)), dd = INNER * (30 + wr() * 8.5); if (!free(ii, dd, 1.6)) continue;
           if (wr() < .35) { const t = new THREE.Group(), H = 6 + wr() * 5; t.add(box(.22, H * .3, .22, wood, 0, H * .15, 0)); for (let k = 0; k < 4; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry((1.7 - k * .34) * (H / 10), H * .34, 7), spruceM); c.position.y = H * (.3 + k * .19); t.add(c); } put(t, ii, dd, 0, wr() * 6); }
@@ -1261,6 +1299,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { courses, gnomes, benches, park: !!RG.park, classic: !!RG.classic, oneSide: RG.oneSide || 0, harvest: !!RG.harvest, fair: FAIR, gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
+  return { courses, gnomes, benches, park: !!RG.park, sea: !!RG.sea, seaY: SEA.y, classic: !!RG.classic, oneSide: RG.oneSide || 0, harvest: !!RG.harvest, fair: FAIR, gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

@@ -1467,3 +1467,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - abonent bez gazety pierwszy raz dostaje czerwoną ramkę drzwi (ostatnia szansa), drugi dzień z rzędu rezygnuje
 - dzień bez pudła odzyskuje jednego abonenta; zaliczona niedziela to premia 25 zł i nowy tydzień; gdy zostanie mniej niż 3 abonentów, tydzień zaczyna się od nowa
 - na mecie w gazecie ramka „Tydzień” z bilansem dnia
+
+## Wersja 179: Klasyk 4, Deptak nad morzem
+
+- nowy poziom Klasyka: pensjonaty po lewej, za nimi morze; co kawałek zatoczka z plażą (parawany, parasole i leżaki, wieża WOPR, molo, żaglówki)
+- na promenadzie budki z goframi, lodami, rybą, kukurydzą, pamiątkami i frytkami; turyści na chodnikach, stada mew za punkty (MEWY W GÓRĘ! +1)
+- dwie prenumeraty; poziom otwiera się po Parku
