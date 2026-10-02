@@ -74,7 +74,8 @@ export function wipe() { S = blank(); try { localStorage.removeItem(KEY); } catc
 export const hasSave = () => { try { return !!localStorage.getItem(KEY); } catch { return false; } };
 
 // open: the first, and any a finished one leads to
-export function isOpen(id) { const s = load(); if (id === LEVELS[0].id) return true; return LEVELS.some(l => s.done[l.id] && l.after.includes(id)); }
+// (each game's first route is open: Poranna Trasa's and the Classic's)
+export function isOpen(id) { const s = load(), cl = !!LEVELS.find(l => l.id === id)?.classic; if (id === LEVELS.find(l => !!l.classic === cl)?.id) return true; return LEVELS.some(l => s.done[l.id] && l.after.includes(id)); }
 export const starsOf = id => load().best[id]?.stars || 0;
 export const bestOf = id => load().best[id] || null;
 export const totalStars = () => LEVELS.reduce((n, l) => n + starsOf(l.id), 0);

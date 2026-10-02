@@ -18,23 +18,23 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   const fmt = (k, v) => k === 'sens' ? v.toFixed(1) + 'X' : k === 'pix' ? v + ' PX' : k === 'smooth' ? (v > 1 ? v + 'X' : 'BRAK') : k === 'levels' ? (v < 2 ? 'WYŁ.' : String(v)) : k === 'dither' ? (v * 100).toFixed(1) : Math.round(v * 100) + '%';
   const SND = [['GŁOŚNOŚĆ', 'master'], ['MUZYKA', 'music'], ['EFEKTY', 'sfx'], ['GŁOSY', 'voice']];
   function build() {
-    const S = look.S;
+    const S = look.S, CL = !!edition?.classic?.();   // (the Classic: its own menu, none of Poranna Trasa's modes, tests, voice on the earpiece, blood)
     if (page === 'title') return [
       ...(edition ? [{ type: 'button', label: 'WERSJA: ' + edition.name(), act: () => { edition.next(); rows = build(); } }, ...(edition.extra?.() || []).map(o => ({ type: 'button', label: o.label, act: () => { close(); o.act(); } }))] : []),
       { type: 'button', label: 'GRAJ', act: () => { close(); onPlay?.(); } },
       ...(onMap ? [{ type: 'button', label: 'MAPA TRASY', act: () => { close(); onMap(); } }] : []),
-      ...(modes ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
+      ...(modes && !CL ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
       { type: 'button', label: 'USTAWIENIA', act: () => show('settings') },
-      ...(tests ? [{ type: 'button', label: 'TESTY: TRASY I STANY', act: () => show('tests') }] : []),
-      { type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } },
+      ...(tests && !CL ? [{ type: 'button', label: 'TESTY: TRASY I STANY', act: () => show('tests') }] : []),
+      ...(CL ? [] : [{ type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } }]),
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
     if (page === 'pause') return [
       ...(/[?&]arena=/.test(location.search) ? [{ type: 'button', label: '← WRÓĆ DO WARSZTATU', act: () => { location.href = 'studio.html'; } }] : []),
       { type: 'button', label: 'WRÓĆ DO GRY', act: () => close() },
       ...(onMap ? [{ type: 'button', label: 'MAPA TRASY', act: () => { close(); onMap(); } }] : []),
-      ...(modes ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
+      ...(modes && !CL ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
       { type: 'button', label: 'USTAWIENIA', act: () => show('settings') },
-      ...(tests ? [{ type: 'button', label: 'TESTY: TRASY I STANY', act: () => show('tests') }] : []),
+      ...(tests && !CL ? [{ type: 'button', label: 'TESTY: TRASY I STANY', act: () => show('tests') }] : []),
       { type: 'button', label: 'ZACZNIJ OD NOWA', act: () => { close(); onRestart(); } },
       ...(/[?&]arena=/.test(location.search) ? [] : [{ type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } }]),
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
@@ -44,8 +44,8 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'button', label: 'STEROWANIE', act: () => controls ? show('keys') : (close(), onKeys?.()) },
       { type: 'button', label: document.fullscreenElement ? 'EKRAN: ZWYKŁE OKNO' : 'EKRAN: PEŁNY EKRAN', act: () => { onFull?.(); setTimeout(() => { rows = build(); }, 300); } },
       ...(assist ? [{ type: 'button', label: 'ASYSTA RZUTU: ' + assist.name(), act: () => { assist.next(); rows = build(); } }] : []),
-      ...(gore ? [{ type: 'button', label: 'KREW: ' + gore.name(), act: () => { gore.next(); rows = build(); } }] : []),
-      ...(radio ? [{ type: 'button', label: 'JANUSZ W SŁUCHAWCE: ' + radio.name(), act: () => { radio.next(); rows = build(); } }] : []),
+      ...(gore && !CL ? [{ type: 'button', label: 'KREW: ' + gore.name(), act: () => { gore.next(); rows = build(); } }] : []),
+      ...(radio && !CL ? [{ type: 'button', label: 'JANUSZ W SŁUCHAWCE: ' + radio.name(), act: () => { radio.next(); rows = build(); } }] : []),
       { type: 'button', label: 'WRÓĆ', act: () => goBack() }];
     if (page === 'tests') return [...(tests ? tests().map(r => r.head ? { type: 'head', label: r.head } : { type: 'button', label: r.label, act: () => { close(); r.act(); } }) : []), { type: 'button', label: 'WRÓĆ', act: () => goBack() }];
     if (page === 'modes') return [...modes().flatMap(m => [{ type: 'button', label: m.label, act: () => { const wasTitle = parent === 'title'; close(); if (wasTitle) onPlay?.(); m.act(); } }, ...(m.info ? [{ type: 'info', label: m.info, value: '' }] : [])]),
@@ -155,10 +155,10 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   }
   // the title screen: the name big over the street going by, a line under it, the buttons, a hint
   function drawTitle(dt) { const W = A.W, H = A.H, k = Math.min(1, t / .5), e = 1 - Math.pow(1 - k, 3);
-    g.fillStyle = 'rgba(12,13,15,.35)'; for (let y = 0; y < 70; y++) if (y % 2 === 0) g.fillRect(0, y, W, 1);                  // (a shade behind the name, dithered in lines)
+    { const gr = g.createLinearGradient(0, 0, 0, 74); gr.addColorStop(0, 'rgba(12,13,15,.55)'); gr.addColorStop(.7, 'rgba(12,13,15,.3)'); gr.addColorStop(1, 'rgba(12,13,15,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, 74); }   // (a smooth shade behind the name: no lines)
     const name = 'PORANNA TRASA', sc = Math.max(1, Math.min(2, (W - 8) / (A.width(name) * 2))), nw = A.width(name) * 2 * sc; g.save(); g.translate(Math.round(W / 2 - nw / 2), Math.round(22 - (1 - e) * 16)); g.scale(sc, sc);
     A.big(name, 0, 0, '#efc970', '#17181b'); g.restore();
-    const sub = 'GAZETY SAME SIĘ NIE ROZNIOSĄ'; A.text(sub, Math.round(W / 2 - A.width(sub) / 2), 58, '#f6f3ea');
+    const sub = edition?.classic?.() ? 'KLASYK: NA CZAS I NA PUNKTY' : 'GAZETY SAME SIĘ NIE ROZNIOSĄ'; A.text(sub, Math.round(W / 2 - A.width(sub) / 2), 58, '#f6f3ea');
     const bw = 130, bx = Math.round(W / 2 - bw / 2); let y = Math.round(H - 26 - rows.length * 16 + (1 - e) * 20); hits = [];
     const panel = (x, yy, w, h, fill, edge) => { g.fillStyle = '#17181b'; g.fillRect(x + 1, yy - 1, w - 2, h + 2); g.fillRect(x - 1, yy + 1, w + 2, h - 2); g.fillRect(x, yy, w, h); g.fillStyle = edge; g.fillRect(x + 1, yy + 1, w - 2, h - 2); g.fillStyle = fill; g.fillRect(x + 2, yy + 2, w - 4, h - 4); };
     rows.forEach((r, i) => { const on = i === sel; panel(bx, y, bw, 12, on ? '#efc970' : '#25272b', on ? '#f6f3ea' : '#44484c'); A.text(r.label, Math.round(bx + bw / 2 - A.width(r.label) / 2), y + 3, on ? '#17181b' : '#d3d0c3', null); hits.push({ x: bx, y, w: bw, h: 12, i }); y += 16; });

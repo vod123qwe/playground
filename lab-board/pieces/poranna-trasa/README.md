@@ -1435,3 +1435,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - trik zaliczony tylko, gdy obrót jest dokończony (co najmniej 92%) i rower ląduje wzdłuż drogi; w poprzek (ponad 50° od drogi) albo niedokręcony: KRZYWO!, bez punktów, zachwianie i połowa prędkości; poniżej 70% obrotu dalej upadek
 - obrót dokręca się szybciej przed lądowaniem, więc trik zaczęty nawet późno częściej zdąży (NA STYK)
+
+## Wersja 174: menu i mapa według wybranej wersji
+
+- wybierasz KLASYK na ekranie startowym: strona przechodzi na Ulicę Kasztanową, więc tło ekranu startowego to już ulica Klasyka; zapamiętany Klasyk otwiera się od razu na niej
+- w Klasyku menu bez TRYBÓW GRY, TESTÓW i WARSZTATU, w ustawieniach bez JANUSZA W SŁUCHAWCE i KRWI; podtytuł KLASYK: NA CZAS I NA PUNKTY
+- mapa tras pokazuje tylko trasy wybranej wersji (w Klasyku Ulica Kasztanowa i Śródmieście, w Porannej Trasie jej trasy); pierwsza trasa każdej wersji otwarta
+- ekran startowy bez licznika rowerowego i portfela w tle, przyciemnienie za nazwą gładkie (bez poziomych kresek)
