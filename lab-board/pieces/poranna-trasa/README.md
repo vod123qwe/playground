@@ -1195,3 +1195,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - dwa wyjścia: JESZCZE RAZ (Enter) i MAPA TRAS (M); cały ekran pikselową czcionką gry
 - poprawka nocy: plamy światła pod latarniami i nad klatkami blakną miękko ku brzegom (było płaskie koło z ostrą krawędzią); sprawdzone w obrazie gry z filtrem pikselowym
 
+## Wersja 136: walka czytelniej, krew, przeciwnicy z charakterem
+
+- cios przeciwnika widać na nim: pięść, którą bije, świeci (żółto: blok; fioletowo: cios nisko, blok w dół; zielono: teraz parowanie), nad głową „!” albo „NISKO!” przy zamachu i „TERAZ!” w chwili parowania
+- gwiazda z podpisem nad nią: BLOK!, NISKO! BLOK W DÓŁ, TERAZ!, BIJ! (gdy jest odsłonięty), G: FINISZER!; cios nisko ma na gwieździe swój fioletowy kolor
+- krew komiksowa, pikselowa: krople tryskają przy trafieniach w stronę ciosu i zostają plamami na ziemi, mocny cios i nokaut zostawiają kałużę, obity przeciwnik krwawi z nosa; w USTAWIENIACH przełącznik KREW
+- przeciwnicy z charakterem: Cherlak co drugi raz kopie w kostkę (nisko) i odskakuje, Kozak częściej markuje ciosy, Szwagier w połowie zdrowia się wścieka (szybciej, mocniej, mniej się zasłania), Kurier Osiedlowy (z kopniętego kuriera) ma własny szybki styl z seriami
+- finiszer: przeciwnik prawie pokonany i odsłonięty, G: zwiniętą gazetą przez twarz (WYDANIE SPECJALNE!, zwolnione tempo)
+- koniec walki: kwestie zależne od miejsca (peryferie, wieś, dzielnica przemysłowa, miasto, Bronx) i od przeciwnika, osobno na wygraną i przegraną, bez powtórek (src/fightlines.js); po przegranej osobno to, co zabiera zwycięzca
+

@@ -22,6 +22,7 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { makeBag } from './bag.js';
+import { endLine } from './fightlines.js';
 
 export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx }) {
   const V3 = THREE.Vector3, UP = new V3(0, 1, 0), pick = a => a[Math.random() * a.length | 0], clamp = THREE.MathUtils.clamp;
@@ -63,8 +64,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   // wind-up can not be stopped by a punch
   const KINDS = {
     cherlak: { name: 'CHERLAK', hp: 70, dmg: .7, wind: .8, recover: .95, guard: .25, feint: 0, combo: 0 },
-    kozak: { name: 'KOZAK Z OSIEDLA', hp: 100, dmg: 1.1, wind: .58, recover: .65, guard: .45, feint: .25, combo: .35 },
-    szwagier: { name: 'SZWAGIER', hp: 140, dmg: 1.3, wind: .85, recover: .8, guard: .3, feint: 0, combo: .15, armor: true } };
+    kozak: { name: 'KOZAK Z OSIEDLA', hp: 100, dmg: 1.1, wind: .58, recover: .65, guard: .45, feint: .4, combo: .35 },
+    szwagier: { name: 'SZWAGIER', hp: 140, dmg: 1.3, wind: .85, recover: .8, guard: .3, feint: 0, combo: .15, armor: true },
+    kurier: { name: 'KURIER OSIEDLOWY', hp: 90, dmg: 1, wind: .5, recover: .6, guard: .5, feint: .3, combo: .5 } };
   const PARRY = .3;                                                    // (the green moment before a punch lands: a guard raised in it is a parry)                                                  // (the computer hits a little softer: from his eyes it is harder to read)                  // (when in each clip the fist is out furthest: measured on load)
 
   // ---------- a person: the model, its clips, its bones; a cap and a bag for him ----------
@@ -259,7 +261,20 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     if (f.air) { if (f.y <= gy) { f.y = gy; f.air = false; f.vy = 0; } } else { f.y += (gy - f.y) * .5; if (Math.abs(gy - f.y) > .5) f.y = gy; } f.P.G.position.set(f.x, f.y, f.z); f.P.G.rotation.y = f.yaw; f.mouth.set(f.x, f.y + f.P.height + .22, f.z); }
   function push(f) { if (f.ghost) return; const s = solid(f.x, f.z, .3, f.hint, f.air ? f.y : null); if (s) { f.x += s.x; f.z += s.z; } }   // (ghost: the computer's one, stuck behind something, lets himself through; in the air: over what is lower than his feet)
 
+  // ---------- the computer's punch, shown on him (not only on the star): the fist that throws it glows (yellow; a low one violet;
+  // green in the moment a guard raised is a parry), "!" over him as he winds up ("NISKO!" for a low one), "TERAZ!" when it is time;
+  // the brother-in-law angry at half his health; blood from the nose of one knocked about ----------
+  const glowT = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  function tell(f, o, dt) {
+    if (!f.glow) { f.glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT, color: '#ffd23a', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); f.glow.scale.setScalar(.55); scene.add(f.glow); }
+    const k = f.ko ? null : f.wind ? f.wind.k : f.move && !f.move.done ? f.move.k : null, low = k === 'bodyL' || k === 'bodyR'; f.glow.visible = !!k;
+    if (k) { const green = !!(f.move && !f.move.done && f.move.dur * f.move.imp - f.move.t < PARRY); f.glow.material.color.set(green ? '#7fe05a' : low ? '#c070f0' : '#ffd23a'); f.P.bones[k === 'jab' ? 'hand_l' : 'hand_r'].getWorldPosition(f.glow.position);
+      if (f.wind && f.tellId !== f.atkId) { f.tellId = f.atkId; fx.pop(head(f), low ? 'NISKO!' : '!', low ? '#c070f0' : '#ffd23a'); }
+      if (green && f.greenId !== f.atkId) { f.greenId = f.atkId; fx.pop(head(f).add(new V3(0, .25, 0)), 'TERAZ!', '#7fe05a'); } }
+    if (f.kindKey === 'szwagier' && !f.rage && !f.ko && f.hp < f.max * .5) { f.rage = true; f.kind = { ...f.kind, wind: .55, dmg: 1.6, combo: .45, guard: .2 }; say(f, pick(['TERAZ TO SIĘ WKURZYŁEM!', 'NO TO KONIEC ŻARTÓW!', 'SZWAGIER IDZIE NA CAŁOŚĆ!'])); fx.shake(.2); }
+    if (!f.ko && f.hp < f.max * .5 && Math.random() < dt * 1.4) fx.blood?.(f.P.bones.head.getWorldPosition(new V3()), null, 1); }
   function fight(f, o, inp, dt) {                                      // one step of a fighter against the other
+    if (f.ai) tell(f, o, dt);
     f.t += dt; f.parryT += dt; f.counterT = Math.max(0, f.counterT - dt); f.chainT += dt; f.tauntT = Math.max(0, f.tauntT - dt);
     if (f.ko) { f.koT += dt; animate(f.P, dt, 0, 'fight'); arms(f.P, f, dt); place(f); return; }
     const busy = f.move || f.wind || f.stagger > 0 || f.dodge;
@@ -292,6 +307,10 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
       else if (W.feint && W.t > W.dur * .7) { f.wind = null; fx.pop(head(f), '?', '#d3d0c3'); if (f.ai) { f.ai.plan = 'circle'; f.ai.t = .35; } }   // (a feint: he lets it go)
       else if (W.t >= W.dur) { const k = W.k; f.wind = null; begin(f, k); } }
     f.recover = Math.max(0, (f.recover || 0) - dt); f.poiseT = Math.max(0, (f.poiseT || 0) - dt);
+    // (a finisher: him nearly done and open, G: the rolled paper across his face)
+    const fin = !f.ai && o.ai && !o.ko && o.hp < o.max * .25 && (o.stagger > 0 || o.recover > 0);
+    if (fin && !f.finTip) { f.finTip = true; fx.tip('G: FINISZER! Gazetą przez twarz'); } else if (!fin && f.finTip) { f.finTip = false; fx.tip(null); }
+    if (fin && inp.taunt && !f.move) { f.atkId = (f.atkId || 0) + 1; begin(f, 'hook'); f.move.finish = true; f.move.mul = 50; inp = { ...inp, taunt: false }; f.finTip = false; fx.tip(null); }
     if (inp.taunt && !f.move && !f.guard && f.tauntT <= 0) { f.tauntT = 2.2; shot(f.P, 'no', 1.4); f.st = Math.min(100, f.st + 25); say(f, pick(SAY.taunt)); }
     if (f.move) { const M = f.move; M.t += dt;
       if (!M.done && M.t >= M.dur * M.imp) { M.done = true; land(f, o, M); }
@@ -326,10 +345,11 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const open = o.recover > 0 || o.stagger > .3, dmg = M.dmg * M.mul * (wrong ? .5 : 1) * (!f.ai ? (open ? 1.4 : .8) : 1); o.hp -= dmg; if (o.ai) o.ai.hits = (o.ai.hits || 0) + 1;
     if (wrong) fx.pop(at.clone().add(new V3(0, .3, 0)), 'ZŁA GARDA', '#cf5a3e'); if (open && !f.ai) { fx.pop(at.clone().add(new V3(0, .45, 0)), 'W ODSŁONĘ!', '#efc970'); trainCount(2); } if (!(M.k === 'jab' && o.wind)) { o.move = null; o.buf = null; }
     const heavy = M.heavy || dmg >= 16, fw = new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw));
-    fx.impact(at, heavy ? 'BUM!' : M.zone === 'low' ? 'PAC!' : 'ŁUP!'); fx.shake(heavy ? .32 : .16); if (heavy) fx.slow(.08);
+    fx.impact(at, heavy ? 'BUM!' : M.zone === 'low' ? 'PAC!' : 'ŁUP!'); fx.shake(heavy ? .32 : .16); if (heavy) fx.slow(.08); fx.blood?.(at, fw, heavy ? 12 : M.zone === 'high' ? 6 : 3);
+    if (M.finish) { fx.pop(at.clone().add(new V3(0, .55, 0)), 'WYDANIE SPECJALNE!', '#efc970'); fx.slow(.6); }
     if (M.combo || M.counter) fx.pop(at.clone().add(new V3(0, .35, 0)), M.counter ? 'KONTRA!' : M.combo + '!', '#efc970');
     if (fightNow && fightNow.train && o.ai) o.hp = Math.max(o.hp, o.max * .5);
-    if (o.hp <= 0) { o.hp = 0; o.ko = true; o.koT = 0; o.guard = false; shot(o.P, 'death', 1.6, { clamp: true }); fx.slow(.5); fx.shake(.4); return; }
+    if (o.hp <= 0) { o.hp = 0; o.ko = true; o.koT = 0; o.guard = false; fx.blood?.(at, fw, 18); shot(o.P, 'death', 1.6, { clamp: true }); fx.slow(.5); fx.shake(.4); return; }
     if (heavy) { o.stagger = .55; o.x += fw.x * .55; o.z += fw.z * .55; shot(o.P, 'knock', .8); }
     else if (M.k === 'jab' && o.wind) { o.x += fw.x * .06; o.z += fw.z * .06; }   // (a jab into his wind-up: it stings, it does not stop him)
     else if (o.ai && o.poiseT > 0) { o.x += fw.x * .05; o.z += fw.z * .05; }   // (just reeled: this one does not stop him)
@@ -361,6 +381,8 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     else if (A.plan === 'attack') { if (d > 1.34) inp.fwd = 1;
       else { const r = Math.random(); inp.atk = tr ? (r < .6 ? 'jab' : 'cross') : r < .42 ? 'jab' : r < .72 ? 'cross' : r < .87 ? 'hook' : 'bodyR'; A.next = !tr && Math.random() < K.combo ? (inp.atk === 'jab' ? 'cross' : 'jab') : null;
         A.plan = 'circle'; A.t = (tr ? 1.4 : .8) + Math.random() * (tr ? .6 : 1.1); if (Math.random() < .35) A.strafe = -A.strafe; } }
+    // (the weakling: a kick to the ankle as often as not, then off out of reach)
+    if (inp.atk && !tr && f.kindKey === 'cherlak') { if (Math.random() < .4) inp.atk = 'bodyR'; A.plan = 'back'; A.t = 0; }
     if (!tr && !inp.guard && A.plan === 'circle' && Math.random() < dt * .15 && f.tauntT <= 0 && d > 1.4) inp.taunt = true;
     return inp;
   }
@@ -437,8 +459,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   // who wins takes something (fx.take: the game says what)
   function end(winner, loser) {
     const g = fightNow; fightNow = null; me.mode = 'walk'; fx.tip(null); winner.mode = loser.mode = 'walk'; if (g.autoView) view = 'third';
-    if (loser === me) { const line = fx.take(); say(winner, line || pick(SAY.won)); g.state = 'leave'; g.wait = 3.2; }
-    else { fx.drop?.({ x: loser.x, y: loser.y, z: loser.z }); fx.score(15, head(loser), 'NOKAUT! +15', '#efc970'); fx.flash('Nokaut!'); setTimeout(() => say(loser, pick(SAY.ko)), 900); g.state = 'lying'; g.wait = 4.5; }
+    for (const f of [winner, loser]) if (f.glow) f.glow.visible = false; if (me.finTip) { me.finTip = false; fx.tip(null); }
+    if (loser === me) { const take = fx.take(); say(winner, endLine(track.region, winner.kindKey, 'lose')); if (take) setTimeout(() => say(winner, take), 1900); g.state = 'leave'; g.wait = 3.6; }
+    else { fx.drop?.({ x: loser.x, y: loser.y, z: loser.z }); fx.score(15, head(loser), 'NOKAUT! +15', '#efc970'); fx.flash('Nokaut!'); setTimeout(() => say(loser, endLine(track.region, loser.kindKey, 'win')), 900); g.state = 'lying'; g.wait = 4.5; }
   }
 
   // ---------- each frame ----------
@@ -449,7 +472,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     for (let k = grudges.length - 1; k >= 0; k--) { const G = grudges[k], f = G.f, b = G.bike; G.t += dt;
       const tx = active ? me.x : world.rider.x, tz = active ? me.z : world.rider.z, d = Math.hypot(f.x - tx, f.z - tz);
       if (G.state === 'down' && G.t > 1.5) { const p = b.r.pelvisAt || b.r.root.position; Object.assign(f, { x: p.x, z: p.z, y: p.y, hint: -1, yaw: Math.atan2(tx - p.x, tz - p.z), hp: 100, st: 100, ko: false, move: null, mode: 'walk', vf: 0, vs: 0, stagger: 0 });
-        setKind(f, Math.random() < .6 ? 'cherlak' : 'kozak'); b.r.boy.visible = false; f.P.G.visible = true; shot(f.P, 'getup', .9); G.state = 'after'; G.t = 0; const lines = active ? SAY.grudgeFoot : SAY.grudge; setTimeout(() => say(f, pick(lines)), 600); }
+        setKind(f, b.rival ? 'kurier' : Math.random() < .6 ? 'cherlak' : 'kozak'); b.r.boy.visible = false; f.P.G.visible = true; shot(f.P, 'getup', .9); G.state = 'after'; G.t = 0; const lines = active ? SAY.grudgeFoot : SAY.grudge; setTimeout(() => say(f, pick(lines)), 600); }
       else if (G.state === 'after') {
         if (d > 24 || G.t > 25) { say(f, pick(SAY.coward)); G.state = 'leave'; G.wait = .6; }
         else if (d < 1.9 && (active || Math.abs(world.rider.v) < 3.5)) { if (!active) world.pullOff(); fightNow = G; G.state = 'fight'; me.mode = 'fight'; f.mode = 'fight'; say(f, pick(SAY.start)); startTraining(G); fx.flash(TOUCH ? 'Bójka! LEWY / PRAWY: cios, BLOK trzymaj, gałka w bok + UNIK' : me.lockedHint ? 'Bójka! Mysz: strona ciosu, LPM cios, PPM blok, Shift unik' : 'Bójka! Kliknij: mysz (LPM cios, PPM blok) albo ← → ↑ ↓ i Spacja'); }
@@ -528,9 +551,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   // what the HUD shows: the two bars in a fight; how red the edges (his health low)
   function star() { if (!fightNow) return null; const o = fightNow.f, k = o.wind ? o.wind.k : o.move && !o.move.done ? o.move.k : null;
     const green = !!(o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY);
-    return { dir: mAim.dir, foe: k ? SIDE[k] : null, green, open: o.recover > 0 || o.stagger > .3, guard: me.guard, low: me.low, high: view !== 'first' }; }
+    return { dir: mAim.dir, foe: k ? SIDE[k] : null, green, open: o.recover > 0 || o.stagger > .3, guard: me.guard, low: me.low, high: view !== 'first', finish: !!me.finTip }; }
   function status() { if (!me) return null; return { train: fightNow && fightNow.train ? fightNow.train.step + ':' + fightNow.train.n : null, foeState: fightNow ? (fightNow.f.wind ? 'wind' : fightNow.f.move ? 'move' : fightNow.f.recover > 0 ? 'open' : (fightNow.f.ai && fightNow.f.ai.plan)) : null, star: star(), fight: fightNow ? { a: { name: 'TY', hp: me.hp, st: me.st, guard: me.guard }, b: { name: fightNow.f.kind ? fightNow.f.kind.name : fightNow.f.name, hp: fightNow.f.hp / (fightNow.f.max || 100) * 100, st: fightNow.f.st } } : null, low: active ? clamp((40 - me.hp) / 40, 0, 1) : 0 }; }
-  function setKind(f, k) { f.kind = KINDS[k]; f.max = f.kind.hp; f.hp = f.max; }
+  function setKind(f, k) { f.kindKey = k; f.rage = false; f.kind = KINDS[k]; f.max = f.kind.hp; f.hp = f.max; }
   // ---------- the training, at the first fight: a parry, a dodge, a hit when he is open; then for real ----------
   const TIPS = ['TRENING 1/3 · Bierze zamach: żółta strzałka. Gdy zrobi się ZIELONA, PPM albo Spacja: KONTRA (2x)', 'TRENING 2/3 · UNIK: gdy bierze zamach, Shift i krok w bok (A albo D) (1x)', 'TRENING 3/3 · Po jego ciosie jest ODSŁONIĘTY (środek gwiazdy świeci): wtedy LPM (2x)'];
   let trained = false; try { trained = localStorage.getItem('pt.trained') === '1'; } catch { }
