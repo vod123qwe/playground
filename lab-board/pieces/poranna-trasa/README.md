@@ -1408,3 +1408,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - rower w Klasyku szybciej przyspiesza (0 → 6 m/s w ~1,2 s), skręca żwawiej; czyste lądowanie po triku daje kopa: ODPAŁ! (chwilowo szybciej, ponad zwykły gaz)
 - postacie Klasyka z modeli ludzi zamiast klocków: emeryci siedzą na ławkach, biegacze biegną, pan z psem idzie, śmieciarze w pomarańczowym, właściciel za szybę biegnie za tobą (klocki zostają tylko na chwilę, zanim model się wczyta)
+
+## Wersja 169: Klasyk: tor przeszkód na końcu trasy
+
+- finał Klasyka dłuższy (do 380 m zamiast 300), wzdłuż obu krawędzi drogi biało-czerwone barierki: jedziesz korytarzem; w poprzek pół drogi niskie płotki do przeskoczenia (spacja); slalom, rowy, skocznie, tarcze jak dotąd
+- fala zdarzeń na finale: opony i piłki z obu stron drogi, jedna za drugą (opona co ~1 s, do kilku naraz)
