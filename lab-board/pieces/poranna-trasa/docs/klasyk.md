@@ -37,6 +37,7 @@ Rytm ulicy, odcinki po ~150 m, każdy z innym charakterem (do zbudowania etapami
 - **Upadki:** jak w Porannej Trasie od v155 (zachwianie przy średnich, upadek przy mocnych), ale bez wstawania pieszo: chwila leżenia i rowerzysta z rowerem wraca na pas, mrugając ~2,5 s bez przewracania (v157).
 - **Kamera:** jedna, bez przełączania, zoomu i obrotu (v157).
 - **Klawisze w Klasyku:** spacja skacze, V kopie, R od razu od nowa (v164).
+- **Zasada Klasyka (Jarek, 02.10):** jazda na najlepszy czas i jak najwięcej akcji za punkty; nic nie może wymagać zatrzymania (złodziej: kop i +5, torebka wraca sama; bez zleceń z rozmową, v172).
 
 ## Przeszkody i zdarzenia (katalog z oceną)
 

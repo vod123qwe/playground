@@ -1425,3 +1425,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 171: autobus nie kręci się w poprzek drogi
 
 - kierunek aut, autobusu i traktora przy zmianie pasa i powolnej jeździe ograniczony do małego odchylenia od drogi (autobus ~10°, traktor ~14°, auto ~18°): wcześniej przy wymijaniu i podjeżdżaniu autobus obracał się na środku na całą szerokość drogi i potrafił stanąć w poprzek i wyjechać za drogę
+
+## Wersja 172: na auta łatwiej, złodziej w Klasyku bez zatrzymywania
+
+- wskok na dach auta łagodniejszy także na jadące auta (podciąga na dach, kiedy brakuje do 0,6 m; było 0,35) i w Porannej Trasie: podskok wyżej (z 0,74 do ~0,95 m), niskie auto z podskoku osiągalne; w Klasyku przy toczeniu z podskoku 1,6–3,4 m przed autem
+- Klasyk to jazda na czas i na punkty: złodziej torebki po kopnięciu od razu oddaje torebkę właścicielce (ZŁODZIEJ! +5), bez zbierania, rozmowy i zatrzymywania; zlecenia ludzi, które wymagają rozmowy, w Klasyku się nie pojawiają

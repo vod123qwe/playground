@@ -663,7 +663,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     // past is let go (another, later, further on)
     { const fx = Math.sin(R.yaw), fz = Math.cos(R.yaw), ahead = r => { const dx = r.G.position.x - R.x, dz = r.G.position.z - R.z, l = Math.hypot(dx, dz) || 1; return [l, (dx * fx + dz * fz) / l]; };
       let open = 0; for (const [r, o] of P) { if (o.lead !== r || !o.offer) continue; const [l, dot] = ahead(r); if (dot < -.3 && l > 45 && !busy(o.offer)) { o.offer = null; o.cool = Math.max(o.cool, 60); } else open++; }
-      if ((offerT -= dt) <= 0) { offerT = 6;
+      if (!track.classic && (offerT -= dt) <= 0) { offerT = 6;   // (the Classic: no errands that want a stop and a talk)
         if (open < 2 && !talk.isOpen) { const c = []; for (const [r, o] of P) { if (o.lead !== r || o.offer || o.cool > 0 || o.mood <= -4) continue; const [l, dot] = ahead(r); if (l < 50 || l > 220 || dot < .3) continue; offerFor(o, true); if (o.offer && !busy(o.offer)) c.push(o); o.offer = null; }
           if (c.length) { const o = pick(c); offerFor(o, true); for (let n = 0; n < 8 && !o.offer; n++) offerFor(o, true); if (o.kind === 'shacks' && o.mood <= -3) o.offer = null; offerT = 50 + rnd() * 45; } } } }
     // the thief
@@ -725,6 +725,8 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   function onHitPed(p) {
     const e = active.find(q => q.kind === 'thief' && q.stage === 'chase' && q.lad === p); if (!e) return false;
     e.stage = 'bag'; p.flee = 5; p.fleeNew = true; p.stun = .9; e.loot.parent?.remove(e.loot); e.glow.parent?.remove(e.glow); hud.rant(V(p.x, p.G.position.y + 1.9, p.z), pick(['AŁA! DOBRA, DOBRA!', 'MOJA NOGA!', 'TO NIE JA!']), false);
+    // (the Classic: no stopping for it: the bag back to her at once, points, on he rides)
+    if (track.classic) { endThief(e, true); thiefT = 45 + rnd() * 35; game.money(5, V(p.x, p.G.position.y + 2.1, p.z), 'ZŁODZIEJ! +5'); hud.rant(V(e.lady.x, e.lady.G.position.y + 1.9, e.lady.z), pick(['DZIĘKUJĘ, KOCHANIE!', 'MOJA TOREBKA! BRAWO!', 'NIECH CI BÓG WYNAGRODZI!']), false); return true; }
     e.drop = game.dropBag(V(p.x, p.G.position.y, p.z), () => bagPicked(e)); game.flash('Torebka na chodniku. Podnieś ją.'); return true;
   }
   function reset() { if (GA.chase) { for (const g of GA.chase.m) g.r.root.parent?.remove(g.r.root); GA.chase = null; } Object.assign(GA, { rep: 0, cool: 200 + rnd() * 120 }); AN.reset(); for (const k in TAKEN) delete TAKEN[k]; for (const S of stage) for (const h of S.hens || []) h.g.parent?.remove(h.g); PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null, rep: 0 }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }

@@ -780,10 +780,10 @@ function ride(dt, inp) {
   if (B.onCar && !B.air) { const t = B.onCar, cv = t.stop > 0 ? 0 : t.v; B.x += Math.sin(t.yaw) * cv * dt; B.z += Math.cos(t.yaw) * cv * dt; }
   const nx = B.x + Math.sin(B.yaw) * B.v * dt, nz = B.z + Math.cos(B.yaw) * B.v * dt;
   // up and down: the ground (and a ramp on it); a hop; off a ramp's lip into the air; the landing
-  const rp = rampAt(nx, nz), g0 = track.probe(nx, nz, B.hint).y + rp.h, roof = carRoofAt(nx, nz), RS = track.classic ? .62 : .35, ground = roof !== null && B.y >= roof - RS ? Math.max(g0, roof) : g0;   // (RS: how far short of a roof he is still pulled up onto it; the Classic: a little kinder)
+  const rp = rampAt(nx, nz), g0 = track.probe(nx, nz, B.hint).y + rp.h, roof = carRoofAt(nx, nz), RS = .62, ground = roof !== null && B.y >= roof - RS ? Math.max(g0, roof) : g0;   // (RS: how far short of a roof he is still pulled up onto it)
   if (rp.wall && B.v > (track.classic ? 4.3 : 7) && !B.air) { B.x = nx; B.z = nz; crash(); return; } else if (rp.wall && B.v > 2 && !B.air && !(B.staggerT > 0)) { B.staggerT = .8; B.v *= .35; B.jolt = .22; }   // (into a ramp's side: a fall only at speed)
   B.staggerT = (B.staggerT || 0) - dt;
-  if (inp.hop && !B.air) { B.air = true; B.vy = (track.classic ? 5.2 : 3.8) + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : track.classic ? 'hop' : null; }   // (the Classic: a hop high enough for a car's roof, timed well; and a trick off it)   // (hopped off a ramp: higher, and a trick allowed)
+  if (inp.hop && !B.air) { B.air = true; B.vy = (track.classic ? 5.2 : 4.3) + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : track.classic ? 'hop' : null; }   // (the Classic: a hop high enough for a car's roof, timed well; and a trick off it)   // (hopped off a ramp: higher, and a trick allowed)
   if (B.air) { B.vy -= g * dt; B.y += B.vy * dt; if (B.y <= ground) { B.airRamp = null;
     if (B.trick) { const T = B.trick; B.trick = null;
       if (T.p < .7) { B.y = ground; B.air = false; B.vy = 0; B.airRamp = null; B.done = []; flash('Za późno! Trik od razu po wybiciu'); crash(0); return; }
@@ -807,7 +807,7 @@ function ride(dt, inp) {
     if (C.kind === 'hole') { if (!B.air && !C.cool) { B.jolt = .12; B.v *= .82; C.cool = true; setTimeout(() => { C.cool = false; }, 900); } continue; }
     if (C.kind === 'bundle') { pickBundle(C); continue; }
     if (clear(C)) { if (track.classic && C.kind === 'hard' && !C.car && !C.thing && C.h > .6 && C.h < 2 && !(C.jumpT > performance.now())) { C.jumpT = performance.now() + 4000; score(1, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'PRZESKOK! +1', '#efc970'); } continue; }   // (the Classic: over a fence, a bale, a bench: a point)
-    if (C.car && C.roof && B.y >= C.roof - (track.classic ? .62 : .35)) continue;   // (up on that car's roof)
+    if (C.car && C.roof && B.y >= C.roof - .62) continue;   // (up on that car's roof, or as good as)
     if (C.thing?.kind === 'cone') { if (C.thing.gnome && !C.thing.scored && Math.abs(B.v) > .4) gnomeDown(C.thing); if (Math.abs(B.v) > .4) { stuff.bump(C.thing, Math.sin(B.yaw) * B.v * .9 + (Math.random() - .5), Math.cos(B.yaw) * B.v * .9 + (Math.random() - .5)); B.v *= .9; B.jolt = .06; } continue; }   // (a cone: it goes over, not him)
     if (C.kind === 'soft') { B.v *= Math.pow(.08, dt); continue; }
     if (C.hyd && Math.abs(B.v) > .8 && water.spray(new THREE.Vector3(C.x, C.y0 || 0, C.z), 4.5)) hud.pop(new THREE.Vector3(C.x, (C.y0 || 0) + 1.6, C.z), 'PSSS!', '#9ccad8');   // a hydrant knocked: it gushes
@@ -826,7 +826,7 @@ function ride(dt, inp) {
       traffic.knock(C.t, mv, hard); if (hard) { quests.onKnockBike(C.t); C.t.ghostUntil = performance.now() + 7000; if (Math.random() < .3) foot.grudge(C.t); }
       if (!(C.t.rantAt > performance.now())) { C.t.rantAt = performance.now() + 2500; hud.rant(C.t.r.root.position, hard ? pickOf(OUCH) : pickOf(SWEARS), true, 2); if (hard) witness(C.t.x, C.t.z); }
       if (hard) { crash(0, bv.multiplyScalar(.5)); return; } B.x = nx + h.nx * (h.pen + .02); B.z = nz + h.nz * (h.pen + .02); B.v *= .55; B.jolt = .12; return pose(dt, 0, 0, slope, 0); }
-    if (h && C.t.car && B.y >= (C.y0 || 0) + (C.trailer ? 1.55 : Math.min(C.t.car.roofH ?? 1.5, 3.2)) - .35) continue;   // (up on its roof)
+    if (h && C.t.car && B.y >= (C.y0 || 0) + (C.trailer ? 1.55 : Math.min(C.t.car.roofH ?? 1.5, 3.2)) - .62) continue;   // (up on its roof, or as good as)
     if (h) { C.t.stop = 2.5; if (Math.abs(B.v) > 2.2 || C.t.v > 2.5) { crash(0, new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.v)); return; } B.x = nx + h.nx * (h.pen + .01); B.z = nz + h.nz * (h.pen + .01); B.v *= .4; return pose(dt, 0, 0, slope, 0); } }
   B.x = nx; B.z = nz;
   // (round the home's circle the yards go further out than the loop's 28 m: there the edge is a ring round the circle; on the loop
