@@ -1150,3 +1150,18 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - zlecenia jednego rodzaju (list, słoik, pocztówka; kłótnia o szybę; przystanek) najwyżej raz na trasę, a ich warianty nie powtarzają się, dopóki nie pojawią się wszystkie
 - dokumenty: biomy i trasy (docs/trasy-tematyczne.md), fabuła z zasadami tonu (docs/fabula.md: Megafon, dzielnicowy, sabotaż Janusza, kobieta w czerwonej chustce, rodzina z wesołego miasteczka, ekipa spod beczki)
 
+## Wersja 131: Bronx nocą (nowy region), pełniejsze chodniki
+
+- nowy region BRONX i pierwsza trasa NOC NA BLOKOWISKU (po Blokowisku): własna mapa (917 m) między blokami, w nocy
+- noc: ciemne niebo z gwiazdami i księżycem, granatowa mgła, słabe zimne światło; latarnie co 24 m z plamą światła na jezdni, część mruga; trzy prawdziwe światła idą z graczem od latarni do latarni; świecą okna bloków i kamienic, lampy nad klatkami, część witryn sklepików; panorama miasta ciemna z zapalonymi oknami; gazeta w locie lekko świeci
+- ciemne przejścia: zaułek nocą bez latarni (szybciej, ale po ciemku)
+- rzut nocą: znacznik abonenta widać z 15 m albo pod latarnią
+- nocny sklep CAŁODOBOWY (zamiast biurowca) i oświetlony kiosk, nocni goście przed sklepem
+- cwaniacy pod klatkami: osiem postaci, każda z ksywką i swoim stylem (Profesor, Bajer, Cichy, Lizak, Kozak, Ziomek z Kanady, Mechanik, Raper); docinają, gdy przejeżdżasz, zagadani mają swoje kwestie (Cichy raz na trasie powie coś więcej), biorą gazetę; kopnięci gonią i jak złapią wolnego, jest gleba; osiedle pamięta (reputacja w Bronksie zapisywana między trasami), a przy złej reputacji wypychają kosz na drogę
+- szkło na jezdni: przebita opona, przez chwilę jedzie się ciężej; toczące się opony spod garaży przecinają drogę; przewrócone kosze i worki przy krawężniku
+- Pan Inżynier na materacu: gazeta to jego kołdra (+3), w zamian plotka (także o dzielnicowym)
+- imprezowicze wracają chodnikiem i śpiewają swoje piosenki; zagadani albo trafieni gazetą stają
+- chodniki w mieście gęstsze: więcej mebli przy krawężniku, a drugi rząd przy domach: stojaki z reklamami, kosze, stojaki z gazetami, deski do skakania
+- gazeta: nowe wpisy Z OSIEDLA (kopnięcie pod klatką, pościg, szkło, opona, kołdra z gazety)
+- poprawka: panorama miasta i samoloty ustawiają się wokół środka danej mapy (na mapie osiedla m3 panorama mogła wchodzić na drogę)
+

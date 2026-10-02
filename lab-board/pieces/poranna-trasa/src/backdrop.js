@@ -3,14 +3,14 @@
 // its slope (white walls, red and grey roofs, a church with its tower here and there), farther hills in haze. Above them the sky
 // shows through (the top is clear). Colours from the game's palette, so it sits in the picture.
 
-export function createBackdrop({ THREE, radius = 430, height = 90, city = false }) {   // (city: the town's skyline in place of the lake and the hills)
+export function createBackdrop({ THREE, radius = 430, height = 90, city = false, night = false }) {   // (city: the town's skyline in place of the lake and the hills)
   const W = 1024, H = 160, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   let s = 91; const r = () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const px = (x, y, col) => { g.fillStyle = col; g.fillRect(((x % W) + W) % W, y, 1, 1); };
   const wave = (x, a) => a.reduce((v, [amp, f, ph]) => v + amp * Math.sin(x / W * Math.PI * 2 * f + ph), 0);   // (seamless round the circle)
   const ridge = (base, a) => Array.from({ length: W }, (_, x) => Math.round(base + wave(x, a)));
   const fill = (top, col, dith) => { for (let x = 0; x < W; x++) for (let y = top[x]; y < H; y++) { if (dith && y === top[x] && (x & 1)) continue; px(x, y, col); } };
-  if (city) { cityscape(); return wrapUp(); }
+  if (city) { cityscape(); if (night) darken(); return wrapUp(); }
   const LAKE = 118;
   // far hills, in haze
   const far = ridge(78, [[9, 3, .4], [5, 7, 1.3], [3, 13, 2.1]]); fill(far, '#9db9b0'); for (let x = 0; x < W; x += 2) px(x, far[x] - 1, '#b8cdc2');
@@ -48,6 +48,13 @@ export function createBackdrop({ THREE, radius = 430, height = 90, city = false 
       for (let x = ax - 60; x < ax + 90; x += 4) px(x, 125, '#efc970'); }
     layer(90, 140, 8, 24, 8, 22, '#6f7a84', '#d9d4b8', .22);   // (close: the dense row)
     for (let x = 0; x < W; x++) for (let y = 140; y < H; y++) px(x, y, y < 142 ? '#5a636b' : '#4f575e'); }
+  // (night: every pixel dark and blue but the lit ones: windows warm, a few more of them lit, the lights kept)
+  function darken() { const im = g.getImageData(0, 0, W, H), d = im.data, keep = ['#efe0a0', '#bccad2', '#c9d0c0', '#d9d4b8', '#efc970', '#cf5a3e'].map(h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16)));
+    for (let p = 0; p < d.length; p += 4) { if (!d[p + 3]) continue; const r = d[p], gg = d[p + 1], b = d[p + 2], lit = keep.some(([a, b2, c2]) => a === r && b2 === gg && c2 === b);
+      if (lit) { const red = r === 207 && gg === 90; d[p] = red ? 230 : 255; d[p + 1] = red ? 70 : 205; d[p + 2] = red ? 60 : 120; }
+      else if (!lit && Math.random() < .035 && p / 4 / W < 138) { d[p] = 245; d[p + 1] = 190; d[p + 2] = 105; }
+      else { d[p] = r * .17 + 6; d[p + 1] = gg * .19 + 8; d[p + 2] = b * .24 + 16; } }
+    g.putImageData(im, 0, 0); }
   function wrapUp() {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.wrapS = THREE.RepeatWrapping;
   const geo = new THREE.CylinderGeometry(radius, radius, height, 128, 1, true);
