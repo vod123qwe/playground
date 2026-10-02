@@ -1291,3 +1291,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - teraz to prawdziwy wózek: kierowca w kamizelce i kasku pod klatką, maszt, widły z paletą kartonów, pomarańczowy kogut na dachu, który mruga, kiedy wózek jedzie; nigdy nie znika w przerzedzeniu
 - jedzie widłami do przodu, przed ruszeniem obraca się płynnie w miejscu
 - w poprzek drogi namalowany żółty przerywany pas przejazdu wózków, widać z daleka, gdzie mogą wyjechać
+
+## Wersja 151: skok nad pociągiem bez drzewa, menu nie zostaje pod mapą
+
+- skocznia przed przejazdem celuje wzdłuż drogi tam, gdzie wylądujesz, a nie prosto przed siebie: na zakręcie lot zostaje nad jezdnią; drzewa przy drodze na torze lotu zdjęte na ten przejazd (pień złapany w powietrzu był upadkiem z niczego)
+- auta przy opadającym szlabanie: pierwsze staje przy samej linii, reszta za nim; jadące twoim pasem czekają przed żółtymi paskami rozpędu, więc rozbieg do skoczni zostaje wolny
+- menu pauzy znika od razu po wybraniu MAPA TRASY (zostawał pod mapą jego ostatni obraz)

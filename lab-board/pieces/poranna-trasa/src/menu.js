@@ -69,7 +69,8 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   }
   const back = {}; function goBack() { show(back[page] || parent, true); }
   function show(p, isBack) { if (!isBack && page && p !== page) back[p] = page; if ((p === 'keys' || p === 'gfx' || p === 'snd' || p === 'modes' || p === 'settings' || p === 'tests') && (page === 'title' || page === 'pause')) parent = page; page = p; t = 0; capture = null; window.PT_capturing = false; scroll = scrollT = 0; rows = build(); sel = Math.max(0, rows.findIndex(pickable)); }
-  function close() { page = null; drag = null; capture = null; window.PT_capturing = false; onClose && onClose(); }
+  // (wiped at once: with the map open over it the game draws no frame, and the last picture of the menu stayed under the map)
+  function close() { page = null; drag = null; capture = null; window.PT_capturing = false; g.clearRect(0, 0, cv.width, cv.height); onClose && onClose(); }
   const valOf = row => row.get ? row.get() : look.S[row.key];                    // (a slider's value: in the look, or kept by its own get / set)
   const setVal = (row, v) => { v = clamp(snap(v, row.step), row.min, row.max); v = +v.toFixed(4); if (valOf(row) !== v) { if (row.set) row.set(v); else look.set({ [row.key]: v }, true); } rows = build(); };
   function change(row, dir) {
