@@ -6,9 +6,11 @@
 //   the dustcart: slow up the road, a stop every few houses, two bin men across the road with the bins and back; the cart itself: he is
 //     down; a bin man: a bump; a paper to one: caught
 // createClassic({ THREE, toon, track, scene, cars }) → the locals' shape: { id, people, lights, update(dt, R) → events, kick, talk, paper }
-//   events: { kind: 'shout' | 'driveway' | 'wet' | 'truck' | 'bump' | 'honk', p?, text? }
+//   tyres rolling across the road ahead of him now and then (hop them, or ride round); a ramp on the far lawn with kids sitting in a row
+//     behind it, cheering: over their heads, a bonus
+//   events: { kind: 'shout' | 'driveway' | 'wet' | 'truck' | 'bump' | 'honk' | 'tyre' | 'overhead', p?, text? }
 
-export function createClassic({ THREE, toon, track, scene, cars }) {
+export function createClassic({ THREE, toon, track, scene, cars, traffic = () => [] }) {
   let a = 1709; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const { S, N, ds } = track, L = N * ds, wrap = i => ((i % N) + N) % N, V = (x, y, z) => new THREE.Vector3(x, y, z), M = c => toon(c), hs = track.oneSide || -1;
   const gy = (x, z, i) => track.probe(x, z, i ?? -1).y, at = (i, d) => { const A = S[wrap(i)]; return V(A.p.x + A.r.x * d, 0, A.p.z + A.r.z * d); };
@@ -25,7 +27,10 @@ export function createClassic({ THREE, toon, track, scene, cars }) {
     for (const d of doors) { if ((d.i - last) * ds < 40 || rnd() < .25) continue; last = d.i; const i = wrap(d.i + Math.round(5 / ds)), A = S[i], c = cars.random(rnd);
       const g = c.group, d0 = hs * (track.PAVE + 4.2), yawIn = Math.atan2(A.r.x * hs, A.r.z * hs); g.userData.keep = true; scene.add(g);
       const lamps = []; for (const x of [-.55, .55]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.22, .14, .05), new THREE.MeshBasicMaterial({ color: '#f6f3ea' })); l.position.set(x, .75, -(c.half[1] + .02)); l.visible = false; g.add(l); lamps.push(l); }
-      backers.push({ g, c, i, d: d0, d0, d1: hs * 2.2, yawIn, lamps, st: 'in', t: 0, hitT: 0, sorry: 0 }); } }
+      g.updateMatrixWorld(true); const roofH = Math.min(3, new THREE.Box3().setFromObject(g).max.y - g.position.y);
+      // (a plank on the pavement before the drive: off it, over the car as it backs out, or onto its roof)
+      { const ir = wrap(i - Math.round(7 / ds)), Ar = S[ir], o = track.props.ramp(rnd, 'plank'), pr = pv(ir, hs * (track.KERB + 1.3)); o.group.position.copy(pr); o.group.rotation.y = Math.atan2(Ar.f.x, Ar.f.z); scene.add(o.group); o.group.updateMatrixWorld(true); const C = track.addHit(o.group, o.hit, ir); track.ramps?.push(C); }
+      backers.push({ g, c, i, d: d0, d0, d1: hs * 2.2, yawIn, lamps, st: 'in', t: 0, hitT: 0, sorry: 0, roofH, P0: { s: i * ds, d: hs * 2.2, len: 5 }, car: c, yaw: yawIn + Math.PI, v: 0, stop: 0 }); } }
 
   // ---------- sprinklers on the lawns: a jet of water sweeping to and fro over the pavement ----------
   const sprinklers = [], waterM = new THREE.MeshBasicMaterial({ color: '#cfe8f5', transparent: true, opacity: .55, depthWrite: false });
@@ -47,18 +52,38 @@ export function createClassic({ THREE, toon, track, scene, cars }) {
     const P0 = { s: L * .3, d: 1.6, len: 7 }; track.parked.push(P0);   // (in the lane of the way it drives)
     cart = { g, beacon, men, s: L * .3, v: 0, stop: 0, go: 30, P0, hitT: 0, sayT: 0 }; }
 
+  // ---------- tyres rolling across the road: from the far side, over to the houses ----------
+  const tyres = [], tyreM = M('#24262a'), hubM = M('#9a9c9e'); let tyreT = 5;
+  const tyre = () => { const g = new THREE.Group(), w = new THREE.Mesh(new THREE.TorusGeometry(.32, .13, 6, 12), tyreM), h = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .2, 8).rotateX(Math.PI / 2), hubM); g.add(w, h); scene.add(g); return g; };
+  // ---------- jump over the kids: a ramp on the far lawn, three of them sitting in a row behind it, cheering ----------
+  const shows = [], CHEER = deck(['DAWAJ!', 'SKACZ!', 'NAD NAMI!', 'JESZCZE RAZ!', 'ALE ODLOT!']);
+  for (const f of [.27, .5, .73]) { const i = wrap(Math.round(N * f)), A = S[i], d = -hs * (track.PAVE + 3.4), o = track.props.ramp(rnd, 'big'), pr = pv(i, d); o.group.position.copy(pr); o.group.rotation.y = Math.atan2(A.f.x, A.f.z); scene.add(o.group); o.group.updateMatrixWorld(true); const C = track.addHit(o.group, o.hit, i); track.ramps?.push(C);
+    const kids = []; for (let k = 0; k < 3; k++) { const ik = wrap(i + Math.round((6.5 + k * .9) / ds)), p = pv(ik, d), g = new THREE.Group(), b = new THREE.Mesh(new THREE.BoxGeometry(.34, .4, .26), M(['#cf3a2c', '#3b6fa0', '#efc930'][k])); b.position.y = .32; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .2), M('#e3b08a')); hd.position.y = .62; g.add(b, hd); g.position.copy(p); g.rotation.y = Math.atan2(A.r.x * hs, A.r.z * hs); scene.add(g); kids.push({ g, p, ph: rnd() * 6 }); }
+    shows.push({ kids, done: 0, sayT: 0 }); }
+
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0);
+    // (a tyre now and then, 18-30 m ahead of him, rolling across from the far side; it bounces a little; gone past the houses' kerb)
+    tyreT -= dt; if (tyreT <= 0 && Math.abs(R.v) > 2 && R.s != null && tyres.length < 3) { tyreT = 4 + rnd() * 5; const i = wrap(Math.round((R.s + (R.along || 1) * (18 + rnd() * 12)) / ds)); tyres.push({ g: tyre(), i, d: -hs * (track.PAVE + 1), v: 3.6 + rnd() * 1.4, spin: 0, hitT: 0 }); }
+    for (let k = tyres.length - 1; k >= 0; k--) { const T0 = tyres[k], A = S[T0.i]; T0.d += hs * T0.v * dt; T0.spin += T0.v * dt / .4; const p = pv(T0.i, T0.d); T0.g.position.set(p.x, p.y + .45 + Math.abs(Math.sin(T0.spin * .7)) * .12, p.z); T0.g.rotation.set(0, Math.atan2(A.f.x, A.f.z), 0); T0.g.rotateX(T0.spin);
+      T0.hitT = Math.max(0, T0.hitT - dt); if (!R.foot && !T0.hitT && Math.hypot(R.x - p.x, R.z - p.z) < .55 && !((R.h || 0) > .55)) { T0.hitT = 3; ev.push({ kind: 'tyre' }); }
+      if (Math.abs(T0.d) > track.PAVE + 3 && Math.sign(T0.d) === hs) { scene.remove(T0.g); tyres.splice(k, 1); } }
+    // (the kids behind the ramp: they bob and wave; him over their heads in the air: a bonus; into them on the ground: a bump)
+    for (const Sh of shows) { Sh.sayT -= dt; for (const K of Sh.kids) { K.ph += dt * 5; K.g.position.y = K.p.y + Math.max(0, Math.sin(K.ph)) * .12; const dist = Math.hypot(R.x - K.p.x, R.z - K.p.z);
+        if (dist < 9 && Sh.sayT <= 0) { Sh.sayT = 8; ev.push({ kind: 'shout', p: { g: K.g }, text: CHEER() }); }
+        if (dist < 1.2 && !R.foot) { if ((R.h || 0) > 1.1 && clock - Sh.done > 6) { Sh.done = clock; ev.push({ kind: 'overhead', p: { g: K.g } }); } else if (!R.air && !(K.hitT > clock)) { K.hitT = clock + 3; ev.push({ kind: 'bump', p: { g: K.g } }); } } } }
     // (the drives: lights on as he comes (25 m off, the way he rides), out it backs, a wait at the road's edge, back in)
     for (const K of backers) { const A = S[K.i], ahead = ((((K.i * ds - (R.s ?? 0)) * (R.along || 1)) % L) + L * 1.5) % L - L / 2;
       if (K.st === 'in' && ahead > 6 && ahead < 26 && Math.abs(R.v) > 1) { K.st = 'lights'; K.t = 0; }
-      K.t += dt; if (K.st === 'lights' && K.t > .9) { K.st = 'out'; K.t = 0; } if (K.st === 'out') { K.d += (K.d1 - K.d) > 0 ? Math.min(K.d1 - K.d, 2.2 * dt) : Math.max(K.d1 - K.d, -2.2 * dt); if (Math.abs(K.d - K.d1) < .02) { K.st = 'wait'; K.t = 0; } }
+      K.t += dt; if (K.st === 'lights' && K.t > .9 && !traffic().some(b => !b.t?.r && Math.hypot(b.x - A.p.x, b.z - A.p.z) < 18)) { K.st = 'out'; K.t = 0; if (!track.parked.includes(K.P0)) track.parked.push(K.P0); } if (K.st === 'out') { K.d += (K.d1 - K.d) > 0 ? Math.min(K.d1 - K.d, 2.2 * dt) : Math.max(K.d1 - K.d, -2.2 * dt); if (Math.abs(K.d - K.d1) < .02) { K.st = 'wait'; K.t = 0; } }
       if (K.st === 'wait' && K.t > 2.6) { K.st = 'back'; K.t = 0; } if (K.st === 'back') { K.d += (K.d0 - K.d) > 0 ? Math.min(K.d0 - K.d, 1.6 * dt) : Math.max(K.d0 - K.d, -1.6 * dt); if (Math.abs(K.d - K.d0) < .02) { K.st = 'rest'; K.t = 0; } }
+      if (K.st === 'rest') { const ix = track.parked.indexOf(K.P0); if (ix >= 0) track.parked.splice(ix, 1); }
       if (K.st === 'rest' && K.t > 18 && Math.abs(ahead) > 60) K.st = 'in';
+      K.v = K.st === 'out' ? 2.2 : K.st === 'back' ? -1.6 : 0;   // (backing out: along its tail; going back in: the other way)
       for (const l of K.lamps) l.visible = K.st === 'lights' || K.st === 'out';
       const p = pv(K.i, K.d); K.g.position.copy(p); K.g.rotation.y = K.yawIn; K.hitT = Math.max(0, K.hitT - dt);
       const dx = R.x - p.x, dz = R.z - p.z, lz = dx * Math.sin(K.yawIn) + dz * Math.cos(K.yawIn), lx = dx * Math.cos(K.yawIn) - dz * Math.sin(K.yawIn);
-      if (!R.foot && !K.hitT && !(R.air && R.h > 1.3) && Math.abs(lx) < K.c.half[0] + .3 && Math.abs(lz) < K.c.half[1] + .3 && (K.st === 'out' || K.st === 'back')) { K.hitT = 3; ev.push({ kind: 'driveway' }); } }
+      if (!R.foot && !K.hitT && !((R.h || 0) > K.roofH - .45) && Math.abs(lx) < K.c.half[0] + .3 && Math.abs(lz) < K.c.half[1] + .3 && (K.st === 'out' || K.st === 'back')) { K.hitT = 3; ev.push({ kind: 'driveway' }); } }
     // (the sprinklers: sweeping; in the jet, the wheels slip)
     for (const W of sprinklers) { W.flipT = Math.max(0, W.flipT - dt); W.sw += W.dir * dt * .9; if (Math.abs(W.sw) > 1.1) { W.sw = Math.sign(W.sw) * 1.1; W.dir *= -1; } W.jet.rotation.y = W.base + W.sw;
       W.wetT = Math.max(0, W.wetT - dt); const dx = R.x - W.p.x, dz = R.z - W.p.z, dist = Math.hypot(dx, dz); if (dist < 4.6 && dist > .4 && !R.foot && !R.air && !W.wetT) { const ang = Math.atan2(dx, dz), da = Math.atan2(Math.sin(ang - W.base - W.sw), Math.cos(ang - W.base - W.sw)); if (Math.abs(da) < .35) { W.wetT = 2; ev.push({ kind: 'wet' }); } } }

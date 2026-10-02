@@ -98,3 +98,7 @@ Celność (trafione na rzucone), trafienia do skrzynki na wszystkie, upadki na m
 ## Zrobione (v158)
 
 Trawniki do jazdy, deski i skocznie między domami, krasnale (+1), wyższy podskok i PRZESKOK +1 (płot, bela, ławka), trzy tory przeszkód (deska, bela, duża skocznia przed autem, slalom, kicker, meta; komplet +6), auta wyjeżdżające z podjazdów (światła cofania jako sygnał, gazeta na szybę +2), zraszacze (poślizg, gazeta obraca strumień +1), śmieciarka z dwoma śmieciarzami (gazeta do śmieciarza +2). Do zrobienia z katalogu: abonenci widoczni kolorem, kosiarka, plac zabaw, ławki z emerytami, smycz, przeprowadzka.
+
+## Zrobione (v162)
+
+Deski przed podjazdami (przeskok nad cofającym autem albo lądowanie na dachu), auta czekają, gdy ulicą jedzie ruch, i nie wjeżdżają w jadące; co trzeci odcinek bez płotów; toczące się opony przez drogę; skocznie nad dzieciakami (+3). Pomysły Jarka z 02.10: „nie zatrzymuje się, mogę speedrunować, ale czasem trudno” — trzymać płynność: przeszkody do przeskoczenia albo objechania, nie ściany.
