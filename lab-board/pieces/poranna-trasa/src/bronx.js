@@ -47,7 +47,7 @@ export function createBronx({ THREE, toon, track, scene, residents }) {
   const people = [], groups = [], lights = [];
   const spots = []; for (const d of track.doors.slice().sort(() => rnd() - .5)) { if (spots.length >= 4) break; const q = track.probe(d.p.x, d.p.z, d.i); if (Math.abs(q.d) > 22) continue; if (spots.some(o => Math.abs(((o.i - d.i) % N + N * 1.5) % N - N / 2) * ds < 120)) continue; spots.push(d); }
   const names = Object.keys(PERSONA).sort(() => rnd() - .5); let ni = 0;
-  const poolM = new THREE.MeshBasicMaterial({ color: '#ffb35a', transparent: true, opacity: .22, blending: THREE.AdditiveBlending, depthWrite: false });
+  const poolM = new THREE.MeshBasicMaterial({ color: '#ffb35a', map: (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.45, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })(), transparent: true, opacity: .4, blending: THREE.AdditiveBlending, depthWrite: false });
   for (const d of spots) { const grp = { members: [], shoutT: 0, pushT: 20 + rnd() * 20, i: d.i }; groups.push(grp);
     { const c = d.p.clone().addScaledVector(d.n, -1.4), pool = new THREE.Mesh(new THREE.CircleGeometry(3, 14).rotateX(-Math.PI / 2), poolM); pool.position.set(c.x, gy(c.x, c.z, d.i) + .07, c.z); pool.renderOrder = 2; scene.add(pool); lights.push({ p: V(c.x, gy(c.x, c.z, d.i) + 3.2, c.z), flick: false }); }   // (the stairwell's light on them: one of the game's real lights, near)
     const along = V(-d.n.z, 0, d.n.x), n = 2;

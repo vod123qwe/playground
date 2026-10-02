@@ -1193,4 +1193,5 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - liczby z odniesieniem: dystans obok rekordu (albo znaczek REKORD!), gazety obok celu trasy; zbite szyby i zatrzymania tylko wtedy, gdy były
 - loteria tylko wtedy, gdy jest co wylosować; inaczej jedna linijka podpowiedzi
 - dwa wyjścia: JESZCZE RAZ (Enter) i MAPA TRAS (M); cały ekran pikselową czcionką gry
+- poprawka nocy: plamy światła pod latarniami i nad klatkami blakną miękko ku brzegom (było płaskie koło z ostrą krawędzią); sprawdzone w obrazie gry z filtrem pikselowym
 
