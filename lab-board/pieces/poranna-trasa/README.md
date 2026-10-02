@@ -1169,3 +1169,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - bloki (Bronx i osiedle m3): skrzynki na słupkach przy chodniku przed każdą klatką, a nie na ścianie 13 m od jezdni; teraz 99 ze 108 skrzynek w Bronksie stoi do 9 m od środka drogi, a najdłuższa przerwa między skrzynkami abonentów to około 56 m
 
+## Wersja 133: Dzielnica turystyczna (m5)
+
+- nowa trasa w mieście DZIELNICA TURYSTYCZNA (po Starym Mieście), własna mapa (809 m): pastelowe kamienice, dużo drzew, wielki park w środku pętli
+- oba skróty prowadzą przez park: wąska alejka bez aut, za to z turystami stojącymi na środku, przewodniczką z żółtą parasolką i jej grupą (chodzą tam i z powrotem), ławkami, placem zabaw
+- skatepark w parku: plac z dużą skocznią, dwiema małymi, deską i poręczą; skaterzy zaczepiają, żeby skoczyć
+- food trucki (lody, gofry, zapiekanki) w parku i na placu: można do nich dowozić gazetę jak do drzwi
+- koce piknikowe ze starszymi państwem: gazeta na kanapki, a babcia zagadana trzeci raz powie coś o mężu
+- plac z zabytkowym kościołem z wieżą i rozetą oraz pomnikiem (zamiast biurowca), turyści robią zdjęcia z fleszem (także tobie, gdy przejeżdżasz), pytają o drogę łamanym polskim, gazeta to dla nich pamiątka, kopnięci grożą recenzją z jedną gwiazdką
+- wjechanie w turystę: hamujesz i chwiejesz się, on krzyczy
+- postacie daleko od gracza nie są animowane (oszczędność na telefonie)
+

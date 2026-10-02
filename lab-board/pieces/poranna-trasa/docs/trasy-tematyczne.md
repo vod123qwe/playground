@@ -58,7 +58,7 @@ Kamienice, rynek, tramwaje, sklepy, turyści. Gęsto, kolorowo, dużo ludzi.
 | --- | --- | --- | --- | --- | --- |
 | Stare Miasto | kostka (trzęsie), bramy, skróty przez zaułek i park | klatki i sklepy, witryny | kamienicznicy, drogowcy | ranek | ★★★ (jest) |
 | Dzień targowy | stragany, gołębie zrywają się i zasłaniają widok | do koszyka straganu | kwiaciarka, kataryniarz | kolorowo | ★★ (jest) |
-| Dzielnica turystyczna | wybór: ulica z autami albo wąska ścieżka w parku z tłumem, skatepark ze skoczniami | na koc piknikowy, do okienka food trucka, rzut w locie | turyści z mapą na środku drogi, przewodnik z parasolką, skaterzy | zabytki, zieleń | ★★★ |
+| Dzielnica turystyczna (jest, v133) | wybór: ulica z autami albo wąska ścieżka w parku z tłumem, skatepark ze skoczniami | na koc piknikowy, do okienka food trucka, rzut w locie | turyści z mapą na środku drogi, przewodnik z parasolką, skaterzy | zabytki, zieleń | ★★★ |
 | Godzina szczytu | korki, tramwaj jako ruchoma przeszkoda, jednokierunkowa pod prąd | do okien tramwaju | kierowcy w korku, motorniczy | pośpiech, klaksony | ★★ |
 | Bulwary i most | wąski bulwar, wiatr na moście | na barkę (ruchomy cel), poeta na barierce | poeta, biegacze | rzeka, mewy | ★★ |
 
@@ -71,7 +71,7 @@ Wielka płyta, ciemne przejścia, graffiti. Surowo, a w nocy groźnie. Własny b
 | Trasa | Jazda | Rzut | Ludzie i historie | Klimat | Ocena |
 | --- | --- | --- | --- | --- | --- |
 | Blokowisko | długi bulwar, zawrotka, zygzak między blokami | klatka przy klatce, wysokie balkony | dozorczyni, dzieci z piłką, emeryt z okna | dzień | ★★ (jest jako m3, przeniesie się tu) |
-| Noc na blokowisku | ciemno, latarnie co kawałek (część mruga), szkło i dziury | po ciemku, bez znaczników z daleka | cwaniacy pod klatką (docinki, zaczepki, bójka), bezdomny na materacu | latarnie, świecące okna | ★★★ |
+| Noc na blokowisku (jest, v131) | ciemno, latarnie co kawałek (część mruga), szkło i dziury | po ciemku, bez znaczników z daleka | cwaniacy pod klatką (docinki, zaczepki, bójka), bezdomny na materacu | latarnie, świecące okna | ★★★ |
 | Garaże | labirynt boksów garażowych, wąsko, ślepe zaułki | do boksów, gdzie ktoś dłubie przy aucie | mechanik amator, handlarz „z bagażnika” | blacha, neon | ★★★ |
 | Pętla autobusowa | nocne autobusy, kioski 24h, wiata pełna ludzi | do kiosku, do okna nocnego autobusu | kierowca nocnego, kioskarka | sodowe lampy | ★★ |
 | Ucieczka | patrol z latarką, psy, trzeba się chować w przejściach | szybkie rzuty w biegu | ekipa spod bloku goni gracza | noc, syreny | ★★ (do przemyślenia, czy to nie odciąga od roznoszenia) |

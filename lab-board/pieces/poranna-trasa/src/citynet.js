@@ -11,7 +11,7 @@
 
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox, stops, night = false, cen = { x: 110, z: -10, r: 180 } }) {
+export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox, stops, night = false, tourist = false, cen = { x: 110, z: -10, r: 180 } }) {
   const M = c => toon(c), wrap = i => ((i % N) + N) % N, O = 30;
   // ---------- where: two straight stretches for the shortcuts (none of them across a checkpoint: a quarter of the loop from the start),
   // four spots for the side streets on the outside ----------
@@ -19,7 +19,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   const quarterAt = q => wrap(startI + Math.round(N * q)), cps = [0, .25, .5, .75].map(quarterAt), near = (i, j, m) => { const d = Math.abs(wrap(i - j + N / 2) - N / 2) * ds; return d < m; };
   const LEN = Math.round(64 / ds), shortcuts = [];
   for (let i = 0; i < N && shortcuts.length < 2; i += Math.round(6 / ds)) { const j = i + LEN; if (turnOf(i - Math.round(8 / ds), LEN + Math.round(16 / ds)) > .35) continue; if (cps.some(c => { for (let k = -10; k <= LEN + 10; k += 4) if (wrap(i + k) === c || near(wrap(i + k), c, 6)) return true; return false; })) continue;
-    if (shortcuts.some(s0 => Math.abs(wrap(i - s0.a + N / 2) - N / 2) * ds < 140)) continue; shortcuts.push({ a: wrap(i), b: wrap(j), kind: shortcuts.length ? 'park' : 'alley' }); }
+    if (shortcuts.some(s0 => Math.abs(wrap(i - s0.a + N / 2) - N / 2) * ds < 140)) continue; shortcuts.push({ a: wrap(i), b: wrap(j), kind: shortcuts.length || tourist ? 'park' : 'alley' }); }
   const stubs = []; for (const f of [.08, .31, .58, .83]) { let i = wrap(startI + Math.round(N * f)); if (shortcuts.some(s0 => near(i, s0.a, 20) || near(i, s0.b, 20))) i = wrap(i + Math.round(30 / ds)); stubs.push({ i, sd: -INNER }); }
   // (the ways kept clear of what the loop plants and puts about: trees, bins, benches)
   { const z0 = (i, d, hx, hz) => { const o = new THREE.Object3D(); o.position.copy(at(i, d, 0)); o.rotation.y = Math.atan2(S[wrap(i)].f.x, S[wrap(i)].f.z); o.updateMatrixWorld(); zone(o, hx, hz); };
@@ -56,7 +56,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   const dummy = (i, d, turn = 0) => { const o = new THREE.Object3D(); const q = at(i, d, 0); o.position.copy(q); o.rotation.y = Math.atan2(S[wrap(i)].f.x, S[wrap(i)].f.z) + turn; o.updateMatrixWorld(); return o; };
   // the canvas for a sign or a graffiti (pixel letters, see city.js's own font: here a few shapes and colours only)
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); f(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
-  const FONT = { A: '010101111101101', E: '111100110100111', K: '101110100110101', R: '110101110110101', T: '111010010010010', Z: '111001010100111', Ó: '010010101101010', U: '101101101101111', Ł: '100110100100111', P: '110101110100100', Y: '101101010010010', W: '101101111111101', J: '001001001101010', D: '110101101101110', ' ': '000000000000000', C: '111100100100111', B: '110101110101110', N: '110101101101101', M: '101111111101101', X: '101101010101101', I: '111010010010111', S: '111100111001111', O: '111101101101111', '>': '100010001010100', '<': '001010100010001' };
+  const FONT = { A: '010101111101101', E: '111100110100111', K: '101110100110101', R: '110101110110101', T: '111010010010010', Z: '111001010100111', Ó: '010010101101010', U: '101101101101111', Ł: '100110100100111', P: '110101110100100', Y: '101101010010010', W: '101101111111101', J: '001001001101010', D: '110101101101110', ' ': '000000000000000', C: '111100100100111', B: '110101110101110', F: '111100110100100', G: '011100101101011', L: '100100100100111', H: '101101111101101', N: '110101101101101', M: '101111111101101', X: '101101010101101', I: '111010010010111', S: '111100111001111', O: '111101101101111', '>': '100010001010100', '<': '001010100010001' };
   const words = (text, bg, fg) => cv(text.length * 4 + 3, 9, g => { g.fillStyle = bg; g.fillRect(0, 0, 999, 9); g.fillStyle = fg; [...text].forEach((ch, k) => { const r = FONT[ch] || FONT[' ']; for (let q = 0; q < 15; q++) if (r[q] === '1') g.fillRect(2 + k * 4 + q % 3, 2 + (q / 3 | 0), 1, 1); }); });
   const plate = (text, bg, fg, w, h) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: words(text, bg, fg), side: THREE.DoubleSide }));
   const lampM = new THREE.MeshBasicMaterial({ color: '#ffd98a' }), steel = M('#5a5f66'), dark = M('#2a2c30');
@@ -100,8 +100,9 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
     // a low fence round the lawn, benches by the path, trees
     for (const side of [-1, 1]) for (let i = A + Math.round(6 / ds); i < Bn - Math.round(6 / ds); i += Math.round(2.5 / ds)) { const g = new THREE.Group(); g.add(box(.05, .6, .05, dark, 0, .3, 0), box(.04, .04, 2.5, dark, 0, .55, 0)); put(g, i, sg * (O + side * W2), 0, 0); }
     for (let i = A + Math.round(10 / ds); i < Bn - Math.round(10 / ds); i += Math.round(12 / ds)) { const g = new THREE.Group(); g.add(box(.5, .08, 1.7, M('#9e7a4f'), 0, .45, 0), box(.08, .5, 1.7, M('#9e7a4f'), .22, .75, 0)); for (const z of [-.7, .7]) g.add(box(.45, .45, .08, dark, 0, .22, z)); put(g, i, sg * (O + 2.4), 0, Math.PI); hit(g, { hx: .3, hz: .9, h: .6, kind: 'hard' }, wrap(i)); }
-    for (let k = 0; k < 9; k++) { const i = A + Math.round((6 + rnd() * 52) / ds), side = rnd() < .5 ? -1 : 1, d = sg * (O + side * (4.5 + rnd() * 3.5)), g = new THREE.Group(), h = 2.4 + rnd() * 1.6; g.add(box(.22, h, .22, M('#5a4030'), 0, h / 2, 0)); const cr = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4 + rnd() * .6, 1), M(['#467537', '#5b8a3c', '#3f6b35'][rnd() * 3 | 0])); cr.position.y = h + .9; g.add(cr); put(g, i, d, 0, rnd() * 6); hit(g, { hx: .2, hz: .2, h, kind: 'hard' }, wrap(i)); }
+    for (let k = 0; k < 9; k++) { const i = A + Math.round((6 + rnd() * 52) / ds), side = rnd() < .5 ? -1 : 1, d = sg * (O + side * (4.5 + rnd() * 3.5)), g = new THREE.Group(), h = 2.4 + rnd() * 1.6; if (tourist && side < 0 && i > A + LEN * .18 - 4 / ds && i < A + LEN * .18 + 16 / ds) continue; g.add(box(.22, h, .22, M('#5a4030'), 0, h / 2, 0)); const cr = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4 + rnd() * .6, 1), M(['#467537', '#5b8a3c', '#3f6b35'][rnd() * 3 | 0])); cr.position.y = h + .9; g.add(cr); put(g, i, d, 0, rnd() * 6); hit(g, { hx: .2, hz: .2, h, kind: 'hard' }, wrap(i)); }
     // the playground: its fence, swings, a slide, a sandbox, a seesaw, a climbing frame
+    if (tourist) touristPark(c, sg, A, Bn);
     { const i0 = A + Math.round(LEN * .45), pg = new THREE.Group(), red = M('#cf5a3e'), blue = M('#3b5670'), yel = M('#efc970'), wood = M('#9e7a4f');
       for (const [x, z, w0, d0] of [[0, -5, 8, .06], [0, 5, 8, .06], [-4, 0, .06, 10]]) pg.add(box(w0, .7, d0, M('#2f4a6e'), x, .35, z));
       pg.add(box(8, .04, 10, M('#c9a96a'), 0, .02, 0));
@@ -114,6 +115,33 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
     // the houses facing the park, on its far side
     for (let i = A + Math.round(6 / ds); i < Bn - Math.round(6 / ds); i += Math.round(11 / ds)) house(i, sg * (O + W2 + 1.5 + 4), sg, 9, 8, 5.6 + (rnd() < .5 ? 2.8 : 0), ['#e8dcc0', '#d8c0a8', '#b7c29a', '#e3c77e'][rnd() * 4 | 0]);
     for (let i = A + Math.round(4 / ds); i < Bn; i += Math.round(20 / ds)) lamp(i, sg * (O + 2)); }
+
+  // ---------- the tourist quarter ----------
+  // a food truck: a van with its hatch up, its counter, its name on the roof; it takes a paper at its hatch (a subscriber as a door is)
+  const picnics = [], spotsT = [];
+  function foodTruck(i, d, sg, name, col) { const g = new THREE.Group(); g.add(box(2.3, 2.5, 4.6, M(col), 0, 1.45, 0), box(2.2, .5, 1.4, M('#2a2c30'), 0, .4, 1.7), box(2.2, .5, 1.4, M('#2a2c30'), 0, .4, -1.7));
+    g.add(box(.06, 1, 2.6, M('#3f5566'), sg * 1.16, 1.9, 0), box(1.2, .06, 2.8, M('#f6f3ea'), sg * 1.7, 2.6, 0), box(.5, .08, 2.6, M('#c9c4ba'), sg * 1.3, 1.35, 0));
+    const nm = plate(name, '#17181b', '#efc970', name.length * .32 + .4, .45); nm.position.set(0, 2.95, 0); nm.rotation.y = Math.PI / 2; g.add(box(.1, .5, name.length * .32 + .5, dark, 0, 2.95, 0), nm); const nm2 = nm.clone(); nm2.rotation.y = -Math.PI / 2; nm2.position.x = -.06; g.add(nm2);
+    put(g, i, d, 0, 0); hit(g, { hx: 1.2, hz: 2.3, h: 2.8, kind: 'hard' }, wrap(i)); g.updateMatrixWorld(true);
+    const n = new THREE.Vector3(sg, 0, 0).transformDirection(g.matrixWorld).setY(0).normalize(); doors.push({ p: g.localToWorld(new THREE.Vector3(sg * 1.2, 0, 0)).addScaledVector(n, 2), n, done: false, i: wrap(i) }); return g; }
+  // in the park: a skatepark (a pad, a quarter, kickers, a rail: all to ride), two food trucks by the path, picnic blankets on the lawn
+  function touristPark(c, sg, A, Bn) { const m = x => Math.round(x / ds);
+    { const i0 = A + Math.round(LEN * .18), i1 = i0 + m(12), dd = sg * (O - 5.6), L = line(i0, i1, dd); ribbon(L, 9, '#a9a49a', .02); for (let k = 1; k < L.length; k++) seg(L[k - 1], L[k], 4.6); seg(P2(i0 + m(6), sg * (O - 1)), P2(i0 + m(6), dd), 2);
+      for (const [dz, size, turn] of [[1.5, 'big', 0], [8, 'kicker', Math.PI], [5, 'kicker', 0], [10.5, 'plank', Math.PI]]) { const o = P.ramp(rnd, size); put(o.group, i0 + m(dz), dd + sg * (size === 'big' ? 2 : -1.5), 0, turn); hit(o.group, o.hit, wrap(i0)); }
+      { const g = new THREE.Group(); g.add(box(.08, .08, 3.4, steel, 0, .5, 0)); for (const z of [-1.5, 1.5]) g.add(box(.06, .5, .06, steel, 0, .25, z)); put(g, i0 + m(6), dd, 0, 0); hit(g, { hx: .06, hz: 1.7, h: .55, kind: 'soft' }, wrap(i0)); }
+      spotsT.push({ i: i0 + m(6), d: dd, kind: 'skate' }); }
+    foodTruck(A + Math.round(LEN * .62), sg * (O - 4.4), -sg, ['LODY', 'GOFRY', 'ZAPIEKANKI'][rnd() * 3 | 0], ['#e8a0b8', '#a0d0e8', '#f0d070'][rnd() * 3 | 0]);
+    for (let k = 0; k < 3; k++) { const i = A + Math.round(LEN * (.3 + k * .22)), d = sg * (O + 5.5 + rnd() * 2.5), g = new THREE.Group(), col = ['#cf5a3e', '#3b5670', '#efc970', '#467537'][k];
+      g.add(box(1.8, .03, 1.6, M(col), 0, .02, 0)); for (let q = 0; q < 3; q++) g.add(box(.3, .035, 1.6, M('#f6f3ea'), -.6 + q * .6, .025, 0)); g.add(box(.45, .3, .3, M('#9e7a4f'), .7, .17, .6)); put(g, i, d, 0, rnd() * 3); picnics.push({ i: wrap(i), d, yaw: rnd() * 6.28 }); } }
+  // where the town has its office tower: a church with its tower, a monument on the square, a food truck by it
+  function oldTown(sg, mid) { const m = x => Math.round(x / ds), wall = M('#e8dcc0'), roof = M('#8e3b2c');
+    { const g = new THREE.Group(); g.add(box(10, 9, 16, wall, 0, 4.5, 2), box(10.4, .6, 16.4, roof, 0, 9.3, 2)); const r2 = new THREE.Mesh(new THREE.ConeGeometry(7.6, 4, 4), roof); r2.rotation.y = Math.PI / 4; r2.scale.set(1, 1, 1.6); r2.position.set(0, 11.3, 2); g.add(r2);
+      g.add(box(4.4, 22, 4.4, wall, 0, 11, -7.5)); const sp = new THREE.Mesh(new THREE.ConeGeometry(3, 8, 8), M('#4a6a5a')); sp.position.set(0, 26, -7.5); g.add(sp); g.add(box(.1, 1.6, 1.6, M('#3a3d42'), sg * 2.25, 16, -7.5), box(.1, 3, 2, M('#5a3a24'), sg * 5.05, 1.5, 2));
+      for (const z of [-2, 2, 6]) g.add(box(.1, 3.4, 1, M('#5a7f94'), sg * 5.05, 4.8, z)); const rose = new THREE.Mesh(new THREE.CircleGeometry(.9, 12), M('#b7a4e0')); rose.position.set(sg * 2.25, 12, -7.5); rose.rotation.y = sg > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(rose);
+      put(g, mid, sg * (PAVE + 22), 0, 0); hit(g, { hx: 5.2, hz: 10, h: 22, kind: 'hard' }, wrap(mid)); }
+    { const g = new THREE.Group(), br = M('#6a7a5a'); g.add(box(1.6, 1.8, 1.6, M('#c9c4ba'), 0, .9, 0), box(2, .3, 2, M('#b9b2a2'), 0, .15, 0), box(.5, 1, .36, br, 0, 2.4, 0), box(.3, .3, .3, br, 0, 3.05, 0), box(.14, .7, .14, br, .3, 2.7, .1), box(.14, .14, .7, br, -.3, 2.9, .3));
+      put(g, mid + m(6), sg * (PAVE + 10), 0, 0); hit(g, { hx: 1, hz: 1, h: 3, kind: 'hard' }, wrap(mid)); }
+    foodTruck(mid - m(12), sg * (PAVE + 6), -sg, 'LODY', '#e8a0b8'); spotsT.push({ i: mid, d: sg * (PAVE + 8), kind: 'square' }); }
 
   // ---------- a side street: in from the main street on the outside, closed a little way in ----------
   function stub(t) { const sg = t.sd, i = t.i, L0 = across(i, sg * (ROAD - .1), sg * 30); ribbon(L0, 6.4, '#3f4246', .03); ribbon(L0, 10.4, '#b3ad9d', .02); for (let k = 1; k < L0.length; k++) seg(L0[k - 1], L0[k], 3.4);
@@ -153,7 +181,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   const walkers = [];
   function office() { if (!plaza) return; const sg = plaza.sd, i0 = plaza.i0, i1 = plaza.i1, mid = i0 + Math.round((i1 - i0) / 2);
     { const L = line(i0, i1, sg * (PAVE + 9)); ribbon(L, 18, '#b9b2a2', .022); for (let k = 1; k < L.length; k++) seg(L[k - 1], L[k], 9.2); }
-    if (night) nightShop(sg, mid); else { const g = new THREE.Group(), gt = cv(8, 16, x => { for (let y = 0; y < 16; y++) for (let q = 0; q < 8; q++) { x.fillStyle = (y % 4 === 0) ? '#5a6a74' : (q % 2 ? '#7fa6c2' : (rnd() < .2 ? '#e8dca0' : '#6f93ad')); x.fillRect(q, y, 1, 1); } });
+    if (night) nightShop(sg, mid); else if (tourist) oldTown(sg, mid); else { const g = new THREE.Group(), gt = cv(8, 16, x => { for (let y = 0; y < 16; y++) for (let q = 0; q < 8; q++) { x.fillStyle = (y % 4 === 0) ? '#5a6a74' : (q % 2 ? '#7fa6c2' : (rnd() < .2 ? '#e8dca0' : '#6f93ad')); x.fillRect(q, y, 1, 1); } });
       gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(4, 10); const glass = toon('#ffffff', { map: gt });
       g.add(box(14, 38, 18, glass, 0, 19, 0), box(14.4, .8, 18.4, M('#4a4e55'), 0, 38.4, 0), box(3, 4, 6, M('#3a3d42'), 0, 40.4, -3));
       g.add(box(3, .25, 7, M('#c9c4ba'), sg * 8.5, 4.2, 0), box(.1, 3.6, 3.2, M('#2f3e4a'), sg * 7.05, 1.8, 0));
@@ -278,5 +306,5 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
     { const k = new THREE.Group(); k.add(box(2.2, 2.5, 2, M('#3b6e4a'), 0, 1.25, 0), box(2.4, .2, 2.2, M('#2a4a34'), 0, 2.6, 0), box(.06, .9, 1.4, litM, sg * 1.11, 1.5, 0)); const kp = plate('KIOSK', '#17181b', '#ffd27a', 1.6, .4); kp.position.set(sg * 1.14, 2.2, 0); kp.rotation.y = sg > 0 ? Math.PI / 2 : -Math.PI / 2; k.add(kp);
       put(k, mid + m(11), sg * (PAVE + 4), 0, 0); hit(k, { hx: 1.1, hz: 1, h: 2.6, kind: 'hard' }, wrap(mid)); } }
   function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); nightLamps(); office(); taxis(); roadworks(); for (const z of zebras) if (!z.lights) crossing(z); furniture(); }
-  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi, zebras, works, get workers() { return worksOn ? workers : []; }, nearWorks, nearTaxi, setWorks, lamps, flickOn };
+  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi, zebras, works, get workers() { return worksOn ? workers : []; }, nearWorks, nearTaxi, setWorks, lamps, flickOn, picnics, spotsT };
 }
