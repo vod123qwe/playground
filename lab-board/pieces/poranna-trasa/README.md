@@ -1229,3 +1229,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - blok w idealnym momencie (parowanie): przeciwnik odbija się od ciebie i odlatuje do tyłu, chwilę zwolnione tempo, „IDEALNIE! KONTRUJ!”; przez 1,4 s twój cios bije ponad dwa razy mocniej i działa jak mocny (zwykłe parowanie dawało półtora raza)
 - w trakcie ciosu z klipem idzie tylko ręka, która bije (gra sama sprawdza w klipie, która), druga zostaje w gardzie; wcześniej przy sierpowym ruszała się dziwnie także druga ręka, jakby bił obiema po kolei
 
+## Wersja 141: okno idealnego parowania 500 ms
+
+- idealne parowanie: garda podniesiona w ciągu 500 ms przed trafieniem (było 300 ms); zwykły blok (garda trzymana wcześniej) tylko zatrzymuje cios, bez odrzucenia
+- zielona pięść świeci właśnie w tym oknie, liczonym razem z końcówką zamachu (wcześniej dopiero w samym ciosie, czyli za krótko); sprawdzone na arenie: okno około pół sekundy, gardą w nim 5 idealnych parowań na 20 s
+

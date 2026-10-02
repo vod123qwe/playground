@@ -67,7 +67,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     kozak: { name: 'KOZAK Z OSIEDLA', hp: 100, dmg: 1.1, wind: .42, recover: .42, guard: .6, feint: .4, combo: .5, counter: .28, heavy: .15 },
     szwagier: { name: 'SZWAGIER', hp: 140, dmg: 1.3, wind: .64, recover: .56, guard: .42, counter: .15, heavy: .35, feint: 0, combo: .15, armor: true },
     kurier: { name: 'KURIER OSIEDLOWY', hp: 90, dmg: 1, wind: .38, recover: .44, guard: .6, feint: .3, combo: .6, counter: .35, heavy: .1 } };
-  const PARRY = .3, HAND = { jab: 'l', cross: 'r', hook: 'r' };                                                    // (the green moment before a punch lands: a guard raised in it is a parry)                                                  // (the computer hits a little softer: from his eyes it is harder to read)                  // (when in each clip the fist is out furthest: measured on load)
+  const PARRY = .5, HAND = { jab: 'l', cross: 'r', hook: 'r' };                                                    // (the green moment before a punch lands: a guard raised in it is a parry)                                                  // (the computer hits a little softer: from his eyes it is harder to read)                  // (when in each clip the fist is out furthest: measured on load)
 
   // ---------- a person: the model, its clips, its bones; a cap and a bag for him ----------
   function person(key, extras) {
@@ -267,10 +267,12 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   // green in the moment a guard raised is a parry), "!" over him as he winds up ("NISKO!" for a low one), "TERAZ!" when it is time;
   // the brother-in-law angry at half his health; blood from the nose of one knocked about ----------
   const glowT = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  // (how long till his punch lands: the rest of his wind-up and the clip up to its blow)
+  const toImpact = f => { if (f.move && !f.move.done) return f.move.dur * f.move.imp - f.move.t; if (f.wind) { const M = MOVES[f.wind.k]; return f.wind.dur - f.wind.t + (M ? M.dur * 1.12 * (IMPACT[M.clip] || .45) : .25); } return 9; };
   function tell(f, o, dt) {
     if (!f.glow) { f.glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT, color: '#ffd23a', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); f.glow.scale.setScalar(.55); scene.add(f.glow); }
     const k = f.ko ? null : f.wind ? f.wind.k : f.move && !f.move.done ? f.move.k : null, low = k === 'bodyL' || k === 'bodyR'; f.glow.visible = !!k;
-    if (k) { const heavy = !!(f.wind?.heavy || f.move?.heavyAtk), green = !heavy && !!(f.move && !f.move.done && f.move.dur * f.move.imp - f.move.t < PARRY); f.glow.material.color.set(heavy ? '#ff3a2a' : green ? '#7fe05a' : low ? '#c070f0' : '#ffd23a'); f.glow.scale.setScalar(heavy ? .8 : .55); f.P.bones[k === 'jab' ? 'hand_l' : 'hand_r'].getWorldPosition(f.glow.position);
+    if (k) { const heavy = !!(f.wind?.heavy || f.move?.heavyAtk), green = !heavy && toImpact(f) < PARRY; f.glow.material.color.set(heavy ? '#ff3a2a' : green ? '#7fe05a' : low ? '#c070f0' : '#ffd23a'); f.glow.scale.setScalar(heavy ? .8 : .55); f.P.bones[k === 'jab' ? 'hand_l' : 'hand_r'].getWorldPosition(f.glow.position);
     }
     if (f.kindKey === 'szwagier' && !f.rage && !f.ko && f.hp < f.max * .5) { f.rage = true; f.kind = { ...f.kind, wind: .55, dmg: 1.6, combo: .45, guard: .2 }; say(f, pick(['TERAZ TO SIĘ WKURZYŁEM!', 'NO TO KONIEC ŻARTÓW!', 'SZWAGIER IDZIE NA CAŁOŚĆ!'])); fx.shake(.2); }
     if (!f.ko && f.hp < f.max * .5 && Math.random() < dt * 1.4) fx.blood?.(f.P.bones.head.getWorldPosition(new V3()), null, 1); }
@@ -567,7 +569,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   }
   // what the HUD shows: the two bars in a fight; how red the edges (his health low)
   function star() { if (!fightNow) return null; const o = fightNow.f, k = o.wind ? o.wind.k : o.move && !o.move.done ? o.move.k : null;
-    const heavy = !!(o.wind?.heavy || o.move?.heavyAtk), green = !heavy && !!(o.move && !o.move.done && o.move.dur * o.move.imp - o.move.t < PARRY);
+    const heavy = !!(o.wind?.heavy || o.move?.heavyAtk), green = !heavy && toImpact(o) < PARRY;
     return { dir: mAim.dir, foe: k ? SIDE[k] : null, green, open: o.recover > 0 || o.stagger > .3, guard: me.guard, low: me.low, high: view !== 'first', finish: !!me.finTip, heavy, mouse: !!document.pointerLockElement }; }
   function status() { if (!me) return null; return { train: fightNow && fightNow.train ? fightNow.train.step + ':' + fightNow.train.n : null, foeState: fightNow ? (fightNow.f.wind ? 'wind' : fightNow.f.move ? 'move' : fightNow.f.recover > 0 ? 'open' : (fightNow.f.ai && fightNow.f.ai.plan)) : null, star: star(), fight: fightNow ? { a: { name: 'TY', hp: me.hp, st: me.st, guard: me.guard }, b: { name: fightNow.f.kind ? fightNow.f.kind.name : fightNow.f.name, hp: fightNow.f.hp / (fightNow.f.max || 100) * 100, st: fightNow.f.st } } : null, low: active ? clamp((40 - me.hp) / 40, 0, 1) : 0 }; }
   function setKind(f, k) { f.kindKey = k; f.rage = false; f.kind = KINDS[k]; f.max = f.kind.hp; f.hp = f.max; }
