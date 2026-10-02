@@ -13,6 +13,7 @@ export function createBronx({ THREE, toon, track, scene, residents }) {
   let a = 811; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const { S, N, ds } = track, wrap = i => ((i % N) + N) % N, V = (x, y, z) => new THREE.Vector3(x, y, z), M = c => toon(c);
   const gy = (x, z, i) => track.probe(x, z, i ?? -1).y;
+  const at = (i, d) => { const A = S[wrap(i)]; return { x: A.p.x + A.r.x * d, z: A.p.z + A.r.z * d }; };
   // a deck: its lines one by one, shuffled, none again till all have come
   const deck = lines => { let left = []; return () => { if (!left.length) left = lines.slice().sort(() => rnd() - .5); return left.pop(); }; };
   // ---------- the estate's name for him (kept between runs): kicks lower it, papers and a word raise it ----------
@@ -106,6 +107,23 @@ export function createBronx({ THREE, toon, track, scene, residents }) {
       p.o.acts.walk && (p.o.acts.walk.timeScale = party.stopT > 0 ? 0 : 1); p.o.mixer.update(dt); p.paperT = Math.max(0, p.paperT - dt); near = Math.min(near, Math.hypot(R.x - p.x, R.z - p.z)); }
     if (near < 9 && party.sayT <= 0) { party.sayT = 9 + rnd() * 6; said = { kind: 'shout', p: party.members[rnd() * party.members.length | 0], text: SONG() }; }
     return said; }
+  // ---------- the garages (their map): a mechanic at an open box, a man selling from his car's boot, cars backing out onto the road ----------
+  const GAR = track.openGarages || [], backers = [];
+  const MECH = deck(['TEN SILNIK PRZEŻYŁ TRZY ŻONY. MOJE.', 'NIE PODCHODŹ, ZASŁANIASZ MI LAMPĘ. JEDYNĄ.', 'O TEJ PORZE NAJLEPIEJ SIĘ NAPRAWIA. NIKT NIE PYTA, CO NAPRAWIAM.', 'KLUCZ DZIESIĄTKA. KTOŚ WIDZIAŁ DZIESIĄTKĘ? ZAWSZE ZNIKA.']);
+  const SELL = deck(['ZEGARKI, PERFUMY, NAWIGACJE. WSZYSTKO ORYGINALNE. TROCHĘ.', 'DLA CIEBIE ZNIŻKA. DLA WSZYSTKICH JEST ZNIŻKA.', 'NIE PYTAJ SKĄD. PYTAJ ZA ILE.', 'RADIO DO ROWERU? Z PILOTEM!']);
+  if (GAR.length) { const pick = GAR.slice().sort(() => rnd() - .5);
+    for (const [k, G0] of pick.slice(0, 3).entries()) { G0.g.updateMatrixWorld(true); const q = G0.g.localToWorld(V(G0.fx + G0.s * 1.1, 0, G0.z + .9)), p = { kind: k === 2 ? 'seller' : 'mech', x: q.x, z: q.z, y: gy(q.x, q.z), g: null, o: null, paperT: 0, talks: 0, sayT: 0 };
+      people.push(p); residents.spawn(k === 2 ? 'dogman' : 'suit').then(o => { if (!o) return; p.o = o; p.g = o.G; o.m.traverse(m => { if (m.isMesh && !/skin|body|eye|teeth|tongue|brow|lash|hair/i.test(m.material.name + m.name)) m.material.color.set(k === 2 ? '#3a2a22' : '#2f4a6e'); });
+        o.acts.idle?.play(); o.G.position.set(p.x, p.y, p.z); o.G.rotation.y = G0.g.rotation.y + (G0.s > 0 ? Math.PI / 2 : -Math.PI / 2); }); }
+    for (const G0 of pick.slice(3, 7)) backers.push({ G0, t: -5 - rnd() * 25, car: null }); }
+  function stepBackers(dt, R, ev) { const CARS = track.cars; if (!CARS) return;
+    for (const b of backers) { const G0 = b.G0; b.t += dt; if (b.t < 0) continue;
+      if (!b.car) { const near = Math.hypot(R.x - G0.g.position.x, R.z - G0.g.position.z); if (near > 60 || near < 14) { b.t = -3; continue; } const c = CARS.random(rnd); b.car = c; scene.add(c.group); b.t = 0; ev.push({ kind: 'honk' }); }
+      const c = b.car.group, i = G0.i, A = S[wrap(i)], yaw = Math.atan2(A.f.x, A.f.z), u = Math.min(1, b.t / 3.2), d0 = G0.s * ((track.PAVE ?? 6.6) + .4 + 1.6), d1 = G0.s * 1.75;
+      const d = d0 + (d1 - d0) * u, alongK = b.t > 4.2 ? (b.t - 4.2) * 8 : 0, base = at(i, d); const x = base.x + A.f.x * alongK, z = base.z + A.f.z * alongK;
+      c.position.set(x, gy(x, z, i), z); c.rotation.y = b.t < 4.2 ? yaw + (G0.s > 0 ? -Math.PI / 2 : Math.PI / 2) * (1 - u) : yaw;
+      if (!R.foot && !(b.hitT > 0) && (R.x - x) ** 2 + (R.z - z) ** 2 < 2.4) { b.hitT = 3; ev.push({ kind: 'reverse' }); } b.hitT = Math.max(0, (b.hitT || 0) - dt);
+      if (b.t > 7.5) { scene.remove(c); b.car = null; b.t = -20 - rnd() * 25; } } }
   // ---------- what they do ----------
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = [];
@@ -123,7 +141,8 @@ export function createBronx({ THREE, toon, track, scene, residents }) {
       // (a bad name here: now and then a bin pushed out onto the road ahead of him)
       if (rep <= -2 && grp.pushT <= 0 && grp.members[0] === p && dist < 60 && dist > 22 && !R.foot) { grp.pushT = 35 + rnd() * 20; const q = track.probe(R.x, R.z, R.hint), along = Math.sign(Math.sin(R.yaw) * S[q.i].f.x + Math.cos(R.yaw) * S[q.i].f.z) || 1, i = wrap(q.i + Math.round((dist * .6) / ds) * along);
         if (Math.hypot(S[i].p.x - p.x, S[i].p.z - p.z) < 40) { putBin(i, q.d); ev.push({ kind: 'push', p, text: PUSH() }); } } }
-    { const e = stepParty(dt, R); if (e) ev.push(e); }
+    { const e = stepParty(dt, R); if (e) ev.push(e); } stepBackers(dt, R, ev);
+    for (const p of people) { if ((p.kind !== 'mech' && p.kind !== 'seller') || !p.o) continue; const dd = Math.hypot(R.x - p.x, R.z - p.z); if (dd > 70) continue; p.o.mixer.update(dt); p.paperT = Math.max(0, p.paperT - dt); p.sayT -= dt; if (dd < 9 && p.sayT <= 0) { p.sayT = 18 + rnd() * 10; ev.push({ kind: 'shout', p, text: p.kind === 'seller' ? SELL() : MECH() }); } }
     tyreT -= dt; if (tyreT <= 0 && Math.abs(R.v) > 3 && !R.foot) { tyreT = 22 + rnd() * 18; rollTyre(R); }
     for (let k = tyres.length - 1; k >= 0; k--) { const T = tyres[k]; T.t += dt; T.x += T.vx * dt; T.z += T.vz * dt; T.spin += 4.2 / .46 * dt; const y = gy(T.x, T.z, T.i) + .46 + Math.abs(Math.sin(T.t * 5)) * .08;
       T.g.position.set(T.x, y, T.z); T.g.rotation.set(0, Math.atan2(T.vx, T.vz) + Math.PI / 2, 0); T.g.children[0].rotation.z = T.spin; T.g.children[1].rotation.y = T.spin;
@@ -137,12 +156,13 @@ export function createBronx({ THREE, toon, track, scene, residents }) {
   function putBin(i, dd) { const A = S[i], d = Math.max(-2.6, Math.min(2.6, dd)), x = A.p.x + A.r.x * d, z = A.p.z + A.r.z * d, g = new THREE.Group(), b = new THREE.Mesh(new THREE.BoxGeometry(.8, 1.1, .7), M('#2f5a3a')); b.position.y = .55; g.add(b);
     g.position.set(x, gy(x, z, i), z); g.rotation.y = Math.atan2(A.f.x, A.f.z); scene.add(g); g.updateMatrixWorld(true); const C = track.addHit(g, { hx: .4, hz: .35, h: 1.1, kind: 'soft' }, i); bins.push({ g, C, t: 28, gone: false }); }
   // kicked (from the bike): he swears and the lads run after him; the estate remembers
-  function kick(p) { if (p.kind === 'party') { party.stopT = 3; return PARTY_KICK(); } if (p.kind === 'inzynier') { repAdd(-2); return 'ZA CO?! JA TU TYLKO LEŻĘ!'; } repAdd(-1); for (const m of p.grp.members) if (m.ready) { m.state = 'chase'; m.t = 0; } return KICKED(); }
+  function kick(p) { if (p.kind === 'mech') return 'EJ! TO JEST SERWIS, A NIE MYJNIA!'; if (p.kind === 'seller') return 'NO TO CENA W GÓRĘ!'; if (p.kind === 'party') { party.stopT = 3; return PARTY_KICK(); } if (p.kind === 'inzynier') { repAdd(-2); return 'ZA CO?! JA TU TYLKO LEŻĘ!'; } repAdd(-1); for (const m of p.grp.members) if (m.ready) { m.state = 'chase'; m.t = 0; } return KICKED(); }
   // spoken to (on foot): each in his own way; with a bad name here, short with him
-  function talk(p) { p.talks = (p.talks || 0) + 1; if (p.kind === 'inzynier') return RUMOUR(); if (p.kind === 'party') { party.stopT = 4; return SONG(); }
+  function talk(p) { p.talks = (p.talks || 0) + 1; if (p.kind === 'mech') return MECH(); if (p.kind === 'seller') return SELL(); if (p.kind === 'inzynier') return RUMOUR(); if (p.kind === 'party') { party.stopT = 4; return SONG(); }
     if (rep <= -2) return TALK_BAD(); if (p.talks === 3 && p.P.once && !p.onceSaid) { p.onceSaid = true; return p.P.once; } if (p.talks === 2) repAdd(1); return p.P.talk[(p.talks - 1) % p.P.talk.length]; }
   // a paper thrown to one: taken (the estate a little kinder); the engineer covers himself with it and has a rumour for you
   function paper(Pp) { for (const p of people) { if (p.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > (p.kind === 'inzynier' ? 1.3 : .8)) continue; p.paperT = 40; repAdd(1);
+      if (p.kind === 'mech') return { p, text: 'GAZETA? DAJ, PODŁOŻĘ POD MISKĘ OLEJOWĄ. ŻARTUJĘ. PRZECZYTAM, JAK SKOŃCZĘ. CZYLI NIGDY.', who: 'lad' }; if (p.kind === 'seller') return { p, text: 'GAZETA ZA DARMO? KOLEGO, TY NIE UMIESZ HANDLOWAĆ.', who: 'lad' };
       if (p.kind === 'inzynier') { p.blanket.visible = true; return { p, text: RUMOUR(), who: 'inzynier' }; } if (p.kind === 'party') { party.stopT = 3; return { p, text: PARTY_PAPER(), who: 'party' }; } return { p, text: p.P.paper, who: 'lad' }; } return null; }
   return { id: 'bronx', people, lights, update, kick, talk, paper, get rep() { return rep; } };
 }

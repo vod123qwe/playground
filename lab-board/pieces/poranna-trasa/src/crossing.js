@@ -55,8 +55,9 @@ export function createCrossing({ THREE, toon, track, at }) {
     for (const L of lamps) L.l.material = st.blink < 0 ? lampOff : ((st.blink === 0) === (L.k < 0) ? lampOn : lampOff);
     for (const b of bars) b.arm.rotation.x = -(1 - THREE.MathUtils.smoothstep(st.down, 0, 1)) * 1.48;
     // the train on the rails, the player there: the worst; the barrier down in his way at speed: over it he goes
-    if (st.mode === 'train' && Math.abs(al) < 1.7) { const lo = Math.min(st.x, st.x - st.dir * TLEN), hi = Math.max(st.x, st.x - st.dir * TLEN); if (ac > lo - 1.4 && ac < hi + 1.4) out = { hit: 'train', push: r.clone().multiplyScalar(st.dir * 9) }; }
-    if (!out && !me.onFoot && st.down > .7 && Math.abs(ac) < ROAD + .4) for (const b of bars) if (Math.abs(al - b.al) < .45 && Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) === -Math.sign(b.al)) { out = { hit: 'barrier', push: f.clone().multiplyScalar(-Math.sign(b.al) * 1.5) }; break; }
+    if (st.mode === 'train' && Math.abs(al) < 1.7) { const lo = Math.min(st.x, st.x - st.dir * TLEN), hi = Math.max(st.x, st.x - st.dir * TLEN); if (ac > lo - 1.4 && ac < hi + 1.4) { if ((me.h || 0) > 2.9) { if (!st.over) { st.over = true; out = { hit: 'over' }; } } else out = { hit: 'train', push: r.clone().multiplyScalar(st.dir * 9) }; } }   // (high enough: over the wagons' roofs)
+    if (st.mode !== 'train') st.over = false;
+    if (!out && !me.onFoot && !((me.h || 0) > 1.1) && st.down > .7 && Math.abs(ac) < ROAD + .4) for (const b of bars) if (Math.abs(al - b.al) < .45 && Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) === -Math.sign(b.al)) { out = { hit: 'barrier', push: f.clone().multiplyScalar(-Math.sign(b.al) * 1.5) }; break; }
     // the cars wait at it (down, or about to be)
     if (traffic && st.mode !== 'idle') for (const q of traffic) { if (!q.t || q.t.stop === undefined) continue; const a2 = along(q.x, q.z); if (Math.abs(a2) < 14 && Math.abs(a2) > 3 && Math.abs(across(q.x, q.z)) < ROAD + 1) q.t.stop = Math.max(q.t.stop, .4); }
     return out; }

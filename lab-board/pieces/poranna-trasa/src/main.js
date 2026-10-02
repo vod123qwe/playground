@@ -873,11 +873,26 @@ let barkers = [];
 const nearDog = () => barkers.find(n => n.dist < 2.9);
 // ---------- level crossings (crossing.js): where a level has them (LEVELS[].cross: shares of the way), the lamps, the barriers, the train ----------
 const CROSS = []; let dingT = 0, trainHitT = 0;
-function clearCrossings() { for (const X of CROSS) scene.remove(X.group); CROSS.length = 0; }
+function clearCrossings() { for (const X of CROSS) scene.remove(X.group); CROSS.length = 0;
+  for (const J of crossJumps) { scene.remove(J.o.group); scene.remove(J.pad); track.dropHit?.(J.C); const ix = track.parked.indexOf(J.P0); if (ix >= 0) track.parked.splice(ix, 1); } crossJumps.length = 0;
+  for (const C of crossHidden) { C.used = false; if (C.o) C.o.visible = true; } crossHidden.length = 0; }
+// (a way over the rails: on his way before each crossing a strip of speed, then a mega ramp: high enough, the barrier and the train go under
+// him; the ramps of the road just past a crossing put away for the run: no waiting at the rails for a ramp behind them)
+const crossJumps = [], crossHidden = [], padM = new THREE.MeshBasicMaterial({ color: '#efc930' });
+function crossWays(iC, dir) { const N = track.N, ds = track.ds, wrap = i => ((i % N) + N) % N, S = track.S;
+  for (const C of track.ramps || []) { if (C.used || C.i == null) continue; const d = Math.abs(((C.i - iC) % N + N * 1.5) % N - N / 2) * ds; if (d < 35) { C.used = true; if (C.o) C.o.visible = false; crossHidden.push(C); } }
+  const ri = wrap(iC - dir * Math.round(11 / ds)), A = S[ri], d0 = dir * 1.4, o = track.props.ramp(Math.random, 'mega'), q = track.probe(A.p.x + A.r.x * d0, A.p.z + A.r.z * d0, ri);
+  o.group.position.set(A.p.x + A.r.x * d0, q.y, A.p.z + A.r.z * d0); o.group.rotation.y = Math.atan2(A.f.x, A.f.z) + (dir < 0 ? Math.PI : 0); scene.add(o.group); o.group.updateMatrixWorld(true);
+  const C = track.addHit(o.group, o.hit, ri), P0 = { s: ri * ds, d: d0 }; track.parked.push(P0);
+  const pi = wrap(ri - dir * Math.round(14 / ds)), B0 = S[pi], pad = new THREE.Group(); for (let k = 0; k < 3; k++) { const ch = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .35).rotateX(-Math.PI / 2), padM); ch.position.z = (k - 1) * .7; pad.add(ch); }
+  const px_ = B0.p.x + B0.r.x * d0, pz_ = B0.p.z + B0.r.z * d0; pad.position.set(px_, track.probe(px_, pz_, pi).y + .03, pz_); pad.rotation.y = o.group.rotation.y; pad.renderOrder = 1; scene.add(pad);
+  crossJumps.push({ o, C, P0, pad, x: px_, z: pz_, used: false }); }
 function buildCrossings() { clearCrossings(); if (!LV?.cross) return; const N = track.N, iJ = track.startI, dir = LV.finish.dir;
-  for (const fr of LV.cross) { const X = createCrossing({ THREE, toon, track, at: iJ + dir * Math.round(N * LV.finish.to * fr) }); scene.add(X.group); CROSS.push(X); } }
-function stepCrossings(dt) { if (!CROSS.length) return; const M0 = foot.active ? foot.me : B, me = { x: M0.x, z: M0.z, v: foot.active ? 0 : B.v, yaw: M0.yaw, onFoot: foot.active }, tb = traffic.boxes(); trainHitT -= dt;
+  for (const fr of LV.cross) { const at = iJ + dir * Math.round(N * LV.finish.to * fr), X = createCrossing({ THREE, toon, track, at }); scene.add(X.group); CROSS.push(X); crossWays(at, dir); } }
+function stepCrossings(dt) { if (!CROSS.length) return; const M0 = foot.active ? foot.me : B, me = { x: M0.x, z: M0.z, v: foot.active ? 0 : B.v, yaw: M0.yaw, onFoot: foot.active, h: !foot.active && B.air ? B.y - track.probe(B.x, B.z, B.hint).y : 0 }, tb = traffic.boxes(); trainHitT -= dt;
+  for (const J of crossJumps) { if (foot.active || B.air) continue; const d = Math.hypot(B.x - J.x, B.z - J.z); if (d < 1.3 && !J.hot) { J.hot = true; B.v = Math.max(B.v, 12.5); audio.play('trick', { vol: .4 }); if (!J.said) { J.said = true; flash('Rozpęd! Skocznia przed torami: wysoko nad szlabanem, a nawet nad pociągiem'); } } else if (d > 3) J.hot = false; }
   let ring = false; for (const X of CROSS) { const o = X.update(dt, me, tb); if (X.ringing && Math.hypot(X.center.x - me.x, X.center.z - me.z) < 60) ring = true;
+    if (o?.hit === 'over') { logEv('train_jump', me.x, me.z); score(25, new THREE.Vector3(me.x, (B.y || 0) + 2.2, me.z), 'NAD POCIĄGIEM! +25', '#efc970'); flash('Przeskoczyłeś pociąg!'); audio.play('trick'); }
     if (o?.hit === 'warn' && !RUN.crossSaid) { RUN.crossSaid = true; flash('Przejazd kolejowy! Miga, szlabany idą w dół: zdążysz albo czekaj'); }
     if (o?.hit === 'barrier' && !B.crash && !foot.active) { logEv('barrier', me.x, me.z); crash(0, o.push); flash('Szlaban! Trzeba było poczekać'); hud.impact(new THREE.Vector3(me.x, (B.y || 0) + 1.3, me.z), 'ŁUP!'); }
     if (o?.hit === 'train' && trainHitT <= 0) { trainHitT = 3; logEv('train', me.x, me.z); hurt(30, 'Pociąg był szybszy.'); shake = .5; audio.play('crash'); flash('POCIĄG! O włos...');
@@ -1160,6 +1175,8 @@ function localEvent(e) {
   if (e.kind === 'load') { logEv('load', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Ładunek z suwnicy! Patrz na cień na jezdni.'); }
   if (e.kind === 'forklift') { logEv('forklift', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Wózek widłowy ma pierwszeństwo. Zawsze.'); }
   if (e.kind === 'beep') audio.play('ui', { vol: .25 });
+  if (e.kind === 'honk') audio.play('horn', { vol: .35 });
+  if (e.kind === 'reverse') { logEv('reverse', B.x, B.z); crash(Math.random() < .5 ? -1 : 1, new THREE.Vector3(0, 0, 0)); flash('Auto cofało z garażu. Patrz na otwarte boksy.'); }
   if (e.kind === 'tyre') { logEv('tyre', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Opona z naprzeciwka! Patrz na boki.'); }
   if (e.kind === 'glass') { B.flatT = 7; audio.play('glass', { vol: .45 }); flash('Szkło! Opona flaczeje, przez chwilę jedzie się ciężej'); logEv('glass', B.x, B.z); }
   if (e.kind === 'push' && e.p?.g) { hud.rant(e.p.g.position, e.text, true, 1.95); flash('Ktoś wypchnął kosz na drogę!'); } }
@@ -1737,7 +1754,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'reverse', 'train_jump', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }
