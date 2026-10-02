@@ -1353,3 +1353,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - śmieciarka: jedzie powoli, staje co 35–50 m, dwóch śmieciarzy biega z koszami w poprzek drogi; śmieciarka: leżysz, śmieciarz: zwalniasz; gazeta do śmieciarza: łapie (+2)
 - bez drzew przy samej drodze (zasłaniały skrzynki i rowerzystę z kamery Klasyka)
 - notki w gazecie: cofał z podjazdu, śmieciarka i gazety, tor przeszkód zaliczony
+
+## Wersja 159: Klasyk startuje spod domu
+
+- Ulica Kasztanowa ma teraz twój dom: stoi po stronie domów (na zewnątrz pętli) przy swojej uliczce, przejazd zaczyna się na jego podjeździe
+- domy i dom po zewnętrznej stronie, trawnik z ławkami, paczkami i torami przeszkód w środku pętli; trasa jedzie w drugą stronę, więc domy dalej masz po lewej; skocznie, tory przeszkód i śmieciarka obrócone pod ten kierunek
+- rower w Klasyku toczy się sam dopiero, kiedy już ruszysz (stojąc, czeka na gaz); zahamujesz do zera: stoi

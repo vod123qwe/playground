@@ -44,7 +44,7 @@ export function createClassic({ THREE, toon, track, scene, cars }) {
       const legs = [-1, 1].map(sd => { const l = new THREE.Group(), lm = new THREE.Mesh(new THREE.BoxGeometry(.14, .78, .16), M('#3b4a5e')); lm.position.y = -.39; l.add(lm); l.position.set(sd * .1, .8, 0); m.add(l); return l; });
       const bin = new THREE.Mesh(new THREE.BoxGeometry(.6, .9, .6), M('#5a6b4a')); bin.position.set(0, .45, .55); bin.visible = false; m.add(bin); scene.add(m); return { g: m, legs, bin, d: 0, ph: 0, sayT: 0, hitT: 0, paperT: 0 }; };
     const men = [man(), man()]; for (const m of men) people.push({ g: m.g, x: 0, z: 0, kind: 'binman', P: null, m });
-    const P0 = { s: L * .3, d: -hs * 1.6, len: 7 }; track.parked.push(P0);
+    const P0 = { s: L * .3, d: 1.6, len: 7 }; track.parked.push(P0);   // (in the lane of the way it drives)
     cart = { g, beacon, men, s: L * .3, v: 0, stop: 0, go: 30, P0, hitT: 0, sayT: 0 }; }
 
   let clock = 0;
@@ -65,7 +65,7 @@ export function createClassic({ THREE, toon, track, scene, cars }) {
     // (the dustcart: up the road in its lane slowly, a stop every 35-50 m: the men out across the road to the bins and back)
     if (cart) { const C = cart; C.hitT = Math.max(0, C.hitT - dt); C.sayT -= dt;
       if (C.stop > 0) { C.stop -= dt; C.v = 0; } else { C.v += (3 - C.v) * Math.min(1, dt * 1.5); C.go -= C.v * dt; if (C.go <= 0) { C.stop = 7; C.go = 35 + rnd() * 15; } }
-      C.s = ((C.s + C.v * dt) % L + L) % L; C.P0.s = C.s; const i = wrap(Math.round(C.s / ds)), A = S[i], d = -hs * 1.6, x = A.p.x + A.r.x * d, z = A.p.z + A.r.z * d, yaw = Math.atan2(A.f.x, A.f.z);
+      C.s = ((C.s + C.v * dt) % L + L) % L; C.P0.s = C.s; const i = wrap(Math.round(C.s / ds)), A = S[i], d = 1.6, x = A.p.x + A.r.x * d, z = A.p.z + A.r.z * d, yaw = Math.atan2(A.f.x, A.f.z);
       C.g.position.set(x, gy(x, z, i), z); C.g.rotation.y = yaw; C.beacon.visible = (clock * 3 | 0) % 2 === 0;
       const ph = C.stop > 0 ? 1 - Math.abs((7 - C.stop) / 3.5 - 1) : 0;   // (0 by the cart, 1 at the bins, back to 0)
       C.men.forEach((m, k) => { const dm = d + (hs * (track.ROAD + 2.4) - d) * Math.max(0, Math.min(1, ph * 1.15)), off = k ? -2.4 : -3.6, mi = wrap(i + Math.round(off / ds)), B0 = S[mi];
