@@ -67,7 +67,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     kozak: { name: 'KOZAK Z OSIEDLA', hp: 100, dmg: 1.1, wind: .42, recover: .42, guard: .6, feint: .4, combo: .5, counter: .28, heavy: .15 },
     szwagier: { name: 'SZWAGIER', hp: 140, dmg: 1.3, wind: .64, recover: .56, guard: .42, counter: .15, heavy: .35, feint: 0, combo: .15, armor: true },
     kurier: { name: 'KURIER OSIEDLOWY', hp: 90, dmg: 1, wind: .38, recover: .44, guard: .6, feint: .3, combo: .6, counter: .35, heavy: .1 } };
-  const PARRY = .3;                                                    // (the green moment before a punch lands: a guard raised in it is a parry)                                                  // (the computer hits a little softer: from his eyes it is harder to read)                  // (when in each clip the fist is out furthest: measured on load)
+  const PARRY = .3, HAND = { jab: 'l', cross: 'r', hook: 'r' };                                                    // (the green moment before a punch lands: a guard raised in it is a parry)                                                  // (the computer hits a little softer: from his eyes it is harder to read)                  // (when in each clip the fist is out furthest: measured on load)
 
   // ---------- a person: the model, its clips, its bones; a cap and a bag for him ----------
   function person(key, extras) {
@@ -240,13 +240,15 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const punch = P.shot && ['jab', 'cross', 'hook'].includes(P.shot.name);   // (a punch: the clip throws it, the fists come back to the guard at its end)
     const want = f.ko || f.mode !== 'fight' ? 0 : P.shot ? (punch ? (P.shot.t > P.shot.dur * .85 ? .6 : 0) : .25) : 1;
     P.ik += (want - P.ik) * Math.min(1, dt * 14); P.fist += ((f.mode === 'fight' && !f.ko ? 1 : 0) - P.fist) * Math.min(1, dt * 8);
-    if (P.ik > .01) {
+    // (in a punch only the hand that throws it goes with the clip; the other is held up in the guard)
+    const busyH = punch ? HAND[P.shot.name] : null, wOther = f.ko || f.mode !== 'fight' ? 0 : 1; P.ikO = (P.ikO ?? 0) + (((busyH ? wOther : P.ik)) - (P.ikO ?? 0)) * Math.min(1, dt * 14);
+    if (P.ik > .01 || (busyH && P.ikO > .01)) {
       const hd = P.bones.head.getWorldPosition(new V3()), fw = new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw)), lf = new V3(Math.cos(f.yaw), 0, -Math.sin(f.yaw)), g = f.guardW, lo = f.lowW;
       const pt = (fwd, side, up) => hd.clone().addScaledVector(fw, fwd).addScaledVector(lf, side).addScaledVector(UP, up);
       const L = pt(.4, .14, -.11).lerp(pt(.27, .09, -.01), g).lerp(pt(.3, .13, -.42), lo * g), R = pt(.31, -.16, -.15).lerp(pt(.26, -.09, -.02), g).lerp(pt(.28, -.13, -.44), lo * g);
       const bob = Math.sin(f.t * 5.5) * .012 * (1 - g); L.y += bob; R.y -= bob;
       for (const [s, T, sd] of [['l', L, 1], ['r', R, -1]]) { const sh = P.bones['upperarm_' + s].getWorldPosition(new V3()), pole = sh.clone().addScaledVector(UP, -1).addScaledVector(lf, sd * .7).addScaledVector(fw, -.25);
-        reach(P.bones['upperarm_' + s], P.bones['lowerarm_' + s], P.bones['hand_' + s], T, pole, P.ik); }
+        reach(P.bones['upperarm_' + s], P.bones['lowerarm_' + s], P.bones['hand_' + s], T, pole, busyH && s !== busyH ? P.ikO : P.ik); }
     }
     fists(P, P.fist);
   }
@@ -337,9 +339,9 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const M = MOVES[k]; if (!M) return; const tired = f.st < 18;
     f.chain = f.chainT < .5 ? [...f.chain, k].slice(-3) : [k]; f.chainT = 0;
     const combo = f.chain.join() === 'jab,jab,cross' ? 'SERIA' : f.chain.slice(-2).join() === 'jab,cross' ? 'RAZ-DWA' : null;
-    f.move = { k, ...M, t: 0, dur: M.dur * (tired ? 1.35 : 1) * (f.ai ? 1.12 : 1), imp: IMPACT[M.clip] || .45, done: false, combo, mul: (combo === 'SERIA' ? 1.5 : combo ? 1.3 : 1) * (tired ? .55 : 1) * (f.counterT > 0 ? 1.5 : 1) * (f.ai ? AI_DMG * (f.kind ? f.kind.dmg : 1) * (fightNow && fightNow.train ? 0 : 1) : 1), counter: f.counterT > 0 };
+    f.move = { k, ...M, t: 0, dur: M.dur * (tired ? 1.35 : 1) * (f.ai ? 1.12 : 1), imp: IMPACT[M.clip] || .45, done: false, combo, mul: (combo === 'SERIA' ? 1.5 : combo ? 1.3 : 1) * (tired ? .55 : 1) * (f.counterT > 0 ? (f.perfect ? 2.2 : 1.5) : 1) * (f.ai ? AI_DMG * (f.kind ? f.kind.dmg : 1) * (fightNow && fightNow.train ? 0 : 1) : 1), counter: f.counterT > 0, perfect: f.counterT > 0 && !!f.perfect };
     if (heavyAtk) { f.move.heavyAtk = true; f.move.mul *= 1.6; }   // (a heavy one: no guard stops it, a dodge does)
-    f.counterT = 0; f.st = Math.max(0, f.st - M.st); shot(f.P, M.clip, f.move.dur);
+    f.counterT = 0; f.perfect = false; f.st = Math.max(0, f.st - M.st); shot(f.P, M.clip, f.move.dur);
   }
   const head = f => f.P.bones.head.getWorldPosition(new V3()).add(new V3(0, .32, 0));
   const chest = f => f.P.bones.spine_03.getWorldPosition(new V3());
@@ -349,7 +351,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     const at = M.zone === 'high' ? o.P.bones.head.getWorldPosition(new V3()) : chest(o), covered = o.guard && (M.zone === 'low') === o.low, wrong = o.guard && !covered;
     if (covered && M.heavyAtk) { o.hp -= M.dmg * M.mul * .55; o.stagger = .7; o.guard = false; o.st = Math.max(0, o.st - 25); fx.pop(at.clone().add(new V3(0, .3, 0)), 'ZA MOCNY! UNIKAJ', '#ff3a2a'); fx.impact(at, 'BUM!'); fx.shake(.3); fx.blood?.(at, new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw)), 6); shot(o.P, 'hitchest', .6); return; }   // (a heavy one through the guard)
     if (covered) {
-      if (o.parryT < PARRY) { if (f.ai) trainCount(0); f.stagger = .75; f.move = null; f.buf = null; o.counterT = 1.1; fx.pop(at.clone().add(new V3(0, .3, 0)), 'KONTRA!', '#efc970'); shot(f.P, 'hithead', .5, { from: .1 }); fx.shake(.18); return; }   // (a parry)
+      if (o.parryT < PARRY) { if (f.ai) trainCount(0); f.stagger = 1; f.move = null; f.buf = null; o.counterT = 1.4; o.perfect = true; f.x -= Math.sin(f.yaw) * .75; f.z -= Math.cos(f.yaw) * .75; fx.pop(at.clone().add(new V3(0, .3, 0)), 'IDEALNIE! KONTRUJ!', '#9be36a'); shot(f.P, 'knock', .7); fx.shake(.25); fx.slow(.16); fx.sound?.('kick', .6); return; }   // (a parry right on time: he bounces off you, wide open; yours next hits more than twice as hard)
       if (o.ai) o.ai.riposte = true; o.hp -= M.dmg * .12; o.st -= M.dmg * 1.4; f.st = Math.max(0, f.st - 6); if (!f.ai) f.stagger = Math.max(f.stagger, .14);   // (off his guard: it costs, it sets you back a touch)
       fx.pop(at, 'BLOK', '#d3d0c3'); fx.impact(at, null); fx.shake(.06);
       if (o.st <= 0) { o.st = 0; o.guard = false; o.stagger = .9; fx.pop(at.clone().add(new V3(0, .3, 0)), 'GARDA PĘKŁA!', '#cf5a3e'); shot(o.P, 'hitchest', .6); }
@@ -357,7 +359,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     }
     const open = o.recover > 0 || o.stagger > .3, dmg = M.dmg * M.mul * (wrong ? .5 : 1) * (!f.ai ? (open ? 1.4 : .8) : 1); o.hp -= dmg; if (o.ai) o.ai.hits = (o.ai.hits || 0) + 1;
     if (wrong) fx.pop(at.clone().add(new V3(0, .3, 0)), 'ZŁA GARDA', '#cf5a3e'); if (open && !f.ai) { fx.pop(at.clone().add(new V3(0, .45, 0)), 'W ODSŁONĘ!', '#efc970'); trainCount(2); } if (!(M.k === 'jab' && o.wind)) { o.move = null; o.buf = null; }
-    const heavy = M.heavy || dmg >= 16, fw = new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw));
+    const heavy = M.heavy || M.perfect || dmg >= 16, fw = new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw));
     fx.impact(at, heavy ? 'BUM!' : M.zone === 'low' ? 'PAC!' : 'ŁUP!'); fx.shake(heavy ? .32 : .16); if (heavy) fx.slow(.08); fx.blood?.(at, fw, heavy ? 12 : M.zone === 'high' ? 6 : 3);
     if (M.finish) { fx.pop(at.clone().add(new V3(0, .55, 0)), 'WYDANIE SPECJALNE!', '#efc970'); fx.slow(.6); }
     if (M.combo || M.counter) fx.pop(at.clone().add(new V3(0, .35, 0)), M.counter ? 'KONTRA!' : M.combo + '!', '#efc970');
@@ -419,10 +421,10 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   let riderP = null;
   function measure(P) {                                               // when, in each punch clip, the fist is out furthest
     P.G.position.set(0, 0, 0); P.G.rotation.set(0, 0, 0); P.G.updateMatrixWorld(true);
-    for (const n of ['jab', 'cross', 'hook']) { const a = P.A[n]; if (!a) continue; P.mixer.stopAllAction(); a.reset().play(); let best = -9, bt = .45;
+    for (const n of ['jab', 'cross', 'hook']) { const a = P.A[n]; if (!a) continue; P.mixer.stopAllAction(); a.reset().play(); let best = -9, bt = .45; const far = { l: -9, r: -9 };
       for (let k = 2; k <= 22; k++) { a.time = P.clips[n].duration * k / 24; P.mixer.update(0); P.m.updateMatrixWorld(true); const pz = P.bones.pelvis.getWorldPosition(new V3()).z;
-        for (const s of ['l', 'r']) { const r = P.bones['hand_' + s].getWorldPosition(new V3()).z - pz; if (r > best) { best = r; bt = k / 24; } } }
-      IMPACT[n] = bt; a.stop(); }
+        for (const s of ['l', 'r']) { const r = P.bones['hand_' + s].getWorldPosition(new V3()).z - pz; far[s] = Math.max(far[s], r); if (r > best) { best = r; bt = k / 24; } } }
+      IMPACT[n] = bt; HAND[n] = far.l > far.r ? 'l' : 'r'; a.stop(); }   // (and which hand throws it: the other stays up in the guard)
     P.mixer.stopAllAction(); for (const n of ['idle', 'walk', 'jog', 'stance']) if (P.A[n]) { P.A[n].play(); P.A[n].setEffectiveWeight(n === 'idle' ? 1 : 0); }
   }
 
