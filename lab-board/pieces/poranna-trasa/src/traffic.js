@@ -101,6 +101,14 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       else if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = -(R.along || 1); b.s = wrap(R.s + (R.along || 1) * (110 + rnd() * 70)); b.lane = b.dir * 2.55; b.snap = true; b.r.root.visible = true; }   // (ahead of him, coming his way)
       const rel = ahead(R.s, b.s, R.along || 1);                       // (how far ahead of him, the way he rides)
       if (!b.rival && !b.hold && (rel < -40 || rel > 320)) { b.on = false; b.wait = 6 + rnd() * 14; b.r.root.visible = false; continue; }
+      // (a cyclist with him on its line ahead, standing or slow: it swerves round him, and short of him it brakes)
+      // (and round what stands on its line: a parked car, a ramp, the road works; the nearest of them, or him, ahead within 18 m)
+      if (!b.fall && !b.hold) { const home = b.rival ? b.lane : b.dir * 2.55; let ob = null, od = 18;
+        const toHim = ahead(b.s, R.s, b.dir); if (!b.rival && toHim > 0 && toHim < od && Math.abs(home - R.d) < 1.5 && Math.abs(R.d) < 3.6) { ob = R.d; od = toHim; }
+        for (const p of track.parked) { const a2 = ahead(b.s, p.s, b.dir); if (a2 > 0 && a2 < od && Math.abs(home - p.d) < 1.7) { ob = p.d; od = a2; } }
+        if (!b.rival) { const want = ob !== null ? Math.max(-3.2, Math.min(3.2, ob + (home >= ob ? 1 : -1) * 2)) : home; b.lane += (want - b.lane) * Math.min(1, dt * 2.6); }
+        else if (ob !== null && od < 10) b.lane += ((ob + (b.lane >= ob ? 1 : -1) * 2) - b.lane) * Math.min(1, dt * 3);
+        if (!b.rival && toHim > 0 && toHim < 4 && Math.abs(b.lane - R.d) < .9) b.stop = Math.max(b.stop, .35); }
       if (b.hold) b.stop = Math.max(b.stop, .5); const v = b.stop > 0 ? 0 : b.v; b.s = wrap(b.s + b.dir * v * dt); b.dt = dt; if (!b.fall) place(b);
       const q = track.probe(b.x, b.z, Math.floor(wrap(b.s) / ds) % N); b.r.root.position.set(b.x, q.y, b.z); b.r.root.rotation.set(0, b.yaw, 0);
       // knocked off: the bike over on its side, the rider thrown (a ragdoll), a while, up again; bumped: a wobble
