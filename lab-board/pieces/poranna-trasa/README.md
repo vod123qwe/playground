@@ -1270,3 +1270,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - Janusz w słuchawce mniej gada sam: nowe ustawienie JANUSZ W SŁUCHAWCE (USTAWIENIA): RZADKO (domyślnie: sam z siebie najwyżej raz na 75 s, przy punkcie czy sprincie tylko czasem), CZĘSTO (jak było) albo WYŁĄCZONY (nic sam z siebie; telefony ze zleceniami i scenki zostają); telefony ze zleceniami w trybie rzadkim co około 2 minuty zamiast co minutę
 - noc: skrzynka każdego abonenta ma ciepłą, pulsującą łunę widoczną z daleka na ciemnych ścianach i chodnikach; gaśnie, gdy skrzynka dostanie gazetę; w Bronksie nocą 56 świecących skrzynek na 56 abonentów
 
+## Wersja 147: łuna tylko tam, gdzie trzeba wrzucić
+
+- nocna łuna już nie na wszystkich abonentach: świeci tylko skrzynka, do której masz teraz wrzucić (nie dostała gazety, w torbie jest gazeta jej tytułu), i tylko trzy najbliższe przed tobą w promieniu 45 m; subtelniej: mniejsza, przygaszona, zapala się i gaśnie płynnie
+
