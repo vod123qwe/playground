@@ -28,7 +28,12 @@ export const REGION_T = {
     roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false },
   wies: { id: 'wies', home: false, ctrl: [[0, 0, 0], [10, 2, 70], [-10, 5, 140], [30, 8, 200], [100, 9, 235], [175, 6, 220], [225, 3, 165], [235, 0, 95], [270, 2, 30], [255, 5, -45], [195, 7, -95], [125, 4, -110], [70, 1, -85], [25, -1, -45]],
     roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [24, 18], houseP: .56, farms: true,
-    walls: ['#e8e4dc', '#d9d4c8', '#c9c2b0', '#e6dcc4', '#bfb8a8', '#d8cfb8'], roofs: ['#5a5f66', '#6d4a3a', '#7a7f86', '#4a4038'] },
+    walls: ['#e8e4dc', '#d9d4c8', '#c9c2b0', '#e6dcc4', '#bfb8a8', '#d8cfb8'], roofs: ['#5a5f66', '#6d4a3a', '#7a7f86', '#4a4038'],
+    // (the village's routes, each its map: the harvest (golden fields one after another, combines on the road and dust behind them,
+    // tractors with trailers, straw ramps, bales out on the stubble))
+    maps: {
+      zniwa: { harvest: true, ctrl: [[0, 0, 0], [20, 1, 80], [0, 3, 160], [60, 6, 225], [150, 7, 245], [225, 5, 205], [255, 2, 120], [262, 1, 40], [232, 3, -40], [165, 4, -85], [95, 2, -95], [32, 0, -55]],
+        gap: [22, 16], houseP: .38, trees: .5, stops: [.5], shops: [[.3, 1]] } } },
   // peryferia2 ("Druga strona"): the new estate over the tracks: a flat loop with tighter corners, kerbs and lines, houses close in a row
   // (modern greys and whites, dark roofs), lots with a house going up, two stretches of warehouses, road works, cranes over it all
   peryferia2: { id: 'peryferia2', home: false, ctrl: [[0, 0, 0], [5, 1, 55], [40, 1, 95], [95, 2, 100], [140, 1, 70], [150, 0, 20], [190, 1, -10], [235, 2, -5], [255, 1, -55], [225, 0, -110], [160, -1, -125], [100, 0, -100], [55, 1, -110], [15, 0, -70]],
@@ -945,7 +950,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     if (bigAt.some(b => Math.abs(b - i) * ds < 14)) continue;             // (the big ones' run up and landing kept clear)
     // (a ramp: in town not on the pavement (its benches, bins and posts in the way of the landing), and never with a car parked before or after it)
     if (r < .26 && (parked.some(q => q.d * sd > 0 && Math.abs(q.s - i * ds) < 18) || NET?.nearWorks(i, 30))) continue;
-    if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4 && !NET, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride
+    if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4 && !NET, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); if (RG.harvest) o.group.traverse(q => { if (q.isMesh && q.material?.color) { q.material = q.material.clone(); q.material.color.lerp(new THREE.Color('#e2c25e'), .7); } }); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride (the harvest: straw)
     else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); const C = hit(o.group, o.hit, ii); o.group.userData.keep = true; C.thing = { kind: 'cone', o: o.group, C, r: .18 }; things.push(C.thing); } }
     else if (r < .48) { const o = P.bags(rnd), d = sd * (VERGE - .3 + rnd() * 1.4); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); }
     else if (r < .56) { const o = P.wagon(), d = sd * (VERGE + .8); put(o.group, i, d, 0, rnd() * 6); hit(o.group, o.hit, i); }
@@ -959,7 +964,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   { const fr = mulberry(31), stripes = (c1, c2, rows = 8) => { const c = document.createElement('canvas'); c.width = 16; c.height = 16; const x = c.getContext('2d');   // (a field's rows)
       for (let k = 0; k < rows; k++) { x.fillStyle = k % 2 ? c1 : c2; x.fillRect(0, k * 16 / rows, 16, 16 / rows); } for (let k = 0; k < 20; k++) { x.fillStyle = 'rgba(0,0,0,.08)'; x.fillRect(fr() * 16 | 0, fr() * 16 | 0, 1, 1); }
       const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
-    const FIELDS = [['#d9b45a', '#c9a04a'], ['#8a6038', '#6b4a2e'], ['#77a146', '#5b8a3c'], ['#c9b77a', '#b8a060'], ['#98b85a', '#7c9a45']].map(([a, b]) => toon('#ffffff', { map: stripes(a, b) }));
+    const FIELDS = (RG.harvest ? [['#e2c25e', '#d1ab48'], ['#d8c588', '#c2ac6c'], ['#e6cf7a', '#cfb35a'], ['#d9b45a', '#c9a04a']] : [['#d9b45a', '#c9a04a'], ['#8a6038', '#6b4a2e'], ['#77a146', '#5b8a3c'], ['#c9b77a', '#b8a060'], ['#98b85a', '#7c9a45']]).map(([a, b]) => toon('#ffffff', { map: stripes(a, b) }));   // (the harvest: all golden, standing or cut)
     // a patch laid on the rolling ground: from d0 to d1 across, from i0 to i1 along, its rows running along or across
     function field(i0, i1, d0, d1, m, across) {
       const na = 8, nd = 6, pos = [], uv = [], idx = [];
@@ -1002,7 +1007,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     // (by most fields, a farm out at the back of it: its gate at the road, a letterbox on a post by the gate, its house beyond the field;
     // the field's stretch of road then has a paper to throw too)
     { const gateW = toon('#8a6a44'), boxM = toon('#7f878e'), flagM = toon('#cf3a2c');
-      for (const F of fieldLots) { if (fr() > .75) continue; const i = F.i + Math.round(4 / ds), A = S[((i % N) + N) % N], dG = F.s * (PAVE + 1.4);
+      for (const F of fieldLots) { if (fr() > (RG.harvest ? .9 : .75)) continue; const i = F.i + Math.round(4 / ds), A = S[((i % N) + N) % N], dG = F.s * (PAVE + 1.4);
         if (!free(i, dG, 2.2)) continue; const g = new THREE.Group();
         for (const z of [-1.5, 1.5]) g.add(box(.16, 1.5, .16, gateW, 0, .75, z)); for (const y of [.45, .85, 1.25]) g.add(box(.06, .1, 2.9, gateW, 0, y, 0)); { const dg = box(.06, .1, 3.1, gateW, 0, .85, 0); dg.rotation.x = .38; g.add(dg); }
         put(g, i, dG, 0, 0); hit(g, { hx: .12, hz: 1.6, h: 1.5, kind: 'hard' }, i);
@@ -1011,7 +1016,9 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         mb.userData.keep = true; const im = i + Math.round(2.4 / ds); put(mb, im, F.s * (PAVE + .7), 0, 0); const C = hit(mb, { hx: .18, hz: .25, h: 1.4, kind: 'hard' }, im);
         const n = new THREE.Vector3(A.r.x * -F.s, 0, A.r.z * -F.s).normalize(), gp = at(i, dG, 0), hi = doors.length; doors.push({ p: gp.clone().addScaledVector(n, 2.6), n, done: false, i, gate: true });
         const M0 = { o: mb, i: im, side: F.s, flag, house: hi }; mailboxes.push(M0); things.push({ kind: 'mailbox', o: mb, mb: M0, C, side: F.s });
-        const dH = F.s * (PAVE + 42); if (free(i, dH, 6)) farmhouse(i, dH); } }
+        const dH = F.s * (PAVE + 42); if (free(i, dH, 6)) farmhouse(i, dH); }
+      if (RG.harvest) { const hayM = toon('#e2c25e'), hayE = toon('#c49a3e'); for (const F of fieldLots) for (let k = 0; k < 3 + (fr() * 4 | 0); k++) { const i = F.i + Math.round((fr() * 22 - 6) / ds), d = F.s * (PAVE + 8 + fr() * 24);
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, 1.2, 14).rotateZ(Math.PI / 2), [hayM, hayE, hayE]); b.position.y = .75; const g = new THREE.Group(); g.add(b); put(g, i, d, 0, fr() * 6); } } }
     if (CITY) { CITY.skyline(CEN.x, CEN.z, REACH); CITY.rails(); NET.build(); }   // (the town: a skyline round it, not fields; the tram's rails in the road)
     for (const sd of CITY ? [] : [-INNER]) {                                        // (the outside of the loop only)
       for (const [r0, r1] of [[46, 54], [100, 110]]) { let i = Math.round(fr() * 60 / ds);        // (two rows of them: near, and far)
@@ -1138,6 +1145,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
+  return { harvest: !!RG.harvest, gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

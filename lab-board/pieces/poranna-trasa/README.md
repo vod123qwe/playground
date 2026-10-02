@@ -1304,3 +1304,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - przy większości pól brama gospodarstwa: drewniana furtka z ukośną belką, skrzynka na słupku przy drodze, dom w głębi za polem; pole też ma gazetę do rzucenia
 - na każdej mapie pilnowany odstęp: gdzie między abonentami robi się ponad ~55 m pustki, dom najbliżej środka dziury dostaje prenumeratę
 - wieś: 1,1 → 3,2 abonenta na 100 m, najdłuższy odcinek bez gazety 199 → 74 m; peryferia: najdłuższy 100 → 65 m
+
+## Wersja 153: Żniwa
+
+- trasa ZA TRAKTOREM jest teraz ŻNIWAMI na własnej mapie: inna pętla, złote pola jedno przy drugim (stojące zboże, ściernisko, pokos), bele na ścierniskach, słomiane skocznie, mniej drzew nad drogą
+- dwa kombajny na drodze, każdy w swoją stronę: zielony korpus, kabina, rura, żółty heder z czerwonymi rozdzielaczami i obracającym się nawijaczem; zajmują prawie całą szerokość jezdni, za nimi kurz zasłania drogę; kombajnista trąbi i woła, kiedy jedziesz mu w drogę; w heder albo korpus: leżysz, heder da się przeskoczyć ze skoczni; przed opuszczonym szlabanem kombajn czeka
+- cztery traktory z przyczepami zamiast dwóch (gazeta na przyczepę dalej łapana)
+- rolnicy przy bramach gospodarstw, każdy po swojemu: gospodarz od pogody i cen skupu, gospodyni, która karmi wszystkich, student na wakacyjnej robocie (Kalkulator), dziadek od kosy i bel, sąsiadka, która wszystko widzi z okna; zagadać, kopnąć, rzucić gazetę
+- nowa notka w gazecie: kombajn kontra rower
