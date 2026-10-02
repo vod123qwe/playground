@@ -1087,3 +1087,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - trudność rośnie z każdym odcinkiem: dłuższy slalom, ciaśniejsze odstępy, mega skocznia, więcej obręczy i tarcz w powietrzu, dodatkowy slalom przed metą
 - każdy rów jest wykonalny: przed pełnym rowem stoi skocznia, podwójny rów to dwie połówki jezdni do objechania albo przeskoczenia
 - na odcinku finału nie stoją auta zaparkowane przy krawężniku (wcześniej jedno blokowało pas)
+
+## Wersja 123: skoki do torów przeszkód, poprawka roweru, więcej ludzi w mieście
+
+- menu TESTY: grupa TORY PRZESZKÓD (FINAŁY): przy każdym odcinku „Tor: nazwa”: odpala odcinek i stawia od razu na początku finału (także w innym regionie, po przeładowaniu); dla bieżącego odcinka skoki w miejsca toru: początek, łatwy pas, trudny pas (przed rozpędem), druga skocznia, podwójny rów
+- poprawka: po budowie finału model roweru zostawał w miejscu próbnego skoku; zaczynając odcinek pieszo widziało się rower obok, a gra mówiła, że jest daleko i nie dawała go podnieść
+- miasto: każdy rodzaj przechodnia trzy razy (Druga strona dwa razy), kopie w innych kolorach ubrań i włosów i trochę innego wzrostu

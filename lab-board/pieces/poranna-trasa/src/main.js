@@ -156,7 +156,8 @@ const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => 
   onLoot: T => { shop.grant(T.item, T.tier); audio.play('pick'); flash(T.label + '! Zamontowane. Właściciel się nie dowie... chyba'); B.fame = (B.fame || 0) + 1; setTimeout(() => hud.rant(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'EJ! MOJE PRZERZUTKI!!!', false), 1600); witness?.(T.x, T.z); },
   onShrine: T => { B.fame = (B.fame || 0) + .5; hud.rant(new THREE.Vector3(T.x + 1, T.y + 1.8, T.z), pickOf(['OBRAZA BOSKA!', 'JEZUS MARIA, CO TY ROBISZ?!', 'POKUTA CIĘ NIE MINIE!']), false); },
   onBreak: T => { B.fame = (B.fame || 0) + .4; hud.pop(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'SKRZYNKA!', '#cf5a3e'); witness?.(T.x, T.z); } });   // (people sitting out in their gardens)                         // (a hydrant knocked or kicked)
-const peds = createPedestrians({ THREE, toon, track }); scene.add(peds.group);
+// (the town busier: each kind of walker three times, the estate twice)
+const peds = createPedestrians({ THREE, toon, track, copies: track.region === 'miasto' ? 3 : track.region === 'peryferia2' ? 2 : 1 }); scene.add(peds.group);
 // a word with people, and the errands that come of it (talk.js: the box; quests.js: who wants what, and what came of it)
 const audio = createAudio();
 // a sound out in the world: as loud as it is near the camera, from its side
@@ -1297,7 +1298,7 @@ function saveCampaign() { LVM.save({ money: B.points, bike: myBike, inv: INV.map
 function applySave() { if (!LVM.hasSave()) return; const S = LVM.load(); if (S.bike?.type) { myBike = { type: S.bike.type, parts: { ...newParts(), ...(S.bike.parts || {}) }, ...(S.bike.paint ? { paint: S.bike.paint } : {}) }; }
   if (S.owned?.licznik) cyclo.skin(S.owned.licznik); INV.splice(0, INV.length, ...(S.inv || [])); PAINTS.clear(); for (const k of [0, ...(S.paints || [])]) PAINTS.add(k); B.points = S.money || 0; applyBike(); }
 setTimeout(applySave, 0);
-{ const pz = new URLSearchParams(location.search).get('poziom'); if (pz) setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('poziom'); history.replaceState(null, '', location.pathname + '?' + q.toString().replace(/=(&|$)/g, '$1')); startLevel(pz); }, 60); }
+{ const pz = new URLSearchParams(location.search).get('poziom'); if (pz) setTimeout(() => { const q = new URLSearchParams(location.search); q.delete('poziom'); history.replaceState(null, '', location.pathname + '?' + q.toString().replace(/=(&|$)/g, '$1')); startLevel(pz); let tp = null; try { tp = JSON.parse(sessionStorage.getItem('pt.tp') || 'null'); sessionStorage.removeItem('pt.tp'); } catch { } if (tp?.id === pz) setTimeout(() => tpFinale(tp.where), 900); }, 60); }
 // the gate over the loop road: two striped posts at the kerbs, a chequered banner with META
 function clearGate() { for (const o of RUN.gate) scene.remove(o); for (const C of RUN.hits) track.dropHit(C); RUN.gate = []; RUN.hits = []; }
 function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55, yaw = Math.atan2(S0.f.x, S0.f.z);
@@ -1478,10 +1479,10 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
   const ALL = LVM.LEVELS.filter(l => !l.soon), D = THREE.MathUtils.clamp(ALL.findIndex(l => l.id === LV.id) / Math.max(1, ALL.length - 1), 0, 1), L2 = W / 2;
   // (a jump's flight: flown once by the game's own ride() from its pad at the pad's speed, the speed held to the lip as the pad holds
   // it in play; the rider's state, the sounds, any fall kept out and put back after. → the points the rider's middle passed in the air)
-  const flown = (q, v, lip) => { const keep = { ...B }, ap = audio.play, fx = q.f.x, fz = q.f.z, out = []; audio.play = () => { }; const q0 = track.probe(q.x, q.z, q.i);
+  const flown = (q, v, lip) => { const keep = { ...B }, rp = rider.root.position.clone(), rq = rider.root.quaternion.clone(), rv = rider.root.visible, ap = audio.play, fx = q.f.x, fz = q.f.z, out = []; audio.play = () => { }; const q0 = track.probe(q.x, q.z, q.i);
     Object.assign(B, { x: q.x, z: q.z, hint: q0.i, y: q0.y, gPrev: q0.y, gVel: 0, yaw: Math.atan2(fx, fz), v, air: false, vy: 0, crash: null, safe: 99, trick: null, lift: null, parked: false, kick: null, charge: null, onRamp: null });
     try { for (let k = 0; k < 480; k++) { if (!B.air && !out.length) B.v = v; ride(1 / 60, { steer: 0, pedal: 0, brake: 0 }); if (B.air) out.push(new THREE.Vector3(B.x, B.y + 1, B.z)); else if (out.length) break; } } catch (e) { console.warn('flight', e); }
-    audio.play = ap; for (const k of Object.keys(B)) if (!(k in keep)) delete B[k]; Object.assign(B, keep); return out; };
+    audio.play = ap; for (const k of Object.keys(B)) if (!(k in keep)) delete B[k]; Object.assign(B, keep); rider.root.position.copy(rp); rider.root.quaternion.copy(rq); rider.root.visible = rv; rider.root.updateMatrixWorld(true); return out; };   // (the bike's model back where it stood too)
   const jump = (m, size, d, v, nRings, nAir) => { pad(m + 7, d, v); const o = kicker(m, size, d), lip = m - o.hit.hz, path = flown(at(m + 7, d), v, lip);
     FIN.locks.push({ from: m + 7, to: lip, v, d });
     if (path.length < 6) return { o, lip, land: lip - 6 };
@@ -1523,16 +1524,25 @@ let stepAcc = 0; function stepSteps(dt) { const me = foot.me; if (!me || me.air 
 // ---------- the menu's TESTY page (for trying things quickly; to go later): every stretch by region, and the states to jump to ----------
 function tpTo(x, z, along = 1) { const q = track.probe(x, z, -1), A = track.S[q.i], dir = LV?.finish.dir || 1; if (foot.active) mount(); Object.assign(B, { x: A.p.x + A.r.x * 1.4 * dir, z: A.p.z + A.r.z * 1.4 * dir, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null, air: false, yaw: Math.atan2(A.f.x * dir * along, A.f.z * dir * along) }); C.yaw = B.yaw; C.init = false; C.iy = 0; }
 function aheadOf(x, z, m) { const q = track.probe(x, z, -1), dir = LV?.finish.dir || 1, i = ((q.i - dir * Math.round(m / track.ds)) % track.N + track.N) % track.N; return track.S[i].p; }
+// the obstacle course of a stretch, straight to it: a place on it (m: metres before the line, d: off the road's middle, + right),
+// the bike under him facing the line; where: start, the easy lane, the hard lane (before its speed pad), the second jump, the double trench
+function tpFin(m, d = 0) { if (!LV || !FIN.on) return; const dir = LV.finish.dir, i = ((FIN.iF - dir * Math.round(m / track.ds)) % track.N + track.N) % track.N, A = track.S[i], x = A.p.x + A.r.x * d * dir, z = A.p.z + A.r.z * d * dir, q = track.probe(x, z, i);
+  if (foot.active) mount(); Object.assign(B, { x, z, hint: q.i, y: q.y, gPrev: q.y, v: 0, crash: null, air: false, lift: null, parked: false, yaw: Math.atan2(A.f.x * dir, A.f.z * dir) }); C.yaw = B.yaw; C.init = false; C.iy = 0; }
+function tpFinale(where = 'start') { if (!LV || !FIN.on) return; const L2 = track.ROAD / 2, FL = Math.min(300, LV.finish.to * track.len * .45), Lk = FIN.locks || [];
+  const at = { start: [FL + 14, 0], easy: [(FIN.forkM || FL * .74) - 2, -L2], hard: [(Lk[0]?.from ?? FL * .74) + 8, L2], jump2: [(Lk[1]?.from ?? FL * .5) + 8, L2], double: [FL * .24 + 14, 0] }[where] || [FL + 14, 0];
+  tpFin(at[0], at[1]); flash('Tor przeszkód: ' + ({ start: 'początek', easy: 'łatwy pas', hard: 'trudny pas', jump2: 'druga skocznia', double: 'podwójny rów' }[where] || 'początek')); }
+function goTrack(id, where = 'start') { const L0 = LVM.LEVEL(id); if (!L0) return; if ((L0.region === 'peryferia' ? 'peryferia' : L0.region) !== track.region) { try { sessionStorage.setItem('pt.tp', JSON.stringify({ id, where })); } catch { } startLevel(id); return; } startLevel(id); setTimeout(() => tpFinale(where), 700); }
 function testRows() { const out = [];
   for (const R of LVM.REGIONS) { const ls = LVM.LEVELS.filter(l => l.region === R.id && !l.soon); if (!ls.length) continue; out.push({ head: 'TRASY · ' + R.name });
     for (const l of ls) out.push({ label: l.name + (LV?.id === l.id ? ' (TERAZ)' : ''), act: () => startLevel(l.id) }); }
   const here = LVM.LEVELS.find(l => (l.region === 'peryferia' ? 'peryferia' : l.region) === track.region && !l.soon);
   const needLV = f => () => { if (!LV && here) { startLevel(here.id); setTimeout(f, 700); } else f(); };
+  out.push({ head: 'TORY PRZESZKÓD (FINAŁY)' }); for (const l of LVM.LEVELS.filter(l => !l.soon)) out.push({ label: 'TOR: ' + l.name, act: () => goTrack(l.id) });
+  if (LV && FIN.on) out.push({ head: 'TEN TOR: ' + LV.name }, ...[['start', 'POCZĄTEK'], ['easy', 'ŁATWY PAS'], ['hard', 'TRUDNY PAS (ROZPĘD)'], ['jump2', 'DRUGA SKOCZNIA'], ['double', 'PODWÓJNY RÓW']].map(([w, n]) => ({ label: n, act: () => tpFinale(w) })));
   out.push({ head: 'STANY' },
     { label: 'GAZETA PO TRASIE', act: needLV(() => finishLevel()) },
     { label: 'MAPA TRASY', act: () => openMap() },
     { label: 'SKLEP JANUSZA', act: () => shop.open() },
-    { label: 'FINAŁOWA PROSTA', act: needLV(() => { const c = FIN.cones[0] || FIN.targets[0]?.c; if (c) { const p = aheadOf(c.x, c.z, 18); tpTo(p.x, p.z); } }) },
     ...(CROSS.length ? [{ label: 'PRZEJAZD KOLEJOWY', act: () => { const p = aheadOf(CROSS[0].center.x, CROSS[0].center.z, 16); tpTo(p.x, p.z); } }] : []),
     { label: 'WSIĄDŹ NA ROWER', act: () => { if (foot.active) mount(); } },
     { label: '+100 ZŁ', act: () => { B.points += 100; flash('+100 zł (test)'); } });
