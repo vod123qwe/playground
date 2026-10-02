@@ -1220,3 +1220,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - mocny cios: czerwona pięść i dłuższy zamach; blok go nie zatrzymuje (przebija gardę, boli, wybija z rytmu, „ZA MOCNY! UNIKAJ”), unik (Shift) mija go w całości i zostawia przeciwnika odsłoniętego; najczęściej u Szwagra
 - unik z przechyłem: dłuższy i szybszy odskok, ciało rzucone w stronę uniku, przysiad i mały podskok, świst; tak samo przy uniku przeciwnika
 
+## Wersja 139: unik jak u boksera
+
+- unik nie przechyla już całej sylwetki: kolana się uginają (biodra w dół, stopy zostają na ziemi), tułów, szyja i głowa schodzą w bok, w stronę uniku, i lekko w dół; unik do tyłu: odchylenie; odskok w bok krótszy i dynamiczny
+
