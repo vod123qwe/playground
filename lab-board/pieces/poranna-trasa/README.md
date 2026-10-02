@@ -1180,3 +1180,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - wjechanie w turystę: hamujesz i chwiejesz się, on krzyczy
 - postacie daleko od gracza nie są animowane (oszczędność na telefonie)
 
+## Wersja 134: rusztowania z cegłami, Blokowisko w Bronksie, kurierzy z daleka
+
+- rusztowania przy części kamienic w mieście (za dnia): słupy na chodniku, pomosty na każdym piętrze, zielona siatka, murarze przy robocie na pomostach (da się ich zagadać, kopnąć, trafić gazetą); gdy jedziesz chodnikiem pod rusztowaniem, z góry leci cegła: najpierw na chodniku rośnie cień tam, gdzie spadnie (1,3 s), a murarz krzyczy; pod cegłą jest gleba, obok tylko huk
+- Blokowisko (m3) przeniesione do regionu Bronx jako jego trasa dzienna (postęp zostaje)
+- kurierzy Kuriera Osiedlowego widoczni z daleka: czerwona chorągiewka nad tylnym kołem i duży granatowy plecak z żółtym pasem; zwykli rowerzyści nie noszą już żółtych koszulek
+- kopnięcie kuriera: przewraca się, gubi paczkę gazet do zebrania i zawsze wraca, żeby oddać; zwykły rowerzysta oddaje tylko czasem; pieszy klnie i staje (w Bronksie goni)
+

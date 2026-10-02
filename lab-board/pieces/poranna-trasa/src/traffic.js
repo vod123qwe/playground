@@ -86,13 +86,18 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   // cyclists: now and then one coming the other way, at the kerb, in its own colours; far behind him (or too far ahead), it is sent
   // round again, to come at him from ahead
   const bikes = [];
+  // (their shirts: no yellow, that is the Kurier's)
   if (makeRider) for (let k = 0; k < nb; k++) { const r = makeRider(), M = r.materials, pick = a => a[rnd() * a.length | 0];
-    M.shirt.color.set(pick(['#cf5a3e', '#3b5670', '#467537', '#efc970', '#b7a4e0', '#e9e3d1'])); M.jeans.color.set(pick(['#2f4a6e', '#44484c', '#1d1e21', '#7c8446']));
+    M.shirt.color.set(pick(['#cf5a3e', '#3b5670', '#467537', '#8e6a9e', '#b7a4e0', '#e9e3d1'])); M.jeans.color.set(pick(['#2f4a6e', '#44484c', '#1d1e21', '#7c8446']));
     M.cap.color.set(pick(['#3b5670', '#17181b', '#e9e3d1', '#467537'])); M.frame.color.set(pick(['#3b5670', '#17181b', '#9aa0a4', '#467537', '#efc970'])); M.hair.color.set(pick(['#24190f', '#9a938a', '#d9a441', '#5b3a22']));
     G.add(r.root); bikes.push({ r, s: 0, dir: 1, lane: 0, v: 4 + rnd() * 1.6, wait: 4 + k * 9 + rnd() * 8, stop: 0, x: 0, z: 0, yaw: 0, snap: true, on: false }); r.root.visible = false; }
   // the Kurier Osiedlowy's couriers (the newspaper war): yellow and navy, a bag of their own papers; they ride his way, ahead of him
   let rivalsOn = 0;
   function rivals(n) { rivalsOn = n; if (!makeRider) return; while (bikes.filter(b => b.rival).length < n) { const r = makeRider(), M = r.materials; M.shirt.color.set('#e3b22e'); M.jeans.color.set('#2f4a6e'); M.cap.color.set('#2f4a6e'); M.frame.color.set('#2f4a6e'); M.hair.color.set(['#24190f', '#5b3a22'][bikes.length % 2]);
+      // (seen from afar: a tall pennant of the Megafon's red over the back wheel, a big navy bag of papers on his back)
+      { const T = THREE, red = new T.MeshBasicMaterial({ color: '#e3462e', side: T.DoubleSide }), pole = new T.Mesh(new T.BoxGeometry(.025, 1.5, .025), new T.MeshBasicMaterial({ color: '#2a2c30' })); pole.position.set(.12, 1.25, -.62); r.root.add(pole);
+        const fl = new T.Mesh(new T.PlaneGeometry(.4, .26), red); fl.rotation.y = Math.PI / 2; fl.position.set(.12, 1.88, -.82); r.root.add(fl); const st = new T.Mesh(new T.PlaneGeometry(.4, .06), new T.MeshBasicMaterial({ color: '#f6f3ea', side: T.DoubleSide })); st.rotation.y = Math.PI / 2; st.position.set(.125, 1.86, -.82); r.root.add(st);
+        const bag = new T.Mesh(new T.BoxGeometry(.44, .46, .24), new T.MeshLambertMaterial({ color: '#22325a' })); bag.position.set(0, 1.32, -.36); r.root.add(bag); const band = new T.Mesh(new T.BoxGeometry(.45, .07, .25), new T.MeshLambertMaterial({ color: '#e3b22e' })); band.position.set(0, 1.4, -.36); r.root.add(band); }
       G.add(r.root); r.root.visible = false; bikes.push({ r, rival: true, s: 0, dir: 1, lane: 0, v: 5.6 + rnd() * .9, wait: 2 + bikes.filter(b => b.rival).length * 7, stop: 0, x: 0, z: 0, yaw: 0, snap: true, on: false }); }
     for (const b of bikes) if (b.rival && bikes.filter(q => q.rival).indexOf(b) >= n) { b.on = false; b.r.root.visible = false; } }
   function stepBikes(dt, R) {

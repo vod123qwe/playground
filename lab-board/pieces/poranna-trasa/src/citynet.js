@@ -11,7 +11,7 @@
 
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox, stops, night = false, tourist = false, cen = { x: 110, z: -10, r: 180 } }) {
+export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox, scaffoldsOf, probe, stops, night = false, tourist = false, cen = { x: 110, z: -10, r: 180 } }) {
   const M = c => toon(c), wrap = i => ((i % N) + N) % N, O = 30;
   // ---------- where: two straight stretches for the shortcuts (none of them across a checkpoint: a quarter of the loop from the start),
   // four spots for the side streets on the outside ----------
@@ -224,7 +224,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   const workers = [], digs = [], blinkM = new THREE.MeshBasicMaterial({ color: '#ffb347' });
   const a14 = cv(11, 10, x => { for (let y = 0; y < 10; y++) { const h = Math.round(y * .55); for (let q = 5 - h; q <= 5 + h; q++) { x.fillStyle = (y === 9 || y === 0 || q === 5 - h || q === 5 + h) ? '#c23a2e' : '#f6f3ea'; x.fillRect(q, y, 1, 1); } } x.fillStyle = '#17181b'; x.fillRect(5, 3, 1, 1); x.fillRect(4, 4, 2, 2); x.fillRect(3, 6, 1, 2); x.fillRect(6, 6, 1, 2); x.fillRect(7, 5, 1, 1); x.fillRect(8, 7, 1, 1); });
   // a man of the works crew: an orange vest with its stripes, a helmet, what he works with (kind: dig, lean, jack, flag, boss); y: stood lower (in the trench)
-  function worker(kind, i, d, turn, y = 0) { const g = new THREE.Group(), body = new THREE.Group(), boss = kind === 'boss', skin = M(['#e3b08a', '#c98a5a', '#d9a07a'][rnd() * 3 | 0]), vest = M('#e8742e'), coat = boss ? M('#c9c4ba') : vest, strip = M('#e9e6df'), hat = M(boss ? '#f6f3ea' : '#efc930'), wood = M('#9e7a4f');
+  function worker(kind, i, d, turn, y = 0, solid = true) { const g = new THREE.Group(), body = new THREE.Group(), boss = kind === 'boss', skin = M(['#e3b08a', '#c98a5a', '#d9a07a'][rnd() * 3 | 0]), vest = M('#e8742e'), coat = boss ? M('#c9c4ba') : vest, strip = M('#e9e6df'), hat = M(boss ? '#f6f3ea' : '#efc930'), wood = M('#9e7a4f');
     g.add(body); body.position.y = y;
     const legs = [-1, 1].map(s2 => { const l = new THREE.Group(); l.add(box(.15, .8, .17, M(boss ? '#44484c' : '#3b4a5e'), 0, -.4, 0), box(.17, .1, .26, dark, 0, -.77, .04)); l.position.set(s2 * .1, .82, 0); body.add(l); return l; });
     body.add(box(.46, .6, .28, coat, 0, 1.14, 0), box(.47, .06, .29, boss ? vest : strip, 0, 1.02, 0), box(.47, .06, .29, boss ? vest : strip, 0, 1.24, 0), box(.22, .24, .22, skin, 0, 1.58, 0), box(.29, .1, .29, hat, 0, 1.74, 0), box(.3, .03, .12, hat, 0, 1.7, .17));
@@ -234,8 +234,9 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
     if (kind === 'jack') tool.add(box(.18, .5, .18, M('#c23a2e'), 0, .45, 0), box(.5, .05, .05, dark, 0, .74, 0), box(.04, .3, .04, steel, 0, .05, 0));
     if (kind === 'flag') { const disc = c => new THREE.Mesh(new THREE.CircleGeometry(.2, 12), new THREE.MeshBasicMaterial({ color: c })), a = disc('#c23a2e'), b = disc('#3c9a4a'), head = new THREE.Group(); a.position.z = .012; b.position.z = -.012; b.rotation.y = Math.PI; head.position.y = .98; head.add(a, b); tool.add(box(.03, .9, .03, wood, 0, .45, 0), head); tool.userData.head = head; }
     if (boss) tool.add(box(.22, .3, .02, M('#f6f3ea'), 0, 0, 0), box(.2, .04, .03, dark, 0, .15, 0));
+    if (kind === 'mason') tool.add(box(.25, .08, .12, M('#a5432f'), 0, 0, 0), box(.05, .02, .16, steel, .18, .02, .06));
     const paper = box(.32, .42, .02, M('#f6f3ea'), 0, 1.35, .36); paper.visible = false; body.add(paper);
-    put(g, i, d, 0, turn); g.userData.keep = true; hitW(g, { hx: .3, hz: .3, h: 1.8, kind: 'hard' }, wrap(i));
+    put(g, i, d, 0, turn); g.userData.keep = true; if (solid) hitW(g, { hx: .3, hz: .3, h: 1.8, kind: 'hard' }, wrap(i));
     const w = { g, body, legs, arms, tool, paper, kind, x: g.position.x, z: g.position.z, y, yaw0: g.rotation.y, ph: rnd() * 6, stun: 0, madT: 0, face: null, talks: 0, talkT: 0, paperT: 0, readT: 0 };
     w.mouth = () => g.position.clone().add(new THREE.Vector3(0, 1.9 + y, 0)); workers.push(w); return w; }
   function roadworks() { if (!works) return; const n0 = G.children.length; roadworks0(); for (const o of G.children.slice(n0)) WG.attach(o); G.add(WG); }
@@ -273,13 +274,14 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
       else if (w.kind === 'lean') { A[0].rotation.set(-.3, 0, 0); A[1].rotation.set(-.55, 0, -.2); T.position.set(.18, .02, .38); T.rotation.set(-.12, 0, 0); b.rotation.set(.06, 0, Math.sin(t * .4) * .03); }
       else if (w.kind === 'jack') { A[0].rotation.set(-.6, 0, .25); A[1].rotation.set(-.6, 0, -.25); T.position.set(0, Math.abs(Math.sin(t * 40)) * .03, .32); b.position.x = Math.sin(t * 70) * .012; }
       else if (w.kind === 'flag') { A[1].rotation.set(-.5, 0, 0); T.position.set(.32, .72, .22); const hd = T.userData.head; hd.rotation.y += ((Math.floor(t / 7) % 2 ? Math.PI : 0) - hd.rotation.y) * Math.min(1, dt * 4); }
+      else if (w.kind === 'mason') { const s = Math.sin(t * 1.6); A[0].rotation.set(-1.2 + s * .3, 0, 0); A[1].rotation.set(-1 - s * .3, 0, 0); T.position.set(0, 1.15, .42); T.rotation.set(0, s * .4, 0); b.rotation.x = .1 + s * .05; }
       else if (w.kind === 'boss') { A[0].rotation.set(-.9, 0, .2); A[1].rotation.set(-.7, 0, -.3); T.position.set(0, 1.12, .26); T.rotation.set(-.6, 0, 0); b.rotation.y = Math.sin(t * .3) * .5; }
       if (w.madT > 0) A[1].rotation.set(-2.7 + Math.sin(t * 11) * .3, 0, 0);
       if (w.stun > 0) b.position.x = Math.sin(t * 50) * .03;
       // (him riding by close and quick: one of them has a word for him; not every time)
       if (R && worksCool <= 0 && !(w.readT > 0) && R.v > 3 && Math.hypot(R.x - w.x, R.z - w.z) < 5) { worksCool = 9 + rnd() * 6; onShout(w); } } }
   let clock = 0;
-  function update(dt, R) { clock += dt; let shout = null; if (lampAt.length) { const on = flickOn(); headF.color.set(on ? '#ffd27a' : '#3a2e1c'); poolF.opacity = on ? .3 : .03; } stepWorks(dt, R, w => { shout = w; });
+  function update(dt, R) { clock += dt; let shout = null; stepBricks(dt, R); if (lampAt.length) { const on = flickOn(); headF.color.set(on ? '#ffd27a' : '#3a2e1c'); poolF.opacity = on ? .3 : .03; } stepWorks(dt, R, w => { shout = w; });
     for (const W0 of walkers) { W0.a += W0.w * dt / Math.max(1, W0.r); const x = W0.c.x + Math.cos(W0.a) * W0.r, z = W0.c.z + Math.sin(W0.a) * W0.r, dir = Math.sign(W0.w); W0.g.position.set(x, W0.c.y, z); W0.g.rotation.y = Math.atan2(-Math.sin(W0.a) * dir, Math.cos(W0.a) * dir); const st = Math.sin(clock * 7 + W0.ph) * .45; W0.legs[0].rotation.x = st; W0.legs[1].rotation.x = -st; }
     for (const Pl of planes) { Pl.t += dt; if (Pl.t < 0) continue; if (Pl.t > 34) { Pl.t = -20 - rnd() * 25; Pl.g.visible = false; continue; } if (!Pl.g.visible) { Pl.a = rnd() * 6.28; Pl.g.visible = true; }
       const u = Pl.t / 34, R = cen.r + 150 - u * 120, ang = Pl.a + u * .9, y = 18 + u * u * 160, vx = -Math.sin(ang), vz = Math.cos(ang); Pl.g.position.set(cen.x + Math.cos(ang) * R, y, cen.z + Math.sin(ang) * R); Pl.g.rotation.set(0, Math.atan2(vx, vz), 0); Pl.g.rotateX(-.2); } return shout; }
@@ -305,6 +307,37 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
     for (const z of [-4, 4]) windows.push({ p: g.localToWorld(new THREE.Vector3(fx + sg * .1, 1.45, z)), n: n.clone(), hw: 2.3, hh: 1, broken: false, i: wrap(mid), house: hi });
     { const k = new THREE.Group(); k.add(box(2.2, 2.5, 2, M('#3b6e4a'), 0, 1.25, 0), box(2.4, .2, 2.2, M('#2a4a34'), 0, 2.6, 0), box(.06, .9, 1.4, litM, sg * 1.11, 1.5, 0)); const kp = plate('KIOSK', '#17181b', '#ffd27a', 1.6, .4); kp.position.set(sg * 1.14, 2.2, 0); kp.rotation.y = sg > 0 ? Math.PI / 2 : -Math.PI / 2; k.add(kp);
       put(k, mid + m(11), sg * (PAVE + 4), 0, 0); hit(k, { hx: 1.1, hz: 1, h: 2.6, kind: 'hard' }, wrap(mid)); } }
-  function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); nightLamps(); office(); taxis(); roadworks(); for (const z of zebras) if (!z.lights) crossing(z); furniture(); }
-  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi, zebras, works, get workers() { return worksOn ? workers : []; }, nearWorks, nearTaxi, setWorks, lamps, flickOn, picnics, spotsT };
+  // ---------- scaffolding before a tenement's front over the pavement (by day): poles in two rows, boards at each floor, a green net, a
+  // mason or two on the boards; and its bricks: one ridden under (on the pavement below), a shadow shows where it will land, then it
+  // comes down there ----------
+  const scaff = [], bricks = [], events = [], brickM = M('#a5432f'), shadowM = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: .45, depthWrite: false });
+  function scaffolding() { for (const S0 of scaffoldsOf?.() || []) { const n = S0.n, yaw = Math.atan2(n.x, n.z), g = new THREE.Group(), W2 = S0.W / 2 - .3, top = Math.min(S0.H - 1, 8.6), pole = M('#8a8f96'), board = M('#b08a52');
+      g.position.copy(S0.front); g.rotation.y = yaw; G.add(g);
+      const fl = []; for (let y = 2.6; y < top; y += 2.6) fl.push(y);
+      for (let x = -W2; x <= W2 + .01; x += 2) for (const z of [.2, 1.4]) g.add(box(.06, top + .9, .06, pole, x, (top + .9) / 2, z));
+      for (const y of fl) { g.add(box(W2 * 2 + .2, .06, 1.3, board, 0, y, .8), box(W2 * 2 + .2, .05, .05, pole, 0, y + 1, 1.42)); }
+      for (let k = 0; k < Math.ceil(W2); k++) { const x = -W2 + k * 2 + 1; const d = box(.04, 2.6, .04, pole, x, 1.3, 1.42); d.rotation.z = .65; g.add(d); }
+      const net = new THREE.Mesh(new THREE.PlaneGeometry(W2 * 2, top - 2.4), new THREE.MeshBasicMaterial({ color: '#5a8a3a', transparent: true, opacity: .5, side: THREE.DoubleSide, depthWrite: false })); net.position.set(0, 2.4 + (top - 2.4) / 2, 1.45); g.add(net);
+      g.updateMatrixWorld(true);
+      // (the outer poles: in the way on the pavement; the inner ones by the wall)
+      for (let x = -W2; x <= W2 + .01; x += 2) for (const z of [.2, 1.4]) { const p = g.localToWorld(new THREE.Vector3(x, 0, z)), q = new THREE.Object3D(); q.position.copy(p); q.rotation.y = yaw; q.updateMatrixWorld(); hit(q, { hx: .06, hz: .06, h: 2.5, kind: 'hard' }, wrap(S0.i)); }
+      // (the masons: on the boards, at work facing the wall)
+      for (let k = 0; k < Math.min(2, fl.length); k++) { const p = g.localToWorld(new THREE.Vector3((k ? -1 : 1) * W2 * .45, 0, .8)), q = probe(p.x, p.z, S0.i), A = S[q.i], turn = Math.atan2(-n.x, -n.z) - Math.atan2(A.f.x, A.f.z);
+        worker('mason', q.i, q.d, turn, fl[Math.min(k, fl.length - 1)] + .03, false); }
+      scaff.push({ g, S0, W2, top: fl[fl.length - 1] || 2.6, cool: 3 }); } }
+  // (a brick on its way: the shadow at the spot, the fall, the crack on the stones; under it, he is down)
+  function stepBricks(dt, R) { for (const sc of scaff) { sc.cool -= dt; if (!R || sc.cool > 0 || R.foot) continue;
+      const lp = sc.g.worldToLocal(new THREE.Vector3(R.x + Math.sin(R.yaw) * R.vs * .9, 0, R.z + Math.cos(R.yaw) * R.vs * 1.3));   // (where he will be in a moment, in the scaffold's own terms)
+      if (Math.abs(lp.x) > sc.W2 + .5 || lp.z < -.2 || lp.z > 3) continue; const now = sc.g.worldToLocal(new THREE.Vector3(R.x, 0, R.z)); if (now.z > 3.2 || Math.abs(now.x) > sc.W2 + 6) continue;
+      sc.cool = 5 + rnd() * 4; const x = Math.max(-sc.W2, Math.min(sc.W2, lp.x)), z = Math.max(.4, Math.min(2.6, lp.z)), land = sc.g.localToWorld(new THREE.Vector3(x, 0, z)), gy0 = groundAt(land.x, land.z, wrap(sc.S0.i));
+      const sh = new THREE.Mesh(new THREE.CircleGeometry(.35, 10).rotateX(-Math.PI / 2), shadowM.clone()); sh.position.set(land.x, gy0 + .05, land.z); sh.scale.setScalar(.2); G.add(sh);
+      const b = box(.25, .08, .12, brickM, 0, 0, 0); const from = sc.g.localToWorld(new THREE.Vector3(x, sc.top + .5, .9)); b.position.set(land.x, from.y, land.z); G.add(b);
+      bricks.push({ b, sh, land, gy0, y: from.y, vy: 0, t: 0, warn: 1.3, fall: Math.sqrt(2 * Math.max(.5, from.y - gy0) / 22) }); events.push({ kind: 'brickWarn', at: from.clone() }); }
+    for (let k = bricks.length - 1; k >= 0; k--) { const B0 = bricks[k]; B0.t += dt; const u = Math.min(1, B0.t / B0.warn); B0.sh.scale.setScalar(.2 + u * .9);
+      if (B0.t < B0.warn - B0.fall) continue;   // (the shadow first; the brick drops so as to land as the shadow is full)
+      B0.vy -= 22 * dt; B0.y += B0.vy * dt; B0.b.position.y = Math.max(B0.gy0 + .05, B0.y); B0.b.rotation.x += dt * 9;
+      if (B0.y <= B0.gy0 + .05) { G.remove(B0.sh); B0.b.rotation.set(0, rnd() * 3, 0); setTimeout(() => G.remove(B0.b), 6000); bricks.splice(k, 1);
+        const hitHim = R && !R.foot && (R.x - B0.land.x) ** 2 + (R.z - B0.land.z) ** 2 < .8; events.push({ kind: hitHim ? 'brick' : 'brickMiss', at: B0.land.clone() }); } } }
+  function build() { for (const c of shortcuts) shortcut(c); scaffolding(); for (const t of stubs) stub(t); nightLamps(); office(); taxis(); roadworks(); for (const z of zebras) if (!z.lights) crossing(z); furniture(); }
+  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi, zebras, works, get workers() { return worksOn ? workers : []; }, nearWorks, nearTaxi, setWorks, lamps, flickOn, picnics, spotsT, events };
 }
