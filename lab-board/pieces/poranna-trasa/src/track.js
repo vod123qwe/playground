@@ -720,7 +720,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const farmLots = [], fieldLots = []; const whLast = {};
   // (the estate: warehouses on their stretches, a site now and then; its road works and cranes further down)
   const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211) }) : null;
-  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ }) : null;   // (the town's other streets: shortcuts, side streets)
+  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked }) : null;   // (the town's other streets: shortcuts, side streets)
   const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G }) : null, cityLast = {};
   const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
     if (NET?.blocked(i, s)) return null;
@@ -983,7 +983,8 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
           if (wr() < .5) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.8 + wr() * .6, 0), bushM); b.scale.y = .7; put(b, ii + Math.round((wr() - .5) * 3 / ds), dd + (wr() - .5) * 3, .4); } }
         i = i1 + Math.round((30 + wr() * 50) / ds); } }
     // the railway, round the outside of the loop between the spruces and the fields: an embankment of ballast, sleepers, two rails
-    { const dR = -INNER * 41.5, pts = [], step = 2; let L = 0;
+    if (!RG.city) { const dR = -INNER * 41.5, pts = [], step = 2; let L = 0;   // (not in the town: no railway round it)
+     
       for (let i = 0; i <= N; i += step) { const q = at(i % N, dR, 0); if (pts.length) L += q.distanceTo(pts[pts.length - 1].p); pts.push({ p: q, s: L }); }
       const pos = [], idx = [], ballastM = toon('#8a857c', { map: rep(tex.slabs(), 1, 1) });
       for (let k = 0; k < pts.length; k++) { const i = (k * step) % N; for (const [dd, y] of [[-2.4, -.05], [-1.3, .22], [1.3, .22], [2.4, -.05]]) { const q = at(i, dR + dd, y); pos.push(q.x, q.y, q.z); } }

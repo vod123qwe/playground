@@ -1103,3 +1103,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - meble uliczne przy krawężniku: słupy ogłoszeniowe z afiszami, kioski Ruchu, budki telefoniczne, ławki, stojaki rowerowe, donice, słupki
 - skróty i boczne ulice są dla roweru jak asfalt (nie hamują jak trawa)
 - menu TESTY: MIASTO: ULICE (skok przed zaułek, przed park, przed boczną ulicę)
+
+## Wersja 125: wielkie miasto w tle, biurowiec, taksówki
+
+- tło miasta zamiast jeziora i pagórków: masa bloków w mgiełce, wieżowce, wieża telewizyjna, iglice kościołów, dźwigi, okna świecące w blokach, lotnisko z wieżą kontrolną, hangarami i światłami pasa
+- samoloty: co jakiś czas jeden startuje daleko za miastem i wznosi się nad nim
+- skyline wokół trasy gęstszy: 70 brył w dwóch pierścieniach; w mieście nie ma już toru kolejowego z pociągiem
+- plac pod biurowcem (na zewnątrz pętli): szklany wieżowiec CENTRUM z daszkiem nad wejściem, recepcja bierze gazetę jak drzwi domu, szyby parteru do wybicia; kostka, klomby z kwiatami, fontanna, latarnie, kilkanaście osób kręcących się po placu; parking z dwoma rzędami aut (na dachy można wskoczyć rowerem)
+- postój taksówek przy krawężniku: trzy żółte taksówki z tabliczką TAXI na dachu i znak POSTÓJ TAXI; ruch je omija
+- kamienice: szyldy wystające z elewacji nad sklepami, więcej balkonów
+- menu TESTY: PLAC POD BIUROWCEM i POSTÓJ TAXI
+

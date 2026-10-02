@@ -37,7 +37,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     g.add(box(D - .4, .5, W - .4, roofM, 0, H + .25, 0)); for (let k = 0; k < 2 + (rnd() * 2 | 0); k++) g.add(box(.6, 1.4, .6, M('#8e3b2c'), (rnd() - .5) * (D - 2), H + 1, (rnd() - .5) * (W - 2)));   // (the roof, its chimneys)
     const cols = Math.max(3, Math.floor(W / 2.6)), reg = [];
     for (let f = 0; f < fl; f++) for (let c = 0; c < cols; c++) { const z = -W / 2 + (c + .5) * W / cols, y = 5.6 + f * 3.1; win(g, fx, s, y, z, 1.1, 1.5, rnd() < .12, f === 0 ? reg : null);
-      if (f < fl - 1 && rnd() < .14) { g.add(box(.9, .12, 1.6, stone, fx + s * .45, y - 1.05, z)); for (const dz of [-.75, .75]) g.add(box(.04, .7, .04, dark, fx + s * .85, y - .65, z + dz)); g.add(box(.04, .04, 1.55, dark, fx + s * .85, y - .3, z)); } }   // (a balcony now and then)
+      if (f < fl - 1 && rnd() < .3) { g.add(box(.9, .12, 1.6, stone, fx + s * .45, y - 1.05, z)); for (const dz of [-.75, .75]) g.add(box(.04, .7, .04, dark, fx + s * .85, y - .65, z + dz)); g.add(box(.04, .04, 1.55, dark, fx + s * .85, y - .3, z)); } }   // (a balcony now and then)
     // the ground floor: a shop (its window, its door, its sign) or a gate; and the stairwell's door with its number and letterbox
     const stairZ = (rnd() < .5 ? -1 : 1) * (W / 2 - 1.8), stairs = [];
     g.add(box(.08, 2.4, 1.3, M('#5a3a24'), fx + s * .05, 1.2, stairZ), box(.1, .3, 1.5, M('#efe8dc'), fx + s * .06, 2.55, stairZ));
@@ -46,6 +46,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     const shopZ = -stairZ * .45;
     if (rnd() < .78) { const [name, col] = SHOPS[rnd() * SHOPS.length | 0]; g.add(box(.1, 2.3, W * .45, glass, fx + s * .04, 1.65, shopZ), box(.12, .1, W * .45 + .2, frame, fx + s * .06, 2.85, shopZ), box(.12, .5, W * .45 + .2, M(col), fx + s * .06, .25, shopZ));
       const sg = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(W * .45, name.length * .42 + .4), .62), new THREE.MeshBasicMaterial({ map: sign(name, col, '#f6f3ea') })); sg.position.set(fx + s * .09, 3.3, shopZ); sg.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(sg);
+      if (rnd() < .6) { const bl = new THREE.Group(), bs = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .5), new THREE.MeshBasicMaterial({ map: sign(name.split(' ')[0], col, '#f6f3ea'), side: THREE.DoubleSide })); bl.add(box(.06, .06, .9, dark, 0, .3, 0), bs); bs.position.set(0, 0, 0); bl.position.set(fx + s * .75, 4.6, shopZ + (shopZ > 0 ? 1 : -1) * W * .2); bl.rotation.y = 0; g.add(bl); bs.rotation.y = 0; }   // (a blade sign out over the pavement, read along the street)
       if (rnd() < .55) { const aw = cv(8, 4, x => { for (let k = 0; k < 8; k++) { x.fillStyle = k % 2 ? '#f6f3ea' : col; x.fillRect(k, 0, 1, 4); } }), awn = new THREE.Mesh(new THREE.BoxGeometry(1.1, .06, W * .45), [M('#f6f3ea'), M('#f6f3ea'), new THREE.MeshBasicMaterial({ map: aw }), M(col), M(col), M(col)]); awn.position.set(fx + s * .6, 3.0, shopZ); awn.rotation.z = -s * .35; g.add(awn); } }
     else { g.add(box(.1, 3, 2.6, dark, fx + s * .03, 1.5, shopZ), box(.14, .4, 3, M('#efe8dc'), fx + s * .06, 3.1, shopZ)); }   // (a gate to the yard)
     put(g, i, s * (PAVE + .4 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 1, W / 2 + .5);
@@ -72,7 +73,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
 
   // ---------- the skyline: towers of flats, a church's spire, a TV mast, far out round the loop ----------
   function skyline(cx, cz) { const tw = M('#9aa3ad'), tw2 = M('#b3b8bd'), sp = M('#4a5a62');
-    for (let k = 0; k < 22; k++) { const a = k / 22 * 6.283 + rnd() * .1, R = 230 + rnd() * 60, h = 25 + rnd() * 30, w = 14 + rnd() * 14, o = box(w, h, 12 + rnd() * 8, rnd() < .5 ? tw : tw2, cx + Math.cos(a) * R, h / 2 - 2, cz + Math.sin(a) * R); o.rotation.y = a; G.add(o); }
+    for (let k = 0; k < 70; k++) { const a = k / 70 * 6.283 + rnd() * .08, R = (k % 2 ? 175 : 235) + rnd() * 55, h = 18 + rnd() * (k % 2 ? 26 : 40), w = 12 + rnd() * 16, o = box(w, h, 12 + rnd() * 8, rnd() < .5 ? tw : tw2, cx + Math.cos(a) * R, h / 2 - 2, cz + Math.sin(a) * R); o.rotation.y = a; G.add(o); }
     { const a = rnd() * 6.283, R = 210, x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; G.add(box(9, 30, 9, M('#c9b8a0'), x, 15, z)); const c = new THREE.Mesh(new THREE.ConeGeometry(5, 18, 4), sp); c.position.set(x, 39, z); c.rotation.y = Math.PI / 4; G.add(c); }
     { const a = rnd() * 6.283, R = 300, x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; G.add(box(2.4, 90, 2.4, M('#cf5a3e'), x, 45, z), box(5, 4, 5, M('#f6f3ea'), x, 70, z)); } }
 
