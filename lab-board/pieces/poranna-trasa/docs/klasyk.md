@@ -94,3 +94,7 @@ Celność (trafione na rzucone), trafienia do skrzynki na wszystkie, upadki na m
 3. Strona domów: auto z podjazdu, zraszacz, kosiarka.
 4. Strona przeszkód: plac zabaw, ławki z emerytami, smycz.
 5. Śmieciarka i scenka przeprowadzki.
+
+## Zrobione (v158)
+
+Trawniki do jazdy, deski i skocznie między domami, krasnale (+1), wyższy podskok i PRZESKOK +1 (płot, bela, ławka), trzy tory przeszkód (deska, bela, duża skocznia przed autem, slalom, kicker, meta; komplet +6), auta wyjeżdżające z podjazdów (światła cofania jako sygnał, gazeta na szybę +2), zraszacze (poślizg, gazeta obraca strumień +1), śmieciarka z dwoma śmieciarzami (gazeta do śmieciarza +2). Do zrobienia z katalogu: abonenci widoczni kolorem, kosiarka, plac zabaw, ławki z emerytami, smycz, przeprowadzka.
