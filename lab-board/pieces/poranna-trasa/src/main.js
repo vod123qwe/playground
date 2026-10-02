@@ -723,6 +723,9 @@ function bodyHit(list, p, r) {
 // ---------- the night (a region's: the estate after dark): the sky dark with stars and the moon, the fog dark blue, the light low and
 // cold, the clouds dim; the papers glow a little in flight; a few real lights go with him from lamp to lamp (the nearest heads), the
 // flickering ones off with their lamps ----------
+if (track.winter) { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#8fa4b8'); gr.addColorStop(.6, '#c4d0db'); gr.addColorStop(1, '#e8edf1'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t;
+  scene.fog.color.set('#e3e9ee'); scene.fog.near = 50; scene.fog.far = 320; }
 const NIGHT = !!track.night, nightLights = [];
 if (NIGHT) { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
   gr.addColorStop(0, '#070a16'); gr.addColorStop(.6, '#141a32'); gr.addColorStop(.85, '#262842'); gr.addColorStop(1, '#3a3148'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
@@ -774,15 +777,18 @@ function ride(dt, inp) {
   if (track.classic && !B.air && !back && inp.brake < .1 && !(B.boostT > 0) && (B.v > 1 || inp.pedal > .05)) a = ((inp.pedal > .05 ? 6.6 * (inp.sprint ? 1.2 : 1) : 4) - B.v) * (inp.pedal > .05 ? 1.9 : 1.1) - g * Math.sin(Math.atan(slope)) * .4;   // (the Classic: once going, rolling on at 4 m/s by himself, up to 6.6 with the pedal; stopped, he stays until the pedal)
   if (back) a = -1.6 * inp.brake - .6 * B.v;
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
+  const ice = !B.air && !!track.iceAt?.(B.x, B.z); if (ice) a *= .12;
+  if (ice && !B.onIce) { B.onIce = true; B.iceF = B.falls || 0; hud.rant(rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'ŚLIZG!', true); }
+  else if (!ice && B.onIce && !B.air) { B.onIce = false; if ((B.falls || 0) === B.iceF && !B.crash) score(1, rider.root.position.clone().add(new THREE.Vector3(0, 2, 0)), 'PO LODZIE! +1', '#cfe6f2'); }
   const v0 = B.v; B.v = Math.max(-1.4, B.v + a * dt); if (!back && inp.pedal < .05 && !B.air && (Math.abs(B.v) < .1 || B.v < 0 || (v0 !== 0 && Math.sign(B.v) !== Math.sign(v0)))) B.v = 0;   // (crawling: he stops, a foot on the ground, on a hill too; back only if he walks it back)
   // steering (hardly any in the air)
   const sIn = Math.sign(inp.steer) * Math.pow(Math.abs(inp.steer), 1.4);   // (a stick: small pushes finer; a key is all or nothing anyway)
-  const lock = .62 * (1 + MOD.steer) * (track.classic ? 1.3 : 1) / (1 + Math.abs(B.v) * .24), want = sIn * lock * (B.air ? .25 : 1), outOf = Math.abs(want) < Math.abs(B.steer) || Math.sign(want) !== Math.sign(B.steer);
+  const lock = .62 * (1 + MOD.steer) * (track.classic ? 1.3 : 1) / (1 + Math.abs(B.v) * .24), want = sIn * lock * (B.air ? .25 : 1) * (ice ? .2 : 1), outOf = Math.abs(want) < Math.abs(B.steer) || Math.sign(want) !== Math.sign(B.steer);
   const rate = (outOf ? 4.6 : 2.4 + 1.6 * (1 - Math.min(1, Math.abs(B.steer) / Math.max(.05, lock)))) * dt;   // (in: quick at first, easing as it comes to full lock; out: quicker)
   B.steer += THREE.MathUtils.clamp(want - B.steer, -rate, rate);
   B.yaw += -B.v * Math.tan(B.steer) / L * dt;
   // the road's bends: not steering (or hardly), on the road and going, he is eased along it (a lane change ends straight with the road)
-  if (!B.air && B.v > 2 && Math.abs(q.d) < track.KERB + .6) { const ry = Math.atan2(q.f.x, q.f.z) + (along < 0 ? Math.PI : 0), d = Math.atan2(Math.sin(ry - B.yaw), Math.cos(ry - B.yaw)), k = Math.max(0, 1 - Math.abs(inp.steer) * 4);
+  if (!B.air && !ice && B.v > 2 && Math.abs(q.d) < track.KERB + .6) { const ry = Math.atan2(q.f.x, q.f.z) + (along < 0 ? Math.PI : 0), d = Math.atan2(Math.sin(ry - B.yaw), Math.cos(ry - B.yaw)), k = Math.max(0, 1 - Math.abs(inp.steer) * 4);
     if (Math.abs(d) < .5 && k > 0) B.yaw += d * Math.min(1, dt * 1.7) * k * (1 - Math.abs(d) / .5 * .5); }
   const leanT = THREE.MathUtils.clamp(Math.atan(B.v * Math.abs(B.v) * Math.tan(B.steer) / (L * g)) * .78, -.44, .44);
   B.leanV += (42 * (leanT - B.lean) - 12 * B.leanV) * dt; B.lean += B.leanV * dt;
@@ -1281,7 +1287,7 @@ function localEvent(e) { director.poke();
   if (e.kind === 'beep') audio.play('ui', { vol: .25 });
   if (e.kind === 'honk') audio.play('horn', { vol: .35 });
   if (e.kind === 'reverse') { logEv('reverse', B.x, B.z); crash(Math.random() < .5 ? -1 : 1, new THREE.Vector3(0, 0, 0)); flash('Auto cofało z garażu. Patrz na otwarte boksy.'); }
-  if (e.kind === 'tyre') { logEv('tyre', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Opona z naprzeciwka! Patrz na boki.'); }
+  if (e.kind === 'tyre') { logEv('tyre', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash(track.winter ? 'Sanki z górki! Patrz na boki.' : 'Opona z naprzeciwka! Patrz na boki.'); }
   if (e.kind === 'glass') { B.flatT = 7; audio.play('glass', { vol: .45 }); flash('Szkło! Opona flaczeje, przez chwilę jedzie się ciężej'); logEv('glass', B.x, B.z); }
   if (e.kind === 'push' && e.p?.g) { hud.rant(e.p.g.position, e.text, true, 1.95); flash('Ktoś wypchnął kosz na drogę!'); } }
 function workTalk(me) { let w = null, bd = 2.8; for (const q of track.net?.workers || []) { const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; w = q; } } if (!w) return false;
@@ -1430,7 +1436,7 @@ function titleBg() { const want = editionK; if (want === worldEd()) { TBG.el.sty
   TBG.el.removeAttribute('src'); TBG.el.style.opacity = 1; setTimeout(() => { location.search = want === 'klasyk' ? '?mapa=klasyk' : ''; }, 560); }
 function stepTitleBg(dt) { if (menu.page !== 'title' || TBG.saved) { if (menu.page !== 'title' && TBG.el.style.opacity !== '0') TBG.el.style.opacity = 0; return; } if ((TBG.t += dt) < 2.5) return; TBG.saved = true;
   try { localStorage.setItem('pt.tbg.' + worldEd(), canvas.toDataURL('image/jpeg', .8)); } catch { } }
-const editionMenu = { classic: () => editionK === 'klasyk', extra: () => editionK === 'klasyk' ? [['k1', 'KLASYK 1: KASZTANOWA'], ['k2', 'KLASYK 2: WIEŚ'], ['k3', 'KLASYK 3: PARK'], ['k4', 'KLASYK 4: DEPTAK']].filter(([id]) => LVM.isOpen(id)).map(([id, t]) => ({ label: t + LVM.medalOf(id).tag, act: () => startLevel(id) })) : [], name: () => EDITIONS[editionK], next: () => { editionK = editionK === 'trasa' ? 'klasyk' : 'trasa'; try { localStorage.setItem('pt.edition', editionK); } catch { } titleBg(); } };
+const editionMenu = { classic: () => editionK === 'klasyk', extra: () => editionK === 'klasyk' ? [['k1', 'KLASYK 1: KASZTANOWA'], ['k2', 'KLASYK 2: WIEŚ'], ['k3', 'KLASYK 3: PARK'], ['k4', 'KLASYK 4: DEPTAK'], ['k5', 'KLASYK 5: ZIMA']].filter(([id]) => LVM.isOpen(id)).map(([id, t]) => ({ label: t + LVM.medalOf(id).tag, act: () => startLevel(id) })) : [], name: () => EDITIONS[editionK], next: () => { editionK = editionK === 'trasa' ? 'klasyk' : 'trasa'; try { localStorage.setItem('pt.edition', editionK); } catch { } titleBg(); } };
 const menu = createMenu({ assist: assistMenu, gore: goreMenu, radio: radioMenu, edition: editionMenu, tests: () => testRows(), onMap: () => openMap(), onPlay: () => { if (editionK === 'klasyk') { if (LV?.id !== 'k1') startLevel('k1'); return; } if (track.classic) { goRegion('peryferia', null, null); return; } flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'); }, modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;

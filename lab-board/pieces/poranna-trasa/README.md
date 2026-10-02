@@ -1490,3 +1490,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - Wieś: stado krów z rolnikiem przechodzi przez drogę; przemknięcie blisko między nimi bez zderzenia to MIĘDZY KROWAMI +2
 - Park: wycieczka dzieci na rowerkach z panią jedzie gęsiego przy krawężniku; wyprzedzenie całej bez zderzenia to +3
+
+## Wersja 183: Klasyk 5, Zima
+
+- nowy poziom Klasyka po Deptaku: ulica pod śniegiem, białe dachy, pada śnieg, zaspy w rynsztokach
+- lód na jezdni: rower słabo skręca i nie da się przyspieszyć ani zahamować; przejazd przez taflę bez wywrotki to PO LODZIE +1
+- bałwany na trawnikach zamiast krasnali, dzieci na sankach w poprzek drogi zamiast opon, pług z lemieszem zamiast śmieciarki

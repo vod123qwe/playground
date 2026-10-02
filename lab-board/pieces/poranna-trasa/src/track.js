@@ -32,6 +32,8 @@ export const REGION_T = {
     // (a board says so), the start on the street itself under a START banner, as on the old machines; on the right the pavement,
     // a strip of lawn with benches and the paper bundles; the street trees on the houses' side)
     maps: {
+      zima: { classic: true, winter: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [8, 1, 90], [40, 2, 170], [105, 3, 225], [185, 3, 246], [262, 2, 222], [306, 1, 160], [314, 0, 82], [290, -1, 10], [236, 0, -44], [160, 1, -70], [86, 0, -68], [28, 0, -40]],
+        gap: [11, 5], stops: [.5], posts: [], shops: [], trees: 0, roll: .12, roofs: ['#eef2f5', '#e3e9ee', '#dde4ea'] },
       deptak: { classic: true, sea: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [4, 0, 100], [30, 0, 190], [90, 0, 250], [180, 0, 272], [270, 0, 262], [340, 0, 215], [372, 0, 140], [366, 0, 60], [326, 0, 0], [256, 0, -36], [170, 0, -50], [90, 0, -46], [30, 0, -28]],
         gap: [12, 5], stops: [.5], posts: [], shops: [], trees: 0, roll: .06, walls: ['#f4e1c1', '#cfe3e8', '#f2c9c0', '#e9f0d8', '#f6f3ea', '#d8d0ec'], roofs: ['#8e3b2c', '#3b6fa0', '#5a5f66'] },
       park: { classic: true, park: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [10, 0, 90], [44, 1, 168], [110, 1, 226], [192, 1, 246], [268, 0, 222], [314, 0, 160], [324, 0, 85], [300, 0, 12], [244, 0, -40], [168, 0, -62], [92, 0, -66], [30, 0, -42]],
@@ -149,6 +151,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     if (s !== INNER) { strip(s * 84, s * 88, '#55595e', .06, .5, tex.asphalt(), 3); strip(s * 83.4, s * 84, '#a8a08a', .1, .5, null, 1); strip(s * 88, s * 88.6, '#a8a08a', .1, .5, null, 1); }   // (a country road out there, gravel edges)   // the land beyond, rolling (inside the loop: not so far, the other side of it is there)
   }
   // (the water's edge: well back behind the guesthouses, close in on the beaches (a cove each), so the camera sees the sea there)
+  const ICE = [], iceAt = (x, z) => ICE.some(P => { const dx = x - P.x, dz = z - P.z, a = dx * P.fx + dz * P.fz, b = dx * P.fz - dz * P.fx; return (a / P.ra) ** 2 + (b / P.rr) ** 2 < 1; });
   const SEA = { y: 0, d: i => { const t = ((((i % N) + N) % N) * ds % 120 - 75) / 45; return PAVE + 24 - (t > 0 ? 13 * Math.pow(Math.sin(Math.PI * t), .6) : 0); } };
   if (RG.sea) { const hd = RG.oneSide, d0 = PAVE + 7.4; SEA.y = Math.min(...S.map(s => s.p.y)) - .3;
     const pos = [], idx = []; for (let i = 0; i <= N; i++) { const s = S[i % N]; for (const [d, y] of [[d0, s.p.y + hAt(hd * d0, i)], [SEA.d(i) + 6, SEA.y - .5]]) pos.push(s.p.x + s.r.x * hd * d, y, s.p.z + s.r.z * hd * d); }
@@ -195,7 +198,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   { const pos = [], colr = [], r = mulberry(7), C = c => new THREE.Color(c);
     const g0 = (i, d) => { const fi = Math.floor(i), fr = (i - fi) * ds, s = S[((fi % N) + N) % N]; return [s.p.x + s.r.x * d + s.f.x * fr, s.p.y + hAt(d, fi), s.p.z + s.r.z * d + s.f.z * fr, s]; };
     const tri = (a, b, c, ca, cb = ca, cc = ca) => { pos.push(...a, ...b, ...c); colr.push(ca.r, ca.g, ca.b, cb.r, cb.g, cb.b, cc.r, cc.g, cc.b); };
-    const LEAF = [['#d9a441', '#b86a2e'], ['#e08556', '#b3392d'], ['#efc970', '#d9a441'], ['#c98a2e', '#7b5836'], ['#cf5a3e', '#8e2e25'], ['#b86a2e', '#5e1c17'], ['#98b85a', '#7c8446']].map(([a, b]) => [C(a), C(b)]);
+    const LEAF = (RG.winter ? Array(7).fill(['#f4f7f9', '#d6dee5']) : [['#d9a441', '#b86a2e'], ['#e08556', '#b3392d'], ['#efc970', '#d9a441'], ['#c98a2e', '#7b5836'], ['#cf5a3e', '#8e2e25'], ['#b86a2e', '#5e1c17'], ['#98b85a', '#7c8446']]).map(([a, b]) => [C(a), C(b)]);   // (the winter: snow in the gutters instead)
     function leaf(i, d, lift = .014) { const [x, y, z, s] = g0(i + r() * .9, d), a = r() * 6.28, L = .12 + r() * .1, w = L * (.5 + r() * .2), fx = Math.cos(a), fz = Math.sin(a), [c1, c2] = LEAF[r() * (r() < .9 ? 6 : 7) | 0];
       const Y = y + lift + r() * .006, tip = [x + fx * L / 2, Y, z + fz * L / 2], back = [x - fx * L / 2, Y, z - fz * L / 2], lft = [x - fz * w / 2, Y, z + fx * w / 2], rgt = [x + fz * w / 2, Y, z - fx * w / 2];
       tri(back, tip, lft, c1); tri(back, rgt, tip, c2); }                // (lit half, shaded half: a leaf's fold)
@@ -1073,7 +1076,11 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         const o = P.ramp(fr, fr() < .5 ? 'plank' : 'kicker'); put(o.group, i, d, 0, (RG.rideDir || 1) < 0 ? Math.PI : 0); ramps.push(hit(o.group, o.hit, i)); }
       // (garden gnomes on the lawns: knocked over at a house that does not take the paper, points; at a subscriber's, he is not pleased)
       const gHat = toon('#cf3a2c'), gCoat = toon('#3b6fa0'), gBeard = toon('#f6f3ea'), gFace = toon('#e3b08a');
-      ds0.forEach(d => { if (RG.city || fr() > .7) return; const sd = new THREE.Vector3(-d.n.z, 0, d.n.x), p = d.p.clone().addScaledVector(d.n, -.9).addScaledVector(sd, (fr() < .5 ? 1 : -1) * 2.4), g = new THREE.Group();
+      ds0.forEach(d => { if (RG.city || fr() > (RG.winter ? .85 : .7)) return; const sd = new THREE.Vector3(-d.n.z, 0, d.n.x), p = d.p.clone().addScaledVector(d.n, -.9).addScaledVector(sd, (fr() < .5 ? 1 : -1) * 2.4), g = new THREE.Group();
+        if (RG.winter) { const sn = toon('#f4f7f9'), coal = toon('#24262a'); for (const [r, y] of [[.36, .34], [.27, .9], [.19, 1.3]]) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), sn); b.position.y = y; g.add(b); }
+          const nose = new THREE.Mesh(new THREE.ConeGeometry(.04, .2, 6).rotateX(Math.PI / 2), toon('#e8742e')); nose.position.set(0, 1.3, .25); const hat = new THREE.Mesh(new THREE.CylinderGeometry(.14, .16, .2, 8), coal); hat.position.y = 1.52; const sc = new THREE.Mesh(new THREE.TorusGeometry(.2, .05, 5, 10).rotateX(Math.PI / 2), toon('#cf3a2c')); sc.position.y = 1.1; g.add(nose, hat, sc);
+          g.position.set(p.x, groundAt(p.x, p.z, d.i), p.z); g.rotation.y = Math.atan2(d.n.x, d.n.z); g.userData.keep = true; G.add(g); g.updateMatrixWorld(true); const C = hit(g, { hx: .34, hz: .34, h: 1.5, kind: 'hard' }, d.i);
+          const T0 = { kind: 'cone', o: g, C, r: .34, gnome: true, snowman: true, door: doors.indexOf(d) }; C.thing = T0; things.push(T0); gnomes.push(T0); return; }
         const body = new THREE.Mesh(new THREE.ConeGeometry(.15, .32, 8), gCoat); body.position.y = .16; const face = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), gFace); face.position.y = .36; const beard = new THREE.Mesh(new THREE.ConeGeometry(.07, .14, 6), gBeard); beard.rotation.x = Math.PI; beard.position.set(0, .3, .05); const hat = new THREE.Mesh(new THREE.ConeGeometry(.08, .2, 8), gHat); hat.position.y = .5; g.add(body, face, beard, hat);
         g.position.set(p.x, groundAt(p.x, p.z, d.i), p.z); g.rotation.y = Math.atan2(d.n.x, d.n.z); g.userData.keep = true; G.add(g); g.updateMatrixWorld(true); const C = hit(g, { hx: .15, hz: .15, h: .55, kind: 'hard' }, d.i);
         const T0 = { kind: 'cone', o: g, C, r: .15, gnome: true, door: doors.indexOf(d) }; C.thing = T0; things.push(T0); gnomes.push(T0); });
@@ -1141,6 +1148,10 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
           const awn = box(.9, .06, 2.6, toon(col), -hd * 1.4, 2.05, 0); awn.rotation.z = hd * .3; g.add(awn);
           const t = new THREE.Mesh(new THREE.PlaneGeometry(2, .42), new THREE.MeshBasicMaterial({ map: pixSign(THREE, name, '#f6f3ea', col), side: THREE.DoubleSide })); t.position.set(-hd * 1.05, 2.0, 0); t.rotation.y = hd > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(t);
           put(g, i, d, 0, 0); hit(g, { hx: 1.4, hz: 1.4, h: 2.4, kind: 'hard' }, i); } }
+      if (RG.winter) { const iceM = new THREE.MeshBasicMaterial({ color: '#cfe6f2', transparent: true, opacity: .85, depthWrite: false }), shineM = new THREE.MeshBasicMaterial({ color: '#f6fbff', transparent: true, opacity: .9, depthWrite: false });
+        for (let i = Math.round(45 / ds); i < N - Math.round(30 / ds); i += Math.round((30 + fr() * 30) / ds)) { const d = (fr() - .5) * 2 * (ROAD - 1.5), ra = 3 + fr() * 2.5, rr = 1.2 + fr() * .8, s = S[i];
+          const m = new THREE.Mesh(new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), iceM), sh = new THREE.Mesh(new THREE.PlaneGeometry(.12, ra * 1.2).rotateX(-Math.PI / 2), shineM); m.scale.set(rr, 1, ra); sh.position.set(rr * .3, .005, 0); m.add(sh);
+          const x = s.p.x + s.r.x * d, z = s.p.z + s.r.z * d; m.position.set(x, s.p.y + .03, z); m.rotation.y = Math.atan2(s.f.x, s.f.z); m.userData.noShadow = true; m.renderOrder = 2; G.add(m); ICE.push({ i, x, z, fx: s.f.x, fz: s.f.z, ra, rr }); } }
       // (the Classic's village, on the far side: bales about the verge, a pasture behind a fence with cows, shrines, a well, a pond)
       if (RG.classic && RG.id === 'wies') { const hd = RG.oneSide, hay = toon('#e2c25e'), hayE = toon('#c49a3e'), wood = toon('#8a6a44'), cowW = toon('#f6f3ea'), cowB = toon('#24190f');
         for (let i = Math.round(25 / ds); i < N - Math.round(10 / ds); i += Math.round((18 + fr() * 16) / ds)) { const d = os * (PAVE - .8 + fr() * 2.4); if (!free(i, d, 1.6)) continue; const g = new THREE.Group(), n = fr() < .3 ? 2 : 1;
@@ -1299,6 +1310,11 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { courses, gnomes, benches, park: !!RG.park, sea: !!RG.sea, seaY: SEA.y, classic: !!RG.classic, oneSide: RG.oneSide || 0, harvest: !!RG.harvest, fair: FAIR, gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
+  // (the winter: under snow: every green thing white (the lawns, the hedges, the trees, the tufts), the ground's grass texture off)
+  if (RG.winter) { const snow = new THREE.Color('#eef2f5'), seen = new Set(), green = c => c.g > c.r * 1.04 && c.g > c.b * 1.04, c = new THREE.Color();
+    G.traverse(o => { if (!o.isMesh) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) { if (!m || seen.has(m)) continue; seen.add(m); if (m.color && green(m.color)) m.color.lerp(snow, .85); }
+      const ca = o.geometry?.attributes?.color; if (!ca) return; let gn = 0; for (let k = 0; k < ca.count; k++) { c.setRGB(ca.getX(k), ca.getY(k), ca.getZ(k)); if (green(c)) { gn++; c.lerp(snow, .88); ca.setXYZ(k, c.r, c.g, c.b); } } ca.needsUpdate = true;
+      if (gn > ca.count * .5 && o.userData.ground && o.material?.map) { o.material = o.material.clone(); o.material.map = null; o.material.needsUpdate = true; } }); }
+  return { courses, gnomes, benches, park: !!RG.park, winter: !!RG.winter, iceAt: RG.winter ? iceAt : null, sea: !!RG.sea, seaY: SEA.y, classic: !!RG.classic, oneSide: RG.oneSide || 0, harvest: !!RG.harvest, fair: FAIR, gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
