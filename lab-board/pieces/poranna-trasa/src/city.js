@@ -22,6 +22,8 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     g.add(box(.06, h + .16, w + .16, frame, fx + o, y, z), box(.08, h, w, lit ? glassLit : glass, fx + o * 1.5, y, z), box(.18, .08, w + .3, stone, fx + sg * .09, y - h / 2 - .1, z));
     if (reg) reg.push({ y, z, w, h }); }
   // the letterbox on the wall by a stairwell's door: a little steel box with its flap (the flag the game turns when a paper is in)
+  // (a block's letterbox out by the pavement on a post, before its stairwell: in reach from the road)
+  function postBox(g, x, sg, z) { g.add(box(.08, 1.15, .08, dark, x - sg * .12, .58, z)); const mb = townBox(sg); mb.position.set(x, 1.25, z); g.add(mb); return { mb, flag: mb.userData.flag }; }
   function letterbox(g, fx, sg, z) { const mb = townBox(sg); mb.position.set(fx + sg * .1, 1.25, z); g.add(mb); return { mb, flag: mb.userData.flag }; }
   // (the town's letterbox: big and red in a white frame, so it reads on brick and on plaster alike; a white envelope on it, a yellow flag)
   function townBox(sg) { const mb = new THREE.Group(); mb.add(box(.04, .82, .78, M('#f0ece2'), -sg * .1, 0, 0), box(.18, .64, .58, M('#d23a2c'), 0, 0, 0), box(.24, .06, .64, M('#8e2219'), 0, .34, 0), box(.19, .04, .38, dark, 0, .2, 0));
@@ -72,7 +74,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     const band = [M('#cf8a5e'), M('#7fa6b3'), M('#9fb36a')][rnd() * 3 | 0], reg = [];
     for (let f = 0; f < fl; f++) for (let c = 0; c < 10; c++) { const z = -W / 2 + (c + .5) * W / 10, y = 1.6 + f * 2.8; if (f === 0 && c % 3 === 1) continue; win(g, fx, s, y, z, 1.4, 1.3, rnd() < .1, f <= 1 ? reg : null); }
     for (let f = 1; f < fl; f++) g.add(box(1.1, .9, W * .9, band, fx + s * .55, .6 + f * 2.8, 0));   // (the balconies' bands)
-    const stairs = []; for (const z of [-W / 3, 0, W / 3]) { g.add(box(.1, 2.3, 1.4, M('#5a5f66'), fx + s * .05, 1.15, z), box(1.4, .15, 2, M('#9aa0a4'), fx + s * .7, 2.5, z)); if (night) g.add(box(.3, .1, .5, porchLit, fx + s * .9, 2.4, z)); stairs.push({ fx, z, box: letterbox(g, fx, s, z + 1.2) }); }
+    const stairs = []; for (const z of [-W / 3, 0, W / 3]) { g.add(box(.1, 2.3, 1.4, M('#5a5f66'), fx + s * .05, 1.15, z), box(1.4, .15, 2, M('#9aa0a4'), fx + s * .7, 2.5, z)); if (night) g.add(box(.3, .1, .5, porchLit, fx + s * .9, 2.4, z)); stairs.push({ fx, z, box: postBox(g, s * (D / 2 + 5.6), s, z + 1.4) }); }
     put(g, i, s * (PAVE + 7 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 7, W / 2 + 1);
     register(g, i, s, stairs, reg); return g; }
 
