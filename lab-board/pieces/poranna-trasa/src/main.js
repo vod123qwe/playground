@@ -419,6 +419,7 @@ function throwTargets(side) { const now = performance.now(), fx = Math.sin(B.yaw
   for (const mb of track.mailboxes) { if (mb.done) continue; const w = mb.o.position; if (Math.abs(w.x - B.x) + Math.abs(w.z - B.z) > 24) continue; const hi = mb.house ?? (mb.house = nearestDoor(w)), d = track.doors[hi]; if (!d || !d.sub || d.done || now - (d.pending || -9e9) < 2500) continue;
     const l = Math.hypot(B.x - w.x, B.z - w.z) || 1; consider(w.x + (B.x - w.x) / l * .45, w.z + (B.z - w.z) / l * .45, 3, d); }   // (just before it, on his side: it drops in)
   for (const d of track.doors) { if (!d.sub || d.done || now - (d.pending || -9e9) < 2500 || Math.abs(d.p.x - B.x) + Math.abs(d.p.z - B.z) > 24) continue; consider(d.p.x - d.n.x * 1.3, d.p.z - d.n.z * 1.3, 0, d); }
+  if (FIN.on) for (const T of FIN.targets) { if (T.hit || !T.up || T.kind === 'barn') continue; const dx = T.c.x - B.x, dz = T.c.z - B.z, fw = dx * fx + dz * fz, lat = (dx * rx + dz * rz) * out, l = Math.hypot(dx, dz); if (fw < -1.5 || fw > 15 || lat < .8 || l > 16) continue; list.push({ p: T.c.clone(), door: null, score: l - 9 }); }
   return list.sort((a, b) => a.score - b.score); }
 // the moment of a tap: 1 when the target is just the right way ahead for his speed (the paper flies a while: lead it), less either side,
 // 0 out of the window. The window narrower in the harder regions. A tap at q 1 drops it in the mailbox; less: under it, on the porch,
@@ -1397,7 +1398,7 @@ function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.class
 // targets by the road to hit with a paper; at the finish a beat of slow motion and a flash. What it came to: a bonus, and in the paper ----------
 const FIN = { G: new THREE.Group(), cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false, entered: false, res: null, combo: 0, comboT: 0, t: 0 };
 scene.add(FIN.G);
-function clearFinale() { for (const o of FIN.junk || []) scene.remove(o); FIN.junk = []; for (const h of FIN.hits) track.dropHit(h); while (FIN.G.children.length) FIN.G.remove(FIN.G.children[0]); Object.assign(FIN, { cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false }); }
+function clearFinale() { for (const K of FIN.carsOff || []) { K.o.visible = true; K.C.used = false; if (!track.parked.includes(K.P0)) track.parked.push(K.P0); } FIN.carsOff = []; for (const o of FIN.junk || []) scene.remove(o); FIN.junk = []; for (const h of FIN.hits) track.dropHit(h); while (FIN.G.children.length) FIN.G.remove(FIN.G.children[0]); Object.assign(FIN, { cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false }); }
 // the final straight (the last 180 m): a banner; a slalom; an arrow pad (a push); a kicker and a trench across the road to clear (in the
 // air: or a fall); big targets by the road, others that pop up as you come, one swinging over the road on a rope; golden rings in the
 // air after the second kicker; a double trench; pads again to the line. Scoring things one after another: a combo (x2, x3)
@@ -1414,18 +1415,16 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
     for (const sd of [-1, 1]) { const q = at(.995, sd * w), post = new THREE.Mesh(new THREE.BoxGeometry(.16, 4.6, .16).translate(0, 2.3, 0), postM); post.position.set(q.x, q.y, q.z); FIN.G.add(post); }
     const b = new THREE.Mesh(new THREE.BoxGeometry(w * 2, .7, .06), new THREE.MeshBasicMaterial({ map: tx })); b.position.set(p.x, p.y + 4.3, p.z); b.rotation.y = p.yaw; FIN.G.add(b); }
   // the slalom
-  const slalom = (u0, n, gap, off) => { for (let k = 0; k < n; k++) { const q = at(u(u0) - k * gap, (k % 2 ? 1 : -1) * off);
+  const slalom = (u0, n, gap, off, c = 0) => { for (let k = 0; k < n; k++) { const q = at(u(u0) - k * gap, c + (k % 2 ? 1 : -1) * off);
     if (WIES) { const m = bale(); m.position.set(q.x, q.y, q.z); m.rotation.y = q.yaw; FIN.G.add(m); FIN.cones.push({ m, x: q.x, z: q.z, down: false, t: 0, ax: 0, az: 0, bale: true, vx: 0, vz: 0, i: q.i }); continue; }
     const m = new THREE.Mesh(new THREE.ConeGeometry(.28, .75, 8).translate(0, .375, 0), coneM), band = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, .1, 8).translate(0, .42, 0), bandM);
     m.add(band); m.position.set(q.x, q.y, q.z); FIN.G.add(m); FIN.cones.push({ m, x: q.x, z: q.z, down: false, t: 0, ax: 0, az: 0 }); } };
-  slalom(.95, 6, 7, 1.1); slalom(.5, 6, 5, 1.5);
   // an arrow pad: chevrons on the road, a push forward
   const arrowT = cv(16, 16, g => { g.fillStyle = '#efc970'; for (let k = 0; k < 2; k++) for (let y = 0; y < 6; y++) { g.fillRect(4 + y - 0, 2 + k * 7 + y, 2, 1); g.fillRect(10 - y, 2 + k * 7 + y, 2, 1); } });
-  const pad = m => { const q = at(m, 0), o = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: arrowT, transparent: true })); o.position.set(q.x, q.y + .03, q.z); o.rotation.y = q.yaw + Math.PI; FIN.G.add(o); FIN.pads.push({ q, used: false, o }); };
-  pad(.8); pad(.55); pad(.03);
+  const pad = (m, d = 0, set = 0) => { const q = at(m, d), o = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: arrowT, transparent: true })); o.position.set(q.x, q.y + .03, q.z); o.rotation.y = q.yaw + Math.PI; FIN.G.add(o); FIN.pads.push({ q, used: false, o, set }); };
   // a kicker, a trench after it (planks at its edges, a striped board each side), another before the line (two of them, a gap between)
-  const kicker = (m, size = 'kicker') => { const q = at(m, 0), o = track.props.ramp(Math.random, size); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = q.yaw; FIN.G.add(o.group); FIN.hits.push(track.addHit(o.group, o.hit, q.i));
-    if (WIES) for (const sd of [-1, 1]) { const p2 = at(m, sd * 2.1), b = bale(.5, 1); b.position.set(p2.x, p2.y, p2.z); b.rotation.y = q.yaw + Math.PI / 2; FIN.G.add(b); } };   // (in the village: a bale each side of it)
+  const kicker = (m, size = 'kicker', d = 0) => { const q = at(m, d), o = track.props.ramp(Math.random, size); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = q.yaw; FIN.G.add(o.group); FIN.hits.push(track.addHit(o.group, o.hit, q.i));
+    if (WIES) for (const sd of [-1, 1]) { const p2 = at(m, d + sd * (o.hit.hx + .5)), b = bale(.5, 1); b.position.set(p2.x, p2.y, p2.z); b.rotation.y = q.yaw + Math.PI / 2; FIN.G.add(b); } return o; };   // (in the village: a bale each side of it)
   const stripes = cv(8, 2, g => { for (let x = 0; x < 8; x++) { g.fillStyle = x % 2 ? '#cf5a3e' : '#f6f3ea'; g.fillRect(x, 0, 1, 2); } }), stripeM = new THREE.MeshBasicMaterial({ map: stripes });
   // (a trench: across the whole road, or half of it (hw its half width, cx its middle off the road's): to ride round or to jump)
   const trench = (m, len = 3.2, hw = W, cx = 0) => { const q = at(m, 0), g = new THREE.Group(); g.position.set(q.x, q.y, q.z); g.rotation.y = q.yaw; const k = -1;   // (the group's x is the road's right reversed)
@@ -1437,7 +1436,6 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
     for (const sx of [-1, 1]) for (const z of [-len / 2 - .35, len / 2 + .35]) { const c0 = WIES ? bale(.3, .55) : new THREE.Mesh(new THREE.ConeGeometry(.22, .6, 8).translate(0, .3, 0), coneM); c0.position.set((cx + sx * (hw - .15)) * k, 0, z); g.add(c0); }
     for (const sd of [-1, 1]) { const x = (cx + sd * (hw + .25)) * k, b = new THREE.Mesh(new THREE.BoxGeometry(.05, .3, len + .6), stripeM); b.position.set(x, .55, 0); g.add(b); for (const z of [-len / 2 - .3, len / 2 + .3]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(.08, .7, .08), postM); p2.position.set(x, .35, z); g.add(p2); } }
     FIN.G.add(g); FIN.trenches.push({ q, len, hw, cx, done: false }); };
-  kicker(.87, 'plank'); kicker(.83, 'kicker'); kicker(.77, 'plank'); trench(u(.77) - 5, 1.8, W * .55, -W * .45); kicker(.15, 'kicker'); trench(u(.15) - 6, 2);
   // the targets: big boards on posts by the road (red and white rings), pop-ups lying flat till you come, one swinging over the road
   const ring = cv(16, 16, g => { const C = [['#cf5a3e', 8], ['#f6f3ea', 6.2], ['#cf5a3e', 4.4], ['#f6f3ea', 2.6], ['#17181b', 1.2]]; for (const [c, r] of C) { g.fillStyle = c; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (Math.hypot(x - 7.5, y - 7.5) < r) g.fillRect(x, y, 1, 1); } }), ringM = new THREE.MeshBasicMaterial({ map: ring });
   const board = r => { const b = new THREE.Mesh(new THREE.CylinderGeometry(r, r, .08, 20).rotateX(Math.PI / 2), [wood, ringM, ringM]); return b; };
@@ -1468,17 +1466,50 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
     plane(1.1, 1.1, trim, loftC); plane(.9, .9, new THREE.MeshBasicMaterial({ color: '#17181b' }), loftC.clone().addScaledVector(new THREE.Vector3(face.x - loftC.x, 0, face.z - loftC.z).normalize(), .01));
     const dummy = new THREE.Group(); dummy.add(new THREE.Group());
     for (const [c0, r0, pay, label] of [[ringC, .42, 5, 'W ŚRODEK!'], [ringC, 1.3, 2, 'W STODOŁĘ!'], [loftC, .5, 8, 'NA STRYCH!']]) FIN.targets.push({ t: bar, hinge: dummy, kind: 'barn', r: r0, c: c0.clone(), hit: false, spin: 0, up: true, sd: 0, pay, label, stick: true }); }
-  target(.7, 1); target(.66, -1, 'pop'); target(.62, 1, 'pop'); target(.4, -1); target(.21, 1); target(.17, -1, 'pop'); target(.08, 1, 'pop'); target(.06, -1, 'pop');
   // the swinging one: a frame over the road, the board on a rope, to and fro
-  for (const su of [.58, .25]) { const q = at(su, 0), g = new THREE.Group(); g.position.set(q.x, q.y, q.z); g.rotation.y = q.yaw; for (const sd of [-1, 1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(.18, 5.2, .18).translate(0, 2.6, 0), dark); p2.position.x = sd * (W + .5); g.add(p2); }
+  const swing = su => { const q = at(su, 0), g = new THREE.Group(); g.position.set(q.x, q.y, q.z); g.rotation.y = q.yaw; for (const sd of [-1, 1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(.18, 5.2, .18).translate(0, 2.6, 0), dark); p2.position.x = sd * (W + .5); g.add(p2); }
     const bar = new THREE.Mesh(new THREE.BoxGeometry(W * 2 + 1.2, .18, .18), dark); bar.position.y = 5.1; g.add(bar); const sw = new THREE.Group(); sw.position.y = 5.0; g.add(sw);
     const rope = new THREE.Mesh(new THREE.BoxGeometry(.03, 1.6, .03).translate(0, -.8, 0), M('#c9b77a')); sw.add(rope); const b = board(.75); b.rotation.y = Math.PI / 2; b.position.y = -2.3; sw.add(b);
-    FIN.G.add(g); FIN.targets.push({ t: g, hinge: sw, kind: 'swing', r: .75, c: new THREE.Vector3(q.x, q.y + 2.7, q.z), hit: false, spin: 0, up: true, sd: 0, pay: 10, q, board: b }); }
+    FIN.G.add(g); FIN.targets.push({ t: g, hinge: sw, kind: 'swing', r: .75, c: new THREE.Vector3(q.x, q.y + 2.7, q.z), hit: false, spin: 0, up: true, sd: 0, pay: 10, q, board: b }); };
   // the second kicker and the golden rings in the air after it
-  kicker(.36, Math.random() < .5 ? 'mega' : 'big');   // (now and then the mega one: the rings after it hang the same, a higher flight through them)
-  for (let k = 0; k < 5; k++) { const q = at(u(.36) - 7 - k * 3.2, 0), o = new THREE.Mesh(new THREE.TorusGeometry(.7, .09, 6, 16), gold); o.position.set(q.x, q.y + 2.4 + Math.sin(k / 4 * Math.PI) * .7, q.z); o.rotation.y = q.yaw; FIN.G.add(o); FIN.rings.push({ o, got: false }); }
-  // the double trench, a gap of road between; pop-ups both sides; a pad to the line
-  kicker(.46, 'plank'); trench(u(.3), 2, W * .6, W * .4); trench(u(.3) - 5, 2, W * .6, -W * .4);
+  // ---------- the layout, by the stretch's difficulty D (0: the first stretch, 1: the last): a warm-up; the fork into two lanes (the
+  // easy one on the left, the hard one on the right: its points count twice); the lanes joining; the run to the line. A jump's rings
+  // and its air targets lie on the flight the game's own physics gives off that ramp at the speed its pad sets (so it can be flown) ----------
+  const ALL = LVM.LEVELS.filter(l => !l.soon), D = THREE.MathUtils.clamp(ALL.findIndex(l => l.id === LV.id) / Math.max(1, ALL.length - 1), 0, 1), L2 = W / 2;
+  // (a jump's flight: flown once by the game's own ride() from its pad at the pad's speed, the speed held to the lip as the pad holds
+  // it in play; the rider's state, the sounds, any fall kept out and put back after. → the points the rider's middle passed in the air)
+  const flown = (q, v, lip) => { const keep = { ...B }, ap = audio.play, fx = q.f.x, fz = q.f.z, out = []; audio.play = () => { }; const q0 = track.probe(q.x, q.z, q.i);
+    Object.assign(B, { x: q.x, z: q.z, hint: q0.i, y: q0.y, gPrev: q0.y, gVel: 0, yaw: Math.atan2(fx, fz), v, air: false, vy: 0, crash: null, safe: 99, trick: null, lift: null, parked: false, kick: null, charge: null, onRamp: null });
+    try { for (let k = 0; k < 480; k++) { if (!B.air && !out.length) B.v = v; ride(1 / 60, { steer: 0, pedal: 0, brake: 0 }); if (B.air) out.push(new THREE.Vector3(B.x, B.y + 1, B.z)); else if (out.length) break; } } catch (e) { console.warn('flight', e); }
+    audio.play = ap; for (const k of Object.keys(B)) if (!(k in keep)) delete B[k]; Object.assign(B, keep); return out; };
+  const jump = (m, size, d, v, nRings, nAir) => { pad(m + 7, d, v); const o = kicker(m, size, d), lip = m - o.hit.hz, path = flown(at(m + 7, d), v, lip);
+    FIN.locks.push({ from: m + 7, to: lip, v, d });
+    if (path.length < 6) return { o, lip, land: lip - 6 };
+    for (let k = 0; k < nRings; k++) { const p = path[Math.round((k + 1) / (nRings + 1) * (path.length - 1))], q = at(lip, d), r = new THREE.Mesh(new THREE.TorusGeometry(.7, .09, 6, 16), gold); r.position.copy(p); r.rotation.y = q.yaw; FIN.G.add(r); FIN.rings.push({ o: r, got: false }); }
+    const top = path.reduce((a2, b2) => b2.y > a2.y ? b2 : a2, path[0]), qt = track.probe(top.x, top.z, at(lip, d).i), A = track.S[qt.i], dir = LV.finish.dir;
+    for (let k = 0; k < nAir; k++) { const sd = k % 2 ? -1 : 1, ox = A.r.x * dir * sd * 3.2, oz = A.r.z * dir * sd * 3.2, x = top.x + ox, z = top.z + oz, gy = track.probe(x, z, qt.i).y, h = top.y + .2 - gy, t = new THREE.Group(), hinge = new THREE.Group();
+      t.position.set(x, gy, z); t.rotation.y = Math.atan2(A.f.x * dir, A.f.z * dir) + Math.PI / 2; t.add(hinge); t.add(new THREE.Mesh(new THREE.BoxGeometry(.1, h, .1).translate(0, h / 2, 0), wood)); const bd = board(.85); bd.position.y = h; hinge.add(bd); FIN.G.add(t);
+      FIN.targets.push({ t, hinge, kind: 'post', r: 1.1, c: new THREE.Vector3(x, gy + h, z), hit: false, spin: 0, up: true, upT: 0, sd, pay: 8, label: 'W LOCIE!' }); }
+    const land = path[path.length - 1], ql = track.probe(land.x, land.z, at(lip, d).i); return { o, lip, land: ahead(ql.i, iF) }; };
+  FIN.locks = []; FIN.carsOff = [];
+  for (const K of track.kerbCars || []) { const m0 = ahead(K.i, iF); if (m0 < FL + 20) { K.o.visible = false; K.C.used = true; const ix = track.parked.indexOf(K.P0); if (ix >= 0) track.parked.splice(ix, 1); FIN.carsOff.push(K); } }   // (no car parked on the track)
+  // the warm-up: a slalom, a pad, a plank, a target by it
+  slalom(.95, 4 + Math.round(D * 3), 7 - D * 2, 1.1); pad(u(.87)); kicker(u(.83), 'plank'); target(.8, 1);
+  // the fork: its sign over the road, cones down the middle to where the lanes join
+  const forkM = u(.74), mergeM = u(.36); FIN.forkM = forkM; FIN.mergeM = mergeM; FIN.iF = iF;
+  { const q = at(forkM + 3, 0), w = W + .6, tx = cv(96, 12, g2 => { g2.fillStyle = '#17181b'; g2.fillRect(0, 0, 96, 12); g2.fillStyle = '#9fd27a'; g2.fillRect(1, 1, 46, 10); g2.fillStyle = '#cf5a3e'; g2.fillRect(49, 1, 46, 10); g2.font = '8px PTPix'; g2.textBaseline = 'top'; g2.textAlign = 'center'; g2.fillStyle = '#17181b'; g2.fillText('< ŁATWA', 24, 2); g2.fillStyle = '#f6f3ea'; g2.fillText('TRUDNA x2 >', 72, 2); });
+    for (const sd of [-1, 1]) { const p2 = at(forkM + 3, sd * w), post = new THREE.Mesh(new THREE.BoxGeometry(.16, 4.6, .16).translate(0, 2.3, 0), postM); post.position.set(p2.x, p2.y, p2.z); FIN.G.add(post); }
+    const bn = new THREE.Mesh(new THREE.BoxGeometry(w * 2, .7, .06), new THREE.MeshBasicMaterial({ map: tx })); bn.position.set(q.x, q.y + 4.3, q.z); bn.rotation.y = q.yaw; FIN.G.add(bn); }
+  for (let m = forkM; m > mergeM; m -= 4.5) { const q = at(m, 0), c0 = new THREE.Mesh(new THREE.ConeGeometry(.22, .6, 8).translate(0, .3, 0), coneM); c0.position.set(q.x, q.y, q.z); FIN.G.add(c0); }
+  // the easy lane (left): low ramps, a slalom in the lane, targets by the road
+  kicker(u(.68), 'plank', -L2); target(.64, -1); slalom(.6, 3 + Math.round(D * 2), 5, .55, -L2); kicker(u(.5), 'kicker', -L2); target(.47, -1, 'pop'); pad(u(.42), -L2);
+  // the hard lane (right): a jump (mega from the middle of the game on) with its rings and targets in the air; a trench, a kicker before
+  // it; a second, smaller jump with rings of its own
+  { const big = D > .45 ? 'mega' : 'big', j1 = jump(u(.69), big, L2, big === 'mega' ? 11 : 10, 3 + Math.round(D * 3), 1 + Math.round(D));
+    const kM = j1.land - 7, ko = kicker(kM, 'kicker', L2); trench(kM - ko.hit.hz - 2.4, 2.2, L2 - .15, L2);
+    if (kM - 30 > mergeM + 8) jump(kM - 30, 'kicker', L2, 9, 2 + Math.round(D * 2), D > .3 ? 1 : 0); }
+  // the lanes joined: a swinging target, a double trench (a half each, apart: round it or hop), pop-ups, a pad to the line
+  swing(.3); trench(u(.24), 2, W * .55, W * .45); trench(u(.24) - 7, 2, W * .55, -W * .45); target(.2, 1, 'pop'); target(.17, -1, 'pop'); if (D > .5) slalom(.12, 4, 5, 1.3); target(.08, 1, 'pop'); target(.06, -1, 'pop'); pad(u(.03));
   FIN.on = true; FIN.entered = false; FIN.combo = 0; FIN.comboT = 0; FIN.res = { targets: 0, of: FIN.targets.length, cones: 0, rings: 0, trenches: 0, combo: 0, score: 0 }; }
 // a parked car's roof under (x, z): its height, or null
 function carRoofAt(x, z) { let y = null; for (const C of track.near(B.hint)) if (C.car && C.roof && !C.used && boxHit(C, x, z, 0)) y = Math.max(y ?? -1e9, C.roof); return y; }
@@ -1512,16 +1543,19 @@ function cullPeople(dt) { if ((CULL.t -= dt) > 0) return; CULL.t = .25; if ((CUL
   const cp = camera.position, far = (foot.active && foot.view === 'first') ? 45 : 60, v = _cullV;
   for (const o of CULL.list) { o.getWorldPosition(v); const near = (v.x - cp.x) ** 2 + (v.z - cp.z) ** 2 < far * far; if (near !== (o.layers.mask === 1)) o.layers.set(near ? 0 : 1); } }
 const _cullV = new THREE.Vector3();
-function finScore(n, at, label) { FIN.combo = FIN.comboT > 0 ? FIN.combo + 1 : 1; FIN.comboT = 3; const k = Math.min(3, FIN.combo), v = n * k; FIN.res.score += v; FIN.res.combo = Math.max(FIN.res.combo, k);
+function finScore(n, at, label) { if (FIN.hardNow) { n *= 2; label += ' x2'; } FIN.combo = FIN.comboT > 0 ? FIN.combo + 1 : 1; FIN.comboT = 3; const k = Math.min(3, FIN.combo), v = n * k; FIN.res.score += v; FIN.res.combo = Math.max(FIN.res.combo, k);
   audio.play(k > 1 ? 'trick' : 'coin'); hud.pop(at, `${label} +${v}${k > 1 ? ' x' + k : ''}`, k > 1 ? '#efc970' : '#9fd27a'); }
 function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? foot.me : B; FIN.t += dt; FIN.comboT -= dt;
+  if (FIN.forkM) { const q = track.probe(me.x, me.z, B.hint), mHere = ahead(q.i, FIN.iF), was = FIN.hardNow;
+    if (!foot.active && !B.air) for (const L of FIN.locks || []) if (mHere < L.from && mHere > L.to && Math.abs(q.d * LV.finish.dir - L.d) < 1.2 && FIN.pads.some(P => P.used && P.set === L.v)) B.v = L.v;   // (on a jump's run-up after its pad: the pad's speed)
+    FIN.hardNow = mHere < FIN.forkM && mHere > FIN.mergeM && q.d * LV.finish.dir > .3; if (FIN.hardNow && !was) flash('Trudny pas: punkty x2'); }
   const near = (p, m) => Math.hypot(me.x - p.x, me.z - p.z) < m;
   if (!FIN.entered && FIN.cones[0] && near(FIN.cones[0], 30)) { FIN.entered = true; flash(track.region === 'wies' ? 'Wiejski finał! Slalom między belami, rowy do przeskoczenia, tarcze i stodoła: kombo mnoży!' : 'Finałowa prosta! Slalom, wykopy do przeskoczenia, tarcze i obręcze: kombo mnoży!'); }
   for (const c of FIN.cones) if (c.bale) { const R = c.m.userData.R;
     if (c.down) { const sp = Math.hypot(c.vx, c.vz); if (sp > .05) { c.x += c.vx * dt; c.z += c.vz * dt; const k2 = Math.exp(-dt * .9); c.vx *= k2; c.vz *= k2; const q2 = track.probe(c.x, c.z, c.i); c.i = q2.i; c.m.position.set(c.x, q2.y, c.z); c.m.rotation.y = Math.atan2(c.vx, c.vz); c.m.children[0].rotation.x += sp * dt / R; } continue; }
     if (near(c, .85) && !foot.active) { c.down = true; const s0 = Math.max(3, Math.abs(B.v) * 1.1); c.vx = Math.sin(B.yaw) * s0; c.vz = Math.cos(B.yaw) * s0; FIN.res.cones++; FIN.combo = 0; audio.play('kick', { vol: .5 }); B.v *= .7; B.jolt = .1; } }
   for (const c of FIN.cones) { if (c.bale) continue; if (c.down) { c.t = Math.min(1, c.t + dt * 4); c.m.rotation.x = c.ax * c.t * 1.5; c.m.rotation.z = c.az * c.t * 1.5; continue; } if (near(c, .6)) { c.down = true; c.ax = Math.cos(B.yaw); c.az = -Math.sin(B.yaw); FIN.res.cones++; FIN.combo = 0; audio.play('pick', { vol: .5 }); B.v *= .85; } }
-  for (const P of FIN.pads) if (!P.used && near(P.q, 1.6) && !foot.active) { P.used = true; B.v = Math.min(B.v + 3.5, 13); audio.play('trick', { vol: .5 }); flash('Strzała! Szybciej!'); setTimeout(() => { P.used = false; }, 4000); }
+  for (const P of FIN.pads) if (!P.used && near(P.q, 1.6) && !foot.active) { P.used = true; B.v = P.set || Math.min(B.v + 3.5, 13); audio.play('trick', { vol: .5 }); flash(P.set ? 'Rozpęd do skoku! Prosto przez obręcze' : 'Strzała! Szybciej!'); setTimeout(() => { P.used = false; }, 4000); }
   // the trenches: over one on the ground, a fall; in the air: cleared
   for (const T of FIN.trenches) { const dx = me.x - T.q.x, dz = me.z - T.q.z, al = dx * T.q.f.x + dz * T.q.f.z, ac = dx * T.q.r.x + dz * T.q.r.z;
     T.cool = Math.max(0, (T.cool || 0) - dt);
@@ -1536,7 +1570,7 @@ function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? f
     // a bale rolling (in the village): into a target by the road, it counts too
     if (!T.hit && (T.kind === 'post' || T.kind === 'pop') && T.up) for (const c of FIN.cones) if (c.bale && c.down && Math.hypot(c.vx, c.vz) > 1 && Math.hypot(c.x - T.c.x, c.z - T.c.z) < T.r + .8) { T.hit = true; FIN.res.targets++; finScore(T.pay + 3, T.c.clone().setY(T.c.y + .8), 'BELĄ W TARCZĘ!'); break; } }
   // the rings: through one in the air
-  for (const R of FIN.rings) { R.o.rotation.z += dt * 2; if (R.got) { R.o.scale.multiplyScalar(Math.max(0, 1 - dt * 4)); continue; } const p = new THREE.Vector3(me.x, (B.y || 0) + 1, me.z); if (p.distanceTo(R.o.position) < 1.1) { R.got = true; FIN.res.rings++; finScore(3, R.o.position.clone().setY(R.o.position.y + .6), 'OBRĘCZ!'); } } }
+  for (const R of FIN.rings) { R.o.rotation.z += dt * 2; if (R.got) { R.o.scale.multiplyScalar(Math.max(0, 1 - dt * 4)); continue; } const p = new THREE.Vector3(me.x, (B.y || 0) + 1, me.z); if (p.distanceTo(R.o.position) < 1.35) { R.got = true; FIN.res.rings++; finScore(3, R.o.position.clone().setY(R.o.position.y + .6), 'OBRĘCZ!'); } } }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
 function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
@@ -1767,5 +1801,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, FIN, CROSS, stepRivals, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, FIN, CROSS, stepRivals, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };
