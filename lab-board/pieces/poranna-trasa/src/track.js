@@ -33,7 +33,14 @@ export const REGION_T = {
   // (modern greys and whites, dark roofs), lots with a house going up, two stretches of warehouses, road works, cranes over it all
   peryferia2: { id: 'peryferia2', home: false, ctrl: [[0, 0, 0], [5, 1, 55], [40, 1, 95], [95, 2, 100], [140, 1, 70], [150, 0, 20], [190, 1, -10], [235, 2, -5], [255, 1, -55], [225, 0, -110], [160, -1, -125], [100, 0, -100], [55, 1, -110], [15, 0, -70]],
     roll: .45, kerb: true, lines: true, bike: false, stops: [.3, .78], posts: [.55], shops: [[.62, -1]], gap: [11, 4], houseP: 1, farms: false, estate: true, site: .22, wh: [[.12, .24], [.66, .76]], works: [[.4, 1], [.88, -1]],
-    walls: ['#e9e6df', '#d6d2ca', '#c9c4ba', '#b9b4ab', '#e3dccf', '#f0eee8'], roofs: ['#3f4246', '#4a4e55', '#5a5f66', '#34373b'] },
+    walls: ['#e9e6df', '#d6d2ca', '#c9c4ba', '#b9b4ab', '#e3dccf', '#f0eee8'], roofs: ['#3f4246', '#4a4e55', '#5a5f66', '#34373b'],
+    // (the industrial quarter's routes, each its map: the building site (sites all along, cranes, gantries with loads over the road);
+    // the sidings (long straights along the halls, forklifts across the road, a level crossing))
+    maps: {
+      budowa: { industry: 'budowa', ctrl: [[0, 0, 0], [0, 1, 70], [30, 2, 120], [90, 2, 130], [130, 1, 100], [135, 1, 40], [180, 1, 20], [230, 2, 40], [260, 1, 0], [250, 0, -60], [200, 0, -90], [140, -1, -80], [80, 0, -100], [30, 0, -60]],
+        site: .62, wh: [], works: [[.2, 1], [.5, -1], [.78, 1]], cranes: 8, stops: [.4], shops: [[.7, -1]] },
+      bocznica: { industry: 'bocznica', ctrl: [[0, 0, 0], [0, 0, 120], [20, 0, 170], [80, 0, 180], [200, 0, 180], [250, 0, 150], [255, 0, 60], [250, 0, -20], [220, 0, -50], [120, 0, -55], [40, 0, -50], [5, 0, -25]],
+        site: .05, wh: [[.05, .45], [.55, .95]], works: [[.5, 1]], cranes: 2, roll: .2, stops: [.3, .8] } } },
   // miasto: the town: a loop of streets with corners (blocks of the old town, the market, the estate of panel blocks), kerbs, lines, a
   // bike lane, many stops; tenements in rows right at the pavement, the market's stalls on one stretch, blocks of flats on another,
   // tram rails, fewer street trees, no poles; round it no fields: a skyline
@@ -917,7 +924,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)
   for (const i of bigAt) { const o = P.ramp(rnd, 'big'); put(o.group, i, 1.4, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: 1.4 }); }   // (the traffic goes round it)
   { const i = Math.round(N * .51), o = P.ramp(rnd, 'mega'); put(o.group, i, -1.3, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: -1.3 }); }   // (and one mega ramp on the other half of the road, half way round)
-  if (EST) { for (const [f, sd] of RG.works) EST.works(Math.round(N * f), sd); const cr = mulberry(223); for (let k = 0; k < 5; k++) EST.crane(Math.round(N * (k + cr() * .6) / 5), (cr() < .5 ? -1 : 1) * (PAVE + 34 + cr() * 40)); }   // (the road works, the cranes over the roofs)
+  if (EST) { for (const [f, sd] of RG.works) EST.works(Math.round(N * f), sd); const cr = mulberry(223), nc = RG.cranes || 5; for (let k = 0; k < nc; k++) EST.crane(Math.round(N * (k + cr() * .6) / nc), (cr() < .5 ? -1 : 1) * (PAVE + 34 + cr() * 40)); }   // (the road works, the cranes over the roofs)
   for (let i = 90; i < N - 30; i += Math.round((26 + rnd() * 30) / ds)) {
     const r = rnd(), sd = rnd() < .5 ? -1 : 1;
     if (EST && RG.works.some(([f]) => Math.abs(i - N * f) * ds < 45)) continue;   // (not in the road works)
@@ -1102,6 +1109,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z)), net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, ROAD, KERB, PAVE };
+  return { paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z)), net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

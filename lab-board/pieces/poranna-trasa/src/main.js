@@ -20,6 +20,7 @@ import { createTraffic } from './traffic.js';
 import { createDogs } from './dogs.js';
 import { createBronx } from './bronx.js';
 import { createTourist } from './tourist.js';
+import { createIndustry } from './industry.js';
 import { createHud } from './hud.js';
 import { createGranny } from './granny.js';
 import { createTouch } from './touch.js';
@@ -154,7 +155,7 @@ const dogs = createDogs({ THREE, toon, probe: track.probe });
 const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });
 // (the locals of a route's own map: the Bronx after dark (its lads, glass, bins, the engineer); the tourist quarter (its tourists, the guide, picnics, skaters))
-const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : null;
+const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : null;
 // what by the road answers a kick: mailboxes (three and it is off its post), poles, trees and bushes (their leaves), swings, cones
 const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => audio.play(n, o) }, makeDog: (c, sz) => dogs.makeDog(c, sz), say: (at, t) => hud.rant(at, t, false),
   onLoot: T => { shop.grant(T.item, T.tier); audio.play('pick'); flash(T.label + '! Zamontowane. Właściciel się nie dowie... chyba'); B.fame = (B.fame || 0) + 1; setTimeout(() => hud.rant(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'EJ! MOJE PRZERZUTKI!!!', false), 1600); witness?.(T.x, T.z); },
@@ -841,7 +842,7 @@ function kickTargets() {
 }
 // (kicked off his bike: a courier of the Kurier always comes back for it, a cyclist now and then; a courier drops his papers)
 function landKick(tg) {
-  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], goose: () => [tg.ref.g.position.x, tg.ref.g.position.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], worker: () => [tg.ref.x, tg.ref.z], bronx: () => [tg.ref.x, tg.ref.z], tourist: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
+  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], goose: () => [tg.ref.g.position.x, tg.ref.g.position.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], worker: () => [tg.ref.x, tg.ref.z], bronx: () => [tg.ref.x, tg.ref.z], tourist: () => [tg.ref.x, tg.ref.z], industry: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
   logEv('kick_' + (tg.kind === 'thing' ? (tg.ref.kind === 'mailbox' ? 'mailbox' : 'thing') : tg.kind), B.x, B.z);
@@ -1156,6 +1157,9 @@ function localEvent(e) {
   if (e.kind === 'bump') { B.v *= .35; B.jolt = .2; hud.rant(e.p.g.position, pickOf(['UWAŻAJ!', 'OJ!', 'SORRY!', 'MOJA KAMERA!']), true, 1.95); logEv('bump_' + locals.id, B.x, B.z); }
   if (e.kind === 'shout' && e.p?.g) hud.rant(e.p.g.position, e.text, true, 1.95);
   if (e.kind === 'catch') { if (e.p?.g) hud.rant(e.p.g.position, e.text, true, 1.95); logEv('cwaniak_catch', B.x, B.z); if (!foot.active) crash(Math.random() < .5 ? -1 : 1); else flash('Dogonili cię. Na szczęście tylko gadają.'); }
+  if (e.kind === 'load') { logEv('load', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Ładunek z suwnicy! Patrz na cień na jezdni.'); }
+  if (e.kind === 'forklift') { logEv('forklift', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Wózek widłowy ma pierwszeństwo. Zawsze.'); }
+  if (e.kind === 'beep') audio.play('ui', { vol: .25 });
   if (e.kind === 'tyre') { logEv('tyre', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Opona z naprzeciwka! Patrz na boki.'); }
   if (e.kind === 'glass') { B.flatT = 7; audio.play('glass', { vol: .45 }); flash('Szkło! Opona flaczeje, przez chwilę jedzie się ciężej'); logEv('glass', B.x, B.z); }
   if (e.kind === 'push' && e.p?.g) { hud.rant(e.p.g.position, e.text, true, 1.95); flash('Ktoś wypchnął kosz na drogę!'); } }
@@ -1733,7 +1737,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'homeless_paper', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }

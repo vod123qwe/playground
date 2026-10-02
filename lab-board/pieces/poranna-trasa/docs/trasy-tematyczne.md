@@ -45,8 +45,8 @@ Hale, bocznice, budowy, rampy, ciężki ruch. Szaro, metalicznie, głośno.
 | Trasa | Jazda | Rzut | Ludzie i historie | Klimat | Ocena |
 | --- | --- | --- | --- | --- | --- |
 | Nowe osiedle | ciasne zakręty, dziury | skrzynki szeregowców | nowi mieszkańcy, deweloper | świeży beton | ★★ (jest) |
-| Plac budowy | rusztowania, spadające cegły z cieniem ostrzegawczym, dźwig z ładunkiem nad drogą | do kontenera kierownika, robotnicy na pomostach | kierownik budowy, ekipa | pył, pomarańczowe siatki | ★★★ |
-| Bocznica | rampy załadunkowe jako skocznie, wózki widłowe, pociąg towarowy | do okienek portierni, na wagony (ruchomy cel) | magazynierzy, portier | hale, tory | ★★★ |
+| Plac budowy (jest, v143) | rusztowania, spadające cegły z cieniem ostrzegawczym, dźwig z ładunkiem nad drogą | do kontenera kierownika, robotnicy na pomostach | kierownik budowy, ekipa | pył, pomarańczowe siatki | ★★★ |
+| Bocznica (jest jako Magazyny, v143) | rampy załadunkowe jako skocznie, wózki widłowe, pociąg towarowy | do okienek portierni, na wagony (ruchomy cel) | magazynierzy, portier | hale, tory | ★★★ |
 | Wojna gazet | kurierzy konkurencji na trasie | wyścig do skrzynek | Kurier Osiedlowy | ranek | ★★★ (jest) |
 | Nocna zmiana | peleton robotników na rowerach, latarnie co kawałek, ciężarówki z długimi światłami | rzut pod lampami | zmęczeni robotnicy, stróż nocny | noc, para z kominów | ★★ |
 
