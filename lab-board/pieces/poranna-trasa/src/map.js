@@ -14,7 +14,9 @@ export const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142]
 import { pxKey, pxStars, pxStar } from './pixui.js';
 
 export function createMap({ levels: LV, game }) {
-  const { REGIONS, LEVELS, LEVEL } = LV;
+  const { REGIONS, LEVEL } = LV;
+  // (only the routes of the game chosen: the Classic's, or Poranna Trasa's)
+  let LEVELS = LV.LEVELS; const pickLevels = () => { const cl = game.edition?.() === 'klasyk'; LEVELS = LV.LEVELS.filter(l => !!l.classic === cl); }; pickLevels();
   const css = document.createElement('style'); css.textContent = `
     #map { position: fixed; inset: 0; z-index: 9; display: none; place-items: center; color: #f6f3ea; font: 16px/1.25 PTPix, ui-monospace, Consolas, monospace; background: #0c0d0f; }
     #map.on { display: grid; } #map * { image-rendering: pixelated; }
@@ -136,7 +138,7 @@ export function createMap({ levels: LV, game }) {
   function key(e) { if (!open_) return false; const c = e.code;
     if (c === 'Escape' || c === 'KeyM') close(); else if (c === 'Enter' || c === 'Space') go(); else if (c === 'ArrowLeft' || c === 'KeyA') step(-1, 0); else if (c === 'ArrowRight' || c === 'KeyD') step(1, 0); else if (c === 'ArrowUp' || c === 'KeyW') step(0, -1); else if (c === 'ArrowDown' || c === 'KeyS') step(0, 1);
     e.preventDefault(); return true; }
-  function open(at) { if (open_) return; open_ = true; const cur = at || game.current?.(); const next = LEVELS.find(l => !l.soon && LV.isOpen(l.id) && !LV.load().done[l.id]); sel = cur && cur !== 'dom' ? (LEVEL(cur)?.after.find(a => LV.isOpen(a) && !LEVEL(a)?.soon) || cur) : next?.id || LEVELS[0].id;
+  function open(at) { if (open_) return; open_ = true; pickLevels(); const cur = at || game.current?.(); const next = LEVELS.find(l => !l.soon && LV.isOpen(l.id) && !LV.load().done[l.id]); sel = cur && cur !== 'dom' ? (LEVEL(cur)?.after.find(a => LV.isOpen(a) && !LEVEL(a)?.soon) || cur) : next?.id || LEVELS[0].id;
     landImg = null; el.classList.add('on'); side(); game.onOpen?.(true); t0 = performance.now(); raf = requestAnimationFrame(loop); }
   function close() { if (!open_) return; open_ = false; el.classList.remove('on'); cancelAnimationFrame(raf); pins.innerHTML = ''; game.onOpen?.(false); }
   return { open, close, key, get isOpen() { return open_; }, refresh: side };
