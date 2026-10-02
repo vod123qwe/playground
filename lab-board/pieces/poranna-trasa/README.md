@@ -1224,3 +1224,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - unik nie przechyla już całej sylwetki: kolana się uginają (biodra w dół, stopy zostają na ziemi), tułów, szyja i głowa schodzą w bok, w stronę uniku, i lekko w dół; unik do tyłu: odchylenie; odskok w bok krótszy i dynamiczny
 
+## Wersja 140: idealne parowanie, sierpowy jedną ręką
+
+- blok w idealnym momencie (parowanie): przeciwnik odbija się od ciebie i odlatuje do tyłu, chwilę zwolnione tempo, „IDEALNIE! KONTRUJ!”; przez 1,4 s twój cios bije ponad dwa razy mocniej i działa jak mocny (zwykłe parowanie dawało półtora raza)
+- w trakcie ciosu z klipem idzie tylko ręka, która bije (gra sama sprawdza w klipie, która), druga zostaje w gardzie; wcześniej przy sierpowym ruszała się dziwnie także druga ręka, jakby bił obiema po kolei
+
