@@ -734,7 +734,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         pos.push(...pa.clone().lerp(pb, t0).add(new THREE.Vector3(0, -sag(t0), 0)).toArray(), ...pa.clone().lerp(pb, t1).add(new THREE.Vector3(0, -sag(t1), 0)).toArray()); } } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); G.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: '#2a2a2a' }))); }
   const parked = [];                                                   // (the ones at the kerb, for the traffic to go round)
-  for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd); parked.push({ s: i * ds, d: sd * 2.45 }); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); }   // parked at the kerb
+  const kerbCars = []; for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd), P0 = { s: i * ds, d: sd * 2.45 }; parked.push(P0); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); c.group.userData.keep = true; const C = hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); kerbCars.push({ o: c.group, C, i, P0 }); }   // (kept whole: a level's finale clears its stretch of them)   // parked at the kerb
   // street trees on the verge: tall, their crowns reaching over the road; under each, its dappled shadow on the road and the pavement
   const DAP = [1, 2, 3].map(k => new THREE.MeshBasicMaterial({ map: tex.dapple(k), color: '#0c0912', transparent: true, opacity: .66, depthWrite: false, alphaTest: .5, fog: true }));
   function dapple(i, dMid, w = 10.5, l = 11) {                            // a patch laid on the ground's own shape (road, kerb, verge, pavement)
@@ -1078,6 +1078,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, ROAD, KERB, PAVE };
+  return { kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

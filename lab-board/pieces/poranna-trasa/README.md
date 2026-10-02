@@ -1076,3 +1076,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - menu: zakładka USTAWIENIA zbiera grafikę, dźwięk, sterowanie, ekran (pełny / zwykły) i asystę rzutu; „Wróć” wraca tam, skąd przyszedłeś
 - poprawka: po wybraniu „Mapa trasy” z pauzy menu nie zostaje zamrożone na mapie
 - gwiazdki pikselowe (z ciemnym obrysem, złote i szare) na mapie, w panelu odcinka, w nagrodach i w tabeli wyników w gazecie
+
+## Wersja 122: finał 2.0: dwa pasy, wykonalne skoki, rosnąca trudność
+
+- finał ma rozwidlenie z tablicą „< ŁATWA · TRUDNA x2 >” i rząd pachołków między pasami; na trudnym pasie (po prawej) punkty liczą się podwójnie
+- łatwy pas: niskie skocznie, slalom w pasie, tarcze przy drodze, strzałka
+- trudny pas: strzałka rozpędu (ustawia i trzyma prędkość do progu skoczni), duża skocznia (od połowy gry mega), obręcze na torze lotu, tarcze w powietrzu przy szczycie lotu, rów za skocznią, druga skocznia z własnymi obręczami
+- obręcze i tarcze w powietrzu stawiane tam, gdzie rower naprawdę przelatuje: przy budowie finału gra puszcza próbny skok tym samym silnikiem jazdy (sprawdzone: 3 z 3 i 2 z 2 obręczy na peryferiach, 6 z 6 i 4 z 4 na mega skoczni w mieście, z pedałowaniem i bez)
+- szybki rzut celuje też w tarcze finału, także w locie
+- trudność rośnie z każdym odcinkiem: dłuższy slalom, ciaśniejsze odstępy, mega skocznia, więcej obręczy i tarcz w powietrzu, dodatkowy slalom przed metą
+- każdy rów jest wykonalny: przed pełnym rowem stoi skocznia, podwójny rów to dwie połówki jezdni do objechania albo przeskoczenia
+- na odcinku finału nie stoją auta zaparkowane przy krawężniku (wcześniej jedno blokowało pas)
