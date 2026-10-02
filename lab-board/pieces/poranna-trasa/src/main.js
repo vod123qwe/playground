@@ -787,9 +787,11 @@ function ride(dt, inp) {
   if (B.air) { B.vy -= g * dt; B.y += B.vy * dt; if (B.y <= ground) { B.airRamp = null;
     if (B.trick) { const T = B.trick; B.trick = null;
       if (T.p < .7) { B.y = ground; B.air = false; B.vy = 0; B.airRamp = null; B.done = []; flash('Za późno! Trik od razu po wybiciu'); crash(0); return; }
-      if (T.p < 1) T.pulled = true; const all = [...(B.done || []), T]; B.done = [];
+      const across = Math.abs(q.d) < track.PAVE && Math.acos(Math.min(1, Math.abs(Math.cos(B.yaw - Math.atan2(q.f.x, q.f.z))))) > .87;   // (landed across the road, over 50 degrees off it: not a trick)
+      if (T.p < .92 || across) { B.done = []; B.v *= .5; B.jolt = .25; B.staggerT = .8; B.leanV += (Math.random() < .5 ? -1 : 1) * 3; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'KRZYWO!', '#cf5a3e'); flash('Krzywe lądowanie: trik się nie liczy'); }   // (landed across, not round: no points, a wobble)
+      else { if (T.p < 1) T.pulled = true; const all = [...(B.done || []), T]; B.done = [];
       const clean = all.every(o => !o.pulled), n = all.reduce((a, o) => a + o.pts, 0) + (clean ? 1 : 0) + (all.length - 1) * 2;
-      const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); logEv('trick', B.x, B.z, { name: lab, clean }); if (track.classic && clean) { B.v = Math.min(9, Math.max(B.v, 5) + 1.6 + all.length * .4); B.boostT = 1.2; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'ODPAŁ!', '#9ccad8'); } if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
+      const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); logEv('trick', B.x, B.z, { name: lab, clean }); if (track.classic && clean) { B.v = Math.min(9, Math.max(B.v, 5) + 1.6 + all.length * .4); B.boostT = 1.2; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.4, 0)), 'ODPAŁ!', '#9ccad8'); } if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); } }
     if (roof !== null && ground === roof && !(B.roofT > 0)) { B.roofT = 4; const n = roofCar ? 4 : 2; logEv('roof', B.x, B.z); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), (roofCar ? 'NA DACH AUTA! +' : 'NA DACH! +') + n, '#efc970'); if (roofCar) { const cv = roofCar.stop > 0 ? 0 : roofCar.v; B.v = Math.max(0, B.v - cv * Math.cos(roofCar.yaw - B.yaw)); } if (roofCar) hud.rant(roofCar.car.group.position, pickOf(['ZŁAŹ Z DACHU!', 'TO NIE TAKSÓWKA!', 'LAKIER MI PORYSUJESZ!', 'CO TY ROBISZ?!']), true, 1.7); }   // (landed on a car's roof: a bonus; a moving one, more)
     if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; B.landed = true; } }
   else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; if (R0?.course) courseRamp(R0.course); B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'mega' ? 2.2 : R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else if (ground < B.y - .35) { B.air = true; B.vy = 0; B.airRamp = null; } else B.y = ground; }   // (off a car's roof, a step: he drops)
@@ -999,7 +1001,7 @@ function stepKick(dt, inp) {
   //   again, another one (a combo, +2 for each one more). Begun far too late (not even most of the way round as he lands): down.
   const airLeft = () => { const h = Math.max(0, B.y - track.probe(B.x, B.z, B.hint).y); return (B.vy + Math.sqrt(B.vy * B.vy + 2 * g * h)) / g; };   // (seconds till he is down)
   if (B.trick) { const T = B.trick; T.t += dt;
-    if (T.p < 1) { const base = 1 / T.dur, need = (1 - T.p) / Math.max(.03, airLeft() - .05), rate = Math.min(base * 2.8, Math.max(base, need));
+    if (T.p < 1) { const base = 1 / T.dur, need = (1 - T.p) / Math.max(.03, airLeft() - .05), rate = Math.min(base * 3.6, Math.max(base, need));
       if (need > base * 1.1) T.pulled = true; T.p = Math.min(1, T.p + rate * dt); } }
   if (inp.kick && B.air && B.airRamp && !B.crash && (!B.trick || B.trick.p >= 1)) { const big = B.airRamp === 'big' || B.airRamp === 'mega', st = inp.steer, left = airLeft();
     if (left > .2) { if (B.trick) { B.done = [...(B.done || []), B.trick]; } else B.done = [];

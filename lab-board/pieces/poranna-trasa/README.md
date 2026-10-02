@@ -1430,3 +1430,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - wskok na dach auta łagodniejszy także na jadące auta (podciąga na dach, kiedy brakuje do 0,6 m; było 0,35) i w Porannej Trasie: podskok wyżej (z 0,74 do ~0,95 m), niskie auto z podskoku osiągalne; w Klasyku przy toczeniu z podskoku 1,6–3,4 m przed autem
 - Klasyk to jazda na czas i na punkty: złodziej torebki po kopnięciu od razu oddaje torebkę właścicielce (ZŁODZIEJ! +5), bez zbierania, rozmowy i zatrzymywania; zlecenia ludzi, które wymagają rozmowy, w Klasyku się nie pojawiają
+
+## Wersja 173: krzywe lądowanie to nie trik
+
+- trik zaliczony tylko, gdy obrót jest dokończony (co najmniej 92%) i rower ląduje wzdłuż drogi; w poprzek (ponad 50° od drogi) albo niedokręcony: KRZYWO!, bez punktów, zachwianie i połowa prędkości; poniżej 70% obrotu dalej upadek
+- obrót dokręca się szybciej przed lądowaniem, więc trik zaczęty nawet późno częściej zdąży (NA STYK)
