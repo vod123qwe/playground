@@ -281,7 +281,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
       // (him riding by close and quick: one of them has a word for him; not every time)
       if (R && worksCool <= 0 && !(w.readT > 0) && R.v > 3 && Math.hypot(R.x - w.x, R.z - w.z) < 5) { worksCool = 9 + rnd() * 6; onShout(w); } } }
   let clock = 0;
-  function update(dt, R) { clock += dt; let shout = null; stepBricks(dt, R); if (lampAt.length) { const on = flickOn(); headF.color.set(on ? '#ffd27a' : '#3a2e1c'); poolF.opacity = on ? .3 : .03; } stepWorks(dt, R, w => { shout = w; });
+  function update(dt, R) { clock += dt; let shout = null; stepBricks(dt, R); if (lampAt.length) { const on = flickOn(); headF.color.set(on ? '#ffd27a' : '#3a2e1c'); poolF.opacity = on ? .42 : .03; } stepWorks(dt, R, w => { shout = w; });
     for (const W0 of walkers) { W0.a += W0.w * dt / Math.max(1, W0.r); const x = W0.c.x + Math.cos(W0.a) * W0.r, z = W0.c.z + Math.sin(W0.a) * W0.r, dir = Math.sign(W0.w); W0.g.position.set(x, W0.c.y, z); W0.g.rotation.y = Math.atan2(-Math.sin(W0.a) * dir, Math.cos(W0.a) * dir); const st = Math.sin(clock * 7 + W0.ph) * .45; W0.legs[0].rotation.x = st; W0.legs[1].rotation.x = -st; }
     for (const Pl of planes) { Pl.t += dt; if (Pl.t < 0) continue; if (Pl.t > 34) { Pl.t = -20 - rnd() * 25; Pl.g.visible = false; continue; } if (!Pl.g.visible) { Pl.a = rnd() * 6.28; Pl.g.visible = true; }
       const u = Pl.t / 34, R = cen.r + 150 - u * 120, ang = Pl.a + u * .9, y = 18 + u * u * 160, vx = -Math.sin(ang), vz = Math.cos(ang); Pl.g.position.set(cen.x + Math.cos(ang) * R, y, cen.z + Math.sin(ang) * R); Pl.g.rotation.set(0, Math.atan2(vx, vz), 0); Pl.g.rotateX(-.2); } return shout; }
@@ -289,7 +289,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   // flickering; under each a pool of light on the ground (all the pools in one mesh, the flickering ones in another); their heads kept
   // for the game's few real lights ----------
   const lamps = [], lampAt = [], headM = new THREE.MeshBasicMaterial({ color: '#ffd27a' }), headF = new THREE.MeshBasicMaterial({ color: '#ffd27a' });
-  const poolM = new THREE.MeshBasicMaterial({ color: '#ffb35a', transparent: true, opacity: .3, blending: THREE.AdditiveBlending, depthWrite: false }), poolF = poolM.clone();
+  const glowT = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.45, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })(), poolM = new THREE.MeshBasicMaterial({ color: '#ffb35a', map: glowT, transparent: true, opacity: .42, blending: THREE.AdditiveBlending, depthWrite: false }), poolF = poolM.clone();   // (a pool of light: soft to its edge)
   if (night) for (let i = Math.round(10 / ds), k = 0; i < N; i += Math.round(24 / ds), k++) { if (stubs.some(t => near(i, t.i, 9)) || shortcuts.some(c => near(i, c.a, 9) || near(i, c.b, 9)) || nearWorks(i, 8) || zebras.some(z => near(i, z.i, 5))) continue; lampAt.push({ i, s: k % 2 ? 1 : -1, flick: rnd() < .22 }); }
   const flickOn = () => { const f = (clock * 1.7) % 7; return !((f > 5.2 && f < 5.5) || (f > 5.9 && f < 6.05) || (f > 6.3 && f < 6.9)); };
   function nightLamps() { if (!lampAt.length) return; const pools = [[], []];
