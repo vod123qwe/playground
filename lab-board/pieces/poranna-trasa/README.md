@@ -1371,3 +1371,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - bez uliczki z rondem z Porannej Trasy: start na samej Ulicy Kasztanowej, przodem w kierunku jazdy, pod czerwoną bramą START nad jezdnią
 - twój dom to jeden z domów w szeregu przy drodze, z tabliczką DOM na trawniku (nie jest abonentem: sobie gazety nie dowozisz)
+
+## Wersja 162: Klasyk: nad autem, po dachu, opony i dzieciaki pod skocznią
+
+- auta wyjeżdżające z podjazdów: przed każdym podjazdem deska na chodniku; z niej przeskakujesz cofające auto albo lądujesz mu na dachu (+4, jedziesz razem z nim); auto nie cofa, gdy ulicą coś jedzie, a kiedy już wyjedzie, ruch je omija (nie wjeżdża w jadące auta)
+- co trzeci odcinek ulicy (~110 m) bez płotów przed domami: otwarte ogródki do przejechania i przeskakiwania
+- opony toczą się w poprzek drogi przed tobą co kilka sekund: przeskocz albo objedź (podskok nad oponą wystarcza)
+- trzy duże skocznie na trawniku po drugiej stronie, za każdą trójka dzieciaków kibicuje (DAWAJ! SKACZ!); przelot nad ich głowami: NAD GŁOWAMI! +3, w nich po ziemi: zwalniasz

@@ -464,7 +464,8 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     // a fence or a hedge along its front, now and then
     //   always open where the drive or the path meets the pavement (a car must get out, one must get in): a gate on the path (now and
     //   then left ajar), posts at the drive (now and then a double gate, swung wide open); a few lots fenced all round, back to the house
-    const k = rnd(), gapO = drv ? [dvx, 3.4, 'drive'] : [dx, 1.3, 'path'], lo = gapO[0] - gapO[1] / 2, hi = gapO[0] + gapO[1] / 2, fL = -W / 2 - (annex && as < 0 ? 3.5 : 0), fR = W / 2 + (annex && as > 0 ? 3.5 : 0);
+    // (the Classic: every third stretch of the street, the front gardens open)
+    const k0 = rnd(), k = RG.classic && Math.floor(i * ds / 110) % 3 === 1 ? 1 : k0, gapO = drv ? [dvx, 3.4, 'drive'] : [dx, 1.3, 'path'], lo = gapO[0] - gapO[1] / 2, hi = gapO[0] + gapO[1] / 2, fL = -W / 2 - (annex && as < 0 ? 3.5 : 0), fR = W / 2 + (annex && as > 0 ? 3.5 : 0);
     const holes = (annex || (garage && path) ? [[lo, hi], [dx - .65, dx + .65]] : [[lo, hi]]).sort((a, b) => a[0] - b[0]), runs = [];   // (with an annex: open at its drive and at the path to the door)
     { let a = fL; for (const [h0, h1] of holes) { runs.push([a, h0]); a = h1; } runs.push([a, fR]); for (let q = runs.length - 1; q >= 0; q--) if (runs[q][1] - runs[q][0] < .3) runs.splice(q, 1); }
     const atFront = (o, z, y = 0) => { if (spot) { const q0 = h.localToWorld(new THREE.Vector3(0, 0, -D / 2 - gap + z)); o.position.set(q0.x, groundAt(q0.x, q0.z, i) + y, q0.z); o.rotation.y = h.rotation.y; G.add(o); return o; } return put(o, i, side * (PAVE + z), y, side > 0 ? -Math.PI / 2 : Math.PI / 2); };   // (the fence's frame: the house's, at the lot's front)

@@ -160,7 +160,7 @@ const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });
 // (the locals of a route's own map: the Bronx after dark (its lads, glass, bins, the engineer); the tourist quarter (its tourists, the guide, picnics, skaters))
 const director = createDirector({ THREE, toon, track, scene });   // (something always going on: a small thing on the road ahead when nothing has happened a while)
-const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : track.classic ? createClassic({ THREE, toon, track, scene, cars: track.cars }) : track.harvest || track.fair ? createVillage({ THREE, toon, track, scene, residents, cars: () => traffic.boxes() }) : null;
+const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : track.classic ? createClassic({ THREE, toon, track, scene, cars: track.cars, traffic: () => traffic.boxes() }) : track.harvest || track.fair ? createVillage({ THREE, toon, track, scene, residents, cars: () => traffic.boxes() }) : null;
 // what by the road answers a kick: mailboxes (three and it is off its post), poles, trees and bushes (their leaves), swings, cones
 const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => audio.play(n, o) }, makeDog: (c, sz) => dogs.makeDog(c, sz), say: (at, t) => hud.rant(at, t, false),
   onLoot: T => { shop.grant(T.item, T.tier); audio.play('pick'); flash(T.label + '! Zamontowane. Właściciel się nie dowie... chyba'); B.fame = (B.fame || 0) + 1; setTimeout(() => hud.rant(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'EJ! MOJE PRZERZUTKI!!!', false), 1600); witness?.(T.x, T.z); },
@@ -1251,6 +1251,7 @@ function localEvent(e) { director.poke();
   if (e.kind === 'forklift') { logEv('forklift', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Wózek widłowy ma pierwszeństwo. Zawsze.'); }
   if (e.kind === 'driveway') { logEv('driveway', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Auto wyjechało tyłem z podjazdu. Białe światła z tyłu: zaraz rusza!'); }
   if (e.kind === 'truck') { logEv('truck', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Śmieciarka! Objedź ją szerokim łukiem.'); }
+  if (e.kind === 'overhead') { logEv('overhead', B.x, B.z); score(3, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'NAD GŁOWAMI! +3', '#efc970'); audio.play('trick'); }
   if (e.kind === 'wet') { B.v *= .8; B.jolt = .2; B.leanV += (Math.random() < .5 ? -1 : 1) * 2.5; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.8, 0)), 'PLUSK!', '#9ccad8'); audio.play('kick', { vol: .2 }); }
   if (e.kind === 'combine') { logEv('combine', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Kombajn zajmuje prawie całą drogę. Zjedź na pobocze albo przeskocz heder!'); }
   if (e.kind === 'beep') audio.play('ui', { vol: .25 });
@@ -1710,6 +1711,8 @@ function carRoofAt(x, z) { let y = null; roofCar = null; for (const C of track.n
   for (const C of traffic.boxes()) { if (C.t.r || Math.abs(C.x - x) + Math.abs(C.z - z) > 8 || !boxHit(C, x, z, 0)) continue; const c = C.t.car;
     if (c.roofH == null) { c.group.updateMatrixWorld(true); c.roofH = new THREE.Box3().setFromObject(c.group).max.y - c.group.position.y; }
     const top = (C.y0 || 0) + (C.trailer ? 1.55 : Math.min(c.roofH, 3.2)); if (y == null || top > y) { y = top; roofCar = C.t; } }
+  // (the Classic's cars backing out of the drives: their roofs too)
+  for (const K of locals?.backers || []) { const p = K.g.position, Y = K.yawIn, C = { x: p.x, z: p.z, c: Math.cos(Y), s: Math.sin(Y), hx: K.c.half[0], hz: K.c.half[1] }; if (Math.abs(p.x - x) + Math.abs(p.z - z) > 8 || !boxHit(C, x, z, 0)) continue; const top = p.y + K.roofH; if (y == null || top > y) { y = top; roofCar = K; } }
   return y; }
 // ---------- the far people not drawn: every person is ~9 skinned meshes (~40 thousand triangles, skinned again for the shadow); beyond
 // 60 m one is a few pixels in this picture. Each such mesh goes to layer 1 (the camera and the shadow draw layer 0 only), back near.
