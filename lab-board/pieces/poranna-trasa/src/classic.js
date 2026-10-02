@@ -94,7 +94,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
   function angry(w) { if (chasers.length > 1) return; const f = fig(['#8e2e25', '#3b5670', '#6b4a2e'][chasers.length % 3], null); dress(f, ['suit', 'gardener', 'shopper'][chasers.length % 3], 'walk', 2.4); const p = w.p.clone().addScaledVector(w.n, 2); f.g.position.set(p.x, gy(p.x, p.z), p.z); chasers.push({ ...f, x: p.x, z: p.z, t: 0, ph: 0, sayT: 0 }); }
 
   let clock = 0;
-  function update(dt, R) { clock += dt; const ev = events.splice(0); for (const mx of mixers) mx.update(dt);
+  function update(dt, R) { clock += dt; const ev = events.splice(0), W0 = api.wave; for (const mx of mixers) mx.update(dt);
     // (the joggers)
     for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
       J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }
@@ -107,7 +107,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       const ex = b0.x - a0.x, ez = b0.z - a0.z, l2 = ex * ex + ez * ez, t = Math.max(0, Math.min(1, ((R.x - a0.x) * ex + (R.z - a0.z) * ez) / l2)), dd = Math.hypot(R.x - (a0.x + ex * t), R.z - (a0.z + ez * t));
       if (!R.foot && !W.hitT && dd < .35 && !((R.h || 0) > .5) && Math.abs(R.v) > 1) { W.hitT = 3; ev.push({ kind: 'leash' }); ev.push({ kind: 'shout', p: { g: W.man.g }, text: LEAD() }); } else if (dd < 6 && W.sayT <= 0) { W.sayT = 14; ev.push({ kind: 'shout', p: { g: W.man.g }, text: LEAD() }); } }
     // (the football: a ball now and then out onto the road ahead of him, from the far lawn)
-    ballT -= dt; if (ballT <= 0 && Math.abs(R.v) > 2 && R.s != null && balls.length < 2) { ballT = 7 + rnd() * 6; const i = wrap(Math.round((R.s + (R.along || 1) * (16 + rnd() * 10)) / ds)), g = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), ballM); scene.add(g); balls.push({ g, i, d: os * (track.PAVE + 6), v: 5 + rnd() * 2, hitT: 0 }); }
+    ballT -= dt; if (ballT <= 0 && Math.abs(R.v) > 2 && R.s != null && balls.length < (W0 ? 4 : 2)) { ballT = W0 ? 1.4 + rnd() : 7 + rnd() * 6; const i = wrap(Math.round((R.s + (R.along || 1) * (16 + rnd() * 10)) / ds)), g = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), ballM); scene.add(g); balls.push({ g, i, d: os * (track.PAVE + 6), v: 5 + rnd() * 2, hitT: 0 }); }
     for (let k = balls.length - 1; k >= 0; k--) { const Bl = balls[k]; Bl.d -= os * Bl.v * dt; const p = pv(Bl.i, Bl.d); Bl.g.position.set(p.x, p.y + .18 + Math.abs(Math.sin(clock * 8)) * .25, p.z); Bl.hitT = Math.max(0, Bl.hitT - dt);
       if (!R.foot && !Bl.hitT && Math.hypot(R.x - p.x, R.z - p.z) < .5 && !((R.h || 0) > .4)) { Bl.hitT = 3; ev.push({ kind: 'ball' }); }
       if (Math.sign(Bl.d) === hs && Math.abs(Bl.d) > track.PAVE + 2) { scene.remove(Bl.g); balls.splice(k, 1); } }
@@ -118,10 +118,10 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       Ch.sayT -= dt; if (Ch.sayT <= 0) { Ch.sayT = 2.6; ev.push({ kind: 'shout', p: { g: Ch.g }, text: OWNER() }); }
       if (dist < .9 && !R.foot && !((R.h || 0) > 1)) { ev.push({ kind: 'owner', p: { g: Ch.g } }); scene.remove(Ch.g); chasers.splice(k, 1); } }
     // (a tyre now and then, 18-30 m ahead of him, rolling across from the far side; it bounces a little; gone past the houses' kerb)
-    tyreT -= dt; if (tyreT <= 0 && Math.abs(R.v) > 2 && R.s != null && tyres.length < 3) { tyreT = 4 + rnd() * 5; const i = wrap(Math.round((R.s + (R.along || 1) * (18 + rnd() * 12)) / ds)); tyres.push({ g: tyre(), i, d: -hs * (track.PAVE + 1), v: 3.6 + rnd() * 1.4, spin: 0, hitT: 0 }); }
-    for (let k = tyres.length - 1; k >= 0; k--) { const T0 = tyres[k], A = S[T0.i]; T0.d += hs * T0.v * dt; T0.spin += T0.v * dt / .4; const p = pv(T0.i, T0.d); T0.g.position.set(p.x, p.y + .45 + Math.abs(Math.sin(T0.spin * .7)) * .12, p.z); T0.g.rotation.set(0, Math.atan2(A.f.x, A.f.z), 0); T0.g.rotateX(T0.spin);
+    tyreT -= dt; if (tyreT <= 0 && Math.abs(R.v) > 2 && R.s != null && tyres.length < (W0 ? 6 : 3)) { tyreT = W0 ? .9 + rnd() * .7 : 4 + rnd() * 5; const i = wrap(Math.round((R.s + (R.along || 1) * (14 + rnd() * 12)) / ds)), sg = W0 && rnd() < .5 ? -hs : hs; tyres.push({ g: tyre(), i, sg, d: -sg * (track.PAVE + 1), v: (W0 ? 4.4 : 3.6) + rnd() * 1.4, spin: 0, hitT: 0 }); }   // (the finale's wave: from both sides, one after another)
+    for (let k = tyres.length - 1; k >= 0; k--) { const T0 = tyres[k], A = S[T0.i]; T0.d += (T0.sg || hs) * T0.v * dt; T0.spin += T0.v * dt / .4; const p = pv(T0.i, T0.d); T0.g.position.set(p.x, p.y + .45 + Math.abs(Math.sin(T0.spin * .7)) * .12, p.z); T0.g.rotation.set(0, Math.atan2(A.f.x, A.f.z), 0); T0.g.rotateX(T0.spin);
       T0.hitT = Math.max(0, T0.hitT - dt); if (!R.foot && !T0.hitT && Math.hypot(R.x - p.x, R.z - p.z) < .55 && !((R.h || 0) > .55)) { T0.hitT = 3; ev.push({ kind: 'tyre' }); }
-      if (Math.abs(T0.d) > track.PAVE + 3 && Math.sign(T0.d) === hs) { scene.remove(T0.g); tyres.splice(k, 1); } }
+      if (Math.abs(T0.d) > track.PAVE + 3 && Math.sign(T0.d) === (T0.sg || hs)) { scene.remove(T0.g); tyres.splice(k, 1); } }
     // (the kids behind the ramp: they bob and wave; him over their heads in the air: a bonus; into them on the ground: a bump)
     for (const Sh of shows) { Sh.sayT -= dt; for (const K of Sh.kids) { K.ph += dt * 5; K.g.position.y = K.p.y + Math.max(0, Math.sin(K.ph)) * .12; const dist = Math.hypot(R.x - K.p.x, R.z - K.p.z);
         if (dist < 9 && Sh.sayT <= 0) { Sh.sayT = 8; ev.push({ kind: 'shout', p: { g: K.g }, text: CHEER() }); }
@@ -165,5 +165,5 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     for (const K of backers) { if (!(K.st === 'out' || K.st === 'lights' || K.st === 'wait') || Math.hypot(K.g.position.x - Pp.x, K.g.position.z - Pp.z) > 1.8) continue; K.st = 'wait'; K.t = 0; return { p: { g: K.g }, text: SORRY(), who: 'driver', pts: 2, label: 'NA SZYBĘ! +2' }; }
     for (const W of sprinklers) { if (W.flipT || Math.hypot(W.p.x - Pp.x, W.p.z - Pp.z) > 1) continue; W.flipT = 2; W.dir *= -1; return { p: { g: W.g }, text: 'PSSST!', who: 'sprinkler', pts: 1, label: 'ZRASZACZ! +1' }; }
     return null; }
-  return { id: 'classic', people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart };
+  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart }; return api;
 }
