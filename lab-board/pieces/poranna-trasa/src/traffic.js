@@ -22,7 +22,10 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     const fx = A.f.x + (B.f.x - A.f.x) * k, fz = A.f.z + (B.f.z - A.f.z) * k;                    // (the heading between the two points it is between)
     // the heading: the way it has actually gone (the road's bend and a lane change in one), eased as a car's is, and held when it stands
     const ox = t.x, oz = t.z; t.x = px + rx * t.lane; t.z = pz + rz * t.lane; const mx = t.x - ox, mz = t.z - oz, moved = Math.hypot(mx, mz);
-    const road = Math.atan2(fx, fz) + (t.dir < 0 ? Math.PI : 0), yawT = moved > .004 && moved < 3 && !t.snap ? Math.atan2(mx, mz) : road; if (moved >= 3) t.yaw = road;   // (a jump: sent elsewhere, faced down the road)
+    const road = Math.atan2(fx, fz) + (t.dir < 0 ? Math.PI : 0), yaw0 = moved > .004 && moved < 3 && !t.snap ? Math.atan2(mx, mz) : road; if (moved >= 3) t.yaw = road;   // (a jump: sent elsewhere, faced down the road)
+    // (never more than a little off the road's own heading: slow, a lane change is mostly sideways, and a bus turned on its middle by it
+    // swept the whole road; a long one less than a car)
+    const lim = t.bus ? .18 : t.tractor ? .25 : .32, dev = Math.atan2(Math.sin(yaw0 - road), Math.cos(yaw0 - road)), yawT = road + Math.max(-lim, Math.min(lim, Math.abs(dev) > 2.2 ? 0 : dev));
     if (t.yaw === undefined || t.snap) { t.yaw = road; t.snap = false; } else { const dy = Math.atan2(Math.sin(yawT - t.yaw), Math.cos(yawT - t.yaw)); t.yaw += dy * Math.min(1, (t.dt || .016) * 9); }
     const steer = 0;
     if (!t.car) return;
