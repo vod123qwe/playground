@@ -113,6 +113,22 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
   const KRAA = deck(['KRAA! DAWAJ GAZETĘ!', 'KRAA!', 'KRAA! TO MOJE!', 'MEWA NAD TOBĄ!']);
   const skaters = SEA ? [0, 1, 2, 3].map(k => { const f = fig(['#e070b0', '#3b6fa0', '#efc930', '#3f8a4a'][k], null); dress(f, 'jogger', 'walk', 2.3, ['#e070b0', '#3b6fa0', '#efc930', '#3f8a4a'][k]); return { ...f, s: L * (.1 + k * .24), dir: k % 2 ? -1 : 1, ph: rnd() * 6, hitT: 0, overT: 0 }; }) : [];
 
+  // ---------- the village: a herd of cows across the road ahead now and then, a farmer behind them (into one: a bump; through them close
+  // without one: points). The park: a school trip on little bikes in a line by the far kerb (into one: a bump; past them all: points) ----------
+  const rel = (s, R) => ((s - (R.s || 0) + L * 1.5) % L) - L / 2;
+  const cowM = [M('#f6f3ea'), M('#24190f'), M('#e3b08a')], herd = { cows: [], t: 12, on: false, i: 0, d: 0, minD: 99, hit: false, farmer: null };
+  if (VIL) { for (let k = 0; k < 4; k++) { const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(.8, .75, 1.6), cowM[0]), new THREE.Mesh(new THREE.BoxGeometry(.82, .32, .55), cowM[1]), new THREE.Mesh(new THREE.BoxGeometry(.45, .45, .55), cowM[0]), new THREE.Mesh(new THREE.BoxGeometry(.3, .2, .12), cowM[2]));
+      g.children[0].position.y = 1; g.children[1].position.set(0, 1.2, .2); g.children[2].position.set(0, 1.25, 1); g.children[3].position.set(0, 1.12, 1.3); for (const x of [-.27, .27]) for (const z of [-.6, .6]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.16, .62, .16), cowM[0]); l.position.set(x, .31, z); g.add(l); }
+      g.visible = false; scene.add(g); herd.cows.push({ g, ds: (k - 1.5) * 2.4, dd: (rnd() - .5) * 1.4, ph: rnd() * 6 }); }
+    const f = fig('#467537', '#6b4a2e'); dress(f, 'gardener', 'walk', .8); f.g.visible = false; herd.farmer = f; }
+  const MUU = deck(['MUUU!', 'KROWY MAJĄ PIERWSZEŃSTWO!', 'POWOLI, MŁODY, TO NIE WYŚCIGI!', 'MUU! (TO KROWA)']);
+  const trip = { kids: [], t: 9, on: false, s: 0, wasBehind: false, hit: false, done: false };
+  if (track.park) { const cols = ['#cf3a2c', '#3b6fa0', '#efc930', '#3f8a4a', '#e070b0', '#e8742e'];
+    for (let k = 0; k < 7; k++) { const lead = k === 0, f = fig(lead ? '#44484c' : cols[k % 6], lead ? '#24190f' : cols[(k + 2) % 6]); f.g.scale.setScalar(lead ? 1 : .62);
+      const bk = new THREE.Group(), fr = M(lead ? '#5a5f66' : cols[(k + 3) % 6]); for (const z of [-.45, .45]) { const w = new THREE.Mesh(new THREE.TorusGeometry(.26, .05, 5, 10).rotateY(Math.PI / 2), M('#24262a')); w.position.set(0, .3, z); bk.add(w); } const b0 = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, .9), fr); b0.position.y = .55; bk.add(b0);
+      f.g.add(bk); bk.scale.setScalar(1 / (lead ? 1 : .62) * (lead ? 1 : .8)); for (const c of f.g.children) if (c !== bk) c.position.y += .45; f.g.visible = false; scene.add(f.g); trip.kids.push({ ...f, k }); } }
+  const TRIP = deck(['DZIECI, GĘSIEGO!', 'PROSZĘ NAS WYPRZEDZAĆ OSTROŻNIE!', 'PANIE, A GAZETĘ MOGĘ?', 'JEDZIEMY DO ZOO!']);
+
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0), W0 = api.wave; for (const mx of mixers) mx.update(dt);
     // (the strollers: to a spot along the path and on to the next; ridden into, a bump)
@@ -144,6 +160,25 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       K.hitT = Math.max(0, K.hitT - dt); K.overT = Math.max(0, K.overT - dt); const dist = Math.hypot(R.x - p.x, R.z - p.z);
       if (dist < 1.1 && !R.foot && (R.h || 0) > 1.1 && !K.overT) { K.overT = 4; ev.push({ kind: 'overhead', p: { g: K.g } }); }
       else if (dist < .6 && !R.foot && !R.air && !K.hitT && Math.abs(R.v) > 2) { K.hitT = 3; ev.push({ kind: 'bump', p: { g: K.g } }); } }
+    // (the herd: 22-30 m ahead of him, from his side's pasture across the road at a cow's pace; gone past the far kerb)
+    if (VIL && !R.foot) { const H = herd; H.t -= dt;
+      if (!H.on && H.t <= 0 && Math.abs(R.v) > 2 && R.s != null) { H.on = true; H.i = wrap(Math.round(((R.s || 0) + (R.along || 1) * (24 + rnd() * 8)) / ds)); H.d = hs * (track.PAVE + 1.5); H.minD = 99; H.hit = false; for (const c of H.cows) c.g.visible = true; H.farmer.g.visible = true; ev.push({ kind: 'shout', at: pv(H.i, H.d).add(V(0, 2.2, 0)), text: MUU() }); }
+      if (H.on) { H.d -= hs * 1.15 * dt; const A = S[H.i];
+        for (const c of H.cows) { const i = wrap(H.i + Math.round(c.ds / ds)), p = pv(i, H.d + c.dd); c.ph += dt * 5; c.g.position.copy(p); c.g.position.y += Math.abs(Math.sin(c.ph)) * .04; c.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs) + Math.sin(c.ph * .3) * .2;
+          const dd = Math.hypot(R.x - p.x, R.z - p.z); if (dd < H.minD) H.minD = dd; if (dd < 1.05 && !H.hit && !R.air) { H.hit = true; ev.push({ kind: 'bump', p: { g: c.g } }); } }
+        { const p = pv(wrap(H.i - Math.round(4 / ds)), H.d + hs * 1.6); H.farmer.g.position.copy(p); H.farmer.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs); }
+        const past = Math.abs(rel(H.i * ds, R)) > 6 && rel(H.i * ds, R) * (R.along || 1) < 0;
+        if (past && Math.abs(H.d) < track.ROAD + 1 && !H.hit && H.minD < 2.6 && !H.paid) { H.paid = true; ev.push({ kind: 'pts', n: 2, at: R, text: 'MIĘDZY KROWAMI! +2' }); }
+        if (Math.sign(H.d) === os && Math.abs(H.d) > track.PAVE + 2 || Math.abs(rel(H.i * ds, R)) > 70) { H.on = false; H.paid = false; H.t = 22 + rnd() * 14; for (const c of H.cows) c.g.visible = false; H.farmer.g.visible = false; } } }
+    // (the school trip: put 30 m ahead of him by the far kerb, riding his way slowly in a line; the teacher first)
+    if (track.park && !R.foot) { const T = trip; T.t -= dt;
+      if (!T.on && T.t <= 0 && Math.abs(R.v) > 2 && R.s != null) { T.on = true; T.dir = R.along || 1; T.s = (R.s || 0) + T.dir * 34; T.hit = false; T.done = false; T.wasBehind = true; for (const K of T.kids) K.g.visible = true; ev.push({ kind: 'shout', at: pv(wrap(Math.round(T.s / ds)), os * (track.ROAD - 1)).add(V(0, 2, 0)), text: TRIP() }); }
+      if (T.on) { T.s = ((T.s + T.dir * 2.8 * dt) % L + L) % L;
+        for (const K of T.kids) { const s = ((T.s - T.dir * K.k * 2.1) % L + L) % L, i = wrap(Math.round(s / ds)), A = S[i], p = pv(i, os * (track.ROAD - 1 + Math.sin(clock * 2 + K.k) * .15)); K.g.position.copy(p); K.g.rotation.y = Math.atan2(A.f.x * T.dir, A.f.z * T.dir);
+          if (!R.air && !T.hit && Math.hypot(R.x - p.x, R.z - p.z) < .7) { T.hit = true; ev.push({ kind: 'bump', p: { g: K.g } }); } }
+        const lead = rel(T.s, R) * T.dir, tail = rel(((T.s - T.dir * 6 * 2.1) % L + L) % L, R) * T.dir;
+        if (!T.done && !T.hit && lead < -3) { T.done = true; ev.push({ kind: 'pts', n: 3, at: R, text: 'WYCIECZKA WYPRZEDZONA! +3' }); }
+        if (tail < -60 || lead > 90) { T.on = false; T.t = 28 + rnd() * 16; for (const K of T.kids) K.g.visible = false; } } }
     // (the joggers)
     for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
       J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }
@@ -214,5 +249,5 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     for (const K of backers) { if (!(K.st === 'out' || K.st === 'lights' || K.st === 'wait') || Math.hypot(K.g.position.x - Pp.x, K.g.position.z - Pp.z) > 1.8) continue; K.st = 'wait'; K.t = 0; return { p: { g: K.g }, text: SORRY(), who: 'driver', pts: 2, label: 'NA SZYBĘ! +2' }; }
     for (const W of sprinklers) { if (W.flipT || Math.hypot(W.p.x - Pp.x, W.p.z - Pp.z) > 1) continue; W.flipT = 2; W.dir *= -1; return { p: { g: W.g }, text: 'PSSST!', who: 'sprinkler', pts: 1, label: 'ZRASZACZ! +1' }; }
     return null; }
-  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters }; return api;
+  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
 }

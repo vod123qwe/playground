@@ -147,3 +147,8 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Teren po stronie morza płaski (bez pagórków pod wodą), bez lasów, stawów i ścieżek w środku pętli.
 - v180: mewa co 13–23 s nurkuje z boku morza (KRAA!, cień na nim rośnie przez 1,7 s); podskok w ostatniej chwili = UNIK MEWY +2, inaczej porywa jedną gazetę z torby. Rolkarze (4) przy krawężniku promenady, w obie strony, zygzakiem: przeskok = NAD GŁOWAMI +3, wpadnięcie = zderzenie.
 - Do rozważenia dalej: lody do zrzucenia z wózka, piłka plażowa przez drogę.
+
+## Uzupełnienie poziomów (v182)
+
+- Wieś: co 22–36 s stado 4 krów z rolnikiem przechodzi przez drogę 24–32 m przed nim (MUU!). Przemknięcie blisko (< 2,6 m) bez zderzenia, kiedy stado jest na jezdni: MIĘDZY KROWAMI +2. Wpadnięcie: zderzenie.
+- Park: co 28–44 s wycieczka (pani i 6 dzieci na rowerkach) jedzie gęsiego przy dalszym krawężniku 2,8 m/s. Wyprzedzenie całej bez zderzenia: WYCIECZKA WYPRZEDZONA +3.

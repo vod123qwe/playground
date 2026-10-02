@@ -1485,3 +1485,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - naprawione: dotykowy KOP w Klasyku nie działał (nadpisywała go obsługa klawiatury)
 - telefon w pionie: pasek poziomu pod licznikiem i serduszkami, nazwa w osobnej linii, nic nie ucieka za ekran
 - zaliczony poziom jest zawsze otwarty na mapie i w menu
+
+## Wersja 182: uzupełnione poziomy Klasyka
+
+- Wieś: stado krów z rolnikiem przechodzi przez drogę; przemknięcie blisko między nimi bez zderzenia to MIĘDZY KROWAMI +2
+- Park: wycieczka dzieci na rowerkach z panią jedzie gęsiego przy krawężniku; wyprzedzenie całej bez zderzenia to +3
