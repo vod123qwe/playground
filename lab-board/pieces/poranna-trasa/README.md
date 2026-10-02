@@ -1366,3 +1366,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - rower w Klasyku wolniejszy: toczy się z ~4 m/s, gaz do ~6,6 m/s (było 5 i 8)
 - domy gęściej (57 zamiast 45), między nimi częściej deski i skocznie, więcej krasnali, kubły na śmieci przy krawężniku (wjedziesz: przewracają się i toczą)
 - więcej zdarzeń: auta z podjazdów co ~40 m (17), zraszacz przy co trzecim domu (19), drobne zdarzenia z ulicy co kilka sekund
+
+## Wersja 161: Klasyk startuje na ulicy, jak na automacie
+
+- bez uliczki z rondem z Porannej Trasy: start na samej Ulicy Kasztanowej, przodem w kierunku jazdy, pod czerwoną bramą START nad jezdnią
+- twój dom to jeden z domów w szeregu przy drodze, z tabliczką DOM na trawniku (nie jest abonentem: sobie gazety nie dowozisz)

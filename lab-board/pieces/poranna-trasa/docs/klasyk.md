@@ -13,7 +13,7 @@ Decyzje Jarka (02.10.2026):
 
 ## Ulica
 
-Mapa „Ulica Kasztanowa”: długa pętla z łagodnymi zakrętami. **Domy stoją tylko po lewej stronie** (patrząc w kierunku jazdy), a wśród nich dom gazeciarza ze swoją uliczką: przejazd zaczyna się na jego podjeździe. Jarek wybrał pierwszą perspektywę (domy w środku pętli, v160); dom stoi w tym samym szeregu. Po prawej jest **strona przeszkód**: chodnik, pas zieleni, ławki, parking, przystanek, plac zabaw, wykop. Na jezdni dzieje się wszystko i wszędzie.
+Mapa „Ulica Kasztanowa”: długa pętla z łagodnymi zakrętami. **Domy stoją tylko po lewej stronie** (patrząc w kierunku jazdy), a wśród nich dom gazeciarza, zwykły dom w szeregu przy drodze z tabliczką DOM (nie jest abonentem). Start na samej ulicy pod bramą START, jak na automacie, bez uliczki z rondem z Porannej Trasy (v161). Jarek: „nie przywiązujmy się do konceptu poprzedniej wersji, szukajmy nowych rozwiązań”. Po prawej jest **strona przeszkód**: chodnik, pas zieleni, ławki, parking, przystanek, plac zabaw, wykop. Na jezdni dzieje się wszystko i wszędzie.
 
 Rytm ulicy, odcinki po ~150 m, każdy z innym charakterem (do zbudowania etapami):
 
