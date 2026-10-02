@@ -324,11 +324,9 @@ export function createHud() {
   function icon(rows, x, y, col, edge = '#17181b', k = 1) { for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') { g.fillStyle = edge; g.fillRect(x + i * k + dx, y + j * k + dy, k, k); } });
     rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') { g.fillStyle = col; g.fillRect(x + i * k, y + j * k, k, k); } }); }
   function aimStar(A, dt, project) { starT += dt; const blink = ((starT * 8) | 0) % 2, W = cv.width, H = cv.height;
-    const p = A.foeHead && project(A.foeHead), x0 = p ? Math.max(16, Math.min(W - 16, p.x)) : W >> 1, y0 = p ? Math.max(26, Math.min(H * .7, p.y - 4)) : 30;
-    const S = A.finish ? [PAPERI, '#f6f3ea', 'G: FINISZER!', '#efc970'] : A.green ? [SHIELD, blink ? '#9be36a' : '#f6f3ea', 'KONTRA! SPACJA', '#9be36a']
-      : A.foe === 'down' ? [SHIELD, '#c070f0', '↓+SPACJA: NISKO', '#c070f0', true] : A.foe ? [SHIELD, '#efc930', 'SPACJA: BLOK', '#efc930'] : A.open ? [FIST, blink ? '#f6f3ea' : '#efc970', 'BIJ!', '#f6f3ea'] : null;
-    if (S) { const ix = Math.round(x0 - S[0][0].length), iy = Math.round(y0 - S[0].length * 2 - 11); icon(S[0], ix, iy, S[1], '#17181b', 2); if (S[4]) icon(DOWN, ix + 4, iy + 4, '#17181b', S[1], 2);
-      const tw = S[2].length * 4; text(S[2], Math.round(Math.max(2, Math.min(W - tw - 2, x0 - tw / 2))), iy + S[0].length * 2 + 3, S[3]); }
+    // (what to do now: a word low in the middle, over your guard's shield; his punch itself shows on him: the fist that glows)
+    const S = A.finish ? ['G: FINISZER!', '#efc970'] : A.heavy && A.foe ? ['MOCNY! SHIFT: UNIK', blink ? '#ff3a2a' : '#f6f3ea'] : A.green ? ['KONTRA! SPACJA', '#9be36a'] : A.foe === 'down' ? ['↓+SPACJA: NISKO', '#c070f0'] : A.foe ? ['SPACJA: BLOK', '#efc930'] : A.open ? ['BIJ!', blink ? '#f6f3ea' : '#efc970'] : null;
+    void S;   // (no word on the picture: he is read by his fist and his moves)
     if (A.guard) { const x = (W >> 1) - 4, y = H - 36; icon(SHIELD, x, y, '#9ccad8'); if (A.low) icon(DOWN, x + 2, y + 2, '#17181b', '#9ccad8'); }
     if (A.mouse) { const cx = W >> 1, cy = (H >> 1) + 4; for (const k of ['left', 'right', 'up', 'down']) { const x = cx + (k === 'left' ? -9 : k === 'right' ? 7 : -1), y = cy + (k === 'up' ? -9 : k === 'down' ? 7 : -1); g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1, 5, 5); g.fillStyle = k === A.dir ? '#f6f3ea' : '#5a5f66'; g.fillRect(x, y, 3, 3); } }
     // (the keys: two short lines low in the middle, between the style button and the bag)
