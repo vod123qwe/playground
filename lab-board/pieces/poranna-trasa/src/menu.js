@@ -6,7 +6,7 @@
 // what it does and its key; Enter or a click on one waits for a new key (Esc: leave it). It scrolls when longer than the picture.
 // createMenu({ hud, look, styles, light, presets, onRestart, onClose }) → { get open, show(page), close(), key(e), pointer(type, x, y) }
 
-export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys, sens, controls, lab, onPlay, sound, modes, onMap }) {
+export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys, sens, controls, lab, onPlay, sound, modes, onMap, assist }) {
   // its own canvas, the same size whatever the game's pixels are (so the menu does not grow or shrink as they change)
   const cv = document.createElement('canvas'); Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', imageRendering: 'pixelated', pointerEvents: 'none', zIndex: 5 });
   document.body.appendChild(cv); const g = cv.getContext('2d'), wr = hud.writer(g), MH = 270;
@@ -25,6 +25,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       ...(modes ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
       { type: 'button', label: 'STEROWANIE', act: () => show('keys') },
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
+      ...(assist ? [{ type: 'button', label: 'ASYSTA RZUTU: ' + assist.name(), act: () => { assist.next(); rows = build(); } }] : []),
       ...(sound ? [{ type: 'button', label: 'DŹWIĘK', act: () => show('snd') }] : []),
       { type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } },
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
@@ -34,6 +35,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       ...(onMap ? [{ type: 'button', label: 'MAPA TRASY', act: () => { close(); onMap(); } }] : []),
       ...(modes ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
+      ...(assist ? [{ type: 'button', label: 'ASYSTA RZUTU: ' + assist.name(), act: () => { assist.next(); rows = build(); } }] : []),
       ...(sound ? [{ type: 'button', label: 'DŹWIĘK', act: () => show('snd') }] : []),
       { type: 'button', label: document.fullscreenElement ? 'ZWYKŁE OKNO' : 'PEŁNY EKRAN', act: () => { onFull?.(); } },
       { type: 'button', label: 'STEROWANIE', act: () => controls ? show('keys') : (close(), onKeys?.()) },

@@ -1050,3 +1050,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 118: kopniak z roweru rozwala skrzynkę
 
 - kopniak w skrzynkę pocztową z roweru rozwala ją od razu (pieszo nadal trzy kopnięcia); przydaje się przy zleceniach typu „Robota dla ekipy”
+
+## Wersja 119: rzucanie na wyczucie i asysta rzutu
+
+- szybki rzut (stuknięcie ← / →) nadal leci do najbliższego prenumeratora po tej stronie, ale jego celność zależy od momentu: idealnie (cel tuż przed Tobą, wyprzedzenie rośnie z prędkością) gazeta wpada do skrzynki; trochę za wcześnie albo za późno ląduje pod skrzynką albo na ganku; wyraźnie obok na trawniku przed domem, a tor może przeciąć okno i wybić szybę; rozrzut rośnie z prędkością, okno węższe w trudniejszych regionach
+- nowe miejsca lądowania: Do skrzynki (5), Pod skrzynkę (3), Na ganek (2), Pod okno (1), Na trawnik (1), szyba (wybryk), pudło
+- celowanie z przytrzymaniem: krążek przyciąga do celu dużo słabiej, więc celujesz naprawdę
+- menu: ASYSTA RZUTU (Łatwa / Średnia / Trudna, zapamiętana):
+  - Łatwa: nad domem ikonka prenumeratora i ramka momentu (narożniki zaciskają się: szara, żółta, zielona) z podpisem klawisza, szerokie okno, mały rozrzut, mocne przyciąganie przy celowaniu
+  - Średnia (domyślna): sama ikonka prenumeratora, bez ramki; zwykłe okno, słabe przyciąganie
+  - Trudna: ikonka dopiero z bliska (20 m), wąskie okno, większy rozrzut, bez przyciągania
