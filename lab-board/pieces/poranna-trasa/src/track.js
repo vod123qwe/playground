@@ -27,7 +27,7 @@ export const REGION_T = {
   peryferia: { id: 'peryferia', home: true, ctrl: [[0, 0, 0], [0, 1, 60], [18, 3, 120], [60, 5, 160], [115, 4, 170], [160, 2, 150], [185, 0, 105], [180, -1, 50], [150, -2, 5], [150, -1, -45], [175, 1, -90], [160, 3, -140], [110, 4, -165], [55, 2, -150], [15, 0, -110], [-5, -1, -55]],
     roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false },
   wies: { id: 'wies', home: false, ctrl: [[0, 0, 0], [10, 2, 70], [-10, 5, 140], [30, 8, 200], [100, 9, 235], [175, 6, 220], [225, 3, 165], [235, 0, 95], [270, 2, 30], [255, 5, -45], [195, 7, -95], [125, 4, -110], [70, 1, -85], [25, -1, -45]],
-    roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [30, 26], houseP: .5, farms: true,
+    roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [24, 18], houseP: .56, farms: true,
     walls: ['#e8e4dc', '#d9d4c8', '#c9c2b0', '#e6dcc4', '#bfb8a8', '#d8cfb8'], roofs: ['#5a5f66', '#6d4a3a', '#7a7f86', '#4a4038'] },
   // peryferia2 ("Druga strona"): the new estate over the tracks: a flat loop with tighter corners, kerbs and lines, houses close in a row
   // (modern greys and whites, dark roofs), lots with a house going up, two stretches of warehouses, road works, cranes over it all
@@ -999,6 +999,19 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     for (const F of farmLots) { if (!free(F.i, F.s * (PAVE + 10), 5)) continue; const h = farmhouse(F.i, F.s * (PAVE + 10)); h.updateMatrixWorld(true); const n = new THREE.Vector3(0, 0, -1).applyQuaternion(h.quaternion); n.y = 0; n.normalize();
       const p = h.localToWorld(new THREE.Vector3(0, 0, -3.5 - 2.6)); if (n.x * (S[F.i].p.x - p.x) + n.z * (S[F.i].p.z - p.z) > 0) doors.push({ p, n, done: false, i: F.i }); barn(F.i + Math.round(15 / ds), F.s * (PAVE + 17)); }
     for (const F of fieldLots) field(F.i - Math.round(8 / ds), F.i + Math.round(16 / ds), F.s * (PAVE + 2), F.s * (PAVE + 34), FIELDS[fr() * FIELDS.length | 0], fr() < .5);
+    // (by most fields, a farm out at the back of it: its gate at the road, a letterbox on a post by the gate, its house beyond the field;
+    // the field's stretch of road then has a paper to throw too)
+    { const gateW = toon('#8a6a44'), boxM = toon('#7f878e'), flagM = toon('#cf3a2c');
+      for (const F of fieldLots) { if (fr() > .75) continue; const i = F.i + Math.round(4 / ds), A = S[((i % N) + N) % N], dG = F.s * (PAVE + 1.4);
+        if (!free(i, dG, 2.2)) continue; const g = new THREE.Group();
+        for (const z of [-1.5, 1.5]) g.add(box(.16, 1.5, .16, gateW, 0, .75, z)); for (const y of [.45, .85, 1.25]) g.add(box(.06, .1, 2.9, gateW, 0, y, 0)); { const dg = box(.06, .1, 3.1, gateW, 0, .85, 0); dg.rotation.x = .38; g.add(dg); }
+        put(g, i, dG, 0, 0); hit(g, { hx: .12, hz: 1.6, h: 1.5, kind: 'hard' }, i);
+        const mb = new THREE.Group(); mb.add(box(.08, 1.1, .08, gateW, 0, .55, 0), box(.3, .28, .46, boxM, 0, 1.22, 0), box(.32, .04, .48, toon('#5d646b'), 0, 1.38, 0), box(.02, .1, .2, toon('#f6f3ea'), -F.s * .16, 1.2, 0));
+        const flag = new THREE.Group(); flag.position.set(F.s * .16, 1.2, -.1); flag.add(box(.015, .24, .025, flagM, 0, .12, 0), box(.018, .09, .13, flagM, 0, .21, .065)); mb.add(flag);
+        mb.userData.keep = true; const im = i + Math.round(2.4 / ds); put(mb, im, F.s * (PAVE + .7), 0, 0); const C = hit(mb, { hx: .18, hz: .25, h: 1.4, kind: 'hard' }, im);
+        const n = new THREE.Vector3(A.r.x * -F.s, 0, A.r.z * -F.s).normalize(), gp = at(i, dG, 0), hi = doors.length; doors.push({ p: gp.clone().addScaledVector(n, 2.6), n, done: false, i, gate: true });
+        const M0 = { o: mb, i: im, side: F.s, flag, house: hi }; mailboxes.push(M0); things.push({ kind: 'mailbox', o: mb, mb: M0, C, side: F.s });
+        const dH = F.s * (PAVE + 42); if (free(i, dH, 6)) farmhouse(i, dH); } }
     if (CITY) { CITY.skyline(CEN.x, CEN.z, REACH); CITY.rails(); NET.build(); }   // (the town: a skyline round it, not fields; the tram's rails in the road)
     for (const sd of CITY ? [] : [-INNER]) {                                        // (the outside of the loop only)
       for (const [r0, r1] of [[46, 54], [100, 110]]) { let i = Math.round(fr() * 60 / ds);        // (two rows of them: near, and far)
