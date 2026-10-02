@@ -55,9 +55,11 @@ export function createAudio() {
     rustle: (d, t) => { hiss(d, t, .18, { type: 'highpass', f: 2000, vol: .12 }); hiss(d, t + .08, .12, { type: 'highpass', f: 3000, vol: .08 }); },
     miss: (d, t) => { tone(d, 520, t, .12, { vol: .12, to: 380 }); tone(d, 380, t + .13, .2, { vol: .12, to: 230 }); },
     splash: (d, t) => { hiss(d, t, .32, { f: 1100, to: 380, q: .7, vol: .3 }); for (let k = 0; k < 4; k++) tone(d, R(420, 820), t + R(.02, .18), .05, { vol: .05, to: R(1100, 1700) }); },
+    // a footstep: a soft thud and a scuff, never twice the same; on grass more scuff than thud
+    step: (d, t, o = {}) => { const gr = !!o.grass; tone(d, R(85, 115), t, .06, { vol: gr ? .1 : .2, to: R(50, 65) }); hiss(d, t, gr ? .09 : .045, { type: gr ? 'highpass' : 'lowpass', f: gr ? R(1800, 2600) : R(700, 1100), vol: gr ? .16 : .12 }); },
     whistle: (d, t) => { tone(d, 1800, t, .12, { vol: .08, to: 2400 }); tone(d, 2400, t + .14, .25, { vol: .08, to: 1500 }); },
   };
-  function play(name, o = {}) { if (!ctx || !FX[name] || !((o.vol ?? 1) >= .02) || !isFinite(o.pan ?? 0)) return; const g = ctx.createGain(); g.gain.value = o.vol ?? 1; g.connect(panner(o.pan, bus.sfx)); FX[name](g, now() + .005); }
+  function play(name, o = {}) { if (!ctx || !FX[name] || !((o.vol ?? 1) >= .02) || !isFinite(o.pan ?? 0)) return; const g = ctx.createGain(); g.gain.value = o.vol ?? 1; g.connect(panner(o.pan, bus.sfx)); FX[name](g, now() + .005, o); }
   // ---------- voices: no words, a burble ----------
   // base pitch (Hz), how far it wanders, syllables a second, the wave, the formant's colour, a slur (the man on the bench), a wobble
   const VOICES = {

@@ -175,6 +175,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   function hit(o, spec, i, ox = 0, oz = 0) {                         // spec in o's space ({ hx, hz, h, kind }), o already placed (i: where along the road)
     const yaw = o.rotation.y, c = Math.cos(yaw), sn = Math.sin(yaw), x = o.position.x + ox * c + oz * sn, z = o.position.z - ox * sn + oz * c;
     const C = { x, z, c, s: sn, hx: spec.hx, hz: spec.hz, h: spec.h, y0: o.position.y, kind: spec.kind, size: spec.size, i, o, used: false }; colliders.push(C);
+    if (spec.car) { C.car = true; spec.car.updateMatrixWorld(true); C.roof = new THREE.Box3().setFromObject(spec.car).max.y; }   // (a car: its roof can be ridden on)
     const reach = Math.ceil(Math.max(spec.hx, spec.hz) / ds / BK) + 1, b0 = Math.floor(i / BK);
     for (let k = -reach; k <= reach; k++) buckets[((b0 + k) % NB + NB) % NB].push(C); return C;
   }
@@ -721,7 +722,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         pos.push(...pa.clone().lerp(pb, t0).add(new THREE.Vector3(0, -sag(t0), 0)).toArray(), ...pa.clone().lerp(pb, t1).add(new THREE.Vector3(0, -sag(t1), 0)).toArray()); } } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); G.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: '#2a2a2a' }))); }
   const parked = [];                                                   // (the ones at the kerb, for the traffic to go round)
-  for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd); parked.push({ s: i * ds, d: sd * 2.45 }); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard' }, i); }   // parked at the kerb
+  for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd); parked.push({ s: i * ds, d: sd * 2.45 }); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); }   // parked at the kerb
   // street trees on the verge: tall, their crowns reaching over the road; under each, its dappled shadow on the road and the pavement
   const DAP = [1, 2, 3].map(k => new THREE.MeshBasicMaterial({ map: tex.dapple(k), color: '#0c0912', transparent: true, opacity: .66, depthWrite: false, alphaTest: .5, fog: true }));
   function dapple(i, dMid, w = 10.5, l = 11) {                            // a patch laid on the ground's own shape (road, kerb, verge, pavement)
@@ -1005,18 +1006,20 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         const m = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 6 + (fr() * 3 | 0)), mtM[i]); m.scale.set(w, h, w); m.position.set(cx + Math.cos(a) * R, h * .5 - 12, cz + Math.sin(a) * R); m.rotation.y = fr() * 6; G.add(m);
         if (h > 56) { const c = new THREE.Mesh(new THREE.ConeGeometry(1, 1, m.geometry.parameters.radialSegments), snowM); c.scale.set(w * .28, h * .28, w * .28); c.position.set(m.position.x, m.position.y + h * .36, m.position.z); c.rotation.y = m.rotation.y; G.add(c); } }
     } }
+  // (the merged meshes: per material and per 60 m square of the ground, so what is out of the view (and out of the shadow's box) is not drawn)
+  const CELL = 90, cellOf = g => { g.computeBoundingBox(); const b = g.boundingBox; return Math.floor((b.min.x + b.max.x) / 2 / CELL) + ',' + Math.floor((b.min.z + b.max.z) / 2 / CELL); };
   // the crowns: every clump and every card of leaves, into one mesh each (the cards' shadows cut by their alpha)
   if (!showcase) { G.updateMatrixWorld(true); const by = new Map(), gone = [];
-    G.traverse(o => { if (!o.isMesh || !o.userData.foliage) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(g); gone.push(o); });
+    G.traverse(o => { if (!o.isMesh || !o.userData.foliage) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const key = o.material.uuid + '|' + cellOf(g); if (!by.has(key)) by.set(key, { m: o.material, gs: [] }); by.get(key).gs.push(g); gone.push(o); });
     for (const o of gone) o.parent.remove(o);
-    for (const [m, gs] of by) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = true; mm.receiveShadow = true; mm.customDepthMaterial = m === cardM ? cardDepth : clumpDepth; G.add(mm); } }
+    for (const { m, gs } of by.values()) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = true; mm.receiveShadow = true; mm.customDepthMaterial = m === cardM ? cardDepth : clumpDepth; G.add(mm); } }
   // the grass, the bushes' clumps, the stones (their colours in their points): merged by material, keeping the colours
   if (!showcase) { G.updateMatrixWorld(true); const by = new Map(), gone = [];
     G.traverse(o => { if (!o.isMesh || !NAT.mats.includes(o.material)) return; for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return;
       const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'color'].includes(k)) g.deleteAttribute(k);
-      if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(g); gone.push(o); });
+      const key = o.material.uuid + '|' + cellOf(g); if (!by.has(key)) by.set(key, { m: o.material, gs: [] }); by.get(key).gs.push(g); gone.push(o); });
     for (const o of gone) o.parent.remove(o);
-    for (const [m, gs] of by) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = mm.receiveShadow = true; G.add(mm); } }
+    for (const { m, gs } of by.values()) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = mm.receiveShadow = true; G.add(mm); } }
   // ---------- all the still things merged, material by material, into a few meshes (a mailbox stays itself: its flag moves) ----------
   if (!showcase) { G.updateMatrixWorld(true); const buckets = new Map(), gone = [];
     const kept = o => { for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return true; return false; };
@@ -1024,7 +1027,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
       for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
       if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-      const k = o.material.uuid; if (!buckets.has(k)) buckets.set(k, { m: o.material, gs: [] }); buckets.get(k).gs.push(g); gone.push(o); });
+      const k = o.material.uuid + '|' + cellOf(g); if (!buckets.has(k)) buckets.set(k, { m: o.material, gs: [] }); buckets.get(k).gs.push(g); gone.push(o); });
     for (const o of gone) o.parent.remove(o);
     for (const { m, gs } of buckets.values()) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = mm.receiveShadow = true; G.add(mm); } }
 

@@ -30,9 +30,59 @@
   body.walk, body.walk #gl{ cursor:none !important; }
   body.walk #pix, body.walk #pix *, body.walk #ink, body.walk #ink *{ cursor:var(--cur) !important; }   /* (its buttons still show one) */
   @media (max-width:700px){ #keys, #keysHint{ display:none; } }
+  /* the boot: just the bike computer (the HUD's own, the "zwykły" one) as a real little device: its two buttons on top, screws, the clamp
+     under it, the LCD with its glare and ghost segments, a bike and a battery on it; the trip's metres rolling, the speed bars running;
+     LADOWANIE under it. Over our overlay, the game blurred behind. Transform and opacity only (it moves while the page is busy) */
+  #boot{ position:fixed; inset:0; z-index:50; display:grid; place-items:center; background:rgba(12,13,15,.9); transition:background .5s, opacity .6s .1s, visibility 0s linear .7s; font:16px/1 PTPix, ui-monospace, 'Cascadia Mono', Consolas, monospace; color:#f6f3ea; }
+  body.drawn #boot{ background:rgba(12,13,15,.42); }
+  body.booted #boot{ opacity:0; visibility:hidden; }
+  body:not(.booted) #gl{ filter:blur(14px) saturate(1.1); }
+  body:not(.booted) > *:not(#boot):not(#gl):not(script){ visibility:hidden; }   /* (the HUD and the rest: not over the loader) */
+  #boot *{ image-rendering:pixelated; }
+  #boot .wrap{ display:grid; justify-items:center; gap:14px; width:min(62vw, 250px); }
+  #boot .dev{ position:relative; width:100%; aspect-ratio:96/52; background-size:100% 100%; filter:drop-shadow(4px 4px 0 rgba(0,0,0,.5)); }
+  #boot .digits{ position:absolute; left:11.46%; top:30.8%; width:52%; height:30.8%; display:grid; grid-template-columns:repeat(4, 1fr); gap:2.4%; }
+  #boot .win{ position:relative; overflow:hidden; background-size:100% 100%; }
+  #boot .strip{ position:absolute; left:0; top:0; width:100%; height:1000%; background-size:100% 100%; animation:roll .8s steps(10) infinite; }
+  #boot .win:nth-child(3) .strip{ animation-duration:8s } #boot .win:nth-child(2) .strip{ animation-duration:80s } #boot .win:nth-child(1) .strip{ animation-duration:800s }
+  #boot .bars{ position:absolute; left:11.46%; top:63.5%; width:77%; height:5.8%; display:grid; grid-template-columns:repeat(16, 1fr); gap:1.2%; }
+  #boot .bars i{ background:#1c2418; animation:bar 1.6s steps(1) infinite; animation-delay:calc(var(--k) * .1s); }
+  #boot .load{ letter-spacing:.18em; color:#efc970; text-shadow:2px 2px 0 #17181b; } #boot .load i{ font-style:normal; animation:blink 1.2s steps(1) infinite; } #boot .load i:nth-child(2){ animation-delay:.2s } #boot .load i:nth-child(3){ animation-delay:.4s }
+  @keyframes roll{ to{ transform:translateY(-100%) } } @keyframes bar{ 0%{ opacity:1 } 50%{ opacity:.1 } } @keyframes blink{ 50%{ opacity:0 } }
+  @media (prefers-reduced-motion:reduce){ #boot *{ animation:none !important } }
 </style>
 </head>
 <body>
+<div id="boot" role="status" aria-live="polite" aria-label="Ładowanie"><div class="wrap">
+  <div class="dev" data-b="dev" aria-hidden="true"><div class="digits"><div class="win" data-b="ghost"><div class="strip" data-b="digits"></div></div><div class="win" data-b="ghost"><div class="strip" data-b="digits"></div></div><div class="win" data-b="ghost"><div class="strip" data-b="digits"></div></div><div class="win" data-b="ghost"><div class="strip" data-b="digits"></div></div></div><div class="bars"></div></div>
+  <div class="load">ŁADOWANIE<i>.</i><i>.</i><i>.</i></div></div></div>
+<script>(function () {
+  var K = { case: '#1b1c1f', top: '#3a3d42', lcd: '#9fae8a', off: '#8a967a', ink: '#1c2418', ghost: 'rgba(28,36,24,.13)', btn: '#b3372c' };
+  function C(w, h, f) { var c = document.createElement('canvas'); c.width = w; c.height = h; var g = c.getContext('2d'); f(g); return c.toDataURL(); }
+  function P(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  var SEG = { a: [1, 0, 6, 1], b: [6, 1, 1, 5], c: [6, 7, 1, 5], d: [1, 12, 6, 1], e: [0, 7, 1, 5], f: [0, 1, 1, 5], g: [1, 6, 6, 1] }, ON = ['abcdef', 'bc', 'abged', 'abgcd', 'fgbc', 'afgcd', 'afgedc', 'abc', 'abcdefg', 'abcdfg'];
+  function dig(g, n, y0, col) { for (var i = 0; i < ON[n].length; i++) { var q = SEG[ON[n][i]]; P(g, q[0], y0 + q[1], q[2], q[3], col); } }
+  // a 3x5 font for the LCD's little words
+  var F = { D: ['110', '101', '101', '101', '110'], S: ['011', '100', '010', '001', '110'], T: ['111', '010', '010', '010', '010'], M: ['101', '111', '111', '101', '101'], K: ['101', '110', '100', '110', '101'], H: ['101', '101', '111', '101', '101'], '/': ['001', '001', '010', '100', '100'] };
+  function word(g, s, x, y, col) { for (var k = 0; k < s.length; k++) { var r = F[s[k]]; if (r) for (var yy = 0; yy < 5; yy++) for (var xx = 0; xx < 3; xx++) if (r[yy][xx] === '1') P(g, x + k * 4 + xx, y + yy, 1, 1, col); } }
+  var S = {
+    dev: C(96, 52, function (g) {
+      P(g, 13, 1, 10, 3, '#44484c'); P(g, 14, 0, 8, 1, '#5a5f66'); P(g, 73, 1, 10, 3, '#44484c'); P(g, 74, 0, 8, 1, K.btn); P(g, 74, 1, 8, 1, '#8e2e25');   // the buttons
+      P(g, 2, 3, 92, 40, K.case); P(g, 1, 4, 94, 38, K.case); P(g, 3, 2, 90, 1, K.case); P(g, 3, 43, 90, 1, K.case);   // the case, its corners round
+      P(g, 3, 3, 90, 1, K.top); P(g, 2, 4, 1, 37, '#2a2c30'); P(g, 3, 42, 90, 1, '#101113'); P(g, 94, 5, 1, 36, '#101113');
+      for (var q = 0; q < 4; q++) { var sx = q % 2 ? 90 : 4, sy = q < 2 ? 5 : 39; P(g, sx, sy, 2, 2, '#44484c'); P(g, sx, sy, 1, 1, '#5a5f66'); }   // the screws
+      P(g, 40, 44, 16, 3, '#101113'); P(g, 36, 47, 24, 3, '#2a2c30'); P(g, 36, 47, 24, 1, '#3a3d42'); P(g, 46, 50, 4, 2, '#101113');   // the clamp to the bars
+      P(g, 7, 7, 82, 31, '#0e0f11'); P(g, 8, 8, 80, 29, K.lcd); P(g, 8, 8, 80, 1, '#b3c09c'); P(g, 8, 36, 80, 1, K.off);   // the LCD
+      for (var d = 0; d < 9; d++) { P(g, 60 + d, 8 + d, 3, 1, 'rgba(255,255,255,.12)'); P(g, 66 + d, 8 + d, 1, 1, 'rgba(255,255,255,.08)'); }   // its glare
+      var I = K.ink; P(g, 11, 11, 1, 1, I); P(g, 10, 12, 3, 1, I); P(g, 11, 13, 1, 1, I); P(g, 17, 11, 1, 1, I); P(g, 16, 12, 3, 1, I); P(g, 17, 13, 1, 1, I); P(g, 12, 11, 5, 1, I); P(g, 14, 10, 1, 1, I); P(g, 13, 9, 2, 1, I);   // a little bike
+      P(g, 78, 10, 7, 4, I); P(g, 79, 11, 5, 2, K.lcd); P(g, 79, 11, 4, 2, I); P(g, 85, 11, 1, 2, I);   // the battery
+      word(g, 'DST', 62, 17, I); word(g, 'M', 62, 24, I); }),
+    ghost: C(8, 14, function (g) { dig(g, 8, 0, K.ghost); }),
+    digits: C(8, 140, function (g) { for (var n = 0; n < 10; n++) dig(g, n, n * 14, K.ink); }) };
+  var els = document.querySelectorAll('#boot [data-b]'); for (var i = 0; i < els.length; i++) els[i].style.backgroundImage = 'url(' + S[els[i].getAttribute('data-b')] + ')';
+  var bars = document.querySelector('#boot .bars'), h = ''; for (var k = 0; k < 16; k++) h += '<i style="--k:' + k + '"></i>'; bars.innerHTML = h;
+  setTimeout(function () { document.body.classList.add('booted'); }, 45000);
+})();</script>
 <canvas id="gl"></canvas>
 <div class="ui" id="hud"></div>
 <div class="ui shut" id="keys"><b>ROWER</b> W pedałuj · Shift szybciej · S hamuj / cofaj · A D skręt · ← → (trzymaj i puść) rzut w lewo / w prawo · Spacja kopniak · C podskok · F zsiądź

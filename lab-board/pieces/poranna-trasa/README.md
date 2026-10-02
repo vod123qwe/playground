@@ -1029,3 +1029,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - finał na Drugiej stronie: kontener budowlany z tarczą na drzwiach (środek +5, reszta +2) i kontener na gruz (gazeta do środka +6)
 - gazeta: dział WOJNA GAZET (podebrane skrzynki, starcia roznosicieli)
 - poprawka: przejazdy kolejowe, gęsi i kurierzy działają też, gdy chodzisz pieszo (wcześniej stały, a gęsi pieszo nie dziobały)
+
+## Wersja 116: wydajność, loader, dachy aut, kroki
+
+- wydajność: nieruchomy świat toru scalony w kawałki po 90 m (zamiast kilku siatek na całą pętlę), więc karta rysuje tylko to, co widać, a cienie tylko najbliższą okolicę; dalekie postacie (dalej niż 60 m, przy widoku z oczu 45 m) nie są rysowane. Wynik na Drugiej stronie: z ok. 3,9 mln do ok. 2,2 mln trójkątów na klatkę
+- loader: od pierwszej chwili licznik rowerowy jak prawdziwy (przyciski, śrubki, uchwyt, odblask, ikonki roweru i baterii, przebieg się kręci, paski prędkości) i napis ŁADOWANIE nad rozmytą grą; znika po skompilowaniu shaderów (koniec przycinania na starcie); działa też przy zmianie regionu. Warianty do porównania: loader-lab.html
+- dachy stojących aut można przeskoczyć i po nich jechać (wyskocz ze skoczni albo podskokiem); za nisko: w bok auta jak dotąd; z krawędzi dachu się spada
+- rowerzyści omijają Cię, gdy stoisz albo jedziesz na ich torze, i przyhamowują tuż przed Tobą; gdy stoisz, kontakt to tylko otarcie (bez wywrotki); omijają też zaparkowane auta, skocznie i roboty drogowe
+- kroki pieszo: ciche stuknięcia, przy biegu częstsze, na trawie bardziej szeleszczące
+- kamera: ujęcie od przodu tylko przy wyjeździe z domu (peryferie, do zaliczenia pierwszego odcinka); po przeładowaniu w innym regionie i po resecie kamera jest za plecami

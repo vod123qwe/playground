@@ -84,3 +84,10 @@ Plac budowy: rampy z desek na palecie, przeskok nad wykopem, slalom między pach
 3. **v113**: persony wiejskie (sołtys, gospodyni, traktorzysta) z zleceniami i wyścigiem.
 4. **v114**: region Druga strona: świat (szeregowce, budowa, magazyny), trasy d1, d2.
 5. **v115**: wojna gazet (rywale z Kuriera), d3, d4, finał na placu budowy.
+
+## Na później: drogi nie zawsze dwukierunkowe (Jarek, 02.10.2026)
+
+- jednokierunkowa ulica przejeżdżana pod prąd (auta z naprzeciwka, mało miejsca),
+- odcinki z samym pasem rowerowym (auta obok, za barierką albo krawężnikiem),
+- zwężenie drogi do ścieżki (np. leśnej w regionie Las), mostki, kładki,
+- przekrój drogi zmienny wzdłuż trasy zamiast jednego na cały region.

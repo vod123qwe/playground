@@ -679,7 +679,7 @@ function ride(dt, inp) {
   B.leanV += (42 * (leanT - B.lean) - 12 * B.leanV) * dt; B.lean += B.leanV * dt;
   const nx = B.x + Math.sin(B.yaw) * B.v * dt, nz = B.z + Math.cos(B.yaw) * B.v * dt;
   // up and down: the ground (and a ramp on it); a hop; off a ramp's lip into the air; the landing
-  const rp = rampAt(nx, nz), ground = track.probe(nx, nz, B.hint).y + rp.h;
+  const rp = rampAt(nx, nz), g0 = track.probe(nx, nz, B.hint).y + rp.h, roof = carRoofAt(nx, nz), ground = roof !== null && B.y >= roof - .35 ? Math.max(g0, roof) : g0;
   if (rp.wall && B.v > 2 && !B.air) { B.x = nx; B.z = nz; crash(); return; }
   if (inp.hop && !B.air) { B.air = true; B.vy = 3.8 + (B.onRamp ? Math.max(0, B.gVel) : 0); B.airRamp = B.onRamp ? (B.onRamp.size || 'plank') : null; }   // (hopped off a ramp: higher, and a trick allowed)
   if (B.air) { B.vy -= g * dt; B.y += B.vy * dt; if (B.y <= ground) { B.airRamp = null;
@@ -689,7 +689,7 @@ function ride(dt, inp) {
       const clean = all.every(o => !o.pulled), n = all.reduce((a, o) => a + o.pts, 0) + (clean ? 1 : 0) + (all.length - 1) * 2;
       const lab = all.map(o => o.name).join(' + ') + (clean ? ' CZYSTO' : ' NA STYK'); logEv('trick', B.x, B.z, { name: lab, clean }); if (clean) quests.gangRep(.3); audio.play('trick'); score(n, rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), lab + ' +' + n, '#efc970'); flash(lab + '! +' + n); }
     if (B.vy < -5.2) { B.jolt = .14; B.v *= .9; } else if (B.vy < -2) B.jolt = .07; B.air = false; B.vy = 0; B.trick = null; B.airRamp = null; B.y = ground; } }
-  else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'mega' ? 2.2 : R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else B.y = ground; }
+  else { if (ground < B.y - .05 && B.gVel > 1) { const R0 = B.onRamp; B.air = true; B.vy = R0 ? B.gVel * 1.2 + (R0.size === 'mega' ? 2.2 : R0.size === 'big' ? 1.9 : R0.size === 'kicker' ? .9 : 1.1) : B.gVel; B.airRamp = R0 ? (R0.size || 'plank') : null; B.y += B.vy * dt; } else if (ground < B.y - .35) { B.air = true; B.vy = 0; B.airRamp = null; } else B.y = ground; }   // (off a car's roof, a step: he drops)
   B.onRamp = !B.air && rp.h > .05 ? rp.on : null;   // (the ground fell away as he rose: he flies)
   B.gVel = B.air ? 0 : (ground - B.gPrev) / dt; B.gPrev = ground;
   // kerbs, potholes, bags and hedges, bundles; what throws him off
@@ -702,6 +702,7 @@ function ride(dt, inp) {
     if (C.kind === 'hole') { if (!B.air && !C.cool) { B.jolt = .12; B.v *= .82; C.cool = true; setTimeout(() => { C.cool = false; }, 900); } continue; }
     if (C.kind === 'bundle') { pickBundle(C); continue; }
     if (clear(C)) continue;
+    if (C.car && C.roof && B.y >= C.roof - .35) continue;   // (up on that car's roof)
     if (C.thing?.kind === 'cone') { if (Math.abs(B.v) > .4) { stuff.bump(C.thing, Math.sin(B.yaw) * B.v * .9 + (Math.random() - .5), Math.cos(B.yaw) * B.v * .9 + (Math.random() - .5)); B.v *= .9; B.jolt = .06; } continue; }   // (a cone: it goes over, not him)
     if (C.kind === 'soft') { B.v *= Math.pow(.08, dt); continue; }
     if (C.hyd && Math.abs(B.v) > .8 && water.spray(new THREE.Vector3(C.x, C.y0 || 0, C.z), 4.5)) hud.pop(new THREE.Vector3(C.x, (C.y0 || 0) + 1.6, C.z), 'PSSS!', '#9ccad8');   // a hydrant knocked: it gushes
@@ -714,7 +715,7 @@ function ride(dt, inp) {
   }
   // the traffic
   for (const C of traffic.boxes()) { if (Math.abs(C.x - nx) + Math.abs(C.z - nz) > 8 || clear(C) || (C.t.ghostUntil > performance.now())) continue; const h = boxHit(C, nx, nz, .38); if (h && C.t.r) {            // a cyclist: both go over if it was hard (by how fast they met), else a bump and a wobble
-      const bv = new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.stop > 0 ? 0 : C.t.v), mv = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)).multiplyScalar(B.v), hard = mv.clone().sub(bv).length() > 3.4;
+      const bv = new THREE.Vector3(Math.sin(C.t.yaw), 0, Math.cos(C.t.yaw)).multiplyScalar(C.t.stop > 0 ? 0 : C.t.v), mv = new THREE.Vector3(Math.sin(B.yaw), 0, Math.cos(B.yaw)).multiplyScalar(B.v), hard = Math.abs(B.v) > 1.5 && mv.clone().sub(bv).length() > 3.4;   // (him standing or barely rolling: only a brush, it wobbles past)
       traffic.knock(C.t, mv, hard); if (hard) { quests.onKnockBike(C.t); C.t.ghostUntil = performance.now() + 7000; if (Math.random() < .3) foot.grudge(C.t); }
       if (!(C.t.rantAt > performance.now())) { C.t.rantAt = performance.now() + 2500; hud.rant(C.t.r.root.position, hard ? pickOf(OUCH) : pickOf(SWEARS), true, 2); if (hard) witness(C.t.x, C.t.z); }
       if (hard) { crash(0, bv.multiplyScalar(.5)); return; } B.x = nx + h.nx * (h.pen + .02); B.z = nz + h.nz * (h.pen + .02); B.v *= .55; B.jolt = .12; return pose(dt, 0, 0, slope, 0); }
@@ -889,7 +890,9 @@ const CAMS = [
 ];
 let camI = 3; const CP = { ...CAMS[3] };
 function setCam(i) { camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
-let C = { yaw: B.yaw, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: Math.PI, iyGo: false };   // (iy: the opening shot, from in front of him, the house behind him; it swings round behind him as he sets off)
+// (the opening shot from in front of him: only leaving home, in the suburb, till the first stretch is done; anywhere else from behind)
+const openShot = () => track.region === 'peryferia' && !(LVM.load().done || {}).p1 ? Math.PI : 0;
+let C = { yaw: B.yaw, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: openShot(), iyGo: false };   // (iy: the opening shot, from in front of him, the house behind him; it swings round behind him as he sets off)
 const _eye = new THREE.Vector3();
 // a paper thrown: the camera eases into a wider view of it (back, up, a little aside from the throw's side), looking between him and
 // the paper, so he stays in the picture; it holds where the paper came down a moment (the +1, the glass), then eases back
@@ -1026,7 +1029,7 @@ function step(dt, inp) {
       toFirst: () => { if (foot.view !== 'first') foot.toggleView(); }, toThird: () => { if (foot.view === 'first') foot.toggleView(); }, talkKey: keysOf('talk') });
     if (was || hoops.holding) inp = { ...inp, lmb: false, rmb: false }; }
   stepCrossings(dt); stepRivals(dt); stepGeese(dt, inp);
-  if (foot.active) return stepFoot(dt, inp);
+  if (foot.active) { stepSteps(dt); return stepFoot(dt, inp); }
   stamina(dt, inp); stepRadio(dt, inp); if (!B.crash) { trip.dist += Math.abs(B.v) * dt; trip.max = Math.max(trip.max, Math.abs(B.v)); if (Math.abs(B.v) > .5) trip.time += dt; }
   throwing(dt, inp); stepAim(); stepDogs(dt, inp); ride(dt, inp); water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: B.x, z: B.z, v: B.v, line: quests.lineFor, said: (r, t) => logEv('said', r.G.position.x, r.G.position.z, { who: r.lines || r.key, text: t }) });
   { const q = track.probe(B.x, B.z, B.hint), p = peds.update(dt, { x: B.x, z: B.z, v: B.v, d: q.d, busy: !!B.crash, bell: MOD.bell > 0 && (B.bellT = (B.bellT || 0) - dt) > -4 });   // someone walking: ridden into, over he goes
@@ -1241,7 +1244,7 @@ function resetGame() {
   myBike = { type: 'moj', parts: newParts() }; INV.length = 0; PAINTS.clear(); PAINTS.add(0); spawnBikes();
   granny.reset(); quests.reset(); shop.reset(); rider.root.visible = true; B.rattled = 0;
   rider.ragdollOff();
-  const q = track.probe(track.start.x, track.start.z, 0); C.iy = Math.PI; C.iyGo = false;
+  const q = track.probe(track.start.x, track.start.z, 0); C.iy = openShot(); C.iyGo = false;
   Object.assign(B, { x: track.start.x, z: track.start.z, y: q.y, vy: 0, air: false, gPrev: q.y, gVel: 0, yaw: track.start.yaw, v: 0, steer: 0, lean: 0, leanV: 0, hint: 0, pitch: 0, jolt: 0,
     stam: 1, spent: false, tired: 0, papers: 30, points: 0, lastPts: 0, earned: 0, delivered: 0, windows: 0, hp: 100, fame: 0, items: [], lastD: 0, crash: null, kick: null, dogSlow: 0, look: null, charge: null, lvl: 0, streak: 0, thrown: 0, falls: 0, fallsAt: [] }); drawStreak();
   for (const p of papers) scene.remove(p.m, p.dot); papers.length = 0; for (const s of shards) scene.remove(s.m); shards.length = 0; for (const m of cracks) scene.remove(m); cracks.length = 0;
@@ -1457,6 +1460,21 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
   // the double trench, a gap of road between; pop-ups both sides; a pad to the line
   kicker(.46, 'plank'); trench(u(.3), 2, W * .6, W * .4); trench(u(.3) - 5, 2, W * .6, -W * .4);
   FIN.on = true; FIN.entered = false; FIN.combo = 0; FIN.comboT = 0; FIN.res = { targets: 0, of: FIN.targets.length, cones: 0, rings: 0, trenches: 0, combo: 0, score: 0 }; }
+// a parked car's roof under (x, z): its height, or null
+function carRoofAt(x, z) { let y = null; for (const C of track.near(B.hint)) if (C.car && C.roof && !C.used && boxHit(C, x, z, 0)) y = Math.max(y ?? -1e9, C.roof); return y; }
+// ---------- the far people not drawn: every person is ~9 skinned meshes (~40 thousand triangles, skinned again for the shadow); beyond
+// 60 m one is a few pixels in this picture. Each such mesh goes to layer 1 (the camera and the shadow draw layer 0 only), back near.
+// The list (all skinned meshes but his own) refreshed now and then; nothing else about them changes ----------
+// the footsteps on foot: one each stride (longer and a little louder running), softer and scuffier on grass
+let stepAcc = 0; function stepSteps(dt) { const me = foot.me; if (!me || me.air || foot.fighting && !me.vf) { stepAcc = 0; return; } const sp = Math.abs(me.vf || 0); if (sp < .4) { stepAcc = Math.min(stepAcc, .3); return; }
+  const run = sp > 3, stride = run ? 1.15 : .72; stepAcc += sp * dt; if (stepAcc < stride) return; stepAcc -= stride; const q = track.probe(me.x, me.z, me.hint ?? B.hint), grass = Math.abs(q.d) > track.ROAD + .4 && !(Math.abs(q.d) > 4.9 && Math.abs(q.d) < track.PAVE + .1);
+  audio.play('step', { vol: (run ? .07 : .045) * (grass ? .8 : 1), grass }); }
+const BOOT = { drawn: false };   // (the loader in index.html: away once the first frames are in and the shaders made)
+const CULL = { t: 0, list: [], listT: 0, own: new Set() };
+function cullPeople(dt) { if ((CULL.t -= dt) > 0) return; CULL.t = .25; if ((CULL.listT -= .25) <= 0) { CULL.listT = 3; CULL.own.clear(); rider.root.traverse(o => CULL.own.add(o)); if (net.on) P2.rider.root.traverse(o => CULL.own.add(o)); CULL.list = []; scene.traverse(o => { if (o.isSkinnedMesh && !CULL.own.has(o)) CULL.list.push(o); }); }
+  const cp = camera.position, far = (foot.active && foot.view === 'first') ? 45 : 60, v = _cullV;
+  for (const o of CULL.list) { o.getWorldPosition(v); const near = (v.x - cp.x) ** 2 + (v.z - cp.z) ** 2 < far * far; if (near !== (o.layers.mask === 1)) o.layers.set(near ? 0 : 1); } }
+const _cullV = new THREE.Vector3();
 function finScore(n, at, label) { FIN.combo = FIN.comboT > 0 ? FIN.combo + 1 : 1; FIN.comboT = 3; const k = Math.min(3, FIN.combo), v = n * k; FIN.res.score += v; FIN.res.combo = Math.max(FIN.res.combo, k);
   audio.play(k > 1 ? 'trick' : 'coin'); hud.pop(at, `${label} +${v}${k > 1 ? ' x' + k : ''}`, k > 1 ? '#efc970' : '#9fd27a'); }
 function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? foot.me : B; FIN.t += dt; FIN.comboT -= dt;
@@ -1538,7 +1556,7 @@ function faceOf(who) { if (who === 'janusz') { if (!JIMG.complete || !JIMG.natur
   if (who === 'img:zaneta') { if (!ZIMG.complete || !ZIMG.naturalWidth) return null; const w = ZIMG.naturalWidth, h = ZIMG.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 96;
     const g = c.getContext('2d'); g.fillStyle = '#d8d0bc'; g.fillRect(0, 0, 96, 96); g.drawImage(ZIMG, w * .3, h * .0, w * .42, w * .42, 0, 0, 96, 96); return printed(c, 64, 64); }
   const byKey = who.startsWith('key:') ? who.slice(4) : null; if (!FACES[who] && !byKey) return null; const R = (residents?.list || []).find(q => byKey ? q.key === byKey : who === 'dogman' ? q.key === 'dogman' : q.lines === who); if (!R?.head) return null;
-  const G = SkeletonUtils.clone(R.G); G.position.set(0, 0, 0); G.rotation.set(0, 0, 0); G.visible = true; G.traverse(o => { o.visible = true; o.frustumCulled = false; }); STUDIO.add(G); G.updateMatrixWorld(true);
+  const G = SkeletonUtils.clone(R.G); G.position.set(0, 0, 0); G.rotation.set(0, 0, 0); G.visible = true; G.traverse(o => { o.visible = true; o.frustumCulled = false; o.layers.set(0); }); STUDIO.add(G); G.updateMatrixWorld(true);
   const hd = G.getObjectByName(R.head.name) || G, hp = hd.getWorldPosition(new THREE.Vector3()), cam = new THREE.PerspectiveCamera(24, camera.aspect, .1, 30);
   cam.position.set(hp.x + .3, hp.y + .1, hp.z + 1.45); cam.lookAt(hp.x, hp.y - .1, hp.z); const ph = photo(cam, photoStyle, STUDIO); STUDIO.remove(G);
   const sq = Math.min(ph.width, ph.height), c = document.createElement('canvas'); c.width = c.height = sq; const cg = c.getContext('2d'); cg.drawImage(ph, (ph.width - sq) / 2, (ph.height - sq) / 2, sq, sq, 0, 0, sq, sq);
@@ -1706,6 +1724,8 @@ function frame(now) {
   { const pc = quests.policeCars()[0]; audio.siren(quests.siren && !menu.open, where(pc && pc.g.position)); }
   audio.music(menu.page === 'title' || runUI.isOpen ? 'tytul' : quests.siren || quests.gangTargets.length ? 'poscig' : 'poranek');
   talkCam(dt); if (B.papers > (B.bagMax || 30)) { B.papers = B.bagMax || 30; if (!(B.fullT > 0)) { flash('Torba pełna'); B.fullT = 4; } } B.fullT = (B.fullT || 0) - dt;   // (no more than the bag holds)
+  cullPeople(dt);
+  if (!BOOT.drawn) { BOOT.drawn = true; requestAnimationFrame(() => document.body.classList.add('drawn')); renderer.compileAsync(scene, camera).catch(() => { }).finally(() => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('booted'))), 300)); }
   hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { px.render(scene, camera, hudBag); drawHud(dt); }
   requestAnimationFrame(frame);
 }
