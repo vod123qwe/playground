@@ -144,7 +144,7 @@ drift(0);
 // (?audit: nothing merged, for the ground check, see track.audit)
 const REGION = new URLSearchParams(location.search).get('region') || 'peryferia';   // (a region's world: built for it; another region: the page loads again)
 const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit'), region: REGION }); track.dapSun.value.copy(SUN); scene.add(track.group);
-const backdrop = createBackdrop({ THREE }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
+const backdrop = createBackdrop({ THREE, city: track.region === 'miasto' }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
 // the village's geese (geese.js): on the verges, across the road when a bike comes
 const geese = track.region === 'wies' ? createGeese({ THREE, scene, track, toon }) : null;
 const traffic = createTraffic({ THREE, track, cars: track.cars, n: 6, makeRider: () => createRider({ THREE, ramp, toon }), bikes: 2 }); scene.add(traffic.group);   // (cars, and now and then a cyclist coming the other way)
@@ -1540,7 +1540,7 @@ function testRows() { const out = [];
   out.push({ head: 'TORY PRZESZKÓD (FINAŁY)' }); for (const l of LVM.LEVELS.filter(l => !l.soon)) out.push({ label: 'TOR: ' + l.name, act: () => goTrack(l.id) });
   if (LV && FIN.on) out.push({ head: 'TEN TOR: ' + LV.name }, ...[['start', 'POCZĄTEK'], ['easy', 'ŁATWY PAS'], ['hard', 'TRUDNY PAS (ROZPĘD)'], ['jump2', 'DRUGA SKOCZNIA'], ['double', 'PODWÓJNY RÓW']].map(([w, n]) => ({ label: n, act: () => tpFinale(w) })));
   if (track.net) { const N0 = track.N, wr = i => ((i % N0) + N0) % N0, go = i => { const A = track.S[wr(i)]; tpTo(A.p.x, A.p.z, 1); };
-    out.push({ head: 'MIASTO: ULICE' }, ...track.net.shortcuts.map(c => ({ label: c.kind === 'alley' ? 'SKRÓT: ZAUŁEK' : 'SKRÓT: PARK Z PLACEM ZABAW', act: () => go(c.a - Math.round(14 / track.ds)) })), ...track.net.stubs.slice(0, 2).map((t, k) => ({ label: 'BOCZNA ULICA ' + (k + 1), act: () => go(t.i - Math.round(16 / track.ds)) }))); }
+    out.push({ head: 'MIASTO: ULICE' }, ...track.net.shortcuts.map(c => ({ label: c.kind === 'alley' ? 'SKRÓT: ZAUŁEK' : 'SKRÓT: PARK Z PLACEM ZABAW', act: () => go(c.a - Math.round(14 / track.ds)) })), ...track.net.stubs.slice(0, 2).map((t, k) => ({ label: 'BOCZNA ULICA ' + (k + 1), act: () => go(t.i - Math.round(16 / track.ds)) })), ...(track.net.plaza ? [{ label: 'PLAC POD BIUROWCEM', act: () => go(track.net.plaza.i0 - Math.round(14 / track.ds)) }] : []), { label: 'POSTÓJ TAXI', act: () => go(track.net.taxi.i - Math.round(14 / track.ds)) }); }
   out.push({ head: 'STANY' },
     { label: 'GAZETA PO TRASIE', act: needLV(() => finishLevel()) },
     { label: 'MAPA TRASY', act: () => openMap() },
@@ -1801,7 +1801,7 @@ function frame(now) {
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
-  drift(dt); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
+  drift(dt); track.net?.update?.(Math.min(dt, .05)); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
   { const q0 = track.probe(B.x, B.z, B.hint); audio.ride(foot.active || menu.open ? 0 : Math.abs(B.v), Math.abs(q0.d) > track.PAVE ? 1 : 0); }
   { const pc = quests.policeCars()[0]; audio.siren(quests.siren && !menu.open, where(pc && pc.g.position)); }

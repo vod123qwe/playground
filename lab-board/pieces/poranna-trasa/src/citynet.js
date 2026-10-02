@@ -9,7 +9,7 @@
 // createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI })
 //   → { blocked(i, side), build(), paved(x, z), shortcuts, stubs }
 
-export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI }) {
+export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked }) {
   const M = c => toon(c), wrap = i => ((i % N) + N) % N, O = 30;
   // ---------- where: two straight stretches for the shortcuts (none of them across a checkpoint: a quarter of the loop from the start),
   // four spots for the side streets on the outside ----------
@@ -23,8 +23,12 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   { const z0 = (i, d, hx, hz) => { const o = new THREE.Object3D(); o.position.copy(at(i, d, 0)); o.rotation.y = Math.atan2(S[wrap(i)].f.x, S[wrap(i)].f.z); o.updateMatrixWorld(); zone(o, hx, hz); };
     for (const c of shortcuts) { for (const i of [c.a, c.a + LEN]) z0(i, INNER * (O + ROAD) / 2, (O - ROAD) / 2 + 1, 3.5); z0(c.a + Math.round(LEN / 2), INNER * O, 12, LEN * ds / 2 + 2); }
     for (const t of stubs) z0(t.i, t.sd * 18, 17, 5.5); }
+  // (the office plaza: on the outside, a stretch with no side street by it; the taxi rank further on, by the kerb)
+  const plaza = (() => { for (const f of [.44, .4, .48, .66]) { const i0 = wrap(startI + Math.round(N * f)), i1 = i0 + Math.round(46 / ds); if (stubs.some(t => near(t.i, i0, 30) || near(t.i, i1, 30))) continue; if (cps.some(c => near(c, i0 + Math.round(23 / ds), 30))) continue; return { i0, i1, sd: -INNER }; } return null; })();
+  const taxi = (() => { let i = wrap(startI + Math.round(N * .93)); if (stubs.some(t => near(t.i, i, 24))) i = wrap(i + Math.round(30 / ds)); return { i, sd: -INNER }; })();
+  if (plaza) { const mid = plaza.i0 + Math.round((plaza.i1 - plaza.i0) / 2), o = new THREE.Object3D(); o.position.copy(at(mid, plaza.sd * 20, 0)); o.rotation.y = Math.atan2(S[wrap(mid)].f.x, S[wrap(mid)].f.z); o.updateMatrixWorld(); zone(o, 16, 26); }
   // a lot (at i, on side s) left empty: where a shortcut's leg goes through, where a side street opens
-  function blocked(i, s) { for (const c of shortcuts) if (s === INNER && (near(i, c.a, 9) || near(i, c.b, 9))) return true; for (const t of stubs) if (s === t.sd && near(i, t.i, 9)) return true; return false; }
+  function blocked(i, s) { if (plaza && s === plaza.sd && wrap(i - plaza.i0 + Math.round(4 / ds)) <= plaza.i1 - plaza.i0 + Math.round(8 / ds)) return true; for (const c of shortcuts) if (s === INNER && (near(i, c.a, 9) || near(i, c.b, 9))) return true; for (const t of stubs) if (s === t.sd && near(i, t.i, 9)) return true; return false; }
   // ---------- the paved ways (segments with a half width): the bike rides on them as on the loop ----------
   const segs = []; const seg = (a, b, hw) => segs.push({ a, b, hw });
   function paved(x, z) { for (const q of segs) { const dx = q.b.x - q.a.x, dz = q.b.z - q.a.z, l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - q.a.x) * dx + (z - q.a.z) * dz) / l2)), px = q.a.x + dx * t - x, pz = q.a.z + dz * t - z; if (px * px + pz * pz < q.hw * q.hw) return true; } return false; }
@@ -39,7 +43,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   const dummy = (i, d, turn = 0) => { const o = new THREE.Object3D(); const q = at(i, d, 0); o.position.copy(q); o.rotation.y = Math.atan2(S[wrap(i)].f.x, S[wrap(i)].f.z) + turn; o.updateMatrixWorld(); return o; };
   // the canvas for a sign or a graffiti (pixel letters, see city.js's own font: here a few shapes and colours only)
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); f(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
-  const FONT = { A: '010101111101101', E: '111100110100111', K: '101110100110101', R: '110101110110101', T: '111010010010010', Z: '111001010100111', Ó: '010010101101010', U: '101101101101111', Ł: '100110100100111', P: '110101110100100', Y: '101101010010010', W: '101101111111101', J: '001001001101010', D: '110101101101110', ' ': '000000000000000', '>': '100010001010100', '<': '001010100010001' };
+  const FONT = { A: '010101111101101', E: '111100110100111', K: '101110100110101', R: '110101110110101', T: '111010010010010', Z: '111001010100111', Ó: '010010101101010', U: '101101101101111', Ł: '100110100100111', P: '110101110100100', Y: '101101010010010', W: '101101111111101', J: '001001001101010', D: '110101101101110', ' ': '000000000000000', C: '111100100100111', N: '110101101101101', M: '101111111101101', X: '101101010101101', I: '111010010010111', S: '111100111001111', O: '111101101101111', '>': '100010001010100', '<': '001010100010001' };
   const words = (text, bg, fg) => cv(text.length * 4 + 3, 9, g => { g.fillStyle = bg; g.fillRect(0, 0, 999, 9); g.fillStyle = fg; [...text].forEach((ch, k) => { const r = FONT[ch] || FONT[' ']; for (let q = 0; q < 15; q++) if (r[q] === '1') g.fillRect(2 + k * 4 + q % 3, 2 + (q / 3 | 0), 1, 1); }); });
   const plate = (text, bg, fg, w, h) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: words(text, bg, fg), side: THREE.DoubleSide }));
   const lampM = new THREE.MeshBasicMaterial({ color: '#ffd98a' }), steel = M('#5a5f66'), dark = M('#2a2c30');
@@ -121,6 +125,47 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
       else if (k < .88) { g.add(box(.9, .5, .9, M('#8a857a'), 0, .25, 0)); const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.45, 1), M('#467537')); b.position.y = .8; g.add(b); hb = { hx: .45, hz: .45, h: .9, kind: 'hard' }; }   // (a planter)
       else { for (const z of [-.8, 0, .8]) g.add(box(.14, .8, .14, dark, 0, .4, z)); }   // (bollards)
       put(g, i, d, 0, 0); if (hb) hit(g, hb, wrap(i)); } }
-  function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); furniture(); }
-  return { blocked, build, paved, shortcuts, stubs };
+  // ---------- the office plaza: the tower (glass, its name over the door), paving, flower beds, a fountain, lamps; a car park with
+  // two rows of cars (their roofs to ride, as any parked car's); people walking about it ----------
+  const walkers = [];
+  function office() { if (!plaza) return; const sg = plaza.sd, i0 = plaza.i0, i1 = plaza.i1, mid = i0 + Math.round((i1 - i0) / 2);
+    { const L = line(i0, i1, sg * (PAVE + 9)); ribbon(L, 18, '#b9b2a2', .022); for (let k = 1; k < L.length; k++) seg(L[k - 1], L[k], 9.2); }
+    { const g = new THREE.Group(), gt = cv(8, 16, x => { for (let y = 0; y < 16; y++) for (let q = 0; q < 8; q++) { x.fillStyle = (y % 4 === 0) ? '#5a6a74' : (q % 2 ? '#7fa6c2' : (rnd() < .2 ? '#e8dca0' : '#6f93ad')); x.fillRect(q, y, 1, 1); } });
+      gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(4, 10); const glass = toon('#ffffff', { map: gt });
+      g.add(box(14, 38, 18, glass, 0, 19, 0), box(14.4, .8, 18.4, M('#4a4e55'), 0, 38.4, 0), box(3, 4, 6, M('#3a3d42'), 0, 40.4, -3));
+      g.add(box(3, .25, 7, M('#c9c4ba'), sg * 8.5, 4.2, 0), box(.1, 3.6, 3.2, M('#2f3e4a'), sg * 7.05, 1.8, 0));
+      const nm = plate('CENTRUM', '#17181b', '#efc970', 4.4, .9); nm.position.set(sg * 7.12, 5.4, 0); nm.rotation.y = sg > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(nm);
+      put(g, mid, sg * (PAVE + 25), 0, 0); hit(g, { hx: 7, hz: 9, h: 38, kind: 'hard' }, wrap(mid)); g.updateMatrixWorld(true);
+      const n = new THREE.Vector3(sg, 0, 0).transformDirection(g.matrixWorld).setY(0).normalize(), fp = g.localToWorld(new THREE.Vector3(sg * 7, 0, 0)), hi = doors.length;
+      // (the reception: it takes the paper as a door does; the ground floor's glass to break)
+      doors.push({ p: fp.clone().addScaledVector(n, 2.6), n, done: false, i: wrap(mid) });
+      for (const z of [-6, -3.5, 3.5, 6]) windows.push({ p: g.localToWorld(new THREE.Vector3(sg * 7.05, 2, z)), n: n.clone(), hw: 1.1, hh: 1.3, broken: false, i: wrap(mid), house: hi }); }
+    // flower beds, a fountain, lamps on the plaza
+    for (const k of [-1, 1]) { const g = new THREE.Group(); g.add(box(3, .5, 5, M('#8a857a'), 0, .25, 0), box(2.7, .2, 4.7, M('#5b8a3c'), 0, .55, 0)); for (let q = 0; q < 6; q++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(.25, 0), M(['#cf5a3e', '#efc970', '#e889b5'][q % 3])); f.position.set((rnd() - .5) * 2.2, .75, (rnd() - .5) * 4); g.add(f); }
+      put(g, mid + k * Math.round(13 / ds), sg * (PAVE + 10), 0, 0); hit(g, { hx: 1.5, hz: 2.5, h: .6, kind: 'hard' }, wrap(mid)); }
+    { const g = new THREE.Group(), rim = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, .6, 16), M('#c9c4ba')), w = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, .1, 16), new THREE.MeshBasicMaterial({ color: '#7fb6cc' })), col = new THREE.Mesh(new THREE.CylinderGeometry(.25, .3, 1.6, 8), M('#c9c4ba'));
+      rim.position.y = .3; w.position.y = .62; col.position.y = .8; g.add(rim, w, col); put(g, mid, sg * (PAVE + 10), 0, 0); hit(g, { hx: 2.4, hz: 2.4, h: .6, kind: 'hard' }, wrap(mid)); }
+    for (const k of [-2, -1, 1, 2]) lamp(mid + k * Math.round(9 / ds), sg * (PAVE + 16));
+    // the car park, by the plaza's near end: two rows across, their lines painted
+    if (CARS) for (let r0 = 0; r0 < 2; r0++) for (let k = 0; k < 5; k++) { const i = i0 + Math.round((2 + k * 2.8) / ds), d = sg * (PAVE + 3.4 + r0 * 6.2), c = CARS.random(rnd); put(c.group, i, d, 0, Math.PI / 2 + (r0 ? Math.PI : 0)); c.group.userData.keep = true; hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, wrap(i));
+      const ln = new THREE.Mesh(new THREE.PlaneGeometry(.1, 4.6).rotateX(-Math.PI / 2), M('#f0ece2')); ln.userData.noShadow = true; put(ln, i + Math.round(1.4 / ds), d, .04, Math.PI / 2); }
+    // the people about the plaza: little figures walking rounds of their own (a coat, a head, legs that step)
+    for (let k = 0; k < 14; k++) { const g = new THREE.Group(), coat = M(['#3b5670', '#8e2e25', '#44484c', '#6b4a2e', '#467537', '#c9b8a0', '#2f4a6e'][k % 7]);
+      g.add(box(.42, .62, .26, coat, 0, 1.12, 0), box(.22, .22, .22, M(['#e3b08a', '#c98a5a', '#d9a07a'][k % 3]), 0, 1.6, 0), box(.24, .07, .24, M(['#24190f', '#9a938a', '#5b3a22'][k % 3]), 0, 1.74, 0));
+      const legs = [-1, 1].map(sd => { const l = new THREE.Group(); l.add(box(.14, .78, .16, M('#2a2c30'), 0, -.39, 0)); l.position.set(sd * .1, .8, 0); g.add(l); return l; }); if (k % 3 === 0) g.add(box(.08, .3, .24, M('#2a2c30'), .28, .9, 0));
+      const c0 = at(mid + Math.round((rnd() - .5) * 30 / ds), sg * (PAVE + 7 + rnd() * 7), 0); g.position.copy(c0); G.add(g); g.userData.keep = true; walkers.push({ g, legs, c: c0.clone(), r: 2 + rnd() * 5, a: rnd() * 6.28, w: (.6 + rnd() * .5) * (rnd() < .5 ? -1 : 1), ph: rnd() * 6 }); } }
+  // ---------- the taxi rank: by the kerb, three taxis in a row with their roof signs, the rank's sign; parked, for the traffic ----------
+  function taxis() { if (!CARS) return; const sg = taxi.sd;
+    for (let k = 0; k < 3; k++) { const i = taxi.i + Math.round(k * 5.4 / ds), c = CARS.makeCar('saloon', '#efc930'), t = new THREE.Group(), w = plate('TAXI', '#17181b', '#efc970', .5, .16); t.add(box(.56, .2, .22, M('#f6f3ea'), 0, 0, 0)); w.position.z = .12; t.add(w); const w2 = w.clone(); w2.position.z = -.12; t.add(w2); t.position.set(0, 1.55, 0); c.group.add(t);
+      put(c.group, i, sg * 2.45, 0, sg < 0 ? Math.PI : 0); c.group.userData.keep = true; hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, wrap(i)); parked?.()?.push({ s: wrap(i) * ds, d: sg * 2.45 }); }
+    const g = new THREE.Group(), pl = plate('POSTÓJ TAXI', '#2f4a6e', '#f6f3ea', 1.9, .42); pl.position.y = 2.6; pl.rotation.y = Math.PI / 2; g.add(box(.07, 2.8, .07, steel, 0, 1.4, 0), pl); put(g, taxi.i - Math.round(3 / ds), sg * (ROAD + 1), 0, 0); hit(g, { hx: .1, hz: .1, h: 2.8, kind: 'hard' }, wrap(taxi.i)); }
+  // ---------- planes off the airport: now and then one takes off far out, climbing over the town, and is gone ----------
+  const planes = []; { const body = M('#e9e6df'), tail = M('#cf5a3e'); for (let k = 0; k < 2; k++) { const g = new THREE.Group(); g.add(box(1.3, 1.3, 11, body, 0, 0, 0), box(13, .2, 2, body, 0, -.2, .5), box(.2, 2.4, 1.4, tail, 0, 1.4, -4.6), box(4.4, .16, 1, body, 0, .2, -4.6)); g.visible = false; g.userData.keep = true; G.add(g); planes.push({ g, t: -4 - k * 22, a: 0 }); } }
+  let clock = 0;
+  function update(dt) { clock += dt;
+    for (const W0 of walkers) { W0.a += W0.w * dt / Math.max(1, W0.r); const x = W0.c.x + Math.cos(W0.a) * W0.r, z = W0.c.z + Math.sin(W0.a) * W0.r, dir = Math.sign(W0.w); W0.g.position.set(x, W0.c.y, z); W0.g.rotation.y = Math.atan2(-Math.sin(W0.a) * dir, Math.cos(W0.a) * dir); const st = Math.sin(clock * 7 + W0.ph) * .45; W0.legs[0].rotation.x = st; W0.legs[1].rotation.x = -st; }
+    for (const Pl of planes) { Pl.t += dt; if (Pl.t < 0) continue; if (Pl.t > 34) { Pl.t = -20 - rnd() * 25; Pl.g.visible = false; continue; } if (!Pl.g.visible) { Pl.a = rnd() * 6.28; Pl.g.visible = true; }
+      const u = Pl.t / 34, R = 330 - u * 120, ang = Pl.a + u * .9, y = 18 + u * u * 160, vx = -Math.sin(ang), vz = Math.cos(ang); Pl.g.position.set(110 + Math.cos(ang) * R, y, -10 + Math.sin(ang) * R); Pl.g.rotation.set(0, Math.atan2(vx, vz), 0); Pl.g.rotateX(-.2); } }
+  function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); office(); taxis(); furniture(); }
+  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi };
 }
