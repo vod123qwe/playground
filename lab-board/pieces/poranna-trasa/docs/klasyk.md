@@ -34,7 +34,8 @@ Rytm ulicy, odcinki po ~150 m, każdy z innym charakterem (do zbudowania etapami
 - **Tempo:** rower toczy się sam (~5 m/s). Gaz przyspiesza do ~8 m/s, hamulec zwalnia do ~2 m/s. Sprint zostaje na proste.
 - **Rzut:** jeden. Każdy klawisz rzutu i oba przyciski myszy rzucają zawsze w stronę domów. Kliknięcie: sam leci do celu w ramce. Przytrzymanie: siła, czyli odległość.
 - **Kamera:** skośna, z drogą, ustawiona nad stroną przeszkód i patrząca po skosie na domy i drogę przed rowerzystą.
-- **Upadki:** jak w Porannej Trasie od v155 (zachwianie przy średnich, upadek przy mocnych).
+- **Upadki:** jak w Porannej Trasie od v155 (zachwianie przy średnich, upadek przy mocnych), ale bez wstawania pieszo: chwila leżenia i rowerzysta z rowerem wraca na pas, mrugając ~2,5 s bez przewracania (v157).
+- **Kamera:** jedna, bez przełączania, zoomu i obrotu (v157).
 
 ## Przeszkody i zdarzenia (katalog z oceną)
 
