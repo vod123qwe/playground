@@ -1460,3 +1460,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - domy abonentów widać z daleka: drzwi w kolorze gazety z białą ramką i skrzynka na słupku z czerwoną chorągiewką; nieabonenci mają ciemne drzwi
 - na mecie medal (brąz, srebro, złoto za 1, 2 i 3 gwiazdki) i punkty z przejazdu z rekordem
 - w menu Klasyka otwarte poziomy z medalem przy nazwie
+
+## Wersja 178: Klasyk, tydzień pracy
+
+- każdy przejazd poziomu Klasyka to dzień tygodnia (w pasku poziomu), ci sami abonenci dzień po dniu
+- abonent bez gazety pierwszy raz dostaje czerwoną ramkę drzwi (ostatnia szansa), drugi dzień z rzędu rezygnuje
+- dzień bez pudła odzyskuje jednego abonenta; zaliczona niedziela to premia 25 zł i nowy tydzień; gdy zostanie mniej niż 3 abonentów, tydzień zaczyna się od nowa
+- na mecie w gazecie ramka „Tydzień” z bilansem dnia
