@@ -11,7 +11,7 @@ export const RC = { peryferia: [62, 118], wies: [150, 52], peryferia2: [176, 132
 export const LAB = { peryferia: [56, 164], wies: [118, 22], peryferia2: [204, 166], miasto: [240, 44], las: [282, 116], dalej: [292, 12] };   // (the names: off the points)
 export const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 72], w2: [126, 50], w3: [174, 50], w4: [150, 30], d1: [178, 112], d2: [160, 140], d3: [198, 138], d4: [182, 158], m1: [222, 92], m2: [236, 66], m3: [256, 84], m4: [244, 108] };
 
-import { pxKey } from './pixui.js';
+import { pxKey, pxStars, pxStar } from './pixui.js';
 
 export function createMap({ levels: LV, game }) {
   const { REGIONS, LEVELS, LEVEL } = LV;
@@ -26,7 +26,7 @@ export function createMap({ levels: LV, game }) {
     #map canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; cursor: pointer; display: block; background: #1d1e21; }
     #map .side { gap: 10px; } #map .info { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
     #map .reg { color: #8d8a80; } #map .ttl { color: #efc970; font-size: 24px; line-height: 1.1; } #map .note { color: #c9c6bb; }
-    #map .stars { display: flex; gap: 6px; } #map .stars i { width: 20px; height: 20px; background: #33363a; clip-path: polygon(40% 0, 60% 0, 60% 30%, 100% 30%, 100% 50%, 80% 60%, 90% 100%, 70% 100%, 50% 80%, 30% 100%, 10% 100%, 20% 60%, 0 50%, 0 30%, 40% 30%); } #map .stars i.on { background: #efc970; }
+    #map .bigstars { font-size: 22px; line-height: 1; margin: 2px 0 4px; } #map .stars { display: flex; gap: 6px; } #map .stars i { width: 20px; height: 20px; background: #33363a; clip-path: polygon(40% 0, 60% 0, 60% 30%, 100% 30%, 100% 50%, 80% 60%, 90% 100%, 70% 100%, 50% 80%, 30% 100%, 10% 100%, 20% 60%, 0 50%, 0 30%, 40% 30%); } #map .stars i.on { background: #efc970; }
     #map .goals, #map .best { border: 6px solid transparent; border-image: var(--px-inset) 3 fill / 6px; padding: 4px 6px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; }
     #map .goals .s { width: 12px; height: 12px; background: #44484c; clip-path: inherit; } #map .goals .s.on { background: #efc970; } #map .goals .v, #map .best .v { color: #efc970; text-align: right; } #map .best .k { grid-column: 1 / 3; color: #a9a69b; }
     #map h4 { margin: 4px 0 0; color: #efc970; font-size: 16px; font-weight: normal; }
@@ -101,7 +101,7 @@ export function createMap({ levels: LV, game }) {
   function pinsDraw(t) { const land = el.querySelector('.land').getBoundingClientRect(); const st0 = state(); game.dio.frame(land, t, st0, links()); let h = '';
     for (const r of REGIONS) { const [x, y] = LAB[r.id], p = game.dio.projectXY(x, y, 3.5); if (p.x < land.left || p.x > land.right || p.y < land.top || p.y > land.bottom) continue; h += `<div class="rlab ${r.built ? '' : 'off'}" style="left:${p.x}px;top:${p.y}px">${r.name}${r.built ? '' : '<small>WKRÓTCE</small>'}</div>`; }
     for (const id of nodes()) { const p = game.dio.project(id); if (!p) continue; const L = LEVEL(id), n = L ? LV.starsOf(id) : 0, open = id === 'dom' || (L && !L.soon && LV.isOpen(id));
-      const reg = st0.reg, near = id === 'dom' ? reg === 'peryferia' : L?.region === reg; h += `<div class="pin ${id === sel ? 'sel' : ''} ${id === 'dom' ? 'home' : ''} ${near ? 'near' : ''} ${open ? '' : 'shut'}" style="left:${p.x}px;top:${p.y}px">${L && open ? `<span class="st">${'★'.repeat(n)}<i>${'★'.repeat(3 - n)}</i></span>` : ''}<span class="nm">${id === 'dom' ? 'DOM' : L ? L.name : ''}</span></div>`; }
+      const reg = st0.reg, near = id === 'dom' ? reg === 'peryferia' : L?.region === reg; h += `<div class="pin ${id === sel ? 'sel' : ''} ${id === 'dom' ? 'home' : ''} ${near ? 'near' : ''} ${open ? '' : 'shut'}" style="left:${p.x}px;top:${p.y}px">${L && open ? `<span class="st">${pxStars(n)}</span>` : ''}<span class="nm">${id === 'dom' ? 'DOM' : L ? L.name : ''}</span></div>`; }
     pins.innerHTML = h; }
   function loop(t) { if (!open_) return; if (game.dio) pinsDraw(t); else draw(t); raf = requestAnimationFrame(loop); }
   // a click on the model: the point nearest on the screen
@@ -109,16 +109,16 @@ export function createMap({ levels: LV, game }) {
 
   // ---------- the side: what the chosen point is ----------
   const mmss = s => s == null ? '-' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  function side() { const tot = LV.totalStars(); el.querySelector('.tot').textContent = `★ ${tot} / ${LEVELS.filter(l => !l.soon).length * 3}`;
+  function side() { const tot = LV.totalStars(); el.querySelector('.tot').innerHTML = `${pxStar()} ${tot} / ${LEVELS.filter(l => !l.soon).length * 3}`;
     if (sel === 'dom') { info.innerHTML = `<div class="reg">PERYFERIA</div><div class="ttl">DOM</div><div class="note">Twoja baza. Kosz z bratem, garaż, rodzina. Jeździsz swobodnie, bez mety i bez zegara.</div>`; goL.textContent = 'DO DOMU'; goB.classList.remove('off'); return; }
     const L = LEVEL(sel), R = REGIONS.find(r => r.id === L.region), open = !L.soon && LV.isOpen(sel), b = LV.bestOf(sel), n = LV.starsOf(sel);
     if (L.soon) { info.innerHTML = `<div class="reg">${R.name}</div><div class="ttl">${L.name}</div><div class="note">${R.note}</div><div class="note" style="color:#8d8a80">Ten region jest jeszcze w budowie.</div>`; goL.textContent = 'WKRÓTCE'; goB.classList.add('off'); return; }
     const gl = L.goal, st = b ? [b.time <= gl.time, (b.acc || 0) >= gl.acc && (b.delivered || 0) >= gl.papers, (b.falls ?? 99) === 0] : [false, false, false];
-    info.innerHTML = `<div class="reg">${R.name}</div><div class="ttl">${L.name}</div><div class="stars">${[0, 1, 2].map(k => `<i class="${k < n ? 'on' : ''}"></i>`).join('')}</div><div class="note">${L.note}</div>
+    info.innerHTML = `<div class="reg">${R.name}</div><div class="ttl">${L.name}</div><div class="bigstars">${pxStars(n)}</div><div class="note">${L.note}</div>
       <h4>GWIAZDKI</h4><div class="goals"><i class="s ${st[0] ? 'on' : ''}"></i><span>CZAS DO</span><span class="v">${mmss(gl.time)}</span><i class="s ${st[1] ? 'on' : ''}"></i><span>${gl.papers} GAZET, CELNOŚĆ</span><span class="v">${Math.round(gl.acc * 100)}%</span><i class="s ${st[2] ? 'on' : ''}"></i><span>BEZ WYWROTKI</span><span class="v"></span></div>
       <h4>NAJLEPSZE WYNIKI</h4>${b ? `<div class="best"><span class="k">CZAS</span><span class="v">${mmss(b.time)}</span><span class="k">GAZETY</span><span class="v">${b.delivered}</span><span class="k">CELNOŚĆ</span><span class="v">${Math.round((b.acc || 0) * 100)}%</span><span class="k">NAJMNIEJ WYWROTEK</span><span class="v">${b.falls}</span><span class="k">ZAROBEK</span><span class="v">${b.earned} ZŁ</span><span class="k">PRZEJAZDY</span><span class="v">${b.runs}</span></div>` : '<div class="note" style="color:#8d8a80">Jeszcze nie jechane.</div>'}
       <h4>NA DRODZE</h4><div class="note">AUTA: ${'▪'.repeat(L.cars)} · PSY: ${'▪'.repeat(Math.round(L.heat * 3))} · W TORBIE: ${L.papers}</div>
-      ${(() => { const R = LV.REWARDS[sel] || {}, got = LV.load().got || {}, rs = [1, 3].filter(k => R[k]); return rs.length ? `<h4>NAGRODY ZA GWIAZDKI</h4><div class="note">${rs.map(k => `<span style="${got[sel + ':' + k] ? 'text-decoration:line-through;opacity:.55' : ''}">${'★'.repeat(k)} ${R[k].cash ? R[k].cash + ' ZŁ' : (game.partName?.(...R[k].part) || 'CZĘŚĆ')}</span>`).join(' · ')}</div>` : ''; })()}
+      ${(() => { const R = LV.REWARDS[sel] || {}, got = LV.load().got || {}, rs = [1, 3].filter(k => R[k]); return rs.length ? `<h4>NAGRODY ZA GWIAZDKI</h4><div class="note">${rs.map(k => `<span style="${got[sel + ':' + k] ? 'text-decoration:line-through;opacity:.55' : ''}">${pxStars(k, k)} ${R[k].cash ? R[k].cash + ' ZŁ' : (game.partName?.(...R[k].part) || 'CZĘŚĆ')}</span>`).join(' · ')}</div>` : ''; })()}
       ${(() => { const m = LV.mods(); return m.length ? `<h4>UMOWA NA JUTRO</h4><div class="note" style="color:#cf5a3e">${m.map(id => LV.MODS.find(q => q.id === id).t).join(', ')} · PREMIA +${Math.round(LV.modBonus(m) * 100)}%</div>` : ''; })()}
       <h4>STALI PRENUMERATORZY</h4><div class="note">${LV.regulars()} · ABONAMENT ${LV.income()} ZŁ ZA METĘ</div>`;
     goL.textContent = open ? (b ? 'JEDŹ JESZCZE RAZ' : 'JEDŹ') : 'ZAMKNIĘTE'; goB.classList.toggle('off', !open);

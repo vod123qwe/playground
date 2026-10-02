@@ -333,6 +333,6 @@ export function createHud() {
     bar(rx, F.b.hp, 5, '#cf5a3e', '#3a2a26', true); bar(rx, F.b.st, 2, '#efc970', '#3a3526', true);
     text(F.a.name, lx, y - 8, '#f6f3ea'); text(F.b.name, rx + bw - width(F.b.name), y - 8, '#f6f3ea');
     if (F.a.guard) { g.fillStyle = '#9ccad8'; g.fillRect(lx + bw + 4, y, 5, 5); g.fillStyle = '#17181b'; g.fillRect(lx + bw + 6, y + 1, 1, 3); } }
-  return { hooks, resize, draw, pop, rant, praise, impact, ask, askAt, bleed, tip, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
+  return { clear: () => g.clearRect(0, 0, cv.width, cv.height), hooks, resize, draw, pop, rant, praise, impact, ask, askAt, bleed, tip, setOverlay: f => { overlay = f; }, writer: ctx => { const on = f => (...a) => { const o = g; g = ctx; try { return f(...a); } finally { g = o; } }; return { text: on(text), big: on(big), width }; },   // (the font, drawing on another canvas)
     api: { get g() { return g; }, text, big, width, glyph, get W() { return cv.width; }, get H() { return cv.height; } }, get askSel() { return Q.sel; }, set askSel(v) { Q.sel = v; }, canvas: cv };
 }

@@ -1069,3 +1069,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - rynek: rząd straganów z pasiastymi daszkami i skrzynkami owoców i warzyw
 - wszystko grywalne jak domy: gazeta do skrzynki na ścianie, pod drzwi klatki, okna parteru i pierwszego piętra da się wybić
 - trasy: Stare Miasto (pół pętli), Dzień targowy (cała pętla w drugą stronę przez rynek), Blokowisko (cała pętla, bloki); Godzina szczytu zapowiedziana
+
+## Wersja 121: menu do testów, ustawienia, pikselowe gwiazdki
+
+- menu (start i pauza): zakładka TESTY: TRASY I STANY: każdy odcinek każdego regionu do odpalenia od razu (bez odblokowywania), stany do przeskoczenia: gazeta po trasie (udawany koniec odcinka), mapa, sklep Janusza, finałowa prosta, przejazd kolejowy, wsiadanie na rower, +100 zł (zakładka tymczasowa, na czas testów)
+- menu: zakładka USTAWIENIA zbiera grafikę, dźwięk, sterowanie, ekran (pełny / zwykły) i asystę rzutu; „Wróć” wraca tam, skąd przyszedłeś
+- poprawka: po wybraniu „Mapa trasy” z pauzy menu nie zostaje zamrożone na mapie
+- gwiazdki pikselowe (z ciemnym obrysem, złote i szare) na mapie, w panelu odcinka, w nagrodach i w tabeli wyników w gazecie
