@@ -510,7 +510,7 @@ const plaques = [];
 const MARK = { door: new THREE.BoxGeometry(.95, 1.95, .06), post: new THREE.BoxGeometry(.08, 1, .08).translate(0, .5, 0), box: new THREE.BoxGeometry(.32, .26, .5), flag: new THREE.BoxGeometry(.04, .22, .14), frame: new THREE.BoxGeometry(1.2, 2.2, .04), off: new THREE.MeshBasicMaterial({ color: '#1f2124' }), white: new THREE.MeshBasicMaterial({ color: '#f6f3ea' }), wood: toon('#8a6a44'), red: new THREE.MeshBasicMaterial({ color: '#e8402c' }), lit: Object.fromEntries(TK.map(k => [k, new THREE.MeshBasicMaterial({ color: TITLES[k].col })])) };   // (unlit: bright from afar in any light)
 function classicMark(d) { if (d.mark) { scene.remove(d.mark); d.mark = null; } if (d.stall || d.mine) return;
   const n = d.n, fa = d.p.clone().addScaledVector(n, -2.6), side = new THREE.Vector3(-n.z, 0, n.x), g = new THREE.Group(), col = d.sub ? MARK.lit[d.sub] : MARK.off, yaw = Math.atan2(n.x, n.z);
-  if (!d.gate && !track.city) { const door = new THREE.Mesh(MARK.door, col); door.position.copy(fa).addScaledVector(n, .12); door.position.y += 1.02; door.rotation.y = yaw; g.add(door); if (d.sub) { const fr = new THREE.Mesh(MARK.frame, MARK.white); fr.position.copy(door.position).addScaledVector(n, -.03); fr.position.y += .05; fr.rotation.y = yaw; g.add(fr); } }
+  if (!d.gate && !track.city) { const door = new THREE.Mesh(MARK.door, col); door.position.copy(fa).addScaledVector(n, .12); door.position.y += 1.02; door.rotation.y = yaw; g.add(door); if (d.sub) { const fr = new THREE.Mesh(MARK.frame, d.miss ? MARK.red : MARK.white); fr.position.copy(door.position).addScaledVector(n, -.03); fr.position.y += .05; fr.rotation.y = yaw; g.add(fr); } }
   if (d.sub) { const mb = new THREE.Group(), bx = new THREE.Mesh(MARK.box, col), fl = new THREE.Mesh(MARK.flag, MARK.red); mb.add(new THREE.Mesh(MARK.post, MARK.wood)); bx.position.y = 1.08; fl.position.set(.19, 1.3, .1); mb.add(bx, fl);
     mb.position.copy(d.p).addScaledVector(side, 1.4); mb.position.y = track.probe(mb.position.x, mb.position.z, d.i ?? -1).y; mb.rotation.y = yaw; g.add(mb); }
   scene.add(g); d.mark = g; }
@@ -1531,6 +1531,7 @@ function setFog(on) { scene.fog.near = on ? 12 : FOG0.near; scene.fog.far = on ?
 // (another region, or this route's own map: the world built anew)
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if (L0.region !== track.region || (L0.map || '') !== track.map) { goRegion(L0.region, id, L0.map); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; if (!(id === 'p1' && !LVM.load().done?.p1)) { C.iy = 0; C.yaw = B.yaw; C.init = false; } const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; RUN.p0 = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; if (L.titles > 1) { const A = ACT(); TK.forEach(t => B.mix[t] = 0); A.forEach((t, k) => B.mix[t] = Math.floor(B.papers / A.length) + (k < B.papers % A.length ? 1 : 0)); }
+  RUN.week = null; if (L.classic) weekStart(L);
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   // (the finish where the run starts (a whole lap): the gate and the finale's course not there yet, at home, in sight from the start;
   // both put up half way round, when home is far behind)
@@ -1849,9 +1850,23 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   let rest = ahead(q.i, RUN.cps[RUN.cp]); for (let k = RUN.cp + 1; k < RUN.cps.length; k++) rest += ahead(RUN.cps[k - 1], RUN.cps[k]);
   if (rest < 130 && !RAD.fin && RUN.go) { RAD.fin = true; radioSay('finish'); }
   const aNow = ahead(q.i, RUN.cps[RUN.cp]); if (onRoad) RUN.minA = Math.min(RUN.minA, aNow); const wrong = onRoad && aNow > RUN.minA + 25;
-  lvHud.innerHTML = `<b>${LV.name}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>${LV2.cur ? `<span class="live">☎ ${LV2.cur.kind === 'parcel' && !LV2.cur.got ? 'PACZUSZKA NA DRODZE' : JB.PERSONAS[LV2.cur.who]?.name.toUpperCase()} · ${Math.ceil(LV2.cur.left)} S</span>` : ''}${JOBRUN.filter(q => !q.done).map(q => `<span class="job">▸ ${JB.lineOf(q.j)}${q.door ? ' ' + Math.round(Math.hypot(me.x - q.door.p.x, me.z - q.door.p.z)) + ' M' : ''}</span>`).join('')}`; }
+  lvHud.innerHTML = `<b>${LV.name}${RUN.week ? ' · ' + DAYS[RUN.week.day] : ''}</b><span>${mmss(RUN.t)}</span><span>${wrong ? '<span class="w">ZAWRÓĆ: META W DRUGĄ STRONĘ</span>' : `META ${Math.round(rest)} M`}</span><span>GAZETY ${B.delivered || 0}/${LV.goal.papers}</span>${LV2.cur ? `<span class="live">☎ ${LV2.cur.kind === 'parcel' && !LV2.cur.got ? 'PACZUSZKA NA DRODZE' : JB.PERSONAS[LV2.cur.who]?.name.toUpperCase()} · ${Math.ceil(LV2.cur.left)} S</span>` : ''}${JOBRUN.filter(q => !q.done).map(q => `<span class="job">▸ ${JB.lineOf(q.j)}${q.door ? ' ' + Math.round(Math.hypot(me.x - q.door.p.x, me.z - q.door.p.z)) + ' M' : ''}</span>`).join('')}`; }
+// ---------- the Classic's week: each run of a level a day, Monday to Sunday, the same subscribers day after day. Two days without a paper
+// and one gives up (the door goes dark); a day without a miss wins one back; Sunday done, the week is passed (a bonus); fewer than three
+// left, it starts again ----------
+const DAYS = ['PONIEDZIAŁEK', 'WTOREK', 'ŚRODA', 'CZWARTEK', 'PIĄTEK', 'SOBOTA', 'NIEDZIELA'];
+function weekStart(L) { const S = LVM.load(), ds = track.doors; S.week ||= {}; let W = S.week[L.id];
+  if (!W || W.n !== ds.length) { W = S.week[L.id] = { day: 0, n: ds.length, subs: ds.map(d => d.sub || null), miss: ds.map(() => 0) }; LVM.save(); }
+  ds.forEach((d, i) => { d.sub = W.subs[i] ?? null; d.miss = W.miss[i] || 0; }); assignSubs(false, true); RUN.week = W;
+  const n = W.subs.filter(Boolean).length; setTimeout(() => flash(`${DAYS[W.day]}: ${n} abonentów. Dwa dni bez gazety i abonent rezygnuje, dzień bez pudła odzyskuje jednego.`), 1800); }
+function weekEnd() { const W = RUN.week; if (!W) return null; const ds = track.doors, of = W.subs.filter(Boolean).length; let lost = 0, all = true, warned = 0;
+  ds.forEach((d, i) => { if (!W.subs[i]) return; if (d.done) { W.miss[i] = 0; return; } all = false; if (++W.miss[i] >= 2) { W.subs[i] = null; W.miss[i] = 0; lost++; } else warned++; });
+  let back = false; if (all) { const A = ACT(), free = ds.map((d, i) => i).filter(i => !W.subs[i] && !ds[i].mine && !ds[i].stall); if (free.length) { W.subs[free[Math.random() * free.length | 0]] = A[Math.random() * A.length | 0]; back = true; } }
+  const left = W.subs.filter(Boolean).length, day = W.day, over = left < 3, full = !over && day >= 6, S = LVM.load();
+  if (over || full) delete S.week[LV.id]; else W.day++; LVM.save(); RUN.week = null;
+  return { day: DAYS[day], next: over || full ? DAYS[0] : DAYS[day + 1], of, left, lost, warned, back, over, full }; }
 function finishLevel() { for (const R of JOBRUN) if (!R.done && R.j.kind === 'wyscig') jobEnd(R, RUN.t <= R.limit); RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
-  const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0, pts: Math.max(0, B.points - (RUN.p0 ?? B.points)) };
+  const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0, pts: Math.max(0, B.points - (RUN.p0 ?? B.points)) }, wk = L.classic ? weekEnd() : null; if (wk?.full) B.points += 25;
   const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
   const got = LVM.rewardsFor(L.id, before, rec.best.stars), bonus = Math.round((B.earned || 0) * LVM.modBonus(RUN.mods || [])), inc = LVM.income();
   for (const g of got) { if (g.cash) B.points += g.cash; if (g.part) shop.grant(g.part[0], g.part[1]); g.name = g.cash ? `${g.cash} ZŁ` : partLabel(g.part[0], g.part[1]); }
@@ -1859,7 +1874,7 @@ function finishLevel() { for (const R of JOBRUN) if (!R.done && R.j.kind === 'wy
   for (const R of JOBRUN) if (!R.done && R.j.kind === 'szarlotka' && (R.j.runs = (R.j.runs || 0) + 1) >= 2) jobEnd(R, false);
   { const S = LVM.load(); for (const j of S.jobs || []) { const R = JOBRUN.find(q => q.j.id === j.id); if (R) j.runs = R.j.runs; } LVM.save(); }
   LVM.save({ mods: [] }); saveCampaign();
-  audio.play('trick'); slowmo = .9; shutter(); const data = paperData(L, r, rec, opened); data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); setTimeout(() => { B.v *= .3; clearFinale(); fin.open(data); }, 1100); }
+  audio.play('trick'); slowmo = .9; shutter(); const data = paperData(L, r, rec, opened); data.week = wk; data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); setTimeout(() => { B.v *= .3; clearFinale(); fin.open(data); }, 1100); }
 // the finish's flash: the screen white a blink, the shutter's click
 function shutter() { const f = document.createElement('div'); f.style.cssText = 'position:fixed;inset:0;z-index:8;background:#fff;pointer-events:none;opacity:.9;transition:opacity .5s steps(4)'; document.body.appendChild(f); audio.play('ui'); requestAnimationFrame(() => requestAnimationFrame(() => { f.style.opacity = '0'; })); setTimeout(() => f.remove(), 700); }
 // the paper's look for its photos: one of the game's own overlays (the look panel's: comic dots, pencil, riso, 1 bit), put on for the

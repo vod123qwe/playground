@@ -130,3 +130,11 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Abonent widoczny z daleka: drzwi w kolorze jego gazety (nieoświetlony kolor, biała ramka) i skrzynka na słupku w tym kolorze z czerwoną chorągiewką. Nieabonent: ciemne drzwi (cel na szybę).
 - Medal z gwiazdek: 1 = brąz, 2 = srebro, 3 = złoto (czas, gazety i celność, bez wywrotki). Na mecie w „W liczbach”: medal i punkty z przejazdu (przyrost od startu) z rekordem.
 - Menu Klasyka: przyciski otwartych poziomów z medalem (np. KLASYK 2: WIEŚ · SREBRO).
+
+## Tydzień pracy (v178, wariant łagodny)
+
+- Każdy przejazd poziomu do mety to dzień: poniedziałek, wtorek… niedziela (dzień w pasku poziomu). Ci sami abonenci dzień po dniu (zapis `week[idPoziomu]` w zapisie kampanii).
+- Abonent bez gazety pierwszy raz: czerwona ramka drzwi (ostatnia szansa). Drugi dzień z rzędu: rezygnuje (ciemne drzwi).
+- Dzień bez pudła (każdy abonent dostał gazetę): wraca jeden abonent (losowy dom bez prenumeraty).
+- Niedziela zaliczona: TYDZIEŃ ZALICZONY, +25 zł, nowy tydzień z nowym rozkładem. Mniej niż 3 abonentów: tydzień od nowa.
+- Na mecie ramka „Tydzień” w „Twojej trasie”: ilu zostało, ilu zrezygnowało, ilu ma ostatnią szansę, kto wrócił, jaki dzień jutro.
