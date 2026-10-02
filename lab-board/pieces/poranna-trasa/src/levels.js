@@ -9,7 +9,7 @@ export const REGIONS = [
   { id: 'peryferia', name: 'PERYFERIA', note: 'Tu mieszkasz. Domki, ogródki, psy za płotem.', col: '#7fae5a', built: true },
   { id: 'wies', name: 'WIEŚ', note: 'Polne drogi, gospodarstwa, górki i błoto. Gęsi nie ustępują.', col: '#c9b25a', built: true },
   { id: 'peryferia2', name: 'DRUGA STRONA', note: 'Nowe osiedle za torami. Budowy, roboty drogowe, magazyny.', col: '#9aa36a', built: true },
-  { id: 'miasto', name: 'MIASTO', note: 'Kamienice, rynek, autobus. Krawężniki, schody i duży ruch.', col: '#b8a090', built: false },
+  { id: 'miasto', name: 'MIASTO', note: 'Kamienice, rynek, bloki, tramwaj. Krawężniki i duży ruch.', col: '#b8a090', built: true },
   { id: 'las', name: 'LEŚNA DROGA', note: 'Ścieżki między drzewami, domki letniskowe, namioty.', col: '#4f8a52', built: false },
   { id: 'dalej', name: '???', note: 'Jeszcze dalej. Inny teren.', col: '#6a6f78', built: false }];
 
@@ -41,7 +41,14 @@ export const LEVELS = [
   { id: 'd3', region: 'peryferia2', name: 'MAGAZYNY', note: 'Długie proste wzdłuż hal, dużo ruchu o świcie. Szybko, ale uważaj na rampy i wózki.', finish: { to: 1, dir: 1 }, cars: 5, pace: 1.15, heat: 1.05, papers: 26, seed: 603,
     goal: { time: 160, acc: .7, papers: 9 }, after: ['d4'], tease: { head: 'Hale przy bocznicy', text: 'Magazynierzy czytają gazetę na przerwie. Kto dowiezie przed szóstą, ten ma u nich kawę.', spot: 'przystanek' } },
   { id: 'd4', region: 'peryferia2', name: 'WOJNA GAZET', note: 'Całe osiedle, a na nim kurierzy Kuriera Osiedlowego: podbierają skrzynki. Wyprzedź, kopnij, trafiaj.', finish: { to: 1, dir: 1 }, cars: 3, pace: 1.1, heat: 1.1, papers: 30, seed: 604, rivals: 2, cross: [.4],
-    goal: { time: 165, acc: .7, papers: 10 }, after: [], tease: { head: 'Kurier wypowiada wojnę', text: 'Szef Kuriera Osiedlowego zapowiada, że od jutra „każda skrzynka będzie nasza”. Redakcja Trąbki odpowiada krótko: zobaczymy.', spot: 'budowa' } }];
+    goal: { time: 165, acc: .7, papers: 10 }, after: ['m1'], tease: { head: 'Kurier wypowiada wojnę', text: 'Szef Kuriera Osiedlowego zapowiada, że od jutra „każda skrzynka będzie nasza”. Redakcja Trąbki odpowiada krótko: zobaczymy.', spot: 'budowa' } },
+  { id: 'm1', region: 'miasto', name: 'STARE MIASTO', note: 'Pół miasta: kamienice ze sklepami, klatki schodowe, skrzynki w bramach. Ciasno i dużo ludzi.', finish: { to: .5, dir: 1 }, cars: 4, pace: 1.1, heat: 1.1, papers: 24, seed: 701,
+    goal: { time: 110, acc: .7, papers: 8 }, after: ['m2', 'm3'], tease: { head: 'Trąbka wjeżdża do miasta', text: 'Kamienicznicy pytają, czy gazeciarz z przedmieścia trafi do skrzynek w bramach. Redakcja odpowiada: trafi, jak nie pomyli klatek.', spot: 'przystanek' } },
+  { id: 'm2', region: 'miasto', name: 'DZIEŃ TARGOWY', note: 'Całe miasto w drugą stronę, przez rynek pełen straganów. Tłok, autobusy, pośpiech.', finish: { to: 1, dir: -1 }, cars: 5, pace: 1.15, heat: 1.15, papers: 30, seed: 702,
+    goal: { time: 175, acc: .7, papers: 11 }, after: ['m4'], tease: { head: 'Na rynku od świtu', text: 'Stragany stoją od piątej. Kwiaciarka mówi, że gazetę czyta między klientami, a klienci między straganami.', spot: 'przystanek' } },
+  { id: 'm3', region: 'miasto', name: 'BLOKOWISKO', note: 'Całe miasto, z osiedlem bloków z wielkiej płyty: długie proste, klatki jedna obok drugiej.', finish: { to: 1, dir: 1 }, cars: 5, pace: 1.2, heat: 1.1, papers: 30, seed: 703,
+    goal: { time: 165, acc: .72, papers: 11 }, after: ['m4'], tease: { head: 'Bloki czekają', text: 'Na osiedlu z wielkiej płyty każda klatka ma swoje plotki. Gazeta ma je zebrać, zanim zrobi to dozorczyni.', spot: 'budowa' } },
+  { id: 'm4', region: 'miasto', name: 'GODZINA SZCZYTU', note: 'Wkrótce: tramwaje, korki i redakcja Trąbki na końcu trasy.', soon: true, after: [] }];
 export const LEVEL = id => LEVELS.find(l => l.id === id);
 
 // ---------- the save ----------
