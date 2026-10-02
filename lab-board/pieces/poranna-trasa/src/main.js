@@ -158,7 +158,7 @@ const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });
 // (the locals of a route's own map: the Bronx after dark (its lads, glass, bins, the engineer); the tourist quarter (its tourists, the guide, picnics, skaters))
 const director = createDirector({ THREE, toon, track, scene });   // (something always going on: a small thing on the road ahead when nothing has happened a while)
-const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : track.harvest ? createVillage({ THREE, toon, track, scene, residents }) : null;
+const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : track.harvest || track.fair ? createVillage({ THREE, toon, track, scene, residents, cars: () => traffic.boxes() }) : null;
 // what by the road answers a kick: mailboxes (three and it is off its post), poles, trees and bushes (their leaves), swings, cones
 const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => audio.play(n, o) }, makeDog: (c, sz) => dogs.makeDog(c, sz), say: (at, t) => hud.rant(at, t, false),
   onLoot: T => { shop.grant(T.item, T.tier); audio.play('pick'); flash(T.label + '! Zamontowane. Właściciel się nie dowie... chyba'); B.fame = (B.fame || 0) + 1; setTimeout(() => hud.rant(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'EJ! MOJE PRZERZUTKI!!!', false), 1600); witness?.(T.x, T.z); },
@@ -209,8 +209,8 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
-  const dogRate = track.city ? .04 : track.region === 'peryferia2' ? .1 : .2;
-  for (const d of track.doors) if (r() < dogRate) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
+  const dogRate = track.city ? .03 : track.region === 'peryferia2' ? .08 : .15;   // (a few less than before)
+  for (const d of track.doors) if (r() < dogRate && !d.stall) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
 let rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
 // his other bikes, by the garage at home: one leant there, one upside down, its front wheel off (being mended)
 const wbikes = createBikes({ THREE, scene, track, createRider, ramp, toon });
@@ -848,7 +848,7 @@ function paperHits(p) {
   for (const q of peds.list) if (!q.paperHit && Math.hypot(q.x - P.x, q.z - P.z) < .55 && P.y - q.G.position.y < 1.9) { q.paperHit = true; setTimeout(() => { q.paperHit = false; }, 4000); q.stun = 1; hud.rant(q.G.position, pickOf(PAPER_PED), true, 1.95); return true; }
   for (const w of track.net?.workers || []) if (!(w.paperT > 0) && Math.hypot(w.x - P.x, w.z - P.z) < .8 && P.y - w.g.position.y - w.y < 2.1) {   // one of the works' crew: he stops to read it
     w.paperT = 30; w.readT = w.kind === 'lean' || w.kind === 'boss' ? 25 : 8; w.face = { x: B.x, z: B.z, t: 1.5 }; hud.rant(w.g.position, pickOf(WORK_PAPER), true, 1.95 + w.y); score(2, w.mouth(), 'DLA EKIPY! +2', '#efc970'); logEv('worker_paper', w.x, w.z); return true; }
-  { const r = locals?.paper(P); if (r) { hud.rant(r.p.g.position, r.text, true, 1.95); score(r.who === 'inzynier' ? 3 : 1, r.p.g.position.clone().setY(r.p.g.position.y + 1.9), r.who === 'inzynier' ? 'KOŁDERKA! +3' : 'DO RĄK! +1', '#efc970'); logEv(r.who === 'inzynier' ? 'homeless_paper' : locals.id + '_paper', P.x, P.z); return true; } }
+  { const r = locals?.paper(P); if (r) { hud.rant(r.p.g.position, r.text, true, 1.95); score(r.pts ?? (r.who === 'inzynier' ? 3 : 1), r.p.g.position.clone().setY(r.p.g.position.y + 1.9), r.label ?? (r.who === 'inzynier' ? 'KOŁDERKA! +3' : 'DO RĄK! +1'), '#efc970'); logEv(r.ev ?? (r.who === 'inzynier' ? 'homeless_paper' : locals.id + '_paper'), P.x, P.z); return true; } }
   for (const r of residents.list) if (r.lines === 'lump' && !(r.awakeT > 0) && Math.hypot(r.G.position.x - P.x, r.G.position.z - P.z) < 1.3) {   // the man asleep at the stop: up he gets, the ones waiting clap
     r.awakeT = 45; r.talkT = 2.6; r.head?.getWorldPosition(r.mouth); r.mouth.y += .35; hud.rant(r.mouth, pickOf(['CO?! KTO?! A, GAZETA...', 'AAA! NIE ŚPIĘ!', 'KTO RZUCA?! A, DZIĘKI...', 'PRZYSTANEK?! JUŻ WSTAJĘ!']), true); score(5, r.mouth.clone(), 'POBUDKA! +5', '#efc970');
     residents.list.filter(o => o.stop === r.stop && o !== r).forEach((o, k) => setTimeout(() => { o.talkT = 2; o.head?.getWorldPosition(o.mouth); o.mouth.y += .35; hud.rant(o.mouth, pickOf(['BRAWO, MŁODY!', 'NARESZCIE!', 'HAHA, CELNIE!', 'BRAWO! TRZECI DZIEŃ TU ŚPI!']), true); }, 700 + k * 500)); return true; }
@@ -1803,7 +1803,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'combine', 'reverse', 'train_jump', 'dooring', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'combine', 'tray', 'reverse', 'train_jump', 'dooring', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }

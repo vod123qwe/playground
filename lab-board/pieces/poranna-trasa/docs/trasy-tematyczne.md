@@ -33,8 +33,8 @@ Polne i asfaltowe drogi bez chodników, gospodarstwa, przestrzeń, zwierzęta.
 | Trasa | Jazda | Rzut | Ludzie i historie | Klimat | Ocena |
 | --- | --- | --- | --- | --- | --- |
 | Polna droga | górki, pobocze, błoto | skrzynki na płotach | sołtys, gęsi | ranek | ★★★ (jest) |
-| Żniwa | kombajn na całą szerokość drogi, kurz zasłania widok, bele siana jako skocznie | rzut do kabiny traktora, na przyczepę | rolnicy, traktorzysta (wyścig) | złote pola, upał | ★★★ |
-| Odpust | tłum przy kościele, kramy, zamknięta droga, objazd przez łąkę | na kramy, do koszyka na tacę (gag) | orkiestra dęta, ksiądz, babcie | odświętnie, chorągwie | ★★★ |
+| Żniwa | kombajn na całą szerokość drogi, kurz zasłania widok, bele siana jako skocznie | rzut do kabiny traktora, na przyczepę | rolnicy, traktorzysta (wyścig) | złote pola, upał | ★★★ (jest, v153: w3; wyścig z traktorzystą jeszcze nie) |
+| Odpust | tłum przy kościele, kramy, zamknięta droga, objazd przez łąkę | na kramy, do koszyka na tacę (gag) | orkiestra dęta, ksiądz, babcie | odświętnie, chorągwie | ★★★ (jest, v154: w5; objazd przez łąkę jeszcze nie, droga zwężona kramami i tłumem) |
 | Sady i pasieka | wąskie drogi między sadami, wóz z jabłkami | skrzynki na bramach gospodarstw | pszczelarz, rój goni jak gęsi | kwitnące drzewa | ★★ |
 | Mgła nad stawami | grobla, wąskie kładki, mgła na kilkanaście metrów | rzut na wyczucie, bez znaczników z daleka | wędkarze (cisza!), kaczki | świt, mgła | ★★ |
 

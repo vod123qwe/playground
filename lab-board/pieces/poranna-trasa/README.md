@@ -1312,3 +1312,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - cztery traktory z przyczepami zamiast dwóch (gazeta na przyczepę dalej łapana)
 - rolnicy przy bramach gospodarstw, każdy po swojemu: gospodarz od pogody i cen skupu, gospodyni, która karmi wszystkich, student na wakacyjnej robocie (Kalkulator), dziadek od kosy i bel, sąsiadka, która wszystko widzi z okna; zagadać, kopnąć, rzucić gazetę
 - nowa notka w gazecie: kombajn kontra rower
+
+## Wersja 154: Odpust, psy szybsze i rzadsze
+
+- nowa trasa ODPUST (wieś, własna mapa, po Targowym Poranku): plac przed kościołem (biały kościół z wieżą i zielonym hełmem, mur z bramą, napis ODPUST PARAFIALNY, chorągwie), kramy po obu stronach drogi (balony, obwarzanki, zabawki, lody, wata cukrowa, pierniki; każdy kram bierze gazetę na ladę), sznury chorągiewek nad drogą
+- tłum na poboczach, który co chwilę przechodzi przez drogę (nie, gdy jedzie auto), orkiestra dęta maszeruje jezdnią tam i z powrotem (tuba, bęben, trąbki), kapelmistrz woła; wjedziesz w kogoś: zwalniasz i słyszysz, co o tym myśli
+- kramarze, proboszcz, chórzystka, babcie z różańcem i kapelmistrz: każdy mówi po swojemu; gazeta na tacę proboszcza: +3 i notka w gazecie
+- psy dobiegają szybciej (szybsze niż rower w normalnej jeździe, wolniejsze niż sprint), jest ich mniej (wieś 20 → 15% domów, osiedle 10 → 8%, miasto 4 → 3%), żaden nie mieszka na kramie

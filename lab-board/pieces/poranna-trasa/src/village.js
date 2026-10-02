@@ -2,9 +2,11 @@
 //   harvest (Żniwa): combines on the road, nearly its whole width, slow, a cloud of dust behind (it hides the road); the farmers by
 //     their gates, each his own way of talking; spoken to, kicked, a paper: as the other locals
 // createVillage({ THREE, toon, track, scene, residents }) → the locals' shape: { id, people, lights, update(dt, R) → events, kick, talk, paper }
-//   events: { kind: 'shout' | 'honk' | 'combine', p?, text? }
+//   the fair (Odpust): the stall keepers, the priest at the gate with his tray, the church ladies, a crowd stepping across the road, the
+//     brass band marching up and down the road (bumped into: he is slowed, they have a word for him)
+//   events: { kind: 'shout' | 'honk' | 'combine' | 'bump', p?, text? }
 
-export function createVillage({ THREE, toon, track, scene, residents }) {
+export function createVillage({ THREE, toon, track, scene, residents, cars = () => [] }) {
   let a = 1201; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const { S, N, ds } = track, L = N * ds, wrap = i => ((i % N) + N) % N, V = (x, y, z) => new THREE.Vector3(x, y, z), M = c => toon(c);
   const gy = (x, z, i) => track.probe(x, z, i ?? -1).y;
@@ -20,6 +22,18 @@ export function createVillage({ THREE, toon, track, scene, residents }) {
     sasiadka: { body: '#8a4a7a', talk: ['U KOWALCZYKÓW KOMBAJN STANĄŁ. NIE MÓWIĘ, ŻE PRZEZ NICH. ALE STANĄŁ.', 'WIDZIAŁAM CIĘ WCZORAJ. I PRZEDWCZORAJ. JA WSZYSTKO WIDZĘ, Z OKNA.', 'TY TEN NOWY OD GAZET? NO TO JUŻ CAŁA WIEŚ WIE.'], paper: 'DAJ, DAJ. SPRAWDZĘ, CZY PISZĄ O TYM, O CZYM JA JUŻ WIEM.' } };
   const SHOUT = deck(['TRZYMAJ SIĘ POBOCZA, KOMBAJN IDZIE!', 'GAZETA! RZUĆ NA PRZYCZEPĘ, JAK DASZ RADĘ!', 'NIE WJEŻDŻAJ W ŚCIERNISKO, OPONY POSZARPIE!', 'O, GAZECIARZ W ŻNIWA. ODWAŻNY.']);
   const KICK = deck(['EJ! W ŻNIWA SIĘ NIE BIJE, W ŻNIWA SIĘ PRACUJE!', 'ZARAZ CIĘ ZWIĄŻĘ W SNOPEK!', 'POWIEM TWOJEJ MATCE! ZNAM JĄ Z TARGU!', 'A IDŹ MI STĄD, BO WIDŁY PRZYNIOSĘ!']);
+  // (the fair's people)
+  Object.assign(FOLK, {
+    ksiadz: { body: '#1d1e21', talk: ['KAZANIE BĘDZIE KRÓTKIE. JAK ZAWSZE. GODZINĘ.', 'NA ODPUST PRZYJEŻDŻAJĄ WSZYSCY. NAWET CI, CO MÓWILI, ŻE NIE PRZYJADĄ.', 'ROWEREM DO KOŚCIOŁA? CHWALEBNIE. DZWONKIEM W CZASIE MSZY? MNIEJ.'], paper: 'BÓG ZAPŁAĆ. PRZECZYTAM PO SUMIE.', tray: 'NA TACĘ? NO... DAR TO DAR. BÓG ZAPŁAĆ, SYNU.' },
+    balony: { body: '#cf3a2c', talk: ['BALON W KSZTAŁCIE KONIA! ZA DZIESIĘĆ ZŁOTYCH JEST KONIEM, ZA PIĘĆ PSEM.', 'U MNIE NAJTANIEJ NA CAŁYM ODPUŚCIE. SPRAWDZAŁEM. JESTEM JEDYNY Z BALONAMI.', 'DLA GAZECIARZA RABAT. JEDEN BALON GRATIS, ALE BEZ HELU.'], paper: 'POŁÓŻ NA LADZIE, OBOK KONIA.' },
+    obwarzanki: { body: '#3f8a4a', talk: ['OBWARZANKI Z MAKIEM, Z SOLĄ I Z SEZAMEM. Z SEZAMEM DLA MIASTOWYCH.', 'STOJĘ TU TRZYDZIEŚCI LAT. TEN SAM KRAM, TA SAMA PLANDEKA, INNE CENY.', 'WEŹ JEDNEGO NA DROGĘ. NIE NA KIEROWNICĘ, BO SIĘ POKRUSZY.'], paper: 'DZIĘKUJĘ. ZAWINĘ W NIĄ OBWARZANKI. ŻARTUJĘ, PRZECZYTAM.' },
+    zabawki: { body: '#3b6fa0', talk: ['PISTOLET NA WODĘ, DZIESIĘĆ ZŁOTYCH. WODA GRATIS.', 'MIECZ ŚWIETLNY BEZ BATERII. ŚWIECI, JAK SIĘ W NIEGO WIERZY.', 'CO ROK DZIECIAKI CHCĄ TO SAMO, CO ROK TEMU. JA TO SZANUJĘ.'], paper: 'A JEST TAM PROGRAM TELEWIZYJNY? NO TO BIORĘ.' },
+    lody: { body: '#e070b0', talk: ['ŚMIETANKOWE I CZEKOLADOWE. TRZECI SMAK SIĘ ROZPUŚCIŁ.', 'O ÓSMEJ RANO LODY JEDZĄ TYLKO DZIECI I PROBOSZCZ.', 'ZIMNE JAK SPOJRZENIE SOŁTYSA. ZA DWA ZŁOTE.'], paper: 'POŁÓŻ NA ZAMRAŻARCE. BĘDZIE ŚWIEŻA.' },
+    chor: { body: '#4a4a6a', talk: ['W CHÓRZE ŚPIEWAM ALTEM. DYRYGENT MÓWI, ŻE INACZEJ.', 'PROCESJA IDZIE TĘDY. TY TEŻ, ALE SZYBCIEJ.', 'GAZETĘ PRZECZYTAM NA KAZANIU. ZNACZY PO.'], paper: 'ZOBACZĘ, CZY NASZ CHÓR OPISALI. ZAWSZE PISZĄ O ORKIESTRZE.' },
+    rozaniec: { body: '#6a4a3a', talk: ['RÓŻANIEC MAM ZAWSZE PRZY SOBIE. I PARASOL. I CUKIERKI.', 'TY NIE JESTEŚ OD KOWALCZYKÓW? NIE? A WYGLĄDASZ.', 'NA ODPUST CHODZIŁO SIĘ KIEDYŚ PIESZO. DWADZIEŚCIA KILOMETRÓW. W JEDNĄ STRONĘ.'], paper: 'ZANIOSĘ SĄSIADCE. ONA NIE CZYTA, ALE LUBI MIEĆ.' },
+    kapelmistrz: { body: '#2f3e6a', talk: ['GRAMY OD SZÓSTEJ. O SIÓDMEJ ZACZYNAMY TEN SAM UTWÓR OD NOWA.', 'TUBA TO SERCE ORKIESTRY. CIĘŻKIE SERCE, OSIEM KILO.', 'NUTY? GRAMY Z PAMIĘCI. DLATEGO KAŻDY TROCHĘ INACZEJ.'], paper: 'POŁÓŻ NA PULPICIE. NIE, TO NIE PULPIT, TO MÓJ KAPELUSZ.' } });
+  const BAND = deck(['RAZ, DWA, TRZY, CZTERY!', 'UWAGA, TRĄBKA IDZIE PIERWSZA!', 'NIE WJEŻDŻAJ W SEKCJĘ DĘTĄ!', 'TUBA SKRĘCA SZEROKO!', 'TRA-TA-TA! Z DROGI, MUZYKA!']);
+  const CROWD = deck(['GAZECIARZ NA ODPUŚCIE!', 'POWOLI, TU SĄ DZIECI!', 'KUP OBWARZANKA, CHUDY JESTEŚ!', 'O, TO TEN OD TRĄBKI!', 'DZWONKIEM, DZWONKIEM!']);
   const DRIVER = deck(['ZJEDŹ NA BOK, MŁODY!', 'KOMBAJN NIE HAMUJE. KOMBAJN MYŚLI.', 'POBOCZEM, POBOCZEM!', 'JA MAM PIĘĆ METRÓW HEDERA, A TY ROWER!', 'NIE TERAZ, ŻNIWA SĄ!']);
 
   // (a farmer: a body of the village's people, his clothes his colour, a straw hat)
@@ -56,8 +70,49 @@ export function createVillage({ THREE, toon, track, scene, residents }) {
     const spots = (gates.length ? gates : track.doors).slice().sort(() => rnd() - .5).slice(0, track.harvest ? keys.length : 0);
     spots.forEach((d, k) => { const side = V(-d.n.z, 0, d.n.x), q = d.p.clone().addScaledVector(d.n, -1.6).addScaledVector(side, 2.2); farmer(q.x, q.z, Math.atan2(d.n.x, d.n.z), keys[k]); }); }
 
+  // ---------- the fair: the keepers at their stalls, the priest at the gate, the church ladies by it, the crowd, the band ----------
+  const F = track.fair, walkers = [], band = [];
+  if (F) { const at = (i, d) => { const A = S[wrap(i)]; return V(A.p.x + A.r.x * d, 0, A.p.z + A.r.z * d); }, faceRoad = (i, s) => { const A = S[wrap(i)]; return Math.atan2(A.r.x * -s, A.r.z * -s); };
+    const keyOf = name => ({ BALONY: 'balony', OBWARZANKI: 'obwarzanki', ZABAWKI: 'zabawki', LODY: 'lody' })[name];
+    F.stalls.filter(o => keyOf(o.name)).slice(0, 4).forEach(o => { const q = at(o.i, o.s * (track.ROAD + 2.7)); farmer(q.x, q.z, faceRoad(o.i, o.s), keyOf(o.name)); });
+    { const q = at(F.iC, F.side * (track.PAVE + 3.4)), pr = farmer(q.x, q.z, faceRoad(F.iC, F.side), 'ksiadz'); pr.tray = true;
+      { const A = S[wrap(F.iC)], t = new THREE.Mesh(new THREE.CylinderGeometry(.24, .2, .04, 14), M('#e3b22e')), fw = V(A.r.x * -F.side, 0, A.r.z * -F.side); t.position.copy(q).addScaledVector(fw, .4); t.position.y = gy(q.x, q.z) + 1.05; scene.add(t); }   // (his tray, held out)
+      { const A = S[wrap(F.iC)], q1 = q.clone().addScaledVector(V(A.f.x, 0, A.f.z), -5); farmer(q1.x, q1.z, faceRoad(F.iC, F.side), 'kapelmistrz'); }
+      for (const [dz, key] of [[2.2, 'chor'], [-2.4, 'rozaniec'], [3.4, 'rozaniec']]) { const A = S[wrap(F.iC)], q2 = q.clone().addScaledVector(V(A.f.x, 0, A.f.z), dz); farmer(q2.x, q2.z, faceRoad(F.iC, F.side), key); } }
+    // (the crowd: little figures with a coat, a head and legs that step, about the verges, now and then across the road when no car is near)
+    const coatC = ['#3b5670', '#8e2e25', '#44484c', '#6b4a2e', '#467537', '#c9b8a0', '#2f4a6e', '#8a4a7a'];
+    const figure = (coat, hat) => { const g = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(.42, .62, .26), M(coat)); body.position.y = 1.12; g.add(body); const hd = new THREE.Mesh(new THREE.BoxGeometry(.22, .22, .22), M(['#e3b08a', '#c98a5a', '#d9a07a'][rnd() * 3 | 0])); hd.position.y = 1.6; g.add(hd);
+      if (hat) { const h = new THREE.Mesh(new THREE.BoxGeometry(.26, .08, .26), M(hat)); h.position.y = 1.74; g.add(h); }
+      const legs = [-1, 1].map(sd => { const l = new THREE.Group(), lm = new THREE.Mesh(new THREE.BoxGeometry(.14, .78, .16), M('#2a2c30')); lm.position.y = -.39; l.add(lm); l.position.set(sd * .1, .8, 0); g.add(l); return l; }); scene.add(g); return { g, legs }; };
+    for (let k = 0; k < 22; k++) { const f = figure(coatC[k % coatC.length], k % 3 === 0 ? ['#f6f3ea', '#24190f', '#9a3a2c'][k % 3] : null), i = F.i0 + Math.round(rnd() * (F.i1 - F.i0)), s0 = rnd() < .5 ? -1 : 1;
+      walkers.push({ ...f, i, d: s0 * (track.ROAD + .4 + rnd() * .9), to: null, ph: rnd() * 6, wait: rnd() * 6, sayT: 0, hitT: 0 }); }
+    // (the band: the leader in front, two rows of three behind in white shirts and caps: a tuba, a drum, trumpets; up and down the church's side of the road)
+    { const lead = figure('#2f3e6a', '#2f3e6a'), gold = M('#e3b22e'); band.push({ ...lead, lead: true, dz: 0, dx: 0 });
+      for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) { const f = figure('#f6f3ea', '#2f3e6a'), k = r * 3 + c;
+        if (k === 1) { const t = new THREE.Mesh(new THREE.TorusGeometry(.26, .07, 6, 12), gold); t.position.set(0, 1.55, .1); f.g.add(t); } else if (k === 4) { const d = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .3, 12).rotateX(Math.PI / 2), M('#f6f3ea')); d.position.set(0, 1.05, .25); f.g.add(d); }
+        else { const t = new THREE.Mesh(new THREE.BoxGeometry(.05, .05, .45), gold); t.position.set(.08, 1.5, .3); f.g.add(t); }
+        band.push({ ...f, dz: -1.4 - r * 1.3, dx: (c - 1) * .9 }); } }
+    F.band = { s: F.i0 * ds + 12, dir: 1, d: F.side * 1.9, P0: { s: F.i0 * ds + 12, d: F.side * 1.9, len: 5 }, sayT: 0, hitT: 0 }; track.parked.push(F.band.P0); }
+
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0);
+    if (F) { const near = Math.hypot(R.x - F.gate.x, R.z - F.gate.z) < 140, carsNow = near ? cars() : [];
+      // (the crowd: they stand, they stroll a little along, now and then one crosses (not with a car near); ridden into: a bump)
+      for (const W of walkers) { if (!near) break; const A = S[wrap(W.i)]; W.wait -= dt;
+        if (W.wait <= 0 && W.to == null) { W.wait = 3 + rnd() * 7; const carNear = carsNow.some(c => !c.t?.r && Math.hypot(c.x - A.p.x, c.z - A.p.z) < 26); W.to = rnd() < .35 && !carNear ? -Math.sign(W.d) * (track.ROAD + .4 + rnd() * .9) : Math.sign(W.d) * (track.ROAD + .4 + rnd() * .9); W.di = (rnd() - .5) * 2; }
+        let moving = false; if (W.to != null) { const dd = W.to - W.d; if (Math.abs(dd) < .05) W.to = null; else { W.d += Math.sign(dd) * Math.min(Math.abs(dd), 1.1 * dt); moving = true; } W.i = Math.round(Math.max(F.i0, Math.min(F.i1, W.i + (W.di || 0) * dt / ds * .3))); }
+        const sg = W.to != null ? Math.sign(W.to - W.d) || 1 : -Math.sign(W.d) || 1, x = A.p.x + A.r.x * W.d, z = A.p.z + A.r.z * W.d; W.g.position.set(x, gy(x, z, W.i), z); W.g.rotation.y = Math.atan2(A.r.x * sg, A.r.z * sg);
+        W.ph += dt * (moving ? 9 : 0); W.legs[0].rotation.x = Math.sin(W.ph) * .5; W.legs[1].rotation.x = -Math.sin(W.ph) * .5;
+        W.hitT = Math.max(0, W.hitT - dt); W.sayT -= dt; const dist = Math.hypot(R.x - x, R.z - z);
+        if (!R.foot && !R.air && dist < .6 && Math.abs(R.v) > 2 && !W.hitT) { W.hitT = 3; ev.push({ kind: 'bump', p: { g: W.g } }); }
+        else if (dist < 6 && Math.abs(R.v) > 3 && W.sayT <= 0 && rnd() < .02) { W.sayT = 30; ev.push({ kind: 'shout', p: { g: W.g }, text: CROWD() }); } }
+      // (the band: up the road and back, slowly, in step; the leader calls out to him)
+      { const Bd = F.band, lo = F.i0 * ds + 10, hi = F.i1 * ds - 10; Bd.s += Bd.dir * .9 * dt; if (Bd.s > hi) { Bd.s = hi; Bd.dir = -1; } if (Bd.s < lo) { Bd.s = lo; Bd.dir = 1; } Bd.P0.s = Bd.s;
+        const i = wrap(Math.round(Bd.s / ds)), A = S[i], f = V(A.f.x * Bd.dir, 0, A.f.z * Bd.dir), r = V(A.r.x, 0, A.r.z), yaw = Math.atan2(f.x, f.z);
+        for (const m of band) { const x = A.p.x + r.x * (Bd.d + m.dx) + f.x * m.dz, z = A.p.z + r.z * (Bd.d + m.dx) + f.z * m.dz; m.g.position.set(x, gy(x, z, i), z); m.g.rotation.y = yaw; const ph = clock * 6 + (m.dx + m.dz); m.legs[0].rotation.x = Math.sin(ph) * .45; m.legs[1].rotation.x = -Math.sin(ph) * .45; }
+        const L0 = band[0].g.position; Bd.sayT -= dt; Bd.hitT = Math.max(0, Bd.hitT - dt);
+        if (near && Math.hypot(R.x - L0.x, R.z - L0.z) < 22 && Bd.sayT <= 0) { Bd.sayT = 10; ev.push({ kind: 'shout', p: { g: band[0].g }, text: BAND() }); }
+        if (!R.foot && !R.air && !Bd.hitT && Math.abs(R.v) > 2 && band.some(m => Math.hypot(R.x - m.g.position.x, R.z - m.g.position.z) < .6)) { Bd.hitT = 3; ev.push({ kind: 'bump', p: { g: band[0].g } }); } } }
     for (const p of people) { if (!p.o) continue; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist > 70) continue; p.o.mixer.update(dt); p.paperT = Math.max(0, p.paperT - dt); p.sayT -= dt;
       if (dist < 9 && Math.abs(R.v) > 2 && p.sayT <= 0 && rnd() < .5) { p.sayT = 25; ev.push({ kind: 'shout', p, text: SHOUT() }); } else if (dist < 9 && p.sayT <= 0) p.sayT = 6; }
     for (const C of combines) { C.s = ((C.s + C.dir * C.v * dt) % L + L) % L; C.P0.s = C.s; const i = wrap(Math.round(C.s / ds)), A = S[i], x = A.p.x + A.r.x * C.d, z = A.p.z + A.r.z * C.d, yaw = Math.atan2(A.f.x * C.dir, A.f.z * C.dir);
@@ -73,6 +128,9 @@ export function createVillage({ THREE, toon, track, scene, residents }) {
     return ev; }
   function kick(p) { return KICK(); }
   function talk(p) { p.talks++; return p.P.talk[(p.talks - 1) % p.P.talk.length]; }
-  function paper(Pp) { for (const p of people) { if (!p.g || p.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > .9) continue; p.paperT = 40; return { p, text: p.P.paper, who: 'farmer' }; } return null; }
+  function paper(Pp) { for (const p of people) { if (!p.g || p.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > .9) continue; p.paperT = 40;
+      // (the priest's tray: the first paper onto it is the fair's gag)
+      if (p.tray && !p.trayed) { p.trayed = true; return { p, text: p.P.tray, who: 'ksiadz', pts: 3, label: 'NA TACĘ! +3', ev: 'tray' }; }
+      return { p, text: p.P.paper, who: 'farmer' }; } return null; }
   return { id: 'village', people, lights, update, kick, talk, paper, combines };
 }
