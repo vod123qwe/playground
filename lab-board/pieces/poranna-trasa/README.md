@@ -1238,3 +1238,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - przeciwnik nie robi już uniku z kontrą na twój cios (wyglądało dziwnie); zamiast tego częściej podnosi gardę na właściwej wysokości (górą albo nisko); po bloku czy parowaniu nadal może od razu oddać, jak wcześniej
 
+## Wersja 143: dzielnica przemysłowa na własnych mapach, uniki przeciwnika
+
+- PLAC BUDOWY (d2) na własnej mapie (842 m): budowy jedna przy drugiej (56), osiem dźwigów, trzy suwnice nad drogą z paletą cegieł jeżdżącą po linie tam i z powrotem (jej cień na jezdni pokazuje, gdzie wisi; pod paletą gleba), roboty drogowe, przejazd kolejowy
+- MAGAZYNY (d3) na własnej mapie (883 m): długie proste wzdłuż hal przy bocznicy, cztery wózki widłowe z paletą przejeżdżające przez drogę między halami (piszczą, mają pierwszeństwo; potrącenie to gleba), przejazd kolejowy z pociągiem towarowym
+- budowlańcy w kaskach przy budowach i magazynierzy przy halach, każdy swoim głosem (brygadzista, pomocnik, operator, kierownik, murarz, magazynier): krzyczą, gdy przejeżdżasz blisko, da się ich zagadać, kopnąć i trafić gazetą; nowe wpisy w gazecie Z BUDOWY
+- walka: przeciwnik znowu robi czasem uniki w bok (tak jak ty, z przechyłem), ale nie oddaje od razu po uniku
+

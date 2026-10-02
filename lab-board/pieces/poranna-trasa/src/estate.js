@@ -6,6 +6,7 @@
 // createEstate({ THREE, toon, P, put, box, hit, zone, things, parked, puddles, PAVE, ds, N, rnd }) → { site(i, s), warehouse(i, s), works(i, sd), crane(i, d) }
 
 export function createEstate({ THREE, toon, P, put, box, hit, zone, things, parked, puddles, PAVE, ds, N, rnd }) {
+  const sites = [], halls = [];
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
   const concrete = toon('#a9a59c'), concreteD = toon('#8a867e'), brick = toon('#b5653f'), yellow = toon('#e3b22e'), dark = toon('#2a2c30'), steel = toon('#8a9094'), orange = toon('#e3742e'), sandM = toon('#d9c38a'), wood = toon('#9e7a4f');
   const corr = cv(16, 8, g => { for (let x = 0; x < 16; x++) { g.fillStyle = x % 2 ? '#a3a8ac' : '#8f9498'; g.fillRect(x, 0, 1, 8); } }), corrM = c => { const t = corr.clone(); t.needsUpdate = true; t.repeat.set(6, 1); return toon(c, { map: t }); };
@@ -33,7 +34,7 @@ export function createEstate({ THREE, toon, P, put, box, hit, zone, things, park
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(2, .5), sign('TEREN BUDOWY')); sg.position.set(fx + s * 5.06, 1.4, 0); sg.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(sg);
     put(g, i, s * (PAVE + 3 + D / 2), 0, 0); hit(g, { hx: D / 2 + .4, hz: W / 2 + .4, h: 5, kind: 'hard' }, i); hit(g, { hx: .5, hz: .4, h: 1.4, kind: 'hard' }, i, fx + s * 3.4, W / 2 - 1.2); zone(g, D / 2 + 6, W / 2 + 1);
     { g.updateMatrixWorld(true); const p = g.localToWorld(sand.position.clone()); puddles.push({ x: p.x, z: p.z, r: 1.4, mud: true }); }   // (the sand: it holds a wheel as mud does)
-    return g; }
+    sites.push({ g, i, s }); return g; }
 
   // ---------- a warehouse: a corrugated hall, the roller door to the road, a dock, pallets, a forklift ----------
   function warehouse(i, s) { const g = grp(), D = 11, W = 15, H = 6.2, fx = s * D / 2, wall = corrM(['#9aa0a4', '#8e9a8a', '#a8a090'][rnd() * 3 | 0]);
@@ -47,7 +48,7 @@ export function createEstate({ THREE, toon, P, put, box, hit, zone, things, park
     for (const x of [-.5, .5]) for (const z of [-.5, .5]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, .2, 10).rotateZ(Math.PI / 2), dark); w.position.set(x, .25, z); fl.add(w); }
     fl.position.set(fx + s * 3.2, 0, -5.5); fl.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(fl);
     put(g, i, s * (PAVE + 4 + D / 2), 0, 0); hit(g, { hx: D / 2 + .2, hz: W / 2, h: H, kind: 'hard' }, i); hit(g, { hx: .8, hz: 1, h: 2, kind: 'hard' }, i, fx + s * 3.2, -5.5); zone(g, D / 2 + 5, W / 2 + 1);
-    return g; }
+    halls.push({ g, i, s, hall: true }); return g; }
 
   // ---------- road works: one lane closed for ~30 m (barriers along it, cones tapering in, an excavator, a sign), the traffic round it ----------
   function works(i, sd) { const L = Math.round(30 / ds);
@@ -74,5 +75,5 @@ export function createEstate({ THREE, toon, P, put, box, hit, zone, things, park
     top.add(box(.05, 9, .05, dark, 0, -4.5, Lj * .7)); top.add(box(.6, .5, .3, dark, 0, -9, Lj * .7)); top.rotation.y = rnd() * 6.28;
     put(g, i, d, 0, 0); return g; }
 
-  return { site, warehouse, works, crane };
+  return { site, warehouse, works, crane, sites, halls };
 }
