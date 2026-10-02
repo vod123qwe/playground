@@ -1442,3 +1442,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - w Klasyku menu bez TRYBÓW GRY, TESTÓW i WARSZTATU, w ustawieniach bez JANUSZA W SŁUCHAWCE i KRWI; podtytuł KLASYK: NA CZAS I NA PUNKTY
 - mapa tras pokazuje tylko trasy wybranej wersji (w Klasyku Ulica Kasztanowa i Śródmieście, w Porannej Trasie jej trasy); pierwsza trasa każdej wersji otwarta
 - ekran startowy bez licznika rowerowego i portfela w tle, przyciemnienie za nazwą gładkie (bez poziomych kresek)
+
+## Wersja 175: GAZECIARZ, przejście między wersjami bez ładowania
+
+- gra nazywa się teraz GAZECIARZ (tytuł na ekranie startowym i w karcie przeglądarki); dwie wersje pod nią: PORANNA TRASA i KLASYK (podtytuł według wersji)
+- przełączenie wersji na ekranie startowym bez ekranu ładowania: tło płynnie przechodzi w ulicę drugiej wersji (zapamiętany obraz jej tła), menu zmienia się od razu; mapa wczytuje się dopiero po GRAJ albo wyborze trasy; tylko za pierwszym razem, zanim gra zobaczy tło drugiej wersji, jedno przeładowanie (z wygaszeniem)
