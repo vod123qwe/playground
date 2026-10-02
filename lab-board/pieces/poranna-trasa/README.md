@@ -1478,3 +1478,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - mewa co jakiś czas nurkuje po gazetę z torby: słychać KRAA, jej cień na rowerze rośnie; podskok w ostatniej chwili to UNIK MEWY +2, inaczej porywa jedną gazetę
 - rolkarze jadą zygzakiem przy krawężniku promenady, w obie strony: przeskok nad nimi za punkty, wpadnięcie to zderzenie
+
+## Wersja 181: Klasyk na telefonie i tablecie
+
+- w Klasyku na ekranie dotykowym własny układ: duży RZUT (zawsze w stronę domów), duży SKOK (w powietrzu świeci jako TRIK i robi trik), KOP, SZYBCIEJ, TYTUŁ; bez przycisku zsiadania i kamery
+- naprawione: dotykowy KOP w Klasyku nie działał (nadpisywała go obsługa klawiatury)
+- telefon w pionie: pasek poziomu pod licznikiem i serduszkami, nazwa w osobnej linii, nic nie ucieka za ekran
+- zaliczony poziom jest zawsze otwarty na mapie i w menu

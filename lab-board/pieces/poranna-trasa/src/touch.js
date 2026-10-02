@@ -104,6 +104,13 @@ export function createTouch({ onCam, onMenu, onBook }) {
   button(IC.off, 'zsiądź', [44, 76, 190], BIKE, () => { edges.mount = true; });
   const chatB = button(IC.talk, 'gadaj', [50, 190, 118], BIKE, () => { edges.talk = true; }); chatB.classList.add('hid');   // (only by someone to talk to)
   button(svg('<rect x="5" y="6" width="14" height="12" rx="1"/><path d="M5 10h14M8 14h8"/>'), 'tytuł', [42, 10, 256], BIKE, () => { edges.title = true; });   // (which paper is thrown: the next title)
+  // the Classic: one throw (always to the houses), the hop big by it (in the air: the trick), the kick, faster, the title; no getting off
+  const CL = ['classic'];
+  button(IC.throwL, 'rzut', [86, 4, 18], CL, () => { state.holdL = true; }, () => { state.holdL = false; });
+  const hopC = button(IC.hop, 'skok', [80, 100, 12], CL, () => { edges.hop = true; });
+  const kickC = button(IC.kick, 'kop', [58, 14, 124], CL, () => { edges.kick = true; state.kickHeld = true; }, () => { state.kickHeld = false; });
+  button(IC.fast, 'szybciej', [50, 112, 112], CL, () => { state.sprint = true; }, () => { state.sprint = false; });
+  button(svg('<rect x="5" y="6" width="14" height="12" rx="1"/><path d="M5 10h14M8 14h8"/>'), 'tytuł', [44, 22, 202], CL, () => { edges.title = true; });
   // on foot: one punch (left and right by turns), hop, talk, back on the bike (a run: the stick pushed all the way)
   let fist = 0;
   button(IC.punchR, 'cios', [78, 58, 14], ['foot'], () => { edges[(fist ^= 1) ? 'punchL' : 'punchR'] = true; });
@@ -117,18 +124,18 @@ export function createTouch({ onCam, onMenu, onBook }) {
   button(IC.dodge, 'unik', [52, 0, 0], ['fight'], () => { edges.dodge = true; });
   // at the top, small, in the middle
   const top = el('top');
-  for (const [ic, fn, name] of [[IC.cam, onCam, 'kamera'], [IC.menu, onMenu, 'menu'], ...(onBook ? [[IC.book, onBook, 'notes']] : []), ...(document.fullscreenEnabled ? [[IC.full, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); }, 'pełny ekran']] : [])])
-    button(ic, '', null, ['bike', 'foot', 'fight'], null, ok => { if (ok) fn(); }, top).setAttribute('aria-label', name);   // (on letting go: the finger is off before the menu is there)
+  for (const [ic, fn, name, md] of [[IC.cam, onCam, 'kamera', ['bike', 'foot', 'fight']], [IC.menu, onMenu, 'menu'], ...(onBook ? [[IC.book, onBook, 'notes', ['bike', 'foot', 'fight']]] : []), ...(document.fullscreenEnabled ? [[IC.full, () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => { })).catch(() => { }); }, 'pełny ekran']] : [])])
+    button(ic, '', null, md || ['bike', 'foot', 'fight', 'classic'], null, ok => { if (ok) fn(); }, top).setAttribute('aria-label', name);   // (the Classic: one camera, no camera button)   // (on letting go: the finger is off before the menu is there)
   let mode = null;
-  function setMode(m) { if (m === mode) return; mode = m; for (const o of all) o.b.classList.toggle('off', !o.modes.includes(m)); hint.innerHTML = m === 'bike' ? 'kciuk tutaj: jazda' : m === 'foot' ? 'kciuk tutaj: chodzenie<br>prawa strona: kamera' : 'kciuk tutaj: krok i unik'; }
+  function setMode(m) { if (m === mode) return; mode = m; for (const o of all) o.b.classList.toggle('off', !o.modes.includes(m)); hint.innerHTML = m === 'classic' ? 'kciuk: skręt<br>góra gaz, dół hamulec' : m === 'bike' ? 'kciuk tutaj: jazda' : m === 'foot' ? 'kciuk tutaj: chodzenie<br>prawa strona: kamera' : 'kciuk tutaj: krok i unik'; }
   // hidden (a menu, a talk): every finger let go, so nothing stays held (a button pressed as it hid got no let-go and would not take another)
   let shown = true;
   function show(v) { root.classList.toggle('hide', !v); if (!v && shown) { for (const o of all) o.free(); freeStick(); lid = null; } shown = v; if (!v) Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false, kickHeld: false }); }
   setMode('bike');
   addEventListener('blur', () => Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, guard: false }));
   // in the air off a ramp: the kick button is the trick button (lit, and says so)
-  let trickOn = false; const kickI = kickB.querySelector('i');
-  let trickLab = ''; function trick(v, lab = 'TRIK!') { if (v === trickOn && lab === trickLab) return; trickOn = v; trickLab = lab; kickB.classList.toggle('trick', v); kickI.textContent = v ? lab : 'kop'; }
+  let trickOn = false; const kickI = kickB.querySelector('i'), hopI = hopC.querySelector('i');
+  let trickLab = ''; function trick(v, lab = 'TRIK!') { if (v === trickOn && lab === trickLab) return; trickOn = v; trickLab = lab; kickB.classList.toggle('trick', v); kickI.textContent = v ? lab : 'kop'; hopC.classList.toggle('trick', v); hopI.textContent = v ? lab : 'skok'; }
   let chatOn = false; function chat(v) { if (v !== chatOn) { chatOn = v; chatB.classList.toggle('hid', !v); } }
   return { on, state, take, setMode, show, trick, chat };
 }
