@@ -9,7 +9,7 @@ const W = 320, H = 180;
 // where the regions lie (their middles: each pixel the region of the nearest, the edges wobbled) and where the points are
 export const RC = { peryferia: [62, 118], wies: [150, 52], peryferia2: [176, 132], miasto: [236, 78], bronx: [280, 92], las: [276, 148], dalej: [300, 24] };
 export const LAB = { peryferia: [56, 164], wies: [118, 22], peryferia2: [204, 166], miasto: [240, 44], bronx: [300, 70], las: [282, 116], dalej: [292, 12] };   // (the names: off the points)
-export const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 72], w2: [126, 50], w3: [174, 50], w4: [150, 30], d1: [178, 112], d2: [160, 140], d3: [198, 138], d4: [182, 158], m1: [222, 92], m2: [236, 66], m3: [262, 84], m4: [244, 108], b1: [276, 98], b2: [292, 112], m5: [212, 66], w5: [174, 26], k1: [40, 158], k2: [228, 124] };
+export const PTS = { dom: [34, 136], p1: [66, 120], p2: [92, 92], p3: [100, 142], p4: [132, 112], w1: [150, 72], w2: [126, 50], w3: [174, 50], w4: [150, 30], d1: [178, 112], d2: [160, 140], d3: [198, 138], d4: [182, 158], m1: [222, 92], m2: [236, 66], m3: [262, 84], m4: [244, 108], b1: [276, 98], b2: [292, 112], m5: [212, 66], w5: [174, 26], k1: [40, 158], k2: [150, 92], k3: [96, 160], k9: [228, 124] };
 
 import { pxKey, pxStars, pxStar } from './pixui.js';
 
