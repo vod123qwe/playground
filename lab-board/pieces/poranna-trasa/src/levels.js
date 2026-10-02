@@ -27,7 +27,7 @@ export const LEVELS = [
     goal: { time: 130, acc: .65, papers: 13 }, after: ['p4'] },
   { id: 'p4', tease: { head: 'Nadciąga godzina szczytu', text: 'Jutro wszyscy jadą do pracy naraz, a psy podobno się wyspały. Gazeciarz musi zdążyć przed nimi.', spot: 'buda z psem' }, region: 'peryferia', name: 'GODZINA SZCZYTU', note: 'Okrążenie, gdy wszyscy jadą do pracy. Psy już nie śpią.', finish: { to: 1, dir: 1 }, cars: 6, pace: 1.3, heat: 1.15, papers: 30, seed: 404,
     goal: { time: 125, acc: .7, papers: 15 }, after: ['w1'] },
-  { id: 'k1', region: 'peryferia', map: 'klasyk', classic: true, name: 'KLASYK: ULICA KASZTANOWA', note: 'Wersja Klasyk: domy tylko po lewej, po prawej przeszkody i paczki z gazetami. Rower toczy się sam, gaz przyspiesza, hamulec zwalnia, każdy rzut leci w stronę domów. Szyby nieabonentów za punkty.', finish: { to: 1, dir: -1 }, cars: 2, pace: .9, heat: .8, papers: 10, seed: 901,
+  { id: 'k1', region: 'peryferia', map: 'klasyk', classic: true, name: 'KLASYK: ULICA KASZTANOWA', note: 'Wersja Klasyk: domy tylko po lewej, po prawej przeszkody i paczki z gazetami. Rower toczy się sam, gaz przyspiesza, hamulec zwalnia, każdy rzut leci w stronę domów. Szyby nieabonentów za punkty.', finish: { to: 1, dir: 1 }, cars: 2, pace: .9, heat: .8, papers: 10, seed: 901,
     goal: { time: 170, acc: .7, papers: 12 }, after: [] },
   { id: 'w1', region: 'wies', name: 'POLNA DROGA', note: 'Pół wsi, od przystanku. Bez chodników, za to z górkami.', finish: { to: .5, dir: 1 }, cars: 1, pace: .9, heat: .75, papers: 18, seed: 501,
     goal: { time: 95, acc: .6, papers: 4 }, after: ['w2', 'w3'], tease: { head: 'Na wsi czekają na gazetę', text: 'Sołtys mówi, że ostatni gazeciarz zgubił się w zbożu. Nowego wypatrują od świtu.', spot: 'działki' } },

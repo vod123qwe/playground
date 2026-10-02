@@ -1359,3 +1359,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - Ulica Kasztanowa ma teraz twój dom: stoi po stronie domów (na zewnątrz pętli) przy swojej uliczce, przejazd zaczyna się na jego podjeździe
 - domy i dom po zewnętrznej stronie, trawnik z ławkami, paczkami i torami przeszkód w środku pętli; trasa jedzie w drugą stronę, więc domy dalej masz po lewej; skocznie, tory przeszkód i śmieciarka obrócone pod ten kierunek
 - rower w Klasyku toczy się sam dopiero, kiedy już ruszysz (stojąc, czeka na gaz); zahamujesz do zera: stoi
+
+## Wersja 160: Klasyk z powrotem w lepszej perspektywie, dom w szeregu, wolniej i gęściej
+
+- powrót do pierwszego układu Ulicy Kasztanowej (domy w środku pętli, jazda jak na początku), a twój dom stoi teraz w tym samym szeregu co domy: start na jego podjeździe
+- rower w Klasyku wolniejszy: toczy się z ~4 m/s, gaz do ~6,6 m/s (było 5 i 8)
+- domy gęściej (57 zamiast 45), między nimi częściej deski i skocznie, więcej krasnali, kubły na śmieci przy krawężniku (wjedziesz: przewracają się i toczą)
+- więcej zdarzeń: auta z podjazdów co ~40 m (17), zraszacz przy co trzecim domu (19), drobne zdarzenia z ulicy co kilka sekund

@@ -13,7 +13,7 @@ Decyzje Jarka (02.10.2026):
 
 ## Ulica
 
-Mapa „Ulica Kasztanowa”: długa pętla z łagodnymi zakrętami. **Domy stoją tylko po lewej stronie** (patrząc w kierunku jazdy), po zewnętrznej stronie pętli, a wśród nich dom gazeciarza ze swoją uliczką: przejazd zaczyna się na jego podjeździe (v159, decyzja Jarka). Trasa jedzie pętlą w drugą stronę niż w Porannej Trasie. Po prawej jest **strona przeszkód**: chodnik, pas zieleni, ławki, parking, przystanek, plac zabaw, wykop. Na jezdni dzieje się wszystko i wszędzie.
+Mapa „Ulica Kasztanowa”: długa pętla z łagodnymi zakrętami. **Domy stoją tylko po lewej stronie** (patrząc w kierunku jazdy), a wśród nich dom gazeciarza ze swoją uliczką: przejazd zaczyna się na jego podjeździe. Jarek wybrał pierwszą perspektywę (domy w środku pętli, v160); dom stoi w tym samym szeregu. Po prawej jest **strona przeszkód**: chodnik, pas zieleni, ławki, parking, przystanek, plac zabaw, wykop. Na jezdni dzieje się wszystko i wszędzie.
 
 Rytm ulicy, odcinki po ~150 m, każdy z innym charakterem (do zbudowania etapami):
 
@@ -31,7 +31,7 @@ Rytm ulicy, odcinki po ~150 m, każdy z innym charakterem (do zbudowania etapami
 - **Abonenci** widoczni z daleka: dom abonenta ma kolorowe drzwi i czerwoną skrzynkę z flagą, a nieabonenta szarą (etap 2).
 - **Punkty:** do skrzynki 3, na ganek 2, na trawnik 1. U nieabonentów psoty: szyba +2, krasnal +1, kosz +1, skrzynka +1. U abonenta szkoda (szyba): rezygnuje i już nie liczy się do trasy (to już działa).
 - **Gazety:** 10 na start. Paczki z gazetami po stronie przeszkód co ~120 m: trzeba zjechać na prawo, czyli dalej od domów. To ryzyko, a nie prezent.
-- **Tempo:** rower toczy się sam (~5 m/s). Gaz przyspiesza do ~8 m/s, hamulec zwalnia do ~2 m/s. Sprint zostaje na proste.
+- **Tempo:** po ruszeniu rower toczy się sam (~4 m/s). Gaz przyspiesza do ~6,6 m/s, hamulec zwalnia do zera (v160: wolniej, decyzja Jarka). Sprint zostaje na proste.
 - **Rzut:** jeden. Każdy klawisz rzutu i oba przyciski myszy rzucają zawsze w stronę domów. Kliknięcie: sam leci do celu w ramce. Przytrzymanie: siła, czyli odległość.
 - **Kamera:** skośna, z drogą, ustawiona nad stroną przeszkód i patrząca po skosie na domy i drogę przed rowerzystą.
 - **Upadki:** jak w Porannej Trasie od v155 (zachwianie przy średnich, upadek przy mocnych), ale bez wstawania pieszo: chwila leżenia i rowerzysta z rowerem wraca na pas, mrugając ~2,5 s bez przewracania (v157).
