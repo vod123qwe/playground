@@ -15,7 +15,7 @@ export const THREADS = {
   koszulka: { region: 'peryferia', key: true, stages: [
     T('Z WARSZTATU', 'Skradziono koszulkę zwycięzcy', 'Pan Janusz zgłosił kradzież koszulki, w której, jak twierdzi, wygrał wielki wyścig w osiemdziesiątym trzecim. Koszulka ma dziurę na łokciu i „wartość historyczną”.', { face: 'janusz', spot: 'sklep rowerowy', quote: ['Pan Janusz', 'To nie szmata, to relikwia!'] }),
     T('Z WARSZTATU', 'Nagroda: dożywotnia pompka', 'Właściciel warsztatu wyznaczył nagrodę za odnalezienie koszulki: darmowe pompowanie kół do końca życia. Swojego albo znalazcy, nie sprecyzował.', { face: 'janusz' }),
-    T('Z WARSZTATU', 'Pomocnik pod lupą', 'Według naszych informacji podejrzenia padają na Mietka, pomocnika z warsztatu. Mietek zaprzecza. Ma alibi: w chwili kradzieży jadł pączka. Pączek nie potwierdza.', { spot: 'sklep rowerowy' }),
+    T('Z WARSZTATU', 'Pomocnik pod lupą', 'Według naszych informacji podejrzenia padają na Szprychę, pomocnika z warsztatu. Szprycha zaprzecza. Ma alibi: w chwili kradzieży był u fryzjera. Fryzjer potwierdza, fryzura nie.', { spot: 'sklep rowerowy' }),
     T('Z WARSZTATU', 'Nowy trop: czerwona chustka', 'Sąsiedzi widzieli pod warsztatem kobietę w czerwonej chustce w groszki. Pan Janusz na wieść o tym zamilkł na pół minuty. Najdłużej od lat.', { face: 'janusz', quote: ['Pan Janusz', 'Nie, nie znam. To znaczy znałem. Nieważne.'] }),
     T('Z WARSZTATU', 'Koszulka wróciła. Bez słowa', 'Koszulka zwycięzcy wisi znów na ścianie warsztatu, uprana i zacerowana na łokciu. Pan Janusz nie chce zdradzić, kto ją oddał. Uśmiecha się podejrzanie często.', { spot: 'sklep rowerowy', end: true })] },
   kurier: { region: 'peryferia', key: true, stages: [

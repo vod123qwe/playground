@@ -15,7 +15,7 @@
 import { bag, JANUSZ } from './stories.js';
 export function createQuests({ THREE, track, residents, peds, hud, talk, game }) {
   const pick = a => a[Math.random() * a.length | 0], rnd = Math.random, _v = new THREE.Vector3(), V = (x, y, z) => new THREE.Vector3(x, y, z);
-  const NAMES = { granma: ['PANI HALINA', 'PANI KRYSIA', 'PANI ZOSIA', 'PANI WIESIA'], grandpa: ['PAN HENIO', 'PAN STEFAN', 'PAN ZBYSZEK', 'PAN TADEK'], belly: ['PAN MIREK', 'PAN RYSIEK', 'PAN JANEK'] };
+  const NAMES = { granma: ['PANI KRYSTYNA', 'PANI TERESA', 'PANI BOGUSIA', 'PANI JADWIGA'], grandpa: ['PAN STEFAN', 'PAN ZBIGNIEW', 'PAN EDMUND', 'PAN LUDWIK'], belly: ['PAN MARIUSZ', 'PAN DAREK', 'PAN ROBERT'] };
   const FINDS = ['ŁYŻKA DO OPON', 'DZWONEK ROWEROWY', 'ŁATKI DO DĘTEK', 'STARA LAMPKA', 'KLUCZ DO SZPRYCH'];
   const P = new Map(), active = [], stage = [], AN = bag();
   let focusAt = null, byeAt = null, byeT = 0;   // (byeAt, byeT: the camera kept on them a moment for their last word)                                                   // (who the talk is with: a function to their head; the camera looks there)
@@ -78,9 +78,12 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     o.she = kind === 'granma' || (kind === 'stop' && r.key === 'granma');
     P.set(r, o); return o;                                              // (no matter yet: the director hands them out, few and ahead of you)
   }
+  // (a kind of matter at most this many times a run: a letter, a feud; more of the same gets old)
+  const CAP = { list: 1, szyba: 1, przystanek: 1 }, TAKEN = {};
   function offerFor(o, first) {                                         // (what matter they have, if any; not all of them have one)
     const k = o.kind; o.offer = k === 'belly' ? (rnd() < (first ? .75 : .5) ? 'szyba' : null) : (k === 'granma' || k === 'grandpa') ? (rnd() < (first ? .6 : .45) ? 'list' : null)
       : k === 'shacks' ? (o.mood >= 2 && rnd() < .6 ? 'rowery' : 'beczka') : k === 'stop' ? (rnd() < .6 ? 'przystanek' : null) : null;
+    if (o.offer && (TAKEN[o.offer] || 0) >= (CAP[o.offer] ?? 99)) o.offer = null;
   }
   const busy = kind => active.some(e => e.kind === kind || e.from === kind);
   const LINES = {
@@ -116,7 +119,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
   function converse(r) {
     const o = person(r), back = active.find(e => e.at === r || (e.point && e.point.r === r));
     if (back && back.talk) return back.talk();
-    if (o.offer && o.cool <= 0 && !busy(o.offer)) return OFFER[o.offer](o, r);
+    if (o.offer && o.cool <= 0 && !busy(o.offer)) { TAKEN[o.offer] = (TAKEN[o.offer] || 0) + 1; return OFFER[o.offer](o, r); }
     if (o.kind === 'lump') return lumpTalk(o, r);
     if (o.kind === 'shacks' && o.flag.sells) return shacksShop(o, r);
     if (o.mood <= -3 && o.kind !== 'lump') return sorryTalk(o, r);
@@ -183,7 +186,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
       wife: (first, NB) => `${first}!!! TO NIE KOGUT, TO TWÓJ BUDZIK! WNUK CI USTAWIŁ KUKURYKU! A ${NB[0]} KOGUTA NIE MA OD TRZECH LAT, BYŁ W ROSOLE!`, hush: 'TYLKO NIE O BUDZIKU!',
       sorry: 'SZYBA? A, TO TY. NIC SIĘ NIE STAŁO, MŁODY. KURY I TAK LUBIĄ PRZECIĄG. A JA LUBIĘ KURY.', sorryAsk: 'A KOGUT?',
       sorryTwist: 'JAKI KOGUT? JA MAM SAME KURY. KOGUT BYŁ W ROSOLE TRZY LATA TEMU. TO JEGO TELEFON PIEJE. MASZ PIĄTAKA ZA FATYGĘ.', sorryBye: 'I WPADNIJ NA JAJECZNICĘ!' } };
-  const VLEFT = {}, variant = (type, keys) => { if (!VLEFT[type] || !VLEFT[type].length) VLEFT[type] = keys.slice().sort(() => rnd() - .5); return VLEFT[type].pop(); };   // (no repeats in a run)
+  const VLEFT = {}, variant = (type, keys) => { if (!VLEFT[type] || !VLEFT[type].length) VLEFT[type] = keys.slice().sort(() => rnd() - .5); return VLEFT[type].pop(); };   // (no repeats till all have come: kept across runs)
   // what the old ones send (one each, no repeats in a run): a letter, a jar of gherkins, a postcard fifty years late; how it is taken
   const LETTERS = {
     list: { label: 'LIST', ask: to => `MŁODY! CHODŹ NO TU. ZAWIEŹ TEN LIST DO ${to}, TEN DOM KAWAŁEK DALEJ. JA JUŻ Z TYMI KOLANAMI NIE DAM RADY.`, bye: 'TYLKO NIE ZGNIEĆ! TO WAŻNY LIST!',
@@ -202,7 +205,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     // a letter to take ahead
     list(o, r) {
       const hi = houseAhead(); if (hi == null) { say(r, 'A, NIEWAŻNE.'); return; }
-      const to = o.she ? pick(['PANA WIEŚKA', 'PANA EDZIA', 'PANA KAZIA']) : pick(['PANI JADZI', 'PANI DOROTKI', 'PANI HALINKI']), L = LETTERS[variant('list', Object.keys(LETTERS))];
+      const to = o.she ? pick(['PANA BOGDANA', 'PANA LESZKA', 'PANA ROMANA']) : pick(['PANI BEATY', 'PANI DOROTY', 'PANI ELŻBIETY']), L = LETTERS[variant('list', Object.keys(LETTERS))];
       const start = (pay) => { done(o); o.cool = 1e9; const d = track.doors[hi];
         active.push({ kind: 'list', o, r, house: hi, to, pay, L, text: () => L.label + ' DO ' + to, target: () => over(d.p, 3.4), mark: 'v' });
         game.flash(L.label.charAt(0) + L.label.slice(1).toLowerCase() + ' do ' + to.toLowerCase() + ': dom ze strzałką. Rzuć pod drzwi albo do skrzynki.'); return null; };
@@ -219,7 +222,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     // painted pink. The twist: his own is in his cellar (his wife shouts it from the window), the pink one is the neighbour's.
     szyba(o, r) {
       const hi = houseAhead(30, 150); if (hi == null || !windowsOf(hi).length) { say(r, 'HEHE. NIEWAŻNE.'); return; }
-      const NB = pick([['ZDZICHU', 'ZDZICHA', 'ZDZICHOWI', 'ZDZICHEM'], ['WALDEK', 'WALDKA', 'WALDKOWI', 'WALDKIEM'], ['HENIEK', 'HEŃKA', 'HEŃKOWI', 'HEŃKIEM']]), nb = NB[0], F = FEUD[variant('szyba', Object.keys(FEUD))];
+      const NB = pick([['ZBYSZEK', 'ZBYSZKA', 'ZBYSZKOWI', 'ZBYSZKIEM'], ['MARIUSZ', 'MARIUSZA', 'MARIUSZOWI', 'MARIUSZEM'], ['GRZESIEK', 'GRZEŚKA', 'GRZEŚKOWI', 'GRZEŚKIEM'], ['DARIUSZ', 'DARIUSZA', 'DARIUSZOWI', 'DARIUSZEM']]), nb = NB[0], F = FEUD[variant('szyba', Object.keys(FEUD))];
       const scene0 = () => mowerOf(hi) || mowing(hi, F.prop, F.hens);
       const job = { t: 'ROBI SIĘ.', bye: 'TYLKO MNIE NIE SPRZEDAJ! MNIE TU NIE BYŁO!', act: () => { done(o); o.cool = 1e9; const w0 = windowsOf(hi);
         active.push({ kind: 'szyba', o, r, house: hi, nb, NB, F, text: () => 'SZYBA U ' + NB[1], target: () => { const w = windowsOf(hi)[0] || w0[0]; return V(w.p.x, w.p.y + 1.1, w.p.z); }, mark: 'v', label: () => 'OKNO ' + NB[1] });
@@ -662,7 +665,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
       let open = 0; for (const [r, o] of P) { if (o.lead !== r || !o.offer) continue; const [l, dot] = ahead(r); if (dot < -.3 && l > 45 && !busy(o.offer)) { o.offer = null; o.cool = Math.max(o.cool, 60); } else open++; }
       if ((offerT -= dt) <= 0) { offerT = 6;
         if (open < 2 && !talk.isOpen) { const c = []; for (const [r, o] of P) { if (o.lead !== r || o.offer || o.cool > 0 || o.mood <= -4) continue; const [l, dot] = ahead(r); if (l < 50 || l > 220 || dot < .3) continue; offerFor(o, true); if (o.offer && !busy(o.offer)) c.push(o); o.offer = null; }
-          if (c.length) { const o = pick(c); offerFor(o, true); while (!o.offer) offerFor(o, true); if (o.kind === 'shacks' && o.mood <= -3) o.offer = null; offerT = 50 + rnd() * 45; } } } }
+          if (c.length) { const o = pick(c); offerFor(o, true); for (let n = 0; n < 8 && !o.offer; n++) offerFor(o, true); if (o.kind === 'shacks' && o.mood <= -3) o.offer = null; offerT = 50 + rnd() * 45; } } } }
     // the thief
     const th = active.find(e => e.kind === 'thief');
     if (!th) { if (R.v > 1.5 && (thiefT -= dt) <= 0) { if (!startThief()) thiefT = 6; } }
@@ -724,6 +727,6 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
     e.stage = 'bag'; p.flee = 5; p.fleeNew = true; p.stun = .9; e.loot.parent?.remove(e.loot); e.glow.parent?.remove(e.glow); hud.rant(V(p.x, p.G.position.y + 1.9, p.z), pick(['AŁA! DOBRA, DOBRA!', 'MOJA NOGA!', 'TO NIE JA!']), false);
     e.drop = game.dropBag(V(p.x, p.G.position.y, p.z), () => bagPicked(e)); game.flash('Torebka na chodniku. Podnieś ją.'); return true;
   }
-  function reset() { if (GA.chase) { for (const g of GA.chase.m) g.r.root.parent?.remove(g.r.root); GA.chase = null; } Object.assign(GA, { rep: 0, cool: 200 + rnd() * 120 }); AN.reset(); for (const k in VLEFT) delete VLEFT[k]; for (const S of stage) for (const h of S.hens || []) h.g.parent?.remove(h.g); PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null, rep: 0 }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
+  function reset() { if (GA.chase) { for (const g of GA.chase.m) g.r.root.parent?.remove(g.r.root); GA.chase = null; } Object.assign(GA, { rep: 0, cool: 200 + rnd() * 120 }); AN.reset(); for (const k in TAKEN) delete TAKEN[k]; for (const S of stage) for (const h of S.hens || []) h.g.parent?.remove(h.g); PO.car?.car.g.parent?.remove(PO.car.car.g); for (const pk of PO.parked) pk.car.g.parent?.remove(pk.car.g); Object.assign(PO, { car: null, cool: 140 + rnd() * 80, stops: 0, dirt: [], parked: [], job: null, rep: 0 }); for (const e of [...active]) if (e.kind === 'thief') endThief(e); for (const S of stage) { S.mower.parent?.remove(S.mower); S.who?.G.parent?.remove(S.who.G); } stage.length = 0; active.length = 0; P.clear(); thiefT = 60 + rnd() * 50; }
   return { update, marks, tracker, onLand, onWindow, onHitPed, onKnockBike, reset, get canChat() { return !!near; }, gang: GA, reps, onKickGang, gangRep: n => { GA.rep = Math.max(-6, Math.min(6, GA.rep + n)); }, get gangTargets() { return GA.chase ? GA.chase.m.filter(g => !g.down) : []; }, policeCars, policeNear, onKickPolice, lineFor, get siren() { return !!PO.car && PO.car.stage === 'chase'; }, police: PO, people: P, get focus() { return talk.isOpen && !talk.isLight && focusAt ? focusAt() : byeT > 0 && byeAt ? byeAt() : null; }, get kickHint() { const e = active.find(q => q.kind === 'thief' && q.stage === 'chase'); return !!e && e.far < 4.2; }, get active() { return active; }, startThief };
 }

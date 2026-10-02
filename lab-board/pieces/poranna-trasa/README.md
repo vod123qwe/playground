@@ -1142,3 +1142,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - pierwsza własna mapa: m3 BLOKOWISKO jedzie po osiedlu z wielkiej płyty (1,1 km): długi bulwar, zawrotka na górze, zygzak między blokami w drodze w dół, bloki prawie wszędzie, kamienice tylko przy starcie i w połowie, więcej drzew, bez rynku; limit czasu na gwiazdki 210 s
 - m1 i m2 dalej na mapie bazowej miasta; kolejne mapy: noc na blokowisku, potem wieś, Druga strona i peryferie
 
+## Wersja 130: postacie bez oklepanych imion, mniej powtórek
+
+- pomocnik pana Janusza to teraz Szprycha (taki chudy, że schował się za szprychą; Janusz opowiada to raz); usunięte powtórzone żarty o dwudziestu biegach, długu z lat dziewięćdziesiątych i pączkach
+- wieś: pani Beata z gospodarstwa i Bogdan „Turbo” z traktora (Turbo, odkąd traktorem wyprzedził karetkę na sygnale)
+- imiona sąsiadów: Krystyna, Teresa, Bogusia, Jadwiga, Stefan, Zbigniew, Edmund, Ludwik, Mariusz, Darek, Robert; w kłótniach sąsiedzkich Zbyszek, Mariusz, Grzesiek, Dariusz
+- zlecenia jednego rodzaju (list, słoik, pocztówka; kłótnia o szybę; przystanek) najwyżej raz na trasę, a ich warianty nie powtarzają się, dopóki nie pojawią się wszystkie
+- dokumenty: biomy i trasy (docs/trasy-tematyczne.md), fabuła z zasadami tonu (docs/fabula.md: Megafon, dzielnicowy, sabotaż Janusza, kobieta w czerwonej chustce, rodzina z wesołego miasteczka, ekipa spod beczki)
+
