@@ -1038,3 +1038,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - rowerzyści omijają Cię, gdy stoisz albo jedziesz na ich torze, i przyhamowują tuż przed Tobą; gdy stoisz, kontakt to tylko otarcie (bez wywrotki); omijają też zaparkowane auta, skocznie i roboty drogowe
 - kroki pieszo: ciche stuknięcia, przy biegu częstsze, na trawie bardziej szeleszczące
 - kamera: ujęcie od przodu tylko przy wyjeździe z domu (peryferie, do zaliczenia pierwszego odcinka); po przeładowaniu w innym regionie i po resecie kamera jest za plecami
+
+## Wersja 117: pikselowe oznaczenia, przechodnie nie wchodzą w drogę
+
+- seria: plakietka w pikselowej ramce (zielona z mnożnikiem, żółta przed nim, czerwona przy przerwaniu), pikselowa czcionka, podskakuje przy zmianie
+- komunikaty („Wywrotka!” i inne): ciemna pikselowa ramka, złoty pikselowy tekst, wskakują krokowo
+- zdrowie: serce w pikselowej ramce, pasek z 10 segmentów z jasnym i ciemnym rantem (zielony, żółty, czerwony)
+- przełącznik stylu w rogu w tej samej pikselowej ramce
+- przechodnie: nie zawracają, gdy jesteś w promieniu 25 m; schodzą na bok wcześniej i w szerszym pasie, także gdy jedziesz za nimi

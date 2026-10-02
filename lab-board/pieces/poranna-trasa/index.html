@@ -16,10 +16,10 @@
   #hud{ left:12px; top:10px; filter:drop-shadow(0 2px 0 rgba(0,0,0,.35)); }   /* the bike computer (a canvas in it) */
   #hud b{ color:#efc970; }
   #keys{ right:16px; top:84px; padding:6px 10px; background:var(--shade); border-radius:6px; text-align:right; opacity:.9; }
-  #note{ left:50%; top:22%; transform:translate(-50%, 6px); padding:6px 12px; background:var(--shade); border-radius:6px; color:#efc970; opacity:0; transition:opacity .2s, transform .25s; }
+  #note{ left:50%; top:22%; transform:translate(-50%, 8px); padding:3px 10px 1px; font:16px/1.25 PTPix, ui-monospace, monospace; letter-spacing:0; text-shadow:none; color:#efc970; background:none; border-style:solid; border-width:6px; border-image:var(--px-chip) 3 fill / 6px; image-rendering:pixelated; opacity:0; transition:opacity .16s steps(2), transform .2s steps(3); max-width:min(86vw, 520px); text-align:center; }
   #note.on{ opacity:1; transform:translate(-50%, 0); }
-  #pix, #ink{ left:16px; bottom:14px; display:flex; align-items:center; gap:4px; padding:4px 6px 4px 10px; background:var(--shade); border-radius:6px; pointer-events:auto; }
-  #pix button, #ink button{ font:inherit; color:var(--ink); background:transparent; border:0; border-radius:4px; padding:4px 7px; cursor:pointer; }
+  #pix, #ink{ left:16px; bottom:14px; display:flex; align-items:center; gap:4px; padding:1px 4px 0 6px; font:16px/1.2 PTPix, ui-monospace, monospace; text-shadow:none; background:none; border-style:solid; border-width:6px; border-image:var(--px-chip) 3 fill / 6px; image-rendering:pixelated; pointer-events:auto; }
+  #pix button, #ink button{ font:inherit; color:var(--ink); background:transparent; border:0; border-radius:0; padding:2px 7px; cursor:pointer; }
   #pix button[aria-pressed="true"], #ink button[aria-pressed="true"]{ background:#efc970; color:#17181b; }
   #pix button:focus-visible, #ink button:focus-visible{ outline:2px solid #efc970; outline-offset:1px; }
   #ink{ bottom:52px; }

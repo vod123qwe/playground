@@ -472,8 +472,10 @@ assignSubs();
 // count once more (to x4); shown under the speed
 const streakMult = () => Math.min(4, 1 + Math.floor((B.streak || 0) / 3));
 let streakEl = document.createElement('div'); streakEl.id = 'streak'; streakEl.className = 'streak'; document.body.appendChild(streakEl);
-{ const st = document.createElement('style'); st.textContent = `.streak { position: fixed; left: 16px; top: 128px; z-index: 3; pointer-events: none; font: 700 11px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: .08em; color: #17181b; background: #9fd27a; padding: 4px 6px; box-shadow: 0 0 0 2px #17181b; opacity: 0; transition: opacity .25s; }
-  .streak.on { opacity: 1; } .streak.x1 { background: #efc970; } .streak.lost { background: #cf5a3e; color: #f6f3ea; } @media (max-width: 639px) { #streak { top: 92px; } }`; document.head.appendChild(st); }
+{ const st = document.createElement('style'); st.textContent = `.streak { position: fixed; left: 16px; top: 128px; z-index: 3; pointer-events: none; font: 16px/1 PTPix, ui-monospace, Consolas, monospace; color: #17181b; padding: 3px 8px 1px;
+    border-style: solid; border-width: 6px; border-image: var(--px-go) 3 fill / 6px; image-rendering: pixelated; opacity: 0; transition: opacity .2s steps(2); }
+  .streak.on { opacity: 1; animation: spop .3s steps(3); } .streak.x1 { border-image-source: var(--px-sel); } .streak.lost { border-image-source: var(--px-red); color: #f6f3ea; }
+  @keyframes spop { 0% { transform: scale(1.25) } 100% { transform: none } } @media (max-width: 639px) { #streak { top: 92px; } }`; document.head.appendChild(st); }
 function drawStreak(lost) { const n = B.streak || 0; streakEl.className = 'streak ' + (lost ? 'on lost' : n ? 'on' + (streakMult() > 1 ? '' : ' x1') : ''); streakEl.textContent = lost ? 'SERIA PRZERWANA' : `SERIA ${n}` + (streakMult() > 1 ? ` · x${streakMult()}` : ` · x2 ZA ${3 - n % 3}`); if (lost) { const e0 = streakEl, b0 = B; setTimeout(() => { if (!(b0.streak > 0)) e0.className = 'streak'; }, 1400); } }
 function breakStreak() { const had = (B.streak || 0) >= 2; B.streak = 0; if (had) { drawStreak(true); audio.play('miss', { vol: .6 }); } else if (!streakEl.classList.contains('lost')) streakEl.className = 'streak'; }
 // a subscriber ridden past without a paper: the streak goes (counted once each time by)
