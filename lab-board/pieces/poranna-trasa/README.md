@@ -1341,3 +1341,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - Klasyk ma jedną kamerę: V jej nie zmienia, kółko myszy i obrót też nie
 - po upadku w Klasyku nie wstajesz pieszo: chwila leżenia, potem rowerzysta z rowerem wraca na pas (przodem w stronę jazdy) i mruga ~2,5 s, przez ten czas nic go nie przewraca
+
+## Wersja 158: Klasyk: między domami i po drugiej stronie dzieje się dużo
+
+- trawniki da się jechać jak w starych grach ulicznych (bez hamowania na trawie); między domami co jakiś czas deska albo skocznia na trawniku
+- krasnale ogrodowe przed domami: przewrócone rowerem albo gazetą u nieabonenta +1 (u abonenta właściciel ma coś do powiedzenia)
+- podskok w Klasyku wyższy: dobrze wymierzony przenosi nad płotem przed domem; przeskok nad płotem, belą albo ławką: PRZESKOK! +1
+- trzy tory przeszkód na trawniku po drugiej stronie: tablica TOR PRZESZKÓD, deska, bela do przeskoczenia, duża skocznia przed zaparkowanym autem (nad nim albo na dach), slalom między pachołkami, kicker i meta; wszystkie trzy skocznie jednym ciągiem (w 15 s): TOR PRZESZKÓD! +6
+- auta na podjazdach: najpierw zapalają się białe światła cofania, potem auto wyjeżdża tyłem do krawędzi jezdni, czeka i wraca; wjedziesz w nie: leżysz; gazeta na szybę: kierowca staje i przeprasza (+2)
+- zraszacze na trawnikach: strumień chodzi w tę i z powrotem nad chodnikiem; w strumieniu koła się ślizgają (PLUSK!); gazeta w zraszacz: obraca się w drugą stronę (+1)
+- śmieciarka: jedzie powoli, staje co 35–50 m, dwóch śmieciarzy biega z koszami w poprzek drogi; śmieciarka: leżysz, śmieciarz: zwalniasz; gazeta do śmieciarza: łapie (+2)
+- bez drzew przy samej drodze (zasłaniały skrzynki i rowerzystę z kamery Klasyka)
+- notki w gazecie: cofał z podjazdu, śmieciarka i gazety, tor przeszkód zaliczony
