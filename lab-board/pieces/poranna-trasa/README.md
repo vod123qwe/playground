@@ -1394,3 +1394,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 165: w Klasyku znów się przewracasz
 
 - progi upadku w Klasyku pod jego wolniejszą jazdę (próg z v155 był pod 9 m/s Porannej Trasy, w Klasyku nic nie przewracało): czołowo w coś twardego już przy toczeniu (~4 m/s) leżysz, przy bardzo wolnej jeździe nic, z ukosa zachwianie; bok skoczni i beczki, bele, wózki z ulicy przewracają od ~4,3 m/s; w Porannej Trasie bez zmian
+
+## Wersja 166: w Klasyku rzut jest szybki
+
+- zamach krótszy (0,3 s zamiast 0,5: gazeta wylatuje po ~0,2 s), lot do celu płaski i szybki (0,3–0,6 s zamiast 0,6–1 s), swobodny rzut mocniejszy i niższy; cały rzut od klawisza do trafienia ~0,6 s zamiast ~1,3 s; w Porannej Trasie bez zmian

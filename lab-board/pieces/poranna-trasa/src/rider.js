@@ -167,7 +167,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   const strap = mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-.21, .12, -.17), new THREE.Vector3(-.17, .25, .06), new THREE.Vector3(-.02, .38, .11), new THREE.Vector3(.12, .46, .03), new THREE.Vector3(.14, .44, -.08), new THREE.Vector3(.15, .28, -.17), new THREE.Vector3(.15, .13, -.2)]), 40, .012, 6, false), M.bagD, torso);
 
   // ---------- the pose, each frame ----------
-  const st = { crank: 0, roll: 0, rise: 0, bend: 0, throwT: -1, side: 0, released: false, look: 0, lookY: 0, walk: 0, back: 0, stand: 0 };
+  const st = { dur: .5, crank: 0, roll: 0, rise: 0, bend: 0, throwT: -1, side: 0, released: false, look: 0, lookY: 0, walk: 0, back: 0, stand: 0 };
   const W = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), knee = new THREE.Vector3(), elbow = new THREE.Vector3();
   const toBoy = (obj, v) => boy.worldToLocal(obj.localToWorld(v.clone()));
   // input: { speed m/s, steer (rad, + right), lean (rad, + right), pedalling (0..1), braking (0..1), climbing (slope, + up), dt,
@@ -203,7 +203,7 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
     head.rotation.set(-.35 - st.bend * .3 + fall * .4 + tired * .35 + st.lookY * .22, st.look * .6, 0); st.look += ((st.throwT >= 0 ? st.side : o.look != null ? o.look : -o.steer * 1.2) - st.look) * Math.min(1, dt * (o.look != null ? 9 : 5));
     // the throw: 0..1 over .5 s; the throwing hand goes to the bag (.0-.35), swings out to its side and lets go (.35-.75), comes back
     let throwHand = -1, throwPos = null;
-    if (st.throwT >= 0) { st.throwT += dt / .5; const t = st.throwT, side = st.side, hi = side < 0 ? 0 : 1;   // side -1: right, +1: left (the left hand reaches across)
+    if (st.throwT >= 0) { st.throwT += dt / st.dur; const t = st.throwT, side = st.side, hi = side < 0 ? 0 : 1;   // side -1: right, +1: left (the left hand reaches across)
       throwHand = hi; const bagPt = new THREE.Vector3(-.2, pelvis.y + .1, pelvis.z - .05), out = new THREE.Vector3(side * .75, pelvis.y + .5, pelvis.z + .15);
       throwPos = t < .35 ? bagPt : t < .75 ? bagPt.clone().lerp(out, (t - .35) / .4) : out.clone().lerp(bagPt, Math.min(1, (t - .75) / .25) * .3);
       if (t >= .62 && !st.released) { st.released = true; o.onRelease?.(boy.localToWorld(throwPos.clone()), side); }
@@ -377,5 +377,5 @@ export function createRider({ THREE, ramp: shared, toon: sharedToon }) {
   function setLook(o) { if (o.shirt) M.shirt.color.set(o.shirt); if (o.cap) M.cap.color.set(o.cap); if (o.jeans) { M.jeans.color.set(o.jeans); M.jeansD.color.set(o.jeans); } }
   // (where the parts are, for the bike's slots on the inventory page: each an Object3D, its world position read when wanted)
   const anchors = { front: frontW, rear: rearW, saddle, steer, bell: extra.bell, lamp: extra.lamp, cogs: extra.cogs, frame: bike, bag: satchel.group };
-  return { root, head, boy, bike, anchors, setParts, setLook, bagFill: k => PR && PR.P.m.userData.bagFill ? PR.P.m.userData.bagFill(k) : satchel.setFill(k), setPerson, eye, frontWheel: frontW, lean, get tuning() { return PR; }, get person() { return PR && PR.P; }, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
+  return { set throwDur(v) { st.dur = v; }, root, head, boy, bike, anchors, setParts, setLook, bagFill: k => PR && PR.P.m.userData.bagFill ? PR.P.m.userData.bagFill(k) : satchel.setFill(k), setPerson, eye, frontWheel: frontW, lean, get tuning() { return PR; }, get person() { return PR && PR.P; }, get pelvisAt() { return RG.on ? RG.p[0] : null; }, update, throwPaper, ragdoll, getUp, ragdollOff, get ragdolling() { return RG.on; }, get throwing() { return st.throwT >= 0; }, wheelbase: FRONT.z - REAR.z, materials: M };   // (head: hidden when the camera is in it)
 }

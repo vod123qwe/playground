@@ -421,9 +421,9 @@ const makeAim = () => { const G = new THREE.Group(), dots = [];   // (the dots: 
   G.traverse(o => { if (o.material) o.material.depthTest = false; });   // (an aid, not a thing: over the grass, always seen)
   G.visible = false; scene.add(G); return { G, dots, ring, at: new THREE.Vector3(), on: false }; };
 let aim = makeAim();
-function throwVel(p, side, c = {}) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, a = (c.ay || 0) * .52, sp = (2.6 + p * 9) * (1 + (c.ax || 0) * .25);
+function throwVel(p, side, c = {}) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, a = (c.ay || 0) * .52, sp = (2.6 + p * 9) * (1 + (c.ax || 0) * .25) * (track.classic ? 1.4 : 1);
   const dx = rx * out * Math.cos(a) + fx * Math.sin(a), dz = rz * out * Math.cos(a) + fz * Math.sin(a);
-  return new THREE.Vector3(fx * B.v * .9 + dx * sp, 1.9 + p * 3.3, fz * B.v * .9 + dz * sp); }
+  return new THREE.Vector3(fx * B.v * .9 + dx * sp, track.classic ? 1.3 + p * 2.1 : 1.9 + p * 3.3, fz * B.v * .9 + dz * sp); }   // (the Classic: a lower, quicker arc)
 // what a paper can be sent to on a side: a subscriber's mailbox (best), the spot before its door; ahead or just level, out on that side,
 // within reach. The current title's subscribers first. → [{ p (on the ground), door }], the best first
 function throwTargets(side) { const now = performance.now(), fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, cur = curTitle(), list = [];
@@ -485,7 +485,7 @@ function throwing(dt, inp) {
   if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge; c.t += dt;
     c.ay = THREE.MathUtils.clamp((c.ay || 0) - (inp.dy || 0) * .005, -1, 1); c.ax = THREE.MathUtils.clamp((c.ax || 0) - (inp.dx || 0) * .005 * c.side, -1, 1);
     const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { const tap = c.t < .22, T0 = tap ? (c.side > 0 ? hot.L : hot.R) : null;   // (a tap: straight to the best on that side; held: where it was aimed, taken to a target near it)
-      B.throwAt = tap ? T0?.p || null : aim.snap || null; B.throwDoor = tap ? T0?.door : aim.snapDoor; B.throwQ = tap && T0 ? tapQ(T0) : null; B.throwP = tap && !B.throwAt ? Math.max(.45, B.charge.p) : B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if (rider.throwPaper(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; audio.play('throw', { vol: .8 }); } B.charge = null; } }
+      B.throwAt = tap ? T0?.p || null : aim.snap || null; B.throwDoor = tap ? T0?.door : aim.snapDoor; B.throwQ = tap && T0 ? tapQ(T0) : null; B.throwP = tap && !B.throwAt ? Math.max(.45, B.charge.p) : B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if ((rider.throwDur = track.classic ? .3 : .5, rider.throwPaper)(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; audio.play('throw', { vol: .8 }); } B.charge = null; } }
 }
 const paperG = new THREE.CylinderGeometry(.035, .035, .26, 10), paperM = toon('#ece5d0'), bandM = toon('#b3372c');
 // ---------- the titles: papers (made up), each house takes one or none; the bag holds some of each, X picks which is thrown. The run starts
@@ -566,8 +566,9 @@ function release(at, side) {                                          // (from t
   let A = B.throwAt; B.throwAt = null; if (A && B.throwDoor) B.throwDoor.pending = performance.now();
   if (A && B.throwQ) { const { q, late } = B.throwQ; B.throwQ = null; if (q < .82) { const r = ((1 - q) * 4.4 + Math.abs(B.v) * .05) * AS().scat, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), lat = (Math.random() - .3) * r * .6, along = (late ? 1 : -1) * r * (.6 + Math.random() * .4);   // (early: short of it; late: past it; a little to the house's side, or the road's)
       const sd = -(side || 1), rx = -fz * sd, rz = fx * sd; A = A.clone(); A.x += fx * along + rx * lat; A.z += fz * along + rz * lat; A.y = track.probe(A.x, A.z, B.hint).y; } }
+  // (the Classic: the arc flat and quick)
   if (A) {   // (a paper on its way to it: not sent another)
-    const dx = A.x - at.x, dz = A.z - at.z, l = Math.hypot(dx, dz), T = THREE.MathUtils.clamp(.5 + l * .04, .6, 1.05); v = new THREE.Vector3(dx / T, (A.y + .05 - at.y) / T + .5 * g * T, dz / T); }   // (sent to a target: the arc that comes down on it)
+    const dx = A.x - at.x, dz = A.z - at.z, l = Math.hypot(dx, dz), T = track.classic ? THREE.MathUtils.clamp(.26 + l * .026, .32, .6) : THREE.MathUtils.clamp(.5 + l * .04, .6, 1.05); v = new THREE.Vector3(dx / T, (A.y + .05 - at.y) / T + .5 * g * T, dz / T); }   // (sent to a target: the arc that comes down on it)
   const dot = new THREE.Mesh(dotG, dotM); dot.renderOrder = 1; scene.add(dot);
   B.thrown = (B.thrown || 0) + 1;
   papers.push({ from: at.clone(), m, v, dot, prev: m.position.clone(), spin: new THREE.Vector3(8 + Math.random() * 4, 0, 3), hint: B.hint, t: 0, rest: false, landed: false, title, guided: !!A });
