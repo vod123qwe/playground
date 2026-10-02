@@ -142,8 +142,8 @@ drift(0);
 
 // ---------- the street, the traffic, the dogs, the rider ----------
 // (?audit: nothing merged, for the ground check, see track.audit)
-const REGION = new URLSearchParams(location.search).get('region') || 'peryferia';   // (a region's world: built for it; another region: the page loads again)
-const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit'), region: REGION }); track.dapSun.value.copy(SUN); scene.add(track.group);
+const REGION = new URLSearchParams(location.search).get('region') || 'peryferia', MAPA = new URLSearchParams(location.search).get('mapa') || '';   // (a region's world: built for it; another region: the page loads again)
+const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit'), region: REGION, map: MAPA }); track.dapSun.value.copy(SUN); scene.add(track.group);
 const backdrop = createBackdrop({ THREE, city: track.region === 'miasto' }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
 // the village's geese (geese.js): on the verges, across the road when a bike comes
 const geese = track.region === 'wies' ? createGeese({ THREE, scene, track, toon }) : null;
@@ -1331,12 +1331,13 @@ function buildGate(i) { clearGate(); const S0 = track.S[i], w = track.ROAD + .55
     post.position.set(x, y + H / 2, z); post.rotation.y = yaw; scene.add(post); RUN.gate.push(post);
     const foot = new THREE.Object3D(); foot.position.set(x, y, z); foot.rotation.y = yaw; RUN.hits.push(track.addHit(foot, { hx: .12, hz: .12, h: H, kind: 'hard' }, i)); }
   const yM = track.probe(S0.p.x, S0.p.z, i).y, ban = new THREE.Mesh(new THREE.BoxGeometry(w * 2 + .2, .75, .06), banM); ban.position.set(S0.p.x, yM + H - .25, S0.p.z); ban.rotation.y = yaw; scene.add(ban); RUN.gate.push(ban); }
-function goRegion(region, poziom) { saveCampaign(); const q = new URLSearchParams(location.search); q.set('play', ''); if (region && region !== 'peryferia') q.set('region', region); else q.delete('region'); if (poziom) q.set('poziom', poziom); else q.delete('poziom'); location.search = q.toString().replace(/=(&|$)/g, '$1'); }
+function goRegion(region, poziom, mapa) { saveCampaign(); const q = new URLSearchParams(location.search); q.set('play', ''); if (region && region !== 'peryferia') q.set('region', region); else q.delete('region'); if (mapa) q.set('mapa', mapa); else q.delete('mapa'); if (poziom) q.set('poziom', poziom); else q.delete('poziom'); location.search = q.toString().replace(/=(&|$)/g, '$1'); }
 // the morning's fog on a level that has it: the far end of the view pulled in (25 m clear, gone by 55), the colour of wet air
 const FOG0 = { near: scene.fog.near, far: scene.fog.far, col: scene.fog.color.clone() };
 function setFog(on) { scene.fog.near = on ? 12 : FOG0.near; scene.fog.far = on ? 55 : FOG0.far; scene.fog.color.copy(on ? new THREE.Color('#d9ddd6') : FOG0.col); }
 // (the opening shot from in front of him: only the very first start, from home; later ones start on the road, from behind)
-function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if ((L0.region === 'peryferia' ? 'peryferia' : L0.region) !== track.region) { goRegion(L0.region, id); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
+// (another region, or this route's own map: the world built anew)
+function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if (L0.region !== track.region || (L0.map || '') !== track.map) { goRegion(L0.region, id, L0.map); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; if (!(id === 'p1' && !LVM.load().done?.p1)) { C.iy = 0; C.yaw = B.yaw; C.init = false; } const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 };
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   // (the finish where the run starts (a whole lap): the gate and the finale's course not there yet, at home, in sight from the start;
@@ -1344,7 +1345,7 @@ function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; 
   { const iF = RUN.cps[RUN.cps.length - 1], gap = Math.abs(((iF - iJ) % N + N * 1.5) % N - N / 2) * track.ds; RUN.late = gap < Math.min(300, L.finish.to * track.len * .45) + 80; }
   if (RUN.late) { clearFinale(); clearGate(); } else buildFinale(); buildCrossings(); setFog(!!LV.fog); traffic.rivals(LV.rivals || 0); if (LV.rivals) setTimeout(() => flash('Kurier Osiedlowy na trasie! Wyprzedź ich, kopnij albo trafiaj gazetą, zanim podbiorą skrzynki'), 2400); if (LV.fog) setTimeout(() => flash('Mgła! Widać na kilkadziesiąt metrów. Przejazd słychać, zanim go widać'), 1800); bindJobs(); { const S1 = LVM.load(); LVM.save({ runs: (S1.runs || 0) + 1 }); } Object.assign(RAD, { fin: false, cool: 6, idle: 40, gag: false }); if (LV2.cur?.box) scene.remove(LV2.cur.box); Object.assign(LV2, { offer: null, cur: null, next: 30 + Math.random() * 20 }); Object.assign(RUN, { shots: [], stolen: 0, rivalHits: 0, boxed: 0, far: 0, mudSaid: false, crossSaid: false, gooseMad: 0, t: 0, go: false, cp: 0, done: false, chk: 0, minA: Infinity, prevA: 1e9, log: [], snaps: [], dogOn: false, dogT: -99, stops: undefined, maxStreak: 0 }); if (!RUN.late) buildGate(RUN.cps[RUN.cps.length - 1]); lvHud.classList.add('on'); saveCampaign();
   flash(`${L.name}: ${track.home?.homeH ? 'wyjedź z domu' : 'ruszaj'} i dojedź do mety` + (mods.length ? ` · umowa: +${Math.round(LVM.modBonus(mods) * 100)}% premii` : '')); }
-function goHome() { if (fin.isOpen) fin.close(); clearFinale(); clearCrossings(); setFog(false); traffic.rivals(0); if (track.region !== 'peryferia') { goRegion('peryferia', null); return; } LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
+function goHome() { if (fin.isOpen) fin.close(); clearFinale(); clearCrossings(); setFog(false); traffic.rivals(0); if (track.region !== 'peryferia' || track.map) { goRegion('peryferia', null); return; } LV = null; clearGate(); lvHud.classList.remove('on'); resetGame(); const S = LVM.load(); if (LVM.hasSave()) B.points = S.money || 0; B.lastPts = B.points; flash('W domu: jeździsz swobodnie. ' + keysOf('map') + ': mapa'); }
 function openMap() { if (menu.open) menu.close(); saveCampaign(); map.open(); }
 // how far along the way to the next checkpoint (the way it goes; more than most of a lap: going the wrong way)
 const ahead = (i, cp) => ((((cp - i) * LV.finish.dir) % track.N) + track.N) % track.N * track.ds;
@@ -1555,7 +1556,7 @@ function tpFin(m, d = 0) { lateFinish(); if (!LV || !FIN.on) return; const dir =
 function tpFinale(where = 'start') { lateFinish(); if (!LV || !FIN.on) return; const L2 = track.ROAD / 2, FL = Math.min(300, LV.finish.to * track.len * .45), Lk = FIN.locks || [];
   const at = { start: [FL + 14, 0], easy: [(FIN.forkM || FL * .74) - 2, -L2], hard: [(Lk[0]?.from ?? FL * .74) + 8, L2], jump2: [(Lk[1]?.from ?? FL * .5) + 8, L2], double: [FL * .24 + 14, 0] }[where] || [FL + 14, 0];
   tpFin(at[0], at[1]); flash('Tor przeszkód: ' + ({ start: 'początek', easy: 'łatwy pas', hard: 'trudny pas', jump2: 'druga skocznia', double: 'podwójny rów' }[where] || 'początek')); }
-function goTrack(id, where = 'start') { const L0 = LVM.LEVEL(id); if (!L0) return; if ((L0.region === 'peryferia' ? 'peryferia' : L0.region) !== track.region) { try { sessionStorage.setItem('pt.tp', JSON.stringify({ id, where })); } catch { } startLevel(id); return; } startLevel(id); setTimeout(() => tpFinale(where), 700); }
+function goTrack(id, where = 'start') { const L0 = LVM.LEVEL(id); if (!L0) return; if (L0.region !== track.region || (L0.map || '') !== track.map) { try { sessionStorage.setItem('pt.tp', JSON.stringify({ id, where })); } catch { } startLevel(id); return; } startLevel(id); setTimeout(() => tpFinale(where), 700); }
 function testRows() { const out = [];
   for (const R of LVM.REGIONS) { const ls = LVM.LEVELS.filter(l => l.region === R.id && !l.soon); if (!ls.length) continue; out.push({ head: 'TRASY · ' + R.name });
     for (const l of ls) out.push({ label: l.name + (LV?.id === l.id ? ' (TERAZ)' : ''), act: () => startLevel(l.id) }); }

@@ -4,7 +4,12 @@ Stan: plan (2026-10-01), realizowany po kolei. Zasada (Jarek): w regionie kilka 
 
 ## Jak trasy różnią się w regionie
 
-Ten sam świat regionu, ale: kierunek, długość (pół pętli, pętla, półtorej), inny start i meta, inne zestawy utrudnień, czasem objazd (zamknięta ulica wymusza skrót), później też pora dnia (świt z latarniami, ranek, przedpołudnie).
+**Decyzja Jarka (02.10.2026): każda trasa ma własną mapę.** Region trzyma klimat (wygląd, paleta, rodzaj zabudowy, persony), a trasa ma swój kształt drogi, swoje dzielnice, sytuacje i ludzi. Przykład: w mieście m1 to kamienice i rynek, m3 osiedle z wielkiej płyty, a noc na blokowisku (Bronx) dostanie swoje ciemne uliczki.
+
+- Technicznie: trasa w `levels.js` ma pole `map`, a region w `track.js` (`REGION_T.<region>.maps.<map>`) opisuje, co ta mapa zmienia (kształt pętli `ctrl`, przystanki, rynek, bloki, drzewa i inne). Trasa bez `map` jedzie po mapie bazowej regionu.
+- Zmiana mapy przeładowuje stronę tak jak zmiana regionu (`?region=...&mapa=...&poziom=...`), z ekranem ładowania.
+- Mapy przerabiamy po kolei. Najpierw miasto (v129: m3 Blokowisko na własnej mapie, potem Bronx nocą), następnie wieś, Druga strona i peryferie.
+- Nadal różnią się też kierunek, długość, utrudnienia i pora dnia.
 
 ## Regiony (6) i trasy (24)
 

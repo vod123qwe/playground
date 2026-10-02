@@ -28,7 +28,7 @@ Czerwone flagi:
   - plac pod biurowcem z parkingiem, postój taxi;
   - roboty drogowe z ekipą (5 robotników do zagadania, kopnięcia i trafienia gazetą).
 - **Dostawy:** do klatek i do sklepów. Duże witryny łatwo zbić.
-- **Poziomy:** m1 Stare Miasto, m2 Dzień targowy, m3 Blokowisko (grywalne), m4 wkrótce.
+- **Poziomy:** m1 Stare Miasto, m2 Dzień targowy, m3 Blokowisko (grywalne), m4 wkrótce. Od v129 każda trasa ma własną mapę: m3 jeździ po osiedlu z długim bulwarem, zawrotką i zygzakiem między blokami (1,1 km).
 
 ## Pomysły i ocena
 
@@ -51,7 +51,7 @@ Skala: ★★★ robić na pewno, ★★ dobre, zrobić przy okazji dzielnicy, �
 ## Kolejność prac (propozycja)
 
 1. **v128: rusztowania.** Rusztowania na kilku kamienicach, robotnicy na pomostach, spadające cegły z ostrzegającym cieniem, kopnięcie słupa trzęsie rusztowaniem.
-2. **v129–v130: noc na blokowisku.** Pora dnia „noc”, latarnie, okna, Bronx: goście pod ścianą, bezdomny, przewrócone kosze, patrol. Nowy poziom miasta.
+2. **v130–v131: noc na blokowisku, na własnej mapie** (ciemne uliczki między blokami, inne niż w m3). Pora dnia „noc”, latarnie, okna, Bronx: goście pod ścianą, bezdomny, przewrócone kosze, patrol. Nowy poziom miasta.
 3. **v131: dzielnica turystyczna.** Park z wąską ścieżką (wybór drogi), turyści, pikniki, food trucki, skatepark ze skoczniami. Nowy poziom.
 4. **Później:** deptak z tłumem i grajkiem, most z poetą, godzina szczytu z tramwajem, przedmieścia, finał miasta (redakcja Trąbki).
 
