@@ -1274,3 +1274,6 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 
 - nocna łuna już nie na wszystkich abonentach: świeci tylko skrzynka, do której masz teraz wrzucić (nie dostała gazety, w torbie jest gazeta jej tytułu), i tylko trzy najbliższe przed tobą w promieniu 45 m; subtelniej: mniejsza, przygaszona, zapala się i gaśnie płynnie
 
+## Wersja 148: znaczniki wcześniej
+
+- ikonki abonentów nad skrzynkami i drzwiami pojawiają się wcześniej: w dzień od 46 m (na trudnym od 26 m), nocą od 28 m zamiast 15 m; podświetlenie celu do rzutu łapie skrzynkę już z 34 m, więc masz czas wycelować zanim dojedziesz
