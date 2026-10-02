@@ -105,7 +105,7 @@ Las, góry w tle, jezioro, kampery. Cicho, dziko, piękne światło.
 
 ## Do balansu (zgłoszone przez Jarka)
 
-- **Za mało skrzynek w mieście nocą** (02.10.2026). Bloki stoją daleko od drogi, a znaczniki nocą widać tylko z bliska, więc są odcinki bez celu do rzutu. Do zrobienia: więcej celów przy drodze (kioski, nocne sklepiki, skrzynki na słupkach przy blokach, oświetlone klatki bliżej jezdni) i przeliczenie gęstości abonentów na trasę.
+- **Za mało skrzynek w mieście nocą** (02.10.2026). Bloki stoją daleko od drogi, a znaczniki nocą widać tylko z bliska, więc są odcinki bez celu do rzutu. Zrobione w v132: skrzynki bloków na słupkach przy chodniku (99 ze 108 do 9 m od drogi), oświetlone klatki. Dalej: przeliczyć gęstość abonentów na trasę po testach Jarka.
 - **Chodniki pełniejsze** (02.10.2026): ławki, kosze, stojaki z reklamami, stojaki z gazetami, deski do skakania, a w nocy opony, bezdomny, imprezowicze, sklepiki i kioski. Pierwsza partia jest w v131, dalej rozbudowywać.
 
 ## Otwarte decyzje

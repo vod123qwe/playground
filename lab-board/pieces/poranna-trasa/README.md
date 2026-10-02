@@ -1165,3 +1165,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - gazeta: nowe wpisy Z OSIEDLA (kopnięcie pod klatką, pościg, szkło, opona, kołdra z gazety)
 - poprawka: panorama miasta i samoloty ustawiają się wokół środka danej mapy (na mapie osiedla m3 panorama mogła wchodzić na drogę)
 
+## Wersja 132: skrzynki bloków przy chodniku
+
+- bloki (Bronx i osiedle m3): skrzynki na słupkach przy chodniku przed każdą klatką, a nie na ścianie 13 m od jezdni; teraz 99 ze 108 skrzynek w Bronksie stoi do 9 m od środka drogi, a najdłuższa przerwa między skrzynkami abonentów to około 56 m
+
