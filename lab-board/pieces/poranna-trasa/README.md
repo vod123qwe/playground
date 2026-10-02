@@ -1213,3 +1213,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - przeciwnik żywszy: krócej krąży, szybciej wraca do ataku, częściej bije seriami i częściej blokuje, więcej się rusza na boki (Kozak przy twojej gardzie: około 13 ataków na 20 s)
 - krople krwi mniejsze (z bliska wyglądały jak kostki)
 
+## Wersja 138: walka bez podpowiedzi na ekranie, kontry, mocne ciosy, unik z przechyłem
+
+- bez znaków nad przeciwnikiem i bez podpisów na ekranie: przeciwnika czyta się po ruchu i po świecącej pięści (żółta: blok, fioletowa: nisko, zielona: teraz parowanie, czerwona i większa: mocny cios); zostaje twoja tarcza gardy i ściąga klawiszy na dole
+- przeciwnik bije szybciej (krótsze zamachy i ciosy), a gdy widzi twój cios, czasem robi unik i od razu oddaje: w szybkiej wymianie można się nadziać na kontrę (najczęściej Kurier i Kozak)
+- mocny cios: czerwona pięść i dłuższy zamach; blok go nie zatrzymuje (przebija gardę, boli, wybija z rytmu, „ZA MOCNY! UNIKAJ”), unik (Shift) mija go w całości i zostawia przeciwnika odsłoniętego; najczęściej u Szwagra
+- unik z przechyłem: dłuższy i szybszy odskok, ciało rzucone w stronę uniku, przysiad i mały podskok, świst; tak samo przy uniku przeciwnika
+

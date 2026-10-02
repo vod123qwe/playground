@@ -232,7 +232,7 @@ function loseFight() {
     return pickOf(['POŻYCZĘ NA CHWILĘ!', 'TERAZ TY IDZIESZ Z BUTA!', 'DAWAJ KOŁA, KOLEGO!']); }
   B.points = Math.max(0, B.points - 3); flash('Zrobił sobie z tobą selfie. -3 zł za prawa do wizerunku.'); return pickOf(['FOTKA NA GRUPĘ OSIEDLA!', 'UŚMIECH! DO RELACJI!', 'MAMA BĘDZIE DUMNA!']);
 }
-const foot = createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx: { score: (n, at, l, c) => score(n, at, l, c), flash: t => flash(t), shake: v => { shake = Math.max(shake, v); }, slow: v => { slowmo = Math.max(slowmo, v); },
+const foot = createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx: { sound: (n, vol = .5) => audio.play(n, { vol }), score: (n, at, l, c) => score(n, at, l, c), flash: t => flash(t), shake: v => { shake = Math.max(shake, v); }, slow: v => { slowmo = Math.max(slowmo, v); },
   rant: (at, t) => hud.rant(at, t, true), pop: (at, t, c) => hud.pop(at, t, c), blood: (at, dir, n) => blood(at, dir, n), tip: t => hud.tip(t), impact: (at, t) => hud.impact(at, t || undefined), take: () => loseFight(), drop: at => dropLoot(at) } });
 const bikeSpot = () => { const me = foot.me, fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), t = THREE.MathUtils.clamp((me.x - B.x) * fx + (me.z - B.z) * fz, -.9, .9); return { x: B.x + fx * t, z: B.z + fz * t }; };   // (the nearest of the bike, front wheel to back)
 let garage = null;   // (the inventory page: made below, once what it needs is there)
