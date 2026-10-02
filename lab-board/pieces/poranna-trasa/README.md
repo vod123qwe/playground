@@ -1378,3 +1378,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - co trzeci odcinek ulicy (~110 m) bez płotów przed domami: otwarte ogródki do przejechania i przeskakiwania
 - opony toczą się w poprzek drogi przed tobą co kilka sekund: przeskocz albo objedź (podskok nad oponą wystarcza)
 - trzy duże skocznie na trawniku po drugiej stronie, za każdą trójka dzieciaków kibicuje (DAWAJ! SKACZ!); przelot nad ich głowami: NAD GŁOWAMI! +3, w nich po ziemi: zwalniasz
+
+## Wersja 163: Klasyk: druga strona ulicy żyje, pościg za szybę
+
+- zbijesz szybę: właściciel wybiega i goni cię kilka sekund, krzycząc po swojemu (biegnie szybciej, niż rower toczy się sam, wolniej niż na gazie); dogoni: KOP i leżysz; uciekniesz: „JESZCZE CIĘ ZŁAPIĘ!”
+- po drugiej stronie: emeryci na co drugiej ławce, każdy po swojemu (zagadać, gazeta do rąk +1), trzech biegaczy na chodniku, pan z psem na długiej smyczy w poprzek chodnika (smycz: przeskocz albo objedź, inaczej szarpnie), dzieciaki z piłką, która co jakiś czas wylatuje na jezdnię, trzy place zabaw (piaskownica, huśtawki, zjeżdżalnia)
+- przy krawężniku po drugiej stronie zaparkowane auta, przed większością skocznia na jezdni: nad autem albo na dach
+- bez drzew po drugiej stronie przy drodze (kamera wisi nad tą stroną, zasłaniały pół ekranu)

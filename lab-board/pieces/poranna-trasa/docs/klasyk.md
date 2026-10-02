@@ -102,3 +102,7 @@ Trawniki do jazdy, deski i skocznie między domami, krasnale (+1), wyższy podsk
 ## Zrobione (v162)
 
 Deski przed podjazdami (przeskok nad cofającym autem albo lądowanie na dachu), auta czekają, gdy ulicą jedzie ruch, i nie wjeżdżają w jadące; co trzeci odcinek bez płotów; toczące się opony przez drogę; skocznie nad dzieciakami (+3). Pomysły Jarka z 02.10: „nie zatrzymuje się, mogę speedrunować, ale czasem trudno” — trzymać płynność: przeszkody do przeskoczenia albo objechania, nie ściany.
+
+## Zrobione (v163)
+
+Pościg właściciela po zbitej szybie (5,6 m/s: toczysz się, dogoni; na gazie uciekniesz), emeryci na ławkach, biegacze, pies na smyczy w poprzek chodnika, piłka z trawnika na jezdnię, place zabaw, zaparkowane auta ze skoczniami po drugiej stronie, bez drzew po stronie kamery.
