@@ -727,7 +727,7 @@ function stepNight(px_, pz_) { if (!NIGHT) return; const lamps = [...(track.net?
 const litNear = p => (track.net?.lamps || []).some(l => (l.p.x - p.x) ** 2 + (l.p.z - p.z) ** 2 < 49);
 const markNear = p => !NIGHT || litNear(p) ? AS().near : Math.min(AS().near, 28);
 function ride(dt, inp) {
-  if (B.safe > 0) B.safe -= dt;
+  if (B.safe > 0) { B.safe -= dt; if (track.classic && !B.crash) rider.root.visible = B.safe <= 0 || ((B.safe * 12) | 0) % 2 === 0; }   // (the Classic: blinking while nothing can throw him)
   if (B.lift) { const L = B.lift; L.t += dt; B.lean = L.from * (1 - THREE.MathUtils.smootherstep(L.t, 0, .8)); B.leanV = 0; B.v = 0; pose(dt, 0, 0, 0, 0); if (L.t >= .8) { B.lift = null; B.lean = 0; } return; }   // (picked up off the ground)
   const q = track.probe(B.x, B.z, B.hint); B.hint = q.i;
   const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), along = fx * q.f.x + fz * q.f.z, slope = q.slope * along;
@@ -735,10 +735,10 @@ function ride(dt, inp) {
     const c = B.crash; c.t += dt; B.v *= Math.pow(.04, dt); B.x += fx * B.v * dt; B.z += fz * B.v * dt;
     const down = c.side * 1.38, want = c.t < 2.3 ? down : c.t < 3.3 ? down * (1 - THREE.MathUtils.smootherstep(c.t, 2.3, 3.3)) : 0;
     B.lean += (want - B.lean) * Math.min(1, dt * (c.t < 2.3 ? 7 : 5)); B.steer *= Math.pow(.1, dt);
-    if (c.robbed) {                                                    // robbed: he lies a moment, then (blinking) he is back on the road, on his bike
-      if (c.t > 2.2 && !c.moved) { c.moved = true; backToRoad(); flash(`Babka zwędziła Ci całą kasę! (−${c.robbed} zł)`); }
-      rider.root.visible = !(c.t > 2.2 && ((c.t * 12) | 0) % 2);
-      if (c.t > 3.3) { B.crash = null; B.v = 0; B.lean = 0; B.leanV = 0; rider.root.visible = true; B.safe = 2.5; B.rattled = 0; }
+    if (c.robbed || track.classic) {                                   // robbed (and always in the Classic): he lies a moment, then (blinking) he is back on the road, on his bike
+      const t0 = c.robbed ? 2.2 : 1.4; if (c.t > t0 && !c.moved) { c.moved = true; backToRoad(); if (c.robbed) flash(`Babka zwędziła Ci całą kasę! (−${c.robbed} zł)`); }
+      rider.root.visible = !(c.t > t0 && ((c.t * 12) | 0) % 2);
+      if (c.t > t0 + 1.1) { B.crash = null; B.v = 0; B.lean = 0; B.leanV = 0; rider.root.visible = true; B.safe = 2.5; B.rattled = 0; }
     } else {
       if (c.t > 2.3 && !c.up) { c.up = true; const p = rider.pelvisAt ? rider.pelvisAt.clone() : new THREE.Vector3(B.x, B.y, B.z);   // (up on his feet; the bike stays down)
         if (foot.ready && foot.start({ x: p.x, z: p.z, yaw: B.yaw, hint: B.hint, getUp: true })) { rider.ragdollOff(); rider.boy.visible = false; B.crash = null; B.v = 0; B.parked = true; B.bikeDown = { lean: B.lean }; flash('Wstań i podnieś rower: F przy rowerze'); return; }
@@ -1025,7 +1025,7 @@ const CAMS = [
   { name: 'klasyk', oblique: 'road', classic: true, fov: 46 },
 ];
 let camI = track.classic ? CAMS.findIndex(c => c.classic) : 3; const CP = { ...CAMS[camI] };   // (the Classic: its own camera)
-function setCam(i) { camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
+function setCam(i) { if (track.classic) { flash('Klasyk ma jedną kamerę'); return; } camI = i; flash(`Kamera ${i + 1}: ${CAMS[i].name}`); }
 // (the opening shot from in front of him: only leaving home, in the suburb, till the first stretch is done; anywhere else from behind)
 const openShot = () => track.region === 'peryferia' && !(LVM.load().done || {}).p1 ? Math.PI : 0;
 let C = { yaw: B.yaw, pos: new THREE.Vector3(), look: new THREE.Vector3(), init: false, gy: 0, iy: openShot(), iyGo: false };   // (iy: the opening shot, from in front of him, the house behind him; it swings round behind him as he sets off)
@@ -1067,7 +1067,7 @@ function follow(dt) {
   //   one angle for the whole run (the road's at the start)
   if (T.oblique) { const sg = Math.sign(Math.sin(B.yaw) * gq.f.x + Math.cos(B.yaw) * gq.f.z) || 1, Y0 = Math.atan2(gq.f.x * sg, gq.f.z * sg);
     if (T.oblique === 'fixed') { if (C.fixY == null || !C.init) C.fixY = Y0; C.oy = C.fixY; } else { if (C.oy == null || !C.init) C.oy = Y0; C.oy += Math.atan2(Math.sin(Y0 - C.oy), Math.cos(Y0 - C.oy)) * Math.min(1, dt * 1.6); }
-    const Y = C.oy + camUser.yaw, fx = Math.sin(Y), fz = Math.cos(Y), A0 = track.S[gq.i], hs = T.classic && track.oneSide ? Math.sign(-(A0.r.x * track.oneSide) * fz + (A0.r.z * track.oneSide) * fx) || 1 : 1, rx = -fz * hs, rz = fx * hs, k = camUser.dist * (1 + Math.max(0, B.v) * .025 + tw * .15), h = (T.classic ? 7.2 : 9) * k, bk = (T.classic ? 4.2 : 5.5) * k, sd = (T.classic ? 6.8 : 8.5) * k, lk = T.classic ? 3.2 : 1.2;   // (the Classic: lower, nearer, turned more to the houses)
+    const Y = C.oy + (T.classic ? 0 : camUser.yaw), fx = Math.sin(Y), fz = Math.cos(Y), A0 = track.S[gq.i], hs = T.classic && track.oneSide ? Math.sign(-(A0.r.x * track.oneSide) * fz + (A0.r.z * track.oneSide) * fx) || 1 : 1, rx = -fz * hs, rz = fx * hs, k = (T.classic ? 1 : camUser.dist) * (1 + Math.max(0, B.v) * .025 + tw * .15), h = (T.classic ? 7.2 : 9) * k, bk = (T.classic ? 4.2 : 5.5) * k, sd = (T.classic ? 6.8 : 8.5) * k, lk = T.classic ? 3.2 : 1.2;   // (the Classic: lower, nearer, turned more to the houses)
     const want = new THREE.Vector3(B.x - fx * bk - rx * sd, C.gy + h, B.z - fz * bk - rz * sd), look = new THREE.Vector3(B.x + fx * 6.5 + rx * lk, C.gy + .4, B.z + fz * 6.5 + rz * lk);
     { const gw = track.probe(want.x, want.z, gq.i).y; if (want.y < gw + 3) want.y = gw + 3; }   // (never in a hill)
     if (!C.init) { C.gy = B.y; C.pos.copy(want); C.init = true; }

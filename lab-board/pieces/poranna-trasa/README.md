@@ -1336,3 +1336,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - własna kamera Klasyka: skośna, nad stroną przeszkód, patrzy na domy i drogę przed tobą; wzgórza z tła odsunięte, żeby kamera w nie nie wjeżdżała
 - szyba nieabonenta w Klasyku: +2 (u abonenta dalej: rezygnuje)
 - w obu wersjach: większy prześwit wokół postaci, gdy zasłania ją drzewo, auto albo dach (3 m, przy kamerach skośnych 3,8 m)
+
+## Wersja 157: Klasyk: jedna kamera, powrót po upadku jak na automacie
+
+- Klasyk ma jedną kamerę: V jej nie zmienia, kółko myszy i obrót też nie
+- po upadku w Klasyku nie wstajesz pieszo: chwila leżenia, potem rowerzysta z rowerem wraca na pas (przodem w stronę jazdy) i mruga ~2,5 s, przez ten czas nic go nie przewraca
