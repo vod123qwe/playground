@@ -1234,3 +1234,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - idealne parowanie: garda podniesiona w ciągu 500 ms przed trafieniem (było 300 ms); zwykły blok (garda trzymana wcześniej) tylko zatrzymuje cios, bez odrzucenia
 - zielona pięść świeci właśnie w tym oknie, liczonym razem z końcówką zamachu (wcześniej dopiero w samym ciosie, czyli za krótko); sprawdzone na arenie: okno około pół sekundy, gardą w nim 5 idealnych parowań na 20 s
 
+## Wersja 142: przeciwnik blokuje zamiast robić unik z kontrą
+
+- przeciwnik nie robi już uniku z kontrą na twój cios (wyglądało dziwnie); zamiast tego częściej podnosi gardę na właściwej wysokości (górą albo nisko); po bloku czy parowaniu nadal może od razu oddać, jak wcześniej
+

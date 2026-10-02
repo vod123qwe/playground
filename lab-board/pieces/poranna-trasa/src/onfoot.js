@@ -389,7 +389,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
     if (!tr && o.st < 15 && !f.move && !f.wind && d < 1.45 && Math.random() < dt * 4) { inp.atk = Math.random() < .5 ? 'cross' : 'hook'; inp.quick = true; return inp; }   // (you are out of breath: he goes in)
     if (A.pend && !f.move && !f.wind) { inp.atk = A.pend; inp.quick = true; A.pend = null; return inp; }   // (a second one, a short wind-up)
     if (f.wind || f.move) return inp;
-    if (!tr && o.move && !o.move.done && A.cseen !== o.move && f.st >= 14 && d < 1.6) { A.cseen = o.move; if (Math.random() < (K.counter || 0)) { inp.dodge = true; inp.side = A.strafe; inp.fwd = 0; A.pend = Math.random() < .5 ? 'cross' : 'hook'; return inp; } }   // (yours seen coming: now and then he slips it and comes straight back)
+    if (!tr && o.move && !o.move.done && A.cseen !== o.move && d < 1.6) { A.cseen = o.move; if (Math.random() < (K.counter || 0)) { A.guardT = .5; A.low = o.move.zone === 'low'; } }   // (yours seen coming: more often a guard, at the right height (no slipping it: he only blocks))
     // yours coming: now and then a guard (the right height mostly)
     if (!tr && o.move && A.seen !== o.move) { A.seen = o.move; if (Math.random() < K.guard) { A.guardT = .45; A.low = Math.random() < .78 ? o.move.zone === 'low' : o.move.zone !== 'low'; } }
     if (A.guardT > 0) { inp.guard = true; inp.low = A.low; }
