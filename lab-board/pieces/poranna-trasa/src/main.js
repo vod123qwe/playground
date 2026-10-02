@@ -201,7 +201,8 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
-  for (const d of track.doors) if (r() < .2) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
+  const dogRate = track.region === 'miasto' ? .04 : track.region === 'peryferia2' ? .1 : .2;
+  for (const d of track.doors) if (r() < dogRate) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
 let rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
 // his other bikes, by the garage at home: one leant there, one upside down, its front wheel off (being mended)
 const wbikes = createBikes({ THREE, scene, track, createRider, ramp, toon });

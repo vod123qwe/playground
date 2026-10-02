@@ -720,7 +720,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const farmLots = [], fieldLots = []; const whLast = {};
   // (the estate: warehouses on their stretches, a site now and then; its road works and cranes further down)
   const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211) }) : null;
-  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked }) : null;   // (the town's other streets: shortcuts, side streets)
+  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked, townBox: s => CITY.townBox(s) }) : null;   // (the town's other streets: shortcuts, side streets)
   const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G }) : null, cityLast = {};
   const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
     if (NET?.blocked(i, s)) return null;
