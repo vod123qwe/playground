@@ -1119,3 +1119,14 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - miejska skrzynka na listy: duża, jaskrawoczerwona, w białej ramce na ścianie (widać ją i na cegle, i na tynku), biała koperta z przodu, żółta chorągiewka; przy klatkach kamienic, bloków i domów przy skrótach
 - psy: w mieście pies przy co 25. drzwiach (było co 5.), na Drugiej stronie przy co 10.
 
+## Wersja 127: miasto żyje: pasy, roboty drogowe, witryny
+
+- przejścia dla pieszych: sześć w mieście (cztery przy bocznych ulicach ze światłami, dwa za przystankami ze znakiem); ludzie czasem przechodzą po pasach na drugą stronę, przyspieszają, gdy nadjeżdżasz, a gdy jesteś blisko, czekają przy krawężniku; auta stają przed pieszym na swoim pasie
+- roboty drogowe: zamknięty pas za barierkami z migającymi lampkami, pachołki, znak ROBOTY w obie strony, wykop, kopce ziemi, rury, otwarta studzienka, mała koparka z ruchomym ramieniem
+- ekipa drogowców (nowy typ ludzi): młot pneumatyczny, kopacz w wykopie, ten, co się opiera o łopatę, chorągiewkowy z lizakiem STOP/JEDŹ, kierownik z podkładką; krzyczą, gdy przejeżdżasz blisko; da się ich zagadać (każdy ma swoje kwestie), kopnąć (grożą pięścią) i trafić gazetą (przerywają robotę i czytają, +2); w gazecie nowe wpisy Z MIASTA
+- auta objeżdżają roboty za jednym razem, a z naprzeciwka czekają przed zwężeniem; na czas finału, który jedzie przez roboty, roboty znikają
+- witryny: parter kamienic to prawie zawsze sklepy (jeden albo dwa), witryna wzdłuż elewacji ze szprosami, drzwi sklepu, szyld, własna skrzynka sklepu; sklep bywa abonentem tak jak mieszkanie; duża witryna to szyba w grze, więc łatwo ją zbić
+- ruch: poprawione stare zatory (auto przy krawężniku naprzeciw skoczni albo postoju taxi zastawiało oba pasy), auta już nie cofają przy wyprzedzaniu, a auto stojące ponad 15 s daleko od gracza rusza z innego miejsca pętli
+- menu TESTY: ROBOTY DROGOWE i PRZEJŚCIE DLA PIESZYCH
+- plan miasta przepisany na wizję z oceną pomysłów: docs/plan-miasto.md
+

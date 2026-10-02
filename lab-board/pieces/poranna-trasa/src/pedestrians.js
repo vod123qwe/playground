@@ -9,6 +9,7 @@ export function createPedestrians({ THREE, toon, track, seed = 21, copies = 1 })
   let a = seed; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const { S, N, ds, len } = track, MID = 5.8;                          // (the pavement's middle, off the road's)
   const T = c => toon(c), EYE = T('#17181b');
+  const ZEB = (track.net?.zebras || []).map(z => z.s);                 // (the town's zebra crossings: where along the road)
   const taper = (r0, r1, seg = 10) => { const pts = []; for (let i = 0; i <= 5; i++) { const q = -Math.PI / 2 + i / 5 * Math.PI / 2; pts.push(new THREE.Vector2(Math.cos(q) * r0, Math.sin(q) * r0)); } for (let i = 0; i <= 5; i++) { const q = i / 5 * Math.PI / 2; pts.push(new THREE.Vector2(Math.cos(q) * r1, 1 + Math.sin(q) * r1)); } return new THREE.LatheGeometry(pts, seg); };
   const lathe = (pts, seg = 14) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
   const _d = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0), _q = new THREE.Quaternion();
@@ -80,18 +81,25 @@ export function createPedestrians({ THREE, toon, track, seed = 21, copies = 1 })
       // the rider coming along the pavement at them: step aside onto the lawn's edge, wait for him to pass, step back
       const dx = R.x - p.x, dz = R.z - p.z, dist = Math.hypot(dx, dz), A = S[Math.floor(wrap(p.s) / ds) % N], ahead = (dx * A.f.x + dz * A.f.z) * p.dir;
       // (him near on their line, ahead or close behind: they keep to the lawn's edge till he is by)
-      const wantOff = dist < (R.bell ? 12 : 8) && ahead > -4 && Math.abs(R.d - p.side * MID) < 1.5 ? 1.1 : 0; p.off += THREE.MathUtils.clamp(wantOff - p.off, -dt * 1.5, dt * 1.5);
-      p.stun = Math.max(0, (p.stun || 0) - dt); const walking = !(wantOff && p.off > .8 && !(p.flee > 0)) && !(p.stun > 0);   // (stun: kicked, stood a moment)
+      const wantOff = !p.cross && dist < (R.bell ? 12 : 8) && ahead > -4 && Math.abs(R.d - p.side * MID) < 1.5 ? 1.1 : 0; p.off += THREE.MathUtils.clamp(wantOff - p.off, -dt * 1.5, dt * 1.5);
+      p.stun = Math.max(0, (p.stun || 0) - dt); const walking = !(wantOff && p.off > .8 && !(p.flee > 0)) && !(p.stun > 0) && !(p.cross && p.cross.wait);   // (stun: kicked, stood a moment; at the kerb, waiting for him to pass)
       if (p.fleeNew) { p.fleeNew = false; if (ahead > 0) p.dir = -p.dir; }                              // (hit: off away from him, fast)
       const pace = p.flee > 0 && !(p.stun > 0) ? (p.flee -= dt, 2.8) : 1;
-      if (walking) { p.s = wrap(p.s + p.dir * p.v * pace * dt); p.ph += p.v * pace * dt * 3; }
-      const f = wrap(p.s) / ds, i0 = Math.floor(f) % N, i1 = (i0 + 1) % N, t = f - Math.floor(f), P0 = S[i0], P1 = S[i1], d = p.side * (MID + p.off);
+      // the town's zebras: one coming to a crossing now and then goes over it (not with him close: nobody steps out right in front of him)
+      p.zc = Math.max(0, (p.zc || 0) - dt);
+      if (!p.cross && p.zc <= 0 && ZEB.length && !(p.flee > 0)) for (const zs of ZEB) { if (Math.abs(((zs - p.s) % len + len * 1.5) % len - len / 2) < .4) { p.zc = 10; if (rnd() < .75) { p.cross = { u: 0, s: zs, wait: dist <= 9 }; p.s = zs; p.off = 0; } break; } }
+      if (p.cross && p.cross.wait && dist > 9) p.cross.wait = false;   // (him by: over they go)
+      p.hurry = p.cross && dist < 10 && Math.abs(R.v) > 3 ? 1.8 : 1;   // (him coming: they hurry over)
+      if (walking && p.cross) { p.cross.u = Math.min(1, p.cross.u + p.v * pace * p.hurry * dt / (2 * MID)); p.ph += p.v * pace * p.hurry * dt * 3; }
+      else if (walking) { p.s = wrap(p.s + p.dir * p.v * pace * dt); p.ph += p.v * pace * dt * 3; }
+      const f = wrap(p.s) / ds, i0 = Math.floor(f) % N, i1 = (i0 + 1) % N, t = f - Math.floor(f), P0 = S[i0], P1 = S[i1], d = p.cross ? p.side * MID * (1 - 2 * p.cross.u) : p.side * (MID + p.off);
       p.x = P0.p.x + (P1.p.x - P0.p.x) * t + P0.r.x * d; p.z = P0.p.z + (P1.p.z - P0.p.z) * t + P0.r.z * d;
-      const y = track.probe(p.x, p.z, i0).y; p.G.position.set(p.x, y, p.z); p.G.rotation.y = Math.atan2(P0.f.x, P0.f.z) + (p.dir < 0 ? Math.PI : 0);
+      const y = track.probe(p.x, p.z, i0).y; p.G.position.set(p.x, y, p.z); p.G.rotation.y = p.cross ? Math.atan2(-p.side * P0.r.x, -p.side * P0.r.z) : Math.atan2(P0.f.x, P0.f.z) + (p.dir < 0 ? Math.PI : 0);
+      if (p.cross && p.cross.u >= 1) { p.side = -p.side; p.cross = null; p.zc = 14; if (rnd() < .5) p.dir = -p.dir; }
       if (p.faceT > 0) { p.faceT -= dt; p.G.rotation.y = Math.atan2(R.x - p.x, R.z - p.z); }        // (spoken to, or hit: he looks at you)
       if (p.ready) {                                                     // the clips at the pace they go; stopped: into the idle
         if (walking !== p.walking) { p.walking = walking; const [from, to] = walking ? [p.acts.idle, p.acts.walk] : [p.acts.walk, p.acts.idle]; to.enabled = true; to.setEffectiveWeight(1); from.crossFadeTo(to, .35, false); }
-        p.acts.walk.timeScale = p.v * (p.flee > 0 ? 2.8 : 1) / (PACE[P.key]?.walkSpeed || 1.05); p.mixer.update(dt); p.G.updateMatrixWorld(true);
+        p.acts.walk.timeScale = p.v * (p.flee > 0 ? 2.8 : p.hurry || 1) / (PACE[P.key]?.walkSpeed || 1.05); p.mixer.update(dt); p.G.updateMatrixWorld(true);
         const b = p.bones, hr = grip(p, b.handR, b.foreR), hl = grip(p, b.handL, b.foreL), pr = p.pr, sw = Math.sin(p.ph);
         if (pr.cane) { pr.cane.position.copy(hr); pr.cane.rotation.x = .1 - sw * .1; }
         if (pr.case) { pr.case.position.copy(hr); pr.case.rotation.x = sw * .06; }
@@ -107,5 +115,7 @@ export function createPedestrians({ THREE, toon, track, seed = 21, copies = 1 })
     }
     return hit;
   }
-  return { group: G, list, update, TYPES };
+  // (the ones on a zebra now: where, for the traffic to stop for)
+  const crossing = () => list.filter(p => p.cross && !p.cross.wait).map(p => ({ s: p.cross.s, d: p.side * MID * (1 - 2 * p.cross.u) }));
+  return { group: G, list, update, crossing, TYPES };
 }

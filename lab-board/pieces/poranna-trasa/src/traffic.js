@@ -38,7 +38,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
     const live = list.filter(t => !t.off);                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
     stepBikes(dt, R);
     // everything that can be in a lane: the cars, the parked ones, the rider
-    const things = [...live.map(t => ({ s: t.s, d: t.lane, v: t.v * t.dir, t })), ...bikes.map(b => ({ s: b.s, d: b.lane, v: b.v * b.dir })), ...track.parked.map(p => ({ s: p.s, d: p.d, v: 0 })), { s: R.s, d: R.d, v: R.v * R.along, rider: true }];
+    const things = [...live.map(t => ({ s: t.s, d: t.lane, v: t.v * t.dir, t })), ...bikes.map(b => ({ s: b.s, d: b.lane, v: b.v * b.dir })), ...track.parked.map(p => ({ s: p.s, d: p.d, v: 0, len: p.len || 0 })), ...(R.peds || []).flatMap(p => [LANE, -LANE].filter(l => Math.abs(p.d - l) < 2.6).map(l => ({ s: p.s, d: l, v: 0, ped: true }))), { s: R.s, d: R.d, v: R.v * R.along, rider: true }];
     for (const t of live) {
       t.stop = Math.max(0, t.stop - dt);
       const mine = t.dir * LANE, other = -mine;
@@ -59,22 +59,26 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       // go round only what will not move: a car parked at the kerb, a ramp, the bus at its stop, the rider stood still a good while; never
       // a car that is only slow or in a queue, never the rider riding (behind him they wait and hoot). The indicator first, a moment, then over
       t.riderStill = L && L.o.rider && L.g < 30 && Math.abs(R.v) < .6 ? (t.riderStill || 0) + dt : 0;
-      const fixed = L && (L.o.rider ? t.riderStill > 4 : L.o.t ? L.o.t.stop > 0 : Math.abs(L.v) < .3);
+      const fixed = L && !L.o.ped && (L.o.rider ? t.riderStill > 4 : L.o.t ? L.o.t.stop > 0 : Math.abs(L.v) < .3);
       if (!t.pass && inMine && L && L.g < 22 && fixed && !L.o.t?.pass) {
-        const clear = coming() > 48 && !(lead(other) && lead(other).g < L.g + 12);
-        if (clear) t.pass = { s: L.o.s, t: L.o.t || null, rider: !!L.o.rider, go: .9 }; }
+        const clear = coming() > Math.max(48, (L.o.len || 0) + 24) && !(lead(other) && lead(other).g < L.g + 12);
+        if (clear) t.pass = { s: L.o.s, len: L.o.len || 0, t: L.o.t || null, rider: !!L.o.rider, go: .9 }; }
       if (t.pass) { const past = -ahead(t.s, t.pass.t ? t.pass.t.s : t.pass.rider ? R.s : t.pass.s, t.dir), oc = coming();   // (how far past it we are)
         if (t.pass.go > 0) { t.pass.go -= dt; t.laneT = mine; } else t.laneT = other;   // (signalling first: still in its lane)
-        if (t.pass.go <= 0) want = Math.min(t.cruise * 1.05, want + 4); const Lo = lead(other); if (Lo) want = Math.min(want, (Lo.g - 6.5 - (Lo.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, Lo.v));   // (out there: mind what is ahead in that lane too)
+        if (t.pass.go <= 0) want = Math.min(t.cruise * 1.05, want + 4); const Lo = lead(other); if (Lo) want = Math.max(0, Math.min(want, (Lo.g - 6.5 - (Lo.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, Lo.v))); if (Lo && Lo.v < -.5 && Lo.g < 30 && past < -1) t.pass = null;   // (out there: mind what is ahead in that lane too)
         if (oc < 30) { want = Math.min(want, oc < 18 ? 1.5 : 4.5); if (past < -1) t.pass = null; }        // something coming: slow; not past yet: back in
-        if (t.pass && (past > 7 || (oc < 25 && past > 4.6)) && !(lead(mine) && lead(mine).g < 3)) t.pass = null; }   // past it (with room): back in; sooner, if one is coming (else they meet nose to nose and both wait)
+        if (t.pass && (past > 7 + t.pass.len || (oc < 25 && past > 4.6 + t.pass.len)) && !(lead(mine) && lead(mine).g < 3)) t.pass = null; }   // past it (with room): back in; sooner, if one is coming (else they meet nose to nose and both wait)
       if (!t.pass) t.laneT = mine;
       // the indicators: left while it waits to pull out and on the way over, right on the way back in
       const side = t.pass && (t.pass.go > 0 || Math.abs(t.lane - other) > .3) ? 1 : !t.pass && Math.abs(t.lane - mine) > .3 ? -1 : 0;
       t.car?.blink?.(side, (clock * 2.6) % 1 < .55);
       // the steering over: a spring, the quicker the faster it goes
       const kk = 2.2 + Math.min(1.5, t.v * .15); t.laneV += ((t.laneT - t.lane) * kk * kk - 2 * kk * t.laneV) * dt; t.laneV = THREE.MathUtils.clamp(t.laneV, -2.2, 2.2); t.lane += t.laneV * dt;
+      // (one going round a long obstacle (the road works) is in our lane: wait short of where it comes back in, do not meet it nose to nose)
+      if (!t.pass) for (const o of live) if (o.pass && o.pass.len && o.dir !== t.dir) { const g = ahead(t.s, wrap(o.pass.s + o.dir * (o.pass.len + 7)), t.dir); if (g > -2 && g < 40) want = Math.min(want, Math.max(0, (g - 10) * 1.3)); }
       if (t.stop > 0) want = 0;
+      // (stood a long while, nose to nose or boxed in, far from him: it goes on from elsewhere on the loop, as one sent off would)
+      t.jam = t.v < .2 && !(t.stop > 0) ? (t.jam || 0) + dt : 0; if (t.jam > 15 && Math.abs(((t.s - R.s) % len + len * 1.5) % len - len / 2) > 70) { t.s = wrap(t.s + len / 2); t.snap = true; t.pass = null; t.lane = t.laneT = mine; t.jam = 0; }
       t.v += THREE.MathUtils.clamp(want - t.v, -7 * dt, 2.5 * dt); t.s = wrap(t.s + t.dir * t.v * dt);
       t.dt = dt; place(t); cars.spin(t.car, t.v * dt);
     }
@@ -105,7 +109,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       // (and round what stands on its line: a parked car, a ramp, the road works; the nearest of them, or him, ahead within 18 m)
       if (!b.fall && !b.hold) { const home = b.rival ? b.lane : b.dir * 2.55; let ob = null, od = 18;
         const toHim = ahead(b.s, R.s, b.dir); if (!b.rival && toHim > 0 && toHim < od && Math.abs(home - R.d) < 1.5 && Math.abs(R.d) < 3.6) { ob = R.d; od = toHim; }
-        for (const p of track.parked) { const a2 = ahead(b.s, p.s, b.dir); if (a2 > 0 && a2 < od && Math.abs(home - p.d) < 1.7) { ob = p.d; od = a2; } }
+        for (const p of track.parked) { const a2 = ahead(b.s, p.s, b.dir); if (a2 > -(p.len || 0) && a2 < od && Math.abs(home - p.d) < 1.7) { ob = p.d; od = a2; } }
         if (!b.rival) { const want = ob !== null ? Math.max(-3.2, Math.min(3.2, ob + (home >= ob ? 1 : -1) * 2)) : home; b.lane += (want - b.lane) * Math.min(1, dt * 2.6); }
         else if (ob !== null && od < 10) b.lane += ((ob + (b.lane >= ob ? 1 : -1) * 2) - b.lane) * Math.min(1, dt * 3);
         if (!b.rival && toHim > 0 && toHim < 4 && Math.abs(b.lane - R.d) < .9) b.stop = Math.max(b.stop, .35); }
