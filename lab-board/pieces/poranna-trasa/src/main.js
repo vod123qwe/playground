@@ -779,6 +779,8 @@ const PAPER_PED = ['O, GAZETKA!', 'AŁA!', 'NIE ZAMAWIAŁEM!', 'EJ, UWAŻAJ!', '
 function paperHits(p) {
   const P = p.m.position;
   for (const q of peds.list) if (!q.paperHit && Math.hypot(q.x - P.x, q.z - P.z) < .55 && P.y - q.G.position.y < 1.9) { q.paperHit = true; setTimeout(() => { q.paperHit = false; }, 4000); q.stun = 1; hud.rant(q.G.position, pickOf(PAPER_PED), true, 1.95); return true; }
+  for (const w of track.net?.workers || []) if (!(w.paperT > 0) && Math.hypot(w.x - P.x, w.z - P.z) < .8 && P.y - w.g.position.y - w.y < 2.1) {   // one of the works' crew: he stops to read it
+    w.paperT = 30; w.readT = w.kind === 'lean' || w.kind === 'boss' ? 25 : 8; w.face = { x: B.x, z: B.z, t: 1.5 }; hud.rant(w.g.position, pickOf(WORK_PAPER), true, 1.95 + w.y); score(2, w.mouth(), 'DLA EKIPY! +2', '#efc970'); logEv('worker_paper', w.x, w.z); return true; }
   for (const r of residents.list) if (r.lines === 'lump' && !(r.awakeT > 0) && Math.hypot(r.G.position.x - P.x, r.G.position.z - P.z) < 1.3) {   // the man asleep at the stop: up he gets, the ones waiting clap
     r.awakeT = 45; r.talkT = 2.6; r.head?.getWorldPosition(r.mouth); r.mouth.y += .35; hud.rant(r.mouth, pickOf(['CO?! KTO?! A, GAZETA...', 'AAA! NIE ŚPIĘ!', 'KTO RZUCA?! A, DZIĘKI...', 'PRZYSTANEK?! JUŻ WSTAJĘ!']), true); score(5, r.mouth.clone(), 'POBUDKA! +5', '#efc970');
     residents.list.filter(o => o.stop === r.stop && o !== r).forEach((o, k) => setTimeout(() => { o.talkT = 2; o.head?.getWorldPosition(o.mouth); o.mouth.y += .35; hud.rant(o.mouth, pickOf(['BRAWO, MŁODY!', 'NARESZCIE!', 'HAHA, CELNIE!', 'BRAWO! TRZECI DZIEŃ TU ŚPI!']), true); }, 700 + k * 500)); return true; }
@@ -789,6 +791,7 @@ function kickTargets() {
   const out = [], add = (kind, x, z, ref, r) => { const d = Math.hypot(x - B.x, z - B.z); if (d < r) out.push({ kind, x, z, ref, d }); };
   for (const n of barkers) add('dog', n.dog.x, n.dog.z, n.dog, 3.3);
   for (const p of peds.list) add('ped', p.x, p.z, p, 2.6);
+  for (const w of track.net?.workers || []) add('worker', w.x, w.z, w, 2.6);
   for (const b of traffic.boxes()) add(b.t.car ? 'car' : 'bike', b.x, b.z, b.t, b.t.car ? 3.1 : 2.6);
   for (const gm of quests.gangTargets) add('gangm', gm.x, gm.z, gm, 2.9);
   for (const pc of quests.policeCars()) add('police', pc.g.position.x, pc.g.position.z, pc, 3.2);
@@ -800,13 +803,14 @@ function kickTargets() {
   return out.sort((a, b) => a.d - b.d);
 }
 function landKick(tg) {
-  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], goose: () => [tg.ref.g.position.x, tg.ref.g.position.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
+  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], goose: () => [tg.ref.g.position.x, tg.ref.g.position.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], worker: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
   logEv('kick_' + (tg.kind === 'thing' ? (tg.ref.kind === 'mailbox' ? 'mailbox' : 'thing') : tg.kind), B.x, B.z);
   if (tg.kind === 'dog') { dogs.kick(tg.ref, { x: ax / al * 4.5 + Math.sin(B.yaw) * B.v * .5, z: az / al * 4.5 + Math.cos(B.yaw) * B.v * .5 }); hud.impact(mid); slowmo = .09; shake = .3; }   // it flies off
   if (tg.kind === 'ped' && quests.onHitPed(tg.ref)) { hud.impact(mid, 'ŁUP!'); slowmo = .08; shake = .25; }   // (the thief: the bag drops)
   else if (tg.kind === 'ped') { hud.impact(mid); tg.ref.stun = 1.6; hud.rant(tg.ref.G.position, pickOf(SWEARS), true, 1.95); slowmo = .06; shake = .22; }   // they stop, and swear after him
+  if (tg.kind === 'worker') { hud.impact(mid); tg.ref.stun = 1.4; tg.ref.madT = 6; tg.ref.readT = 0; tg.ref.face = { x: B.x, z: B.z, t: 6 }; hud.rant(tg.ref.g.position, pickOf(WORK_KICK), true, 1.95 + tg.ref.y); slowmo = .06; shake = .22; }   // he shakes his fist after him
   if (tg.kind === 'bike' && tg.ref.rival) { logEv('rival_hit', tg.ref.x, tg.ref.z); flash('Kurier w rowie! Uważaj, może wstać i oddać'); }
   if (tg.kind === 'bike') { hud.impact(mid); quests.onKnockBike(tg.ref); traffic.knock(tg.ref, new THREE.Vector3(ax / al * 3.2, 0, az / al * 3.2), true); if (Math.random() < .8) foot.grudge(tg.ref); tg.ref.ghostUntil = performance.now() + 5000; hud.rant(tg.ref.r.root.position, pickOf(SWEARS), true, 2.0); slowmo = .06; shake = .22; }
   if (tg.kind === 'car') { hud.impact(mid, 'BUM!'); tg.ref.stop = Math.max(tg.ref.stop, .7); hud.rant(tg.ref.car.group.position, pickOf(DRIVERS), true, 1.7); shake = .28; }   // the driver: the bubble goes with the car
@@ -1063,7 +1067,7 @@ function step(dt, inp) {
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
   rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
-  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
+  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: peds.crossing(), s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
@@ -1090,6 +1094,19 @@ const HIT_PED = { kid: ['MAMOOO!'], oldman: ['MOJA LASKA!', 'ZA MOICH CZASÓW...
 const HIT_ANY = ['AŁA! POLICJA!', 'CO TY ROBISZ?!', 'ZWARIOWAŁ!', 'RATUNKU!'], TOUGH = ['teen', 'suit', 'gardener', 'dogman', 'jogger'];
 const SZWAGIER = ['ZARAZ ZAWOŁAM SZWAGRA!', 'MIETEK! CHODŹ NO TU!', 'SZWAGIER! TEN MNIE BIJE!'], SZWAGIER_COMES = ['KTO TU BIJE MOJEGO SZWAGRA?!', 'TO TY PODSKAKUJESZ?!', 'SZWAGIER MÓWI, ŻE CIĘ ZNA!'];
 const DRIVER_HIT = ['PATRZ, JAK ŁAZISZ!', 'ŚLEPY JESTEŚ?!', 'MÓJ LAKIER!', 'NA PASACH SIĘ CHODZI!', 'ŻYJESZ TAM?'];
+// the road works' crew: what they shout at him riding by, say when spoken to (by who he is), when kicked, when thrown a paper
+const WORK_SHOUT = ['UWAGA, KOPIEMY!', 'OBJAZD, PANIE!', 'NIE TĘDY, MŁODY!', 'TU DZIURA NA DWA METRY!', 'ZWOLNIJ, BO CIĘ ZAKOPIEMY!', 'JEDEN PAS, NIE WIDZISZ?!'];
+const WORK_LINES = { dig: ['Kopiemy od wtorku. Rury znaleźliśmy, tylko nie te.', 'Zakopiemy, to przyjdą od gazu i znowu rozkopią.', 'Co tak patrzysz? Dziury nie widziałeś?'],
+  lean: ['Ja nadzoruję. To też praca, tylko mniej widać.', 'Łopata jest do opierania. Do kopania jest Zbyszek.', 'Przerwa śniadaniowa. Od siódmej.'],
+  jack: ['CO?! NIE SŁYSZĘ!', 'MÓW GŁOŚNIEJ, MŁOTEK CHODZI!', 'JAK SKOŃCZĘ, TO POGADAMY! ZA TRZY TYGODNIE!'],
+  flag: ['Stoisz na czerwonym, kolego.', 'Ja tu tylko obracam lizaka. Osiem godzin.', 'Zielone! A nie, jednak czerwone.'],
+  boss: ['Termin? Termin jest w umowie. Umowa jest w biurze.', 'Wszystko zgodnie z planem. Planu jeszcze nie ma.', 'Pan z gazety? Proszę napisać, że idzie sprawnie.'],
+  annoyed: ['Idź już, robota czeka.', 'Kierownik patrzy, spadaj.', 'No idź, bo nas zgłoszą, że stoimy.'] };
+const WORK_KICK = ['EJ! JA W PRACY JESTEM!', 'ZARAZ CIĘ ZAKOPIĘ!', 'BHP SIĘ KŁANIA!', 'ZBYCHU, WIDZIAŁEŚ TO?!'];
+const WORK_PAPER = ['O, GAZETA! PRZERWA!', 'DZIĘKI! BĘDZIE CO CZYTAĆ!', 'EJ! W KASK TRAFIŁEŚ!', 'KIEROWNIK, ZOBACZ, CO PISZĄ!'];
+function workTalk(me) { let w = null, bd = 2.8; for (const q of track.net?.workers || []) { const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; w = q; } } if (!w) return false;
+  w.talks = (w.talkT > 0 ? w.talks : 0) + 1; w.talkT = 20; w.face = { x: me.x, z: me.z, t: 3 }; hud.rant(me.mouth, pickOf(TALK), true);
+  setTimeout(() => hud.rant(w.mouth(), w.talks >= 3 ? pickOf(WORK_LINES.annoyed) : pickOf(WORK_LINES[w.kind])), 800); return true; }
 let pendingHit = null;
 function pedNear(me, reach) { const fx_ = Math.sin(me.yaw), fz_ = Math.cos(me.yaw); let best = null, bd = reach;
   for (const p of peds.list) { const dx = p.x - me.x, dz = p.z - me.z, d = Math.hypot(dx, dz); if (d < bd && (dx * fx_ + dz * fz_) / (d || 1) > .45) { best = p; bd = d; } } return best; }
@@ -1101,7 +1118,7 @@ function stepPeople(dt, inp, me) {
     const b = !inp.talk && bikeNear(me, 2.4), bp = b && b.r.root.position; if (bp && Math.hypot(bp.x - me.x, bp.z - me.z) < bd) t = bp; if (t) me.yaw = Math.atan2(t.x - me.x, t.z - me.z); }
   if (inp.talk) { const p = pedNear(me, 2.4); if (p) { p.talks = (p.talkT > 0 ? (p.talks || 0) : 0) + 1; p.talkT = 20; p.stun = Math.max(p.stun || 0, 2.2); p.faceT = 2.4; hud.rant(me.mouth, pickOf(TALK), true);
       const key = p.P.key; setTimeout(() => { hud.rant(mouthOf(p), p.talks >= 3 ? pickOf(ANNOYED) : pickOf(REPLY[key] || ANNOYED)); if (p.talks >= 3 && !TOUGH.includes(key)) { p.flee = 3; p.fleeNew = true; } }, 800); }
-    else if (!(geese && gooseTalk(me))) hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
+    else if (!workTalk(me) && !(geese && gooseTalk(me))) hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
   for (const p of peds.list) p.talkT = Math.max(0, (p.talkT || 0) - dt);
   const k = inp.atkL || (inp.lmb && Math.random() < .5) ? 'jab' : inp.atkR || inp.lmb ? 'cross' : null;
   const mv = (k && foot.swing(k)) || foot.fired();                         // (a punch, or a kick in a run of them; a kept press thrown now)
@@ -1179,7 +1196,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor, said: (r, t) => logEv('said', r.G.position.x, r.G.position.z, { who: r.lines || r.key, text: t }) });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
-  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
+  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: peds.crossing(), s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
@@ -1400,7 +1417,7 @@ function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.class
 // targets by the road to hit with a paper; at the finish a beat of slow motion and a flash. What it came to: a bonus, and in the paper ----------
 const FIN = { G: new THREE.Group(), cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false, entered: false, res: null, combo: 0, comboT: 0, t: 0 };
 scene.add(FIN.G);
-function clearFinale() { for (const K of FIN.carsOff || []) { K.o.visible = true; K.C.used = false; if (!track.parked.includes(K.P0)) track.parked.push(K.P0); } FIN.carsOff = []; for (const o of FIN.junk || []) scene.remove(o); FIN.junk = []; for (const h of FIN.hits) track.dropHit(h); while (FIN.G.children.length) FIN.G.remove(FIN.G.children[0]); Object.assign(FIN, { cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false }); }
+function clearFinale() { track.net?.setWorks?.(true); for (const K of FIN.carsOff || []) { K.o.visible = true; K.C.used = false; if (!track.parked.includes(K.P0)) track.parked.push(K.P0); } FIN.carsOff = []; for (const o of FIN.junk || []) scene.remove(o); FIN.junk = []; for (const h of FIN.hits) track.dropHit(h); while (FIN.G.children.length) FIN.G.remove(FIN.G.children[0]); Object.assign(FIN, { cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false }); }
 // the final straight (the last 180 m): a banner; a slalom; an arrow pad (a push); a kicker and a trench across the road to clear (in the
 // air: or a fall); big targets by the road, others that pop up as you come, one swinging over the road on a rope; golden rings in the
 // air after the second kicker; a double trench; pads again to the line. Scoring things one after another: a combo (x2, x3)
@@ -1494,6 +1511,7 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
       FIN.targets.push({ t, hinge, kind: 'post', r: 1.1, c: new THREE.Vector3(x, gy + h, z), hit: false, spin: 0, up: true, upT: 0, sd, pay: 8, label: 'W LOCIE!' }); }
     const land = path[path.length - 1], ql = track.probe(land.x, land.z, at(lip, d).i); return { o, lip, land: ahead(ql.i, iF) }; };
   FIN.locks = []; FIN.carsOff = [];
+  { const W = track.net?.works; if (W) track.net.setWorks(!([W.i0, W.i1].some(i => ahead(i, iF) < FL + 25 || ahead(iF, i) < 30))); }   // (the road works: not on the finale's track)
   for (const K of track.kerbCars || []) { const m0 = ahead(K.i, iF); if (m0 < FL + 20) { K.o.visible = false; K.C.used = true; const ix = track.parked.indexOf(K.P0); if (ix >= 0) track.parked.splice(ix, 1); FIN.carsOff.push(K); } }   // (no car parked on the track)
   // the warm-up: a slalom, a pad, a plank, a target by it
   slalom(.95, 4 + Math.round(D * 3), 7 - D * 2, 1.1); pad(u(.87)); kicker(u(.83), 'plank'); target(.8, 1);
@@ -1541,7 +1559,7 @@ function testRows() { const out = [];
   out.push({ head: 'TORY PRZESZKÓD (FINAŁY)' }); for (const l of LVM.LEVELS.filter(l => !l.soon)) out.push({ label: 'TOR: ' + l.name, act: () => goTrack(l.id) });
   if (LV && FIN.on) out.push({ head: 'TEN TOR: ' + LV.name }, ...[['start', 'POCZĄTEK'], ['easy', 'ŁATWY PAS'], ['hard', 'TRUDNY PAS (ROZPĘD)'], ['jump2', 'DRUGA SKOCZNIA'], ['double', 'PODWÓJNY RÓW']].map(([w, n]) => ({ label: n, act: () => tpFinale(w) })));
   if (track.net) { const N0 = track.N, wr = i => ((i % N0) + N0) % N0, go = i => { const A = track.S[wr(i)]; tpTo(A.p.x, A.p.z, 1); };
-    out.push({ head: 'MIASTO: ULICE' }, ...track.net.shortcuts.map(c => ({ label: c.kind === 'alley' ? 'SKRÓT: ZAUŁEK' : 'SKRÓT: PARK Z PLACEM ZABAW', act: () => go(c.a - Math.round(14 / track.ds)) })), ...track.net.stubs.slice(0, 2).map((t, k) => ({ label: 'BOCZNA ULICA ' + (k + 1), act: () => go(t.i - Math.round(16 / track.ds)) })), ...(track.net.plaza ? [{ label: 'PLAC POD BIUROWCEM', act: () => go(track.net.plaza.i0 - Math.round(14 / track.ds)) }] : []), { label: 'POSTÓJ TAXI', act: () => go(track.net.taxi.i - Math.round(14 / track.ds)) }); }
+    out.push({ head: 'MIASTO: ULICE' }, ...track.net.shortcuts.map(c => ({ label: c.kind === 'alley' ? 'SKRÓT: ZAUŁEK' : 'SKRÓT: PARK Z PLACEM ZABAW', act: () => go(c.a - Math.round(14 / track.ds)) })), ...track.net.stubs.slice(0, 2).map((t, k) => ({ label: 'BOCZNA ULICA ' + (k + 1), act: () => go(t.i - Math.round(16 / track.ds)) })), ...(track.net.plaza ? [{ label: 'PLAC POD BIUROWCEM', act: () => go(track.net.plaza.i0 - Math.round(14 / track.ds)) }] : []), { label: 'POSTÓJ TAXI', act: () => go(track.net.taxi.i - Math.round(14 / track.ds)) }, ...(track.net.works ? [{ label: 'ROBOTY DROGOWE', act: () => go(track.net.works.i0 - Math.round(24 / track.ds)) }] : []), ...(track.net.zebras.some(z => !z.lights) ? [{ label: 'PRZEJŚCIE DLA PIESZYCH', act: () => go(track.net.zebras.find(z => !z.lights).i - Math.round(20 / track.ds)) }] : [])); }
   out.push({ head: 'STANY' },
     { label: 'GAZETA PO TRASIE', act: needLV(() => finishLevel()) },
     { label: 'MAPA TRASY', act: () => openMap() },
@@ -1654,7 +1672,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }
@@ -1802,7 +1820,7 @@ function frame(now) {
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
-  drift(dt); track.net?.update?.(Math.min(dt, .05)); life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
+  drift(dt); { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? null : { x: B.x, z: B.z, v: Math.abs(B.v) }); if (sh) hud.rant(sh.g.position, pickOf(WORK_SHOUT), true, 1.95 + sh.y); } life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
   { const q0 = track.probe(B.x, B.z, B.hint); audio.ride(foot.active || menu.open ? 0 : Math.abs(B.v), Math.abs(q0.d) > track.PAVE ? 1 : 0); }
   { const pc = quests.policeCars()[0]; audio.siren(quests.siren && !menu.open, where(pc && pc.g.position)); }

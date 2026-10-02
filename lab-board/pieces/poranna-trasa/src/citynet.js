@@ -9,7 +9,7 @@
 // createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI })
 //   → { blocked(i, side), build(), paved(x, z), shortcuts, stubs }
 
-export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox }) {
+export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox, stops }) {
   const M = c => toon(c), wrap = i => ((i % N) + N) % N, O = 30;
   // ---------- where: two straight stretches for the shortcuts (none of them across a checkpoint: a quarter of the loop from the start),
   // four spots for the side streets on the outside ----------
@@ -27,6 +27,17 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   const plaza = (() => { for (const f of [.44, .4, .48, .66]) { const i0 = wrap(startI + Math.round(N * f)), i1 = i0 + Math.round(46 / ds); if (stubs.some(t => near(t.i, i0, 30) || near(t.i, i1, 30))) continue; if (cps.some(c => near(c, i0 + Math.round(23 / ds), 30))) continue; return { i0, i1, sd: -INNER }; } return null; })();
   const taxi = (() => { let i = wrap(startI + Math.round(N * .93)); if (stubs.some(t => near(t.i, i, 24))) i = wrap(i + Math.round(30 / ds)); return { i, sd: -INNER }; })();
   if (plaza) { const mid = plaza.i0 + Math.round((plaza.i1 - plaza.i0) / 2), o = new THREE.Object3D(); o.position.copy(at(mid, plaza.sd * 20, 0)); o.rotation.y = Math.atan2(S[wrap(mid)].f.x, S[wrap(mid)].f.z); o.updateMatrixWorld(); zone(o, 16, 26); }
+  // ---------- the road works: half the street dug up for the drains (one lane shut behind barriers, a trench, an excavator, the men
+  // at it); the traffic goes round it in the other lane, the rider too. On a straight bit away from the side streets, stops, ramps ----------
+  const WL = Math.round(26 / ds), works = (() => { const at0 = wrap(startI + Math.round(N * .6)); for (let k = 0; k < 400; k++) { const i0 = wrap(at0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 4), mid = i0 + (WL >> 1), far = (j, m) => !near(j, mid, m + 13);
+      if (stubs.some(t => !far(t.i, 14)) || (stops || []).some(q => q.sd === 1 && !far(q.i, 18)) || cps.some(c => !far(c, 16))) continue;   // (the shortcuts' mouths: on the other side, no matter)
+      if ([.51, .3, .72].some(q => !far(Math.round(N * q), 20)) || !far(taxi.i, 20) || (plaza && (!far(plaza.i0, 15) || !far(plaza.i1, 15)))) continue; return { i0, i1: i0 + WL, sd: 1 }; } return null; })();
+  const nearTaxi = (i, m) => near(i, taxi.i + Math.round(5.4 / ds), m + 6);
+  const nearWorks = (i, m) => !!works && near(i, works.i0 + (WL >> 1), m + 13);
+  // ---------- the zebra crossings: by each side street (with its lights), and just past each bus stop; people cross on them now and then ----------
+  const zebras = []; for (const t of stubs) zebras.push({ i: wrap(t.i - Math.round(5.5 / ds)), lights: true });
+  for (const q of stops || []) { const i = wrap(q.i + Math.round(15 / ds)); if (stubs.some(t => near(t.i, i, 20)) || shortcuts.some(c => near(c.a, i, 14) || near(c.b, i, 14)) || nearWorks(i, 20) || (plaza && near(plaza.i0 + (WL >> 1), i, 34))) continue; zebras.push({ i }); }
+  for (const z of zebras) z.s = z.i * ds;
   // a lot (at i, on side s) left empty: where a shortcut's leg goes through, where a side street opens
   function blocked(i, s) { if (plaza && s === plaza.sd && wrap(i - plaza.i0 + Math.round(4 / ds)) <= plaza.i1 - plaza.i0 + Math.round(8 / ds)) return true; for (const c of shortcuts) if (s === INNER && (near(i, c.a, 9) || near(i, c.b, 9))) return true; for (const t of stubs) if (s === t.sd && near(i, t.i, 9)) return true; return false; }
   // ---------- the paved ways (segments with a half width): the bike rides on them as on the loop ----------
@@ -43,7 +54,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   const dummy = (i, d, turn = 0) => { const o = new THREE.Object3D(); const q = at(i, d, 0); o.position.copy(q); o.rotation.y = Math.atan2(S[wrap(i)].f.x, S[wrap(i)].f.z) + turn; o.updateMatrixWorld(); return o; };
   // the canvas for a sign or a graffiti (pixel letters, see city.js's own font: here a few shapes and colours only)
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); f(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
-  const FONT = { A: '010101111101101', E: '111100110100111', K: '101110100110101', R: '110101110110101', T: '111010010010010', Z: '111001010100111', Ó: '010010101101010', U: '101101101101111', Ł: '100110100100111', P: '110101110100100', Y: '101101010010010', W: '101101111111101', J: '001001001101010', D: '110101101101110', ' ': '000000000000000', C: '111100100100111', N: '110101101101101', M: '101111111101101', X: '101101010101101', I: '111010010010111', S: '111100111001111', O: '111101101101111', '>': '100010001010100', '<': '001010100010001' };
+  const FONT = { A: '010101111101101', E: '111100110100111', K: '101110100110101', R: '110101110110101', T: '111010010010010', Z: '111001010100111', Ó: '010010101101010', U: '101101101101111', Ł: '100110100100111', P: '110101110100100', Y: '101101010010010', W: '101101111111101', J: '001001001101010', D: '110101101101110', ' ': '000000000000000', C: '111100100100111', B: '110101110101110', N: '110101101101101', M: '101111111101101', X: '101101010101101', I: '111010010010111', S: '111100111001111', O: '111101101101111', '>': '100010001010100', '<': '001010100010001' };
   const words = (text, bg, fg) => cv(text.length * 4 + 3, 9, g => { g.fillStyle = bg; g.fillRect(0, 0, 999, 9); g.fillStyle = fg; [...text].forEach((ch, k) => { const r = FONT[ch] || FONT[' ']; for (let q = 0; q < 15; q++) if (r[q] === '1') g.fillRect(2 + k * 4 + q % 3, 2 + (q / 3 | 0), 1, 1); }); });
   const plate = (text, bg, fg, w, h) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: words(text, bg, fg), side: THREE.DoubleSide }));
   const lampM = new THREE.MeshBasicMaterial({ color: '#ffd98a' }), steel = M('#5a5f66'), dark = M('#2a2c30');
@@ -105,7 +116,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   // ---------- a side street: in from the main street on the outside, closed a little way in ----------
   function stub(t) { const sg = t.sd, i = t.i, L0 = across(i, sg * (ROAD - .1), sg * 30); ribbon(L0, 6.4, '#3f4246', .03); ribbon(L0, 10.4, '#b3ad9d', .02); for (let k = 1; k < L0.length; k++) seg(L0[k - 1], L0[k], 3.4);
     // the crossing on the main street, white bars across it; the lights at the corners
-    for (let k = -3; k <= 3; k++) { const o = new THREE.Mesh(new THREE.PlaneGeometry(.5, ROAD * 1.9).rotateX(-Math.PI / 2), M('#f0ece2')); o.userData.noShadow = true; o.renderOrder = 1; put(o, i + Math.round((k * .9 - 5.5) / ds), 0, .016, 0); }
+    zebraBars(i - Math.round(5.5 / ds));
     for (const sd2 of [-1, 1]) { const g = new THREE.Group(), red = new THREE.MeshBasicMaterial({ color: '#ff4a30' }), grn = new THREE.MeshBasicMaterial({ color: '#2e4a2e' }); g.add(box(.12, 3.2, .12, steel, 0, 1.6, 0), box(.32, .8, .25, dark, 0, 3.2, 0)); const r = box(.2, .2, .05, red, 0, 3.42, .13), gg = box(.2, .2, .05, grn, 0, 3.0, .13); g.add(r, gg);
       put(g, i + sd2 * Math.round(4.6 / ds), sg * (ROAD + .6), 0, sg > 0 ? -Math.PI / 2 : Math.PI / 2); hit(g, { hx: .1, hz: .1, h: 3, kind: 'hard' }, wrap(i)); }
     // the barrier and the sign, cones before it, a car parked by the kerb; a wall closing the view
@@ -116,7 +127,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   // ---------- the street's furniture on the paved verge by the kerb: advertising columns, kiosks, phone booths, benches, bike racks,
   // planters, bollards (not at a shortcut's mouth, nor a side street's) ----------
   function furniture() { const poster = () => cv(8, 16, g => { const C = ['#cf5a3e', '#efc970', '#3b5670', '#9fd27a', '#f6f3ea', '#e3742e', '#b7a4e0']; for (let y = 0; y < 16; y += 4) { g.fillStyle = C[rnd() * C.length | 0]; g.fillRect(0, y, 8, 4); g.fillStyle = '#17181b'; g.fillRect(1 + (rnd() * 3 | 0), y + 1, 3 + (rnd() * 3 | 0), 1); } });
-    for (let i = 20; i < N - 10; i += Math.round((14 + rnd() * 12) / ds)) { const s = rnd() < .5 ? -1 : 1, d = s * (ROAD + 1.15); if (shortcuts.some(c => near(i, c.a, 12) || near(i, c.a + LEN, 12)) || stubs.some(t => near(i, t.i, 14))) continue; const k = rnd(), g = new THREE.Group(); let hb = null;
+    for (let i = 20; i < N - 10; i += Math.round((14 + rnd() * 12) / ds)) { const s = rnd() < .5 ? -1 : 1, d = s * (ROAD + 1.15); if (shortcuts.some(c => near(i, c.a, 12) || near(i, c.a + LEN, 12)) || stubs.some(t => near(i, t.i, 14)) || zebras.some(z => near(i, z.i, 6))) continue; const k = rnd(), g = new THREE.Group(); let hb = null;
       if (k < .18) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 2.6, 12), [new THREE.MeshBasicMaterial({ map: poster() }), M('#2f4a6e'), M('#2f4a6e')]); c.position.y = 1.4; g.add(c, box(1.15, .14, 1.15, M('#2f4a6e'), 0, 2.78, 0)); const top = new THREE.Mesh(new THREE.ConeGeometry(.62, .35, 12), M('#2f4a6e')); top.position.y = 3.02; g.add(top); hb = { hx: .5, hz: .5, h: 2.8, kind: 'hard' }; }   // (an advertising column)
       else if (k < .3) { g.add(box(1.4, 2.2, 1.8, M('#e3b22e'), 0, 1.1, 0), box(.06, .9, 1.4, M('#3f5566'), s * -.72, 1.4, 0), box(1.6, .15, 2, M('#b3372c'), 0, 2.27, 0)); const t = plate('RUCH', '#b3372c', '#f6f3ea', 1, .3); t.position.set(s * -.82, 2.05, 0); t.rotation.y = Math.PI / 2; g.add(t); hb = { hx: .75, hz: .95, h: 2.3, kind: 'hard' }; }   // (a kiosk)
       else if (k < .4) { g.add(box(1, 2.3, 1, M('#b3372c'), 0, 1.15, 0)); for (const z of [-.51, .51]) g.add(box(.8, 1.4, .02, M('#9fb3bf'), 0, 1.3, z)); g.add(box(.02, 1.4, .8, M('#9fb3bf'), s * -.51, 1.3, 0)); hb = { hx: .5, hz: .5, h: 2.3, kind: 'hard' }; }   // (a phone booth)
@@ -157,15 +168,81 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   // ---------- the taxi rank: by the kerb, three taxis in a row with their roof signs, the rank's sign; parked, for the traffic ----------
   function taxis() { if (!CARS) return; const sg = taxi.sd;
     for (let k = 0; k < 3; k++) { const i = taxi.i + Math.round(k * 5.4 / ds), c = CARS.makeCar('saloon', '#efc930'), t = new THREE.Group(), w = plate('TAXI', '#17181b', '#efc970', .5, .16); t.add(box(.56, .2, .22, M('#f6f3ea'), 0, 0, 0)); w.position.z = .12; t.add(w); const w2 = w.clone(); w2.position.z = -.12; t.add(w2); t.position.set(0, 1.55, 0); c.group.add(t);
-      put(c.group, i, sg * 2.45, 0, sg < 0 ? Math.PI : 0); c.group.userData.keep = true; hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, wrap(i)); parked?.()?.push({ s: wrap(i) * ds, d: sg * 2.45 }); }
+      put(c.group, i, sg * 2.45, 0, sg < 0 ? Math.PI : 0); c.group.userData.keep = true; hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, wrap(i)); }
+    parked?.()?.push({ s: wrap(taxi.i - Math.round(3 / ds)) * ds, d: sg * 2.45, len: 16 });   // (the three: gone round in one go)
     const g = new THREE.Group(), pl = plate('POSTÓJ TAXI', '#2f4a6e', '#f6f3ea', 1.9, .42); pl.position.y = 2.6; pl.rotation.y = Math.PI / 2; g.add(box(.07, 2.8, .07, steel, 0, 1.4, 0), pl); put(g, taxi.i - Math.round(3 / ds), sg * (ROAD + 1), 0, 0); hit(g, { hx: .1, hz: .1, h: 2.8, kind: 'hard' }, wrap(taxi.i)); }
   // ---------- planes off the airport: now and then one takes off far out, climbing over the town, and is gone ----------
   const planes = []; { const body = M('#e9e6df'), tail = M('#cf5a3e'); for (let k = 0; k < 2; k++) { const g = new THREE.Group(); g.add(box(1.3, 1.3, 11, body, 0, 0, 0), box(13, .2, 2, body, 0, -.2, .5), box(.2, 2.4, 1.4, tail, 0, 1.4, -4.6), box(4.4, .16, 1, body, 0, .2, -4.6)); g.visible = false; g.userData.keep = true; G.add(g); planes.push({ g, t: -4 - k * 22, a: 0 }); } }
+  // ---------- the zebra's bars across the road; the blue sign at each kerb ----------
+  function zebraBars(iC) { for (let k = -3; k <= 3; k++) { const o = new THREE.Mesh(new THREE.PlaneGeometry(.5, ROAD * 1.9).rotateX(-Math.PI / 2), M('#f0ece2')); o.userData.noShadow = true; o.renderOrder = 1; put(o, iC + Math.round(k * .9 / ds), 0, .016, 0); } }
+  const d6 = cv(9, 9, x => { x.fillStyle = '#2f5fa8'; x.fillRect(0, 0, 9, 9); x.fillStyle = '#f6f3ea'; for (let y = 1; y < 8; y++) { const w = 1 + 2 * Math.floor(y / 2); x.fillRect(4 - (w >> 1), y, w, 1); } x.fillStyle = '#17181b'; x.fillRect(4, 3, 1, 1); x.fillRect(4, 4, 1, 2); x.fillRect(3, 6, 1, 1); x.fillRect(5, 6, 1, 1); });
+  function crossing(z) { zebraBars(z.i); for (const sd2 of [-1, 1]) { const g = new THREE.Group(), pl = new THREE.Mesh(new THREE.PlaneGeometry(.6, .6), new THREE.MeshBasicMaterial({ map: d6, side: THREE.DoubleSide })); pl.position.y = 2.5; g.add(box(.07, 2.8, .07, steel, 0, 1.4, 0), pl); put(g, z.i + sd2 * Math.round(2.6 / ds), sd2 * (ROAD + .7), 0, 0); hit(g, { hx: .1, hz: .1, h: 2.8, kind: 'hard' }, wrap(z.i)); } }
+  // ---------- the road works ----------
+  // (all of the works in a group of its own, their colliders in a list, their place in the traffic's: off for a finale run over them)
+  const WG = new THREE.Group(), WC = [], hitW = (...a) => { const C = hit(...a); WC.push(C); return C; }; WG.userData.works = true; let worksOn = true, worksP = null;
+  function setWorks(on) { if (!works || on === worksOn) return; worksOn = on; WG.visible = on; for (const C of WC) C.used = !on; const pk = parked?.(); if (pk && worksP) { const ix = pk.indexOf(worksP); if (on && ix < 0) pk.push(worksP); if (!on && ix >= 0) pk.splice(ix, 1); } }
+  const workers = [], digs = [], blinkM = new THREE.MeshBasicMaterial({ color: '#ffb347' });
+  const a14 = cv(11, 10, x => { for (let y = 0; y < 10; y++) { const h = Math.round(y * .55); for (let q = 5 - h; q <= 5 + h; q++) { x.fillStyle = (y === 9 || y === 0 || q === 5 - h || q === 5 + h) ? '#c23a2e' : '#f6f3ea'; x.fillRect(q, y, 1, 1); } } x.fillStyle = '#17181b'; x.fillRect(5, 3, 1, 1); x.fillRect(4, 4, 2, 2); x.fillRect(3, 6, 1, 2); x.fillRect(6, 6, 1, 2); x.fillRect(7, 5, 1, 1); x.fillRect(8, 7, 1, 1); });
+  // a man of the works crew: an orange vest with its stripes, a helmet, what he works with (kind: dig, lean, jack, flag, boss); y: stood lower (in the trench)
+  function worker(kind, i, d, turn, y = 0) { const g = new THREE.Group(), body = new THREE.Group(), boss = kind === 'boss', skin = M(['#e3b08a', '#c98a5a', '#d9a07a'][rnd() * 3 | 0]), vest = M('#e8742e'), coat = boss ? M('#c9c4ba') : vest, strip = M('#e9e6df'), hat = M(boss ? '#f6f3ea' : '#efc930'), wood = M('#9e7a4f');
+    g.add(body); body.position.y = y;
+    const legs = [-1, 1].map(s2 => { const l = new THREE.Group(); l.add(box(.15, .8, .17, M(boss ? '#44484c' : '#3b4a5e'), 0, -.4, 0), box(.17, .1, .26, dark, 0, -.77, .04)); l.position.set(s2 * .1, .82, 0); body.add(l); return l; });
+    body.add(box(.46, .6, .28, coat, 0, 1.14, 0), box(.47, .06, .29, boss ? vest : strip, 0, 1.02, 0), box(.47, .06, .29, boss ? vest : strip, 0, 1.24, 0), box(.22, .24, .22, skin, 0, 1.58, 0), box(.29, .1, .29, hat, 0, 1.74, 0), box(.3, .03, .12, hat, 0, 1.7, .17));
+    const arms = [-1, 1].map(s2 => { const a = new THREE.Group(); a.add(box(.12, .56, .14, coat, 0, -.28, 0), box(.1, .1, .1, skin, 0, -.6, 0)); a.position.set(s2 * .3, 1.4, 0); body.add(a); return a; });
+    const tool = new THREE.Group(); body.add(tool);
+    if (kind === 'dig' || kind === 'lean') tool.add(box(.04, 1.15, .04, wood, 0, .575, 0), box(.24, .3, .03, steel, 0, -.12, 0));
+    if (kind === 'jack') tool.add(box(.18, .5, .18, M('#c23a2e'), 0, .45, 0), box(.5, .05, .05, dark, 0, .74, 0), box(.04, .3, .04, steel, 0, .05, 0));
+    if (kind === 'flag') { const disc = c => new THREE.Mesh(new THREE.CircleGeometry(.2, 12), new THREE.MeshBasicMaterial({ color: c })), a = disc('#c23a2e'), b = disc('#3c9a4a'), head = new THREE.Group(); a.position.z = .012; b.position.z = -.012; b.rotation.y = Math.PI; head.position.y = .98; head.add(a, b); tool.add(box(.03, .9, .03, wood, 0, .45, 0), head); tool.userData.head = head; }
+    if (boss) tool.add(box(.22, .3, .02, M('#f6f3ea'), 0, 0, 0), box(.2, .04, .03, dark, 0, .15, 0));
+    const paper = box(.32, .42, .02, M('#f6f3ea'), 0, 1.35, .36); paper.visible = false; body.add(paper);
+    put(g, i, d, 0, turn); g.userData.keep = true; hitW(g, { hx: .3, hz: .3, h: 1.8, kind: 'hard' }, wrap(i));
+    const w = { g, body, legs, arms, tool, paper, kind, x: g.position.x, z: g.position.z, y, yaw0: g.rotation.y, ph: rnd() * 6, stun: 0, madT: 0, face: null, talks: 0, talkT: 0, paperT: 0, readT: 0 };
+    w.mouth = () => g.position.clone().add(new THREE.Vector3(0, 1.9 + y, 0)); workers.push(w); return w; }
+  function roadworks() { if (!works) return; const n0 = G.children.length; roadworks0(); for (const o of G.children.slice(n0)) WG.attach(o); G.add(WG); }
+  function roadworks0() { const sd = works.sd, i0 = works.i0, i1 = works.i1, m = x => Math.round(x / ds), yel = M('#e8b923');
+    // the lane shut: barriers along its edge (a lamp blinking on each) and across its ends; cones tapering in before it and out after it
+    for (let x = 1; x < 26; x += 2.1) { const o = P.barrier(), lp = new THREE.Mesh(new THREE.BoxGeometry(.12, .12, .12), blinkM); lp.position.set(0, 1.12, 0); o.group.add(lp); put(o.group, i0 + m(x), sd * .45, 0, Math.PI / 2); hitW(o.group, o.hit, wrap(i0 + m(x))); }
+    for (const j of [i0, i1]) for (const dd of [1.45, 2.95]) { const o = P.barrier(); put(o.group, j, sd * dd, 0, 0); hitW(o.group, o.hit, wrap(j)); }
+    for (let k = 0; k < 5; k++) { const c = P.cone(); put(c.group, i0 - m(10 - k * 2.2), sd * (3.2 - k * .6), 0, 0); hitW(c.group, c.hit, wrap(i0)); }
+    for (let k = 1; k < 4; k++) { const c = P.cone(); put(c.group, i1 + m(k * 2), sd * (.6 + k * .8), 0, 0); hitW(c.group, c.hit, wrap(i1)); }
+    // the signs: roadworks ahead, for both ways
+    for (const [j, s2] of [[i0 - m(16), sd], [i1 + m(14), -sd]]) { const g = new THREE.Group(), tri = new THREE.Mesh(new THREE.PlaneGeometry(.8, .73), new THREE.MeshBasicMaterial({ map: a14, side: THREE.DoubleSide, transparent: true, alphaTest: .5 })), pl = plate('ROBOTY', '#f6f3ea', '#17181b', .8, .22);
+      tri.position.y = 2.35; pl.position.y = 1.85; g.add(box(.07, 2.6, .07, steel, 0, 1.3, 0), tri, pl); put(g, j, s2 * (ROAD + .7), 0, 0); hitW(g, { hx: .1, hz: .1, h: 2.6, kind: 'hard' }, wrap(j)); }
+    // the trench, the dug earth in heaps, the pipes waiting, a drain open
+    ribbon(line(i0 + m(3), i1 - m(7), sd * 2), 1.7, '#5a4330', .03); ribbon(line(i0 + m(3.4), i1 - m(7.4), sd * 2), 1.1, '#241a12', .036);
+    for (const [x, dd] of [[7, 3.1], [15, 3.0]]) { const o = new THREE.Mesh(new THREE.ConeGeometry(1.1, .9, 7), M('#7a5a3c')); o.position.y = .45; const g = new THREE.Group(); g.add(o); put(g, i0 + m(x), sd * dd, 0, 0); hitW(g, { hx: .9, hz: .9, h: .9, kind: 'hard' }, wrap(i0 + m(x))); }
+    { const g = new THREE.Group(), pm = M('#c9c4ba'); for (const [x, y] of [[-.27, .25], [.27, .25], [0, .7]]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, 3, 10).rotateX(Math.PI / 2), pm); c.position.set(x, y, 0); g.add(c); } put(g, i0 + m(19), sd * 3.0, 0, 0); hitW(g, { hx: .55, hz: 1.5, h: .95, kind: 'hard' }, wrap(i0 + m(19))); }
+    { const g = new THREE.Group(), hole = new THREE.Mesh(new THREE.CylinderGeometry(.36, .36, .04, 12), dark), lid = new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .05, 12), steel); hole.position.y = .02; lid.position.set(.7, .03, .2); g.add(hole, lid); put(g, i0 + m(1.6), sd * 2.4, 0, 0); }
+    // the little excavator at the trench's end: its boom working
+    { const g = new THREE.Group(); g.add(box(1.5, .45, 2.3, dark, 0, .23, 0), box(1.4, .8, 1.6, yel, 0, .85, -.1), box(.85, .85, .9, M('#7fa6c2'), -.25, 1.65, -.3), box(.95, .08, 1, yel, -.25, 2.1, -.3));
+      const boom = new THREE.Group(), stick = new THREE.Group(); boom.position.set(.35, 1.1, .6); boom.add(box(.22, .22, 2, yel, 0, 0, 1)); stick.position.set(0, 0, 2); stick.add(box(.18, .18, 1.4, yel, 0, 0, .7), box(.6, .4, .4, dark, 0, -.1, 1.45)); boom.add(stick); g.add(boom);
+      put(g, i1 - m(3.5), sd * 2.0, 0, Math.PI); g.userData.keep = true; hitW(g, { hx: .8, hz: 1.2, h: 2.2, kind: 'hard' }, wrap(i1)); digs.push({ boom, stick }); }
+    // the crew: one with the hammer, one down in the trench, one leaning on his shovel, the flagman before it all, the boss with his clipboard
+    worker('jack', i0 + m(2.5), sd * 1.3, 0); worker('dig', i0 + m(10), sd * 2, 0, -.55); worker('lean', i0 + m(12.5), sd * 3.0, -sd * Math.PI / 2);
+    worker('flag', i0 - m(5), sd * (ROAD + .4), Math.PI); worker('boss', i0 + m(21), sd * 3.2, -sd * Math.PI / 2);
+    worksP = { s: wrap(i0 - m(10)) * ds, d: sd * 1.75, len: 40 }; parked?.()?.push(worksP); }   // (the traffic: round it all, in one go)
+  let worksCool = 0;
+  function stepWorks(dt, R, onShout) { if (!workers.length || !worksOn) return; blinkM.color.set(clock % 1 < .5 ? '#ffb347' : '#5a3a14'); worksCool = Math.max(0, worksCool - dt);
+    for (const D of digs) { D.boom.rotation.x = .35 + Math.sin(clock * .5) * .25; D.stick.rotation.x = .7 + Math.sin(clock * .5 + 1.2) * .45; }
+    for (const w of workers) { const t = clock + w.ph, b = w.body, A = w.arms, T = w.tool; w.stun = Math.max(0, w.stun - dt); w.madT = Math.max(0, w.madT - dt); w.readT = Math.max(0, w.readT - dt); w.paperT = Math.max(0, w.paperT - dt); w.talkT = Math.max(0, w.talkT - dt);
+      // (facing whoever spoke to him, kicked him, threw to him; then back to the work)
+      if (w.face && (w.face.t -= dt) > 0) w.g.rotation.y = Math.atan2(w.face.x - w.x, w.face.z - w.z); else { w.face = null; w.g.rotation.y = w.yaw0; }
+      b.position.x = 0; b.rotation.set(0, 0, 0); w.paper.visible = w.readT > 0; T.visible = !(w.readT > 0);
+      if (w.readT > 0) { A[0].rotation.set(-1.1, 0, .3); A[1].rotation.set(-1.1, 0, -.3); }
+      else if (w.kind === 'dig') { const s = Math.sin(t * 2.2); A[0].rotation.set(-.9 + s * .4, 0, 0); A[1].rotation.set(-.9 + s * .4, 0, 0); T.position.set(0, .75 + s * .1, .42); T.rotation.set(-.6 + s * .5, 0, 0); b.rotation.x = .2 + s * .1; }
+      else if (w.kind === 'lean') { A[0].rotation.set(-.3, 0, 0); A[1].rotation.set(-.55, 0, -.2); T.position.set(.18, .02, .38); T.rotation.set(-.12, 0, 0); b.rotation.set(.06, 0, Math.sin(t * .4) * .03); }
+      else if (w.kind === 'jack') { A[0].rotation.set(-.6, 0, .25); A[1].rotation.set(-.6, 0, -.25); T.position.set(0, Math.abs(Math.sin(t * 40)) * .03, .32); b.position.x = Math.sin(t * 70) * .012; }
+      else if (w.kind === 'flag') { A[1].rotation.set(-.5, 0, 0); T.position.set(.32, .72, .22); const hd = T.userData.head; hd.rotation.y += ((Math.floor(t / 7) % 2 ? Math.PI : 0) - hd.rotation.y) * Math.min(1, dt * 4); }
+      else if (w.kind === 'boss') { A[0].rotation.set(-.9, 0, .2); A[1].rotation.set(-.7, 0, -.3); T.position.set(0, 1.12, .26); T.rotation.set(-.6, 0, 0); b.rotation.y = Math.sin(t * .3) * .5; }
+      if (w.madT > 0) A[1].rotation.set(-2.7 + Math.sin(t * 11) * .3, 0, 0);
+      if (w.stun > 0) b.position.x = Math.sin(t * 50) * .03;
+      // (him riding by close and quick: one of them has a word for him; not every time)
+      if (R && worksCool <= 0 && !(w.readT > 0) && R.v > 3 && Math.hypot(R.x - w.x, R.z - w.z) < 5) { worksCool = 9 + rnd() * 6; onShout(w); } } }
   let clock = 0;
-  function update(dt) { clock += dt;
+  function update(dt, R) { clock += dt; let shout = null; stepWorks(dt, R, w => { shout = w; });
     for (const W0 of walkers) { W0.a += W0.w * dt / Math.max(1, W0.r); const x = W0.c.x + Math.cos(W0.a) * W0.r, z = W0.c.z + Math.sin(W0.a) * W0.r, dir = Math.sign(W0.w); W0.g.position.set(x, W0.c.y, z); W0.g.rotation.y = Math.atan2(-Math.sin(W0.a) * dir, Math.cos(W0.a) * dir); const st = Math.sin(clock * 7 + W0.ph) * .45; W0.legs[0].rotation.x = st; W0.legs[1].rotation.x = -st; }
     for (const Pl of planes) { Pl.t += dt; if (Pl.t < 0) continue; if (Pl.t > 34) { Pl.t = -20 - rnd() * 25; Pl.g.visible = false; continue; } if (!Pl.g.visible) { Pl.a = rnd() * 6.28; Pl.g.visible = true; }
-      const u = Pl.t / 34, R = 330 - u * 120, ang = Pl.a + u * .9, y = 18 + u * u * 160, vx = -Math.sin(ang), vz = Math.cos(ang); Pl.g.position.set(110 + Math.cos(ang) * R, y, -10 + Math.sin(ang) * R); Pl.g.rotation.set(0, Math.atan2(vx, vz), 0); Pl.g.rotateX(-.2); } }
-  function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); office(); taxis(); furniture(); }
-  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi };
+      const u = Pl.t / 34, R = 330 - u * 120, ang = Pl.a + u * .9, y = 18 + u * u * 160, vx = -Math.sin(ang), vz = Math.cos(ang); Pl.g.position.set(110 + Math.cos(ang) * R, y, -10 + Math.sin(ang) * R); Pl.g.rotation.set(0, Math.atan2(vx, vz), 0); Pl.g.rotateX(-.2); } return shout; }
+  function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); office(); taxis(); roadworks(); for (const z of zebras) if (!z.lights) crossing(z); furniture(); }
+  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi, zebras, works, get workers() { return worksOn ? workers : []; }, nearWorks, nearTaxi, setWorks };
 }

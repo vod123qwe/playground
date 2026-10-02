@@ -30,7 +30,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
   // after the building is placed: its doors, windows and letterboxes into the game's lists
   function register(g, i, s, stairs, wins) { g.updateMatrixWorld(true); const n = new THREE.Vector3(1, 0, 0).transformDirection(g.matrixWorld).multiplyScalar(s).setY(0).normalize();
     for (const st of stairs) { const fp = g.localToWorld(new THREE.Vector3(st.fx, 0, st.z)), hi = doors.length; doors.push({ p: fp.clone().addScaledVector(n, 2.6), n: n.clone(), done: false, i });
-      for (const w of wins.filter(q => Math.abs(q.z - st.z) < 4.5)) windows.push({ p: g.localToWorld(new THREE.Vector3(st.fx + s * .1, w.y, w.z)), n: n.clone(), hw: w.w / 2, hh: w.h / 2, broken: false, i, house: hi });
+      for (const w of st.wins || wins.filter(q => Math.abs(q.z - st.z) < 4.5)) windows.push({ p: g.localToWorld(new THREE.Vector3(st.fx + s * .1, w.y, w.z)), n: n.clone(), hw: w.w / 2, hh: w.h / 2, broken: false, i, house: hi });
       if (st.box) { st.box.mb.userData.keep = true; G.attach(st.box.mb);   // (out of the building into the world's group: its position is then the world's, as a street letterbox's is)
         const M0 = { o: st.box.mb, i, side: s, flag: st.box.flag, house: hi, wall: true }; mailboxes.push(M0); const wp = st.box.mb.getWorldPosition(new THREE.Vector3()); hit(st.box.mb, { hx: .12, hz: .25, h: 1.5, kind: 'hard' }, i); things.push({ kind: 'mailbox', o: st.box.mb, mb: M0, C: colliders[colliders.length - 1], side: s, wall: true, at: wp }); } } }
 
@@ -46,12 +46,22 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     g.add(box(.08, 2.4, 1.3, M('#5a3a24'), fx + s * .05, 1.2, stairZ), box(.1, .3, 1.5, M('#efe8dc'), fx + s * .06, 2.55, stairZ));
     const no = new THREE.Mesh(new THREE.PlaneGeometry(.35, .25), new THREE.MeshBasicMaterial({ map: sign(String(1 + (rnd() * 40 | 0)), '#2f4a6e', '#f6f3ea') })); no.position.set(fx + s * .07, 2.9, stairZ); no.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(no);
     stairs.push({ fx, z: stairZ, box: letterbox(g, fx, s, stairZ + (stairZ > 0 ? -1.1 : 1.1)) });
-    const shopZ = -stairZ * .45;
-    if (rnd() < .78) { const [name, col] = SHOPS[rnd() * SHOPS.length | 0]; g.add(box(.1, 2.3, W * .45, glass, fx + s * .04, 1.65, shopZ), box(.12, .1, W * .45 + .2, frame, fx + s * .06, 2.85, shopZ), box(.12, .5, W * .45 + .2, M(col), fx + s * .06, .25, shopZ));
-      const sg = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(W * .45, name.length * .42 + .4), .62), new THREE.MeshBasicMaterial({ map: sign(name, col, '#f6f3ea') })); sg.position.set(fx + s * .09, 3.3, shopZ); sg.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(sg);
-      if (rnd() < .6) { const bl = new THREE.Group(), bs = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .5), new THREE.MeshBasicMaterial({ map: sign(name.split(' ')[0], col, '#f6f3ea'), side: THREE.DoubleSide })); bl.add(box(.06, .06, .9, dark, 0, .3, 0), bs); bs.position.set(0, 0, 0); bl.position.set(fx + s * .75, 4.6, shopZ + (shopZ > 0 ? 1 : -1) * W * .2); bl.rotation.y = 0; g.add(bl); bs.rotation.y = 0; }   // (a blade sign out over the pavement, read along the street)
-      if (rnd() < .55) { const aw = cv(8, 4, x => { for (let k = 0; k < 8; k++) { x.fillStyle = k % 2 ? '#f6f3ea' : col; x.fillRect(k, 0, 1, 4); } }), awn = new THREE.Mesh(new THREE.BoxGeometry(1.1, .06, W * .45), [M('#f6f3ea'), M('#f6f3ea'), new THREE.MeshBasicMaterial({ map: aw }), M(col), M(col), M(col)]); awn.position.set(fx + s * .6, 3.0, shopZ); awn.rotation.z = -s * .35; g.add(awn); } }
-    else { g.add(box(.1, 3, 2.6, dark, fx + s * .03, 1.5, shopZ), box(.14, .4, 3, M('#efe8dc'), fx + s * .06, 3.1, shopZ)); }   // (a gate to the yard)
+    // (the shopfront: shop windows along the ground floor, from its far end to short of the stairwell's letterbox; one shop or two, each with
+    // its door, its sign, its own letterbox (a shop takes the paper too) and its big window to break; now and then a gate to the yard instead)
+    const sgn = stairZ > 0 ? 1 : -1, z0 = -sgn * (W / 2 - .3), z1 = stairZ - sgn * 2.3, dz = Math.sign(z1 - z0), run = Math.abs(z1 - z0);
+    if (rnd() < .9) { const nS = run > 8.4 && rnd() < .5 ? 2 : 1;
+      for (let k = 0; k < nS; k++) { const [name, col] = SHOPS[rnd() * SHOPS.length | 0], L = run / nS - .4, zc = z0 + (z1 - z0) * (k + .5) / nS, shopZ = zc, W2 = L;
+        const zd = zc + dz * (L / 2 - .55), zl = zc + dz * (L / 2 - 1.55), wl = L - 2.2, wz = zc - dz * 1.1;
+        g.add(box(.1, 2.3, wl, glass, fx + s * .04, 1.65, wz), box(.12, .1, L + .2, frame, fx + s * .06, 2.85, zc), box(.12, .5, wl + .2, M(col), fx + s * .06, .25, wz));
+        for (let q = 1; q < Math.round(wl / 1.6); q++) g.add(box(.12, 2.3, .07, frame, fx + s * .06, 1.65, wz - wl / 2 + q * wl / Math.round(wl / 1.6)));   // (the window's mullions)
+        g.add(box(.08, 2.3, 1, M('#2f3e4a'), fx + s * .05, 1.15, zd), box(.1, .08, 1.1, frame, fx + s * .06, 2.34, zd));
+        const sg = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(L, name.length * .42 + .4), .62), new THREE.MeshBasicMaterial({ map: sign(name, col, '#f6f3ea') })); sg.position.set(fx + s * .09, 3.3, zc); sg.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(sg);
+        if (rnd() < .5) { const bl = new THREE.Group(), bs = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .5), new THREE.MeshBasicMaterial({ map: sign(name.split(' ')[0], col, '#f6f3ea'), side: THREE.DoubleSide })); bl.add(box(.06, .06, .9, dark, 0, .3, 0), bs); bl.position.set(fx + s * .75, 4.6, zd); g.add(bl); }   // (a blade sign out over the pavement, read along the street)
+        { const W = W2 * 2.2;
+      if (rnd() < .55) { const aw = cv(8, 4, x => { for (let k = 0; k < 8; k++) { x.fillStyle = k % 2 ? '#f6f3ea' : col; x.fillRect(k, 0, 1, 4); } }), awn = new THREE.Mesh(new THREE.BoxGeometry(1.1, .06, W * .45), [M('#f6f3ea'), M('#f6f3ea'), new THREE.MeshBasicMaterial({ map: aw }), M(col), M(col), M(col)]); awn.position.set(fx + s * .6, 3.0, shopZ); awn.rotation.z = -s * .35; g.add(awn); }
+        }
+        stairs.push({ fx, z: zd, box: letterbox(g, fx, s, zl), wins: [{ y: 1.65, z: wz, w: wl, h: 2.3 }] }); } }
+    else { const shopZ = (z0 + z1) / 2; g.add(box(.1, 3, 2.6, dark, fx + s * .03, 1.5, shopZ), box(.14, .4, 3, M('#efe8dc'), fx + s * .06, 3.1, shopZ)); }   // (a gate to the yard)
     put(g, i, s * (PAVE + .4 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 1, W / 2 + .5);
     register(g, i, s, stairs, reg); return g; }
 

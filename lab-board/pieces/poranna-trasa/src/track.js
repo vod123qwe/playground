@@ -720,7 +720,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const farmLots = [], fieldLots = []; const whLast = {};
   // (the estate: warehouses on their stretches, a site now and then; its road works and cranes further down)
   const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211) }) : null;
-  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked, townBox: s => CITY.townBox(s) }) : null;   // (the town's other streets: shortcuts, side streets)
+  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked, townBox: s => CITY.townBox(s), stops }) : null;   // (the town's other streets: shortcuts, side streets)
   const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G }) : null, cityLast = {};
   const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
     if (NET?.blocked(i, s)) return null;
@@ -737,7 +737,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         pos.push(...pa.clone().lerp(pb, t0).add(new THREE.Vector3(0, -sag(t0), 0)).toArray(), ...pa.clone().lerp(pb, t1).add(new THREE.Vector3(0, -sag(t1), 0)).toArray()); } } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); G.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: '#2a2a2a' }))); }
   const parked = [];                                                   // (the ones at the kerb, for the traffic to go round)
-  const kerbCars = []; for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd), P0 = { s: i * ds, d: sd * 2.45 }; parked.push(P0); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); c.group.userData.keep = true; const C = hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); kerbCars.push({ o: c.group, C, i, P0 }); }   // (kept whole: a level's finale clears its stretch of them)   // parked at the kerb
+  const kerbCars = []; for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { if (NET?.nearWorks(i, 20) || NET?.nearTaxi(i, 30) || [.3, .51, .72].some(q => Math.abs(((i - Math.round(N * q)) % N + N * 1.5) % N - N / 2) * ds < 30)) continue; const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd), P0 = { s: i * ds, d: sd * 2.45 }; parked.push(P0); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); c.group.userData.keep = true; const C = hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); kerbCars.push({ o: c.group, C, i, P0 }); }   // (kept whole: a level's finale clears its stretch of them)   // parked at the kerb
   // street trees on the verge: tall, their crowns reaching over the road; under each, its dappled shadow on the road and the pavement
   const DAP = [1, 2, 3].map(k => new THREE.MeshBasicMaterial({ map: tex.dapple(k), color: '#0c0912', transparent: true, opacity: .66, depthWrite: false, alphaTest: .5, fog: true }));
   function dapple(i, dMid, w = 10.5, l = 11) {                            // a patch laid on the ground's own shape (road, kerb, verge, pavement)
@@ -1039,14 +1039,14 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     for (const { m, gs } of by.values()) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = mm.receiveShadow = true; G.add(mm); } }
   // ---------- all the still things merged, material by material, into a few meshes (a mailbox stays itself: its flag moves) ----------
   if (!showcase) { G.updateMatrixWorld(true); const buckets = new Map(), gone = [];
-    const kept = o => { for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return true; return false; };
+    const kept = o => { for (let q = o; q && q !== G; q = q.parent) if (q.userData.keep) return true; return false; }, worksOf = o => { for (let q = o.parent; q && q !== G; q = q.parent) if (q.userData.works) return q; return null; };
     G.traverse(o => { if (!o.isMesh || Array.isArray(o.material) || o.material.vertexColors || o.material.transparent || kept(o)) return;   // (two materials on one mesh, a car's glasshouse: left as it is)
       let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
       for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
       if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-      const k = o.material.uuid + '|' + cellOf(g); if (!buckets.has(k)) buckets.set(k, { m: o.material, gs: [] }); buckets.get(k).gs.push(g); gone.push(o); });
+      const W = worksOf(o), k = o.material.uuid + '|' + cellOf(g) + (W ? '|W' : ''); if (!buckets.has(k)) buckets.set(k, { m: o.material, gs: [], to: W || G }); buckets.get(k).gs.push(g); gone.push(o); });
     for (const o of gone) o.parent.remove(o);
-    for (const { m, gs } of buckets.values()) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = mm.receiveShadow = true; G.add(mm); } }
+    for (const { m, gs, to } of buckets.values()) { const mm = new THREE.Mesh(mergeGeometries(gs), m); mm.castShadow = mm.receiveShadow = true; to.add(mm); } }
 
   // ---------- where on the road is a point? (searched from the last place) ----------
   function probe(x, z, hint = 0) {
