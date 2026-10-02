@@ -108,6 +108,13 @@ Las, góry w tle, jezioro, kampery. Cicho, dziko, piękne światło.
 - **Za mało skrzynek w mieście nocą** (02.10.2026). Bloki stoją daleko od drogi, a znaczniki nocą widać tylko z bliska, więc są odcinki bez celu do rzutu. Zrobione w v132: skrzynki bloków na słupkach przy chodniku (99 ze 108 do 9 m od drogi), oświetlone klatki. Dalej: przeliczyć gęstość abonentów na trasę po testach Jarka.
 - **Chodniki pełniejsze** (02.10.2026): ławki, kosze, stojaki z reklamami, stojaki z gazetami, deski do skakania, a w nocy opony, bezdomny, imprezowicze, sklepiki i kioski. Pierwsza partia jest w v131, dalej rozbudowywać.
 
+## Walka (decyzje z 02.10.2026)
+
+- Etapami: najpierw czytelny pojedynek z wzorcami (v136: świecąca pięść, podpisy, przeciwnicy z charakterem, finiszer, kwestie końca), potem walka z kilkoma naraz i bronią z otoczenia dla gangu i ekipy.
+- Krew komiksowa i pikselowa, wyłączana w ustawieniach.
+- Sterowanie jak było (cztery kierunki, garda góra i dół), tylko czytelniej.
+- Kwestie końca walki różne w biomach i od różnych osób; stawka: przegrana coś kosztuje, wygrana daje łup.
+
 ## Otwarte decyzje
 
 - „Ucieczka” w Bronksie: czy pościg nie zabiera roznoszenia? Do decyzji przy projektowaniu tej trasy.

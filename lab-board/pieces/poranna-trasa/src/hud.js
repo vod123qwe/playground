@@ -319,11 +319,14 @@ export function createHud() {
     const arrow = (dir, fill, edge) => { for (let q = 0; q < len; q++) { const half = len - 1 - q; for (let r = -half; r <= half; r++) { const on = Math.abs(r) === half || q === 0 ? edge : fill; if (!on) continue; g.fillStyle = on;
       const a = R + q, x = dir === 'left' ? cx - a : dir === 'right' ? cx + a : cx + r, y = dir === 'up' ? cy - a : dir === 'down' ? cy + a : cy + r; g.fillRect(x, y, 1, 1); } } };
     for (const d of ['left', 'right', 'up', 'down']) {
-      if (d === A.foe) { if (A.green) arrow(d, '#9be36a', '#f6f3ea'); else if (((starT * 10) | 0) % 2) arrow(d, '#ff5b3a', '#f6f3ea'); else arrow(d, '#efc970', '#17181b'); }
+      if (d === A.foe) { if (A.green) arrow(d, '#9be36a', '#f6f3ea'); else if (((starT * 10) | 0) % 2) arrow(d, d === 'down' ? '#c070f0' : '#ff5b3a', '#f6f3ea'); else arrow(d, '#efc970', '#17181b'); }
       else arrow(d, d === A.dir ? '#f6f3ea' : 'rgba(23,24,27,.35)', d === A.dir ? '#17181b' : 'rgba(246,243,234,.6)'); }
     if (A.open && ((starT * 8) | 0) % 2) { g.fillStyle = '#17181b'; g.fillRect(cx - 4, cy - 4, 9, 9); g.fillStyle = '#fff8e3'; g.fillRect(cx - 3, cy - 3, 7, 7); }   // (he is open: hit now)
     g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = A.green ? '#7fae58' : '#f6f3ea'; g.fillRect(cx, cy, 1, 1);
-    if (A.guard) { const y = A.low ? cy + R + len + 2 : cy - R - len - 3; g.fillStyle = '#17181b'; g.fillRect(cx - 7, y - 1, 15, 3); g.fillStyle = '#9ccad8'; g.fillRect(cx - 6, y, 13, 1); } }
+    if (A.guard) { const y = A.low ? cy + R + len + 2 : cy - R - len - 3; g.fillStyle = '#17181b'; g.fillRect(cx - 7, y - 1, 15, 3); g.fillStyle = '#9ccad8'; g.fillRect(cx - 6, y, 13, 1); }
+    // (what to do now, in words, over the star)
+    { const L = A.finish ? ['G: FINISZER!', '#efc970'] : A.green ? ['TERAZ!', '#9be36a'] : A.foe === 'down' ? ['NISKO! BLOK W DÓŁ', '#c070f0'] : A.foe ? ['BLOK!', '#ff5b3a'] : A.open ? ['BIJ!', '#efc970'] : null;
+      if (L) text(L[0], cx - L[0].length * 2, Math.max(2, cy - R - len - 11), L[1]); } }
   // the fight: his bars on the left, the other's on the right (health, and under it breath); a shield when his guard is up
   function fightBars(F) { const W = cv.width, bw = Math.min(90, Math.round(W * .3)), y = Math.round(126 * W / Math.max(1, innerWidth)) + 10;   // (under the bike computer and the purse)
     const bar = (x, v, h, col, back, right) => { g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1 + (h === 2 ? 7 : 0), bw + 2, h + 2); g.fillStyle = back; g.fillRect(x, y + (h === 2 ? 7 : 0), bw, h);
