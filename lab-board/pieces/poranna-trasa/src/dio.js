@@ -1,7 +1,7 @@
 // The map as a little model of the land (drawn by the game's own pixel pipeline when the map is open): the regions as islands of
 // blocks in their colours (a region still ahead grey, low, under clouds), on them what each region is (little houses, fields and red
 // barns, cranes, town houses and a tower, woods round a lake, hills of stone), roads of sand between the stretches' points, a flag at
-// each point (gold: done, white: open, grey: shut), the paperboy's pin where you are. The camera from above at a slant, swaying a touch.
+// each point (gold: done, white: open, grey: shut), the paper lad's pin where you are. The camera from above at a slant, swaying a touch.
 // createDiorama({ THREE, toon, REGIONS, RC, PTS, links }) → { scene, camera, frame(rect, t, state), project(id) → { x, y }, at(x, y) }
 //   rect: the land window on the screen (client px); state: { open(id), done(id), built(region), cur, sel }
 
