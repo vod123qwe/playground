@@ -768,7 +768,14 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         pos.push(...pa.clone().lerp(pb, t0).add(new THREE.Vector3(0, -sag(t0), 0)).toArray(), ...pa.clone().lerp(pb, t1).add(new THREE.Vector3(0, -sag(t1), 0)).toArray()); } } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); G.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: '#2a2a2a' }))); }
   const parked = [];                                                   // (the ones at the kerb, for the traffic to go round)
-  const kerbCars = []; for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { if (NET?.nearWorks(i, 20) || NET?.nearTaxi(i, 30) || [.3, .51, .72].some(q => Math.abs(((i - Math.round(N * q)) % N + N * 1.5) % N - N / 2) * ds < 30)) continue; const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd), P0 = { s: i * ds, d: sd * 2.45 }; parked.push(P0); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); c.group.userData.keep = true; const C = hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); kerbCars.push({ o: c.group, C, i, P0 }); }   // (kept whole: a level's finale clears its stretch of them)   // parked at the kerb
+  // (where the industrial maps have the road taken: the works (from 25 m before to 55 m on), the gantries and the forklifts' crossings;
+  // no ramp in these, and the big ones moved on until clear)
+  const gantryF = RG.industry === 'budowa' ? [.12, .4, .9] : [], liftF = RG.industry === 'bocznica' ? [.15, .35, .62, .82] : [];
+  const busy = [...(EST ? (RG.works || []).map(([f]) => [N * f - 25 / ds, N * f + 55 / ds]) : []), ...gantryF.map(f => [N * f - 20 / ds, N * f + 20 / ds]), ...liftF.map(f => [N * f - 14 / ds, N * f + 14 / ds])];
+  const isBusy = i => busy.some(([a, b]) => { const j = ((i - a) % N + N) % N; return j <= b - a; });
+  const clearAt = i => { for (let k = 0; k < 40 && isBusy(i); k++) i = (i + Math.round(10 / ds)) % N; return i; };
+  const bigAt = [clearAt(Math.round(N * .3)), clearAt(Math.round(N * .72))], megaAt = clearAt(Math.round(N * .51));   // (two big ramps on the road, a good run up to each; one mega ramp half way round)
+  const kerbCars = []; for (const i of [140, 380, 520, 760, 900, 1120, 1250, 1480]) { if (NET?.nearWorks(i, 20) || NET?.nearTaxi(i, 30) || [...bigAt, megaAt].some(q => Math.abs(((i - q) % N + N * 1.5) % N - N / 2) * ds < 30)) continue; const sd = (i % 3 ? -1 : 1), c = CARS.random(rnd), P0 = { s: i * ds, d: sd * 2.45 }; parked.push(P0); put(c.group, i, sd * 2.45, 0, sd < 0 ? Math.PI : 0); c.group.userData.keep = true; const C = hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); kerbCars.push({ o: c.group, C, i, P0 }); }   // (kept whole: a level's finale clears its stretch of them)   // parked at the kerb
   // street trees on the verge: tall, their crowns reaching over the road; under each, its dappled shadow on the road and the pavement
   const DAP = [1, 2, 3].map(k => new THREE.MeshBasicMaterial({ map: tex.dapple(k), color: '#0c0912', transparent: true, opacity: .66, depthWrite: false, alphaTest: .5, fog: true }));
   function dapple(i, dMid, w = 10.5, l = 11) {                            // a patch laid on the ground's own shape (road, kerb, verge, pavement)
@@ -913,27 +920,32 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     for (const t of trailPlans) trail(t.i0, t.sd, PAVE + .3, t.sd === INNER ? 36 + nr() * 11 : 31 + nr() * 8, (nr() - .5) * .9, 0);   // (inside: into the woods, short of the lake)
     for (let k = 0; k < trailPlans.length; k++) { const a = trailPlans[k], b = trailPlans.slice(k + 1).find(o => o.sd === a.sd); if (!b || (b.i0 - a.i0) * ds > 95 || nr() < .35) continue; along(a.i0 + 2, b.i0 - 2, a.sd, 30.5 + nr() * 2.5); } }
   // ---------- puddles by the kerb, after the night's rain (a wheel through one: a splash; one by the pavement: whoever is there gets it) ----------
+  // (a flat patch on the road (a puddle, mud) laid on it point by point: flat on a slope or a camber, part of it went under and flickered)
+  function lay(m, i, lift) { m.updateMatrixWorld(true); const inv = m.matrixWorld.clone().invert(), pa = m.geometry.attributes.position, w = new THREE.Vector3();
+    for (let k = 0; k < pa.count; k++) { w.fromBufferAttribute(pa, k).applyMatrix4(m.matrixWorld); w.y = probe(w.x, w.z, i).y + lift; w.applyMatrix4(inv); pa.setXYZ(k, w.x, w.y, w.z); } pa.needsUpdate = true; m.geometry.computeBoundingSphere(); }
   { const waterM = toon('#8aa2b0', { transparent: true, opacity: .8 });
     for (let i = 20; i < N; i += Math.round((24 + pr() * 30) / ds)) { if (pr() > .5) continue; const sd = pr() < .5 ? -1 : 1, r = .45 + pr() * .5, d = sd * (ROAD - .25 - r - pr() * .6);
-      const g = new THREE.CircleGeometry(r, 14); g.scale(1, 1.9, 1); g.rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, waterM); m.userData.noShadow = true; m.renderOrder = 1; put(m, i, d, .014, 0); m.receiveShadow = true;
+      const g = new THREE.CircleGeometry(r, 14); g.scale(1, 1.9, 1); g.rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, waterM); m.userData.noShadow = true; m.renderOrder = 1; put(m, i, d, .014, 0); lay(m, i, .025); m.receiveShadow = true;
       puddles.push({ x: m.position.x, z: m.position.z, r: r * 1.5, mud: false }); } }
   // the village's mud on the road itself (a field's gate, a tractor's tracks): brown patches across a lane or most of the road, a darker
   // rim; a wheel through one is held back (and splashed), hopped over it is nothing
   if (RG.farms) { const mudM = toon('#6b4f33'), rimM = toon('#54402a'), mr = mulberry(131);
     for (let i = 40; i < N - 20; i += Math.round((45 + mr() * 40) / ds)) { if (mr() > .62) continue; const r = 1.1 + mr() * .8, d = (mr() - .5) * (ROAD * 1.2);
-      for (const [rr, m, y] of [[r * 1.12, rimM, .012], [r, mudM, .018]]) { const g = new THREE.CircleGeometry(rr, 16); g.scale(1, 1.5 + mr() * .4, 1); g.rotateX(-Math.PI / 2); const o = new THREE.Mesh(g, m); o.userData.noShadow = true; o.renderOrder = 1; put(o, i, d, y, mr() * .6 - .3); o.receiveShadow = true; }
+      for (const [rr, m, y] of [[r * 1.12, rimM, .012], [r, mudM, .018]]) { const g = new THREE.CircleGeometry(rr, 16); g.scale(1, 1.5 + mr() * .4, 1); g.rotateX(-Math.PI / 2); const o = new THREE.Mesh(g, m); o.userData.noShadow = true; o.renderOrder = 1; put(o, i, d, y, mr() * .6 - .3); lay(o, i, y + .012); o.receiveShadow = true; }
       const q = at(i, d, 0); puddles.push({ x: q.x, z: q.z, r: r * 1.15, mud: true, road: true }); } }
   // ---------- on the road and the pavement: things to ride round, over or into ----------
 
-  const bigAt = [Math.round(N * .3), Math.round(N * .72)];               // (two big ramps, on the road, a good run up to each)
   for (const i of bigAt) { const o = P.ramp(rnd, 'big'); put(o.group, i, 1.4, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: 1.4 }); }   // (the traffic goes round it)
-  { const i = Math.round(N * .51), o = P.ramp(rnd, 'mega'); put(o.group, i, -1.3, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: -1.3 }); }   // (and one mega ramp on the other half of the road, half way round)
+  { const i = megaAt, o = P.ramp(rnd, 'mega'); put(o.group, i, -1.3, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: -1.3 }); }   // (and one mega ramp on the other half of the road, half way round)
   if (EST) { for (const [f, sd] of RG.works) EST.works(Math.round(N * f), sd); const cr = mulberry(223), nc = RG.cranes || 5; for (let k = 0; k < nc; k++) EST.crane(Math.round(N * (k + cr() * .6) / nc), (cr() < .5 ? -1 : 1) * (PAVE + 34 + cr() * 40)); }   // (the road works, the cranes over the roofs)
   for (let i = 90; i < N - 30; i += Math.round((26 + rnd() * 30) / ds)) {
     const r = rnd(), sd = rnd() < .5 ? -1 : 1;
     if (EST && RG.works.some(([f]) => Math.abs(i - N * f) * ds < 45)) continue;   // (not in the road works)
+    if (r < .26 && isBusy(i)) continue;
     if (bigAt.some(b => Math.abs(b - i) * ds < 14)) continue;             // (the big ones' run up and landing kept clear)
-    if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride
+    // (a ramp: in town not on the pavement (its benches, bins and posts in the way of the landing), and never with a car parked before or after it)
+    if (r < .26 && (parked.some(q => q.d * sd > 0 && Math.abs(q.s - i * ds) < 18) || NET?.nearWorks(i, 30))) continue;
+    if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4 && !NET, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride
     else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); const C = hit(o.group, o.hit, ii); o.group.userData.keep = true; C.thing = { kind: 'cone', o: o.group, C, r: .18 }; things.push(C.thing); } }
     else if (r < .48) { const o = P.bags(rnd), d = sd * (VERGE - .3 + rnd() * 1.4); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); }
     else if (r < .56) { const o = P.wagon(), d = sd * (VERGE + .8); put(o.group, i, d, 0, rnd() * 6); hit(o.group, o.hit, i); }
@@ -1113,6 +1125,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
+  return { gantryF, liftF, paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z) || CITY?.paved(x, z)), openGarages: CITY?.openGarages || [], net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, estate: EST, industry: RG.estate ? RG.industry || 'osiedle' : '', ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

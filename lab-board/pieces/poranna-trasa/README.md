@@ -1277,3 +1277,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 148: znaczniki wcześniej
 
 - ikonki abonentów nad skrzynkami i drzwiami pojawiają się wcześniej: w dzień od 46 m (na trudnym od 26 m), nocą od 28 m zamiast 15 m; podświetlenie celu do rzutu łapie skrzynkę już z 34 m, więc masz czas wycelować zanim dojedziesz
+
+## Wersja 149: skrytki przy blokach, Janusz cicho, porządek na nowych mapach
+
+- bloki stoją bliżej drogi (krótszy trawnik), a zamiast skrzynki na słupku przy każdej klatce wisi na ścianie rząd skrytek jak automat paczkowy: żółta rama, szare drzwiczki, czerwone drzwiczki abonenta z kopertą, nocą podświetlony daszek; większy cel, widać z drogi
+- Janusz w słuchawce domyślnie wyłączony: nie komentuje jazdy, nie dzwoni ze zleceniami, nie ma scenek (włączysz w ustawieniach: rzadko albo często)
+- skocznie omijają roboty drogowe, bramownice z cegłami i przejazdy wózków widłowych (na mapie budowy barierki robót przechodziły przez megaskocznię), nie stoją przed ani za zaparkowanym autem, w mieście nie stoją na chodniku (ławki i kosze na lądowaniu)
+- nic już nie miga na drodze: żółte paski rozpędu przed przejazdem, kałuże i błoto leżą na asfalcie punkt po punkcie, cień pod autem wyżej

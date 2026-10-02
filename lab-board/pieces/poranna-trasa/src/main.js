@@ -442,10 +442,10 @@ let assistK = (() => { try { return ASSIST[localStorage.getItem('pt.assist')] ? 
 const AS = () => ASSIST[assistK];
 const assistMenu = { name: () => AS().name, next: () => { const ks = Object.keys(ASSIST); assistK = ks[(ks.indexOf(assistK) + 1) % ks.length]; try { localStorage.setItem('pt.assist', assistK); } catch { } flash('Asysta rzutu: ' + AS().name.toLowerCase()); } };
 // (how often Janusz speaks up on the earpiece by himself, kept in this browser: 'rare' (at most once in 75 s, a checkpoint or a sprint only
-// now and then), 'often' (as it was), 'off' (never by himself; the calls with a job and the scenes still come))
+// now and then), 'often' (as it was), 'off' (silent: no word from him at all, no calls with a job, no scenes; the default for now))
 const RADIO_MODES = { rare: { name: 'RZADKO', gap: 75, odds: .35 }, often: { name: 'CZĘSTO', gap: 0, odds: 1 }, off: { name: 'WYŁĄCZONY', gap: 1e9, odds: 0 } };
-let radioK = (() => { try { return RADIO_MODES[localStorage.getItem('pt.radio')] ? localStorage.getItem('pt.radio') : 'rare'; } catch { return 'rare'; } })();
-const radioMenu = { name: () => RADIO_MODES[radioK].name, next: () => { const ks = Object.keys(RADIO_MODES); radioK = ks[(ks.indexOf(radioK) + 1) % ks.length]; try { localStorage.setItem('pt.radio', radioK); } catch { } flash('Janusz w słuchawce: ' + RADIO_MODES[radioK].name.toLowerCase()); } };
+let radioK = (() => { try { return RADIO_MODES[localStorage.getItem('pt.janusz')] ? localStorage.getItem('pt.janusz') : 'off'; } catch { return 'off'; } })();
+const radioMenu = { name: () => RADIO_MODES[radioK].name, next: () => { const ks = Object.keys(RADIO_MODES); radioK = ks[(ks.indexOf(radioK) + 1) % ks.length]; try { localStorage.setItem('pt.janusz', radioK); } catch { } flash('Janusz w słuchawce: ' + RADIO_MODES[radioK].name.toLowerCase()); } };
 const SELF = ['turbo', 'behind', 'idle', 'check', 'fall'];
 // ---------- blood (comic, pixel): drops spurt off a hit the way it went, fall, and stay as spots on the ground a while; off in the settings ----------
 let gore = (() => { try { return localStorage.getItem('pt.gore') !== '0'; } catch { return true; } })();
@@ -905,8 +905,9 @@ function crossWays(iC, dir) { const N = track.N, ds = track.ds, wrap = i => ((i 
   const ri = wrap(iC - dir * Math.round(11 / ds)), A = S[ri], d0 = dir * 1.4, o = track.props.ramp(Math.random, 'mega'), q = track.probe(A.p.x + A.r.x * d0, A.p.z + A.r.z * d0, ri);
   o.group.position.set(A.p.x + A.r.x * d0, q.y, A.p.z + A.r.z * d0); o.group.rotation.y = Math.atan2(A.f.x, A.f.z) + (dir < 0 ? Math.PI : 0); scene.add(o.group); o.group.updateMatrixWorld(true);
   const C = track.addHit(o.group, o.hit, ri), P0 = { s: ri * ds, d: d0 }; track.parked.push(P0);
-  const pi = wrap(ri - dir * Math.round(14 / ds)), B0 = S[pi], pad = new THREE.Group(); for (let k = 0; k < 3; k++) { const ch = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .35).rotateX(-Math.PI / 2), padM); ch.position.z = (k - 1) * .7; pad.add(ch); }
-  const px_ = B0.p.x + B0.r.x * d0, pz_ = B0.p.z + B0.r.z * d0; pad.position.set(px_, track.probe(px_, pz_, pi).y + .03, pz_); pad.rotation.y = o.group.rotation.y; pad.renderOrder = 1; scene.add(pad);
+  const pi = wrap(ri - dir * Math.round(14 / ds)), B0 = S[pi], pad = new THREE.Group(); for (let k = 0; k < 3; k++) { const ch = new THREE.Mesh(new THREE.BoxGeometry(1.4, .03, .35), padM); ch.position.z = (k - 1) * .7; pad.add(ch); }
+  const px_ = B0.p.x + B0.r.x * d0, pz_ = B0.p.z + B0.r.z * d0; pad.position.set(px_, 0, pz_); pad.rotation.y = o.group.rotation.y; scene.add(pad); pad.updateMatrixWorld(true);
+  for (const ch of pad.children) { const w = ch.getWorldPosition(new THREE.Vector3()); ch.position.y = track.probe(w.x, w.z, pi).y + .05; }
   crossJumps.push({ o, C, P0, pad, x: px_, z: pz_, used: false }); }
 function buildCrossings() { clearCrossings(); if (!LV?.cross) return; const N = track.N, iJ = track.startI, dir = LV.finish.dir;
   for (const fr of LV.cross) { const at = iJ + dir * Math.round(N * LV.finish.to * fr), X = createCrossing({ THREE, toon, track, at }); scene.add(X.group); CROSS.push(X); crossWays(at, dir); } }
@@ -1492,6 +1493,7 @@ const RAD = { t: 0, cool: 6, idle: 50, turbo: 0, sprint: false, fin: false, behi
   #radio.turbo { border-image-source: var(--px-sel); color: #17181b; } #radio.turbo b { color: #8e2e25; } @media (max-width: 640px) { #radio { top: 96px; } }`; document.head.appendChild(st); }
 // (what he says by himself: not too often, by the setting)
 function radioSay(kind, line, who = 'janusz', extra = '') { const S = LVM.load(); if (!S.owned?.sluchawka) return;
+  if (radioK === 'off') return;
   if (SELF.includes(kind)) { const Mo = RADIO_MODES[radioK]; if (RAD.since < Mo.gap || Math.random() > Mo.odds) return; } RAD.since = 0; if (!RAD.el) { RAD.el = document.createElement('div'); RAD.el.id = 'radio'; document.body.appendChild(RAD.el); }
   RAD.faces ||= {}; if (!RAD.faces[who]) { const f = faceOf(JB.PERSONAS[who]?.face || who); if (f) RAD.faces[who] = f.toDataURL(); } const t = line || draw('r:' + kind, JB.RADIO[kind]), fc = RAD.faces[who]; RAD.el.innerHTML = `${fc ? `<img src="${fc}" alt="">` : ''}<div><b><i></i>SŁUCHAWKA · ${(JB.PERSONAS[who]?.name || 'JANUSZ').toUpperCase()}</b><span></span>${extra}</div>`;
   RAD.el.classList.add('on'); RAD.el.classList.toggle('turbo', kind === 'turbo'); const sp = RAD.el.querySelector('span'); clearInterval(RAD.typ); let n = 0; RAD.typ = setInterval(() => { n += 2; sp.textContent = t.slice(0, n); if (n >= t.length) clearInterval(RAD.typ); }, 35); RAD.t = 2.6 + t.length * .045; }
@@ -1507,7 +1509,7 @@ function liveEnd(ok) { const J = LV2.cur; if (!J) return; LV2.cur = null; if (J.
   if (ok) { B.points += J.pay; audio.play('coin'); radioSay('', draw('liveOk', JB.LIVE_OK) + ` +${J.pay} zł`, J.who); } else radioSay('', draw('liveLate', JB.LIVE_LATE), J.who); }
 function stepLive(dt) { if (!LV || RUN.done || !LVM.load().owned?.sluchawka) { if (LV2.cur) liveEnd(false); return; } const me = foot.active ? foot.me : B, sp = Math.abs(foot.active ? foot.me.vf || 0 : B.v);
   if (LV2.offer) { if ((LV2.offer.until -= dt) <= 0) { LV2.offer = null; RAD.el?.classList.remove('on'); } else { const em = RAD.el?.querySelector('em.take'); if (em) em.textContent = `${keysOf('chat')}: BIORĘ · ${Math.ceil(LV2.offer.until)} S`; } }
-  if (!LV2.offer && !LV2.cur && RUN.go && (LV2.next -= dt) <= 0 && RAD.t <= 0) { LV2.next = (radioK === 'often' ? 45 : 110) + Math.random() * 40; liveOffer(); }
+  if (radioK !== 'off' && !LV2.offer && !LV2.cur && RUN.go && (LV2.next -= dt) <= 0 && RAD.t <= 0) { LV2.next = (radioK === 'often' ? 45 : 110) + Math.random() * 40; liveOffer(); }
   const J = LV2.cur; if (!J) return; if ((J.left -= dt) <= 0) { liveEnd(false); return; } const evs = (RUN.log || []).slice(J.log0);
   if (J.kind === 'door' && Math.hypot(me.x - J.door.p.x, me.z - J.door.p.z) < 5 && sp < 2.2) liveEnd(true);
   if (J.kind === 'parcel') { if (!J.got && Math.hypot(me.x - J.box.position.x, me.z - J.box.position.z) < 1.8) { J.got = true; scene.remove(J.box); J.box = null; audio.play('pick'); flash('Paczuszka w torbie. Teraz pod drzwi ze znaczkiem.'); } else if (J.got && Math.hypot(me.x - J.door.p.x, me.z - J.door.p.z) < 5 && sp < 2.2) liveEnd(true); }
@@ -1521,7 +1523,7 @@ function stepRadio(dt, inp) { RAD.since += dt; if (RAD.t > 0 && (RAD.t -= dt) <=
   if (!LVM.load().owned?.sluchawka || foot.active || menu.open) { RAD.sprint = !!inp.sprint; return; }
   if (inp.sprint && !RAD.sprint && RAD.cool <= 0 && B.v > 3) { RAD.turbo = 3.5; RAD.cool = 22; radioSay('turbo'); audio.play('trick', { vol: .4 }); } RAD.sprint = !!inp.sprint;
   if (RAD.behind <= 0) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw); for (const t of traffic.list || []) { const p = t.car?.group?.position; if (!p) continue; const dx = p.x - B.x, dz = p.z - B.z, l = Math.hypot(dx, dz); if (l < 9 && (dx * fx + dz * fz) / l < -.6) { RAD.behind = 30; radioSay('behind'); break; } } }
-  if (LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; const S0 = LVM.load(), gagOk = !RAD.gag && S0.gagRun !== (S0.runs || 0) - 1; if (gagOk && Math.random() < .3) { RAD.gag = true; LVM.save({ gagRun: S0.runs || 0 }); audio.play('ui'); if (Math.random() < .5) radioScene(draw('mixup', JB.MIXUP)); else radioScene([...draw('pocket', JB.POCKET), draw('pocketEnd', JB.POCKET_END)], true); } else radioSay('idle'); } }
+  if (radioK !== 'off' && LV && !RUN.done && RAD.t <= 0 && (RAD.idle -= dt) <= 0) { RAD.idle = 45 + Math.random() * 35; const S0 = LVM.load(), gagOk = !RAD.gag && S0.gagRun !== (S0.runs || 0) - 1; if (gagOk && Math.random() < .3) { RAD.gag = true; LVM.save({ gagRun: S0.runs || 0 }); audio.play('ui'); if (Math.random() < .5) radioScene(draw('mixup', JB.MIXUP)); else radioScene([...draw('pocket', JB.POCKET), draw('pocketEnd', JB.POCKET_END)], true); } else radioSay('idle'); } }
 // ---------- the final straight (the last 130 m before a stretch's finish): a banner over the road, a slalom of cones, a kicker, four
 // targets by the road to hit with a paper; at the finish a beat of slow motion and a flash. What it came to: a bonus, and in the paper ----------
 const FIN = { G: new THREE.Group(), cones: [], targets: [], trenches: [], rings: [], pads: [], hits: [], on: false, entered: false, res: null, combo: 0, comboT: 0, t: 0 };
