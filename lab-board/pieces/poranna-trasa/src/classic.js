@@ -8,7 +8,10 @@
 // createClassic({ THREE, toon, track, scene, cars }) → the locals' shape: { id, people, lights, update(dt, R) → events, kick, talk, paper }
 //   tyres rolling across the road ahead of him now and then (hop them, or ride round); a ramp on the far lawn with kids sitting in a row
 //     behind it, cheering: over their heads, a bonus
-//   events: { kind: 'shout' | 'driveway' | 'wet' | 'truck' | 'bump' | 'honk' | 'tyre' | 'overhead', p?, text? }
+//   the far side: pensioners on the benches (a word, a paper), joggers on the pavement, a man with his dog on a long lead across it (hop the
+//     lead or go round), kids at football on the lawn (the ball now and then out onto the road)
+//   a window broken: its owner runs out after him; caught, he gets a kick (pedal hard: they give up)
+//   events: { kind: 'shout' | 'driveway' | 'wet' | 'truck' | 'bump' | 'honk' | 'tyre' | 'overhead' | 'leash' | 'ball' | 'owner', p?, text? }
 
 export function createClassic({ THREE, toon, track, scene, cars, traffic = () => [] }) {
   let a = 1709; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -61,8 +64,54 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     const kids = []; for (let k = 0; k < 3; k++) { const ik = wrap(i + Math.round((6.5 + k * .9) / ds)), p = pv(ik, d), g = new THREE.Group(), b = new THREE.Mesh(new THREE.BoxGeometry(.34, .4, .26), M(['#cf3a2c', '#3b6fa0', '#efc930'][k])); b.position.y = .32; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .2), M('#e3b08a')); hd.position.y = .62; g.add(b, hd); g.position.copy(p); g.rotation.y = Math.atan2(A.r.x * hs, A.r.z * hs); scene.add(g); kids.push({ g, p, ph: rnd() * 6 }); }
     shows.push({ kids, done: 0, sayT: 0 }); }
 
+  // ---------- the far side's people ----------
+  const os = -hs, fig = (coat, hat, skin = '#e3b08a') => { const g = new THREE.Group(), b = new THREE.Mesh(new THREE.BoxGeometry(.42, .62, .26), M(coat)); b.position.y = 1.12; g.add(b); const hd = new THREE.Mesh(new THREE.BoxGeometry(.22, .22, .22), M(skin)); hd.position.y = 1.6; g.add(hd);
+    if (hat) { const h = new THREE.Mesh(new THREE.BoxGeometry(.26, .08, .26), M(hat)); h.position.y = 1.74; g.add(h); }
+    const legs = [-1, 1].map(sd => { const l = new THREE.Group(), lm = new THREE.Mesh(new THREE.BoxGeometry(.14, .78, .16), M('#2a2c30')); lm.position.y = -.39; l.add(lm); l.position.set(sd * .1, .8, 0); g.add(l); return l; }); scene.add(g); return { g, legs }; };
+  // (the pensioners: on every other bench, each his own way of talking)
+  const OLD = [
+    { coat: '#6a5a4a', hat: '#3a3d42', talk: ['ZA MOICH CZASÓW GAZETĘ PRZYNOSIŁ LISTONOSZ. PIESZO. POD GÓRĘ.', 'SIEDZĘ TU OD SZÓSTEJ. LICZĘ SAMOCHODY. DZIŚ JUŻ CZTERDZIEŚCI DWA.', 'TEN ZRASZACZ U SĄSIADA LEJE NA CHODNIK OD TRZECH LAT. NIKT NIC.'], paper: 'DZIĘKUJĘ. KRZYŻÓWKA JEST? TO DZIEŃ URATOWANY.' },
+    { coat: '#8a4a6a', hat: null, talk: ['UWAŻAJ NA TEGO Z PSEM. PIES MIŁY, PAN GORZEJ.', 'GOŁĘBIE KARMIĘ. ONE MNIE NIE KARMIĄ, ALE PRZYCHODZĄ.', 'MÓJ WNUK TEŻ JEŹDZI NA ROWERZE. W TELEFONIE.'], paper: 'O, GAZETKA! PRZECZYTAM I POŻYCZĘ PANU OBOK. ON NIE ODDA.' },
+    { coat: '#3b4a5e', hat: '#8a6a44', talk: ['SZYBĘ ZBIJESZ, TO CIĘ GONIĆ BĘDĄ. JA BYM GONIŁ. GDYBYM MÓGŁ.', 'NA TEJ ULICY NIC SIĘ NIE DZIEJE. POZA WSZYSTKIM.', 'ŚMIECIARKA JEŹDZI WOLNIEJ NIŻ JA CHODZĘ. A JA CHODZĘ Z LASKĄ.'], paper: 'POŁÓŻ OBOK, MŁODY. OKULARY MAM W DOMU, A DOM MAM DALEKO.' }];
+  (track.benches || []).filter((_, k) => k % 2 === 0).forEach((Bn, k) => { const P = OLD[k % OLD.length], f = fig(P.coat, P.hat), A = S[wrap(Bn.i)]; f.g.position.set(Bn.p.x, Bn.p.y - .45, Bn.p.z); f.g.rotation.y = Math.atan2(A.r.x * hs, A.r.z * hs); for (const l of f.legs) l.rotation.x = -1.4;
+    people.push({ g: f.g, x: Bn.p.x, z: Bn.p.z, kind: 'old', P, talks: 0, m: { paperT: 0 } }); });
+  // (joggers on the far pavement, up and down a stretch each)
+  const joggers = [0, 1, 2].map(k => { const f = fig(['#cf3a2c', '#3f8a4a', '#3b6fa0'][k], k === 1 ? '#f6f3ea' : null); return { ...f, s: L * (.15 + k * .3), dir: k % 2 ? -1 : 1, lo: L * (.1 + k * .3), hi: L * (.1 + k * .3) + 120, ph: 0, hitT: 0, sayT: 0 }; });
+  const JOG = deck(['Z LEWEJ!', 'UWAGA, BIEGNĘ!', 'DZIEŃ DOBRY! UFF!', 'PIĄTY KILOMETR!']);
+  // (a man and his dog on a long lead, across the pavement: the dog sniffs the lawn, he keeps to the kerb)
+  const walk = (() => { const man = fig('#5a5f66', '#24190f'), dog = new THREE.Group(), dm = M('#b88a5a'); const bd = new THREE.Mesh(new THREE.BoxGeometry(.25, .3, .6), dm); bd.position.y = .35; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .22), dm); hd.position.set(0, .5, .38); dog.add(bd, hd); scene.add(dog);
+    const lead = new THREE.Mesh(new THREE.BoxGeometry(.03, .03, 1), M('#cf3a2c')); scene.add(lead); return { man, dog, lead, s: L * .45, dir: 1, ph: 0, hitT: 0, sayT: 0 }; })();
+  const LEAD = deck(['UWAŻAJ NA SMYCZ!', 'BURKUŚ, DO NOGI!', 'NIE PRZEZ SMYCZ, PANIE!']);
+  // (the kids at football on the far lawn; now and then the ball goes out onto the road)
+  const balls = [], ballM = M('#f6f3ea'); let ballT = 7;
+  // (a window broken: the owner out after him)
+  const chasers = [], OWNER = deck(['WRACAJ TU!', 'ZA SZYBĘ ZAPŁACISZ!', 'STÓJ, GAZECIARZU!', 'JA CI DAM GAZETĘ!', 'MAM CIĘ NA NAGRANIU!']);
+  function angry(w) { if (chasers.length > 1) return; const f = fig(['#8e2e25', '#3b5670', '#6b4a2e'][chasers.length % 3], null), p = w.p.clone().addScaledVector(w.n, 2); f.g.position.set(p.x, gy(p.x, p.z), p.z); chasers.push({ ...f, x: p.x, z: p.z, t: 0, ph: 0, sayT: 0 }); }
+
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0);
+    // (the joggers)
+    for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
+      J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }
+      if (!R.foot && !R.air && !J.hitT && dist < .6 && Math.abs(R.v) > 2) { J.hitT = 3; ev.push({ kind: 'bump', p: { g: J.g } }); } }
+    // (the dog walker: slow along the kerb, the dog out on the lawn, the lead between them)
+    { const W = walk; W.s += W.dir * .8 * dt; const i = wrap(Math.round(W.s / ds)), A = S[i], pm = pv(i, os * (track.KERB + .9)), ip = wrap(i + Math.round(1 / ds)), pd = pv(ip, os * (track.KERB + 3.4 + Math.sin(clock * .7) * .6));
+      W.man.g.position.copy(pm); W.man.g.rotation.y = Math.atan2(A.f.x * W.dir, A.f.z * W.dir); W.ph += dt * 4; W.man.legs[0].rotation.x = Math.sin(W.ph) * .4; W.man.legs[1].rotation.x = -Math.sin(W.ph) * .4;
+      W.dog.position.copy(pd); W.dog.rotation.y = Math.atan2(pd.x - pm.x, pd.z - pm.z) + Math.sin(clock * 3) * .3; const a0 = V(pm.x, pm.y + .9, pm.z), b0 = V(pd.x, pd.y + .45, pd.z); W.lead.position.copy(a0).add(b0).multiplyScalar(.5); W.lead.lookAt(b0); W.lead.scale.z = a0.distanceTo(b0);
+      if (W.s > L * .45 + 160) W.dir = -1; if (W.s < L * .45) W.dir = 1; W.hitT = Math.max(0, W.hitT - dt); W.sayT -= dt;
+      const ex = b0.x - a0.x, ez = b0.z - a0.z, l2 = ex * ex + ez * ez, t = Math.max(0, Math.min(1, ((R.x - a0.x) * ex + (R.z - a0.z) * ez) / l2)), dd = Math.hypot(R.x - (a0.x + ex * t), R.z - (a0.z + ez * t));
+      if (!R.foot && !W.hitT && dd < .35 && !((R.h || 0) > .5) && Math.abs(R.v) > 1) { W.hitT = 3; ev.push({ kind: 'leash' }); ev.push({ kind: 'shout', p: { g: W.man.g }, text: LEAD() }); } else if (dd < 6 && W.sayT <= 0) { W.sayT = 14; ev.push({ kind: 'shout', p: { g: W.man.g }, text: LEAD() }); } }
+    // (the football: a ball now and then out onto the road ahead of him, from the far lawn)
+    ballT -= dt; if (ballT <= 0 && Math.abs(R.v) > 2 && R.s != null && balls.length < 2) { ballT = 7 + rnd() * 6; const i = wrap(Math.round((R.s + (R.along || 1) * (16 + rnd() * 10)) / ds)), g = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), ballM); scene.add(g); balls.push({ g, i, d: os * (track.PAVE + 6), v: 5 + rnd() * 2, hitT: 0 }); }
+    for (let k = balls.length - 1; k >= 0; k--) { const Bl = balls[k]; Bl.d -= os * Bl.v * dt; const p = pv(Bl.i, Bl.d); Bl.g.position.set(p.x, p.y + .18 + Math.abs(Math.sin(clock * 8)) * .25, p.z); Bl.hitT = Math.max(0, Bl.hitT - dt);
+      if (!R.foot && !Bl.hitT && Math.hypot(R.x - p.x, R.z - p.z) < .5 && !((R.h || 0) > .4)) { Bl.hitT = 3; ev.push({ kind: 'ball' }); }
+      if (Math.sign(Bl.d) === hs && Math.abs(Bl.d) > track.PAVE + 2) { scene.remove(Bl.g); balls.splice(k, 1); } }
+    // (the owners after him: they run at 5.6 m/s (faster than he rolls, slower than his pedalling); caught: a kick; 9 s, or far behind: they give up)
+    for (let k = chasers.length - 1; k >= 0; k--) { const Ch = chasers[k]; Ch.t += dt; const dx = R.x - Ch.x, dz = R.z - Ch.z, dist = Math.hypot(dx, dz);
+      if (Ch.t > 9 || dist > 32) { ev.push({ kind: 'shout', p: { g: Ch.g }, text: 'JESZCZE CIĘ ZŁAPIĘ!' }); scene.remove(Ch.g); chasers.splice(k, 1); continue; }
+      const sp = 5.6 * dt; Ch.x += dx / (dist || 1) * Math.min(sp, dist); Ch.z += dz / (dist || 1) * Math.min(sp, dist); Ch.g.position.set(Ch.x, gy(Ch.x, Ch.z), Ch.z); Ch.g.rotation.y = Math.atan2(dx, dz); Ch.ph += dt * 12; Ch.legs[0].rotation.x = Math.sin(Ch.ph) * .8; Ch.legs[1].rotation.x = -Math.sin(Ch.ph) * .8;
+      Ch.sayT -= dt; if (Ch.sayT <= 0) { Ch.sayT = 2.6; ev.push({ kind: 'shout', p: { g: Ch.g }, text: OWNER() }); }
+      if (dist < .9 && !R.foot && !((R.h || 0) > 1)) { ev.push({ kind: 'owner', p: { g: Ch.g } }); scene.remove(Ch.g); chasers.splice(k, 1); } }
     // (a tyre now and then, 18-30 m ahead of him, rolling across from the far side; it bounces a little; gone past the houses' kerb)
     tyreT -= dt; if (tyreT <= 0 && Math.abs(R.v) > 2 && R.s != null && tyres.length < 3) { tyreT = 4 + rnd() * 5; const i = wrap(Math.round((R.s + (R.along || 1) * (18 + rnd() * 12)) / ds)); tyres.push({ g: tyre(), i, d: -hs * (track.PAVE + 1), v: 3.6 + rnd() * 1.4, spin: 0, hitT: 0 }); }
     for (let k = tyres.length - 1; k >= 0; k--) { const T0 = tyres[k], A = S[T0.i]; T0.d += hs * T0.v * dt; T0.spin += T0.v * dt / .4; const p = pv(T0.i, T0.d); T0.g.position.set(p.x, p.y + .45 + Math.abs(Math.sin(T0.spin * .7)) * .12, p.z); T0.g.rotation.set(0, Math.atan2(A.f.x, A.f.z), 0); T0.g.rotateX(T0.spin);
@@ -103,13 +152,13 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       if (C.sayT <= 0 && Math.hypot(dx, dz) < 18) { C.sayT = 12; ev.push({ kind: 'shout', p: { g: C.men[0].g }, text: BINMEN() }); }
       if (!R.foot && !C.hitT && !(R.air && R.h > 3.2) && Math.abs(lx) < 1.35 && lz > -4.3 && lz < 3.8) { C.hitT = 3; ev.push({ kind: 'truck' }); } }
     return ev; }
-  function kick(p) { return 'EJ! ŚMIECIARZA SIĘ NIE KOPIE!'; }
-  function talk(p) { return BINMEN(); }
+  function kick(p) { return p.kind === 'old' ? 'TAK SIĘ TRAKTUJE STARSZYCH?!' : 'EJ! ŚMIECIARZA SIĘ NIE KOPIE!'; }
+  function talk(p) { if (p.kind === 'old') { p.talks = (p.talks || 0) + 1; return p.P.talk[(p.talks - 1) % p.P.talk.length]; } return BINMEN(); }
   // (a paper: to a bin man, caught; onto a windscreen backing out, the driver stops; into a sprinkler, it turns the other way)
   function paper(Pp) {
-    for (const p of people) { if (p.m.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > .9) continue; p.m.paperT = 30; return { p, text: BINPAPER(), who: 'binman', pts: 2, label: 'DLA ŚMIECIARZA! +2' }; }
+    for (const p of people) { if (p.m.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > .9) continue; p.m.paperT = 30; if (p.kind === 'old') return { p, text: p.P.paper, who: 'old', pts: 1, label: 'DO RĄK! +1' }; return { p, text: BINPAPER(), who: 'binman', pts: 2, label: 'DLA ŚMIECIARZA! +2' }; }
     for (const K of backers) { if (!(K.st === 'out' || K.st === 'lights' || K.st === 'wait') || Math.hypot(K.g.position.x - Pp.x, K.g.position.z - Pp.z) > 1.8) continue; K.st = 'wait'; K.t = 0; return { p: { g: K.g }, text: SORRY(), who: 'driver', pts: 2, label: 'NA SZYBĘ! +2' }; }
     for (const W of sprinklers) { if (W.flipT || Math.hypot(W.p.x - Pp.x, W.p.z - Pp.z) > 1) continue; W.flipT = 2; W.dir *= -1; return { p: { g: W.g }, text: 'PSSST!', who: 'sprinkler', pts: 1, label: 'ZRASZACZ! +1' }; }
     return null; }
-  return { id: 'classic', people, lights, update, kick, talk, paper, backers, sprinklers, cart };
+  return { id: 'classic', people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart };
 }
