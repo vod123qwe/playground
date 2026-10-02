@@ -1204,3 +1204,12 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - finiszer: przeciwnik prawie pokonany i odsłonięty, G: zwiniętą gazetą przez twarz (WYDANIE SPECJALNE!, zwolnione tempo)
 - koniec walki: kwestie zależne od miejsca (peryferie, wieś, dzielnica przemysłowa, miasto, Bronx) i od przeciwnika, osobno na wygraną i przegraną, bez powtórek (src/fightlines.js); po przegranej osobno to, co zabiera zwycięzca
 
+## Wersja 137: znaki walki zamiast strzałek, żywszy przeciwnik
+
+- zamiast gwiazdy ze strzałkami: nad głową przeciwnika duży pikselowy znak z podpisem, co zrobić: żółta tarcza „SPACJA: BLOK”, fioletowa tarcza ze strzałką w dół „↓+SPACJA: NISKO”, migająca zielona tarcza „KONTRA! SPACJA” (w chwili parowania), biała pięść „BIJ!” (odsłonięty), gazeta „G: FINISZER!”
+- twoja garda: mała niebieska tarcza nisko na środku (ze strzałką w dół, gdy nisko)
+- strzałki kierunku zostają tylko przy walce myszką i pokazują wyłącznie stronę twojego następnego ciosu
+- ściąga klawiszy w dwóch linijkach na dole ekranu w czasie walki
+- przeciwnik żywszy: krócej krąży, szybciej wraca do ataku, częściej bije seriami i częściej blokuje, więcej się rusza na boki (Kozak przy twojej gardzie: około 13 ataków na 20 s)
+- krople krwi mniejsze (z bliska wyglądały jak kostki)
+
