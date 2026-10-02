@@ -1473,3 +1473,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - nowy poziom Klasyka: pensjonaty po lewej, za nimi morze; co kawałek zatoczka z plażą (parawany, parasole i leżaki, wieża WOPR, molo, żaglówki)
 - na promenadzie budki z goframi, lodami, rybą, kukurydzą, pamiątkami i frytkami; turyści na chodnikach, stada mew za punkty (MEWY W GÓRĘ! +1)
 - dwie prenumeraty; poziom otwiera się po Parku
+
+## Wersja 180: Deptak, mewa i rolkarze
+
+- mewa co jakiś czas nurkuje po gazetę z torby: słychać KRAA, jej cień na rowerze rośnie; podskok w ostatniej chwili to UNIK MEWY +2, inaczej porywa jedną gazetę
+- rolkarze jadą zygzakiem przy krawężniku promenady, w obie strony: przeskok nad nimi za punkty, wpadnięcie to zderzenie

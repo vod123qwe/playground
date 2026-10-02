@@ -145,4 +145,5 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Co 120 m 45 m plaży bez domów; tam woda podchodzi blisko (zatoczka), żeby kamera ją widziała. Parawany, parasole z leżakami, wieża WOPR, jedno molo z altanką, żaglówki.
 - Promenada: budki GOFRY, LODY, RYBA, KUKURYDZA, PAMIĄTKI, FRYTKI. Turyści na obu chodnikach, mewy (MEWY W GÓRĘ! +1).
 - Teren po stronie morza płaski (bez pagórków pod wodą), bez lasów, stawów i ścieżek w środku pętli.
-- Do rozważenia dalej: mewa porywająca gazetę w locie, rolkarze, lody do zrzucenia z wózka.
+- v180: mewa co 13–23 s nurkuje z boku morza (KRAA!, cień na nim rośnie przez 1,7 s); podskok w ostatniej chwili = UNIK MEWY +2, inaczej porywa jedną gazetę z torby. Rolkarze (4) przy krawężniku promenady, w obie strony, zygzakiem: przeskok = NAD GŁOWAMI +3, wpadnięcie = zderzenie.
+- Do rozważenia dalej: lody do zrzucenia z wózka, piłka plażowa przez drogę.
