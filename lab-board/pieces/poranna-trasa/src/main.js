@@ -441,6 +441,12 @@ const ASSIST = { easy: { name: 'ŁATWA', tol: 1.5, scat: .6, snap: 2.6, marks: t
 let assistK = (() => { try { return ASSIST[localStorage.getItem('pt.assist')] ? localStorage.getItem('pt.assist') : 'mid'; } catch { return 'mid'; } })();
 const AS = () => ASSIST[assistK];
 const assistMenu = { name: () => AS().name, next: () => { const ks = Object.keys(ASSIST); assistK = ks[(ks.indexOf(assistK) + 1) % ks.length]; try { localStorage.setItem('pt.assist', assistK); } catch { } flash('Asysta rzutu: ' + AS().name.toLowerCase()); } };
+// (how often Janusz speaks up on the earpiece by himself, kept in this browser: 'rare' (at most once in 75 s, a checkpoint or a sprint only
+// now and then), 'often' (as it was), 'off' (never by himself; the calls with a job and the scenes still come))
+const RADIO_MODES = { rare: { name: 'RZADKO', gap: 75, odds: .35 }, often: { name: 'CZĘSTO', gap: 0, odds: 1 }, off: { name: 'WYŁĄCZONY', gap: 1e9, odds: 0 } };
+let radioK = (() => { try { return RADIO_MODES[localStorage.getItem('pt.radio')] ? localStorage.getItem('pt.radio') : 'rare'; } catch { return 'rare'; } })();
+const radioMenu = { name: () => RADIO_MODES[radioK].name, next: () => { const ks = Object.keys(RADIO_MODES); radioK = ks[(ks.indexOf(radioK) + 1) % ks.length]; try { localStorage.setItem('pt.radio', radioK); } catch { } flash('Janusz w słuchawce: ' + RADIO_MODES[radioK].name.toLowerCase()); } };
+const SELF = ['turbo', 'behind', 'idle', 'check', 'fall'];
 // ---------- blood (comic, pixel): drops spurt off a hit the way it went, fall, and stay as spots on the ground a while; off in the settings ----------
 let gore = (() => { try { return localStorage.getItem('pt.gore') !== '0'; } catch { return true; } })();
 const goreMenu = { name: () => gore ? 'WŁĄCZONA' : 'WYŁĄCZONA', next: () => { gore = !gore; try { localStorage.setItem('pt.gore', gore ? '1' : '0'); } catch { } flash('Krew: ' + (gore ? 'włączona' : 'wyłączona')); } };
@@ -499,8 +505,17 @@ function assignSubs(keepNear, fixed) { const A = ACT();   // (fixed: the subscri
     if (!fixed) d.sub = SUBR() < .55 ? A[SUBR() * A.length | 0] : null; if (!d.sub) continue;
     const n = d.n, fa = d.p.clone().addScaledVector(n, -2.6), side = new THREE.Vector3(-n.z, 0, n.x), pl = new THREE.Group();
     const b = new THREE.Mesh(new THREE.BoxGeometry(.34, .24, .03), toon('#f6f3ea')); pl.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(.28, .08, .035), bandOf[d.sub]); c.position.y = .04; pl.add(c);
-    pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; } }
+    pl.position.copy(fa).addScaledVector(n, .06).addScaledVector(side, .95); pl.position.y += 1.55; pl.rotation.y = Math.atan2(n.x, n.z); scene.add(pl); plaques.push(pl); d.plaque = pl; }
+  if (GLOWS_READY) nightGlows(); }   // (night: the glows on the new subscribers' letterboxes)
 assignSubs();
+// (night: a warm glow on each subscriber's letterbox, seen from far off on the dark walls; out once it has its paper)
+const glowT = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.4, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const subGlows = [];
+function nightGlows() { for (const G of subGlows) G.s.parent?.remove(G.s); subGlows.length = 0; if (!track.night) return;
+  const mat = new THREE.SpriteMaterial({ map: glowT, color: '#ffc46a', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  for (const mb of track.mailboxes) { const hi = mb.house; const d = hi != null ? track.doors[hi] : null; if (!d || !d.sub) continue; const s = new THREE.Sprite(mat); s.scale.setScalar(2.6); mb.o.getWorldPosition(s.position); s.position.y += .15; scene.add(s); subGlows.push({ s, mb, d }); } }
+function stepGlows(t) { for (const G of subGlows) { const on = !G.d.done && !G.mb.done; G.s.visible = on; if (on) G.s.scale.setScalar(2.4 + Math.sin(t * 3 + G.d.i) * .5); } }
+var GLOWS_READY = true; nightGlows();
 // the streak: subscribers served one after another (no wrong ones, none passed by, no paper thrown wide of one): every 3 more, the points
 // count once more (to x4); shown under the speed
 const streakMult = () => Math.min(4, 1 + Math.floor((B.streak || 0) / 3));
@@ -1320,7 +1335,7 @@ document.addEventListener('pointerlockchange', () => { if (!document.pointerLock
 // the mouse's speed: 1X is half of what it was at first (it was too quick); kept in the browser
 let sens = 1; try { const v = parseFloat(localStorage.getItem('pt.sens')); if (v > 0) sens = v; } catch { }
 const LAB = location.pathname.includes('/lab-board/pieces/') ? new URL('../../', location.href).href : null;   // (in the lab: the way back to its board)
-const menu = createMenu({ assist: assistMenu, gore: goreMenu, tests: () => testRows(), onMap: () => openMap(), onPlay: () => flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'), modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
+const menu = createMenu({ assist: assistMenu, gore: goreMenu, radio: radioMenu, tests: () => testRows(), onMap: () => openMap(), onPlay: () => flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'), modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
   if (book.isOpen && book.key(e)) { keys.clear(); e.stopImmediatePropagation(); return; }
@@ -1467,11 +1482,13 @@ function jobMarks() { const out = []; const J = LV2.cur; if (J) { if (J.box) out
 const DECK = (() => { let D = {}; try { D = JSON.parse(localStorage.getItem('pt.decks') || '{}'); } catch { } return D; })();
 function draw(key, arr) { let d = DECK[key]; if (!Array.isArray(d) || !d.length || d.some(i => i >= arr.length)) { d = arr.map((_, i) => i).sort(() => Math.random() - .5); if (d.length > 1 && d[d.length - 1] === DECK['last:' + key]) d.unshift(d.pop()); }
   const i = d.pop(); DECK[key] = d; DECK['last:' + key] = i; try { localStorage.setItem('pt.decks', JSON.stringify(DECK)); } catch { } return arr[i]; }
-const RAD = { t: 0, cool: 6, idle: 50, turbo: 0, sprint: false, fin: false, behind: 0, fall: 0, face: null, el: null, typ: 0 };
+const RAD = { t: 0, cool: 6, idle: 50, turbo: 0, sprint: false, fin: false, behind: 0, fall: 0, face: null, el: null, typ: 0, since: 99 };
 { const st = document.createElement('style'); st.textContent = `#radio { position: fixed; z-index: 4; left: 12px; top: 128px; width: min(360px, 60vw); display: none; gap: 8px; align-items: flex-start; font: 16px/20px PTPix, ui-monospace, monospace; color: #f6f3ea; border: 6px solid transparent; border-image: var(--px-chip) 3 fill / 6px; padding: 4px 8px; pointer-events: none; }
   #radio.on { display: flex; } #radio img { width: 40px; height: 40px; image-rendering: pixelated; border: 2px solid #17181b; flex: none; } #radio b { display: block; font-weight: normal; color: #efc970; } #radio b i { display: inline-block; width: 8px; height: 8px; background: #cf5a3e; margin-right: 6px; animation: rad-on .6s steps(1) infinite; } @keyframes rad-on { 50% { opacity: 0; } }
   #radio.turbo { border-image-source: var(--px-sel); color: #17181b; } #radio.turbo b { color: #8e2e25; } @media (max-width: 640px) { #radio { top: 96px; } }`; document.head.appendChild(st); }
-function radioSay(kind, line, who = 'janusz', extra = '') { const S = LVM.load(); if (!S.owned?.sluchawka) return; if (!RAD.el) { RAD.el = document.createElement('div'); RAD.el.id = 'radio'; document.body.appendChild(RAD.el); }
+// (what he says by himself: not too often, by the setting)
+function radioSay(kind, line, who = 'janusz', extra = '') { const S = LVM.load(); if (!S.owned?.sluchawka) return;
+  if (SELF.includes(kind)) { const Mo = RADIO_MODES[radioK]; if (RAD.since < Mo.gap || Math.random() > Mo.odds) return; } RAD.since = 0; if (!RAD.el) { RAD.el = document.createElement('div'); RAD.el.id = 'radio'; document.body.appendChild(RAD.el); }
   RAD.faces ||= {}; if (!RAD.faces[who]) { const f = faceOf(JB.PERSONAS[who]?.face || who); if (f) RAD.faces[who] = f.toDataURL(); } const t = line || draw('r:' + kind, JB.RADIO[kind]), fc = RAD.faces[who]; RAD.el.innerHTML = `${fc ? `<img src="${fc}" alt="">` : ''}<div><b><i></i>SŁUCHAWKA · ${(JB.PERSONAS[who]?.name || 'JANUSZ').toUpperCase()}</b><span></span>${extra}</div>`;
   RAD.el.classList.add('on'); RAD.el.classList.toggle('turbo', kind === 'turbo'); const sp = RAD.el.querySelector('span'); clearInterval(RAD.typ); let n = 0; RAD.typ = setInterval(() => { n += 2; sp.textContent = t.slice(0, n); if (n >= t.length) clearInterval(RAD.typ); }, 35); RAD.t = 2.6 + t.length * .045; }
 // ---------- the calls on the earpiece (jobs.js LIVE): now and then someone with something for right now; T takes it, then the clock ----------
@@ -1486,7 +1503,7 @@ function liveEnd(ok) { const J = LV2.cur; if (!J) return; LV2.cur = null; if (J.
   if (ok) { B.points += J.pay; audio.play('coin'); radioSay('', draw('liveOk', JB.LIVE_OK) + ` +${J.pay} zł`, J.who); } else radioSay('', draw('liveLate', JB.LIVE_LATE), J.who); }
 function stepLive(dt) { if (!LV || RUN.done || !LVM.load().owned?.sluchawka) { if (LV2.cur) liveEnd(false); return; } const me = foot.active ? foot.me : B, sp = Math.abs(foot.active ? foot.me.vf || 0 : B.v);
   if (LV2.offer) { if ((LV2.offer.until -= dt) <= 0) { LV2.offer = null; RAD.el?.classList.remove('on'); } else { const em = RAD.el?.querySelector('em.take'); if (em) em.textContent = `${keysOf('chat')}: BIORĘ · ${Math.ceil(LV2.offer.until)} S`; } }
-  if (!LV2.offer && !LV2.cur && RUN.go && (LV2.next -= dt) <= 0 && RAD.t <= 0) { LV2.next = 45 + Math.random() * 40; liveOffer(); }
+  if (!LV2.offer && !LV2.cur && RUN.go && (LV2.next -= dt) <= 0 && RAD.t <= 0) { LV2.next = (radioK === 'often' ? 45 : 110) + Math.random() * 40; liveOffer(); }
   const J = LV2.cur; if (!J) return; if ((J.left -= dt) <= 0) { liveEnd(false); return; } const evs = (RUN.log || []).slice(J.log0);
   if (J.kind === 'door' && Math.hypot(me.x - J.door.p.x, me.z - J.door.p.z) < 5 && sp < 2.2) liveEnd(true);
   if (J.kind === 'parcel') { if (!J.got && Math.hypot(me.x - J.box.position.x, me.z - J.box.position.z) < 1.8) { J.got = true; scene.remove(J.box); J.box = null; audio.play('pick'); flash('Paczuszka w torbie. Teraz pod drzwi ze znaczkiem.'); } else if (J.got && Math.hypot(me.x - J.door.p.x, me.z - J.door.p.z) < 5 && sp < 2.2) liveEnd(true); }
@@ -1496,7 +1513,7 @@ function stepLive(dt) { if (!LV || RUN.done || !LVM.load().owned?.sluchawka) { i
   if (J.kind === 'dog' && J.snapped) liveEnd(true); }
 // a scene on the earpiece: Janusz, you, Janusz (each in turn, the box his or yours)
 function radioScene(lines, solo) { let k = 0; const next = () => { if (k >= lines.length) return; const mine = !solo && k % 2 === 1; radioSay('', lines[k], mine ? 'ty' : 'janusz'); if (mine) RAD.el.querySelector('b').innerHTML = '<i></i>TY'; k++; setTimeout(next, 900 + lines[k - 1].length * 45); }; next(); }
-function stepRadio(dt, inp) { if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.classList.remove('on'); RAD.turbo = Math.max(0, RAD.turbo - dt); RAD.cool -= dt; RAD.behind -= dt; RAD.fall -= dt;
+function stepRadio(dt, inp) { RAD.since += dt; if (RAD.t > 0 && (RAD.t -= dt) <= 0) RAD.el?.classList.remove('on'); RAD.turbo = Math.max(0, RAD.turbo - dt); RAD.cool -= dt; RAD.behind -= dt; RAD.fall -= dt;
   if (!LVM.load().owned?.sluchawka || foot.active || menu.open) { RAD.sprint = !!inp.sprint; return; }
   if (inp.sprint && !RAD.sprint && RAD.cool <= 0 && B.v > 3) { RAD.turbo = 3.5; RAD.cool = 22; radioSay('turbo'); audio.play('trick', { vol: .4 }); } RAD.sprint = !!inp.sprint;
   if (RAD.behind <= 0) { const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw); for (const t of traffic.list || []) { const p = t.car?.group?.position; if (!p) continue; const dx = p.x - B.x, dz = p.z - B.z, l = Math.hypot(dx, dz); if (l < 9 && (dx * fx + dz * fz) / l < -.6) { RAD.behind = 30; radioSay('behind'); break; } } }
@@ -1910,7 +1927,7 @@ function frame(now) {
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
-  drift(dt); stepNight(B.x, B.z); stepBlood(Math.min(dt, .05));
+  drift(dt); stepNight(B.x, B.z); stepBlood(Math.min(dt, .05)); if (subGlows.length) stepGlows(performance.now() / 1000);
   for (const e of director.update(Math.min(dt, .05), { x: B.x, z: B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint, busy: !!B.crash || !LV || (FIN.on && FIN.entered) || CROSS.some(X => Math.hypot(X.center.x - B.x, X.center.z - B.z) < 50) })) dirEvent(e); if (locals) for (const e of locals.update(Math.min(dt, .05), { x: foot.active ? foot.me?.x ?? B.x : B.x, z: foot.active ? foot.me?.z ?? B.z : B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint })) localEvent(e); { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? { x: foot.me?.x ?? B.x, z: foot.me?.z ?? B.z, v: 0, vs: 0, yaw: 0, foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), vs: B.v, yaw: B.yaw, foot: false }); if (sh) hud.rant(sh.g.position, pickOf(sh.kind === 'mason' ? MASON_SHOUT : WORK_SHOUT), true, 1.95 + sh.y);
     for (const e of track.net?.events?.splice(0) || []) netEvent(e); } life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)

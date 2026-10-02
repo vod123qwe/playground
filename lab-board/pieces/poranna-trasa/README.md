@@ -1265,3 +1265,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - magazyny: każda hala ma biuro przyjmujące gazetę i czerwoną skrzynkę na słupku przy chodniku; Magazyny (d3) z 0,6 do 3,3 abonenta na 100 m, najdłuższy odcinek bez abonenta z 422 do 74 m
 - przegląd tras (PT.dynAudit w trybie testowym): abonenci na 100 m i najdłuższe odcinki bez abonenta i bez niczego; zrobiony dla wszystkich map (tabela w docs/trasy-tematyczne.md)
 
+## Wersja 146: Janusz rzadziej, skrzynki abonentów świecą nocą
+
+- Janusz w słuchawce mniej gada sam: nowe ustawienie JANUSZ W SŁUCHAWCE (USTAWIENIA): RZADKO (domyślnie: sam z siebie najwyżej raz na 75 s, przy punkcie czy sprincie tylko czasem), CZĘSTO (jak było) albo WYŁĄCZONY (nic sam z siebie; telefony ze zleceniami i scenki zostają); telefony ze zleceniami w trybie rzadkim co około 2 minuty zamiast co minutę
+- noc: skrzynka każdego abonenta ma ciepłą, pulsującą łunę widoczną z daleka na ciemnych ścianach i chodnikach; gaśnie, gdy skrzynka dostanie gazetę; w Bronksie nocą 56 świecących skrzynek na 56 abonentów
+
