@@ -290,7 +290,7 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
       f.dodgedId = o.wind || (o.move && !o.move.done) ? o.atkId : -1; }   // (a dodge in his wind-up or his punch: that one misses)
     let tf = (inp.fwd || 0) * (inp.fwd > 0 ? 1.7 : 1.35), ts = (inp.side || 0) * 1.45;
     if (f.guard) { tf *= .55; ts *= .55; } if (f.move) { tf *= .25; ts *= .25; } if (f.stagger > 0) { tf = -.6; ts = 0; }
-    if (f.dodge) { f.dodge.t += dt; const k = 6.4 * (1 - f.dodge.t / .32); tf = f.dodge.f * k; ts = f.dodge.s * k; if (f.dodge.t > .32) f.dodge = null; }
+    if (f.dodge) { f.dodge.t += dt; const k = 5.6 * (1 - f.dodge.t / .3); tf = f.dodge.f * k; ts = f.dodge.s * k; if (f.dodge.t > .3) f.dodge = null; }
     const acc = f.dodge ? 30 : 9; f.vf += (tf - f.vf) * Math.min(1, dt * acc); f.vs += (ts - f.vs) * Math.min(1, dt * acc);
     const fw = new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw)), rt = new V3(-Math.cos(f.yaw), 0, Math.sin(f.yaw));
     f.x += (fw.x * f.vf + rt.x * f.vs) * dt; f.z += (fw.z * f.vf + rt.z * f.vs) * dt;
@@ -317,11 +317,22 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
         else if (f.ai) { const K = f.kind || KINDS.kozak, tr = fightNow && fightNow.train; if (!tr && f.ai.next) { f.ai.pend = f.ai.next; f.ai.next = null; } else f.recover = K.recover * (tr ? 1.5 : 1); } } }   // (the computer's: a second straight after, or it stands open)
     animate(f.P, dt, f.vf || f.vs ? Math.hypot(f.vf, f.vs) * Math.sign(f.vf || 1) : 0, 'fight');
     // leaning into it: forward in a punch, back when hit, into the way he steps
-    const b = f.P.body, D = f.dodge, du = D ? Math.sin(Math.PI * Math.min(1, D.t / .32)) : 0;
-    b.rotation.x += ((D ? -D.f * .38 * du : f.move ? .12 : f.wind ? -.22 : f.recover > 0 ? .1 : 0) + f.vf * .03 - (f.stagger > 0 ? .15 : 0) - b.rotation.x) * Math.min(1, dt * (D ? 22 : 10)); b.rotation.z += ((D ? -D.s * .6 * du : -f.vs * .05) - b.rotation.z) * Math.min(1, dt * (D ? 22 : 8));
-    b.position.y += ((D ? -.2 * du + .1 * Math.sin(Math.PI * 2 * Math.min(1, D.t / .32)) * (D.t < .16 ? 1 : 0) : f.move && f.move.dip ? -.12 : f.guard && f.low ? -.06 : 0) - b.position.y) * Math.min(1, dt * (D ? 26 : 12));
-    arms(f.P, f, dt); place(f);
+    const b = f.P.body, D = f.dodge, du = D ? Math.sin(Math.PI * Math.min(1, D.t / .3)) : 0;
+    b.rotation.x += ((D ? 0 : f.move ? .12 : f.wind ? -.22 : f.recover > 0 ? .1 : 0) + f.vf * .03 - (f.stagger > 0 ? .15 : 0) - b.rotation.x) * Math.min(1, dt * (D ? 22 : 10)); b.rotation.z += ((D ? -D.s * .07 * du : -f.vs * .05) - b.rotation.z) * Math.min(1, dt * (D ? 22 : 8));
+    b.position.y += ((D ? -.17 * du : f.move && f.move.dip ? -.12 : f.guard && f.low ? -.06 : 0) - b.position.y) * Math.min(1, dt * (D ? 30 : 12));
+    slip(f, du); arms(f.P, f, dt); place(f);
   }
+  // a dodge as a boxer's: the knees bent (the body down, the feet kept on the ground), the trunk and the head dipped to the side he steps
+  // to and a little down (back: leaning away); u: how far into it (0..1..0)
+  const _wa = new V3(), _wq = new THREE.Quaternion(), _wp = new THREE.Quaternion();
+  function bendW(bone, axis, ang) { if (!bone || !ang) return; bone.parent.getWorldQuaternion(_wp); _wa.copy(axis).applyQuaternion(_wp.invert()).normalize(); _wq.setFromAxisAngle(_wa, ang); bone.quaternion.premultiply(_wq); bone.updateMatrixWorld(true); }
+  function slip(f, u) { const D = f.dodge, B = f.P.bones; if (!D || u <= .01 || !B.spine_02) return;
+    const fw = new V3(Math.sin(f.yaw), 0, Math.cos(f.yaw)), rt = new V3(-Math.cos(f.yaw), 0, Math.sin(f.yaw)), s = D.s, back = D.f < -.3 && Math.abs(s) < .5;
+    // (the trunk: to the side, down; or back, away from him)
+    for (const [bone, side, dip] of [[B.spine_02, .26, .2], [B.spine_03, .2, .14], [B.neck_01, .14, .12], [B.head, .1, .08]]) { if (back) bendW(bone, rt, side * .9 * u); else { bendW(bone, fw, s * side * u); bendW(bone, rt, -dip * u); } }
+    // (the knees: each foot back on the ground where it is, the knee bent forward over it)
+    if (B.thigh_l && B.calf_l && B.foot_l) for (const k of ['l', 'r']) { const ft = B['foot_' + k].getWorldPosition(new V3()), kn = B['calf_' + k].getWorldPosition(new V3());
+      reach(B['thigh_' + k], B['calf_' + k], B['foot_' + k], ft.clone().addScaledVector(UP, .17 * u), kn.clone().addScaledVector(fw, .8), 1); } }
   function begin(f, k, heavyAtk = false) {
     const M = MOVES[k]; if (!M) return; const tired = f.st < 18;
     f.chain = f.chainT < .5 ? [...f.chain, k].slice(-3) : [k]; f.chainT = 0;
