@@ -1130,3 +1130,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - menu TESTY: ROBOTY DROGOWE i PRZEJŚCIE DLA PIESZYCH
 - plan miasta przepisany na wizję z oceną pomysłów: docs/plan-miasto.md
 
+## Wersja 128: meta nie stoi przy domu
+
+- poziomy na całą pętlę (meta tam, gdzie start): brama META i tor przeszkód finału stawiają się dopiero w połowie trasy (po drugim punkcie), kiedy dom jest daleko; na starcie ich nie widać
+- poziomy, gdzie meta jest daleko od startu: bez zmian
+- skoki z menu TESTY do finału stawiają metę i finał od razu
+
