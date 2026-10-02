@@ -5,7 +5,7 @@
 // the right side of it (s = +1), local -x on the left.
 // createEstate({ THREE, toon, P, put, box, hit, zone, things, parked, puddles, PAVE, ds, N, rnd }) → { site(i, s), warehouse(i, s), works(i, sd), crane(i, d) }
 
-export function createEstate({ THREE, toon, P, put, box, hit, zone, things, parked, puddles, PAVE, ds, N, rnd }) {
+export function createEstate({ THREE, toon, P, put, box, hit, zone, things, parked, puddles, PAVE, ds, N, rnd, doors = [], mailboxes = [] }) {
   const sites = [], halls = [];
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
   const concrete = toon('#a9a59c'), concreteD = toon('#8a867e'), brick = toon('#b5653f'), yellow = toon('#e3b22e'), dark = toon('#2a2c30'), steel = toon('#8a9094'), orange = toon('#e3742e'), sandM = toon('#d9c38a'), wood = toon('#9e7a4f');
@@ -48,6 +48,10 @@ export function createEstate({ THREE, toon, P, put, box, hit, zone, things, park
     for (const x of [-.5, .5]) for (const z of [-.5, .5]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, .2, 10).rotateZ(Math.PI / 2), dark); w.position.set(x, .25, z); fl.add(w); }
     fl.position.set(fx + s * 3.2, 0, -5.5); fl.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2; g.add(fl);
     put(g, i, s * (PAVE + 4 + D / 2), 0, 0); hit(g, { hx: D / 2 + .2, hz: W / 2, h: H, kind: 'hard' }, i); hit(g, { hx: .8, hz: 1, h: 2, kind: 'hard' }, i, fx + s * 3.2, -5.5); zone(g, D / 2 + 5, W / 2 + 1);
+    // (the hall's office (its door by the sign): it takes the paper; a red letterbox on a post out by the pavement before it)
+    g.updateMatrixWorld(true); { const n = new THREE.Vector3(s, 0, 0).transformDirection(g.matrixWorld).setY(0).normalize(), fp = g.localToWorld(new THREE.Vector3(fx, 0, 4)), hi = doors.length; doors.push({ p: fp.clone().addScaledVector(n, 2.6), n, done: false, i });
+      const mb = grp(); mb.add(box(.08, 1.1, .08, dark, 0, .55, 0), box(.36, .32, .5, toon('#d23a2c'), 0, 1.25, 0), box(.37, .04, .3, dark, 0, 1.33, 0)); const flag = grp(); flag.add(box(.03, .22, .03, yellow, 0, .11, 0)); flag.position.set(.2, 1.3, .2); mb.add(flag);
+      const io = i + Math.round(4 / ds); mb.userData.keep = true; put(mb, io, s * (PAVE + .5), 0, 0); const C = hit(mb, { hx: .2, hz: .26, h: 1.45, kind: 'hard' }, io); const M0 = { o: mb, i: io, side: s, flag, house: hi }; mailboxes.push(M0); things.push({ kind: 'mailbox', o: mb, mb: M0, C, side: s }); }
     halls.push({ g, i, s, hall: true }); return g; }
 
   // ---------- road works: one lane closed for ~30 m (barriers along it, cones tapering in, an excavator, a sign), the traffic round it ----------

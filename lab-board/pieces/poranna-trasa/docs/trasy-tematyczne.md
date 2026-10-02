@@ -116,6 +116,25 @@ Las, góry w tle, jezioro, kampery. Cicho, dziko, piękne światło.
 - Kwestie końca walki różne w biomach i od różnych osób; stawka: przegrana coś kosztuje, wygrana daje łup.
 - Do zrobienia później (Jarek, przy v140): mocniejszy refactor walki z bokserskimi animacjami z Mixamo (Jarek pobiera paczkę z Adobe: jab, cross, hook, uppercut, uniki, praca nóg, postawa), przeniesionymi w Blenderze na boy i brawler; teraz biodra są sztywne, bo klipy Quaterniusa są ogólne.
 
+## Przegląd dynamiki tras (02.10.2026, v145)
+
+Abonenci na 100 m / najdłuższy odcinek bez abonenta / najdłuższy odcinek bez niczego (abonenta, przeszkody, skoczni, ludzi):
+
+| Mapa | Abonenci / 100 m | Bez abonenta | Bez niczego |
+| --- | --- | --- | --- |
+| Peryferie | 2,2 | 100 m | 0 |
+| Wieś | 1,1 | 199 m | 0 |
+| Przemysłowa (osiedle) | 2,0 (przed v145) | 200 m (przed v145) | 0 |
+| Plac budowy | 2,0 | 74 m | 24 m |
+| Magazyny | 3,3 (było 0,6) | 74 m (było 422 m) | 0 |
+| Miasto | 8,3 | 50 m | 50 m |
+| Dzielnica turystyczna | 10,3 | 24 m | 24 m |
+| Blokowisko | 6,9 | 50 m | 50 m |
+| Bronx nocą | 6,1 | 50 m | 25 m |
+| Garaże | 12,1 | 50 m | 50 m |
+
+Do poprawy: wieś (dorobić abonentów przy drodze przy trasach Żniwa i Odpust), peryferie (100 m bez abonenta). Reżyser zdarzeń (v145) wypełnia ciche odcinki w czasie jazdy.
+
 ## Otwarte decyzje
 
 - „Ucieczka” w Bronksie: czy pościg nie zabiera roznoszenia? Do decyzji przy projektowaniu tej trasy.

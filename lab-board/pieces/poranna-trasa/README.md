@@ -1253,3 +1253,15 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
   - dzieje się: z otwartych boksów (światło w środku, auto na klockach) co jakiś czas wycofuje auto na drogę (klakson; potrącenie to gleba), mechanik amator przy otwartym boksie, handlarz z bagażnika, a do tego cwaniacy, szkło, opony i imprezowicze z nocy
 - przejazdy kolejowe: przed każdym przejazdem na twojej drodze pas rozpędu (żółte strzałki) i skocznia mega; wysoko w powietrzu szlaban i pociąg przechodzą pod tobą (nad pociągiem +25 i wpis w gazecie); skocznie z drogi tuż obok przejazdu (35 m) schowane, żeby nie czekać przy torach na skoczni; sprawdzone w symulacji: z rozpędem (11–12,5 m/s) 3,9–4,4 m nad torami, wyżej niż pociąg
 
+## Wersja 145: zawsze coś się dzieje, gazety w magazynach
+
+- reżyser (src/director.js): gdy przez kilka sekund nic się nie wydarzyło, a ty jedziesz, przed tobą na drodze (26–38 m) dzieje się coś małego, dopasowanego do miejsca, mniej więcej co 6–11 s:
+  - peryferie: piłka toczy się na jezdnię (dziecko krzyczy), kot przez drogę
+  - wieś: kury przez drogę (KO-KO!), bela siana się toczy
+  - dzielnica przemysłowa: beczka się toczy, kot
+  - miasto: kierowca otwiera drzwi zaparkowanego auta prosto przed tobą, gołębie zrywają się z jezdni, wózek z marketu się toczy
+  - Bronx: wózek z marketu, kot ze śmietnika, piłka, drzwi auta
+  - najechanie: piłka się odbija, kury i kot się rozbiegają (chwiejesz się), wózek, beczka, bela i drzwi przewracają; nie w finale, nie przy przejeździe; gdy dzieje się coś innego (cwaniacy, drogowcy, cegła), reżyser czeka
+- magazyny: każda hala ma biuro przyjmujące gazetę i czerwoną skrzynkę na słupku przy chodniku; Magazyny (d3) z 0,6 do 3,3 abonenta na 100 m, najdłuższy odcinek bez abonenta z 422 do 74 m
+- przegląd tras (PT.dynAudit w trybie testowym): abonenci na 100 m i najdłuższe odcinki bez abonenta i bez niczego; zrobiony dla wszystkich map (tabela w docs/trasy-tematyczne.md)
+
