@@ -28,10 +28,11 @@ import { createCityNet } from './citynet.js';
 export const REGION_T = {
   peryferia: { id: 'peryferia', home: true, ctrl: [[0, 0, 0], [0, 1, 60], [18, 3, 120], [60, 5, 160], [115, 4, 170], [160, 2, 150], [185, 0, 105], [180, -1, 50], [150, -2, 5], [150, -1, -45], [175, 1, -90], [160, 3, -140], [110, 4, -165], [55, 2, -150], [15, 0, -110], [-5, -1, -55]],
     roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false,
-    // (the Classic's street (docs/klasyk.md): a long loop of gentle bends, the houses only on his left as he rides it, on the right the pavement,
+    // (the Classic's street (docs/klasyk.md): a long loop of gentle bends, the houses only on its outside (his left: the route goes the
+    // loop's other way), his home among them at its own little street; on the inside the pavement,
     // a strip of lawn with benches and the paper bundles; the street trees on the houses' side)
     maps: {
-      klasyk: { classic: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [6, 1, 80], [30, 2, 160], [85, 3, 225], [165, 3, 250], [240, 2, 225], [285, 1, 160], [295, 0, 80], [275, -1, 0], [225, 0, -60], [150, 1, -90], [75, 0, -85], [20, 0, -50]],
+      klasyk: { classic: true, oneSide: 1, rideDir: -1, ctrl: [[0, 0, 0], [6, 1, 80], [30, 2, 160], [85, 3, 225], [165, 3, 250], [240, 2, 225], [285, 1, 160], [295, 0, 80], [275, -1, 0], [225, 0, -60], [150, 1, -90], [75, 0, -85], [20, 0, -50]],
         gap: [15, 6], stops: [.86], posts: [], shops: [], trees: 0, roll: .12 } } },   // (flat ground round it: the camera hangs over the right side)
   wies: { id: 'wies', home: false, ctrl: [[0, 0, 0], [10, 2, 70], [-10, 5, 140], [30, 8, 200], [100, 9, 235], [175, 6, 220], [225, 3, 165], [235, 0, 95], [270, 2, 30], [255, 5, -45], [195, 7, -95], [125, 4, -110], [70, 1, -85], [25, -1, -45]],
     roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [24, 18], houseP: .56, farms: true,
@@ -953,8 +954,9 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       const q = at(i, d, 0); puddles.push({ x: q.x, z: q.z, r: r * 1.15, mud: true, road: true }); } }
   // ---------- on the road and the pavement: things to ride round, over or into ----------
 
-  for (const i of bigAt) { const o = P.ramp(rnd, 'big'); put(o.group, i, 1.4, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: 1.4 }); }   // (the traffic goes round it)
-  { const i = megaAt, o = P.ramp(rnd, 'mega'); put(o.group, i, -1.3, 0, 0); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: -1.3 }); }   // (and one mega ramp on the other half of the road, half way round)
+  const RD = RG.rideDir || 1, RT = RD < 0 ? Math.PI : 0;   // (the way the ramps face: up the way the route is ridden)
+  for (const i of bigAt) { const o = P.ramp(rnd, 'big'); put(o.group, i, 1.4 * RD, 0, RT); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: 1.4 * RD }); }   // (the traffic goes round it)
+  { const i = megaAt, o = P.ramp(rnd, 'mega'); put(o.group, i, -1.3 * RD, 0, RT); ramps.push(hit(o.group, o.hit, i)); parked.push({ s: i * ds, d: -1.3 * RD }); }   // (and one mega ramp on the other half of the road, half way round)
   if (EST) { for (const [f, sd] of RG.works) EST.works(Math.round(N * f), sd); const cr = mulberry(223), nc = RG.cranes || 5; for (let k = 0; k < nc; k++) EST.crane(Math.round(N * (k + cr() * .6) / nc), (cr() < .5 ? -1 : 1) * (PAVE + 34 + cr() * 40)); }   // (the road works, the cranes over the roofs)
   for (let i = 90; i < N - 30; i += Math.round((26 + rnd() * 30) / ds)) {
     const r = rnd(), sd = rnd() < .5 ? -1 : 1;
@@ -964,7 +966,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     if (bigAt.some(b => Math.abs(b - i) * ds < 14)) continue;             // (the big ones' run up and landing kept clear)
     // (a ramp: in town not on the pavement (its benches, bins and posts in the way of the landing), and never with a car parked before or after it)
     if (r < .26 && (parked.some(q => q.d * sd > 0 && Math.abs(q.s - i * ds) < 18) || NET?.nearWorks(i, 30))) continue;
-    if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4 && !NET, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, 0); if (RG.harvest) o.group.traverse(q => { if (q.isMesh && q.material?.color) { q.material = q.material.clone(); q.material.color.lerp(new THREE.Color('#e2c25e'), .7); } }); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride (the harvest: straw)
+    if (r < .26) { const o = P.ramp(rnd, rnd() < .45 ? 'kicker' : 'plank'), onPave = rnd() < .4 && !NET, d = onPave ? sd * 5.8 : sd * (1 + rnd() * 1.4); put(o.group, i, d, 0, RT); if (RG.harvest) o.group.traverse(q => { if (q.isMesh && q.material?.color) { q.material = q.material.clone(); q.material.color.lerp(new THREE.Color('#e2c25e'), .7); } }); ramps.push(hit(o.group, o.hit, i)); }       // a ramp, up the way you ride (the harvest: straw)
     else if (r < .4) { for (let n = 0; n < 2 + (rnd() * 2 | 0); n++) { const o = P.cone(), ii = i + n * 5, d = sd * (1.2 + n * .7 + rnd() * .3); put(o.group, ii, d, 0, rnd() * 6); const C = hit(o.group, o.hit, ii); o.group.userData.keep = true; C.thing = { kind: 'cone', o: o.group, C, r: .18 }; things.push(C.thing); } }
     else if (r < .48) { const o = P.bags(rnd), d = sd * (VERGE - .3 + rnd() * 1.4); put(o.group, i, d, 0, 0); hit(o.group, o.hit, i); }
     else if (r < .56) { const o = P.wagon(), d = sd * (VERGE + .8); put(o.group, i, d, 0, rnd() * 6); hit(o.group, o.hit, i); }
@@ -1040,7 +1042,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       // (between the houses: a ramp on the front lawn now and then, the lawns all rideable (as in the old street games))
       const ds0 = doors.slice().sort((x, y) => x.i - y.i);
       for (let k = 0; k + 1 < ds0.length; k++) { const a0 = ds0[k].i, b0 = ds0[k + 1].i; if ((b0 - a0) * ds < 14 || fr() > .45) continue; const i = Math.round((a0 + b0) / 2), d = RG.oneSide * (PAVE + 2.8); if (!free(i, d, 2.2)) continue;
-        const o = P.ramp(fr, fr() < .5 ? 'plank' : 'kicker'); put(o.group, i, d, 0, 0); ramps.push(hit(o.group, o.hit, i)); }
+        const o = P.ramp(fr, fr() < .5 ? 'plank' : 'kicker'); put(o.group, i, d, 0, (RG.rideDir || 1) < 0 ? Math.PI : 0); ramps.push(hit(o.group, o.hit, i)); }
       // (garden gnomes on the lawns: knocked over at a house that does not take the paper, points; at a subscriber's, he is not pleased)
       const gHat = toon('#cf3a2c'), gCoat = toon('#3b6fa0'), gBeard = toon('#f6f3ea'), gFace = toon('#e3b08a');
       ds0.forEach(d => { if (fr() > .55) return; const sd = new THREE.Vector3(-d.n.z, 0, d.n.x), p = d.p.clone().addScaledVector(d.n, -.9).addScaledVector(sd, (fr() < .5 ? 1 : -1) * 2.4), g = new THREE.Group();
@@ -1050,8 +1052,8 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       // (the obstacle courses on the lawn of the far side: a plank, a bale to clear, a big ramp to a parked car (over it or onto its roof),
       // cones to weave, a kicker, the line; all three ramps in one go: a bonus)
       const signM = new THREE.MeshBasicMaterial({ map: pixSign(THREE, 'TOR PRZESZKÓD', '#efc930', '#17181b'), side: THREE.DoubleSide }), baleM = toon('#e2c25e'), postM = toon('#8a6a44');
-      [.14, .37, .61, .84].forEach((f, id) => { const i0 = Math.round(N * f), d = os * (PAVE + 6), m = x => Math.round(x / ds); if (!free(i0, d, 3) || !free(i0 + m(30), d, 3)) return; const K = { id, n: 0, i0 };
-        const ramp = (k, kind) => { const o = P.ramp(fr, kind), i = i0 + m(k); put(o.group, i, d, 0, 0); const C = hit(o.group, o.hit, i); C.course = { id, k: K.n++ }; ramps.push(C); };
+      [.14, .37, .61, .84].forEach((f, id) => { const i0 = Math.round(N * f), d = os * (PAVE + 6), sg = RG.rideDir || 1, m = x => sg * Math.round(x / ds), turn = sg < 0 ? Math.PI : 0; if (!free(i0, d, 3) || !free(i0 + m(30), d, 3)) return; const K = { id, n: 0, i0 };
+        const ramp = (k, kind) => { const o = P.ramp(fr, kind), i = i0 + m(k); put(o.group, i, d, 0, turn); const C = hit(o.group, o.hit, i); C.course = { id, k: K.n++ }; ramps.push(C); };
         { const g = new THREE.Group(); for (const x of [-1.3, 1.3]) g.add(box(.1, 2.4, .1, postM, x, 1.2, 0)); const b = new THREE.Mesh(new THREE.PlaneGeometry(2.8, .6), signM); b.position.y = 2.2; g.add(b); put(g, i0 - m(5), d, 0, Math.PI / 2); for (const x of [-1.3, 1.3]) hit(g, { hx: .07, hz: .07, h: 2.4, kind: 'hard' }, i0 - m(5), x, 0); }
         ramp(0, 'plank');
         { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, 1.6, 12).rotateZ(Math.PI / 2), baleM); b.position.y = .42; g.add(b); put(g, i0 + m(8), d, 0, Math.PI / 2); hit(g, { hx: .8, hz: .42, h: .84, kind: 'hard' }, i0 + m(8)); }
