@@ -95,14 +95,14 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
 
   // ---------- the park's people: strollers wandering its paths; flocks pecking about (pigeons in the park, hens in the village) that go up
   // as he rides through them (a point each flock) ----------
-  const strollers = [], flocks = [], VIL = track.region === 'wies' && track.classic;
-  if (track.park || VIL) { const keys = VIL ? ['gardener', 'shopper'] : ['shopper', 'suit', 'gardener', 'jogger'];
-    for (let k = 0; k < (VIL ? 6 : 22); k++) { const f = fig(['#3b5670', '#8e2e25', '#44484c', '#6b4a2e', '#467537', '#c9b8a0'][k % 6], k % 4 === 0 ? '#24190f' : null); dress(f, keys[k % keys.length], 'walk', .85 + rnd() * .3);
+  const strollers = [], flocks = [], VIL = track.region === 'wies' && track.classic, SEA = !!track.sea;
+  if (track.park || VIL || SEA) { const keys = VIL ? ['gardener', 'shopper'] : SEA ? ['shopper', 'jogger', 'suit', 'shopper'] : ['shopper', 'suit', 'gardener', 'jogger'];
+    for (let k = 0; k < (VIL ? 6 : SEA ? 26 : 22); k++) { const f = fig(['#3b5670', '#8e2e25', '#44484c', '#6b4a2e', '#467537', '#c9b8a0'][k % 6], k % 4 === 0 ? '#24190f' : null); dress(f, keys[k % keys.length], 'walk', .85 + rnd() * .3);
       const sd0 = k % 2 ? os : hs, s0 = rnd() * L, d0 = sd0 * (track.KERB + .8 + rnd() * 1.6); strollers.push({ ...f, sd0, s: s0, d: d0, ts: s0, td: d0, hitT: 0, wait: rnd() * 4 }); }
-    const bodyM = VIL ? [M('#f6f3ea'), M('#a8643a')] : [M('#8a9094'), M('#9aa0a4')], headM = VIL ? M('#cf3a2c') : M('#5d646b');
+    const bodyM = VIL ? [M('#f6f3ea'), M('#a8643a')] : SEA ? [M('#f6f3ea'), M('#c9ccd0')] : [M('#8a9094'), M('#9aa0a4')], headM = VIL ? M('#cf3a2c') : SEA ? M('#f6f3ea') : M('#5d646b');
     for (let k = 0; k < 9; k++) { const birds = []; for (let b = 0; b < 8; b++) { const g = new THREE.Group(), sz = VIL ? 1.5 : 1, bd = new THREE.Mesh(new THREE.BoxGeometry(.16 * sz, .14 * sz, .26 * sz), bodyM[b % 2]), hd = new THREE.Mesh(new THREE.BoxGeometry(.09 * sz, .09 * sz, .09 * sz), headM); bd.position.y = .1 * sz; hd.position.set(0, .2 * sz, .14 * sz); g.add(bd, hd); scene.add(g); birds.push({ g, ox: (rnd() - .5) * 3, oz: (rnd() - .5) * 3, vy: 0, up: 0, vx: 0, vz: 0 }); }
       flocks.push({ s: L * (k + .5) / 9, d: (k % 2 ? os : hs) * (track.KERB + 1.2 + rnd() * .8), birds, up: false, t: 0 }); } }
-  const FLOCK = VIL ? deck(['KO-KO-KO! +1', 'KURY W GÓRĘ! +1', 'KOGUT SIĘ OBRAZIŁ! +1']) : deck(['GOŁĘBIE! +1', 'FRRR! +1', 'PŁOSZYCIEL! +1']);
+  const FLOCK = SEA ? deck(['MEWY W GÓRĘ! +1', 'KRAA! +1', 'MEWA ZGUBIŁA FRYTKĘ! +1']) : VIL ? deck(['KO-KO-KO! +1', 'KURY W GÓRĘ! +1', 'KOGUT SIĘ OBRAZIŁ! +1']) : deck(['GOŁĘBIE! +1', 'FRRR! +1', 'PŁOSZYCIEL! +1']);
 
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0), W0 = api.wave; for (const mx of mixers) mx.update(dt);

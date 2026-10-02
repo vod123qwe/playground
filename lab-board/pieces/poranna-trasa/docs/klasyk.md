@@ -138,3 +138,11 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Dzień bez pudła (każdy abonent dostał gazetę): wraca jeden abonent (losowy dom bez prenumeraty).
 - Niedziela zaliczona: TYDZIEŃ ZALICZONY, +25 zł, nowy tydzień z nowym rozkładem. Mniej niż 3 abonentów: tydzień od nowa.
 - Na mecie ramka „Tydzień” w „Twojej trasie”: ilu zostało, ilu zrezygnowało, ilu ma ostatnią szansę, kto wrócił, jaki dzień jutro.
+
+## Poziom 4: Deptak (v179)
+
+- Mapa `peryferia/deptak`: wydłużona pętla, pensjonaty w pastelach po stronie domów (środek pętli), za nimi morze: płaska tafla w środku pętli, piasek schodzi do wody.
+- Co 120 m 45 m plaży bez domów; tam woda podchodzi blisko (zatoczka), żeby kamera ją widziała. Parawany, parasole z leżakami, wieża WOPR, jedno molo z altanką, żaglówki.
+- Promenada: budki GOFRY, LODY, RYBA, KUKURYDZA, PAMIĄTKI, FRYTKI. Turyści na obu chodnikach, mewy (MEWY W GÓRĘ! +1).
+- Teren po stronie morza płaski (bez pagórków pod wodą), bez lasów, stawów i ścieżek w środku pętli.
+- Do rozważenia dalej: mewa porywająca gazetę w locie, rolkarze, lody do zrzucenia z wózka.
