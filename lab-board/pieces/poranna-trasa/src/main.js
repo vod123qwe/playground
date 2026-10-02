@@ -628,10 +628,10 @@ const carsNow = () => LV ? LV.cars : carsAt(level()), heatNow = () => LV ? LV.he
 function stepLevel() { if (LV) return; const l = level(); if (l === B.lvl) return; if (B.lvl) { flash(`POZIOM ${l}: ${LVL_SAY[l]}`); audio.play('trick'); } B.lvl = l; }
 function hurt(n, why) { if (endT > 0) return; audio.play('hurt', { vol: .6 }); B.hp = Math.max(0, (B.hp ?? 100) - n); if (B.hp <= 0) { endT = 2.4; endWhy = why || 'Zdrowie się skończyło.'; } }
 let endT = 0, endWhy = '';
-const runUI = createRun({ onAgain: () => { if (LV) startLevel(LV.id); else { resetGame(); fromAccount(); } } });
+const runUI = createRun({ onAgain: () => { if (LV) startLevel(LV.id); else { resetGame(); fromAccount(); } }, onMap: () => { if (LV) startLevel(LV.id); else { resetGame(); fromAccount(); } openMap(); } });
 // the notebook (Tab): who thinks what of you, the bike, what you carry, how you are
 const book = createBook({ data: () => ({ reps: quests.reps(), parts: shop.equipped(), items: B.items || [], kept: kept(), hp: B.hp ?? 100, money: B.points, fame: B.fame || 0, papers: ACT().map(k => ({ name: TITLES[k].name, n: B.mix[k], col: TITLES[k].col })), dist: trip.dist }) });
-function endRun(why) { if (runUI.isOpen) return; endT = 0; runUI.open({ reason: why, dist: trip.dist, delivered: B.delivered || 0, earned: B.earned || 0, windows: B.windows || 0, stops: quests.police?.stops || 0 }, [...shop.ownedList(), ...(B.items || []).map(n => ({ label: 'FANT: ' + n, keep: { item: n } }))]); }
+function endRun(why) { if (runUI.isOpen) return; endT = 0; runUI.open({ reason: why, goal: LV?.goal?.papers || 0, dist: trip.dist, delivered: B.delivered || 0, earned: B.earned || 0, windows: B.windows || 0, stops: quests.police?.stops || 0 }, [...shop.ownedList(), ...(B.items || []).map(n => ({ label: 'FANT: ' + n, keep: { item: n } }))]); }
 function fromAccount() { const all = kept(); for (const k of all) { if (k.keep.part) shop.grant(k.keep.part, k.keep.tier); else if (k.keep.item) (B.items ||= []).push(k.keep.item); } if (all.length) flash('Z konta: ' + all.map(k => k.label.toLowerCase()).join(', ')); }
 setTimeout(() => fromAccount(), 0);   // (the first run too)
 // (B.safe: just up or back on the bike, a knock holds him back, he does not go over again straight off)

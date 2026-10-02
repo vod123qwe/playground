@@ -1187,3 +1187,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - kurierzy Kuriera Osiedlowego widoczni z daleka: czerwona chorągiewka nad tylnym kołem i duży granatowy plecak z żółtym pasem; zwykli rowerzyści nie noszą już żółtych koszulek
 - kopnięcie kuriera: przewraca się, gubi paczkę gazet do zebrania i zawsze wraca, żeby oddać; zwykły rowerzysta oddaje tylko czasem; pieszy klnie i staje (w Bronksie goni)
 
+## Wersja 135: nowy ekran końca przejazdu
+
+- koniec przejazdu (zdrowie do zera, trzecie zatrzymanie) jako wycinek z Trąbki: nagłówek jak w gazecie zależny od powodu (np. GAZECIARZ KONTRA AUTO 0:1, ASFALT WYGRAŁ NA PUNKTY, GĘSI GÓRĄ), a pod nim sam powód
+- liczby z odniesieniem: dystans obok rekordu (albo znaczek REKORD!), gazety obok celu trasy; zbite szyby i zatrzymania tylko wtedy, gdy były
+- loteria tylko wtedy, gdy jest co wylosować; inaczej jedna linijka podpowiedzi
+- dwa wyjścia: JESZCZE RAZ (Enter) i MAPA TRAS (M); cały ekran pikselową czcionką gry
+
