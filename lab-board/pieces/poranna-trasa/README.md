@@ -1421,3 +1421,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - kurier konkurencji podbiera skrzynki
 - PILNE (oba poziomy Klasyka): co 14–22 s jeden abonent 35–90 m przed tobą chce gazetę na już, nad drzwiami miga czerwone PILNE!; 12 s na dowiezienie właściwego tytułu: +5
 - notka w gazecie: gazeta na już
+
+## Wersja 171: autobus nie kręci się w poprzek drogi
+
+- kierunek aut, autobusu i traktora przy zmianie pasa i powolnej jeździe ograniczony do małego odchylenia od drogi (autobus ~10°, traktor ~14°, auto ~18°): wcześniej przy wymijaniu i podjeżdżaniu autobus obracał się na środku na całą szerokość drogi i potrafił stanąć w poprzek i wyjechać za drogę
