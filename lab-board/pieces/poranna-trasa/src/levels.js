@@ -46,8 +46,8 @@ export const LEVELS = [
     goal: { time: 110, acc: .7, papers: 8 }, after: ['m2', 'm3'], tease: { head: 'Trąbka wjeżdża do miasta', text: 'Kamienicznicy pytają, czy gazeciarz z przedmieścia trafi do skrzynek w bramach. Redakcja odpowiada: trafi, jak nie pomyli klatek.', spot: 'przystanek' } },
   { id: 'm2', region: 'miasto', name: 'DZIEŃ TARGOWY', note: 'Całe miasto w drugą stronę, przez rynek pełen straganów. Tłok, autobusy, pośpiech.', finish: { to: 1, dir: -1 }, cars: 5, pace: 1.15, heat: 1.15, papers: 30, seed: 702,
     goal: { time: 175, acc: .7, papers: 11 }, after: ['m4'], tease: { head: 'Na rynku od świtu', text: 'Stragany stoją od piątej. Kwiaciarka mówi, że gazetę czyta między klientami, a klienci między straganami.', spot: 'przystanek' } },
-  { id: 'm3', region: 'miasto', name: 'BLOKOWISKO', note: 'Całe miasto, z osiedlem bloków z wielkiej płyty: długie proste, klatki jedna obok drugiej.', finish: { to: 1, dir: 1 }, cars: 5, pace: 1.2, heat: 1.1, papers: 30, seed: 703,
-    goal: { time: 165, acc: .72, papers: 11 }, after: ['m4'], tease: { head: 'Bloki czekają', text: 'Na osiedlu z wielkiej płyty każda klatka ma swoje plotki. Gazeta ma je zebrać, zanim zrobi to dozorczyni.', spot: 'budowa' } },
+  { id: 'm3', region: 'miasto', map: 'bloki', name: 'BLOKOWISKO', note: 'Własna mapa: osiedle z wielkiej płyty dookoła. Długi bulwar, zawrotka i zygzak między blokami, klatka przy klatce, więcej drzew, mniej sklepów.', finish: { to: 1, dir: 1 }, cars: 5, pace: 1.2, heat: 1.1, papers: 30, seed: 703,
+    goal: { time: 210, acc: .72, papers: 11 }, after: ['m4'], tease: { head: 'Bloki czekają', text: 'Na osiedlu z wielkiej płyty każda klatka ma swoje plotki. Gazeta ma je zebrać, zanim zrobi to dozorczyni.', spot: 'budowa' } },
   { id: 'm4', region: 'miasto', name: 'GODZINA SZCZYTU', note: 'Wkrótce: tramwaje, korki i redakcja Trąbki na końcu trasy.', soon: true, after: [] }];
 export const LEVEL = id => LEVELS.find(l => l.id === id);
 

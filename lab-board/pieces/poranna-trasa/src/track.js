@@ -39,10 +39,16 @@ export const REGION_T = {
   // tram rails, fewer street trees, no poles; round it no fields: a skyline
   miasto: { id: 'miasto', home: false, ctrl: [[0, 0, 0], [0, 0, 60], [6, 0, 100], [45, 1, 108], [100, 1, 108], [140, 1, 100], [148, 1, 60], [150, 2, 10], [158, 2, -30], [200, 2, -36], [240, 1, -40], [250, 1, -80], [244, 0, -120], [200, 0, -128], [120, 0, -126], [60, 0, -122], [8, 0, -112], [-2, 0, -60]],
     roll: .25, kerb: true, lines: true, bike: true, stops: [.12, .34, .56, .78], posts: [.46], shops: [[.3, 1], [.84, -1]], gap: [13, 1.5], houseP: 1, farms: false, city: true, market: [[.2, .28]], blocks: [[.6, .74]], trees: .3,
-    walls: ['#d8c0a8', '#e3c77e', '#c9b8a0', '#b7c29a'], roofs: ['#4a4e55', '#5a5f66', '#8e3b2c'] } };
+    walls: ['#d8c0a8', '#e3c77e', '#c9b8a0', '#b7c29a'], roofs: ['#4a4e55', '#5a5f66', '#8e3b2c'],
+    // a route's own map in the town (docs/regiony.md: each route its own streets, the region's look): what it changes of the above
+    maps: {
+      // bloki: the estate of panel blocks: a long boulevard up one side, a turn back, a zigzag between the blocks on the way down; blocks on most of it, a strip of tenements by the start
+      // and one half way round, more trees, no market
+      bloki: { ctrl: [[0, 0, 0], [0, 0, 100], [0, 1, 200], [10, 1, 290], [50, 2, 330], [100, 2, 330], [130, 1, 300], [130, 1, 240], [170, 1, 215], [210, 1, 215], [240, 0, 180], [240, 0, 100], [205, 0, 70], [160, -1, 60], [130, -1, 20], [125, -1, -40], [95, 0, -75], [45, 0, -80], [10, 0, -50]],
+        stops: [.1, .3, .55, .8], posts: [.5], shops: [[.25, 1], [.7, -1]], market: [], blocks: [[.1, .44], [.56, .94]], trees: .6 } } } };
 
-export function createTrack({ THREE, toon, tex, showcase = false, region = 'peryferia' }) {   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
-  const RG = REGION_T[region] || REGION_T.peryferia;   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
+export function createTrack({ THREE, toon, tex, showcase = false, region = 'peryferia', map = '' }) {   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
+  const RG0 = REGION_T[region] || REGION_T.peryferia, RG = RG0.maps?.[map] ? { ...RG0, ...RG0.maps[map], map } : { ...RG0, map: '' };   // (a route's own map: the region's, with its changes)   // (showcase: for the workshop; nothing merged, each house, tree, shack kept by itself in show)
   const G = new THREE.Group();
   // ---------- the line of the road ----------
   const ctrl = RG.ctrl.map(([x, y, z]) => new THREE.Vector3(x, y, z));
@@ -1082,6 +1088,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z)), net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, ROAD, KERB, PAVE };
+  return { paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z)), net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }

@@ -1136,3 +1136,9 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - poziomy, gdzie meta jest daleko od startu: bez zmian
 - skoki z menu TESTY do finału stawiają metę i finał od razu
 
+## Wersja 129: każda trasa może mieć własną mapę
+
+- trasa może mieć własną mapę w swoim regionie: ten sam klimat, inny kształt drogi, inne dzielnice i sytuacje (decyzja w docs/regiony.md); przejście na trasę z inną mapą wczytuje świat od nowa, tak jak zmiana regionu
+- pierwsza własna mapa: m3 BLOKOWISKO jedzie po osiedlu z wielkiej płyty (1,1 km): długi bulwar, zawrotka na górze, zygzak między blokami w drodze w dół, bloki prawie wszędzie, kamienice tylko przy starcie i w połowie, więcej drzew, bez rynku; limit czasu na gwiazdki 210 s
+- m1 i m2 dalej na mapie bazowej miasta; kolejne mapy: noc na blokowisku, potem wieś, Druga strona i peryferie
+
