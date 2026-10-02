@@ -1271,6 +1271,7 @@ function localEvent(e) { director.poke();
   if (e.kind === 'owner') { logEv('owner_kick', B.x, B.z); hud.impact(e.p.g.position.clone().add(new THREE.Vector3(0, 1.2, 0)), 'KOP!'); crash(Math.random() < .5 ? -1 : 1); flash('Dogonił cię za tę szybę. Następnym razem dociśnij gazu!'); }
   if (e.kind === 'leash') { B.v *= .4; B.jolt = .25; B.leanV += (Math.random() < .5 ? -1 : 1) * 3; logEv('leash', B.x, B.z); }
   if (e.kind === 'ball') { B.v *= .7; B.jolt = .18; hud.pop(rider.root.position.clone().add(new THREE.Vector3(0, 1.8, 0)), 'PIŁKA!', '#f6f3ea'); }
+  if (e.kind === 'pts') { score(e.n, rider.root.position.clone().add(new THREE.Vector3(0, 2.1, 0)), e.text, '#efc970'); audio.play('trick'); }
   if (e.kind === 'gull') { const at = rider.root.position.clone().add(new THREE.Vector3(0, 2.1, 0)); if (e.ok) { score(2, at, 'UNIK MEWY! +2', '#efc970'); audio.play('trick'); }
     else if (B.papers > 0) { B.papers--; syncMix(); hud.pop(at, 'MEWA ZABRAŁA GAZETĘ! -1', '#cf5a3e'); audio.play('kick', { vol: .3 }); } }
   if (e.kind === 'flock') { score(1, e.at.clone().add(new THREE.Vector3(0, 1.6, 0)), e.text, '#f6f3ea'); }
