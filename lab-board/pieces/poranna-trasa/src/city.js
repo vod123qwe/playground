@@ -65,6 +65,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
         stairs.push({ fx, z: zd, box: letterbox(g, fx, s, zl), wins: [{ y: 1.65, z: wz, w: wl, h: 2.3 }] }); } }
     else { const shopZ = (z0 + z1) / 2; g.add(box(.1, 3, 2.6, dark, fx + s * .03, 1.5, shopZ), box(.14, .4, 3, M('#efe8dc'), fx + s * .06, 3.1, shopZ)); }   // (a gate to the yard)
     put(g, i, s * (PAVE + .4 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 1, W / 2 + .5);
+    if (!night && rnd() < .12) { g.updateMatrixWorld(true); const front = g.localToWorld(new THREE.Vector3(fx, 0, 0)), n = new THREE.Vector3(s, 0, 0).transformDirection(g.matrixWorld).setY(0).normalize(); scaffolds.push({ i, s, W, H, front, n }); }   // (under scaffolding: the network puts it up)
     register(g, i, s, stairs, reg); return g; }
 
   // ---------- a block of flats of big panels: five floors, set back behind a lawn, three stairwells ----------
@@ -98,5 +99,6 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#5a5f66' })); m.userData.noShadow = true; m.renderOrder = 1; G.add(m); }
 
-  return { townBox, tenement, block, stalls, skyline, rails };
+  const scaffolds = [];
+  return { townBox, tenement, block, stalls, skyline, rails, scaffolds };
 }

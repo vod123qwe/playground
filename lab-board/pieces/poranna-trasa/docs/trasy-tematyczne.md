@@ -70,7 +70,7 @@ Wielka płyta, ciemne przejścia, graffiti. Surowo, a w nocy groźnie. Własny b
 
 | Trasa | Jazda | Rzut | Ludzie i historie | Klimat | Ocena |
 | --- | --- | --- | --- | --- | --- |
-| Blokowisko | długi bulwar, zawrotka, zygzak między blokami | klatka przy klatce, wysokie balkony | dozorczyni, dzieci z piłką, emeryt z okna | dzień | ★★ (jest jako m3, przeniesie się tu) |
+| Blokowisko (jest, w Bronksie od v134) | długi bulwar, zawrotka, zygzak między blokami | klatka przy klatce, wysokie balkony | dozorczyni, dzieci z piłką, emeryt z okna | dzień | ★★ (jest jako m3, przeniesie się tu) |
 | Noc na blokowisku (jest, v131) | ciemno, latarnie co kawałek (część mruga), szkło i dziury | po ciemku, bez znaczników z daleka | cwaniacy pod klatką (docinki, zaczepki, bójka), bezdomny na materacu | latarnie, świecące okna | ★★★ |
 | Garaże | labirynt boksów garażowych, wąsko, ślepe zaułki | do boksów, gdzie ktoś dłubie przy aucie | mechanik amator, handlarz „z bagażnika” | blacha, neon | ★★★ |
 | Pętla autobusowa | nocne autobusy, kioski 24h, wiata pełna ludzi | do kiosku, do okna nocnego autobusu | kierowca nocnego, kioskarka | sodowe lampy | ★★ |
