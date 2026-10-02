@@ -5,7 +5,7 @@
 // update(dt, R) → a person he rode into, or null; R: { x, z, v, d (his offset from the road's middle), busy }
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-export function createPedestrians({ THREE, toon, track, seed = 21 }) {
+export function createPedestrians({ THREE, toon, track, seed = 21, copies = 1 }) {   // (copies: each kind of person this many times; the copies dressed otherwise)
   let a = seed; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const { S, N, ds, len } = track, MID = 5.8;                          // (the pavement's middle, off the road's)
   const T = c => toon(c), EYE = T('#17181b');
@@ -54,12 +54,13 @@ export function createPedestrians({ THREE, toon, track, seed = 21 }) {
 
   // ---------- the people ----------
   const G = new THREE.Group(), list = [], loader = new GLTFLoader();
-  TYPES.forEach((P, k) => {
-    const p = { P, G: new THREE.Group(), s: (k + rnd() * .5) / TYPES.length * len, dir: rnd() < .5 ? 1 : -1, side: rnd() < .5 ? 1 : -1, v: P.v * (.92 + rnd() * .16), off: 0, turnT: 12 + rnd() * 25, x: 0, z: 0, cool: 0, ph: 0, ready: false };
+  const ALL = Array.from({ length: copies }, (_, c) => TYPES.map(P => ({ P, c }))).flat();
+  ALL.forEach(({ P, c }, k) => {
+    const p = { P, G: new THREE.Group(), s: (k + rnd() * .5) / ALL.length * len, dir: rnd() < .5 ? 1 : -1, side: rnd() < .5 ? 1 : -1, v: P.v * (.92 + rnd() * .16), off: 0, turnT: 12 + rnd() * 25, x: 0, z: 0, cool: 0, ph: 0, ready: false };
     G.add(p.G); list.push(p); p.pr = props(P, p.G);
     loader.load(`assets/export/${P.key}.glb`, gltf => {
-      const m = gltf.scene; p.G.add(m);
-      m.traverse(o => { if (o.isMesh) { const om = o.material, cut = om.transparent || om.alphaTest > 0; o.material = toon(om.color.clone(), { map: om.map || null, ...(cut ? { alphaTest: .5, side: THREE.DoubleSide } : {}) });   // (the game's own toon; the clothes' pictures kept; hair and brows cut out)
+      const m = gltf.scene; p.G.add(m); const hue = (rnd() - .5) * .5, lit = (rnd() - .5) * .22; if (c) m.scale.setScalar(.93 + rnd() * .14);   // (a copy: its own height, its clothes and hair in other colours)
+      m.traverse(o => { if (o.isMesh) { const om = o.material, cut = om.transparent || om.alphaTest > 0; const col = om.color.clone(); if (c && !/skin|body|eye|teeth|tongue|brow|lash/i.test(om.name + o.name)) col.offsetHSL(hue, 0, lit); o.material = toon(col, { map: om.map || null, ...(cut ? { alphaTest: .5, side: THREE.DoubleSide } : {}) });   // (the game's own toon; the clothes' pictures kept; hair and brows cut out)
         o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
       const bone = n => m.getObjectByName(n);
       p.bones = { handL: bone('hand_l'), handR: bone('hand_r'), foreL: bone('lowerarm_l'), foreR: bone('lowerarm_r') };
