@@ -749,7 +749,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const plots = createPlots({ THREE, toon, tex, P, box, rep, hit, put, zone, things, seats, show, ramps, PAVE, rnd: pr, puddle, settle, groundAt }), plotOrder = [...plots.kinds].sort(() => pr() - .5); let plotK = 0;
   const farmLots = [], fieldLots = []; const whLast = {};
   // (the estate: warehouses on their stretches, a site now and then; its road works and cranes further down)
-  const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211) }) : null;
+  const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211), doors, mailboxes }) : null;
   const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked, townBox: s => CITY.townBox(s), scaffoldsOf: () => CITY.scaffolds, probe, stops, night: !!RG.night, tourist: !!RG.tourist, cen: { x: CEN.x, z: CEN.z, r: REACH } }) : null;   // (the town's other streets: shortcuts, side streets)
   const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G , night: !!RG.night , tourist: !!RG.tourist , walls: RG.tourist ? RG.walls : null , P }) : null, cityLast = {};
   const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;

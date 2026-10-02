@@ -21,6 +21,7 @@ import { createDogs } from './dogs.js';
 import { createBronx } from './bronx.js';
 import { createTourist } from './tourist.js';
 import { createIndustry } from './industry.js';
+import { createDirector } from './director.js';
 import { createHud } from './hud.js';
 import { createGranny } from './granny.js';
 import { createTouch } from './touch.js';
@@ -155,6 +156,7 @@ const dogs = createDogs({ THREE, toon, probe: track.probe });
 const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });
 // (the locals of a route's own map: the Bronx after dark (its lads, glass, bins, the engineer); the tourist quarter (its tourists, the guide, picnics, skaters))
+const director = createDirector({ THREE, toon, track, scene });   // (something always going on: a small thing on the road ahead when nothing has happened a while)
 const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : null;
 // what by the road answers a kick: mailboxes (three and it is off its post), poles, trees and bushes (their leaves), swings, cones
 const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => audio.play(n, o) }, makeDog: (c, sz) => dogs.makeDog(c, sz), say: (at, t) => hud.rant(at, t, false),
@@ -1159,7 +1161,7 @@ const WORK_LINES = { mason: ['Cegła po cegle. Jak w życiu, tylko w życiu szyb
   annoyed: ['Idź już, robota czeka.', 'Kierownik patrzy, spadaj.', 'No idź, bo nas zgłoszą, że stoimy.'] };
 const MASON_SHOUT = ['UWAGA, CEGŁA!', 'NA DOLE! GÓRA IDZIE!', 'NIE STÓJ POD RUSZTOWANIEM!', 'ZEJDŹ Z CHODNIKA, MŁODY!'];
 // a brick off a scaffold: a word from above as it goes; it lands: on him (down he goes), or by him (a crack and the dust)
-function netEvent(e) {
+function netEvent(e) { director.poke();
   if (e.kind === 'brickWarn') { const w = (track.net?.workers || []).filter(q => q.kind === 'mason').sort((a, b) => a.g.position.distanceToSquared(e.at) - b.g.position.distanceToSquared(e.at))[0]; if (w) hud.rant(w.g.position, pickOf(['UWAGA!', 'CEGŁA!', 'OJEJ!', 'ŁAP... NIE, NIE ŁAP!']), true, 1.95 + w.y); }
   if (e.kind === 'brick') { logEv('brick', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Cegła z rusztowania! Pod rusztowaniem patrz na cień na chodniku.'); }
   if (e.kind === 'brickMiss') audio.play('land', { vol: .6 }); }
@@ -1168,7 +1170,13 @@ const WORK_PAPER = ['O, GAZETA! PRZERWA!', 'DZIĘKI! BĘDZIE CO CZYTAĆ!', 'EJ! 
 // the estate's lads and the engineer (the Bronx): spoken to, each in his own way; what happens to him there at night
 function localTalk(me) { if (!locals) return false; let p = null, bd = 2.8; for (const q of locals.people) { if (!q.g) continue; const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; p = q; } } if (!p) return false;
   hud.rant(me.mouth, pickOf(TALK), true); const text = locals.talk(p); setTimeout(() => hud.rant(p.g.position.clone().add(new THREE.Vector3(0, 1.9, 0)), text), 800); return true; }
-function localEvent(e) {
+// the director's small things: a word from whoever is there, a bounce, a fall
+function dirEvent(e) {
+  if (e.kind === 'shout' && e.at) hud.rant(e.at, e.text, true);
+  if (e.kind === 'flap') audio.play('rustle', { vol: .4 });
+  if (e.kind === 'wobble') { B.v *= .6; B.jolt = .2; if (e.at) hud.impact(e.at, e.text); }
+  if (e.kind === 'crash') { if (e.at) hud.impact(e.at, e.text); if (e.text === 'DRZWI!') logEv('dooring', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); } }
+function localEvent(e) { director.poke();
   if (e.kind === 'bump') { B.v *= .35; B.jolt = .2; hud.rant(e.p.g.position, pickOf(['UWAŻAJ!', 'OJ!', 'SORRY!', 'MOJA KAMERA!']), true, 1.95); logEv('bump_' + locals.id, B.x, B.z); }
   if (e.kind === 'shout' && e.p?.g) hud.rant(e.p.g.position, e.text, true, 1.95);
   if (e.kind === 'catch') { if (e.p?.g) hud.rant(e.p.g.position, e.text, true, 1.95); logEv('cwaniak_catch', B.x, B.z); if (!foot.active) crash(Math.random() < .5 ? -1 : 1); else flash('Dogonili cię. Na szczęście tylko gadają.'); }
@@ -1754,7 +1762,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'reverse', 'train_jump', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'kick_tourist', 'tourist_paper', 'cwaniak_catch', 'glass', 'tyre', 'brick', 'load', 'forklift', 'reverse', 'train_jump', 'dooring', 'kick_industry', 'industry_paper', 'homeless_paper', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }
@@ -1902,7 +1910,8 @@ function frame(now) {
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
-  drift(dt); stepNight(B.x, B.z); stepBlood(Math.min(dt, .05)); if (locals) for (const e of locals.update(Math.min(dt, .05), { x: foot.active ? foot.me?.x ?? B.x : B.x, z: foot.active ? foot.me?.z ?? B.z : B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint })) localEvent(e); { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? { x: foot.me?.x ?? B.x, z: foot.me?.z ?? B.z, v: 0, vs: 0, yaw: 0, foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), vs: B.v, yaw: B.yaw, foot: false }); if (sh) hud.rant(sh.g.position, pickOf(sh.kind === 'mason' ? MASON_SHOUT : WORK_SHOUT), true, 1.95 + sh.y);
+  drift(dt); stepNight(B.x, B.z); stepBlood(Math.min(dt, .05));
+  for (const e of director.update(Math.min(dt, .05), { x: B.x, z: B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint, busy: !!B.crash || !LV || (FIN.on && FIN.entered) || CROSS.some(X => Math.hypot(X.center.x - B.x, X.center.z - B.z) < 50) })) dirEvent(e); if (locals) for (const e of locals.update(Math.min(dt, .05), { x: foot.active ? foot.me?.x ?? B.x : B.x, z: foot.active ? foot.me?.z ?? B.z : B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint })) localEvent(e); { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? { x: foot.me?.x ?? B.x, z: foot.me?.z ?? B.z, v: 0, vs: 0, yaw: 0, foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), vs: B.v, yaw: B.yaw, foot: false }); if (sh) hud.rant(sh.g.position, pickOf(sh.kind === 'mason' ? MASON_SHOUT : WORK_SHOUT), true, 1.95 + sh.y);
     for (const e of track.net?.events?.splice(0) || []) netEvent(e); } life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
   { const q0 = track.probe(B.x, B.z, B.hint); audio.ride(foot.active || menu.open ? 0 : Math.abs(B.v), Math.abs(q0.d) > track.PAVE ? 1 : 0); }
@@ -1915,5 +1924,17 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, FIN, CROSS, stepRivals, lateFinish, stepNight, locals, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+// (for the tests: how much there is along the route, per 25 m: the subscribers' doors, the things to ride or dodge or kick, the people
+// standing about; the longest stretches without a subscriber, and without anything at all)
+function dynAudit() { const N = track.N, ds = track.ds, bin = Math.max(1, Math.round(25 / ds)), nb = Math.ceil(N / bin), z = () => new Array(nb).fill(0), subs = z(), feats = z(), folk = z(), at = i => Math.floor((((i % N) + N) % N) / bin) % nb;
+  const near = (x, zz) => { const q = track.probe(x, zz, -1); return Math.abs(q.d) < 16 ? at(q.i) : -1; };
+  for (const d of track.doors) if (d.sub) { const k = near(d.p.x, d.p.z); if (k >= 0) subs[k]++; }
+  for (const C of track.ramps || []) if (!C.used) feats[at(C.i)]++;
+  for (const T of track.things || []) { const o = T.o, p = o?.getWorldPosition ? o.getWorldPosition(new THREE.Vector3()) : null; if (!p || T.kind === 'mailbox') continue; const k = near(p.x, p.z); if (k >= 0) feats[k]++; }
+  for (const X of CROSS) feats[at(track.probe(X.center.x, X.center.z, -1).i)] += 3;
+  for (const P of [...(locals?.people || []), ...(track.net?.workers || []), ...residents.list.map(r => ({ x: r.G.position.x, z: r.G.position.z }))]) { const k = near(P.x, P.z); if (k >= 0) folk[k]++; }
+  const run = f => { let best = 0, cur = 0; for (let k = 0; k < nb * 2; k++) { if (f(k % nb)) { cur++; best = Math.max(best, cur); } else cur = 0; } return Math.min(best, nb) * bin * ds | 0; };
+  const nSub = subs.reduce((a, b) => a + b, 0);
+  return { len: track.len | 0, subsPer100m: +(nSub / track.len * 100).toFixed(1), feats: feats.reduce((a, b) => a + b, 0), folk: folk.reduce((a, b) => a + b, 0), noSubM: run(k => !subs[k]), quietM: run(k => !feats[k] && !folk[k]), emptyM: run(k => !subs[k] && !feats[k] && !folk[k]) }; }
+window.PT = { THREE, FIN, CROSS, stepRivals, lateFinish, stepNight, locals, dynAudit, director, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };
