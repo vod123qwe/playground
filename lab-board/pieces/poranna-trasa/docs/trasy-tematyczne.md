@@ -103,6 +103,11 @@ Las, góry w tle, jezioro, kampery. Cicho, dziko, piękne światło.
 - Biomy dokładają nowe zasady i przeszkody, a niektóre znikają: wszystko dopasowane do biomu. Gdy trzeba, tworzymy nowe przeszkody, postacie, auta i tramwaje.
 - Fabuła i postacie: `fabula.md`.
 
+## Do balansu (zgłoszone przez Jarka)
+
+- **Za mało skrzynek w mieście nocą** (02.10.2026). Bloki stoją daleko od drogi, a znaczniki nocą widać tylko z bliska, więc są odcinki bez celu do rzutu. Do zrobienia: więcej celów przy drodze (kioski, nocne sklepiki, skrzynki na słupkach przy blokach, oświetlone klatki bliżej jezdni) i przeliczenie gęstości abonentów na trasę.
+- **Chodniki pełniejsze** (02.10.2026): ławki, kosze, stojaki z reklamami, stojaki z gazetami, deski do skakania, a w nocy opony, bezdomny, imprezowicze, sklepiki i kioski. Pierwsza partia jest w v131, dalej rozbudowywać.
+
 ## Otwarte decyzje
 
 - „Ucieczka” w Bronksie: czy pościg nie zabiera roznoszenia? Do decyzji przy projektowaniu tej trasy.

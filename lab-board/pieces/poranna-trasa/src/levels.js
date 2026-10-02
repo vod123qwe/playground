@@ -10,6 +10,7 @@ export const REGIONS = [
   { id: 'wies', name: 'WIEŚ', note: 'Polne drogi, gospodarstwa, górki i błoto. Gęsi nie ustępują.', col: '#c9b25a', built: true },
   { id: 'peryferia2', name: 'DRUGA STRONA', note: 'Nowe osiedle za torami. Budowy, roboty drogowe, magazyny.', col: '#9aa36a', built: true },
   { id: 'miasto', name: 'MIASTO', note: 'Kamienice, rynek, bloki, tramwaj. Krawężniki i duży ruch.', col: '#b8a090', built: true },
+  { id: 'bronx', name: 'BRONX', note: 'Wielka płyta po zmroku. Latarnie, cwaniacy pod klatkami, szkło na drodze, ciemne przejścia.', col: '#5a5f78', built: true },
   { id: 'las', name: 'LEŚNA DROGA', note: 'Ścieżki między drzewami, domki letniskowe, namioty.', col: '#4f8a52', built: false },
   { id: 'dalej', name: '???', note: 'Jeszcze dalej. Inny teren.', col: '#6a6f78', built: false }];
 
@@ -47,7 +48,9 @@ export const LEVELS = [
   { id: 'm2', region: 'miasto', name: 'DZIEŃ TARGOWY', note: 'Całe miasto w drugą stronę, przez rynek pełen straganów. Tłok, autobusy, pośpiech.', finish: { to: 1, dir: -1 }, cars: 5, pace: 1.15, heat: 1.15, papers: 30, seed: 702,
     goal: { time: 175, acc: .7, papers: 11 }, after: ['m4'], tease: { head: 'Na rynku od świtu', text: 'Stragany stoją od piątej. Kwiaciarka mówi, że gazetę czyta między klientami, a klienci między straganami.', spot: 'przystanek' } },
   { id: 'm3', region: 'miasto', map: 'bloki', name: 'BLOKOWISKO', note: 'Własna mapa: osiedle z wielkiej płyty dookoła. Długi bulwar, zawrotka i zygzak między blokami, klatka przy klatce, więcej drzew, mniej sklepów.', finish: { to: 1, dir: 1 }, cars: 5, pace: 1.2, heat: 1.1, papers: 30, seed: 703,
-    goal: { time: 210, acc: .72, papers: 11 }, after: ['m4'], tease: { head: 'Bloki czekają', text: 'Na osiedlu z wielkiej płyty każda klatka ma swoje plotki. Gazeta ma je zebrać, zanim zrobi to dozorczyni.', spot: 'budowa' } },
+    goal: { time: 210, acc: .72, papers: 11 }, after: ['m4', 'b1'], tease: { head: 'Bloki czekają', text: 'Na osiedlu z wielkiej płyty każda klatka ma swoje plotki. Gazeta ma je zebrać, zanim zrobi to dozorczyni.', spot: 'budowa' } },
+  { id: 'b1', region: 'bronx', name: 'NOC NA BLOKOWISKU', note: 'Osiedle po zmroku. Latarnie co kawałek, część mruga, w przejściach między blokami ciemno. Znaczniki widać z bliska albo pod latarnią.', finish: { to: 1, dir: 1 }, cars: 2, pace: 1, heat: 1.1, papers: 26, seed: 801,
+    goal: { time: 190, acc: .65, papers: 9 }, after: [], tease: { head: 'Na osiedlu nie śpią', text: 'Mieszkańcy bloków skarżą się, że gazeta przychodzi, kiedy już nikt nie czyta. Redakcja odpowiada: to przyjedziemy wcześniej. Po ciemku.', spot: 'przystanek' } },
   { id: 'm4', region: 'miasto', name: 'GODZINA SZCZYTU', note: 'Wkrótce: tramwaje, korki i redakcja Trąbki na końcu trasy.', soon: true, after: [] }];
 export const LEVEL = id => LEVELS.find(l => l.id === id);
 

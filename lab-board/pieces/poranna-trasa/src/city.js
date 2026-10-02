@@ -7,18 +7,18 @@
 // them), letterboxes (in one: the most). A lot's front faces the road: local +x on the right side of it (s = +1), local -x on the left.
 // createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G }) → { tenement(i, s), block(i, s), stalls(i, s), skyline(cx, cz), rails() }
 
-export function createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G }) {
+export function createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G, night = false }) {
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); f(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
   // a 3 x 5 pixel font for the signs (the game's own font may not be loaded yet when the world is built)
   const F = { A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010', K: '101110100110101', L: '100100100100111', M: '101111111101101',
     N: '110101101101101', O: '010101101101010', P: '110101110100100', R: '110101110110101', S: '011100010001110', T: '111010010010010', U: '101101101101111', W: '101101111111101', Y: '101101010010010', Z: '111001010100111', Ł: '100110100100111', Ó: '010010101101010', Ż: '010111001010111', ' ': '000000000000000', '.': '000000000000010',
     0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111' };
   const sign = (text, bg, fg) => cv(text.length * 4 + 3, 9, g => { g.fillStyle = bg; g.fillRect(0, 0, text.length * 4 + 3, 9); g.fillStyle = fg; [...text].forEach((ch, k) => { const r = F[ch] || F[' ']; for (let q = 0; q < 15; q++) if (r[q] === '1') g.fillRect(2 + k * 4 + q % 3, 2 + (q / 3 | 0), 1, 1); }); });
-  const M = c => toon(c), glass = M('#3f5566'), glassLit = M('#c9b77a'), frame = M('#f0ece2'), dark = M('#2a2c30'), roofM = M('#4a4e55'), stone = M('#8a857a');
+  const M = c => toon(c), glass = M('#3f5566'), glassLit = night ? new THREE.MeshBasicMaterial({ color: '#ffcf7a' }) : M('#c9b77a'), shopLit = new THREE.MeshBasicMaterial({ color: '#fff0c4' }), porchLit = new THREE.MeshBasicMaterial({ color: '#ffe0a0' }), frame = M('#f0ece2'), dark = M('#2a2c30'), roofM = M('#4a4e55'), stone = M('#8a857a');
   const SHOPS = [['PIEKARNIA', '#8e5a2e'], ['APTEKA', '#3f6b35'], ['KIOSK RUCH', '#b3372c'], ['KWIACIARNIA', '#467537'], ['FRYZJER', '#2f4a6e'], ['BAR MLECZNY', '#8e2e25'], ['ZEGARMISTRZ', '#44484c'], ['SPOŻYWCZY', '#3b5670'], ['OBUWIE', '#6b4a2e']];
   const WALLS = ['#d8c0a8', '#e3c77e', '#c9b8a0', '#b7c29a', '#d8b8a0', '#a9bccb', '#cfc4b4', '#e8dcc0', '#c98a6a'];
   // a window on a facade: glass in a white frame, a sill under it; registered when low enough to break (fx: the facade's x, sg: its side)
-  function win(g, fx, sg, y, z, w = 1.1, h = 1.4, lit = false, reg = null) { const o = sg * .03;
+  function win(g, fx, sg, y, z, w = 1.1, h = 1.4, lit = false, reg = null) { const o = sg * .03; if (night && !lit && rnd() < .3) lit = true;
     g.add(box(.06, h + .16, w + .16, frame, fx + o, y, z), box(.08, h, w, lit ? glassLit : glass, fx + o * 1.5, y, z), box(.18, .08, w + .3, stone, fx + sg * .09, y - h / 2 - .1, z));
     if (reg) reg.push({ y, z, w, h }); }
   // the letterbox on the wall by a stairwell's door: a little steel box with its flap (the flag the game turns when a paper is in)
@@ -52,7 +52,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     if (rnd() < .9) { const nS = run > 8.4 && rnd() < .5 ? 2 : 1;
       for (let k = 0; k < nS; k++) { const [name, col] = SHOPS[rnd() * SHOPS.length | 0], L = run / nS - .4, zc = z0 + (z1 - z0) * (k + .5) / nS, shopZ = zc, W2 = L;
         const zd = zc + dz * (L / 2 - .55), zl = zc + dz * (L / 2 - 1.55), wl = L - 2.2, wz = zc - dz * 1.1;
-        g.add(box(.1, 2.3, wl, glass, fx + s * .04, 1.65, wz), box(.12, .1, L + .2, frame, fx + s * .06, 2.85, zc), box(.12, .5, wl + .2, M(col), fx + s * .06, .25, wz));
+        g.add(box(.1, 2.3, wl, night && rnd() < .35 ? shopLit : glass, fx + s * .04, 1.65, wz), box(.12, .1, L + .2, frame, fx + s * .06, 2.85, zc), box(.12, .5, wl + .2, M(col), fx + s * .06, .25, wz));
         for (let q = 1; q < Math.round(wl / 1.6); q++) g.add(box(.12, 2.3, .07, frame, fx + s * .06, 1.65, wz - wl / 2 + q * wl / Math.round(wl / 1.6)));   // (the window's mullions)
         g.add(box(.08, 2.3, 1, M('#2f3e4a'), fx + s * .05, 1.15, zd), box(.1, .08, 1.1, frame, fx + s * .06, 2.34, zd));
         const sg = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(L, name.length * .42 + .4), .62), new THREE.MeshBasicMaterial({ map: sign(name, col, '#f6f3ea') })); sg.position.set(fx + s * .09, 3.3, zc); sg.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(sg);
@@ -72,7 +72,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     const band = [M('#cf8a5e'), M('#7fa6b3'), M('#9fb36a')][rnd() * 3 | 0], reg = [];
     for (let f = 0; f < fl; f++) for (let c = 0; c < 10; c++) { const z = -W / 2 + (c + .5) * W / 10, y = 1.6 + f * 2.8; if (f === 0 && c % 3 === 1) continue; win(g, fx, s, y, z, 1.4, 1.3, rnd() < .1, f <= 1 ? reg : null); }
     for (let f = 1; f < fl; f++) g.add(box(1.1, .9, W * .9, band, fx + s * .55, .6 + f * 2.8, 0));   // (the balconies' bands)
-    const stairs = []; for (const z of [-W / 3, 0, W / 3]) { g.add(box(.1, 2.3, 1.4, M('#5a5f66'), fx + s * .05, 1.15, z), box(1.4, .15, 2, M('#9aa0a4'), fx + s * .7, 2.5, z)); stairs.push({ fx, z, box: letterbox(g, fx, s, z + 1.2) }); }
+    const stairs = []; for (const z of [-W / 3, 0, W / 3]) { g.add(box(.1, 2.3, 1.4, M('#5a5f66'), fx + s * .05, 1.15, z), box(1.4, .15, 2, M('#9aa0a4'), fx + s * .7, 2.5, z)); if (night) g.add(box(.3, .1, .5, porchLit, fx + s * .9, 2.4, z)); stairs.push({ fx, z, box: letterbox(g, fx, s, z + 1.2) }); }
     put(g, i, s * (PAVE + 7 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 7, W / 2 + 1);
     register(g, i, s, stairs, reg); return g; }
 
@@ -85,10 +85,10 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     put(g, i, s * (PAVE + 2.2), 0, 0); hit(g, { hx: .8, hz: 4.8, h: 1.2, kind: 'hard' }, i); zone(g, 1.6, 5.4); return g; }
 
   // ---------- the skyline: towers of flats, a church's spire, a TV mast, far out round the loop ----------
-  function skyline(cx, cz) { const tw = M('#9aa3ad'), tw2 = M('#b3b8bd'), sp = M('#4a5a62');
-    for (let k = 0; k < 70; k++) { const a = k / 70 * 6.283 + rnd() * .08, R = (k % 2 ? 175 : 235) + rnd() * 55, h = 18 + rnd() * (k % 2 ? 26 : 40), w = 12 + rnd() * 16, o = box(w, h, 12 + rnd() * 8, rnd() < .5 ? tw : tw2, cx + Math.cos(a) * R, h / 2 - 2, cz + Math.sin(a) * R); o.rotation.y = a; G.add(o); }
-    { const a = rnd() * 6.283, R = 210, x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; G.add(box(9, 30, 9, M('#c9b8a0'), x, 15, z)); const c = new THREE.Mesh(new THREE.ConeGeometry(5, 18, 4), sp); c.position.set(x, 39, z); c.rotation.y = Math.PI / 4; G.add(c); }
-    { const a = rnd() * 6.283, R = 300, x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; G.add(box(2.4, 90, 2.4, M('#cf5a3e'), x, 45, z), box(5, 4, 5, M('#f6f3ea'), x, 70, z)); } }
+  function skyline(cx, cz, r0 = 175) { const tw = M('#9aa3ad'), tw2 = M('#b3b8bd'), sp = M('#4a5a62');
+    for (let k = 0; k < 70; k++) { const a = k / 70 * 6.283 + rnd() * .08, R = r0 + (k % 2 ? 0 : 60) + rnd() * 55, h = 18 + rnd() * (k % 2 ? 26 : 40), w = 12 + rnd() * 16, o = box(w, h, 12 + rnd() * 8, rnd() < .5 ? tw : tw2, cx + Math.cos(a) * R, h / 2 - 2, cz + Math.sin(a) * R); o.rotation.y = a; G.add(o); }
+    { const a = rnd() * 6.283, R = r0 + 35, x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; G.add(box(9, 30, 9, M('#c9b8a0'), x, 15, z)); const c = new THREE.Mesh(new THREE.ConeGeometry(5, 18, 4), sp); c.position.set(x, 39, z); c.rotation.y = Math.PI / 4; G.add(c); }
+    { const a = rnd() * 6.283, R = r0 + 125, x = cx + Math.cos(a) * R, z = cz + Math.sin(a) * R; G.add(box(2.4, 90, 2.4, M('#cf5a3e'), x, 45, z), box(5, 4, 5, M('#f6f3ea'), x, 70, z)); } }
 
   // ---------- the tram's rails: two pairs, one in each lane, a steel strip and its groove ----------
   function rails() { const pos = [], idx = []; let n = 0; const strip = (d0, d1, y) => { for (let i = 0; i < N; i++) { const a = S[i], b = S[(i + 1) % N]; for (const [s0, d] of [[a, d0], [a, d1], [b, d0], [b, d1]]) pos.push(s0.p.x + s0.r.x * d, s0.p.y + y, s0.p.z + s0.r.z * d); idx.push(n, n + 1, n + 2, n + 1, n + 3, n + 2); n += 4; } };

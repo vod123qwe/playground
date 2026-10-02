@@ -18,6 +18,7 @@ import { createTextures } from './textures.js';
 import { createBackdrop } from './backdrop.js';
 import { createTraffic } from './traffic.js';
 import { createDogs } from './dogs.js';
+import { createBronx } from './bronx.js';
 import { createHud } from './hud.js';
 import { createGranny } from './granny.js';
 import { createTouch } from './touch.js';
@@ -144,20 +145,21 @@ drift(0);
 // (?audit: nothing merged, for the ground check, see track.audit)
 const REGION = new URLSearchParams(location.search).get('region') || 'peryferia', MAPA = new URLSearchParams(location.search).get('mapa') || '';   // (a region's world: built for it; another region: the page loads again)
 const track = createTrack({ THREE, toon, tex: createTextures({ THREE }), showcase: new URLSearchParams(location.search).has('audit'), region: REGION, map: MAPA }); track.dapSun.value.copy(SUN); scene.add(track.group);
-const backdrop = createBackdrop({ THREE, city: track.region === 'miasto' }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
+const backdrop = createBackdrop({ THREE, city: track.city, night: track.night }); backdrop.position.set(track.centre.x, 16, track.centre.z); scene.add(backdrop);   // (the lake and the town, all round)
 // the village's geese (geese.js): on the verges, across the road when a bike comes
 const geese = track.region === 'wies' ? createGeese({ THREE, scene, track, toon }) : null;
 const traffic = createTraffic({ THREE, track, cars: track.cars, n: 6, makeRider: () => createRider({ THREE, ramp, toon }), bikes: 2 }); scene.add(traffic.group);   // (cars, and now and then a cyclist coming the other way)
 const dogs = createDogs({ THREE, toon, probe: track.probe });
 const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });
+const bronx = track.night ? createBronx({ THREE, toon, track, scene, residents }) : null;   // (the estate after dark: its lads, glass, bins, the engineer)
 // what by the road answers a kick: mailboxes (three and it is off its post), poles, trees and bushes (their leaves), swings, cones
 const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => audio.play(n, o) }, makeDog: (c, sz) => dogs.makeDog(c, sz), say: (at, t) => hud.rant(at, t, false),
   onLoot: T => { shop.grant(T.item, T.tier); audio.play('pick'); flash(T.label + '! Zamontowane. Właściciel się nie dowie... chyba'); B.fame = (B.fame || 0) + 1; setTimeout(() => hud.rant(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'EJ! MOJE PRZERZUTKI!!!', false), 1600); witness?.(T.x, T.z); },
   onShrine: T => { B.fame = (B.fame || 0) + .5; hud.rant(new THREE.Vector3(T.x + 1, T.y + 1.8, T.z), pickOf(['OBRAZA BOSKA!', 'JEZUS MARIA, CO TY ROBISZ?!', 'POKUTA CIĘ NIE MINIE!']), false); },
   onBreak: T => { B.fame = (B.fame || 0) + .4; hud.pop(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'SKRZYNKA!', '#cf5a3e'); witness?.(T.x, T.z); } });   // (people sitting out in their gardens)                         // (a hydrant knocked or kicked)
 // (the town busier: each kind of walker three times, the estate twice)
-const peds = createPedestrians({ THREE, toon, track, copies: track.region === 'miasto' ? 3 : track.region === 'peryferia2' ? 2 : 1 }); scene.add(peds.group);
+const peds = createPedestrians({ THREE, toon, track, copies: track.night ? 1 : track.city ? 3 : track.region === 'peryferia2' ? 2 : 1 }); scene.add(peds.group);
 // a word with people, and the errands that come of it (talk.js: the box; quests.js: who wants what, and what came of it)
 const audio = createAudio();
 // a sound out in the world: as loud as it is near the camera, from its side
@@ -201,7 +203,7 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
 const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
-  const dogRate = track.region === 'miasto' ? .04 : track.region === 'peryferia2' ? .1 : .2;
+  const dogRate = track.city ? .04 : track.region === 'peryferia2' ? .1 : .2;
   for (const d of track.doors) if (r() < dogRate) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
 let rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
 // his other bikes, by the garage at home: one leant there, one upside down, its front wheel off (being mended)
@@ -657,6 +659,26 @@ function bodyHit(list, p, r) {
     if (top - (p.y - r) < .22) p.y = top + r; else { p.x += h.nx * h.pen; p.z += h.nz * h.pen; } }   // (near its top: onto it; else: against its side)
   return hit;
 }
+// ---------- the night (a region's: the estate after dark): the sky dark with stars and the moon, the fog dark blue, the light low and
+// cold, the clouds dim; the papers glow a little in flight; a few real lights go with him from lamp to lamp (the nearest heads), the
+// flickering ones off with their lamps ----------
+const NIGHT = !!track.night, nightLights = [];
+if (NIGHT) { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#070a16'); gr.addColorStop(.6, '#141a32'); gr.addColorStop(.85, '#262842'); gr.addColorStop(1, '#3a3148'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t;
+  scene.fog.color.set('#131a2c'); scene.fog.near = 35; scene.fog.far = 230; hemi.color.set('#5a6c98'); hemi.groundColor.set('#1c1820'); hemi.intensity = .2;
+  sun.color.set('#a8bce8'); sun.intensity = .26; RIM.col.value.set('#7088c0'); SUN.set(.35, .75, .55).normalize(); paperM.emissive.set('#5e5030');
+  for (const c0 of clouds) { c0.s.material.color.set('#3a4260'); c0.s.material.opacity *= .55; }
+  const sp = []; for (let k = 0; k < 600; k++) { const a = Math.random() * 6.283, e = .12 + Math.random() * 1.3, R = 520; sp.push(Math.cos(a) * Math.cos(e) * R, Math.sin(e) * R, Math.sin(a) * Math.cos(e) * R); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3)); const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#dfe6ff', size: 1.5, sizeAttenuation: false, fog: false })); stars.position.copy(track.centre); scene.add(stars);
+  const moon = new THREE.Mesh(new THREE.CircleGeometry(13, 20), new THREE.MeshBasicMaterial({ color: '#f2efd8', fog: false })); moon.position.copy(track.centre).addScaledVector(SUN, 470); moon.lookAt(track.centre); scene.add(moon);
+  for (let k = 0; k < 3; k++) { const L = new THREE.PointLight('#ffc27a', 0, 17, 1.4); scene.add(L); nightLights.push(L); } }
+function stepNight(px_, pz_) { if (!NIGHT) return; const lamps = [...(track.net?.lamps || []), ...(bronx?.lights || [])], on = track.net?.flickOn?.() ?? true;
+  const near = lamps.map(l => [l, (l.p.x - px_) ** 2 + (l.p.z - pz_) ** 2]).sort((a, b) => a[1] - b[1]);
+  nightLights.forEach((L, k) => { const e = near[k]; if (!e) { L.intensity = 0; return; } L.position.set(e[0].p.x, e[0].p.y - .3, e[0].p.z); L.intensity = e[0].flick && !on ? 0 : 34; }); }
+// (at night a subscriber's mark shows only near, or under a lamp)
+const litNear = p => (track.net?.lamps || []).some(l => (l.p.x - p.x) ** 2 + (l.p.z - p.z) ** 2 < 49);
+const markNear = p => !NIGHT || litNear(p) ? AS().near : Math.min(AS().near, 15);
 function ride(dt, inp) {
   if (B.safe > 0) B.safe -= dt;
   if (B.lift) { const L = B.lift; L.t += dt; B.lean = L.from * (1 - THREE.MathUtils.smootherstep(L.t, 0, .8)); B.leanV = 0; B.v = 0; pose(dt, 0, 0, 0, 0); if (L.t >= .8) { B.lift = null; B.lean = 0; } return; }   // (picked up off the ground)
@@ -684,7 +706,8 @@ function ride(dt, inp) {
   // (B.v is signed: held at a stop, the brake walks him backwards, slowly)
   const accK = 1 + MOD.acc, topK = 1 + MOD.top, push = inp.pedal * (inp.sprint ? 1.35 : 1) * (RAD.turbo > 0 ? 1.3 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) * accK - Math.max(0, B.v) * (inp.sprint ? .33 : .36) * accK / topK);   // (the parts: shop.js)
   const back = inp.brake > .1 && B.v < .15 && inp.pedal < .1, brk = B.v > .05 ? inp.brake * 6.5 : 0;
-  let a = push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * Math.max(.2, 1 + MOD.grass) * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 * (slope > 0 ? 1 - MOD.hill : 1) - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
+  B.flatT = Math.max(0, (B.flatT || 0) - dt);   // (a tyre cut on glass: it drags a while)
+  let a = -(B.flatT > 0 ? .55 * B.v : 0) + push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * Math.max(.2, 1 + MOD.grass) * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 * (slope > 0 ? 1 - MOD.hill : 1) - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
   if (inp.pedal < .05 && !B.air && Math.abs(B.v) < 1.3) a -= Math.sign(B.v) * (1.2 - Math.abs(B.v) * .7);   // (coasting slowly: the tyres drag him to a stop)
   if (back) a = -1.6 * inp.brake - .6 * B.v;
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
@@ -781,6 +804,7 @@ function paperHits(p) {
   for (const q of peds.list) if (!q.paperHit && Math.hypot(q.x - P.x, q.z - P.z) < .55 && P.y - q.G.position.y < 1.9) { q.paperHit = true; setTimeout(() => { q.paperHit = false; }, 4000); q.stun = 1; hud.rant(q.G.position, pickOf(PAPER_PED), true, 1.95); return true; }
   for (const w of track.net?.workers || []) if (!(w.paperT > 0) && Math.hypot(w.x - P.x, w.z - P.z) < .8 && P.y - w.g.position.y - w.y < 2.1) {   // one of the works' crew: he stops to read it
     w.paperT = 30; w.readT = w.kind === 'lean' || w.kind === 'boss' ? 25 : 8; w.face = { x: B.x, z: B.z, t: 1.5 }; hud.rant(w.g.position, pickOf(WORK_PAPER), true, 1.95 + w.y); score(2, w.mouth(), 'DLA EKIPY! +2', '#efc970'); logEv('worker_paper', w.x, w.z); return true; }
+  { const r = bronx?.paper(P); if (r) { hud.rant(r.p.g.position, r.text, true, 1.95); score(r.who === 'inzynier' ? 3 : 1, r.p.g.position.clone().setY(r.p.g.position.y + 1.9), r.who === 'inzynier' ? 'KOŁDERKA! +3' : 'DO RĄK! +1', '#efc970'); logEv(r.who === 'inzynier' ? 'homeless_paper' : 'cwaniak_paper', P.x, P.z); return true; } }
   for (const r of residents.list) if (r.lines === 'lump' && !(r.awakeT > 0) && Math.hypot(r.G.position.x - P.x, r.G.position.z - P.z) < 1.3) {   // the man asleep at the stop: up he gets, the ones waiting clap
     r.awakeT = 45; r.talkT = 2.6; r.head?.getWorldPosition(r.mouth); r.mouth.y += .35; hud.rant(r.mouth, pickOf(['CO?! KTO?! A, GAZETA...', 'AAA! NIE ŚPIĘ!', 'KTO RZUCA?! A, DZIĘKI...', 'PRZYSTANEK?! JUŻ WSTAJĘ!']), true); score(5, r.mouth.clone(), 'POBUDKA! +5', '#efc970');
     residents.list.filter(o => o.stop === r.stop && o !== r).forEach((o, k) => setTimeout(() => { o.talkT = 2; o.head?.getWorldPosition(o.mouth); o.mouth.y += .35; hud.rant(o.mouth, pickOf(['BRAWO, MŁODY!', 'NARESZCIE!', 'HAHA, CELNIE!', 'BRAWO! TRZECI DZIEŃ TU ŚPI!']), true); }, 700 + k * 500)); return true; }
@@ -792,6 +816,7 @@ function kickTargets() {
   for (const n of barkers) add('dog', n.dog.x, n.dog.z, n.dog, 3.3);
   for (const p of peds.list) add('ped', p.x, p.z, p, 2.6);
   for (const w of track.net?.workers || []) add('worker', w.x, w.z, w, 2.6);
+  for (const p of bronx?.people || []) if (p.g) add('bronx', p.x, p.z, p, 2.6);
   for (const b of traffic.boxes()) add(b.t.car ? 'car' : 'bike', b.x, b.z, b.t, b.t.car ? 3.1 : 2.6);
   for (const gm of quests.gangTargets) add('gangm', gm.x, gm.z, gm, 2.9);
   for (const pc of quests.policeCars()) add('police', pc.g.position.x, pc.g.position.z, pc, 3.2);
@@ -803,13 +828,14 @@ function kickTargets() {
   return out.sort((a, b) => a.d - b.d);
 }
 function landKick(tg) {
-  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], goose: () => [tg.ref.g.position.x, tg.ref.g.position.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], worker: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
+  const at = { rider: () => [tg.ref.B.x, tg.ref.B.z], dog: () => [tg.ref.x, tg.ref.z], ped: () => [tg.ref.x, tg.ref.z], car: () => [tg.ref.x, tg.ref.z], bike: () => [tg.ref.x, tg.ref.z], granny: () => [tg.ref.group.position.x, tg.ref.group.position.z], hyd: () => [tg.ref.x, tg.ref.z], goose: () => [tg.ref.g.position.x, tg.ref.g.position.z], police: () => [tg.ref.g.position.x, tg.ref.g.position.z], gangm: () => [tg.ref.x, tg.ref.z], worker: () => [tg.ref.x, tg.ref.z], bronx: () => [tg.ref.x, tg.ref.z], thing: () => [tg.ref.x, tg.ref.z] }[tg.kind]();
   const ax = at[0] - B.x, az = at[1] - B.z, al = Math.hypot(ax, az) || 1; if (al > (tg.kind === 'car' ? 3.4 : 3.3)) return;   // (it got away)
   const mid = new THREE.Vector3(B.x + ax * .55, B.y + .7, B.z + az * .55);
   logEv('kick_' + (tg.kind === 'thing' ? (tg.ref.kind === 'mailbox' ? 'mailbox' : 'thing') : tg.kind), B.x, B.z);
   if (tg.kind === 'dog') { dogs.kick(tg.ref, { x: ax / al * 4.5 + Math.sin(B.yaw) * B.v * .5, z: az / al * 4.5 + Math.cos(B.yaw) * B.v * .5 }); hud.impact(mid); slowmo = .09; shake = .3; }   // it flies off
   if (tg.kind === 'ped' && quests.onHitPed(tg.ref)) { hud.impact(mid, 'ŁUP!'); slowmo = .08; shake = .25; }   // (the thief: the bag drops)
   else if (tg.kind === 'ped') { hud.impact(mid); tg.ref.stun = 1.6; hud.rant(tg.ref.G.position, pickOf(SWEARS), true, 1.95); slowmo = .06; shake = .22; }   // they stop, and swear after him
+  if (tg.kind === 'bronx') { hud.impact(mid); hud.rant(tg.ref.g.position, bronx.kick(tg.ref), true, 1.95); slowmo = .06; shake = .22; }   // (the lads: after him)
   if (tg.kind === 'worker') { hud.impact(mid); tg.ref.stun = 1.4; tg.ref.madT = 6; tg.ref.readT = 0; tg.ref.face = { x: B.x, z: B.z, t: 6 }; hud.rant(tg.ref.g.position, pickOf(WORK_KICK), true, 1.95 + tg.ref.y); slowmo = .06; shake = .22; }   // he shakes his fist after him
   if (tg.kind === 'bike' && tg.ref.rival) { logEv('rival_hit', tg.ref.x, tg.ref.z); flash('Kurier w rowie! Uważaj, może wstać i oddać'); }
   if (tg.kind === 'bike') { hud.impact(mid); quests.onKnockBike(tg.ref); traffic.knock(tg.ref, new THREE.Vector3(ax / al * 3.2, 0, az / al * 3.2), true); if (Math.random() < .8) foot.grudge(tg.ref); tg.ref.ghostUntil = performance.now() + 5000; hud.rant(tg.ref.r.root.position, pickOf(SWEARS), true, 2.0); slowmo = .06; shake = .22; }
@@ -994,7 +1020,7 @@ function talkCam(dt) {
 }
 // over the subscribers ahead (near, not served yet): a little paper in their title's colour
 function subMarks() { const out = [], P = foot.active ? foot.me : B, fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
-  for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - P.x, dz = d.p.z - P.z, l = Math.hypot(dx, dz); if (l > AS().near || l < 2 || (dx * fx + dz * fz) / l < -.2) continue; const h = !AS().marks ? 0 : hot.L?.door === d ? 1 : hot.R?.door === d ? -1 : 0;   // (in reach of a tap: which button sends it there)
+  for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - P.x, dz = d.p.z - P.z, l = Math.hypot(dx, dz); if (l > markNear(d.p) || l < 2 || (dx * fx + dz * fz) / l < -.2) continue; const h = !AS().marks ? 0 : hot.L?.door === d ? 1 : hot.R?.door === d ? -1 : 0;   // (in reach of a tap: which button sends it there)
     const H = h > 0 ? hot.L : h < 0 ? hot.R : null;   // (in reach: over where it would go, the mailbox or the door step)
     out.push({ p: H ? H.p.clone().setY(H.p.y + 1.9) : new THREE.Vector3(d.p.x, d.p.y + 3, d.p.z), s: 'sub', col: TITLES[d.sub].col, hot: h, q: H ? tapQ(H).q : 0, label: h ? (h > 0 ? (pad.active ? 'LB' : 'LPM') : (pad.active ? 'RB' : 'PPM')) : null }); } return out; }
 function project(w) { _v.copy(w).project(camera); if (_v.z > 1) return null; const [W, H] = px.size; return { x: (_v.x + 1) / 2 * W, y: (1 - _v.y) / 2 * H }; }
@@ -1104,6 +1130,15 @@ const WORK_LINES = { dig: ['Kopiemy od wtorku. Rury znaleźliśmy, tylko nie te.
   annoyed: ['Idź już, robota czeka.', 'Kierownik patrzy, spadaj.', 'No idź, bo nas zgłoszą, że stoimy.'] };
 const WORK_KICK = ['EJ! JA W PRACY JESTEM!', 'ZARAZ CIĘ ZAKOPIĘ!', 'BHP SIĘ KŁANIA!', 'ZBYCHU, WIDZIAŁEŚ TO?!'];
 const WORK_PAPER = ['O, GAZETA! PRZERWA!', 'DZIĘKI! BĘDZIE CO CZYTAĆ!', 'EJ! W KASK TRAFIŁEŚ!', 'KIEROWNIK, ZOBACZ, CO PISZĄ!'];
+// the estate's lads and the engineer (the Bronx): spoken to, each in his own way; what happens to him there at night
+function bronxTalk(me) { if (!bronx) return false; let p = null, bd = 2.8; for (const q of bronx.people) { if (!q.g) continue; const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; p = q; } } if (!p) return false;
+  hud.rant(me.mouth, pickOf(TALK), true); const text = bronx.talk(p); setTimeout(() => hud.rant(p.g.position.clone().add(new THREE.Vector3(0, 1.9, 0)), text), 800); return true; }
+function bronxEvent(e) {
+  if (e.kind === 'shout' && e.p?.g) hud.rant(e.p.g.position, e.text, true, 1.95);
+  if (e.kind === 'catch') { if (e.p?.g) hud.rant(e.p.g.position, e.text, true, 1.95); logEv('cwaniak_catch', B.x, B.z); if (!foot.active) crash(Math.random() < .5 ? -1 : 1); else flash('Dogonili cię. Na szczęście tylko gadają.'); }
+  if (e.kind === 'tyre') { logEv('tyre', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Opona z naprzeciwka! Patrz na boki.'); }
+  if (e.kind === 'glass') { B.flatT = 7; audio.play('glass', { vol: .45 }); flash('Szkło! Opona flaczeje, przez chwilę jedzie się ciężej'); logEv('glass', B.x, B.z); }
+  if (e.kind === 'push' && e.p?.g) { hud.rant(e.p.g.position, e.text, true, 1.95); flash('Ktoś wypchnął kosz na drogę!'); } }
 function workTalk(me) { let w = null, bd = 2.8; for (const q of track.net?.workers || []) { const d = Math.hypot(q.x - me.x, q.z - me.z); if (d < bd) { bd = d; w = q; } } if (!w) return false;
   w.talks = (w.talkT > 0 ? w.talks : 0) + 1; w.talkT = 20; w.face = { x: me.x, z: me.z, t: 3 }; hud.rant(me.mouth, pickOf(TALK), true);
   setTimeout(() => hud.rant(w.mouth(), w.talks >= 3 ? pickOf(WORK_LINES.annoyed) : pickOf(WORK_LINES[w.kind])), 800); return true; }
@@ -1118,7 +1153,7 @@ function stepPeople(dt, inp, me) {
     const b = !inp.talk && bikeNear(me, 2.4), bp = b && b.r.root.position; if (bp && Math.hypot(bp.x - me.x, bp.z - me.z) < bd) t = bp; if (t) me.yaw = Math.atan2(t.x - me.x, t.z - me.z); }
   if (inp.talk) { const p = pedNear(me, 2.4); if (p) { p.talks = (p.talkT > 0 ? (p.talks || 0) : 0) + 1; p.talkT = 20; p.stun = Math.max(p.stun || 0, 2.2); p.faceT = 2.4; hud.rant(me.mouth, pickOf(TALK), true);
       const key = p.P.key; setTimeout(() => { hud.rant(mouthOf(p), p.talks >= 3 ? pickOf(ANNOYED) : pickOf(REPLY[key] || ANNOYED)); if (p.talks >= 3 && !TOUGH.includes(key)) { p.flee = 3; p.fleeNew = true; } }, 800); }
-    else if (!workTalk(me) && !(geese && gooseTalk(me))) hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
+    else if (!workTalk(me) && !bronxTalk(me) && !(geese && gooseTalk(me))) hud.rant(me.mouth, pickOf(['HALO?', 'NIKOGO...', 'HEJ!']), true); }
   for (const p of peds.list) p.talkT = Math.max(0, (p.talkT || 0) - dt);
   const k = inp.atkL || (inp.lmb && Math.random() < .5) ? 'jab' : inp.atkR || inp.lmb ? 'cross' : null;
   const mv = (k && foot.swing(k)) || foot.fired();                         // (a punch, or a kick in a run of them; a kept press thrown now)
@@ -1678,7 +1713,7 @@ function paperData(L, r, rec, opened) { const iJ = track.startI, N = track.N, di
   for (const d of track.doors) if (onWay(d.i)) { route.doors.push({ x: d.p.x, z: d.p.z, sub: !!d.sub || d.done, done: !!d.done }); if (d.sub || d.done) route.subs++; }
   for (const w of track.windows) if (w.broken) route.wins.push({ x: w.p.x, z: w.p.z });
   // the news: what happened (the two most telling, each at its place), else the town's own; then tomorrow's
-  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'trick'], news = [];
+  const log = RUN.log || [], count = k => log.filter(e => e.kind === k).length, ORDER = ['kick_granny', 'granny', 'gang', 'chase', 'kick_police', 'car', 'police', 'kick_gangm', 'kick_ped', 'window', 'kick_mailbox', 'kick_bike', 'dog', 'kick_dog', 'kick_car', 'rival_steal', 'rival_hit', 'train', 'barrier', 'tractor_paper', 'goose', 'kick_goose', 'goose_chase', 'goose_friend', 'kick_worker', 'worker_paper', 'kick_bronx', 'cwaniak_catch', 'glass', 'tyre', 'homeless_paper', 'trick'], news = [];
   for (const k of ORDER) { if (news.length >= 2) break; const n = count(k); if (!n) continue; const e = log.find(q => q.kind === k); news.push({ kind: k, ...eventNews(k, n, e.name), img: e.img || photoAt(e.x, e.z) }); }
   const pool = NEWS.slice().sort(() => Math.random() - .5); while (news.length < 2 && pool.length) { const n = pool.pop(), im = photoOf(n.spot); if (im) news.push({ ...n, img: im }); }
   for (const n of news) if (!n.img) { const f = pool.pop(); n.img = f ? photoOf(f.spot) : null; }
@@ -1826,7 +1861,7 @@ function frame(now) {
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : 1.9; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
-  drift(dt); { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? null : { x: B.x, z: B.z, v: Math.abs(B.v) }); if (sh) hud.rant(sh.g.position, pickOf(WORK_SHOUT), true, 1.95 + sh.y); } life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
+  drift(dt); stepNight(B.x, B.z); if (bronx) for (const e of bronx.update(Math.min(dt, .05), { x: foot.active ? foot.me?.x ?? B.x : B.x, z: foot.active ? foot.me?.z ?? B.z : B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint })) bronxEvent(e); { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? null : { x: B.x, z: B.z, v: Math.abs(B.v) }); if (sh) hud.rant(sh.g.position, pickOf(WORK_SHOUT), true, 1.95 + sh.y); } life.update(Math.min(dt, .05), camera.position); camera.updateMatrixWorld(); RIM.sun.value.copy(SUN).transformDirection(camera.matrixWorldInverse); RIM.up.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);   // (the sun, as the eye sees it)
   px.uniforms.wobT.value = (Math.floor(performance.now() / 125) * 1.37) % 97;   // (the line boiling: a new drawing eight times a second)
   { const q0 = track.probe(B.x, B.z, B.hint); audio.ride(foot.active || menu.open ? 0 : Math.abs(B.v), Math.abs(q0.d) > track.PAVE ? 1 : 0); }
   { const pc = quests.policeCars()[0]; audio.siren(quests.siren && !menu.open, where(pc && pc.g.position)); }
@@ -1838,5 +1873,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.PT = { THREE, FIN, CROSS, stepRivals, lateFinish, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, FIN, CROSS, stepRivals, lateFinish, stepNight, bronx, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };

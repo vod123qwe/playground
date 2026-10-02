@@ -9,7 +9,9 @@
 // createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI })
 //   → { blocked(i, side), build(), paved(x, z), shortcuts, stubs }
 
-export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox, stops }) {
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd, startI, CARS, parked, townBox, stops, night = false, cen = { x: 110, z: -10, r: 180 } }) {
   const M = c => toon(c), wrap = i => ((i % N) + N) % N, O = 30;
   // ---------- where: two straight stretches for the shortcuts (none of them across a checkpoint: a quarter of the loop from the start),
   // four spots for the side streets on the outside ----------
@@ -92,7 +94,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
     { const i = A + Math.round(LEN * .55), g = new THREE.Group(); g.add(box(1.9, .22, .95, M('#c9b8a0'), 0, .11, 0), box(1.8, .06, .9, M('#a99a80'), 0, .24, 0)); const man = new THREE.Group(); man.add(box(.42, .5, .3, M('#5a5f45'), 0, .55, 0), box(.24, .24, .24, M('#d9a07a'), 0, .95, 0), box(.28, .12, .28, M('#3a3d42'), 0, 1.1, 0), box(.5, .16, .3, M('#2f3a4a'), .3, .3, 0)); man.position.set(-.5, 0, 0); g.add(man);
       for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.CylinderGeometry(.035, .04, .24, 8), M(k ? '#5e7a3a' : '#8e5a2e')); b.position.set(.7 + k * .12, .12, .5 - k * .1); if (k === 2) { b.rotation.z = Math.PI / 2; b.position.y = .05; } g.add(b); }
       put(g, i, sg * (O + 1.6), 0, Math.PI / 2); hit(g, { hx: 1, hz: .5, h: .6, kind: 'soft' }, wrap(i)); things.push({ kind: 'bush', o: g, r: .9, top: .6 }); }
-    for (let i = A + Math.round(4 / ds); i < Bn; i += Math.round(17 / ds)) lamp(i, sg * (O - 2.6)); }
+    if (!night) for (let i = A + Math.round(4 / ds); i < Bn; i += Math.round(17 / ds)) lamp(i, sg * (O - 2.6)); }   // (at night the alley is dark: the quick way, the dark way)
   function park(c, sg, A, Bn) { const W2 = 9, green = '#6f8f3e';
     ribbon(line(A + Math.round(4 / ds), Bn - Math.round(4 / ds), sg * O), W2 * 2, green, .015);
     // a low fence round the lawn, benches by the path, trees
@@ -127,7 +129,7 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
   // ---------- the street's furniture on the paved verge by the kerb: advertising columns, kiosks, phone booths, benches, bike racks,
   // planters, bollards (not at a shortcut's mouth, nor a side street's) ----------
   function furniture() { const poster = () => cv(8, 16, g => { const C = ['#cf5a3e', '#efc970', '#3b5670', '#9fd27a', '#f6f3ea', '#e3742e', '#b7a4e0']; for (let y = 0; y < 16; y += 4) { g.fillStyle = C[rnd() * C.length | 0]; g.fillRect(0, y, 8, 4); g.fillStyle = '#17181b'; g.fillRect(1 + (rnd() * 3 | 0), y + 1, 3 + (rnd() * 3 | 0), 1); } });
-    for (let i = 20; i < N - 10; i += Math.round((14 + rnd() * 12) / ds)) { const s = rnd() < .5 ? -1 : 1, d = s * (ROAD + 1.15); if (shortcuts.some(c => near(i, c.a, 12) || near(i, c.a + LEN, 12)) || stubs.some(t => near(i, t.i, 14)) || zebras.some(z => near(i, z.i, 6))) continue; const k = rnd(), g = new THREE.Group(); let hb = null;
+    for (let i = 20; i < N - 10; i += Math.round((10 + rnd() * 8) / ds)) { const s = rnd() < .5 ? -1 : 1, d = s * (ROAD + 1.15); if (shortcuts.some(c => near(i, c.a, 12) || near(i, c.a + LEN, 12)) || stubs.some(t => near(i, t.i, 14)) || zebras.some(z => near(i, z.i, 6)) || lampAt.some(L => near(i, L.i, 5))) continue; const k = rnd(), g = new THREE.Group(); let hb = null;
       if (k < .18) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 2.6, 12), [new THREE.MeshBasicMaterial({ map: poster() }), M('#2f4a6e'), M('#2f4a6e')]); c.position.y = 1.4; g.add(c, box(1.15, .14, 1.15, M('#2f4a6e'), 0, 2.78, 0)); const top = new THREE.Mesh(new THREE.ConeGeometry(.62, .35, 12), M('#2f4a6e')); top.position.y = 3.02; g.add(top); hb = { hx: .5, hz: .5, h: 2.8, kind: 'hard' }; }   // (an advertising column)
       else if (k < .3) { g.add(box(1.4, 2.2, 1.8, M('#e3b22e'), 0, 1.1, 0), box(.06, .9, 1.4, M('#3f5566'), s * -.72, 1.4, 0), box(1.6, .15, 2, M('#b3372c'), 0, 2.27, 0)); const t = plate('RUCH', '#b3372c', '#f6f3ea', 1, .3); t.position.set(s * -.82, 2.05, 0); t.rotation.y = Math.PI / 2; g.add(t); hb = { hx: .75, hz: .95, h: 2.3, kind: 'hard' }; }   // (a kiosk)
       else if (k < .4) { g.add(box(1, 2.3, 1, M('#b3372c'), 0, 1.15, 0)); for (const z of [-.51, .51]) g.add(box(.8, 1.4, .02, M('#9fb3bf'), 0, 1.3, z)); g.add(box(.02, 1.4, .8, M('#9fb3bf'), s * -.51, 1.3, 0)); hb = { hx: .5, hz: .5, h: 2.3, kind: 'hard' }; }   // (a phone booth)
@@ -135,13 +137,23 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
       else if (k < .72) { for (let n = 0; n < 4; n++) { const a = new THREE.Mesh(new THREE.TorusGeometry(.35, .03, 4, 10, Math.PI), steel); a.position.set(0, 0, (n - 1.5) * .5); a.rotation.y = Math.PI / 2; g.add(a); } hb = { hx: .2, hz: 1, h: .4, kind: 'hard' }; }   // (a bike rack)
       else if (k < .88) { g.add(box(.9, .5, .9, M('#8a857a'), 0, .25, 0)); const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.45, 1), M('#467537')); b.position.y = .8; g.add(b); hb = { hx: .45, hz: .45, h: .9, kind: 'hard' }; }   // (a planter)
       else { for (const z of [-.8, 0, .8]) g.add(box(.14, .8, .14, dark, 0, .4, z)); }   // (bollards)
+      put(g, i, d, 0, 0); if (hb) hit(g, hb, wrap(i)); }
+    // the row by the houses: an A-board before a shop (a poster on it), a street bin, a stand of papers (Trąbka and the other one), a plank
+    // to jump off along the pavement
+    const paperT = cv(8, 8, g => { for (let y = 0; y < 8; y += 2) { g.fillStyle = y % 4 ? '#e9e3d1' : '#f6f3ea'; g.fillRect(0, y, 8, 2); g.fillStyle = y % 4 ? '#cf5a3e' : '#3b5670'; g.fillRect(1, y, 4, 1); } });
+    for (let i = 30; i < N - 10; i += Math.round((12 + rnd() * 10) / ds)) { const s = rnd() < .5 ? -1 : 1, d = s * (PAVE - 1.3); if (shortcuts.some(c => near(i, c.a, 12) || near(i, c.a + LEN, 12)) || stubs.some(t => near(i, t.i, 14)) || zebras.some(z => near(i, z.i, 6)) || (plaza && near(i, plaza.i0 + 40, 40))) continue;
+      const k = rnd(), g = new THREE.Group(); let hb = null;
+      if (k < .32) { const pl = new THREE.MeshBasicMaterial({ map: poster() }); for (const sg of [-1, 1]) { const b = new THREE.Mesh(new THREE.BoxGeometry(.04, 1, .6), [pl, pl, dark, dark, dark, dark]); b.position.set(sg * .2, .5, 0); b.rotation.z = sg * .2; g.add(b); } hb = { hx: .3, hz: .32, h: 1, kind: 'soft' }; }   // (an A-board)
+      else if (k < .6) { const b = new THREE.Mesh(new THREE.CylinderGeometry(.28, .24, .85, 10), M('#5a6b4a')); b.position.y = .43; g.add(b, box(.6, .05, .6, dark, 0, .87, 0)); hb = { hx: .28, hz: .28, h: .9, kind: 'soft' }; }   // (a street bin)
+      else if (k < .8) { g.add(box(.7, .9, .35, M('#b3372c'), 0, .45, 0)); for (let q = 0; q < 3; q++) { const p = new THREE.Mesh(new THREE.BoxGeometry(.02, .3, .4), new THREE.MeshBasicMaterial({ map: paperT })); p.position.set(-s * .19, .62 - q * .2, 0); p.rotation.z = -s * .25; g.add(p); } hb = { hx: .36, hz: .2, h: .9, kind: 'soft' }; }   // (a stand of papers)
+      else { const o = P.ramp(rnd, rnd() < .5 ? 'plank' : 'kicker'); put(o.group, i, s * 5.4, 0, rnd() < .5 ? 0 : Math.PI); hit(o.group, o.hit, wrap(i)); continue; }   // (a plank to jump, along the pavement)
       put(g, i, d, 0, 0); if (hb) hit(g, hb, wrap(i)); } }
   // ---------- the office plaza: the tower (glass, its name over the door), paving, flower beds, a fountain, lamps; a car park with
   // two rows of cars (their roofs to ride, as any parked car's); people walking about it ----------
   const walkers = [];
   function office() { if (!plaza) return; const sg = plaza.sd, i0 = plaza.i0, i1 = plaza.i1, mid = i0 + Math.round((i1 - i0) / 2);
     { const L = line(i0, i1, sg * (PAVE + 9)); ribbon(L, 18, '#b9b2a2', .022); for (let k = 1; k < L.length; k++) seg(L[k - 1], L[k], 9.2); }
-    { const g = new THREE.Group(), gt = cv(8, 16, x => { for (let y = 0; y < 16; y++) for (let q = 0; q < 8; q++) { x.fillStyle = (y % 4 === 0) ? '#5a6a74' : (q % 2 ? '#7fa6c2' : (rnd() < .2 ? '#e8dca0' : '#6f93ad')); x.fillRect(q, y, 1, 1); } });
+    if (night) nightShop(sg, mid); else { const g = new THREE.Group(), gt = cv(8, 16, x => { for (let y = 0; y < 16; y++) for (let q = 0; q < 8; q++) { x.fillStyle = (y % 4 === 0) ? '#5a6a74' : (q % 2 ? '#7fa6c2' : (rnd() < .2 ? '#e8dca0' : '#6f93ad')); x.fillRect(q, y, 1, 1); } });
       gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(4, 10); const glass = toon('#ffffff', { map: gt });
       g.add(box(14, 38, 18, glass, 0, 19, 0), box(14.4, .8, 18.4, M('#4a4e55'), 0, 38.4, 0), box(3, 4, 6, M('#3a3d42'), 0, 40.4, -3));
       g.add(box(3, .25, 7, M('#c9c4ba'), sg * 8.5, 4.2, 0), box(.1, 3.6, 3.2, M('#2f3e4a'), sg * 7.05, 1.8, 0));
@@ -152,16 +164,16 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
       doors.push({ p: fp.clone().addScaledVector(n, 2.6), n, done: false, i: wrap(mid) });
       for (const z of [-6, -3.5, 3.5, 6]) windows.push({ p: g.localToWorld(new THREE.Vector3(sg * 7.05, 2, z)), n: n.clone(), hw: 1.1, hh: 1.3, broken: false, i: wrap(mid), house: hi }); }
     // flower beds, a fountain, lamps on the plaza
-    for (const k of [-1, 1]) { const g = new THREE.Group(); g.add(box(3, .5, 5, M('#8a857a'), 0, .25, 0), box(2.7, .2, 4.7, M('#5b8a3c'), 0, .55, 0)); for (let q = 0; q < 6; q++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(.25, 0), M(['#cf5a3e', '#efc970', '#e889b5'][q % 3])); f.position.set((rnd() - .5) * 2.2, .75, (rnd() - .5) * 4); g.add(f); }
+    if (!night) for (const k of [-1, 1]) { const g = new THREE.Group(); g.add(box(3, .5, 5, M('#8a857a'), 0, .25, 0), box(2.7, .2, 4.7, M('#5b8a3c'), 0, .55, 0)); for (let q = 0; q < 6; q++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(.25, 0), M(['#cf5a3e', '#efc970', '#e889b5'][q % 3])); f.position.set((rnd() - .5) * 2.2, .75, (rnd() - .5) * 4); g.add(f); }
       put(g, mid + k * Math.round(13 / ds), sg * (PAVE + 10), 0, 0); hit(g, { hx: 1.5, hz: 2.5, h: .6, kind: 'hard' }, wrap(mid)); }
-    { const g = new THREE.Group(), rim = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, .6, 16), M('#c9c4ba')), w = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, .1, 16), new THREE.MeshBasicMaterial({ color: '#7fb6cc' })), col = new THREE.Mesh(new THREE.CylinderGeometry(.25, .3, 1.6, 8), M('#c9c4ba'));
+    if (!night) { const g = new THREE.Group(), rim = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, .6, 16), M('#c9c4ba')), w = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, .1, 16), new THREE.MeshBasicMaterial({ color: '#7fb6cc' })), col = new THREE.Mesh(new THREE.CylinderGeometry(.25, .3, 1.6, 8), M('#c9c4ba'));
       rim.position.y = .3; w.position.y = .62; col.position.y = .8; g.add(rim, w, col); put(g, mid, sg * (PAVE + 10), 0, 0); hit(g, { hx: 2.4, hz: 2.4, h: .6, kind: 'hard' }, wrap(mid)); }
     for (const k of [-2, -1, 1, 2]) lamp(mid + k * Math.round(9 / ds), sg * (PAVE + 16));
     // the car park, by the plaza's near end: two rows across, their lines painted
     if (CARS) for (let r0 = 0; r0 < 2; r0++) for (let k = 0; k < 5; k++) { const i = i0 + Math.round((2 + k * 2.8) / ds), d = sg * (PAVE + 3.4 + r0 * 6.2), c = CARS.random(rnd); put(c.group, i, d, 0, Math.PI / 2 + (r0 ? Math.PI : 0)); c.group.userData.keep = true; hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, wrap(i));
       const ln = new THREE.Mesh(new THREE.PlaneGeometry(.1, 4.6).rotateX(-Math.PI / 2), M('#f0ece2')); ln.userData.noShadow = true; put(ln, i + Math.round(1.4 / ds), d, .04, Math.PI / 2); }
     // the people about the plaza: little figures walking rounds of their own (a coat, a head, legs that step)
-    for (let k = 0; k < 14; k++) { const g = new THREE.Group(), coat = M(['#3b5670', '#8e2e25', '#44484c', '#6b4a2e', '#467537', '#c9b8a0', '#2f4a6e'][k % 7]);
+    for (let k = 0; k < (night ? 5 : 14); k++) { const g = new THREE.Group(), coat = M(['#3b5670', '#8e2e25', '#44484c', '#6b4a2e', '#467537', '#c9b8a0', '#2f4a6e'][k % 7]);
       g.add(box(.42, .62, .26, coat, 0, 1.12, 0), box(.22, .22, .22, M(['#e3b08a', '#c98a5a', '#d9a07a'][k % 3]), 0, 1.6, 0), box(.24, .07, .24, M(['#24190f', '#9a938a', '#5b3a22'][k % 3]), 0, 1.74, 0));
       const legs = [-1, 1].map(sd => { const l = new THREE.Group(); l.add(box(.14, .78, .16, M('#2a2c30'), 0, -.39, 0)); l.position.set(sd * .1, .8, 0); g.add(l); return l; }); if (k % 3 === 0) g.add(box(.08, .3, .24, M('#2a2c30'), .28, .9, 0));
       const c0 = at(mid + Math.round((rnd() - .5) * 30 / ds), sg * (PAVE + 7 + rnd() * 7), 0); g.position.copy(c0); G.add(g); g.userData.keep = true; walkers.push({ g, legs, c: c0.clone(), r: 2 + rnd() * 5, a: rnd() * 6.28, w: (.6 + rnd() * .5) * (rnd() < .5 ? -1 : 1), ph: rnd() * 6 }); } }
@@ -239,10 +251,32 @@ export function createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, gr
       // (him riding by close and quick: one of them has a word for him; not every time)
       if (R && worksCool <= 0 && !(w.readT > 0) && R.v > 3 && Math.hypot(R.x - w.x, R.z - w.z) < 5) { worksCool = 9 + rnd() * 6; onShout(w); } } }
   let clock = 0;
-  function update(dt, R) { clock += dt; let shout = null; stepWorks(dt, R, w => { shout = w; });
+  function update(dt, R) { clock += dt; let shout = null; if (lampAt.length) { const on = flickOn(); headF.color.set(on ? '#ffd27a' : '#3a2e1c'); poolF.opacity = on ? .3 : .03; } stepWorks(dt, R, w => { shout = w; });
     for (const W0 of walkers) { W0.a += W0.w * dt / Math.max(1, W0.r); const x = W0.c.x + Math.cos(W0.a) * W0.r, z = W0.c.z + Math.sin(W0.a) * W0.r, dir = Math.sign(W0.w); W0.g.position.set(x, W0.c.y, z); W0.g.rotation.y = Math.atan2(-Math.sin(W0.a) * dir, Math.cos(W0.a) * dir); const st = Math.sin(clock * 7 + W0.ph) * .45; W0.legs[0].rotation.x = st; W0.legs[1].rotation.x = -st; }
     for (const Pl of planes) { Pl.t += dt; if (Pl.t < 0) continue; if (Pl.t > 34) { Pl.t = -20 - rnd() * 25; Pl.g.visible = false; continue; } if (!Pl.g.visible) { Pl.a = rnd() * 6.28; Pl.g.visible = true; }
-      const u = Pl.t / 34, R = 330 - u * 120, ang = Pl.a + u * .9, y = 18 + u * u * 160, vx = -Math.sin(ang), vz = Math.cos(ang); Pl.g.position.set(110 + Math.cos(ang) * R, y, -10 + Math.sin(ang) * R); Pl.g.rotation.set(0, Math.atan2(vx, vz), 0); Pl.g.rotateX(-.2); } return shout; }
-  function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); office(); taxis(); roadworks(); for (const z of zebras) if (!z.lights) crossing(z); furniture(); }
-  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi, zebras, works, get workers() { return worksOn ? workers : []; }, nearWorks, nearTaxi, setWorks };
+      const u = Pl.t / 34, R = cen.r + 150 - u * 120, ang = Pl.a + u * .9, y = 18 + u * u * 160, vx = -Math.sin(ang), vz = Math.cos(ang); Pl.g.position.set(cen.x + Math.cos(ang) * R, y, cen.z + Math.sin(ang) * R); Pl.g.rotation.set(0, Math.atan2(vx, vz), 0); Pl.g.rotateX(-.2); } return shout; }
+  // ---------- the night: lamps along the loop every 24 m, by turns on each side (not at a side street's or a shortcut's mouth), some
+  // flickering; under each a pool of light on the ground (all the pools in one mesh, the flickering ones in another); their heads kept
+  // for the game's few real lights ----------
+  const lamps = [], lampAt = [], headM = new THREE.MeshBasicMaterial({ color: '#ffd27a' }), headF = new THREE.MeshBasicMaterial({ color: '#ffd27a' });
+  const poolM = new THREE.MeshBasicMaterial({ color: '#ffb35a', transparent: true, opacity: .3, blending: THREE.AdditiveBlending, depthWrite: false }), poolF = poolM.clone();
+  if (night) for (let i = Math.round(10 / ds), k = 0; i < N; i += Math.round(24 / ds), k++) { if (stubs.some(t => near(i, t.i, 9)) || shortcuts.some(c => near(i, c.a, 9) || near(i, c.b, 9)) || nearWorks(i, 8) || zebras.some(z => near(i, z.i, 5))) continue; lampAt.push({ i, s: k % 2 ? 1 : -1, flick: rnd() < .22 }); }
+  const flickOn = () => { const f = (clock * 1.7) % 7; return !((f > 5.2 && f < 5.5) || (f > 5.9 && f < 6.05) || (f > 6.3 && f < 6.9)); };
+  function nightLamps() { if (!lampAt.length) return; const pools = [[], []];
+    for (const L of lampAt) { const sg = L.s, g = new THREE.Group(), hm = L.flick ? headF : headM; g.add(box(.14, 5.6, .14, steel, 0, 2.8, 0), box(1.6, .1, .1, steel, sg * .8, 5.55, 0), box(.5, .12, .3, dark, sg * 1.5, 5.5, 0), box(.4, .05, .22, hm, sg * 1.5, 5.43, 0));
+      put(g, L.i, sg * (ROAD + .6), 0, 0); hit(g, { hx: .1, hz: .1, h: 5, kind: 'hard' }, wrap(L.i)); g.updateMatrixWorld(true);
+      const p = g.localToWorld(new THREE.Vector3(sg * 1.5, 5.4, 0)), gy = groundAt(p.x, p.z, wrap(L.i)); lamps.push({ p, flick: L.flick, i: wrap(L.i) });
+      pools[L.flick ? 1 : 0].push(new THREE.CircleGeometry(4.2, 14).rotateX(-Math.PI / 2).translate(p.x, gy + .06, p.z)); }
+    pools.forEach((gs, k) => { if (!gs.length) return; const m = new THREE.Mesh(mergeGeometries(gs), k ? poolF : poolM); m.renderOrder = 2; m.userData.keep = true; m.userData.noShadow = true; m.frustumCulled = false; G.add(m); }); }
+  // ---------- at night, in the plaza's place: a pavilion shop open all night (its windows lit, its sign), a kiosk lit beside it ----------
+  function nightShop(sg, mid) { const m = x => Math.round(x / ds), litM = new THREE.MeshBasicMaterial({ color: '#fff0c4' }), fx = sg * 4;
+    const g = house(mid, sg * (PAVE + 12), sg, 14, 8, 3.8, '#8a8f96'), hi = doors.length - 1;
+    for (const z of [-4, 4]) g.add(box(.08, 2, 4.6, litM, fx + sg * .07, 1.45, z));
+    const nm = plate('CAŁODOBOWY', '#17181b', '#ffd27a', 5, .8); nm.position.set(fx + sg * .12, 3.3, 0); nm.rotation.y = sg > 0 ? Math.PI / 2 : -Math.PI / 2; g.add(nm); g.updateMatrixWorld(true);
+    const n = new THREE.Vector3(sg, 0, 0).transformDirection(g.matrixWorld).setY(0).normalize();
+    for (const z of [-4, 4]) windows.push({ p: g.localToWorld(new THREE.Vector3(fx + sg * .1, 1.45, z)), n: n.clone(), hw: 2.3, hh: 1, broken: false, i: wrap(mid), house: hi });
+    { const k = new THREE.Group(); k.add(box(2.2, 2.5, 2, M('#3b6e4a'), 0, 1.25, 0), box(2.4, .2, 2.2, M('#2a4a34'), 0, 2.6, 0), box(.06, .9, 1.4, litM, sg * 1.11, 1.5, 0)); const kp = plate('KIOSK', '#17181b', '#ffd27a', 1.6, .4); kp.position.set(sg * 1.14, 2.2, 0); kp.rotation.y = sg > 0 ? Math.PI / 2 : -Math.PI / 2; k.add(kp);
+      put(k, mid + m(11), sg * (PAVE + 4), 0, 0); hit(k, { hx: 1.1, hz: 1, h: 2.6, kind: 'hard' }, wrap(mid)); } }
+  function build() { for (const c of shortcuts) shortcut(c); for (const t of stubs) stub(t); nightLamps(); office(); taxis(); roadworks(); for (const z of zebras) if (!z.lights) crossing(z); furniture(); }
+  return { blocked, build, paved, update, shortcuts, stubs, plaza, taxi, zebras, works, get workers() { return worksOn ? workers : []; }, nearWorks, nearTaxi, setWorks, lamps, flickOn };
 }
