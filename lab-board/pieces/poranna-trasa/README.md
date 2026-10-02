@@ -1398,3 +1398,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 ## Wersja 166: w Klasyku rzut jest szybki
 
 - zamach krótszy (0,3 s zamiast 0,5: gazeta wylatuje po ~0,2 s), lot do celu płaski i szybki (0,3–0,6 s zamiast 0,6–1 s), swobodny rzut mocniejszy i niższy; cały rzut od klawisza do trafienia ~0,6 s zamiast ~1,3 s; w Porannej Trasie bez zmian
+
+## Wersja 167: Klasyk: na dach stojącego auta z podskoku, triki spacją
+
+- podskok w Klasyku wyższy: dobrze wymierzony wnosi na dach stojącego auta (przy toczeniu 1,4–3,2 m przed autem, na gazie 2–4,4 m), za wcześnie albo za późno: w auto; przy dachu lekkie podciągnięcie, kiedy brakuje niewiele
+- triki w Klasyku: spacja na ziemi skacze, w powietrzu robi trik (z wychyleniem 360, na dużej skoczni z gazem salto, bez niczego STÓŁ; kolejne naciśnięcie w locie: następny, kombo), także z samego podskoku, nie tylko ze skoczni
