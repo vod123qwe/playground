@@ -425,9 +425,9 @@ function throwVel(p, side, c = {}) { const fx = Math.sin(B.yaw), fz = Math.cos(B
 function throwTargets(side) { const now = performance.now(), fx = Math.sin(B.yaw), fz = Math.cos(B.yaw), rx = -fz, rz = fx, out = -side, cur = curTitle(), list = [];
   const consider = (x, z, val, d) => { const dx = x - B.x, dz = z - B.z, fw = dx * fx + dz * fz, lat = (dx * rx + dz * rz) * out, l = Math.hypot(dx, dz); if (fw < -1.5 || fw > 15 || lat < .8 || l > 16) return;
     list.push({ p: new THREE.Vector3(x, track.probe(x, z, B.hint).y, z), door: d, score: l - val - (d.sub === cur ? 6 : 0) }); };
-  for (const mb of track.mailboxes) { if (mb.done) continue; const w = mb.o.position; if (Math.abs(w.x - B.x) + Math.abs(w.z - B.z) > 24) continue; const hi = mb.house ?? (mb.house = nearestDoor(w)), d = track.doors[hi]; if (!d || !d.sub || d.done || now - (d.pending || -9e9) < 2500) continue;
+  for (const mb of track.mailboxes) { if (mb.done) continue; const w = mb.o.position; if (Math.abs(w.x - B.x) + Math.abs(w.z - B.z) > 34) continue; const hi = mb.house ?? (mb.house = nearestDoor(w)), d = track.doors[hi]; if (!d || !d.sub || d.done || now - (d.pending || -9e9) < 2500) continue;
     const l = Math.hypot(B.x - w.x, B.z - w.z) || 1; consider(w.x + (B.x - w.x) / l * .45, w.z + (B.z - w.z) / l * .45, 3, d); }   // (just before it, on his side: it drops in)
-  for (const d of track.doors) { if (!d.sub || d.done || now - (d.pending || -9e9) < 2500 || Math.abs(d.p.x - B.x) + Math.abs(d.p.z - B.z) > 24) continue; consider(d.p.x - d.n.x * 1.3, d.p.z - d.n.z * 1.3, 0, d); }
+  for (const d of track.doors) { if (!d.sub || d.done || now - (d.pending || -9e9) < 2500 || Math.abs(d.p.x - B.x) + Math.abs(d.p.z - B.z) > 34) continue; consider(d.p.x - d.n.x * 1.3, d.p.z - d.n.z * 1.3, 0, d); }
   if (FIN.on) for (const T of FIN.targets) { if (T.hit || !T.up || T.kind === 'barn') continue; const dx = T.c.x - B.x, dz = T.c.z - B.z, fw = dx * fx + dz * fz, lat = (dx * rx + dz * rz) * out, l = Math.hypot(dx, dz); if (fw < -1.5 || fw > 15 || lat < .8 || l > 16) continue; list.push({ p: T.c.clone(), door: null, score: l - 9 }); }
   return list.sort((a, b) => a.score - b.score); }
 // the moment of a tap: 1 when the target is just the right way ahead for his speed (the paper flies a while: lead it), less either side,
@@ -437,7 +437,7 @@ const TAP_TOL = { peryferia: 4.2, wies: 3.7, peryferia2: 3.1 };
 // the throw's help (menu: ASYSTA RZUTU; kept in pt.assist): easy: the moment's window shown over the house, wide, a small scatter, the held
 // aim taken to a target near it; middle (the default): only the subscriber's sign, the usual window, a weak pull; hard: the sign only
 // near, a narrow window, a wider scatter, no pull
-const ASSIST = { easy: { name: 'ŁATWA', tol: 1.5, scat: .6, snap: 2.6, marks: true, near: 38 }, mid: { name: 'ŚREDNIA', tol: 1, scat: 1, snap: .9, marks: false, near: 38 }, hard: { name: 'TRUDNA', tol: .7, scat: 1.3, snap: 0, marks: false, near: 20 } };
+const ASSIST = { easy: { name: 'ŁATWA', tol: 1.5, scat: .6, snap: 2.6, marks: true, near: 46 }, mid: { name: 'ŚREDNIA', tol: 1, scat: 1, snap: .9, marks: false, near: 46 }, hard: { name: 'TRUDNA', tol: .7, scat: 1.3, snap: 0, marks: false, near: 26 } };
 let assistK = (() => { try { return ASSIST[localStorage.getItem('pt.assist')] ? localStorage.getItem('pt.assist') : 'mid'; } catch { return 'mid'; } })();
 const AS = () => ASSIST[assistK];
 const assistMenu = { name: () => AS().name, next: () => { const ks = Object.keys(ASSIST); assistK = ks[(ks.indexOf(assistK) + 1) % ks.length]; try { localStorage.setItem('pt.assist', assistK); } catch { } flash('Asysta rzutu: ' + AS().name.toLowerCase()); } };
@@ -712,7 +712,7 @@ function stepNight(px_, pz_) { if (!NIGHT) return; const lamps = [...(track.net?
   nightLights.forEach((L, k) => { const e = near[k]; if (!e) { L.intensity = 0; return; } L.position.set(e[0].p.x, e[0].p.y - .3, e[0].p.z); L.intensity = e[0].flick && !on ? 0 : 34; }); }
 // (at night a subscriber's mark shows only near, or under a lamp)
 const litNear = p => (track.net?.lamps || []).some(l => (l.p.x - p.x) ** 2 + (l.p.z - p.z) ** 2 < 49);
-const markNear = p => !NIGHT || litNear(p) ? AS().near : Math.min(AS().near, 15);
+const markNear = p => !NIGHT || litNear(p) ? AS().near : Math.min(AS().near, 28);
 function ride(dt, inp) {
   if (B.safe > 0) B.safe -= dt;
   if (B.lift) { const L = B.lift; L.t += dt; B.lean = L.from * (1 - THREE.MathUtils.smootherstep(L.t, 0, .8)); B.leanV = 0; B.v = 0; pose(dt, 0, 0, 0, 0); if (L.t >= .8) { B.lift = null; B.lean = 0; } return; }   // (picked up off the ground)
