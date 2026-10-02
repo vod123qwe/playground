@@ -117,7 +117,7 @@ export function createBronx({ THREE, toon, track, scene, residents }) {
         else if (p.t > 7 || far > 45) p.state = 'back'; }
       else if (p.state === 'back') { const hx = p.home.x - p.x, hz = p.home.z - p.z, hd = Math.hypot(hx, hz); if (hd < .3) { p.state = 'stand'; walkW(p, 0, 1); } else { p.x += hx / hd * 1.4 * dt; p.z += hz / hd * 1.4 * dt; p.yaw = Math.atan2(hx, hz); walkW(p, 1, 1); } }
       else walkW(p, 0, 1);
-      p.o.mixer.update(dt); place(p);
+      if (dist < 70 || p.state !== 'stand') p.o.mixer.update(dt); place(p);
       // (him going by: one of the group calls after him, now and then; the estate against him: more spite in it)
       if (p.state === 'stand' && dist < 9 && Math.abs(R.v) > 1.5 && grp.shoutT <= 0 && grp.members[0] === p) { grp.shoutT = 14 + rnd() * 10; if (rnd() < .7) ev.push({ kind: 'shout', p: grp.members[rnd() * grp.members.length | 0], text: rep <= -2 ? SHOUT_BAD() : SHOUT() }); }
       // (a bad name here: now and then a bin pushed out onto the road ahead of him)
@@ -144,5 +144,5 @@ export function createBronx({ THREE, toon, track, scene, residents }) {
   // a paper thrown to one: taken (the estate a little kinder); the engineer covers himself with it and has a rumour for you
   function paper(Pp) { for (const p of people) { if (p.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > (p.kind === 'inzynier' ? 1.3 : .8)) continue; p.paperT = 40; repAdd(1);
       if (p.kind === 'inzynier') { p.blanket.visible = true; return { p, text: RUMOUR(), who: 'inzynier' }; } if (p.kind === 'party') { party.stopT = 3; return { p, text: PARTY_PAPER(), who: 'party' }; } return { p, text: p.P.paper, who: 'lad' }; } return null; }
-  return { people, lights, update, kick, talk, paper, get rep() { return rep; } };
+  return { id: 'bronx', people, lights, update, kick, talk, paper, get rep() { return rep; } };
 }

@@ -7,7 +7,7 @@
 // them), letterboxes (in one: the most). A lot's front faces the road: local +x on the right side of it (s = +1), local -x on the left.
 // createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G }) → { tenement(i, s), block(i, s), stalls(i, s), skyline(cx, cz), rails() }
 
-export function createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G, night = false }) {
+export function createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G, night = false, tourist = false, walls = null }) {
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); f(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
   // a 3 x 5 pixel font for the signs (the game's own font may not be loaded yet when the world is built)
   const F = { A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010', K: '101110100110101', L: '100100100100111', M: '101111111101101',
@@ -16,7 +16,7 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
   const sign = (text, bg, fg) => cv(text.length * 4 + 3, 9, g => { g.fillStyle = bg; g.fillRect(0, 0, text.length * 4 + 3, 9); g.fillStyle = fg; [...text].forEach((ch, k) => { const r = F[ch] || F[' ']; for (let q = 0; q < 15; q++) if (r[q] === '1') g.fillRect(2 + k * 4 + q % 3, 2 + (q / 3 | 0), 1, 1); }); });
   const M = c => toon(c), glass = M('#3f5566'), glassLit = night ? new THREE.MeshBasicMaterial({ color: '#ffcf7a' }) : M('#c9b77a'), shopLit = new THREE.MeshBasicMaterial({ color: '#fff0c4' }), porchLit = new THREE.MeshBasicMaterial({ color: '#ffe0a0' }), frame = M('#f0ece2'), dark = M('#2a2c30'), roofM = M('#4a4e55'), stone = M('#8a857a');
   const SHOPS = [['PIEKARNIA', '#8e5a2e'], ['APTEKA', '#3f6b35'], ['KIOSK RUCH', '#b3372c'], ['KWIACIARNIA', '#467537'], ['FRYZJER', '#2f4a6e'], ['BAR MLECZNY', '#8e2e25'], ['ZEGARMISTRZ', '#44484c'], ['SPOŻYWCZY', '#3b5670'], ['OBUWIE', '#6b4a2e']];
-  const WALLS = ['#d8c0a8', '#e3c77e', '#c9b8a0', '#b7c29a', '#d8b8a0', '#a9bccb', '#cfc4b4', '#e8dcc0', '#c98a6a'];
+  const WALLS = walls || ['#d8c0a8', '#e3c77e', '#c9b8a0', '#b7c29a', '#d8b8a0', '#a9bccb', '#cfc4b4', '#e8dcc0', '#c98a6a'];
   // a window on a facade: glass in a white frame, a sill under it; registered when low enough to break (fx: the facade's x, sg: its side)
   function win(g, fx, sg, y, z, w = 1.1, h = 1.4, lit = false, reg = null) { const o = sg * .03; if (night && !lit && rnd() < .3) lit = true;
     g.add(box(.06, h + .16, w + .16, frame, fx + o, y, z), box(.08, h, w, lit ? glassLit : glass, fx + o * 1.5, y, z), box(.18, .08, w + .3, stone, fx + sg * .09, y - h / 2 - .1, z));

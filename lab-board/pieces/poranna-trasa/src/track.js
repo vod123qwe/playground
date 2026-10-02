@@ -45,7 +45,11 @@ export const REGION_T = {
       // bloki: the estate of panel blocks: a long boulevard up one side, a turn back, a zigzag between the blocks on the way down; blocks on most of it, a strip of tenements by the start
       // and one half way round, more trees, no market
       bloki: { ctrl: [[0, 0, 0], [0, 0, 100], [0, 1, 200], [10, 1, 290], [50, 2, 330], [100, 2, 330], [130, 1, 300], [130, 1, 240], [170, 1, 215], [210, 1, 215], [240, 0, 180], [240, 0, 100], [205, 0, 70], [160, -1, 60], [130, -1, 20], [125, -1, -40], [95, 0, -75], [45, 0, -80], [10, 0, -50]],
-        stops: [.1, .3, .55, .8], posts: [.5], shops: [[.25, 1], [.7, -1]], market: [], blocks: [[.1, .44], [.56, .94]], trees: .6 } } },
+        stops: [.1, .3, .55, .8], posts: [.5], shops: [[.25, 1], [.7, -1]], market: [], blocks: [[.1, .44], [.56, .94]], trees: .6 },
+      // turystyczna: the tourist quarter: old tenements in pastels round a big park inside the loop (both shortcuts through it: narrow
+      // paths, no cars, people everywhere), a church and a monument where the town has its office tower, food trucks, a skatepark
+      turystyczna: { tourist: true, ctrl: [[0, 0, 0], [0, 1, 70], [15, 2, 130], [60, 2, 160], [120, 1, 165], [170, 1, 140], [190, 0, 90], [230, 0, 60], [250, 0, 0], [230, 0, -60], [170, 0, -80], [100, 0, -75], [45, 0, -60], [10, 0, -30]],
+        stops: [.2, .5, .8], posts: [.5], shops: [[.3, 1], [.75, -1]], market: [], blocks: [], trees: .75, walls: ['#e8c8c0', '#f0dca8', '#c8dcc0', '#c0d0e0', '#e8d0e0', '#f0e0c8'] } } },
   // bronx: the estate of panel blocks after dark (docs/trasy-tematyczne.md): its own loop of streets between the blocks, blocks nearly
   // all the way, a few tenements; the night: lamps along it (some flickering), lit windows, dark passages, a shop open all night
   bronx: { id: 'bronx', home: false, city: true, night: true, ctrl: [[0, 0, 0], [0, 0, 80], [-20, 0, 140], [10, 0, 190], [70, 0, 205], [115, 0, 175], [125, 0, 115], [165, 0, 92], [222, 0, 102], [262, 0, 70], [258, 0, 0], [212, 0, -42], [150, 0, -52], [92, 0, -32], [42, 0, -44]],
@@ -733,8 +737,8 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
   const farmLots = [], fieldLots = []; const whLast = {};
   // (the estate: warehouses on their stretches, a site now and then; its road works and cranes further down)
   const EST = RG.estate ? createEstate({ THREE, toon, P, put, box, hit, zone, things, parked: () => parked, puddles, PAVE, ds, N, rnd: mulberry(211) }) : null;
-  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked, townBox: s => CITY.townBox(s), stops, night: !!RG.night, cen: { x: CEN.x, z: CEN.z, r: REACH } }) : null;   // (the town's other streets: shortcuts, side streets)
-  const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G , night: !!RG.night }) : null, cityLast = {};
+  const NET = RG.city ? createCityNet({ THREE, toon, S, N, ds, INNER, ROAD, PAVE, at, groundAt, put, box, hit, zone, things, doors, windows, mailboxes, colliders, G, P, rnd: mulberry(331), startI: home.iJ, CARS, parked: () => parked, townBox: s => CITY.townBox(s), stops, night: !!RG.night, tourist: !!RG.tourist, cen: { x: CEN.x, z: CEN.z, r: REACH } }) : null;   // (the town's other streets: shortcuts, side streets)
+  const CITY = RG.city ? createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd: mulberry(307), G , night: !!RG.night , tourist: !!RG.tourist , walls: RG.tourist ? RG.walls : null }) : null, cityLast = {};
   const lot = (i, s) => { if (home.near(i, s, 34) || nearStop(i, s, 16) || nearPost(i, s, 15) || nearShop(i, s, 14) || nearTrail(i, s, 11)) return null;
     if (NET?.blocked(i, s)) return null;
     if (CITY) { const f = i / N, gapM = (i - (cityLast[s] ?? -1e9)) * ds; if (RG.market.some(([a, b]) => f >= a && f <= b)) { if (s < 0 || gapM < 11) return null; cityLast[s] = i; return CITY.stalls(i, s); }
@@ -1095,6 +1099,6 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
     return out; }
   // (for the game's modes: a collider added or taken away while it runs, the props to build with)
   const dropHit = C => { const k = colliders.indexOf(C); if (k >= 0) colliders.splice(k, 1); for (const b of buckets) { const j = b.indexOf(C); if (j >= 0) b.splice(j, 1); } };
-  return { paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z)), net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, ROAD, KERB, PAVE };
+  return { paved: (x, z) => !!(home.paved?.(x, z) || NET?.paved(x, z)), net: NET, kerbCars, standCars, addHit: hit, dropHit, props: P, home, audit, things, floorAt, puddles, group: G, probe, S, N, ds, len, INNER, dapT, dapSun, stops, posts, shops, bins, bikeZones, fires, annexes, show, train, farRoad: -INNER * 86, parked, seats, mailboxes, colliders, near, windows, doors, bundles, ramps, lots, cars: CARS, centre: new THREE.Vector3(90, 0, 0), start: home.start, startI: home.iJ, region: RG.id, map: RG.map, night: !!RG.night, city: !!RG.city, tourist: !!RG.tourist, ROAD, KERB, PAVE };
 }
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
