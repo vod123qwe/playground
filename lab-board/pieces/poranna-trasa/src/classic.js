@@ -22,14 +22,14 @@ export function createClassic({ THREE, toon, track, scene, cars }) {
   // ---------- cars on the drives (the houses' side), nose to the house, backing out when he comes ----------
   const backers = [];
   if (cars) { const doors = track.doors.slice().sort((x, y) => x.i - y.i); let last = -1e9;
-    for (const d of doors) { if ((d.i - last) * ds < 70 || rnd() < .45) continue; last = d.i; const i = wrap(d.i + Math.round(5 / ds)), A = S[i], c = cars.random(rnd);
+    for (const d of doors) { if ((d.i - last) * ds < 40 || rnd() < .25) continue; last = d.i; const i = wrap(d.i + Math.round(5 / ds)), A = S[i], c = cars.random(rnd);
       const g = c.group, d0 = hs * (track.PAVE + 4.2), yawIn = Math.atan2(A.r.x * hs, A.r.z * hs); g.userData.keep = true; scene.add(g);
       const lamps = []; for (const x of [-.55, .55]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.22, .14, .05), new THREE.MeshBasicMaterial({ color: '#f6f3ea' })); l.position.set(x, .75, -(c.half[1] + .02)); l.visible = false; g.add(l); lamps.push(l); }
       backers.push({ g, c, i, d: d0, d0, d1: hs * 2.2, yawIn, lamps, st: 'in', t: 0, hitT: 0, sorry: 0 }); } }
 
   // ---------- sprinklers on the lawns: a jet of water sweeping to and fro over the pavement ----------
   const sprinklers = [], waterM = new THREE.MeshBasicMaterial({ color: '#cfe8f5', transparent: true, opacity: .55, depthWrite: false });
-  for (const d of track.doors.filter((_, k) => k % 5 === 2)) { const i = wrap(d.i - Math.round(4 / ds)), p = pv(i, hs * (track.PAVE + 1.2)), g = new THREE.Group();
+  for (const d of track.doors.filter((_, k) => k % 3 === 1)) { const i = wrap(d.i - Math.round(4 / ds)), p = pv(i, hs * (track.PAVE + 1.2)), g = new THREE.Group();
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .18, 8), M('#3a3d42'))); g.children[0].position.y = .09; const jet = new THREE.Group(); jet.position.y = .2; g.add(jet);
     for (let k = 0; k < 9; k++) { const dr = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, .5), waterM); const u = k / 8; dr.position.set(0, Math.sin(u * Math.PI) * 1.3, u * 4.2); dr.rotation.x = -Math.cos(u * Math.PI) * .7; jet.add(dr); }
     g.position.copy(p); scene.add(g); const A = S[i]; sprinklers.push({ g, jet, i, p, base: Math.atan2(A.r.x * -hs, A.r.z * -hs), sw: 0, dir: 1, wetT: 0, flipT: 0 }); }

@@ -52,7 +52,8 @@ export function createDirector({ THREE, toon, track, scene }) {
     return { kind: 'shout', at: V(p.x, gy(p.x, p.z, K.i) + 1.7, p.z), text: pick(['OJ, SORRY!', 'NIE WIDZIAŁEM CIĘ!', 'GDZIE PĘDZISZ?!']) }; void half; }
   // ---------- each frame ----------
   function update(dt, R) { const ev = [];
-    if (!R.foot && Math.abs(R.v) > 3 && !R.busy) { quiet -= dt; if (quiet <= 0) { quiet = 6 + Math.random() * 5; const e = spawn(R); if (e) ev.push(e); } }
+    if (!R.foot && Math.abs(R.v) > 3 && !R.busy) { quiet -= dt; if (quiet <= 0) { quiet = track.classic ? 3.5 + Math.random() * 3 : 6 + Math.random() * 5;   // (the Classic: something every few seconds)
+      const e = spawn(R); if (e) ev.push(e); } }
     for (let k = live.length - 1; k >= 0; k--) { const L = live[k]; L.t += dt; const A = S[L.i];
       if (L.list) { for (const c of L.list) { if (L.kind === 'pigeons') { const dd = Math.hypot(R.x - c.g.position.x, R.z - c.g.position.z); if (!c.fly && dd < 7) { c.fly = true; c.vy = 3 + Math.random() * 2; if (!L.flapped) { L.flapped = true; ev.push({ kind: 'flap' }); } }
             if (c.fly) { c.vy -= 1.5 * dt; c.g.position.y += c.vy * dt; c.g.position.x += Math.sin(c.ph) * 3 * dt; c.g.position.z += Math.cos(c.ph) * 3 * dt; } continue; }

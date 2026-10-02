@@ -757,7 +757,7 @@ function ride(dt, inp) {
   B.flatT = Math.max(0, (B.flatT || 0) - dt);   // (a tyre cut on glass: it drags a while)
   let a = -(B.flatT > 0 ? .55 * B.v : 0) + push - brk - .009 * B.v * Math.abs(B.v) - .035 * B.v - (off ? .9 * Math.max(.2, 1 + MOD.grass) * B.v : 0) - g * Math.sin(Math.atan(slope)) * 1.25 * (slope > 0 ? 1 - MOD.hill : 1) - B.dogSlow * (1.2 + .09 * B.v * B.v) * Math.sign(B.v);
   if (inp.pedal < .05 && !B.air && Math.abs(B.v) < 1.3) a -= Math.sign(B.v) * (1.2 - Math.abs(B.v) * .7);   // (coasting slowly: the tyres drag him to a stop)
-  if (track.classic && !B.air && !back && inp.brake < .1 && (B.v > 1 || inp.pedal > .05)) a = ((inp.pedal > .05 ? 8.2 * (inp.sprint ? 1.2 : 1) : 5) - B.v) * (inp.pedal > .05 ? .9 : .7) - g * Math.sin(Math.atan(slope)) * .4;   // (the Classic: once going, rolling on at 5 m/s by himself, up to 8 with the pedal; stopped, he stays until the pedal)
+  if (track.classic && !B.air && !back && inp.brake < .1 && (B.v > 1 || inp.pedal > .05)) a = ((inp.pedal > .05 ? 6.6 * (inp.sprint ? 1.2 : 1) : 4) - B.v) * (inp.pedal > .05 ? .9 : .7) - g * Math.sin(Math.atan(slope)) * .4;   // (the Classic: once going, rolling on at 4 m/s by himself, up to 6.6 with the pedal; stopped, he stays until the pedal)
   if (back) a = -1.6 * inp.brake - .6 * B.v;
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
   const v0 = B.v; B.v = Math.max(-1.4, B.v + a * dt); if (!back && inp.pedal < .05 && !B.air && (Math.abs(B.v) < .1 || B.v < 0 || (v0 !== 0 && Math.sign(B.v) !== Math.sign(v0)))) B.v = 0;   // (crawling: he stops, a foot on the ground, on a hill too; back only if he walks it back)
