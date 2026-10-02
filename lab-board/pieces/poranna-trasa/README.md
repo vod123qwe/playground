@@ -1284,3 +1284,10 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - Janusz w słuchawce domyślnie wyłączony: nie komentuje jazdy, nie dzwoni ze zleceniami, nie ma scenek (włączysz w ustawieniach: rzadko albo często)
 - skocznie omijają roboty drogowe, bramownice z cegłami i przejazdy wózków widłowych (na mapie budowy barierki robót przechodziły przez megaskocznię), nie stoją przed ani za zaparkowanym autem, w mieście nie stoją na chodniku (ławki i kosze na lądowaniu)
 - nic już nie miga na drodze: żółte paski rozpędu przed przejazdem, kałuże i błoto leżą na asfalcie punkt po punkcie, cień pod autem wyżej
+
+## Wersja 150: wózek widłowy, który widać
+
+- na mapie z magazynami wózki widłowe przecinające drogę były migającą, prześwitującą plamą: gra przerzedzała je jak koronę drzewa między kamerą a tobą, a przy ruszaniu i staniu obracały się skokiem o pół obrotu
+- teraz to prawdziwy wózek: kierowca w kamizelce i kasku pod klatką, maszt, widły z paletą kartonów, pomarańczowy kogut na dachu, który mruga, kiedy wózek jedzie; nigdy nie znika w przerzedzeniu
+- jedzie widłami do przodu, przed ruszeniem obraca się płynnie w miejscu
+- w poprzek drogi namalowany żółty przerywany pas przejazdu wózków, widać z daleka, gdzie mogą wyjechać
