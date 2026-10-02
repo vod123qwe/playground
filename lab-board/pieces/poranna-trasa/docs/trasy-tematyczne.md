@@ -114,6 +114,7 @@ Las, góry w tle, jezioro, kampery. Cicho, dziko, piękne światło.
 - Krew komiksowa i pikselowa, wyłączana w ustawieniach.
 - Sterowanie jak było (cztery kierunki, garda góra i dół), tylko czytelniej.
 - Kwestie końca walki różne w biomach i od różnych osób; stawka: przegrana coś kosztuje, wygrana daje łup.
+- Do zrobienia później (Jarek, przy v140): mocniejszy refactor walki z bokserskimi animacjami z Mixamo (Jarek pobiera paczkę z Adobe: jab, cross, hook, uppercut, uniki, praca nóg, postawa), przeniesionymi w Blenderze na boy i brawler; teraz biodra są sztywne, bo klipy Quaterniusa są ogólne.
 
 ## Otwarte decyzje
 
