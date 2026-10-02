@@ -169,7 +169,7 @@ export function createHud() {
     markT += dt; if (st.marks) for (const m of st.marks) drawMark(m, project, st.projEdge);
     if (st.quests && st.quests.length) questList(st.quests);
     if (tipText) drawTip();
-    if (st.star) aimStar(st.star, dt); else if (st.cross) { const cx = cv.width >> 1, cy = cv.height >> 1; g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = '#f6f3ea'; g.fillRect(cx, cy, 1, 1); }
+    if (st.star) aimStar(st.star, dt, project); else if (st.cross) { const cx = cv.width >> 1, cy = cv.height >> 1; g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = '#f6f3ea'; g.fillRect(cx, cy, 1, 1); }
     if (Q.open) drawAsk(dt);
     if (overlay) overlay(dt);
   }
@@ -312,21 +312,27 @@ export function createHud() {
     const bw = Math.max(...lines.map(width)) + 12, bh = lines.length * 8 + 8, x = Math.round(W / 2 - bw / 2), y = document.body.classList.contains('touch') ? Math.round(H * .76) - bh : H - 40 - bh;   // (a phone: above the buttons)
     g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1, bw + 2, bh + 2); g.fillStyle = '#25272b'; g.fillRect(x, y, bw, bh); g.fillStyle = '#efc970'; g.fillRect(x, y, bw, 1);
     lines.forEach((l, i) => text(l, Math.round(W / 2 - width(l) / 2), y + 5 + i * 8, i === 0 && l.startsWith('TRENING') ? '#efc970' : '#f6f3ea')); }
-  // the fight's star (as in the knightly games): four arrows round the middle of the picture; the side your mouse picks, lit; his
-  // punch coming, red and blinking on its side, green in the moment a guard raised is a parry; your guard, a bar under the star
+  // the fight's signs: over the other one, what to do about his punch (a pixel sign and its words: a yellow shield, guard (Space); a
+  // violet shield with an arrow down, guard low (↓ and Space); the shield green and blinking, guard now: a counter; a white fist, he is
+  // open: hit; the paper, G: the finisher); your guard, a small shield low in the middle; with the mouse held, a small star of the side
+  // your next punch comes from; under the picture, the keys
   let starT = 0;
-  function aimStar(A, dt) { starT += dt; const cx = cv.width >> 1, cy = A.high ? Math.round(cv.height * .3) : (cv.height >> 1) + 4, R = 9, len = 9;   // (from behind him: up over the two, not on his back)
-    const arrow = (dir, fill, edge) => { for (let q = 0; q < len; q++) { const half = len - 1 - q; for (let r = -half; r <= half; r++) { const on = Math.abs(r) === half || q === 0 ? edge : fill; if (!on) continue; g.fillStyle = on;
-      const a = R + q, x = dir === 'left' ? cx - a : dir === 'right' ? cx + a : cx + r, y = dir === 'up' ? cy - a : dir === 'down' ? cy + a : cy + r; g.fillRect(x, y, 1, 1); } } };
-    for (const d of ['left', 'right', 'up', 'down']) {
-      if (d === A.foe) { if (A.green) arrow(d, '#9be36a', '#f6f3ea'); else if (((starT * 10) | 0) % 2) arrow(d, d === 'down' ? '#c070f0' : '#ff5b3a', '#f6f3ea'); else arrow(d, '#efc970', '#17181b'); }
-      else arrow(d, d === A.dir ? '#f6f3ea' : 'rgba(23,24,27,.35)', d === A.dir ? '#17181b' : 'rgba(246,243,234,.6)'); }
-    if (A.open && ((starT * 8) | 0) % 2) { g.fillStyle = '#17181b'; g.fillRect(cx - 4, cy - 4, 9, 9); g.fillStyle = '#fff8e3'; g.fillRect(cx - 3, cy - 3, 7, 7); }   // (he is open: hit now)
-    g.fillStyle = '#17181b'; g.fillRect(cx - 1, cy - 1, 3, 3); g.fillStyle = A.green ? '#7fae58' : '#f6f3ea'; g.fillRect(cx, cy, 1, 1);
-    if (A.guard) { const y = A.low ? cy + R + len + 2 : cy - R - len - 3; g.fillStyle = '#17181b'; g.fillRect(cx - 7, y - 1, 15, 3); g.fillStyle = '#9ccad8'; g.fillRect(cx - 6, y, 13, 1); }
-    // (what to do now, in words, over the star)
-    { const L = A.finish ? ['G: FINISZER!', '#efc970'] : A.green ? ['TERAZ!', '#9be36a'] : A.foe === 'down' ? ['NISKO! BLOK W DÓŁ', '#c070f0'] : A.foe ? ['BLOK!', '#ff5b3a'] : A.open ? ['BIJ!', '#efc970'] : null;
-      if (L) text(L[0], cx - L[0].length * 2, Math.max(2, cy - R - len - 11), L[1]); } }
+  const SHIELD = ['.#######.', '#########', '#########', '#########', '#########', '.#######.', '.#######.', '..#####..', '...###...', '....#....'];
+  const FIST = ['.##.##...', '#######..', '########.', '########.', '########.', '.######..', '..####...', '..####...'];
+  const PAPERI = ['#########', '#.......#', '#.##.##.#', '#.......#', '#.#####.#', '#.......#', '#.#####.#', '#########'];
+  const DOWN = ['..#..', '..#..', '#####', '.###.', '..#..'];
+  function icon(rows, x, y, col, edge = '#17181b', k = 1) { for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') { g.fillStyle = edge; g.fillRect(x + i * k + dx, y + j * k + dy, k, k); } });
+    rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') { g.fillStyle = col; g.fillRect(x + i * k, y + j * k, k, k); } }); }
+  function aimStar(A, dt, project) { starT += dt; const blink = ((starT * 8) | 0) % 2, W = cv.width, H = cv.height;
+    const p = A.foeHead && project(A.foeHead), x0 = p ? Math.max(16, Math.min(W - 16, p.x)) : W >> 1, y0 = p ? Math.max(26, Math.min(H * .7, p.y - 4)) : 30;
+    const S = A.finish ? [PAPERI, '#f6f3ea', 'G: FINISZER!', '#efc970'] : A.green ? [SHIELD, blink ? '#9be36a' : '#f6f3ea', 'KONTRA! SPACJA', '#9be36a']
+      : A.foe === 'down' ? [SHIELD, '#c070f0', '↓+SPACJA: NISKO', '#c070f0', true] : A.foe ? [SHIELD, '#efc930', 'SPACJA: BLOK', '#efc930'] : A.open ? [FIST, blink ? '#f6f3ea' : '#efc970', 'BIJ!', '#f6f3ea'] : null;
+    if (S) { const ix = Math.round(x0 - S[0][0].length), iy = Math.round(y0 - S[0].length * 2 - 11); icon(S[0], ix, iy, S[1], '#17181b', 2); if (S[4]) icon(DOWN, ix + 4, iy + 4, '#17181b', S[1], 2);
+      const tw = S[2].length * 4; text(S[2], Math.round(Math.max(2, Math.min(W - tw - 2, x0 - tw / 2))), iy + S[0].length * 2 + 3, S[3]); }
+    if (A.guard) { const x = (W >> 1) - 4, y = H - 36; icon(SHIELD, x, y, '#9ccad8'); if (A.low) icon(DOWN, x + 2, y + 2, '#17181b', '#9ccad8'); }
+    if (A.mouse) { const cx = W >> 1, cy = (H >> 1) + 4; for (const k of ['left', 'right', 'up', 'down']) { const x = cx + (k === 'left' ? -9 : k === 'right' ? 7 : -1), y = cy + (k === 'up' ? -9 : k === 'down' ? 7 : -1); g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1, 5, 5); g.fillStyle = k === A.dir ? '#f6f3ea' : '#5a5f66'; g.fillRect(x, y, 3, 3); } }
+    // (the keys: two short lines low in the middle, between the style button and the bag)
+    { const L = A.mouse ? ['MYSZ: STRONA  LPM: CIOS', 'PPM: BLOK  SHIFT: UNIK'] : ['← → CIOS  ↑ HAK  ↓ DOŁEM', 'SPACJA BLOK  SHIFT UNIK']; L.forEach((k, j) => text(k, Math.max(2, (W - k.length * 4) >> 1), H - 20 + j * 8, '#c9c4ba')); } }
   // the fight: his bars on the left, the other's on the right (health, and under it breath); a shield when his guard is up
   function fightBars(F) { const W = cv.width, bw = Math.min(90, Math.round(W * .3)), y = Math.round(126 * W / Math.max(1, innerWidth)) + 10;   // (under the bike computer and the purse)
     const bar = (x, v, h, col, back, right) => { g.fillStyle = '#17181b'; g.fillRect(x - 1, y - 1 + (h === 2 ? 7 : 0), bw + 2, h + 2); g.fillStyle = back; g.fillRect(x, y + (h === 2 ? 7 : 0), bw, h);
