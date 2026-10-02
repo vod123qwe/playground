@@ -51,7 +51,7 @@ export function createWorld({ THREE, scene, track, toon, audio, onBreak, say, on
   function hit(T, dx, dz, power = 1) {
     if (!ready) init(); const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l; T.axis = V(dz, 0, -dx);   // (it leans away from the kick: about the line across it)
     if (T.kind === 'mailbox') { if (T.broken) return; T.hits++; T.wv += 4.5 * power; T.mb.flag.rotation.x = -.9; T.flagT = .5; puff(T.x - dx * .15, T.y + 1.05, T.z - dz * .15, 3, '#b8b8ae', .7); audio?.play('mailbox', { vol: .45 });
-      if (T.hits >= 3) { const q = track.probe(T.x, T.z, -1), R = track.S[q.i].r, sg = Math.sign(q.d) || 1, ox = R.x * sg, oz = R.z * sg;   // (off the road: onto the lawn behind it)
+      if (T.hits >= 3 || power >= 2) { const q = track.probe(T.x, T.z, -1), R = track.S[q.i].r, sg = Math.sign(q.d) || 1, ox = R.x * sg, oz = R.z * sg;   // (off the road: onto the lawn behind it)
         T.axis = V(oz, 0, -ox); T.broken = true; T.fall = { t: 0, dx: ox, dz: oz }; T.mb.done = true; if (T.C) T.C.used = true; audio?.play('crash', { vol: .35 }); onBreak?.(T); } return; }
     if (T.kind === 'pole' && (T.soft || T.carpet)) { T.hits++; T.wv += 2.5 * power; puff(T.x - dx * .2, T.y + 1, T.z - dz * .2, T.carpet ? 9 : 4, T.carpet ? '#b59a74' : '#d8d0bf', T.carpet ? 1.4 : .8); audio?.play('kick', { vol: .3 }); return; }
     if (T.kind === 'ball') { T.vx = dx * 6.5 * power; T.vz = dz * 6.5 * power; T.vy = 2.4 * power; audio?.play('kick', { vol: .35 }); return; }

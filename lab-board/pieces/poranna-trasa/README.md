@@ -1046,3 +1046,7 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - zdrowie: serce w pikselowej ramce, pasek z 10 segmentów z jasnym i ciemnym rantem (zielony, żółty, czerwony)
 - przełącznik stylu w rogu w tej samej pikselowej ramce
 - przechodnie: nie zawracają, gdy jesteś w promieniu 25 m; schodzą na bok wcześniej i w szerszym pasie, także gdy jedziesz za nimi
+
+## Wersja 118: kopniak z roweru rozwala skrzynkę
+
+- kopniak w skrzynkę pocztową z roweru rozwala ją od razu (pieszo nadal trzy kopnięcia); przydaje się przy zleceniach typu „Robota dla ekipy”

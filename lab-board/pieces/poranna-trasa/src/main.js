@@ -794,7 +794,7 @@ function landKick(tg) {
   if (tg.kind === 'rider') { const how = mp.kick(meId(), otherId()); hud.impact(mid, how === 'tag' ? 'BEREK!' : 'ŁUP!'); shake = .25; audio.play('kick', { vol: .7 }); net.send({ k: 'kick', how, dx: ax / al, dz: az / al }); }   // (the other player: off his bike in the race, a shove otherwise)
   if (tg.kind === 'goose') { geese.kick(tg.ref, ax / al, az / al); gooseKicked(tg.ref, mid); }
   if (tg.kind === 'granny') { tg.ref.kicked(); hud.rant(tg.ref.mouth, 'JA CI DAM GNOJKU!', true); shake = .12; }   // (the old woman: a kick does nothing, bar make her crosser)
-  if (tg.kind === 'thing') { stuff.hit(tg.ref, ax, az, 1); shake = Math.max(shake, tg.ref.kind === 'mailbox' ? .08 : .03); }   // (from the bike: as on foot)
+  if (tg.kind === 'thing') { stuff.hit(tg.ref, ax, az, tg.ref.kind === 'mailbox' ? 2 : 1); shake = Math.max(shake, tg.ref.kind === 'mailbox' ? .08 : .03); }   // (from the bike: as on foot)
   if (tg.kind === 'hyd' && water.spray(new THREE.Vector3(tg.ref.x, tg.ref.y0 || 0, tg.ref.z), 4.5)) { hud.impact(new THREE.Vector3(tg.ref.x, (tg.ref.y0 || 0) + .5, tg.ref.z), 'PSSS!'); shake = .15; }
 }
 // puddles: a wheel (or a foot) through one throws it up; at speed by the pavement, whoever stands there gets it, and says so; mud holds a bike back
