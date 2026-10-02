@@ -678,7 +678,7 @@ function ride(dt, inp) {
     if (c.moved) { B.lean = 0; B.leanV = 0; B.v = 0; }
     B.y += (q.y - B.y) * Math.min(1, dt * 12); pose(dt, 0, 0, slope, Math.min(1, Math.abs(B.lean) / 1.3)); return;
   }
-  const off = Math.abs(q.d) > track.PAVE && !track.home?.paved(B.x, B.z);   // (the home's street: asphalt, though off the loop)
+  const off = Math.abs(q.d) > track.PAVE && !track.paved(B.x, B.z);   // (the home's street: asphalt, though off the loop)
   // the push: strong from standing, falling off towards 9 m/s (a little more with Shift); the brake; the air, the tyres, the grass; the hill; a dog
   // (B.v is signed: held at a stop, the brake walks him backwards, slowly)
   const accK = 1 + MOD.acc, topK = 1 + MOD.top, push = inp.pedal * (inp.sprint ? 1.35 : 1) * (RAD.turbo > 0 ? 1.3 : 1) * Math.max(0, (inp.sprint ? 3.9 : 3.4) * accK - Math.max(0, B.v) * (inp.sprint ? .33 : .36) * accK / topK);   // (the parts: shop.js)
@@ -960,7 +960,7 @@ function follow(dt) {
   const q = track.probe(C.pos.x, C.pos.z, B.hint); C.pos.y = Math.max(C.pos.y, q.y + .6);
   camera.position.copy(C.pos); camera.up.set(0, 1, 0); camera.lookAt(C.look); camera.rotateZ(-B.lean * .2 * (B.crash ? .3 : 1) - mlook.x * .04);
   if (shake > 0) { shake = Math.max(0, shake - dt * 1.8); const a = shake * shake * 1.6; camera.position.x += (Math.random() - .5) * a; camera.position.y += (Math.random() - .5) * a; }
-  { const sp = Math.min(1, Math.max(0, B.v) / 9), rum = (Math.abs(gq.d) > track.PAVE && !track.home?.paved(B.x, B.z) ? .035 : Math.abs(gq.d) > track.KERB ? .014 : .006) * sp * (B.air || B.crash ? 0 : 1), t = performance.now() / 1000;
+  { const sp = Math.min(1, Math.max(0, B.v) / 9), rum = (Math.abs(gq.d) > track.PAVE && !track.paved(B.x, B.z) ? .035 : Math.abs(gq.d) > track.KERB ? .014 : .006) * sp * (B.air || B.crash ? 0 : 1), t = performance.now() / 1000;
     camera.position.y += (Math.sin(t * 47) * .6 + Math.sin(t * 71) * .4) * rum; camera.position.x += Math.sin(t * 39) * rum * .5; }   // (the ground under the wheels: asphalt, the kerb, the grass)
   camera.fov = (CP.fov + Math.max(0, B.v) * .75 + rush * 7 + THREE.MathUtils.smootherstep(throwCam.w, 0, 1) * 8) * PK(); camera.updateProjectionMatrix();
   if (CUR === P1) { sun.position.copy(rider.root.position).addScaledVector(SUN, 60); sun.target.position.copy(rider.root.position); sun.target.updateMatrixWorld(); }
@@ -1539,6 +1539,8 @@ function testRows() { const out = [];
   const needLV = f => () => { if (!LV && here) { startLevel(here.id); setTimeout(f, 700); } else f(); };
   out.push({ head: 'TORY PRZESZKÓD (FINAŁY)' }); for (const l of LVM.LEVELS.filter(l => !l.soon)) out.push({ label: 'TOR: ' + l.name, act: () => goTrack(l.id) });
   if (LV && FIN.on) out.push({ head: 'TEN TOR: ' + LV.name }, ...[['start', 'POCZĄTEK'], ['easy', 'ŁATWY PAS'], ['hard', 'TRUDNY PAS (ROZPĘD)'], ['jump2', 'DRUGA SKOCZNIA'], ['double', 'PODWÓJNY RÓW']].map(([w, n]) => ({ label: n, act: () => tpFinale(w) })));
+  if (track.net) { const N0 = track.N, wr = i => ((i % N0) + N0) % N0, go = i => { const A = track.S[wr(i)]; tpTo(A.p.x, A.p.z, 1); };
+    out.push({ head: 'MIASTO: ULICE' }, ...track.net.shortcuts.map(c => ({ label: c.kind === 'alley' ? 'SKRÓT: ZAUŁEK' : 'SKRÓT: PARK Z PLACEM ZABAW', act: () => go(c.a - Math.round(14 / track.ds)) })), ...track.net.stubs.slice(0, 2).map((t, k) => ({ label: 'BOCZNA ULICA ' + (k + 1), act: () => go(t.i - Math.round(16 / track.ds)) }))); }
   out.push({ head: 'STANY' },
     { label: 'GAZETA PO TRASIE', act: needLV(() => finishLevel()) },
     { label: 'MAPA TRASY', act: () => openMap() },

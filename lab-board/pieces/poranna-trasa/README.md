@@ -1093,3 +1093,13 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - menu TESTY: grupa TORY PRZESZKÓD (FINAŁY): przy każdym odcinku „Tor: nazwa”: odpala odcinek i stawia od razu na początku finału (także w innym regionie, po przeładowaniu); dla bieżącego odcinka skoki w miejsca toru: początek, łatwy pas, trudny pas (przed rozpędem), druga skocznia, podwójny rów
 - poprawka: po budowie finału model roweru zostawał w miejscu próbnego skoku; zaczynając odcinek pieszo widziało się rower obok, a gra mówiła, że jest daleko i nie dawała go podnieść
 - miasto: każdy rodzaj przechodnia trzy razy (Druga strona dwa razy), kopie w innych kolorach ubrań i włosów i trochę innego wzrostu
+
+## Wersja 124: miasto jako sieć ulic
+
+- dwa skróty przez kwartały: odbijasz z głównej ulicy (tablica ZAUŁEK > albo PARK >), jedziesz równoległą drogą 30 m w głąb i wracasz na główną przed tym samym punktem kontrolnym; wybór drogi, ta sama meta
+  - zaułek: wąsko, mury podwórek i tyły kamienic, kontenery i worki na śmieci, graffiti, materac z bezdomnym i jego piwem, latarnie, tylne drzwi z prenumeratorami
+  - park: alejka przez trawnik, plac zabaw w płotku (huśtawki, zjeżdżalnia, piaskownica, huśtawka-ważka, drabinki), ławki, drzewa, domy od strony parku z prenumeratorami
+- cztery boczne ulice zamknięte kawałek dalej: pasy dla pieszych na głównej ulicy, sygnalizatory na rogach, barierka z pachołkami, znak zakazu wjazdu, ściana kamienicy na końcu
+- meble uliczne przy krawężniku: słupy ogłoszeniowe z afiszami, kioski Ruchu, budki telefoniczne, ławki, stojaki rowerowe, donice, słupki
+- skróty i boczne ulice są dla roweru jak asfalt (nie hamują jak trawa)
+- menu TESTY: MIASTO: ULICE (skok przed zaułek, przed park, przed boczną ulicę)
