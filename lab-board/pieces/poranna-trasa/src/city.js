@@ -7,7 +7,7 @@
 // them), letterboxes (in one: the most). A lot's front faces the road: local +x on the right side of it (s = +1), local -x on the left.
 // createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G }) → { tenement(i, s), block(i, s), stalls(i, s), skyline(cx, cz), rails() }
 
-export function createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G, night = false, tourist = false, walls = null }) {
+export function createCity({ THREE, toon, put, box, hit, zone, things, doors, windows, mailboxes, colliders, PAVE, S, N, ds, rnd, G, night = false, tourist = false, walls = null, P = null }) {
   const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); f(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
   // a 3 x 5 pixel font for the signs (the game's own font may not be loaded yet when the world is built)
   const F = { A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010', K: '101110100110101', L: '100100100100111', M: '101111111101101',
@@ -79,6 +79,25 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     put(g, i, s * (PAVE + 7 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard' }, i); zone(g, D / 2 + 7, W / 2 + 1);
     register(g, i, s, stairs, reg); return g; }
 
+  // ---------- a row of garages (the Bronx): four boxes by the road, ribbed metal doors, graffiti, one open now and then (a light in it, a car
+  // up on blocks inside); each box takes the paper (a letterbox on its door); the flat roofs one long run to ride along, a ramp up at
+  // each end of the row; the ground before them paved ----------
+  const doorT = cv(8, 8, g => { for (let y = 0; y < 8; y++) { g.fillStyle = y % 2 ? '#6f757d' : '#868c94'; g.fillRect(0, y, 8, 1); } }), openGarages = [], paveRects = [];
+  function garages(i, s) { const g = new THREE.Group(), D = 6, W = 12.4, H = 2.3, fx = s * D / 2, n = 4, wall = M(['#9a948a', '#8c8a84', '#a8a098'][rnd() * 3 | 0]), doorM = toon('#ffffff', { map: doorT }), inside = night ? new THREE.MeshBasicMaterial({ color: '#c8a060' }) : M('#5a5048');
+    g.add(box(D, H, W, wall, 0, H / 2, 0), box(D + .3, .16, W + .2, roofM, 0, H + .08, 0));
+    const stairs = [];
+    for (let k = 0; k < n; k++) { const z = -W / 2 + (k + .5) * W / n, open = rnd() < .28;
+      if (open) { g.add(box(.05, 2, 2.6, inside, fx + s * .02, 1, z), box(2.6, .9, 1.7, M(['#8e2e25', '#3b5670', '#9aa0a4'][rnd() * 3 | 0]), fx - s * 1.8, .75, z), box(1.6, .6, 1.5, M('#2f3e4a'), fx - s * 2.1, 1.45, z)); openGarages.push({ g, z, s, fx, i }); }
+      else g.add(box(.06, 2, 2.6, doorM, fx + s * .03, 1, z));
+      if (rnd() < .45) g.add(box(.02, .35 + rnd() * .3, .8 + rnd() * 1.2, M(['#cf5a3e', '#efc970', '#8fc3f0', '#9fd27a', '#e070b0'][rnd() * 5 | 0]), fx + s * .07, 1 + rnd() * .6, z + (rnd() - .5)));
+      stairs.push({ fx, z, box: letterbox(g, fx, s, z + 1.05) }); }
+    put(g, i, s * (PAVE + .4 + D / 2), 0, 0); hit(g, { hx: D / 2, hz: W / 2, h: H, kind: 'hard', car: g }, i); zone(g, D / 2 + 1, W / 2 + .5);
+    g.updateMatrixWorld(true); const c = g.localToWorld(new THREE.Vector3(0, 0, 0)); paveRects.push({ x: c.x, z: c.z, yaw: g.rotation.y, hx: D / 2 + 3.6, hz: W / 2 + 7 });
+    for (const end of [-1, 1]) { const o = P?.ramp ? P.ramp(rnd, 'big') : null; if (!o) break; const q = g.localToWorld(new THREE.Vector3(0, 0, end * (W / 2 + 2.4))); o.group.position.set(q.x, q.y, q.z); o.group.rotation.y = g.rotation.y + (end < 0 ? 0 : Math.PI); G.add(o.group); o.group.updateMatrixWorld(true); hit(o.group, o.hit, i); }
+    register(g, i, s, stairs, []); return g; }
+  // (on the paved ground before a row of garages: the bike rides as on the road)
+  const paved = (x, z) => { for (const r of paveRects) { const dx = x - r.x, dz = z - r.z, c = Math.cos(r.yaw), sn = Math.sin(r.yaw), lx = dx * c - dz * sn, lz = dx * sn + dz * c; if (Math.abs(lx) < r.hx && Math.abs(lz) < r.hz) return true; } return false; };
+
   // ---------- the market: a row of stalls under striped awnings, crates of fruit and veg before them ----------
   function stalls(i, s) { const g = new THREE.Group(), cols = ['#b3372c', '#2f4a6e', '#467537', '#e3742e'], fruit = ['#cf5a3e', '#efc970', '#7fae58', '#e3742e', '#8e2e25'];
     for (let k = 0; k < 3; k++) { const z = (k - 1) * 3.4, col = cols[(i + k) % 4], aw = cv(8, 4, x => { for (let q = 0; q < 8; q++) { x.fillStyle = q % 2 ? '#f6f3ea' : col; x.fillRect(q, 0, 1, 4); } });
@@ -100,5 +119,5 @@ export function createCity({ THREE, toon, put, box, hit, zone, things, doors, wi
     const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: '#5a5f66' })); m.userData.noShadow = true; m.renderOrder = 1; G.add(m); }
 
   const scaffolds = [];
-  return { townBox, tenement, block, stalls, skyline, rails, scaffolds };
+  return { townBox, tenement, block, stalls, skyline, rails, scaffolds, garages, openGarages, paved };
 }

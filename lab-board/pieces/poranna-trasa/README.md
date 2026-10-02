@@ -1245,3 +1245,11 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - budowlańcy w kaskach przy budowach i magazynierzy przy halach, każdy swoim głosem (brygadzista, pomocnik, operator, kierownik, murarz, magazynier): krzyczą, gdy przejeżdżasz blisko, da się ich zagadać, kopnąć i trafić gazetą; nowe wpisy w gazecie Z BUDOWY
 - walka: przeciwnik znowu robi czasem uniki w bok (tak jak ty, z przechyłem), ale nie oddaje od razu po uniku
 
+## Wersja 144: Garaże (Bronx nocą), przeskok nad torami
+
+- nowa trasa w Bronksie GARAŻE (po Nocy na blokowisku), własna mapa (892 m) nocą: rzędy boksów garażowych wzdłuż zygzaka przez osiedle, kilka bloków między nimi
+  - gazety: każdy boks może być abonentem (skrzynka na drzwiach), na trasie 180 drzwi
+  - jazda: z rampy na końcu rzędu na płaskie dachy garaży i po nich jak po torze; ziemia przed garażami utwardzona
+  - dzieje się: z otwartych boksów (światło w środku, auto na klockach) co jakiś czas wycofuje auto na drogę (klakson; potrącenie to gleba), mechanik amator przy otwartym boksie, handlarz z bagażnika, a do tego cwaniacy, szkło, opony i imprezowicze z nocy
+- przejazdy kolejowe: przed każdym przejazdem na twojej drodze pas rozpędu (żółte strzałki) i skocznia mega; wysoko w powietrzu szlaban i pociąg przechodzą pod tobą (nad pociągiem +25 i wpis w gazecie); skocznie z drogi tuż obok przejazdu (35 m) schowane, żeby nie czekać przy torach na skoczni; sprawdzone w symulacji: z rozpędem (11–12,5 m/s) 3,9–4,4 m nad torami, wyżej niż pociąg
+
