@@ -104,6 +104,15 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       flocks.push({ s: L * (k + .5) / 9, d: (k % 2 ? os : hs) * (track.KERB + 1.2 + rnd() * .8), birds, up: false, t: 0 }); } }
   const FLOCK = SEA ? deck(['MEWY W GÓRĘ! +1', 'KRAA! +1', 'MEWA ZGUBIŁA FRYTKĘ! +1']) : VIL ? deck(['KO-KO-KO! +1', 'KURY W GÓRĘ! +1', 'KOGUT SIĘ OBRAZIŁ! +1']) : deck(['GOŁĘBIE! +1', 'FRRR! +1', 'PŁOSZYCIEL! +1']);
 
+  // ---------- the seaside: a gull that dives for a paper in his bag (KRAA!, its shadow on him growing: hop at the last moment and it misses,
+  // points; or it is off with one), and rollerbladers on the road by the promenade, fast, weaving (into one: a bump; over one: points) ----------
+  const GULL = SEA ? (() => { const g = new THREE.Group(), w = M('#f6f3ea'), gr = M('#9aa0a4'), bd = new THREE.Mesh(new THREE.BoxGeometry(.3, .25, .6), w), hd = new THREE.Mesh(new THREE.BoxGeometry(.18, .18, .2), w), bk = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, .16), M('#efc930'));
+    hd.position.set(0, .12, .36); bk.position.set(0, .1, .5); const wl = new THREE.Mesh(new THREE.BoxGeometry(.9, .04, .3).translate(-.45, 0, 0), gr), wr = new THREE.Mesh(new THREE.BoxGeometry(.9, .04, .3).translate(.45, 0, 0), gr); wl.position.x = -.15; wr.position.x = .15; g.add(bd, hd, bk, wl, wr); g.scale.setScalar(1.4); g.visible = false; scene.add(g);
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#17181b', transparent: true, opacity: .35, depthWrite: false })); sh.visible = false; scene.add(sh);
+    return { g, wl, wr, sh, t: 10 + rnd() * 6, st: 'wait', p: V(0, 0, 0), from: V(0, 0, 0), k: 0, dodged: false }; })() : null;
+  const KRAA = deck(['KRAA! DAWAJ GAZETĘ!', 'KRAA!', 'KRAA! TO MOJE!', 'MEWA NAD TOBĄ!']);
+  const skaters = SEA ? [0, 1, 2, 3].map(k => { const f = fig(['#e070b0', '#3b6fa0', '#efc930', '#3f8a4a'][k], null); dress(f, 'jogger', 'walk', 2.3, ['#e070b0', '#3b6fa0', '#efc930', '#3f8a4a'][k]); return { ...f, s: L * (.1 + k * .24), dir: k % 2 ? -1 : 1, ph: rnd() * 6, hitT: 0, overT: 0 }; }) : [];
+
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0), W0 = api.wave; for (const mx of mixers) mx.update(dt);
     // (the strollers: to a spot along the path and on to the next; ridden into, a bump)
@@ -117,6 +126,24 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       for (const b of Fk.birds) { if (Fk.up) { if (VIL) { b.vy -= 6 * dt; } else b.vy -= .6 * dt; b.ox += b.vx * dt; b.oz += b.vz * dt; b.up = Math.max(0, b.up + b.vy * dt); if (VIL && !b.up) { b.vx *= .9; b.vz *= .9; } b.g.position.set(c.x + b.ox, c.y + b.up, c.z + b.oz); if (b.up) b.g.rotation.y += dt * 4; }
         else { b.g.position.set(c.x + b.ox, c.y, c.z + b.oz); if (rnd() < dt * 1.5) b.g.rotation.y = rnd() * 6.28; b.g.children[1].position.y = b.g.children[0].position.y * 2 - Math.max(0, Math.sin(clock * 9 + b.ox * 7)) * .06; } }
       if (Fk.up && Fk.t > 12 && Math.hypot(R.x - c.x, R.z - c.z) > 30) { Fk.up = false; for (const b of Fk.birds) { b.up = 0; b.ox = (rnd() - .5) * 3; b.oz = (rnd() - .5) * 3; } } }
+    // (the gull: waiting a while, then from the sea side ahead and high, diving onto him in 1.7 s)
+    if (GULL) { const Gu = GULL; Gu.t -= dt; Gu.wl.rotation.z = Math.sin(clock * 14) * .6; Gu.wr.rotation.z = -Math.sin(clock * 14) * .6;
+      const ry = track.probe(R.x, R.z, R.hint).y;
+      if (Gu.st === 'wait' && Gu.t <= 0 && !R.foot && Math.abs(R.v) > 2) { const i = wrap(Math.round((R.s || 0) / ds) + Math.round((R.along || 1) * 16 / ds)); Gu.from.copy(pv(i, hs * (track.PAVE + 8))); Gu.from.y += 6; Gu.p.copy(Gu.from); Gu.st = 'dive'; Gu.k = 0; Gu.dodged = false; Gu.g.visible = Gu.sh.visible = true; ev.push({ kind: 'shout', at: Gu.p.clone(), text: KRAA() }); }
+      if (Gu.st === 'dive') { Gu.k += dt / 1.7; const e = Math.min(1, Gu.k), tx = R.x, tz = R.z, ty = ry + 1.3, prev = Gu.p.clone();
+        Gu.p.set(Gu.from.x + (tx - Gu.from.x) * e, Gu.from.y + (ty - Gu.from.y) * (1 - Math.pow(1 - e, 2)) + Math.sin(e * Math.PI) * 1.5, Gu.from.z + (tz - Gu.from.z) * e); Gu.g.position.copy(Gu.p);
+        if (prev.distanceToSquared(Gu.p) > 1e-6) Gu.g.rotation.y = Math.atan2(Gu.p.x - prev.x, Gu.p.z - prev.z);
+        Gu.sh.position.set(R.x, ry + .06, R.z); Gu.sh.scale.setScalar(.4 + e * .9); Gu.sh.material.opacity = .15 + e * .35;
+        if (Gu.k > .82 && R.air && (R.h || 0) > .25) Gu.dodged = true;
+        if (Gu.k >= 1.08 || R.foot) { Gu.st = 'away'; Gu.k = 0; Gu.sh.visible = false; Gu.from.copy(Gu.p); if (!R.foot) ev.push({ kind: 'gull', ok: Gu.dodged, at: Gu.p.clone() }); } }
+      else if (Gu.st === 'away') { Gu.k += dt / 2.2; const i = wrap(Math.round((R.s || 0) / ds)), to = pv(i, hs * (track.PAVE + 40)); to.y += 12; Gu.p.lerpVectors(Gu.from, to, Math.min(1, Gu.k)); Gu.g.position.copy(Gu.p); Gu.g.rotation.y = Math.atan2(to.x - Gu.from.x, to.z - Gu.from.z);
+        if (Gu.k >= 1) { Gu.st = 'wait'; Gu.g.visible = false; Gu.t = 13 + rnd() * 10; } } }
+    // (the rollerbladers: along the road by the promenade's kerb, both ways, weaving)
+    for (const K of skaters) { K.s = ((K.s + K.dir * 4.6 * dt) % L + L) % L; K.ph += dt * 2.2; const i = wrap(Math.round(K.s / ds)), A = S[i], d = hs * (track.ROAD - 1.1 + Math.sin(K.ph) * .45), p = pv(i, d); K.g.position.copy(p);
+      K.g.rotation.y = Math.atan2(A.f.x * K.dir, A.f.z * K.dir) + Math.cos(K.ph) * .35 * K.dir; K.legs && (K.legs[0].rotation.x = Math.sin(K.ph * 3) * .5, K.legs[1].rotation.x = -Math.sin(K.ph * 3) * .5);
+      K.hitT = Math.max(0, K.hitT - dt); K.overT = Math.max(0, K.overT - dt); const dist = Math.hypot(R.x - p.x, R.z - p.z);
+      if (dist < 1.1 && !R.foot && (R.h || 0) > 1.1 && !K.overT) { K.overT = 4; ev.push({ kind: 'overhead', p: { g: K.g } }); }
+      else if (dist < .6 && !R.foot && !R.air && !K.hitT && Math.abs(R.v) > 2) { K.hitT = 3; ev.push({ kind: 'bump', p: { g: K.g } }); } }
     // (the joggers)
     for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
       J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }
@@ -187,5 +214,5 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     for (const K of backers) { if (!(K.st === 'out' || K.st === 'lights' || K.st === 'wait') || Math.hypot(K.g.position.x - Pp.x, K.g.position.z - Pp.z) > 1.8) continue; K.st = 'wait'; K.t = 0; return { p: { g: K.g }, text: SORRY(), who: 'driver', pts: 2, label: 'NA SZYBĘ! +2' }; }
     for (const W of sprinklers) { if (W.flipT || Math.hypot(W.p.x - Pp.x, W.p.z - Pp.z) > 1) continue; W.flipT = 2; W.dir *= -1; return { p: { g: W.g }, text: 'PSSST!', who: 'sprinkler', pts: 1, label: 'ZRASZACZ! +1' }; }
     return null; }
-  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers }; return api;
+  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters }; return api;
 }
