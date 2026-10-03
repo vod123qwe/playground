@@ -13,6 +13,9 @@
 //   a window broken: its owner runs out after him; caught, he gets a kick (pedal hard: they give up)
 //   events: { kind: 'shout' | 'driveway' | 'wet' | 'truck' | 'bump' | 'honk' | 'tyre' | 'overhead' | 'leash' | 'ball' | 'owner', p?, text? }
 
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
 export function createClassic({ THREE, toon, track, scene, cars, traffic = () => [], residents = null }) {
   let a = 1709; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const { S, N, ds } = track, L = N * ds, wrap = i => ((i % N) + N) % N, V = (x, y, z) => new THREE.Vector3(x, y, z), M = c => toon(c), hs = track.oneSide || -1;
@@ -30,6 +33,18 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     if (f.act && fade) a.crossFadeFrom(f.act, fade, false); else if (f.act) f.act.stop(); f.act = a; f.actName = name; f.onceT = 0; return true; };
   const once = (f, name, speed = 1) => { const o = f.dressed, a = o?.acts[name]; if (!a || f.onceT > 0) return; const back = f.actName; a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = speed; a.play();
     if (f.act && f.act !== a) a.crossFadeFrom(f.act, .15, false); f.act = a; f.actName = name; f.onceT = a.getClip().duration / speed - .15; f.back = back; };
+  const ALOAD = {}, animal = key => (ALOAD[key] ||= new Promise(ok => new GLTFLoader().load(`assets/animals/${key}.glb`, ok, undefined, () => ok(null))));
+  const SCALE = { ShibaInu: .19, Husky: .245, Cow: .254, Bull: .27 };                // (the pack's own units: a cow 8 m long; these make it some 2 m, a shiba .8 m)
+  const beast = (holder, key, clip = 'Walk', speed = 1) => animal(key).then(g => { if (!g) return; const m = SkeletonUtils.clone(g.scene);
+    m.scale.setScalar(SCALE[key] || .25);
+    m.traverse(o => { if (o.isMesh) { const om = o.material; o.material = toon(om.color ? om.color.clone() : '#ffffff', { map: om.map || null, vertexColors: !!o.geometry.attributes.color }); o.castShadow = true; o.frustumCulled = false; } });
+    for (const c of holder.children) if (!c.userData.keepShown) c.visible = false; holder.add(m);
+    const mixer = new THREE.AnimationMixer(m), acts = {}; for (const c of g.animations) { const n = c.name.split('|').pop(); if (!acts[n]) acts[n] = mixer.clipAction(c); } mixers.push(mixer);
+    holder.userData.beast = { m, mixer, acts, cur: null }; playB(holder, clip, speed, true); });
+  const playB = (holder, name, speed = 1, rand = false) => { const B = holder.userData.beast; if (!B) return; const a = B.acts[name]; if (!a) return; a.timeScale = speed; if (B.cur === a) return;
+    a.reset().play(); if (rand) a.time = rnd() * 2; if (B.cur) a.crossFadeFrom(B.cur, .3, false); B.cur = a; };
+  // (the pasture's cows: grazing, now and then lifting their heads)
+  for (const C of track.cows || []) { const h = new THREE.Group(); h.position.copy(C.p); h.rotation.y = C.yaw; scene.add(h); beast(h, rnd() < .25 ? 'Bull' : 'Cow', rnd() < .7 ? 'Eating' : 'Idle', .7 + rnd() * .5); }
   const SORRY = deck(['OJ, NIE WIDZIAŁEM CIĘ!', 'PRZEPRASZAM, SPIESZĘ SIĘ DO PRACY!', 'GAZETA NA SZYBIE? NO DOBRA, ZASŁUŻYŁEM.', 'LUSTERKA MAM, TYLKO NIE PATRZĘ.']);
   const BINMEN = deck(['UWAGA, KUBEŁ JEDZIE!', 'Z DROGI, MŁODY, ŚMIECI CZEKAJĄ!', 'TY ROZNOSISZ, MY ZBIERAMY. KOŁO ŻYCIA.', 'RZUĆ GAZETĘ, PRZECZYTAM W KABINIE!']);
   const BINPAPER = deck(['DZIĘKI! NA DRUGIE ŚNIADANIE JAK ZNALAZŁ.', 'O, PROGNOZA POGODY. BĘDZIE ŚMIERDZIAŁO.', 'ZŁAPANE! LEPIEJ NIŻ KUBEŁ.']);
@@ -92,7 +107,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
   const joggers = [0, 1, 2].map(k => { const f = fig(['#cf3a2c', '#3f8a4a', '#3b6fa0'][k], k === 1 ? '#f6f3ea' : null); dress(f, 'jogger', 'walk', 1.9, ['#cf3a2c', '#3f8a4a', '#3b6fa0'][k]); return { ...f, s: L * (.15 + k * .3), dir: k % 2 ? -1 : 1, lo: L * (.1 + k * .3), hi: L * (.1 + k * .3) + 120, ph: 0, hitT: 0, sayT: 0 }; });
   const JOG = deck(['Z LEWEJ!', 'UWAGA, BIEGNĘ!', 'DZIEŃ DOBRY! UFF!', 'PIĄTY KILOMETR!']);
   // (a man and his dog on a long lead, across the pavement: the dog sniffs the lawn, he keeps to the kerb)
-  const walk = (() => { const man = fig('#5a5f66', '#24190f'); dress(man, 'suit', 'walk', .7); const dog = new THREE.Group(), dm = M('#b88a5a'); const bd = new THREE.Mesh(new THREE.BoxGeometry(.25, .3, .6), dm); bd.position.y = .35; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .22), dm); hd.position.set(0, .5, .38); dog.add(bd, hd); scene.add(dog);
+  const walk = (() => { const man = fig('#5a5f66', '#24190f'); dress(man, 'suit', 'walk', .7); const dog = new THREE.Group(), dm = M('#b88a5a'); const bd = new THREE.Mesh(new THREE.BoxGeometry(.25, .3, .6), dm); bd.position.y = .35; const hd = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .22), dm); hd.position.set(0, .5, .38); dog.add(bd, hd); scene.add(dog); beast(dog, 'ShibaInu', 'Walk', 1.1);
     const lead = new THREE.Mesh(new THREE.BoxGeometry(.03, .03, 1), M('#cf3a2c')); scene.add(lead); return { man, dog, lead, s: L * .45, dir: 1, ph: 0, hitT: 0, sayT: 0 }; })();
   const LEAD = deck(['UWAŻAJ NA SMYCZ!', 'BURKUŚ, DO NOGI!', 'NIE PRZEZ SMYCZ, PANIE!']);
   // (the kids at football on the far lawn; now and then the ball goes out onto the road)
@@ -127,7 +142,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
   const cowM = [M('#f6f3ea'), M('#24190f'), M('#e3b08a')], herd = { cows: [], t: 12, on: false, i: 0, d: 0, minD: 99, hit: false, farmer: null };
   if (VIL) { for (let k = 0; k < 4; k++) { const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(.8, .75, 1.6), cowM[0]), new THREE.Mesh(new THREE.BoxGeometry(.82, .32, .55), cowM[1]), new THREE.Mesh(new THREE.BoxGeometry(.45, .45, .55), cowM[0]), new THREE.Mesh(new THREE.BoxGeometry(.3, .2, .12), cowM[2]));
       g.children[0].position.y = 1; g.children[1].position.set(0, 1.2, .2); g.children[2].position.set(0, 1.25, 1); g.children[3].position.set(0, 1.12, 1.3); for (const x of [-.27, .27]) for (const z of [-.6, .6]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.16, .62, .16), cowM[0]); l.position.set(x, .31, z); g.add(l); }
-      g.visible = false; scene.add(g); herd.cows.push({ g, ds: (k - 1.5) * 2.4, dd: (rnd() - .5) * 1.4, ph: rnd() * 6 }); }
+      g.visible = false; scene.add(g); herd.cows.push({ g, ds: (k - 1.5) * 2.4, dd: (rnd() - .5) * 1.4, ph: rnd() * 6 }); beast(g, 'Cow', 'Walk', .8 + rnd() * .2); }
     const f = fig('#467537', '#6b4a2e'); dress(f, 'gardener', 'walk', .8); f.g.visible = false; herd.farmer = f; }
   const MUU = deck(['MUUU!', 'KROWY MAJĄ PIERWSZEŃSTWO!', 'POWOLI, MŁODY, TO NIE WYŚCIGI!', 'MUU! (TO KROWA)']);
   const trip = { kids: [], t: 9, on: false, s: 0, wasBehind: false, hit: false, done: false };
@@ -178,7 +193,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     if (VIL && !R.foot) { const H = herd; H.t -= dt;
       if (!H.on && H.t <= 0 && Math.abs(R.v) > 2 && R.s != null) { H.on = true; H.i = wrap(Math.round(((R.s || 0) + (R.along || 1) * (24 + rnd() * 8)) / ds)); H.d = hs * (track.PAVE + 1.5); H.minD = 99; H.hit = false; for (const c of H.cows) c.g.visible = true; H.farmer.g.visible = true; ev.push({ kind: 'shout', at: pv(H.i, H.d).add(V(0, 2.2, 0)), text: MUU() }); }
       if (H.on) { H.d -= hs * 1.15 * dt; const A = S[H.i];
-        for (const c of H.cows) { const i = wrap(H.i + Math.round(c.ds / ds)), p = pv(i, H.d + c.dd); c.ph += dt * 5; c.g.position.copy(p); c.g.position.y += Math.abs(Math.sin(c.ph)) * .04; c.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs) + Math.sin(c.ph * .3) * .2;
+        for (const c of H.cows) { const i = wrap(H.i + Math.round(c.ds / ds)), p = pv(i, H.d + c.dd); c.ph += dt * 5; c.g.position.copy(p); if (!c.g.userData.beast) c.g.position.y += Math.abs(Math.sin(c.ph)) * .04; c.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs) + Math.sin(c.ph * .3) * .2;
           const dd = Math.hypot(R.x - p.x, R.z - p.z); if (dd < H.minD) H.minD = dd; if (dd < 1.05 && !H.hit && !R.air) { H.hit = true; ev.push({ kind: 'bump', p: { g: c.g } }); } }
         { const p = pv(wrap(H.i - Math.round(4 / ds)), H.d + hs * 1.6); H.farmer.g.position.copy(p); H.farmer.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs); }
         const past = Math.abs(rel(H.i * ds, R)) > 6 && rel(H.i * ds, R) * (R.along || 1) < 0;

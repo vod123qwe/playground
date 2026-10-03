@@ -2126,7 +2126,7 @@ function frame(now) {
   talkCam(dt); if (B.papers > (B.bagMax || 30)) { B.papers = B.bagMax || 30; if (!(B.fullT > 0)) { flash('Torba pełna'); B.fullT = 4; } } B.fullT = (B.fullT || 0) - dt;   // (no more than the bag holds)
   cullPeople(dt);
   if (!BOOT.drawn) { BOOT.drawn = true; requestAnimationFrame(() => document.body.classList.add('drawn')); renderer.compileAsync(scene, camera).catch(() => { }).finally(() => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('booted'))), 300)); }
-  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { hud.clear(); const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { if (window.PT?.camOverride) { const o = PT.camOverride; camera.position.set(...o.pos); camera.lookAt(...o.look); }   // (a test camera, for looking at a scene from anywhere)
+  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { hud.clear(); const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { if (window.PT?.camOverride) { const o = PT.camOverride; camera.position.set(...o.pos); camera.lookAt(...o.look); FADE.cam.value.copy(camera.position); FADE.tgt.value.copy(camera.position); }   // (a test camera, for looking at a scene from anywhere)
   px.render(scene, camera, hudBag); stepTitleBg(dt); drawHud(dt); }
   requestAnimationFrame(frame);
 }

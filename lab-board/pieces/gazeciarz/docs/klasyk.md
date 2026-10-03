@@ -183,3 +183,10 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - `src/furniture.js`: ławka parkowa (żeliwne boki z oparciem na rękę i zwijką, 4 listwy siedziska, 3 odchylone listwy oparcia, drewno w dwóch tonach) i kubeł na kółkach (zwężany ku dołowi, pokrywa z rantem, uchwyt, dwa kółka na osi, wytłoczenie na froncie). Ławki tyłem do trawnika, kubły frontem do drogi.
 - Emeryci na ławkach siedzą przodem do drogi, na siedzisku (wcześniej tyłem, za oparciem).
 - Dalej: skrzynki na listy, kioski i budki, latarnie; potem zwierzęta (paczka CC0), pojazdy robocze, ogródki i atrakcje (krasnale, place zabaw, tor przeszkód, rampy, paczki).
+
+## Zwierzęta (v188)
+
+- Biblioteka `F:\AI - Tests\.assets\quaternius\animals` (Ultimate Animated Animal Pack, CC0, 12 zwierząt); w grze `assets/animals/` (Husky, ShibaInu, Cow, Bull).
+- Kanciaste zwierzęta zastąpione: pies na smyczy (shiba, chód), stado na Wsi (krowy idą przez drogę), krowy na pastwisku (pasą się albo stoją; czasem byk). Skale stałe (paczka ma krowę 8 m długą; ramka Box3 dla modeli ze szkieletem przed animacją kłamie).
+- Naprawione: krowy z pastwiska stały w ścianach domów (teraz tylko tam, gdzie 8 m wzdłuż drogi nie ma domu).
+- Psy przy domach zostają ręcznie modelowane (6 ras) do decyzji Jarka.
