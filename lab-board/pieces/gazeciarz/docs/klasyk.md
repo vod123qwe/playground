@@ -177,3 +177,9 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Kanciaste postacie zastąpione: dzieci przy skoczniach (kibicują, machają po przelocie nad nimi), wycieczka (dzieci i pani na rowerkach, poza „za kierownicą”), babcia z laską (model babci: goni truchtem, grozi palcem, szura do domu).
 - Postacie przechodzą płynnie między ruchami; potknięcie po zderzeniu i wraca do swojego; goniący biegną; śmieciarze niosą kubeł; emeryci klaszczą, gdy przelatujesz obok.
 - Naprawione: ukrywanie dalekich postaci (v185) pokazywało z powrotem zapasowe klocki postaci; złodziej torebek znów się pojawia (uciekający to teraz biegacz).
+
+## Meble ulicy (v187)
+
+- `src/furniture.js`: ławka parkowa (żeliwne boki z oparciem na rękę i zwijką, 4 listwy siedziska, 3 odchylone listwy oparcia, drewno w dwóch tonach) i kubeł na kółkach (zwężany ku dołowi, pokrywa z rantem, uchwyt, dwa kółka na osi, wytłoczenie na froncie). Ławki tyłem do trawnika, kubły frontem do drogi.
+- Emeryci na ławkach siedzą przodem do drogi, na siedzisku (wcześniej tyłem, za oparciem).
+- Dalej: skrzynki na listy, kioski i budki, latarnie; potem zwierzęta (paczka CC0), pojazdy robocze, ogródki i atrakcje (krasnale, place zabaw, tor przeszkód, rampy, paczki).
