@@ -46,6 +46,12 @@ Klawiatura: strzałki/WASD jazda, mysz lub przyciski rzutu, Spacja skok (w powie
 - pies na smyczy to shiba, krowy w stadzie na Wsi i na pastwisku to prawdziwe animowane modele (paczka zwierząt Quaternius, CC0)
 - krowy z pastwiska nie stoją już w ścianach domów
 
+### Wersja 190: skok na cofające auto
+
+- na dach auta cofającego z podjazdu można wskoczyć, ale trzeba trafić w tempo: przy zwykłej jeździe skok mniej więcej 3–4 m przed autem; za wcześnie albo za późno to wywrotka z podpowiedzią, co poszło nie tak
+- lądowanie w szczycie skoku: dodatkowe W PUNKT! +2
+- naprawione: jazda po dachu cofającego auta od razu kończyła się wywrotką; przez auto stojące na skraju drogi dało się przejechać na wylot
+
 ### Wersja 189: psy, stado i kolizje
 
 - psy przy domach to prawdziwe animowane modele (husky i shiba, przebarwione na 6 ras)
