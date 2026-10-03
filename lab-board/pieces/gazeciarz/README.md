@@ -40,3 +40,8 @@ Klawiatura: strzałki/WASD jazda, mysz lub przyciski rzutu, Spacja skok (w powie
 
 - prawdziwa ławka parkowa (żeliwne boki, listwy) i kubeł na kółkach zamiast klocków
 - emeryci siedzą na ławkach przodem do drogi
+
+### Wersja 188: prawdziwe zwierzęta
+
+- pies na smyczy to shiba, krowy w stadzie na Wsi i na pastwisku to prawdziwe animowane modele (paczka zwierząt Quaternius, CC0)
+- krowy z pastwiska nie stoją już w ścianach domów
