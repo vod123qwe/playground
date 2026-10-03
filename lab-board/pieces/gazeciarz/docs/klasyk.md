@@ -198,3 +198,9 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Kopnięta krowa: reszta galopem na drugą stronę. Auta stają przed krowami na jezdni (`classic.crossing()` dołączone do pieszych w ruchu).
 - Kolizje: `solidAt()` z kolizyjnych pudełek drogi; spacerowicze wybierają inny cel, rolkarze skaczą przez skocznie i omijają resztę, wycieczka i biegacze schodzą z linii. Cofające auta tylko z podjazdu z wolnym torem jazdy; deska przed podjazdem nie przy przejściu krów.
 - Kałuże i błoto: kontur `blob()` z nieregularnym brzegiem; błoto mniejsze (r 0,4–0,72 m), ciemniejsza obwódka i 1–2 bryzgi obok. Start: `traffic.clearAround()` wynosi auta 80 m od rowerzysty.
+
+## Skok na cofające auto (v190)
+
+- Okno skoku: dach liczy się tylko wtedy, gdy rowerzysta jest co najmniej 0,32 m pod dachem (inne dachy dalej 0,62 m). Przy 6,5 m/s sedan i pikap: skok 3–4 m przed autem = dach; 2 m i bliżej = „Za późno!”, 5 m i dalej = „Za wcześnie!”. Niski wedge wybacza więcej.
+- Lądowanie przy pionowej prędkości poniżej 1,6 m/s (szczyt skoku): W PUNKT! +2 obok NA DACH AUTA! +4.
+- Naprawione: wysokość nad ziemią (R.h) była zerem na dachu, więc jazda po dachu cofającego auta dawała wywrotkę; auto czekające na skraju drogi nie miało kolizji.

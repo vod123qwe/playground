@@ -276,7 +276,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       for (const l of K.lamps) l.visible = K.st === 'lights' || K.st === 'out';
       const p = pv(K.i, K.d); K.g.position.copy(p); K.g.rotation.y = K.yawIn; K.hitT = Math.max(0, K.hitT - dt);
       const dx = R.x - p.x, dz = R.z - p.z, lz = dx * Math.sin(K.yawIn) + dz * Math.cos(K.yawIn), lx = dx * Math.cos(K.yawIn) - dz * Math.sin(K.yawIn);
-      if (!R.foot && !K.hitT && !((R.h || 0) > K.roofH - .45) && Math.abs(lx) < K.c.half[0] + .3 && Math.abs(lz) < K.c.half[1] + .3 && (K.st === 'out' || K.st === 'back')) { K.hitT = 3; ev.push({ kind: 'driveway' }); } }
+      if (!R.foot && !K.hitT && !((R.h || 0) > K.roofH - .32) && Math.abs(lx) < K.c.half[0] + .3 && Math.abs(lz) < K.c.half[1] + .3 && (K.st === 'out' || K.st === 'wait' || K.st === 'back')) { K.hitT = 3; ev.push({ kind: 'driveway', why: R.air ? ((R.vy || 0) < 0 ? 'early' : 'late') : null }); } }
     // (the sprinklers: sweeping; in the jet, the wheels slip)
     for (const W of sprinklers) { W.flipT = Math.max(0, W.flipT - dt); W.sw += W.dir * dt * .9; if (Math.abs(W.sw) > 1.1) { W.sw = Math.sign(W.sw) * 1.1; W.dir *= -1; } W.jet.rotation.y = W.base + W.sw;
       W.wetT = Math.max(0, W.wetT - dt); const dx = R.x - W.p.x, dz = R.z - W.p.z, dist = Math.hypot(dx, dz); if (dist < 4.6 && dist > .4 && !R.foot && !R.air && !W.wetT) { const ang = Math.atan2(dx, dz), da = Math.atan2(Math.sin(ang - W.base - W.sw), Math.cos(ang - W.base - W.sw)); if (Math.abs(da) < .35) { W.wetT = 2; ev.push({ kind: 'wet' }); } } }
