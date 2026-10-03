@@ -4,7 +4,30 @@
 // A kick sends it off yelping; it runs home and keeps away a while. It gives up if he gets away.
 // update(dt, rider) → the dogs by him: [{ dog, dist, side }] (the side he has it on: +1 left, -1 right).
 
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
 export function createDogs({ THREE, toon, probe }) {
+  // ---------- the real dogs: Quaternius' animated husky and shiba (CC0, assets/animals), coloured and sized for each breed; the dog
+  // modelled here stays only as the stand-in till its model is in ----------
+  //   breed: [model, back colour, belly colour, size, leg height (y scale)]
+  const LOOK = { labrador: ['ShibaInu', '#c98e4a', '#e7c49a', 1.08, 1], husky: ['Husky', null, null, 1, 1], jamnik: ['ShibaInu', '#7b3326', '#a3653f', 1.05, .66],
+    terier: ['ShibaInu', '#e9e3d1', '#f6f3ea', .72, 1], 'dalmatyńczyk': ['Husky', '#ece8dd', '#f6f3ea', 1.02, 1], kundel: ['ShibaInu', '#3a322b', '#b8925f', .96, 1] };
+  const SC = { ShibaInu: .19, Husky: .245 }, LD = {}, loadM = k => LD[k] ||= new Promise(ok => new GLTFLoader().load(`assets/animals/${k}.glb`, ok, undefined, () => ok(null)));
+  function dressDog(d) { const L = LOOK[d.breed]; if (!L) return;
+    loadM(L[0]).then(g => { if (!g) return; const m = SkeletonUtils.clone(g.scene), s = SC[L[0]] * L[3] * (d.size || 1); m.scale.set(s, s * L[4], s);
+      m.traverse(o => { if (!o.isMesh) return; const n = o.material.name; let c = o.material.color.clone(); if (L[1] && /^(Main|Material)$/.test(n)) c = new THREE.Color(L[1]); if (L[2] && /^(Main_Light|Material\.001)$/.test(n)) c = new THREE.Color(L[2]);
+        o.material = toon(c); o.castShadow = true; o.frustumCulled = false; });
+      for (const c of d.group.children) c.visible = false; d.group.add(m);
+      const mixer = new THREE.AnimationMixer(m), acts = {}; for (const c of g.animations) { const nm = c.name.split('|').pop(); if (!acts[nm]) acts[nm] = mixer.clipAction(c); }
+      d.model = { m, mixer, acts, cur: null }; }); }
+  // (its clip by what it is doing: resting at home (idle, now and then sniffing), trotting, galloping after him (the faster, the quicker
+  // the clip), knocked flying (the hit)
+  function poseModel(d, dt) { const M = d.model, rest = d.state === 'home' && d.v < .2; let name, ts = 1;
+    if (d.fly) name = 'Idle_HitReact_Left'; else if (rest) { const k = (d.t + d.cool * 3) % 16; name = k < 9 ? 'Idle' : k < 13 ? 'Idle_2_HeadLow' : 'Eating'; }
+    else if (d.v < 2.6) { name = 'Walk'; ts = Math.max(.6, d.v / 1.3); } else { name = 'Gallop'; ts = Math.max(.75, d.v / 6.2); }
+    const a = M.acts[name] || M.acts.Idle; if (M.cur !== a) { a.reset().play(); if (M.cur) a.crossFadeFrom(M.cur, .2, false); M.cur = a; } a.timeScale = ts;
+    M.m.rotation.z = d.fly ? d.fly.spin * Math.min(d.fly.t, d.fly.T) : 0; M.mixer.update(dt); }
   const COATS = [['#8c5a34', '#e9e3d1'], ['#2b2622', '#e9e3d1'], ['#c98e4a', '#e7b68f'], ['#5a3d27', '#5a3d27'], ['#e9e3d1', '#9e7a4f']];
   const black = toon('#17181b'), tongue = toon('#cf5a3e');
   const taper = (r0, r1) => { const pts = []; for (let i = 0; i <= 5; i++) { const a = -Math.PI / 2 + i / 5 * Math.PI / 2; pts.push(new THREE.Vector2(Math.cos(a) * r0, Math.sin(a) * r0)); } for (let i = 0; i <= 5; i++) { const a = i / 5 * Math.PI / 2; pts.push(new THREE.Vector2(Math.cos(a) * r1, 1 + Math.sin(a) * r1)); } return new THREE.LatheGeometry(pts, 10); };
@@ -66,10 +89,11 @@ export function createDogs({ THREE, toon, probe }) {
   function add(x, z, yaw, r) {                                        // a dog lying by its house
     const m = makeDog(null, .9 + r() * .3, r); m.group.position.set(x, 0, z); m.group.rotation.y = yaw;
     const d = { ...m, home: new THREE.Vector3(x, 0, z), x, z, yaw, v: 0, state: 'home', t: 0, cool: r() * 8, gait: r() * 6, bark: 0, hint: -1, eager: .6 + r() * .35 };
-    dogs.push(d); return d;
+    dogs.push(d); dressDog(d); return d;
   }
   const _p = new THREE.Vector3();
   function pose(d, dt) {                                              // the legs from the gait; lying at home
+    if (d.model) { poseModel(d, dt); return; }
     const lying = d.state === 'home' && d.v < .2, speed = d.v; d.gait += dt * (4 + speed * 2.2);
     d.body.position.y = lying ? -(d.ht - .12) * d.size : Math.abs(Math.sin(d.gait)) * .03 * Math.min(1, speed);
     d.body.rotation.x = lying ? 0 : Math.sin(d.gait * 2) * .04 * Math.min(1, speed);
