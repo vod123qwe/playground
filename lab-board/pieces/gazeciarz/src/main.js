@@ -213,7 +213,7 @@ const quests = createQuests({ THREE, track, residents, peds, hud, talk, game: {
   jostle: (dir, n) => { if (foot.active || B.crash) return; B.v *= .82; B.jolt = .16; const l = Math.hypot(dir.x, dir.z) || 1; B.x += dir.x / l * .35; B.z += dir.z / l * .35; shake = Math.max(shake, .25); audio.play('kick', { vol: .6 }); hud.impact(rider.root.position.clone().setY(rider.root.position.y + 1.3), 'ŁUP!'); hurt(6, 'Gang cię dopadł.'); flash(`Kopniak od gangu: ${n}/5`); }, scene, openShop: () => shop.open(), lamp: () => MOD.lamp > 0, diff: () => difficulty(), traffic, fameNow: () => B.fame || 0, endRun: msg => endRun(msg),
   talkKey: () => touch.on ? 'GADAJ' : (foot.active ? keysOf('talk') : keysOf('chat')) + ': GADAJ' } });
 const life = createLife({ THREE, scene, track, cars: track.cars, toon });   // (out there: cars and a tractor on a country road, birds)
-const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors }); scene.add(granny.group);
+const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.doors, residents }); scene.add(granny.group);
 { let a = 23; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
   const dogRate = track.city ? .03 : track.region === 'peryferia2' ? .08 : .15;   // (a few less than before)
   for (const d of track.doors) if (r() < dogRate && !d.stall) { const dog = dogs.add(d.p.x, d.p.z, r() * 6, r); scene.add(dog.group); } }
@@ -1908,7 +1908,7 @@ const MERGED = mergeStatic();
 const PCULL = { t: 0, n: -1, list: [], v: new THREE.Vector3() };
 function stepPerf(dt) { if ((PCULL.t -= dt) > 0) return; PCULL.t = .25;
   if (PCULL.n !== scene.children.length) { PCULL.n = scene.children.length; PCULL.list = [];
-    for (const c of scene.children) { if (c === track.group || c === rider.root) continue; const ms = []; let sk = false; c.traverse(o => { if (o.isMesh) { ms.push(o); if (o.isSkinnedMesh) sk = true; } }); if (sk || ms.length >= 100) PCULL.list.push({ ms, sk, probe: ms[0] }); } }
+    for (const c of scene.children) { if (c === track.group || c === rider.root) continue; const ms = []; let sk = false; c.traverse(o => { if (o.isMesh) { ms.push(o); if (o.isSkinnedMesh) sk = true; } }); if (sk) { const only = ms.filter(o => o.isSkinnedMesh); PCULL.list.push({ ms: only, sk, probe: only[0] }); } } }   // (a person: only the model's own meshes, never a stand-in block hidden on purpose)
   const R2 = 55 * 55, S2 = 25 * 25;
   for (const e of PCULL.list) { if (!e.probe) continue; e.probe.getWorldPosition(PCULL.v); const d2 = (PCULL.v.x - B.x) ** 2 + (PCULL.v.z - B.z) ** 2, show = d2 < R2;
     for (const m of e.ms) { m.visible = show; if (e.sk) m.castShadow = show && d2 < S2; } } }
@@ -2126,7 +2126,8 @@ function frame(now) {
   talkCam(dt); if (B.papers > (B.bagMax || 30)) { B.papers = B.bagMax || 30; if (!(B.fullT > 0)) { flash('Torba pełna'); B.fullT = 4; } } B.fullT = (B.fullT || 0) - dt;   // (no more than the bag holds)
   cullPeople(dt);
   if (!BOOT.drawn) { BOOT.drawn = true; requestAnimationFrame(() => document.body.classList.add('drawn')); renderer.compileAsync(scene, camera).catch(() => { }).finally(() => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('booted'))), 300)); }
-  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { hud.clear(); const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { px.render(scene, camera, hudBag); stepTitleBg(dt); drawHud(dt); }
+  hudBag.update(dt, B.papers, B.bagMax || 30, px.size[0] / Math.max(1, px.size[1]), menu.page !== 'title', touch.on); if (map.isOpen) { hud.clear(); const so = px.snap.on; px.snap.on = false; px.render(dio.scene, dio.camera); px.snap.on = so; } else { if (window.PT?.camOverride) { const o = PT.camOverride; camera.position.set(...o.pos); camera.lookAt(...o.look); }   // (a test camera, for looking at a scene from anywhere)
+  px.render(scene, camera, hudBag); stepTitleBg(dt); drawHud(dt); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

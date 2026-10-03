@@ -169,3 +169,11 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
   - każde auto scalone po materiale we własnym układzie (koła osobno, kierunkowskazy dalej migają, bo zmieniają materiał);
   - bez rowerów w ogródkach (w Klasyku nie ma chodzenia, więc nie da się ich wziąć).
 - Dalej do zrobienia: odchudzenie modeli ludzi (MakeHuman ma po ~5 tys. trójkątów na część), scalanie domów z szybami (szyby jako osobne), wycięcie z kodu modułów Porannej Trasy (walka, zlecenia, sklep, garaż, multiplayer).
+
+## Prawdziwe postacie z ruchami z Mixamo (v186)
+
+- Biblioteka ruchów: `F:\AI - Tests\.assets\mixamo` (154 animacje, lokalnie; licencja Mixamo: nie rozpowszechniać jako plików). Narzędzie `add_clips.py` przenosi ruchy na szkielet postaci MakeHuman.
+- `tools/build_people.sh` buduje postacie Klasyka z nowymi klipami: dziecko (cheer, wave, hit, drive), pani (drive, wave, angry, hit), ogrodnik (carry, run, angry, hit), garnitur (run, angry, hit, phone), zakupowiczka (run, angry, hit), biegaczka (hit), dziadek i babcia (sitclap), babcia też run, walkold, angry.
+- Kanciaste postacie zastąpione: dzieci przy skoczniach (kibicują, machają po przelocie nad nimi), wycieczka (dzieci i pani na rowerkach, poza „za kierownicą”), babcia z laską (model babci: goni truchtem, grozi palcem, szura do domu).
+- Postacie przechodzą płynnie między ruchami; potknięcie po zderzeniu i wraca do swojego; goniący biegną; śmieciarze niosą kubeł; emeryci klaszczą, gdy przelatujesz obok.
+- Naprawione: ukrywanie dalekich postaci (v185) pokazywało z powrotem zapasowe klocki postaci; złodziej torebek znów się pojawia (uciekający to teraz biegacz).
