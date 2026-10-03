@@ -1,5 +1,3 @@
-> Od wersji 184 Klasyk to osobna gra **Gazeciarz** w folderze `gazeciarz` (tam aktualna wersja tego dokumentu). Tu zostaje jako historia.
-
 # Klasyk: druga wersja gry, jedna ulica (koncept, 02.10.2026)
 
 Decyzje Jarka (02.10.2026):

@@ -28,7 +28,18 @@ import { createCityNet } from './citynet.js';
 export const REGION_T = {
   peryferia: { id: 'peryferia', home: true, ctrl: [[0, 0, 0], [0, 1, 60], [18, 3, 120], [60, 5, 160], [115, 4, 170], [160, 2, 150], [185, 0, 105], [180, -1, 50], [150, -2, 5], [150, -1, -45], [175, 1, -90], [160, 3, -140], [110, 4, -165], [55, 2, -150], [15, 0, -110], [-5, -1, -55]],
     roll: 1, kerb: true, lines: true, bike: true, stops: [.18, .5, .8], posts: [.33, .7], shops: [[.6, -1]], gap: [20, 10], houseP: 1, farms: false,
-  },
+    // (the Classic's street (docs/klasyk.md): a long loop of gentle bends, the houses only on his left as he rides it, his home one of them
+    // (a board says so), the start on the street itself under a START banner, as on the old machines; on the right the pavement,
+    // a strip of lawn with benches and the paper bundles; the street trees on the houses' side)
+    maps: {
+      zima: { classic: true, winter: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [8, 1, 90], [40, 2, 170], [105, 3, 225], [185, 3, 246], [262, 2, 222], [306, 1, 160], [314, 0, 82], [290, -1, 10], [236, 0, -44], [160, 1, -70], [86, 0, -68], [28, 0, -40]],
+        gap: [11, 5], stops: [.5], posts: [], shops: [], trees: 0, roll: .12, roofs: ['#eef2f5', '#e3e9ee', '#dde4ea'] },
+      deptak: { classic: true, sea: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [4, 0, 100], [30, 0, 190], [90, 0, 250], [180, 0, 272], [270, 0, 262], [340, 0, 215], [372, 0, 140], [366, 0, 60], [326, 0, 0], [256, 0, -36], [170, 0, -50], [90, 0, -46], [30, 0, -28]],
+        gap: [12, 5], stops: [.5], posts: [], shops: [], trees: 0, roll: .06, walls: ['#f4e1c1', '#cfe3e8', '#f2c9c0', '#e9f0d8', '#f6f3ea', '#d8d0ec'], roofs: ['#8e3b2c', '#3b6fa0', '#5a5f66'] },
+      park: { classic: true, park: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [10, 0, 90], [44, 1, 168], [110, 1, 226], [192, 1, 246], [268, 0, 222], [314, 0, 160], [324, 0, 85], [300, 0, 12], [244, 0, -40], [168, 0, -62], [92, 0, -66], [30, 0, -42]],
+        gap: [12, 5], stops: [.4], posts: [], shops: [], trees: 0, roll: .1, walls: ['#f0eee8', '#e8dcc8', '#d8e0d0', '#e8d8d0', '#f0e8d0'], roofs: ['#8e3b2c', '#5a5f66', '#6d4a3a'] },
+      klasyk: { classic: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [6, 1, 80], [30, 2, 160], [85, 3, 225], [165, 3, 250], [240, 2, 225], [285, 1, 160], [295, 0, 80], [275, -1, 0], [225, 0, -60], [150, 1, -90], [75, 0, -85], [20, 0, -50]],
+        gap: [11, 5], stops: [.86], posts: [], shops: [], trees: 0, roll: .12 } } },   // (flat ground round it: the camera hangs over the right side)
   wies: { id: 'wies', home: false, ctrl: [[0, 0, 0], [10, 2, 70], [-10, 5, 140], [30, 8, 200], [100, 9, 235], [175, 6, 220], [225, 3, 165], [235, 0, 95], [270, 2, 30], [255, 5, -45], [195, 7, -95], [125, 4, -110], [70, 1, -85], [25, -1, -45]],
     roll: 1.6, kerb: false, lines: false, bike: false, stops: [.45], posts: [], shops: [[.72, -1]], gap: [24, 18], houseP: .56, farms: true,
     walls: ['#e8e4dc', '#d9d4c8', '#c9c2b0', '#e6dcc4', '#bfb8a8', '#d8cfb8'], roofs: ['#5a5f66', '#6d4a3a', '#7a7f86', '#4a4038'],
@@ -39,7 +50,10 @@ export const REGION_T = {
         gap: [22, 16], houseP: .38, trees: .5, stops: [.5], shops: [[.3, 1]] },
       // (the church fair: the village with its church square, the stalls along both verges, a crowd, the band on the road)
       odpust: { fair: [.44, .54], fairSide: 1, ctrl: [[0, 0, 0], [-15, 1, 75], [5, 3, 150], [70, 5, 200], [150, 6, 215], [215, 4, 175], [245, 2, 95], [240, 1, 20], [205, 3, -50], [140, 4, -95], [75, 2, -90], [25, 0, -50]],
-        gap: [22, 16], houseP: .62, stops: [.3, .7], shops: [[.6, -1]] } } },
+        gap: [22, 16], houseP: .62, stops: [.3, .7], shops: [[.6, -1]] },
+      // (the Classic's second street: the village, cottages only on his left, on the right the country: bales, a pasture, a shrine, a pond)
+      klasyk: { classic: true, oneSide: -1, home: false, ctrl: [[0, 0, 0], [6, 1, 85], [32, 2, 165], [92, 3, 228], [175, 4, 255], [258, 3, 238], [306, 2, 178], [320, 1, 98], [302, 0, 20], [252, 1, -38], [175, 2, -66], [95, 1, -72], [30, 0, -46]],
+        gap: [15, 7], houseP: .66, trees: 0, stops: [.5], posts: [], shops: [], roll: .5 } } },
   // peryferia2 ("Druga strona"): the new estate over the tracks: a flat loop with tighter corners, kerbs and lines, houses close in a row
   // (modern greys and whites, dark roofs), lots with a house going up, two stretches of warehouses, road works, cranes over it all
   peryferia2: { id: 'peryferia2', home: false, ctrl: [[0, 0, 0], [5, 1, 55], [40, 1, 95], [95, 2, 100], [140, 1, 70], [150, 0, 20], [190, 1, -10], [235, 2, -5], [255, 1, -55], [225, 0, -110], [160, -1, -125], [100, 0, -100], [55, 1, -110], [15, 0, -70]],
@@ -63,7 +77,9 @@ export const REGION_T = {
       // turystyczna: the tourist quarter: old tenements in pastels round a big park inside the loop (both shortcuts through it: narrow
       // paths, no cars, people everywhere), a church and a monument where the town has its office tower, food trucks, a skatepark
       turystyczna: { tourist: true, ctrl: [[0, 0, 0], [0, 1, 70], [15, 2, 130], [60, 2, 160], [120, 1, 165], [170, 1, 140], [190, 0, 90], [230, 0, 60], [250, 0, 0], [230, 0, -60], [170, 0, -80], [100, 0, -75], [45, 0, -60], [10, 0, -30]],
-        stops: [.2, .5, .8], posts: [.5], shops: [[.3, 1], [.75, -1]], market: [], blocks: [], trees: .75, walls: ['#e8c8c0', '#f0dca8', '#c8dcc0', '#c0d0e0', '#e8d0e0', '#f0e0c8'] } } },
+        stops: [.2, .5, .8], posts: [.5], shops: [[.3, 1], [.75, -1]], market: [], blocks: [], trees: .75, walls: ['#e8c8c0', '#f0dca8', '#c8dcc0', '#c0d0e0', '#e8d0e0', '#f0e0c8'] },
+      // (the Classic's second street: the town by day, tenements with their shops only on his left, the other side for the street's life)
+      klasyk2: { classic: true, oneSide: -1, home: false, market: [], blocks: [], trees: 0, stops: [.3, .72], shops: [] } } },
   // bronx: the estate of panel blocks after dark (docs/trasy-tematyczne.md): its own loop of streets between the blocks, blocks nearly
   // all the way, a few tenements; the night: lamps along it (some flickering), lit windows, dark passages, a shop open all night
   bronx: { id: 'bronx', home: false, city: true, night: true, ctrl: [[0, 0, 0], [0, 0, 80], [-20, 0, 140], [10, 0, 190], [70, 0, 205], [115, 0, 175], [125, 0, 115], [165, 0, 92], [222, 0, 102], [262, 0, 70], [258, 0, 0], [212, 0, -42], [150, 0, -52], [92, 0, -32], [42, 0, -44]],

@@ -1,0 +1,112 @@
+{
+ "suit": {
+  "walkSpeed": 1.064,
+  "walkClip": "Walk_Formal_Loop",
+  "idleClip": "Idle_TalkingPhone_Loop",
+  "height": 1.908
+ },
+ "dogman": {
+  "walkSpeed": 1.035,
+  "walkClip": "Walk_Loop",
+  "idleClip": "Idle_Loop",
+  "height": 1.857
+ },
+ "oldman": {
+  "walkSpeed": 0.946,
+  "walkClip": "Walk_Loop",
+  "idleClip": "Idle_Loop",
+  "height": 1.688
+ },
+ "jogger": {
+  "walkSpeed": 2.171,
+  "walkClip": "Jog_Fwd_Loop",
+  "idleClip": "Idle_Loop",
+  "height": 1.568
+ },
+ "mum": {
+  "walkSpeed": 0.558,
+  "walkClip": "Walk_Carry_Loop",
+  "idleClip": "Idle_Loop",
+  "height": 1.55
+ },
+ "teen": {
+  "walkSpeed": 0.823,
+  "walkClip": "Walk_Loop",
+  "idleClip": "Idle_TalkingPhone_Loop",
+  "height": 1.508
+ },
+ "shopper": {
+  "walkSpeed": 0.807,
+  "walkClip": "Walk_Loop",
+  "idleClip": "Idle_Loop",
+  "height": 1.539
+ },
+ "kid": {
+  "walkSpeed": 0.699,
+  "walkClip": "Walk_Loop",
+  "idleClip": "Idle_Loop",
+  "height": 1.281
+ },
+ "gardener": {
+  "walkSpeed": 0.994,
+  "walkClip": "Walk_Loop",
+  "idleClip": "Farm_Watering",
+  "height": 1.782
+ },
+ "lady": {
+  "walkSpeed": 0.872,
+  "walkClip": "Walk_Formal_Loop",
+  "idleClip": "Idle_FoldArms_Loop",
+  "height": 1.644
+ },
+ "belly": {
+  "idleClip": "Sitting_Idle_Loop",
+  "talkClip": "Sitting_Talking_Loop",
+  "height": 1.747
+ },
+ "granma": {
+  "idleClip": "Sitting_Idle_Loop",
+  "talkClip": "Sitting_Talking_Loop",
+  "height": 1.556
+ },
+ "grandpa": {
+  "idleClip": "Sitting_Idle_Loop",
+  "talkClip": "Sitting_Talking_Loop",
+  "height": 1.737
+ },
+ "boy": {
+  "walkClip": "Walk_Loop",
+  "walkSpeed": 0.966,
+  "jogClip": "Jog_Fwd_Loop",
+  "jogSpeed": 2.517,
+  "idleClip": "Idle_Loop",
+  "jabClip": "Punch_Jab",
+  "crossClip": "Punch_Cross",
+  "hookClip": "Melee_Hook",
+  "hitchestClip": "Hit_Chest",
+  "hitheadClip": "Hit_Head",
+  "knockClip": "Hit_Knockback",
+  "deathClip": "Death01",
+  "noClip": "Idle_No_Loop",
+  "getupClip": "LayToIdle",
+  "jumpClip": "Jump_Loop",
+  "height": 1.739
+ },
+ "brawler": {
+  "walkClip": "Walk_Loop",
+  "walkSpeed": 0.98,
+  "jogClip": "Jog_Fwd_Loop",
+  "jogSpeed": 2.556,
+  "idleClip": "Idle_Loop",
+  "jabClip": "Punch_Jab",
+  "crossClip": "Punch_Cross",
+  "hookClip": "Melee_Hook",
+  "hitchestClip": "Hit_Chest",
+  "hitheadClip": "Hit_Head",
+  "knockClip": "Hit_Knockback",
+  "deathClip": "Death01",
+  "noClip": "Idle_No_Loop",
+  "getupClip": "LayToIdle",
+  "height": 1.765
+ }
+}
