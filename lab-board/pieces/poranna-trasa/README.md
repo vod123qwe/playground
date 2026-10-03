@@ -1496,3 +1496,8 @@ i w przeglądarce `http://localhost:8805` (moduły ES nie działają z pliku otw
 - nowy poziom Klasyka po Deptaku: ulica pod śniegiem, białe dachy, pada śnieg, zaspy w rynsztokach
 - lód na jezdni: rower słabo skręca i nie da się przyspieszyć ani zahamować; przejazd przez taflę bez wywrotki to PO LODZIE +1
 - bałwany na trawnikach zamiast krasnali, dzieci na sankach w poprzek drogi zamiast opon, pług z lemieszem zamiast śmieciarki
+
+## Wersja 184: podział na dwie gry (GTB Gazeciarz i Gazeciarz)
+
+- ta gra nazywa się teraz GTB Gazeciarz (otwarte miasto 3D, trasy, zlecenia, postacie); Klasyk jest osobną grą Gazeciarz w folderze `gazeciarz` (własny kafel w labie, własny zapis)
+- usunięte stąd: poziomy i mapy Klasyka, `classic.js`, przełącznik wersji na ekranie startowym; wspólny kod rozróżnia `src/edition.js` (tu `trasa`)

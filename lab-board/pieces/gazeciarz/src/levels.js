@@ -27,6 +27,18 @@ export const LEVELS = [
     goal: { time: 130, acc: .65, papers: 13 }, after: ['p4'] },
   { id: 'p4', tease: { head: 'Nadciąga godzina szczytu', text: 'Jutro wszyscy jadą do pracy naraz, a psy podobno się wyspały. Gazeciarz musi zdążyć przed nimi.', spot: 'buda z psem' }, region: 'peryferia', name: 'GODZINA SZCZYTU', note: 'Okrążenie, gdy wszyscy jadą do pracy. Psy już nie śpią.', finish: { to: 1, dir: 1 }, cars: 6, pace: 1.3, heat: 1.15, papers: 30, seed: 404,
     goal: { time: 125, acc: .7, papers: 15 }, after: ['w1'] },
+  { id: 'k1', region: 'peryferia', map: 'klasyk', classic: true, name: 'KLASYK: ULICA KASZTANOWA', note: 'Wersja Klasyk: domy tylko po lewej, po prawej przeszkody i paczki z gazetami. Rower toczy się sam, gaz przyspiesza, hamulec zwalnia, każdy rzut leci w stronę domów. Szyby nieabonentów za punkty.', finish: { to: 1, dir: 1 }, cars: 2, pace: .9, heat: .8, papers: 10, seed: 901,
+    goal: { time: 170, acc: .7, papers: 12 }, after: ['k2'] },
+  { id: 'k2', region: 'wies', map: 'klasyk', classic: true, name: 'KLASYK: WIEŚ', note: 'Wersja Klasyk, drugi poziom: wieś. Chałupy po lewej, po prawej pola, bele siana, pastwisko z krowami, kapliczki i staw. Na drodze traktory, na poboczu gęsi i kury. Spłosz stado za punkty.', finish: { to: 1, dir: 1 }, cars: 2, pace: .95, heat: .9, papers: 12, seed: 903,
+    goal: { time: 180, acc: .7, papers: 12 }, after: ['k3'] },
+  { id: 'k3', region: 'peryferia', map: 'park', classic: true, titles: 2, name: 'KLASYK: PARK', note: 'Wersja Klasyk, trzeci poziom: wille przy parku. Po prawej park: alejka, żywopłoty, klomby, stawy, lodziarnia, altana. Spacerowicze i gołębie. Dwie prenumeraty: X przełącza tytuł. PILNE zamówienia na czas.', finish: { to: 1, dir: 1 }, cars: 3, pace: 1, heat: 1, papers: 14, seed: 904,
+    goal: { time: 190, acc: .7, papers: 14 }, after: ['k4'] },
+  { id: 'k4', region: 'peryferia', map: 'deptak', classic: true, titles: 2, name: 'KLASYK: DEPTAK', note: 'Wersja Klasyk, czwarty poziom: deptak nad morzem. Pensjonaty po lewej, za nimi morze, co kawałek plaża z parawanami, molo i wieża ratowników. Budki z goframi, turyści i mewy. Dwie prenumeraty.', finish: { to: 1, dir: 1 }, cars: 2, pace: 1, heat: 1, papers: 14, seed: 905,
+    goal: { time: 200, acc: .7, papers: 14 }, after: ['k5'] },
+  { id: 'k5', region: 'peryferia', map: 'zima', classic: true, name: 'KLASYK: ZIMA', note: 'Wersja Klasyk, piąty poziom: ulica pod śniegiem. Lód na jezdni (rower się ślizga i słabo skręca), bałwany na trawnikach, dzieci na sankach w poprzek drogi, pług z solarką. Śnieg pada.', finish: { to: 1, dir: 1 }, cars: 2, pace: 1, heat: 1, papers: 14, seed: 906,
+    goal: { time: 200, acc: .7, papers: 14 }, after: [] },
+  { id: 'k9', soon: true, region: 'miasto', map: 'klasyk2', classic: true, titles: 2, rivals: 1, name: 'KLASYK: ŚRÓDMIEŚCIE', note: 'Wersja Klasyk, drugi poziom: miasto za dnia. Kamienice ze sklepami po lewej, po prawej życie ulicy. Dwie prenumeraty: każdy abonent czyta swoją, X przełącza tytuł. Kurier konkurencji podbiera skrzynki. PILNE zamówienia na czas.', finish: { to: 1, dir: 1 }, cars: 4, pace: 1, heat: 1, papers: 14, seed: 902,
+    goal: { time: 190, acc: .7, papers: 14 }, after: [] },
   { id: 'w1', region: 'wies', name: 'POLNA DROGA', note: 'Pół wsi, od przystanku. Bez chodników, za to z górkami.', finish: { to: .5, dir: 1 }, cars: 1, pace: .9, heat: .75, papers: 18, seed: 501,
     goal: { time: 95, acc: .6, papers: 4 }, after: ['w2', 'w3'], tease: { head: 'Na wsi czekają na gazetę', text: 'Sołtys mówi, że ostatni gazeciarz zgubił się w zbożu. Nowego wypatrują od świtu.', spot: 'działki' } },
   { id: 'w2', region: 'wies', name: 'PRZEZ SADY', note: 'Cała wieś w drugą stronę, między sadami. Spokojnie, ale psy z łańcuchów.', finish: { to: 1, dir: -1 }, cars: 1, pace: .95, heat: .95, papers: 24, seed: 502, cross: [.3],
@@ -61,10 +73,13 @@ export const LEVELS = [
 export const LEVEL = id => LEVELS.find(l => l.id === id);
 
 // ---------- the save ----------
-const KEY = 'pt.save';
+const KEY = 'gz.save';   // (its own save since the Classic became a game of its own; the first time, its levels' results come over from the old shared one)
 const blank = () => ({ v: 1, done: {}, best: {}, money: 0, bike: null, inv: [], paints: [], at: null, t: 0 });
 let S = null;
-export function load() { if (S) return S; try { S = Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || 'null') || {}); } catch { S = blank(); } return S; }
+export function load() { if (S) return S; try { S = Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || 'null') || {}); } catch { S = blank(); }
+  if (!S.t) { try { const O = JSON.parse(localStorage.getItem('pt.save') || 'null'); if (O) { const mine = o => Object.fromEntries(Object.entries(o || {}).filter(([k]) => /^k\d/.test(k)));
+    Object.assign(S, { done: mine(O.done), best: mine(O.best), week: mine(O.week), money: O.money || 0, bike: O.bike || null, inv: O.inv || [], paints: O.paints || [] }); } } catch { } }
+  return S; }
 export function save(patch) { load(); if (patch) Object.assign(S, patch); S.t = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } return S; }
 export function wipe() { S = blank(); try { localStorage.removeItem(KEY); } catch { } return S; }
 export const hasSave = () => { try { return !!localStorage.getItem(KEY); } catch { return false; } };

@@ -1,0 +1,143 @@
+// Traffic: cars driving round the loop in both directions, each in its lane (1.75 m right of the middle, as it goes), at 30-40 km/h.
+// Each keeps behind what is ahead of it in its lane (a car, one parked at the kerb, the rider). It goes round only what will not move
+// (a parked car, a ramp, the bus at its stop, the rider stood still a while), the indicator blinking first: over into the other lane,
+// if nothing is coming that way, past it, and back. Behind a slow car or the rider riding it waits (and hoots). A lane change is a steer, not a jump
+// (the car turns a little into it). Something coming while it is out there: it slows, and if it has not got past yet, it goes back.
+// One he runs into (or that runs into him) stops a while. boxes() gives where each is, as the rider's colliders are.
+
+export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider = null, bikes: nb = 2 }) {
+  let a = seed; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const G = new THREE.Group(), list = [], { S, N, ds, len } = track, LANE = 1.75;
+  for (let k = 0; k < n; k++) { const c = cars.random(rnd), dir = k % 2 ? 1 : -1; G.add(c.group);
+    list.push({ car: c, dir, s: (k + .3) / n * len, v: 8 + rnd() * 3, cruise: 8.5 + rnd() * 2.5, lane: dir * LANE, laneV: 0, laneT: dir * LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0 }); }
+  // the bus: round the loop, stopping at the stops on its side (track.stops) a few seconds; the cars behind go round it
+  { const c = cars.makeCar('bus', cars.COLOURS.bus[rnd() * 3 | 0]); G.add(c.group); list.push({ car: c, dir: 1, s: len * .6, v: 7, cruise: 7.6, lane: LANE, laneV: 0, laneT: LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0, bus: true, extra: 3.2 }); }
+  // the village's tractor: slow, always out, the cars behind it wait and go round
+  if (track.region === 'wies' && cars.makeTractor) for (const [dir, f] of track.harvest ? [[-1, .3], [1, .75], [1, .45], [-1, .9]] : [[-1, .3], [1, .75]]) { const c = cars.makeTractor(); G.add(c.group); list.push({ car: c, dir, s: len * f, v: 3.4, cruise: 3.4 + rnd() * .5, lane: dir * LANE, laneV: 0, laneT: dir * LANE, pass: null, stop: 0, x: 0, z: 0, yaw: 0, tractor: true, extra: 1 }); }
+  const wrap = x => ((x % len) + len) % len, ahead = (from, to, dir) => { let d = ((to - from) * dir % len + len) % len; return d > len / 2 ? d - len : d; };
+  function place(t) {
+    const f = wrap(t.s) / ds, i0 = Math.floor(f) % N, i1 = (i0 + 1) % N, k = f - Math.floor(f), A = S[i0], B = S[i1];
+    const px = A.p.x + (B.p.x - A.p.x) * k, pz = A.p.z + (B.p.z - A.p.z) * k, py = A.p.y + (B.p.y - A.p.y) * k;
+    let rx = A.r.x + (B.r.x - A.r.x) * k, rz = A.r.z + (B.r.z - A.r.z) * k; const rl = Math.hypot(rx, rz) || 1; rx /= rl; rz /= rl;   // (the side between the two too: no step sideways where one bit of road meets the next)
+    const fx = A.f.x + (B.f.x - A.f.x) * k, fz = A.f.z + (B.f.z - A.f.z) * k;                    // (the heading between the two points it is between)
+    // the heading: the way it has actually gone (the road's bend and a lane change in one), eased as a car's is, and held when it stands
+    const ox = t.x, oz = t.z; t.x = px + rx * t.lane; t.z = pz + rz * t.lane; const mx = t.x - ox, mz = t.z - oz, moved = Math.hypot(mx, mz);
+    const road = Math.atan2(fx, fz) + (t.dir < 0 ? Math.PI : 0), yaw0 = moved > .004 && moved < 3 && !t.snap ? Math.atan2(mx, mz) : road; if (moved >= 3) t.yaw = road;   // (a jump: sent elsewhere, faced down the road)
+    // (never more than a little off the road's own heading: slow, a lane change is mostly sideways, and a bus turned on its middle by it
+    // swept the whole road; a long one less than a car)
+    const lim = t.bus ? .18 : t.tractor ? .25 : .32, dev = Math.atan2(Math.sin(yaw0 - road), Math.cos(yaw0 - road)), yawT = road + Math.max(-lim, Math.min(lim, Math.abs(dev) > 2.2 ? 0 : dev));
+    if (t.yaw === undefined || t.snap) { t.yaw = road; t.snap = false; } else { const dy = Math.atan2(Math.sin(yawT - t.yaw), Math.cos(yawT - t.yaw)); t.yaw += dy * Math.min(1, (t.dt || .016) * 9); }
+    const steer = 0;
+    if (!t.car) return;
+    t.car.group.position.set(t.x, py, t.z); t.car.group.rotation.set(-Math.atan((B.p.y - A.p.y) / ds) * t.dir, t.yaw - steer, 0, 'YXZ');
+  }
+  let clock = 0;
+  function update(dt, R) { clock += dt;
+    // how many cars are out (R.cars: few at first, more as the run goes on); one coming out starts on the far side of the loop
+    { let k = 0; for (const t of list) { if (t.tractor) { t.off = false; continue; } if (t.bus) { const on = R.bus !== false; if (on && t.off) { t.s = wrap(R.s + len / 2); t.snap = true; t.stop = 0; } t.off = !on; t.car.group.visible = on; continue; } const on = k++ < (R.cars ?? 99); if (on && t.off) { t.s = wrap(R.s + len / 2 + k * 41); t.v = t.cruise; t.lane = t.laneT = t.dir * LANE; t.pass = null; t.stop = 0; t.snap = true; } t.off = !on; t.car.group.visible = on; } }
+    // a stretch kept clear (the finale's track): nothing drives on it; one that comes to it goes on from the far side of the loop
+    if (R.clear) { const [a0, b0] = R.clear, A0 = wrap(a0), B0 = wrap(b0), inC = s0 => { const s1 = wrap(s0); return A0 <= B0 ? s1 >= A0 && s1 <= B0 : s1 >= A0 || s1 <= B0; };
+      for (const t of list) if (!t.off && inC(t.s)) { t.s = wrap(t.s + len / 2); t.snap = true; t.stop = 0; } }
+    const live = list.filter(t => !t.off);                                            // R: { s (along the road), d (off the middle), v, along (+1 / -1: which way he rides) }
+    stepBikes(dt, R);
+    // everything that can be in a lane: the cars, the parked ones, the rider
+    const things = [...live.map(t => ({ s: t.s, d: t.lane, v: t.v * t.dir, t })), ...bikes.map(b => ({ s: b.s, d: b.lane, v: b.v * b.dir })), ...track.parked.map(p => ({ s: p.s, d: p.d, v: 0, len: p.len || 0 })), ...(R.peds || []).flatMap(p => [LANE, -LANE].filter(l => Math.abs(p.d - l) < 2.6).map(l => ({ s: p.s, d: l, v: 0, ped: true }))), { s: R.s, d: R.d, v: R.v * R.along, rider: true }];
+    for (const t of live) {
+      t.stop = Math.max(0, t.stop - dt);
+      const mine = t.dir * LANE, other = -mine;
+      // what is ahead of it in a lane (d), and how near, and how fast it goes our way
+      const lead = d => { let best = null; for (const o of things) { if (o.t === t || (o.rider && (R.onCar === t || R.high)) || Math.abs(o.d - d) > (o.rider ? .8 : 1.5)) continue; const g = ahead(t.s, o.s, t.dir); if (g > 0 && g < 40 && (!best || g < best.g)) best = { g, v: o.v * t.dir, o }; } return best; };
+      const coming = () => { let near = 1e9; for (const o of list) { if (o === t || o.dir === t.dir) continue; const g = ahead(t.s, o.s, t.dir); if (g > -2 && g < near) near = g; } return near; };   // (the nearest one coming the other way)
+      const L = lead(t.lane), inMine = Math.abs(t.lane - mine) < .5;
+      // the rider in its way: a driver waits a moment (slows, hoots) before going round him; a swerve over a moment's wobble is not how they drive
+      t.riderT = L && L.o.rider && L.g < 30 ? (t.riderT || 0) + dt : Math.max(0, (t.riderT || 0) - dt * 2);
+      // stuck behind him a good while (he is ahead, near, and it has had to slow): it hoots, the driver has something to say
+      const behind = L && L.o.rider && L.g < 14 && t.v < t.cruise * .75 && !t.pass; t.stuckT = behind ? (t.stuckT || 0) + dt : Math.max(0, (t.stuckT || 0) - dt * 2);
+      t.shoutCool = Math.max(0, (t.shoutCool || 0) - dt); if (t.stuckT > 3.5 && t.shoutCool <= 0) { t.shoutNow = true; t.shoutCool = 7 + rnd() * 6; }
+      let want = t.cruise * (R.pace || 1);   // (the run's difficulty: faster as it goes on)
+      if (L) want = Math.max(0, Math.min(t.cruise, (L.g - 6.5 - (L.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, L.v)));        // (keep behind it; further behind a bus)
+      if (t.bus && track.stops) for (const q of track.stops) { if (q.sd !== t.dir) continue; const g = ahead(t.s, q.s, t.dir);   // (the bus: easing in to its stop, standing there a few seconds)
+        if (t.lastStop === q) { if (g < -40) t.lastStop = null; continue; }
+        if (g > 0 && g < 16) want = Math.min(want, Math.max(.8, g * .7)); if (g > -1 && g < 1.2 && t.stop <= 0) { t.stop = 6; t.lastStop = q; } }
+      // go round only what will not move: a car parked at the kerb, a ramp, the bus at its stop, the rider stood still a good while; never
+      // a car that is only slow or in a queue, never the rider riding (behind him they wait and hoot). The indicator first, a moment, then over
+      t.riderStill = L && L.o.rider && L.g < 30 && Math.abs(R.v) < .6 ? (t.riderStill || 0) + dt : 0;
+      const fixed = L && !L.o.ped && (L.o.rider ? t.riderStill > 4 : L.o.t ? L.o.t.stop > 0 : Math.abs(L.v) < .3);
+      if (!t.pass && inMine && L && L.g < 22 && fixed && !L.o.t?.pass) {
+        const clear = coming() > Math.max(48, (L.o.len || 0) + 24) && !(lead(other) && lead(other).g < L.g + 12);
+        if (clear) t.pass = { s: L.o.s, len: L.o.len || 0, t: L.o.t || null, rider: !!L.o.rider, go: .9 }; }
+      if (t.pass) { const past = -ahead(t.s, t.pass.t ? t.pass.t.s : t.pass.rider ? R.s : t.pass.s, t.dir), oc = coming();   // (how far past it we are)
+        if (t.pass.go > 0) { t.pass.go -= dt; t.laneT = mine; } else t.laneT = other;   // (signalling first: still in its lane)
+        if (t.pass.go <= 0) want = Math.min(t.cruise * 1.05, want + 4); const Lo = lead(other); if (Lo) want = Math.max(0, Math.min(want, (Lo.g - 6.5 - (Lo.o.t?.extra || 0) - (t.extra || 0)) * 1.3 + Math.max(0, Lo.v))); if (Lo && Lo.v < -.5 && Lo.g < 30 && past < -1) t.pass = null;   // (out there: mind what is ahead in that lane too)
+        if (oc < 30) { want = Math.min(want, oc < 18 ? 1.5 : 4.5); if (past < -1) t.pass = null; }        // something coming: slow; not past yet: back in
+        if (t.pass && (past > 7 + t.pass.len || (oc < 25 && past > 4.6 + t.pass.len)) && !(lead(mine) && lead(mine).g < 3)) t.pass = null; }   // past it (with room): back in; sooner, if one is coming (else they meet nose to nose and both wait)
+      if (!t.pass) t.laneT = mine;
+      // the indicators: left while it waits to pull out and on the way over, right on the way back in
+      const side = t.pass && (t.pass.go > 0 || Math.abs(t.lane - other) > .3) ? 1 : !t.pass && Math.abs(t.lane - mine) > .3 ? -1 : 0;
+      t.car?.blink?.(side, (clock * 2.6) % 1 < .55);
+      // the steering over: a spring, the quicker the faster it goes
+      const kk = 2.2 + Math.min(1.5, t.v * .15); t.laneV += ((t.laneT - t.lane) * kk * kk - 2 * kk * t.laneV) * dt; t.laneV = THREE.MathUtils.clamp(t.laneV, -2.2, 2.2); t.lane += t.laneV * dt;
+      // (one going round a long obstacle (the road works) is in our lane: wait short of where it comes back in, do not meet it nose to nose)
+      if (!t.pass) for (const o of live) if (o.pass && o.pass.len && o.dir !== t.dir) { const g = ahead(t.s, wrap(o.pass.s + o.dir * (o.pass.len + 7)), t.dir); if (g > -2 && g < 40) want = Math.min(want, Math.max(0, (g - 10) * 1.3)); }
+      if (t.stop > 0) want = 0;
+      // (stood a long while, nose to nose or boxed in, far from him: it goes on from elsewhere on the loop, as one sent off would)
+      t.jam = t.v < .2 && !(t.stop > 0) ? (t.jam || 0) + dt : 0; if (t.jam > 15 && Math.abs(((t.s - R.s) % len + len * 1.5) % len - len / 2) > 70) { t.s = wrap(t.s + len / 2); t.snap = true; t.pass = null; t.lane = t.laneT = mine; t.jam = 0; }
+      t.v += THREE.MathUtils.clamp(want - t.v, -7 * dt, 2.5 * dt); t.s = wrap(t.s + t.dir * t.v * dt);
+      t.dt = dt; place(t); cars.spin(t.car, t.v * dt);
+    }
+  }
+  // cyclists: now and then one coming the other way, at the kerb, in its own colours; far behind him (or too far ahead), it is sent
+  // round again, to come at him from ahead
+  const bikes = [];
+  // (their shirts: no yellow, that is the Kurier's)
+  if (makeRider) for (let k = 0; k < nb; k++) { const r = makeRider(), M = r.materials, pick = a => a[rnd() * a.length | 0];
+    M.shirt.color.set(pick(['#cf5a3e', '#3b5670', '#467537', '#8e6a9e', '#b7a4e0', '#e9e3d1'])); M.jeans.color.set(pick(['#2f4a6e', '#44484c', '#1d1e21', '#7c8446']));
+    M.cap.color.set(pick(['#3b5670', '#17181b', '#e9e3d1', '#467537'])); M.frame.color.set(pick(['#3b5670', '#17181b', '#9aa0a4', '#467537', '#efc970'])); M.hair.color.set(pick(['#24190f', '#9a938a', '#d9a441', '#5b3a22']));
+    G.add(r.root); bikes.push({ r, s: 0, dir: 1, lane: 0, v: 4 + rnd() * 1.6, wait: 4 + k * 9 + rnd() * 8, stop: 0, x: 0, z: 0, yaw: 0, snap: true, on: false }); r.root.visible = false; }
+  // the Kurier Osiedlowy's couriers (the newspaper war): yellow and navy, a bag of their own papers; they ride his way, ahead of him
+  let rivalsOn = 0;
+  function rivals(n) { rivalsOn = n; if (!makeRider) return; while (bikes.filter(b => b.rival).length < n) { const r = makeRider(), M = r.materials; M.shirt.color.set('#e3b22e'); M.jeans.color.set('#2f4a6e'); M.cap.color.set('#2f4a6e'); M.frame.color.set('#2f4a6e'); M.hair.color.set(['#24190f', '#5b3a22'][bikes.length % 2]);
+      // (seen from afar: a tall pennant of the Megafon's red over the back wheel, a big navy bag of papers on his back)
+      { const T = THREE, red = new T.MeshBasicMaterial({ color: '#e3462e', side: T.DoubleSide }), pole = new T.Mesh(new T.BoxGeometry(.025, 1.5, .025), new T.MeshBasicMaterial({ color: '#2a2c30' })); pole.position.set(.12, 1.25, -.62); r.root.add(pole);
+        const fl = new T.Mesh(new T.PlaneGeometry(.4, .26), red); fl.rotation.y = Math.PI / 2; fl.position.set(.12, 1.88, -.82); r.root.add(fl); const st = new T.Mesh(new T.PlaneGeometry(.4, .06), new T.MeshBasicMaterial({ color: '#f6f3ea', side: T.DoubleSide })); st.rotation.y = Math.PI / 2; st.position.set(.125, 1.86, -.82); r.root.add(st);
+        const bag = new T.Mesh(new T.BoxGeometry(.44, .46, .24), new T.MeshLambertMaterial({ color: '#22325a' })); bag.position.set(0, 1.32, -.36); r.root.add(bag); const band = new T.Mesh(new T.BoxGeometry(.45, .07, .25), new T.MeshLambertMaterial({ color: '#e3b22e' })); band.position.set(0, 1.4, -.36); r.root.add(band); }
+      G.add(r.root); r.root.visible = false; bikes.push({ r, rival: true, s: 0, dir: 1, lane: 0, v: 5.6 + rnd() * .9, wait: 2 + bikes.filter(b => b.rival).length * 7, stop: 0, x: 0, z: 0, yaw: 0, snap: true, on: false }); }
+    for (const b of bikes) if (b.rival && bikes.filter(q => q.rival).indexOf(b) >= n) { b.on = false; b.r.root.visible = false; } }
+  function stepBikes(dt, R) {
+    for (const b of bikes) {
+      b.stop = Math.max(0, b.stop - dt);
+      if (b.rival && bikes.filter(q => q.rival).indexOf(b) >= rivalsOn) continue;
+      if (b.rival) { if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = R.along || 1; b.s = wrap(R.s + b.dir * (55 + rnd() * 60)); b.lane = b.dir * 1.7; b.snap = true; b.r.root.visible = true; b.v = 5.6 + rnd() * .9; }
+        const rel = ahead(R.s, b.s, R.along || 1); if (!b.hold && rel < -40 && rel > -400) { b.on = false; b.wait = 16 + rnd() * 12; b.r.root.visible = false; b.dropped = (b.dropped || 0) + 1; continue; }
+        if (b.dir !== (R.along || 1) && !b.fall) b.dir = R.along || 1; }
+      else if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = -(R.along || 1); b.s = wrap(R.s + (R.along || 1) * (110 + rnd() * 70)); b.lane = b.dir * 2.55; b.snap = true; b.r.root.visible = true; }   // (ahead of him, coming his way)
+      const rel = ahead(R.s, b.s, R.along || 1);                       // (how far ahead of him, the way he rides)
+      if (!b.rival && !b.hold && (rel < -40 || rel > 320)) { b.on = false; b.wait = 6 + rnd() * 14; b.r.root.visible = false; continue; }
+      // (a cyclist with him on its line ahead, standing or slow: it swerves round him, and short of him it brakes)
+      // (and round what stands on its line: a parked car, a ramp, the road works; the nearest of them, or him, ahead within 18 m)
+      if (!b.fall && !b.hold) { const home = b.rival ? b.lane : b.dir * 2.55; let ob = null, od = 18;
+        const toHim = ahead(b.s, R.s, b.dir); if (!b.rival && toHim > 0 && toHim < od && Math.abs(home - R.d) < 1.5 && Math.abs(R.d) < 3.6) { ob = R.d; od = toHim; }
+        for (const p of track.parked) { const a2 = ahead(b.s, p.s, b.dir); if (a2 > -(p.len || 0) && a2 < od && Math.abs(home - p.d) < 1.7) { ob = p.d; od = a2; } }
+        if (!b.rival) { const want = ob !== null ? Math.max(-3.2, Math.min(3.2, ob + (home >= ob ? 1 : -1) * 2)) : home; b.lane += (want - b.lane) * Math.min(1, dt * 2.6); }
+        else if (ob !== null && od < 10) b.lane += ((ob + (b.lane >= ob ? 1 : -1) * 2) - b.lane) * Math.min(1, dt * 3);
+        if (!b.rival && toHim > 0 && toHim < 4 && Math.abs(b.lane - R.d) < .9) b.stop = Math.max(b.stop, .35); }
+      if (b.hold) b.stop = Math.max(b.stop, .5); const v = b.stop > 0 ? 0 : b.v; b.s = wrap(b.s + b.dir * v * dt); b.dt = dt; if (!b.fall) place(b);
+      const q = track.probe(b.x, b.z, Math.floor(wrap(b.s) / ds) % N); b.r.root.position.set(b.x, q.y, b.z); b.r.root.rotation.set(0, b.yaw, 0);
+      // knocked off: the bike over on its side, the rider thrown (a ragdoll), a while, up again; bumped: a wobble
+      let lean = 0; if (b.fall) { const f = b.fall; f.t += dt; lean = f.side * 1.35 * (f.t < 2.8 ? Math.min(1, f.t * 5) : Math.max(0, 1 - (f.t - 2.8) / .9)); if (b.hold) f.t = Math.min(f.t, 2.2); if (f.t > 2.8 && !f.up) { f.up = true; b.r.getUp(.9); } if (f.t > 3.8) b.fall = null; }
+      if (b.wob > 0) { b.wob -= dt; lean = Math.sin(b.wob * 22) * .25 * b.wob; }
+      b.r.update({ dt, speed: b.fall ? 0 : v, steer: 0, lean, pedalling: v > 0 && !b.fall ? 1 : 0, braking: 0, climbing: 0, look: null, nervous: 0, kick: null, air: false, fallen: b.fall ? 1 : 0, charge: null });
+    }
+  }
+  // the rider ran into a cyclist: hard, and it is knocked off too; softly, it wobbles and goes on
+  function knock(b, vel, hard) {
+    if (!hard) { b.wob = .8; b.stop = Math.max(b.stop, .6); return; }
+    if (b.fall) return; const f = new THREE.Vector3(Math.sin(b.yaw), 0, Math.cos(b.yaw)), side = Math.random() < .5 ? -1 : 1; b.fall = { t: 0, side, up: false }; b.stop = 4.2;
+    const v = vel.clone().multiplyScalar(.6).addScaledVector(f, b.v * .5), sp = Math.min(6, v.length());
+    b.r.ragdoll({ vel: v, spin: new THREE.Vector3(f.z, 0, -f.x).multiplyScalar(.35 * sp).addScaledVector(f, side * .6), lift: .5 + sp * .07, ground: (x, z) => track.probe(x, z, Math.floor(wrap(b.s) / ds) % N).y, near: () => [], hit: () => false });
+  }
+  function boxes() { return [...bikes.filter(b => b.on).map(b => ({ x: b.x, z: b.z, c: Math.cos(b.yaw), s: Math.sin(b.yaw), hx: .3, hz: .9, h: 1.6, y0: b.r.root.position.y, kind: 'car', t: b })), ...list.filter(t => !t.off).map(t => ({ x: t.x, z: t.z, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: t.car.half[0], hz: t.car.half[1], h: 1.5, y0: t.car.group.position.y, kind: 'car', t })),
+    ...list.filter(t => !t.off && t.car.trailer).map(t => { const T = t.car.trailer; return { x: t.x - Math.sin(t.yaw) * T.back, z: t.z - Math.cos(t.yaw) * T.back, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: T.hx, hz: T.hz, h: 1.9, y0: t.car.group.position.y, kind: 'car', t, trailer: true }; }) ]; }   // (the tractor's trailer: a box of its own behind it)
+  list.forEach(place);
+  return { group: G, list, update, boxes, knock, bikes, rivals };
+}

@@ -22,6 +22,7 @@ import { createBronx } from './bronx.js';
 import { createTourist } from './tourist.js';
 import { createIndustry } from './industry.js';
 import { createVillage } from './village.js';
+import { createClassic } from './classic.js';
 import { createDirector } from './director.js';
 import { createHud } from './hud.js';
 import { createGranny } from './granny.js';
@@ -162,7 +163,7 @@ const water = createWater({ THREE, scene });
 const residents = createResidents({ THREE, toon, track, hud, scene });
 // (the locals of a route's own map: the Bronx after dark (its lads, glass, bins, the engineer); the tourist quarter (its tourists, the guide, picnics, skaters))
 const director = createDirector({ THREE, toon, track, scene });   // (something always going on: a small thing on the road ahead when nothing has happened a while)
-const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : track.harvest || track.fair ? createVillage({ THREE, toon, track, scene, residents, cars: () => traffic.boxes() }) : null;
+const locals = track.night ? createBronx({ THREE, toon, track, scene, residents }) : track.tourist ? createTourist({ THREE, toon, track, scene, residents }) : track.industry ? createIndustry({ THREE, toon, track, scene, residents }) : track.classic ? createClassic({ THREE, toon, track, scene, cars: track.cars, traffic: () => traffic.boxes(), residents }) : track.harvest || track.fair ? createVillage({ THREE, toon, track, scene, residents, cars: () => traffic.boxes() }) : null;
 // what by the road answers a kick: mailboxes (three and it is off its post), poles, trees and bushes (their leaves), swings, cones
 const stuff = createWorld({ THREE, scene, track, toon, audio: { play: (n, o) => audio.play(n, o) }, makeDog: (c, sz) => dogs.makeDog(c, sz), say: (at, t) => hud.rant(at, t, false),
   onLoot: T => { shop.grant(T.item, T.tier); audio.play('pick'); flash(T.label + '! Zamontowane. Właściciel się nie dowie... chyba'); B.fame = (B.fame || 0) + 1; setTimeout(() => hud.rant(new THREE.Vector3(T.x, T.y + 1.6, T.z), 'EJ! MOJE PRZERZUTKI!!!', false), 1600); witness?.(T.x, T.z); },
