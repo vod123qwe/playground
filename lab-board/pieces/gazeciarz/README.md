@@ -35,3 +35,8 @@ Klawiatura: strzałki/WASD jazda, mysz lub przyciski rzutu, Spacja skok (w powie
 - dzieci przy skoczniach, wycieczka na rowerkach i babcia z laską to teraz prawdziwe modele ludzi z ruchami (Mixamo przeniesione na postacie MakeHuman), zamiast klocków
 - postacie płynnie zmieniają ruchy: kibicowanie, machanie, potknięcie po zderzeniu, bieg goniących, niesienie kubła, klaskanie emerytów
 - naprawione: przy ukrywaniu dalekich postaci wracały klocki; złodziej torebek znów się pojawia
+
+### Wersja 187: ławki i kubły
+
+- prawdziwa ławka parkowa (żeliwne boki, listwy) i kubeł na kółkach zamiast klocków
+- emeryci siedzą na ławkach przodem do drogi

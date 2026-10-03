@@ -12,6 +12,7 @@
 // the road's direction, its slope.
 
 import { createFair } from './fair.js';
+import { createFurniture } from './furniture.js';
 import { pixSign } from './pixsign.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createCars } from './cars.js';
@@ -1060,9 +1061,9 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       if (RG.harvest) { const hayM = toon('#e2c25e'), hayE = toon('#c49a3e'); for (const F of fieldLots) for (let k = 0; k < 3 + (fr() * 4 | 0); k++) { const i = F.i + Math.round((fr() * 22 - 6) / ds), d = F.s * (PAVE + 8 + fr() * 24);
         const b = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, 1.2, 14).rotateZ(Math.PI / 2), [hayM, hayE, hayE]); b.position.y = .75; const g = new THREE.Group(); g.add(b); put(g, i, d, 0, fr() * 6); } } }
     // (the Classic: on the side away from the houses, the bundles of papers by the kerb (the only papers there are), benches on the lawn)
-    if (RG.oneSide) { const os = -RG.oneSide, benchM = toon('#8a6a44'), legM = toon('#3a3d42');
+    if (RG.oneSide) { const os = -RG.oneSide, benchM = toon('#8a6a44'), legM = toon('#3a3d42'), FURN = createFurniture({ THREE, toon });
       for (let i = Math.round(60 / ds); i < N - Math.round(30 / ds); i += Math.round(110 / ds)) { const o = P.bundle(), d = os * (VERGE + .6); if (!free(i, d, 1.5)) continue; o.group.userData.keep = true; put(o.group, i, d, 0, 0); bundles.push(hit(o.group, o.hit, i)); }
-      for (let i = Math.round(40 / ds); i < N - Math.round(20 / ds); i += Math.round((34 + fr() * 20) / ds)) { const d = os * (PAVE + 2.2); if (!free(i, d, 2)) continue; const g = new THREE.Group(); g.add(box(.5, .08, 1.8, benchM, 0, .48, 0), box(.08, .5, 1.8, benchM, os * .24, .78, 0)); for (const z of [-.75, .75]) g.add(box(.45, .45, .08, legM, 0, .22, z)); put(g, i, d, 0, 0); hit(g, { hx: .3, hz: .95, h: 1, kind: 'hard' }, i); benches.push({ i, d, p: g.position.clone(), yaw: g.rotation.y }); }
+      for (let i = Math.round(40 / ds); i < N - Math.round(20 / ds); i += Math.round((34 + fr() * 20) / ds)) { const d = os * (PAVE + 2.2); if (!free(i, d, 2)) continue; const g = FURN.bench(); put(g, i, d, 0, os > 0 ? 0 : Math.PI); hit(g, { hx: .3, hz: .95, h: 1, kind: 'hard' }, i); benches.push({ i, d, p: g.position.clone(), yaw: g.rotation.y }); }
       // (the far side's kerb: a car parked now and then, a plank on the road before some of them: over it, or onto its roof)
       for (let i = Math.round(70 / ds); i < N - Math.round(40 / ds); i += Math.round((80 + fr() * 50) / ds)) { const d = os * 2.45; if (!free(i, d, 2.5)) continue; const c = CARS.random(fr); put(c.group, i, d, 0, 0); c.group.userData.keep = true; hit(c.group, { hx: c.half[0], hz: c.half[1], h: 1.5, kind: 'hard', car: c.group }, i); parked.push({ s: i * ds, d, len: 5 });
         if (fr() < .6) { const ir = i - Math.round(8 / ds), o = P.ramp(fr, 'big'); put(o.group, ir, d, 0, 0); ramps.push(hit(o.group, o.hit, ir)); parked.push({ s: ir * ds, d, len: 3 }); } }
@@ -1167,8 +1168,8 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
         for (let i = 0; i < N; i += Math.round((8 + fr() * 8) / ds)) { const d = hd * (PAVE + 22 + fr() * 16); if (free(i, d, 2)) farTree(i, d, 1 + fr() * .5); } }
       // (bin day: wheelie bins out at the kerb before most houses; ridden into, over they go and roll)
       const binM = [toon('#3f7a4a'), toon('#3b5670'), toon('#5a5f66')], lidM = toon('#2a2c30');
-      ds0.forEach(d => { if (fr() > .6) return; const i = d.i + Math.round((fr() < .5 ? 3 : -3) / ds), dd = RG.oneSide * (KERB + .55); if (!free(i, dd, .9)) return; const g = new THREE.Group(), m = binM[fr() * 3 | 0];
-        g.add(box(.56, .95, .6, m, 0, .48, 0), box(.6, .07, .66, lidM, 0, .99, 0)); put(g, i, dd, 0, fr() * .4); g.userData.keep = true; const C = hit(g, { hx: .3, hz: .32, h: 1, kind: 'hard' }, i); C.thing = { kind: 'cone', o: g, C, r: .3 }; things.push(C.thing); });
+      ds0.forEach(d => { if (fr() > .6) return; const i = d.i + Math.round((fr() < .5 ? 3 : -3) / ds), dd = RG.oneSide * (KERB + .55); if (!free(i, dd, .9)) return; const g = FURN.bin(['#3f7a4a', '#3b5670', '#5a5f66', '#7a4a2e'][fr() * 4 | 0]);
+        put(g, i, dd, 0, (RG.oneSide < 0 ? Math.PI : 0) + (fr() - .5) * .5); g.userData.keep = true; const C = hit(g, { hx: .3, hz: .32, h: 1, kind: 'hard' }, i); C.thing = { kind: 'cone', o: g, C, r: .3 }; things.push(C.thing); });
       // (the obstacle courses on the lawn of the far side: a plank, a bale to clear, a big ramp to a parked car (over it or onto its roof),
       // cones to weave, a kicker, the line; all three ramps in one go: a bonus)
       const signM = new THREE.MeshBasicMaterial({ map: pixSign(THREE, 'TOR PRZESZKÓD', '#efc930', '#17181b'), side: THREE.DoubleSide }), baleM = toon('#e2c25e'), postM = toon('#8a6a44');
