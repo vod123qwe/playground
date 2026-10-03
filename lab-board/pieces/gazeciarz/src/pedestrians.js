@@ -21,8 +21,8 @@ export function createPedestrians({ THREE, toon, track, seed = 21, copies = 1 })
 
   // ---------- the ten: who (the model), how fast, what they carry ----------
   const TYPES = [
-    { key: 'oldman', v: .75, prop: 'cane' }, { key: 'jogger', v: 2.6, run: true }, { key: 'mum', v: 1, prop: 'pram' }, { key: 'dogman', v: 1.15, prop: 'dog' }, { key: 'teen', v: 1.3 },
-    { key: 'suit', v: 1.45, prop: 'case' }, { key: 'shopper', v: .95, prop: 'bags' }, { key: 'kid', v: 1.1, prop: 'balloon', h: .6 }, { key: 'gardener', v: .9, prop: 'rake' }, { key: 'lady', v: 1.05, prop: 'handbag' },
+    // (the Classic: only the people its own street uses anyway, so nothing more to download)
+    { key: 'jogger', v: 2.6, run: true }, { key: 'suit', v: 1.45, prop: 'case' }, { key: 'shopper', v: .95, prop: 'bags' }, { key: 'gardener', v: .9, prop: 'rake' }, { key: 'lady', v: 1.05, prop: 'handbag' },
   ];
   let PACE = {}; fetch('assets/export/people.json').then(r => r.json()).then(j => { PACE = j; }).catch(() => {});   // (metres a second each one's walk clip covers)
 

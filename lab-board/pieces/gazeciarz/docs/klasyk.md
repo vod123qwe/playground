@@ -158,3 +158,14 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Mapa `peryferia/zima` (flaga `winter`): po budowie wszystko, co zielone, przechodzi w śnieg (materiały i kolory wierzchołków; trawa bez tekstury), dachy białe, liście w rynsztokach jako zaspy, szare niebo i jasna mgła, pada śnieg (900 płatków wokół niego).
 - Lód: plamy co 30–60 m na jezdni (`track.iceAt`). Na lodzie: przyspieszanie i hamowanie ×0,12, skręt ×0,2, bez prowadzenia wzdłuż drogi. ŚLIZG! przy wjeździe, PO LODZIE +1 przy zjeździe bez wywrotki.
 - Bałwany zamiast krasnali (ta sama zasada punktów), sanki z dziećmi zamiast opon (kolizja: wywrotka, przeskok: bez kary), śmieciarka jako pomarańczowy pług z lemieszem.
+
+## Osobna gra i optymalizacja (v184–v185)
+
+- v184: Klasyk wydzielony z poranna-trasa do własnego folderu `gazeciarz` (port 8806), `src/edition.js` = `klasyk`, własny zapis `gz.save` (za pierwszym razem przejmuje wyniki poziomów k z `pt.save`, jeśli ten sam adres).
+- v185, pomiar na Kasztanowej (jedna klatka z cieniami): było 6140 wywołań rysowania i 3,75 mln trójkątów, jest około 3450 i 2,2 mln (−44% i −41%); pobieranie 30 MB → około 21 MB.
+  - modele ludzi: tylko 9 potrzebnych (bez brawlera, nastolatka, dziecka, mamy, staruszka, pana z psem);
+  - ludzie i duże zestawy (np. rowery) dalej niż 55 m od gracza nie są rysowane, ludzie rzucają cień tylko do 25 m, drobne rekwizyty (promień < 0,45 m) bez cienia;
+  - nieruchome części ulicy scalone po materiale (kolor, tekstura, tryb) w kwadratach 48 m; nietknięte: szyby, skrzynki, rzeczy do strącenia, paczki, auta, rampy, wszystko z `keep`;
+  - każde auto scalone po materiale we własnym układzie (koła osobno, kierunkowskazy dalej migają, bo zmieniają materiał);
+  - bez rowerów w ogródkach (w Klasyku nie ma chodzenia, więc nie da się ich wziąć).
+- Dalej do zrobienia: odchudzenie modeli ludzi (MakeHuman ma po ~5 tys. trójkątów na część), scalanie domów z szybami (szyby jako osobne), wycięcie z kodu modułów Porannej Trasy (walka, zlecenia, sklep, garaż, multiplayer).
