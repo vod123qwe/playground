@@ -631,7 +631,7 @@ export function createTrack({ THREE, toon, tex, showcase = false, region = 'pery
       put(h, q.i, q.sd * (PAVE + 1.0), 0, q.sd > 0 ? -Math.PI / 2 : Math.PI / 2); h.updateMatrixWorld(true);
       hit(h, { hx: 2.1, hz: .12, h: 2.4, kind: 'hard' }, q.i, 0, .6); hit(h, { hx: .1, hz: .1, h: 2.6, kind: 'hard' }, q.i, -2.6, -1.25); zone(h, 2.8, 1.4, 0, 0);
       seats.push({ h, local: new THREE.Vector3(.4, 0, .32), key: 'belly', lines: 'lump', stop: q.id, i: q.i });
-      for (let k = 0; k < 1 + (rnd() < .5 ? 1 : 0); k++) seats.push({ h, local: new THREE.Vector3(-1 + k * 1.1, 0, -.45), stand: true, key: ['lady', 'teen', 'oldman', 'shopper'][rnd() * 4 | 0], face: Math.PI, lines: 'stop', stop: q.id, i: q.i });
+      for (let k = 0; k < 1 + (rnd() < .5 ? 1 : 0); k++) seats.push({ h, local: new THREE.Vector3(-1 + k * 1.1, 0, -.45), stand: true, key: ['lady', 'suit', 'gardener', 'shopper'][rnd() * 4 | 0], face: Math.PI, lines: 'stop', stop: q.id, i: q.i });
       show.shacks.push({ o: h, label: 'przystanek', note: '4,3 × 1,5 m' }); }
     // the police stations: a small white block behind the pavement, a blue band, POLICJA over the door, a blue lamp, steps, a bench
     const wallP = toon('#e9e6dc'), blueP = toon('#2f5aa0'), roofP = toon('#3a3d42'), glassP = toon('#9fc0cc'), doorP = toon('#2a2c30'), lampP = toon('#5b8fe0');

@@ -62,6 +62,7 @@ import { createDiorama } from './dio.js';
 import { createPaper, NEWS, eventNews, CAST, ANECDOTES, printed, badgesOf } from './paper.js';
 import { createHoops } from './hoops.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PARTS } from './shop.js';
 { const q = new URLSearchParams(location.search), ed = EDITION;
   if (ed === 'klasyk' && !q.has('mapa') && !q.has('region') && !q.has('poziom') && !q.has('arena') && !q.has('mp')) { q.set('mapa', 'klasyk'); location.replace('?' + q.toString().replace(/=(&|$)/g, '$1')); } }
@@ -219,7 +220,8 @@ const granny = createGranny({ THREE, toon, probe: track.probe, doors: track.door
 let rider = createRider({ THREE, ramp, toon }); scene.add(rider.root);
 // his other bikes, by the garage at home: one leant there, one upside down, its front wheel off (being mended)
 const wbikes = createBikes({ THREE, scene, track, createRider, ramp, toon });
-function spawnBikes() { wbikes.clear(); let a = 77; wbikes.spawn(() => { a = (a * 16807) % 2147483647; return a / 2147483647; });   // (the same gardens each time)
+function spawnBikes() { wbikes.clear(); if (track.classic) return; let a = 77;   // (the Classic: no walking, so no bikes in the gardens to take: none drawn)
+   wbikes.spawn(() => { a = (a * 16807) % 2147483647; return a / 2147483647; });   // (the same gardens each time)
   for (const b of track.home?.bikes || []) if (!b.up) wbikes.add({ type: 'bmx', parts: newParts({ kierownica: 2 }) }, b.p.x, b.p.z, b.yaw, false, { kind: 'brat' }); }
 spawnBikes();
 for (const b of track.home?.bikes || []) { if (!b.up) continue; const r = createRider({ THREE, ramp, toon }); r.boy.visible = false; scene.add(r.root); const y = track.probe(b.p.x, b.p.z, track.startI).y;
@@ -1876,6 +1878,40 @@ function weekEnd() { const W = RUN.week; if (!W) return null; const ds = track.d
   const left = W.subs.filter(Boolean).length, day = W.day, over = left < 3, full = !over && day >= 6, S = LVM.load();
   if (over || full) delete S.week[LV.id]; else W.day++; LVM.save(); RUN.week = null;
   return { day: DAYS[day], next: over || full ? DAYS[0] : DAYS[day + 1], of, left, lost, warned, back, over, full }; }
+// ---------- performance (the Classic's camera sees some 40 m): the people (skinned models, heavy) and the bikes (many small parts) far
+// from him not drawn at all, and the people casting a shadow only near him; the street's small props (tufts, flowers, pickets, cones)
+// cast none (the shadow pass draws every caster in its 48 m box a second time) ----------
+track.group.traverse(o => { if (!o.isMesh || !o.castShadow || !o.geometry) return; if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); const sc = o.getWorldScale(new THREE.Vector3()), r = (o.geometry.boundingSphere?.radius || 0) * Math.max(sc.x, sc.y, sc.z); if (r < .45) o.castShadow = false; });
+// (the street's still parts merged: once built, every mesh that nothing moves, swaps or hides (a house's walls, its roof, its fence, a
+// planter) joins the others of its material in its 48 m square of ground, one draw for them all instead of hundreds; whatever the game
+// keeps a hand on (the windows, the mailboxes, the things to knock over, the cars, the ramps, anything marked keep) stays as it was)
+function mergeStatic() { const G = track.group, keep = new Set(), seen = new Set();
+  const guard = o => { if (o !== G && !keep.has(o)) o.traverse(q => keep.add(q)); };
+  const scan = (v, depth) => { if (!v || typeof v !== 'object' || seen.has(v) || depth > 3) return; seen.add(v); if (v.isObject3D) { guard(v); return; } if (v.isVector3 || v.isMaterial || v.isBufferGeometry) return;
+    const proto = Object.getPrototypeOf(v); if (proto !== Object.prototype && proto !== Array.prototype) return; for (const w of Array.isArray(v) ? v : Object.values(v)) scan(w, depth + 1); };
+  for (const k of ['windows', 'mailboxes', 'things', 'ramps', 'bundles', 'parked', 'kerbCars', 'standCars', 'gnomes', 'bins', 'fires', 'train', 'courses', 'openGarages', 'puddles', 'bikeZones']) scan(track[k], 0);   // (what the game changes: broken, flagged, knocked over, picked up, moved, lit)
+  G.traverse(o => { if (o.userData?.keep || o.userData?.car) o.traverse(q => keep.add(q)); });
+  G.updateMatrixWorld(true); const inv = G.matrixWorld.clone().invert(), cells = new Map(), v = new THREE.Vector3();
+  G.traverse(o => { if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || keep.has(o) || Array.isArray(o.material) || o.material.transparent || o.userData.ground || !o.geometry?.attributes?.position) return;
+    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); if (o.geometry.attributes.position.count > 3000 || o.geometry.boundingSphere.radius * o.getWorldScale(v).x > 10) return;   // (a big one, along the whole street: as it is)
+    for (let p = o; p; p = p.parent) if (!p.visible) return;
+    const g = o.geometry, mt = o.material, key = [mt.type, mt.color?.getHexString(), mt.map?.uuid, mt.vertexColors, mt.side, mt.alphaTest, mt.emissive?.getHexString(), mt.userData?.noFade, mt.flatShading, mt.depthWrite].join(':') + '|' + Object.keys(g.attributes).sort().join(',') + '|' + (g.index ? 'i' : 'n') + '|' + o.castShadow + o.receiveShadow + '|' + o.renderOrder + '|' + !!o.userData.noShadow;
+    o.getWorldPosition(v); const ck = Math.floor(v.x / 48) + ',' + Math.floor(v.z / 48) + '|' + key; let l = cells.get(ck); if (!l) cells.set(ck, l = []); l.push(o); });
+  let groups = 0, parts = 0, m4 = new THREE.Matrix4();
+  for (const list of cells.values()) { if (list.length < 3) continue;
+    const geos = list.map(o => { const g = o.geometry.clone(); g.morphAttributes = {}; g.applyMatrix4(m4.multiplyMatrices(inv, o.matrixWorld)); return g; });
+    let mg = null; try { mg = mergeGeometries(geos, false); } catch { } geos.forEach(g => g.dispose()); if (!mg) continue;
+    const a = list[0], m = new THREE.Mesh(mg, a.material); m.castShadow = a.castShadow; m.receiveShadow = a.receiveShadow; m.renderOrder = a.renderOrder; m.userData.merged = true; if (a.userData.noShadow) m.userData.noShadow = true; m.matrixAutoUpdate = false; G.add(m);
+    for (const o of list) o.parent.remove(o); groups++; parts += list.length; }
+  return { groups, parts }; }
+const MERGED = mergeStatic();
+const PCULL = { t: 0, n: -1, list: [], v: new THREE.Vector3() };
+function stepPerf(dt) { if ((PCULL.t -= dt) > 0) return; PCULL.t = .25;
+  if (PCULL.n !== scene.children.length) { PCULL.n = scene.children.length; PCULL.list = [];
+    for (const c of scene.children) { if (c === track.group || c === rider.root) continue; const ms = []; let sk = false; c.traverse(o => { if (o.isMesh) { ms.push(o); if (o.isSkinnedMesh) sk = true; } }); if (sk || ms.length >= 100) PCULL.list.push({ ms, sk, probe: ms[0] }); } }
+  const R2 = 55 * 55, S2 = 25 * 25;
+  for (const e of PCULL.list) { if (!e.probe) continue; e.probe.getWorldPosition(PCULL.v); const d2 = (PCULL.v.x - B.x) ** 2 + (PCULL.v.z - B.z) ** 2, show = d2 < R2;
+    for (const m of e.ms) { m.visible = show; if (e.sk) m.castShadow = show && d2 < S2; } } }
 function finishLevel() { for (const R of JOBRUN) if (!R.done && R.j.kind === 'wyscig') jobEnd(R, RUN.t <= R.limit); RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
   const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0, pts: Math.max(0, B.points - (RUN.p0 ?? B.points)) }, wk = L.classic ? weekEnd() : null; if (wk?.full) B.points += 25;
   const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
@@ -2078,7 +2114,7 @@ function frame(now) {
   if ((hudT -= dt) <= 0) { hudT = .1; paintHud(); } if (noteT > 0 && (noteT -= dt) <= 0) note.classList.remove('on');
   { const k = Math.min(1, B.papers / 20); rider.bagFill?.(k); foot.bagFill?.(k); }
   { const me = foot.active ? foot.me : null, eyes = me ? foot.view === 'first' : CAMS[camI].fpv; FADE.cam.value.copy(camera.position); if (me) FADE.tgt.value.set(me.x, me.y + 1.2, me.z); else FADE.tgt.value.copy(rider.root.position).setY(rider.root.position.y + 1.1); FADE.r.value = eyes || menu.page === 'title' ? 0 : CAMS[camI].oblique ? 3.8 : 3; px.snap.tgt.copy(FADE.tgt.value); }   // (the thinning of what hides him)   // (the bag shows how many papers are left)
-  drift(dt); stepNight(B.x, B.z); stepRush(Math.min(dt, .05)); stepBlood(Math.min(dt, .05)); if (subGlows.length) stepGlows(performance.now() / 1000, Math.min(dt, .05));
+  drift(dt); stepPerf(dt); stepNight(B.x, B.z); stepRush(Math.min(dt, .05)); stepBlood(Math.min(dt, .05)); if (subGlows.length) stepGlows(performance.now() / 1000, Math.min(dt, .05));
   for (const e of director.update(Math.min(dt, .05), { x: B.x, z: B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, hint: B.hint, busy: !!B.crash || !LV || (FIN.on && FIN.entered) || CROSS.some(X => Math.hypot(X.center.x - B.x, X.center.z - B.z) < 50) })) dirEvent(e); if (locals) for (const e of locals.update(Math.min(dt, .05), { x: foot.active ? foot.me?.x ?? B.x : B.x, z: foot.active ? foot.me?.z ?? B.z : B.z, v: B.v, yaw: B.yaw, foot: foot.active, air: B.air, h: B.air ? B.y - track.probe(B.x, B.z, B.hint).y : 0, hint: B.hint, ...(() => { const q = track.probe(B.x, B.z, B.hint); return { s: q.s, along: Math.sign(Math.sin(B.yaw) * q.f.x + Math.cos(B.yaw) * q.f.z) || 1 }; })() })) localEvent(e);
   // (a combine at the level crossing: it waits while the barrier is down, as the cars do)
   for (const C of locals?.combines || []) { const p = C.g.position, f = new THREE.Vector3(Math.sin(C.g.rotation.y), 0, Math.cos(C.g.rotation.y)); C.v = CROSS.some(X => X.state.mode !== 'idle' && (X.center.x - p.x) * f.x + (X.center.z - p.z) * f.z > 0 && Math.hypot(X.center.x - p.x, X.center.z - p.z) < 16) ? 0 : 2.8; } { const sh = track.net?.update?.(Math.min(dt, .05), foot.active ? { x: foot.me?.x ?? B.x, z: foot.me?.z ?? B.z, v: 0, vs: 0, yaw: 0, foot: true } : { x: B.x, z: B.z, v: Math.abs(B.v), vs: B.v, yaw: B.yaw, foot: false }); if (sh) hud.rant(sh.g.position, pickOf(sh.kind === 'mason' ? MASON_SHOUT : WORK_SHOUT), true, 1.95 + sh.y);
@@ -2106,5 +2142,5 @@ function dynAudit() { const N = track.N, ds = track.ds, bin = Math.max(1, Math.r
   const run = f => { let best = 0, cur = 0; for (let k = 0; k < nb * 2; k++) { if (f(k % nb)) { cur++; best = Math.max(best, cur); } else cur = 0; } return Math.min(best, nb) * bin * ds | 0; };
   const nSub = subs.reduce((a, b) => a + b, 0);
   return { len: track.len | 0, subsPer100m: +(nSub / track.len * 100).toFixed(1), feats: feats.reduce((a, b) => a + b, 0), folk: folk.reduce((a, b) => a + b, 0), noSubM: run(k => !subs[k]), quietM: run(k => !feats[k] && !folk[k]), emptyM: run(k => !subs[k] && !feats[k] && !folk[k]) }; }
-window.PT = { THREE, FIN, CROSS, crossJumps, crossHidden, stepRush, TBG, titleBg, stepTitleBg, editionMenu, carRoofAt, get roofCar() { return roofCar; }, stepRivals, lateFinish, stepNight, locals, dynAudit, director, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, stepPerf, MERGED, FIN, CROSS, crossJumps, crossHidden, stepRush, TBG, titleBg, stepTitleBg, editionMenu, carRoofAt, get roofCar() { return roofCar; }, stepRivals, lateFinish, stepNight, locals, dynAudit, director, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };

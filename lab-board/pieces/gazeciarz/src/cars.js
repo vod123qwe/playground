@@ -4,7 +4,15 @@
 // an estate, a pickup (with its bed). Local frame: +z forward, +x the car's left, on the ground.
 // makeCar() gives { group, wheels, half: [half width, half length], kind }; spin(car, metres) turns its wheels.
 
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
 export function createCars({ THREE, toon }) {
+  // (a car's still meshes merged by material, in the car's own frame: what the game changes on a car is a material (the indicators'
+  // glow, a light), so those keep working; the wheels and whatever is under them left out, as they turn)
+  function mergeKids(G, wheels) { const skip = new Set(); for (const w of wheels) w.traverse(q => skip.add(q)); G.updateMatrixWorld(true); const inv = G.matrixWorld.clone().invert(), by = new Map(), m4 = new THREE.Matrix4();
+    G.traverse(o => { if (!o.isMesh || skip.has(o) || Array.isArray(o.material)) return; const g = o.geometry, k = o.material.uuid + '|' + Object.keys(g.attributes).sort().join(',') + '|' + (g.index ? 'i' : 'n') + '|' + o.castShadow + o.receiveShadow + '|' + !!o.userData.noShadow + '|' + o.renderOrder; let l = by.get(k); if (!l) by.set(k, l = []); l.push(o); });
+    for (const l of by.values()) { if (l.length < 2) continue; const geos = l.map(o => { const g = o.geometry.clone(); g.morphAttributes = {}; return g.applyMatrix4(m4.multiplyMatrices(inv, o.matrixWorld)); }); let mg = null; try { mg = mergeGeometries(geos, false); } catch { } geos.forEach(g => g.dispose()); if (!mg) continue;
+      const a = l[0], m = new THREE.Mesh(mg, a.material); m.castShadow = a.castShadow; m.receiveShadow = a.receiveShadow; m.renderOrder = a.renderOrder; if (a.userData.noShadow) m.userData.noShadow = true; G.add(m); for (const o of l) o.parent.remove(o); } }
   const canvasT = (w, h, draw, rx = 1, ry = 1) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g); const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); return t; };
   // glass: see-through, tinted dark blue (a little more at the top), with a streak of the sky across it: a wide one and a thin one,
@@ -164,6 +172,7 @@ export function createCars({ THREE, toon }) {
     G.traverse(o => { if (o.isMesh && !o.userData.noShadow) { o.castShadow = true; o.receiveShadow = true; } });
     // blink(side, on): side +1 left, -1 right, 0 none
     const blink = (side, on) => { for (const k of [-1, 1]) amb[k].emissive.set(k === side && on ? '#ff9a1f' : '#000000'); };
+    mergeKids(G, wheels);   // (one car: its still parts by material, a few draws instead of dozens; the wheels as they were, to turn)
     return { group: G, wheels, half: [W / 2, L / 2], kind: kindName, R: K.R, blink };
   }
   // a tractor (the village's): a green body and bonnet, an orange seat under a cab of four posts and a roof, a pipe, big rear wheels

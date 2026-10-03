@@ -413,10 +413,10 @@ export function createOnFoot({ THREE, toon, scene, track, hud, camera, solid, fx
   const ATK = { left: 'jab', right: 'cross', up: 'hook' };
   const SIDE = { jab: 'right', cross: 'left', hook: 'up', bodyL: 'down', bodyR: 'down' };   // (his punch, as it comes at you: his left from your right)
   const brawlers = [];
-  Promise.all(['boy', 'brawler'].map(k => new Promise(ok => loader.load(`assets/export/${k}.glb`, g => { src[k] = g; ok(); }, undefined, () => ok())))).then(() => {
+  Promise.all(['boy'].map(k => new Promise(ok => loader.load(`assets/export/${k}.glb`, g => { src[k] = g; ok(); }, undefined, () => ok())))).then(() => {
     if (!src.boy || !src.brawler) return;
     me = fighter(person('boy', kit), 'TY'); me.P.G.visible = false;
-    for (let k = 0; k < 2; k++) { const f = fighter(person('brawler'), 'ROWERZYSTA'); f.P.G.visible = false; brawlers.push(f); }
+    for (let k = 0; k < 2; k++) { const f = fighter(person(src.brawler ? 'brawler' : 'boy'), 'ROWERZYSTA'); f.P.G.visible = false; brawlers.push(f); }
     measure(me.P); riderP = person('boy', kit); ready = true;
   });
   // (the same boy, a second of him, for the bike: rider.js poses his bones from its own figure, so on the bike he is who walks)
