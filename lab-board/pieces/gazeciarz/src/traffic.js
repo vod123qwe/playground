@@ -139,5 +139,7 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
   function boxes() { return [...bikes.filter(b => b.on).map(b => ({ x: b.x, z: b.z, c: Math.cos(b.yaw), s: Math.sin(b.yaw), hx: .3, hz: .9, h: 1.6, y0: b.r.root.position.y, kind: 'car', t: b })), ...list.filter(t => !t.off).map(t => ({ x: t.x, z: t.z, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: t.car.half[0], hz: t.car.half[1], h: 1.5, y0: t.car.group.position.y, kind: 'car', t })),
     ...list.filter(t => !t.off && t.car.trailer).map(t => { const T = t.car.trailer; return { x: t.x - Math.sin(t.yaw) * T.back, z: t.z - Math.cos(t.yaw) * T.back, c: Math.cos(t.yaw), s: Math.sin(t.yaw), hx: T.hx, hz: T.hz, h: 1.9, y0: t.car.group.position.y, kind: 'car', t, trailer: true }; }) ]; }   // (the tractor's trailer: a box of its own behind it)
   list.forEach(place);
-  return { group: G, list, update, boxes, knock, bikes, rivals };
+  // (the start kept clear: nothing driving within m metres of where he starts, so a level does not open with a car on top of him)
+  function clearAround(s0, m = 80) { for (const t of list) { const d = ((t.s - s0) % len + len * 1.5) % len - len / 2; if (Math.abs(d) < m) { t.s = wrap(s0 + len / 2 + (Math.random() - .5) * 80); t.snap = true; t.stop = 0; t.pass = null; } } }
+  return { clearAround, group: G, list, update, boxes, knock, bikes, rivals };
 }

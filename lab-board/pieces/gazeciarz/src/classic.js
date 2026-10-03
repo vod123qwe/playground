@@ -53,12 +53,14 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
   // ---------- cars on the drives (the houses' side), nose to the house, backing out when he comes ----------
   const backers = [];
   if (cars && !track.city) { const doors = track.doors.slice().sort((x, y) => x.i - y.i); let last = -1e9;   // (in town: no drives)
-    for (const d of doors) { if ((d.i - last) * ds < 40 || rnd() < .25) continue; last = d.i; const i = wrap(d.i + Math.round(5 / ds)), A = S[i], c = cars.random(rnd);
+    // (the drive only where the car's whole way out is clear: from the drive across the pavement to the lane, its width, nothing standing on it)
+    const clearWay = i => { for (let dd = 1.8; dd <= track.PAVE + 6.5; dd += .7) for (const off of [-1.15, 0, 1.15]) { const ii = wrap(i + Math.round(off / ds)), p = pv(ii, hs * dd); for (const C of track.near(ii)) { if (C.kind === 'soft') continue; const dx = p.x - C.x, dz = p.z - C.z, lx = dx * C.c - dz * C.s, lz = dx * C.s + dz * C.c; if (Math.abs(lx) < C.hx + .35 && Math.abs(lz) < C.hz + .35) return false; } } return true; };
+    for (const d of doors) { if ((d.i - last) * ds < 40 || rnd() < .25) continue; const i = [5, 6.5, -5, -6.5, 8].map(o => wrap(d.i + Math.round(o / ds))).find(clearWay); if (i == null) continue; last = d.i; const A = S[i], c = cars.random(rnd);
       const g = c.group, d0 = hs * (track.PAVE + 4.2), yawIn = Math.atan2(A.r.x * hs, A.r.z * hs); g.userData.keep = true; scene.add(g);
       const lamps = []; for (const x of [-.55, .55]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.22, .14, .05), new THREE.MeshBasicMaterial({ color: '#f6f3ea' })); l.position.set(x, .75, -(c.half[1] + .02)); l.visible = false; g.add(l); lamps.push(l); }
       g.updateMatrixWorld(true); const roofH = Math.min(3, new THREE.Box3().setFromObject(g).max.y - g.position.y);
       // (a plank on the pavement before the drive: off it, over the car as it backs out, or onto its roof)
-      { const ir = wrap(i - Math.round(7 / ds)), Ar = S[ir], o = track.props.ramp(rnd, 'plank'), pr = pv(ir, hs * (track.KERB + 1.3)); o.group.position.copy(pr); o.group.rotation.y = Math.atan2(Ar.f.x, Ar.f.z); scene.add(o.group); o.group.updateMatrixWorld(true); const C = track.addHit(o.group, o.hit, ir); track.ramps?.push(C); }
+      if (!(track.cowCross || []).some(cx => Math.abs(((cx - (i - Math.round(7 / ds))) % N + N * 1.5) % N - N / 2) * ds < 12)) { const ir = wrap(i - Math.round(7 / ds)), Ar = S[ir], o = track.props.ramp(rnd, 'plank'), pr = pv(ir, hs * (track.KERB + 1.3)); o.group.position.copy(pr); o.group.rotation.y = Math.atan2(Ar.f.x, Ar.f.z); scene.add(o.group); o.group.updateMatrixWorld(true); const C = track.addHit(o.group, o.hit, ir); track.ramps?.push(C); }
       backers.push({ g, c, i, d: d0, d0, d1: hs * 2.2, yawIn, lamps, st: 'in', t: 0, hitT: 0, sorry: 0, roofH, P0: { s: i * ds, d: hs * 2.2, len: 5 }, car: c, yaw: yawIn + Math.PI, v: 0, stop: 0 }); } }
 
   // ---------- sprinklers on the lawns: a jet of water sweeping to and fro over the pavement ----------
@@ -138,6 +140,8 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
 
   // ---------- the village: a herd of cows across the road ahead now and then, a farmer behind them (into one: a bump; through them close
   // without one: points). The park: a school trip on little bikes in a line by the far kerb (into one: a bump; past them all: points) ----------
+  const solidAt = (x, z, i, pad = .3, kinds = null) => { for (const C of track.near(i)) { if (C.kind === 'soft' || (kinds && !kinds.includes(C.kind))) continue;
+    const dx = x - C.x, dz = z - C.z, lx = dx * C.c - dz * C.s, lz = dx * C.s + dz * C.c; if (Math.abs(lx) < C.hx + pad && Math.abs(lz) < C.hz + pad) return C; } return null; };
   const rel = (s, R) => ((s - (R.s || 0) + L * 1.5) % L) - L / 2;
   const cowM = [M('#f6f3ea'), M('#24190f'), M('#e3b08a')], herd = { cows: [], t: 12, on: false, i: 0, d: 0, minD: 99, hit: false, farmer: null };
   if (VIL) { for (let k = 0; k < 4; k++) { const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(.8, .75, 1.6), cowM[0]), new THREE.Mesh(new THREE.BoxGeometry(.82, .32, .55), cowM[1]), new THREE.Mesh(new THREE.BoxGeometry(.45, .45, .55), cowM[0]), new THREE.Mesh(new THREE.BoxGeometry(.3, .2, .12), cowM[2]));
@@ -162,7 +166,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     if (R.air && (R.h || 0) > .7) for (const o of people) if (o.kind === 'old' && o.f && !(o.clapT > clock) && Math.hypot(R.x - o.x, R.z - o.z) < 13) { o.clapT = clock + 7; once(o.f, 'sitclap'); }
     // (the strollers: to a spot along the path and on to the next; ridden into, a bump)
     for (const P of strollers) { const i0 = wrap(Math.round(P.s / ds)), p0 = pv(i0, P.d);
-      if (P.wait > 0) P.wait -= dt; else { const dS = ((P.ts - P.s + L * 1.5) % L) - L / 2, dd = P.td - P.d, l = Math.hypot(dS, dd); if (l < .3) { P.wait = 1 + rnd() * 4; P.ts = ((P.s + (rnd() - .5) * 50) % L + L) % L; P.td = P.sd0 * (track.KERB + .8 + rnd() * 1.6); } else { const sp = 1.1 * dt; P.s = ((P.s + dS / l * sp) % L + L) % L; P.d += dd / l * sp; } }
+      if (P.wait > 0) P.wait -= dt; else { const dS = ((P.ts - P.s + L * 1.5) % L) - L / 2, dd = P.td - P.d, l = Math.hypot(dS, dd); if (l < .3) { P.wait = 1 + rnd() * 4; P.ts = ((P.s + (rnd() - .5) * 50) % L + L) % L; P.td = P.sd0 * (track.KERB + .8 + rnd() * 1.6); } else { const sp = 1.1 * dt, ns = ((P.s + dS / l * sp * 6) % L + L) % L, nd = P.d + dd / l * sp * 6, ni = wrap(Math.round(ns / ds)), np = pv(ni, nd); if (solidAt(np.x, np.z, ni, .25)) { P.wait = .6 + rnd() * 1.5; P.ts = ((P.s + (rnd() - .5) * 30) % L + L) % L; P.td = P.sd0 * (track.KERB + .8 + rnd() * 1.6); } else { P.s = ((P.s + dS / l * sp) % L + L) % L; P.d += dd / l * sp; } } }
       const i = wrap(Math.round(P.s / ds)), p = pv(i, P.d); if (Math.hypot(p.x - p0.x, p.z - p0.z) > 1e-4) P.g.rotation.y = Math.atan2(p.x - p0.x, p.z - p0.z); P.g.position.copy(p);
       P.hitT = Math.max(0, P.hitT - dt); if (!R.foot && !R.air && !P.hitT && Math.abs(R.v) > 2 && Math.hypot(R.x - p.x, R.z - p.z) < .6) { P.hitT = 3; ev.push({ kind: 'bump', p: { g: P.g } }); once(P, 'hit'); } }
     // (the flocks: pecking about; him within 4 m, up they go (hens only flutter); back down once he is well away)
@@ -184,26 +188,46 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       else if (Gu.st === 'away') { Gu.k += dt / 2.2; const i = wrap(Math.round((R.s || 0) / ds)), to = pv(i, hs * (track.PAVE + 40)); to.y += 12; Gu.p.lerpVectors(Gu.from, to, Math.min(1, Gu.k)); Gu.g.position.copy(Gu.p); Gu.g.rotation.y = Math.atan2(to.x - Gu.from.x, to.z - Gu.from.z);
         if (Gu.k >= 1) { Gu.st = 'wait'; Gu.g.visible = false; Gu.t = 13 + rnd() * 10; } } }
     // (the rollerbladers: along the road by the promenade's kerb, both ways, weaving)
-    for (const K of skaters) { K.s = ((K.s + K.dir * 4.6 * dt) % L + L) % L; K.ph += dt * 2.2; const i = wrap(Math.round(K.s / ds)), A = S[i], d = hs * (track.ROAD - 1.1 + Math.sin(K.ph) * .45), p = pv(i, d); K.g.position.copy(p);
+    for (const K of skaters) { K.s = ((K.s + K.dir * 4.6 * dt) % L + L) % L; K.ph += dt * 2.2; const i = wrap(Math.round(K.s / ds)), A = S[i];
+      { const ai = wrap(i + K.dir * Math.round(2.2 / ds)), ap = pv(ai, hs * (track.ROAD - 1.1)), bl = solidAt(ap.x, ap.z, ai, .35); if (bl?.kind === 'ramp' && !(K.jumpT > 0)) K.jumpT = .62; K.off = (K.off || 0) + (((bl && bl.kind !== 'ramp') ? 1.6 : 0) - (K.off || 0)) * Math.min(1, dt * 3); }
+      K.jumpT = Math.max(0, (K.jumpT || 0) - dt); const d = hs * (track.ROAD - 1.1 - (K.off || 0) + Math.sin(K.ph) * .45), p = pv(i, d); K.g.position.copy(p); if (K.jumpT > 0) K.g.position.y += Math.sin(Math.PI * (1 - K.jumpT / .62)) * .75;
       K.g.rotation.y = Math.atan2(A.f.x * K.dir, A.f.z * K.dir) + Math.cos(K.ph) * .35 * K.dir; K.legs && (K.legs[0].rotation.x = Math.sin(K.ph * 3) * .5, K.legs[1].rotation.x = -Math.sin(K.ph * 3) * .5);
       K.hitT = Math.max(0, K.hitT - dt); K.overT = Math.max(0, K.overT - dt); const dist = Math.hypot(R.x - p.x, R.z - p.z);
       if (dist < 1.1 && !R.foot && (R.h || 0) > 1.1 && !K.overT) { K.overT = 4; ev.push({ kind: 'overhead', p: { g: K.g } }); }
       else if (dist < .6 && !R.foot && !R.air && !K.hitT && Math.abs(R.v) > 2) { K.hitT = 3; ev.push({ kind: 'bump', p: { g: K.g } }); once(K, 'hit'); } }
     // (the herd: 22-30 m ahead of him, from his side's pasture across the road at a cow's pace; gone past the far kerb)
     if (VIL && !R.foot) { const H = herd; H.t -= dt;
-      if (!H.on && H.t <= 0 && Math.abs(R.v) > 2 && R.s != null) { H.on = true; H.i = wrap(Math.round(((R.s || 0) + (R.along || 1) * (24 + rnd() * 8)) / ds)); H.d = hs * (track.PAVE + 1.5); H.minD = 99; H.hit = false; for (const c of H.cows) c.g.visible = true; H.farmer.g.visible = true; ev.push({ kind: 'shout', at: pv(H.i, H.d).add(V(0, 2.2, 0)), text: MUU() }); }
-      if (H.on) { H.d -= hs * 1.15 * dt; const A = S[H.i];
-        for (const c of H.cows) { const i = wrap(H.i + Math.round(c.ds / ds)), p = pv(i, H.d + c.dd); c.ph += dt * 5; c.g.position.copy(p); if (!c.g.userData.beast) c.g.position.y += Math.abs(Math.sin(c.ph)) * .04; c.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs) + Math.sin(c.ph * .3) * .2;
+      if (!H.XS) H.XS = (track.cowCross || []).filter(cx => { for (let dd = -(track.PAVE + 2); dd <= track.PAVE + 3; dd += .8) for (let s0 = -3.5; s0 <= 3.5; s0 += 1) { const i = wrap(cx + Math.round(s0 / ds)), p = pv(i, hs * dd); if (solidAt(p.x, p.z, i, .3, ['ramp', 'hard'])) return false; } return true; });
+      const XS = H.XS; H.used ||= {};
+      if (!H.on && H.t <= 0 && Math.abs(R.v) > 2 && R.s != null) { const ci = XS.find(x => { const ah = rel(x * ds, R) * (R.along || 1); return ah > 22 && ah < 42 && !(H.used[x] > clock); });
+        if (ci != null) { H.on = true; H.used[ci] = clock + 75; H.i = ci; H.minD = 99; H.hit = false; H.tt = 0; const taken = [];
+          for (const c of H.cows) { let s0 = 0, e0 = 0; for (let k = 0; k < 30; k++) { s0 = (rnd() - .5) * 5.5; e0 = track.PAVE + 1.2 + rnd() * 3.6; if (taken.every(([t, e]) => Math.abs(t - s0) > 1.25 || Math.abs(e - e0) > 2.6)) break; } taken.push([s0, e0]);
+            if (!c.who) { c.who = { g: c.g, x: 0, z: 0, kind: 'cow', cow: c, m: { paperT: 0 } }; } if (!people.includes(c.who)) people.push(c.who); c.flee = false; c.hitT = 0;
+            Object.assign(c, { ds: s0, d0: e0, prog: 0, spd: .85 + rnd() * .5, delay: rnd() * 2.2, pause: 0, yaw: 0, sway: rnd() * 6 }); c.g.visible = true; }
+          H.farmer.g.visible = true; ev.push({ kind: 'shout', at: pv(H.i, hs * (track.PAVE + 2)).add(V(0, 2.2, 0)), text: MUU() }); } }
+      if (H.on) { H.tt += dt; const A = S[H.i]; let back = -99, sumS = 0, done = 0;
+        for (const c of H.cows) { if (c.flee) { c.pause = 0; c.delay = 0; } c.hitT = Math.max(0, (c.hitT || 0) - dt); const moving = H.tt > c.delay && c.pause <= 0 && !(c.hitT > 0); if (c.pause > 0) c.pause -= dt; else if (moving && rnd() < dt * .12 && c.prog > 1.5) { c.pause = .8 + rnd() * 1.4; }
+          // (one walking up behind another (on its line, within a body's length): it waits, and steps a little aside)
+          const me = c.d0 - c.prog, ahead = H.cows.find(o => o !== c && Math.abs(o.ds - c.ds) < 1.05 && (o.d0 - o.prog) < me && me - (o.d0 - o.prog) < 2.4);
+          if (ahead) c.ds += Math.sign(c.ds - ahead.ds || (rnd() - .5)) * .55 * dt;
+          for (const o of H.cows) if (o !== c && Math.abs(o.ds - c.ds) < 1.1 && Math.abs((o.d0 - o.prog) - me) < 2.3) c.ds += Math.sign(c.ds - o.ds || (rnd() - .5)) * .7 * dt;   // (side by side too close: apart a little)
+          // (something on the ground in its way (a ramp, a bin): it stops and goes round, along the road)
+          { const nx = pv(wrap(H.i + Math.round(c.ds / ds)), hs * (me - .9)), block = solidAt(nx.x, nx.z, wrap(H.i + Math.round(c.ds / ds)), .45, ['ramp', 'hard']); if (block) { const A0 = S[H.i], side = (nx.x - block.x) * A0.f.x + (nx.z - block.z) * A0.f.z; c.ds += (side >= 0 ? 1 : -1) * 1.1 * dt; c.blocked = true; } else c.blocked = false; }
+          if (moving && !ahead && !c.blocked) c.prog += c.spd * dt; c.ds += Math.sin(H.tt * .8 + c.sway) * .18 * dt;
+          const dNow = hs * (c.d0 - c.prog), i = wrap(H.i + Math.round(c.ds / ds)), p = pv(i, dNow); c.ph += dt * 5; c.g.position.copy(p); if (!c.g.userData.beast) c.g.position.y += Math.abs(Math.sin(c.ph)) * .04;
+          c.yaw += ((Math.sin(H.tt * .6 + c.sway) * .28) - c.yaw) * Math.min(1, dt * 2); c.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs) + c.yaw;
+          playB(c.g, c.hitT > 0 ? 'Idle_HitReact_Left' : moving && !ahead && !c.blocked ? (c.flee ? 'Gallop' : 'Walk') : (c.pause > 0 ? 'Eating' : 'Idle'), moving && !ahead ? (c.flee ? c.spd / 4 : c.spd / 1.05) : 1); c.who.x = c.g.position.x; c.who.z = c.g.position.z;
+          back = Math.max(back, c.d0 - c.prog); sumS += c.ds; if (c.d0 - c.prog < -(track.PAVE + 2.5)) done++;
           const dd = Math.hypot(R.x - p.x, R.z - p.z); if (dd < H.minD) H.minD = dd; if (dd < 1.05 && !H.hit && !R.air) { H.hit = true; ev.push({ kind: 'bump', p: { g: c.g } }); } }
-        { const p = pv(wrap(H.i - Math.round(4 / ds)), H.d + hs * 1.6); H.farmer.g.position.copy(p); H.farmer.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs); }
+        { const p = pv(wrap(H.i + Math.round((sumS / H.cows.length - .8) / ds)), hs * (back + 1.5)); H.farmer.g.position.copy(p); H.farmer.g.rotation.y = Math.atan2(-A.r.x * hs, -A.r.z * hs); }
         const past = Math.abs(rel(H.i * ds, R)) > 6 && rel(H.i * ds, R) * (R.along || 1) < 0;
-        if (past && Math.abs(H.d) < track.ROAD + 1 && !H.hit && H.minD < 2.6 && !H.paid) { H.paid = true; ev.push({ kind: 'pts', n: 2, at: R, text: 'MIĘDZY KROWAMI! +2' }); }
-        if (Math.sign(H.d) === os && Math.abs(H.d) > track.PAVE + 2 || Math.abs(rel(H.i * ds, R)) > 70) { H.on = false; H.paid = false; H.t = 22 + rnd() * 14; for (const c of H.cows) c.g.visible = false; H.farmer.g.visible = false; } } }
+        if (past && back > -track.ROAD - 1 && !H.hit && H.minD < 2.6 && !H.paid) { H.paid = true; ev.push({ kind: 'pts', n: 2, at: R, text: 'MIĘDZY KROWAMI! +2' }); }
+        if (done === H.cows.length || Math.abs(rel(H.i * ds, R)) > 80) { for (const c of H.cows) { const k = people.indexOf(c.who); if (k >= 0) people.splice(k, 1); } H.on = false; H.paid = false; H.t = 22 + rnd() * 14; for (const c of H.cows) c.g.visible = false; H.farmer.g.visible = false; } } }
     // (the school trip: put 30 m ahead of him by the far kerb, riding his way slowly in a line; the teacher first)
     if (track.park && !R.foot) { const T = trip; T.t -= dt;
       if (!T.on && T.t <= 0 && Math.abs(R.v) > 2 && R.s != null) { T.on = true; T.dir = R.along || 1; T.s = (R.s || 0) + T.dir * 34; T.hit = false; T.done = false; T.wasBehind = true; for (const K of T.kids) K.g.visible = true; ev.push({ kind: 'shout', at: pv(wrap(Math.round(T.s / ds)), os * (track.ROAD - 1)).add(V(0, 2, 0)), text: TRIP() }); }
       if (T.on) { T.s = ((T.s + T.dir * 2.8 * dt) % L + L) % L;
-        for (const K of T.kids) { const s = ((T.s - T.dir * K.k * 2.1) % L + L) % L, i = wrap(Math.round(s / ds)), A = S[i], p = pv(i, os * (track.ROAD - 1 + Math.sin(clock * 2 + K.k) * .15)); K.g.position.copy(p); K.g.rotation.y = Math.atan2(A.f.x * T.dir, A.f.z * T.dir);
+        for (const K of T.kids) { const s = ((T.s - T.dir * K.k * 2.1) % L + L) % L, i = wrap(Math.round(s / ds)), A = S[i], ai = wrap(i + T.dir * Math.round(3 / ds)), ap = pv(ai, os * (track.ROAD - 1)); K.off = (K.off || 0) + ((solidAt(ap.x, ap.z, ai, .5) ? 1.9 : 0) - (K.off || 0)) * Math.min(1, dt * 2.5); const p = pv(i, os * (track.ROAD - 1 - K.off + Math.sin(clock * 2 + K.k) * .15)); K.g.position.copy(p); K.g.rotation.y = Math.atan2(A.f.x * T.dir, A.f.z * T.dir);
           if (!R.air && !T.hit && Math.hypot(R.x - p.x, R.z - p.z) < .7) { T.hit = true; ev.push({ kind: 'bump', p: { g: K.g } }); } }
         const lead = rel(T.s, R) * T.dir, tail = rel(((T.s - T.dir * 6 * 2.1) % L + L) % L, R) * T.dir;
         if (!T.done && !T.hit && lead < -3) { T.done = true; ev.push({ kind: 'pts', n: 3, at: R, text: 'WYCIECZKA WYPRZEDZONA! +3' }); }
@@ -211,7 +235,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     if (flakes) { const a = flakes.geometry.attributes.position, P = a.array; flakes.position.set(R.x, track.probe(R.x, R.z, R.hint).y, R.z);
       for (let k = 0; k < P.length; k += 3) { P[k + 1] -= dt * (1 + (k % 7) * .08); P[k] += Math.sin(clock + k) * dt * .3; if (P[k + 1] < 0) P[k + 1] += 18; } a.needsUpdate = true; }
     // (the joggers)
-    for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], p = pv(i, os * (track.KERB + 1.4)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
+    for (const J of joggers) { J.s += J.dir * 2.6 * dt; if (J.s > J.hi) J.dir = -1; if (J.s < J.lo) J.dir = 1; const i = wrap(Math.round(J.s / ds)), A = S[i], ai = wrap(i + Math.sign(J.dir) * Math.round(1.8 / ds)), ap = pv(ai, os * (track.KERB + 1.4)); J.off = (J.off || 0) + ((solidAt(ap.x, ap.z, ai, .3) ? 1.1 : 0) - (J.off || 0)) * Math.min(1, dt * 4); const p = pv(i, os * (track.KERB + 1.4 + J.off)); J.g.position.copy(p); J.g.rotation.y = Math.atan2(A.f.x * J.dir, A.f.z * J.dir); J.ph += dt * 10; J.legs[0].rotation.x = Math.sin(J.ph) * .7; J.legs[1].rotation.x = -Math.sin(J.ph) * .7;
       J.hitT = Math.max(0, J.hitT - dt); J.sayT -= dt; const dist = Math.hypot(R.x - p.x, R.z - p.z); if (dist < 7 && J.sayT <= 0) { J.sayT = 15; ev.push({ kind: 'shout', p: { g: J.g }, text: JOG() }); }
       if (!R.foot && !R.air && !J.hitT && dist < .6 && Math.abs(R.v) > 2) { J.hitT = 3; ev.push({ kind: 'bump', p: { g: J.g } }); once(J, 'hit'); } }
     // (the dog walker: slow along the kerb, the dog out on the lawn, the lead between them)
@@ -272,13 +296,16 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       if (C.sayT <= 0 && Math.hypot(dx, dz) < 18) { C.sayT = 12; ev.push({ kind: 'shout', p: { g: C.men[0].g }, text: BINMEN() }); }
       if (!R.foot && !C.hitT && !(R.air && R.h > 3.2) && Math.abs(lx) < 1.35 && lz > -4.3 && lz < 3.8) { C.hitT = 3; ev.push({ kind: 'truck' }); } }
     return ev; }
-  function kick(p) { return p.kind === 'old' ? 'TAK SIĘ TRAKTUJE STARSZYCH?!' : 'EJ! ŚMIECIARZA SIĘ NIE KOPIE!'; }
-  function talk(p) { if (p.kind === 'old') { p.talks = (p.talks || 0) + 1; return p.P.talk[(p.talks - 1) % p.P.talk.length]; } return BINMEN(); }
+  function kick(p) { if (p.kind === 'cow') { const H = herd; for (const c of H.cows) { c.flee = true; c.spd = 3.4 + rnd() * 1.2; } p.cow.hitT = .6; return ['MUUUUU!', 'MUU?! MUUUU!', 'MOJE KROWY!'][rnd() * 3 | 0]; }
+    return p.kind === 'old' ? 'TAK SIĘ TRAKTUJE STARSZYCH?!' : 'EJ! ŚMIECIARZA SIĘ NIE KOPIE!'; }
+  function talk(p) { if (p.kind === 'cow') return 'MUU.'; if (p.kind === 'old') { p.talks = (p.talks || 0) + 1; return p.P.talk[(p.talks - 1) % p.P.talk.length]; } return BINMEN(); }
   // (a paper: to a bin man, caught; onto a windscreen backing out, the driver stops; into a sprinkler, it turns the other way)
   function paper(Pp) {
-    for (const p of people) { if (p.m.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > .9) continue; p.m.paperT = 30; if (p.kind === 'old') return { p, text: p.P.paper, who: 'old', pts: 1, label: 'DO RĄK! +1' }; return { p, text: BINPAPER(), who: 'binman', pts: 2, label: 'DLA ŚMIECIARZA! +2' }; }
+    for (const p of people) { if (p.m.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > .9) continue; p.m.paperT = 30; if (p.kind === 'cow') return { p, text: ['MUU?', 'MUUU... (CZYTA)', 'MUU! HOROSKOP!'][rnd() * 3 | 0], who: 'cow', pts: 1, label: 'KROWA Z GAZETĄ! +1' }; if (p.kind === 'old') return { p, text: p.P.paper, who: 'old', pts: 1, label: 'DO RĄK! +1' }; return { p, text: BINPAPER(), who: 'binman', pts: 2, label: 'DLA ŚMIECIARZA! +2' }; }
     for (const K of backers) { if (!(K.st === 'out' || K.st === 'lights' || K.st === 'wait') || Math.hypot(K.g.position.x - Pp.x, K.g.position.z - Pp.z) > 1.8) continue; K.st = 'wait'; K.t = 0; return { p: { g: K.g }, text: SORRY(), who: 'driver', pts: 2, label: 'NA SZYBĘ! +2' }; }
     for (const W of sprinklers) { if (W.flipT || Math.hypot(W.p.x - Pp.x, W.p.z - Pp.z) > 1) continue; W.flipT = 2; W.dir *= -1; return { p: { g: W.g }, text: 'PSSST!', who: 'sprinkler', pts: 1, label: 'ZRASZACZ! +1' }; }
     return null; }
-  const api = { id: 'classic', wave: false, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
+  // (the herd on the road: for the traffic to stop before each cow, as before someone on a zebra)
+  const crossing = () => herd.on ? herd.cows.filter(c => Math.abs(c.d0 - c.prog) < track.ROAD + 1.5).map(c => ({ s: wrap(herd.i + Math.round(c.ds / ds)) * ds, d: hs * (c.d0 - c.prog) })) : [];
+  const api = { id: 'classic', wave: false, crossing, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
 }

@@ -190,3 +190,11 @@ Do rozważenia: tramwaj przez środek placu, dostawczaki w drugim rzędzie, keln
 - Kanciaste zwierzęta zastąpione: pies na smyczy (shiba, chód), stado na Wsi (krowy idą przez drogę), krowy na pastwisku (pasą się albo stoją; czasem byk). Skale stałe (paczka ma krowę 8 m długą; ramka Box3 dla modeli ze szkieletem przed animacją kłamie).
 - Naprawione: krowy z pastwiska stały w ścianach domów (teraz tylko tam, gdzie 8 m wzdłuż drogi nie ma domu).
 - Psy przy domach zostają ręcznie modelowane (6 ras) do decyzji Jarka.
+
+## Psy, stado i kolizje (v189)
+
+- Psy przy domach: modele Quaternius (Husky, ShibaInu) przebarwione wg rasy (`dogs.js`, tabela LOOK: model, grzbiet, brzuch, wielkość, wysokość nóg); klipy: spoczynek (Idle, węszenie, Eating), Walk, Gallop wg prędkości, HitReact przy kopnięciu.
+- Stado: przejścia tylko przy bramie dwóch pierwszych pastwisk Wsi (`track.cowCross`), droga przejścia sprawdzona na wolne miejsce; znak UWAGA KROWY 35 m przed. Każda krowa ma swój start, tempo, odstęp i chwile skubania trawy; czeka za krową przed sobą, odsuwa się od sąsiadki, obchodzi przeszkodę. Farmer za ostatnią.
+- Kopnięta krowa: reszta galopem na drugą stronę. Auta stają przed krowami na jezdni (`classic.crossing()` dołączone do pieszych w ruchu).
+- Kolizje: `solidAt()` z kolizyjnych pudełek drogi; spacerowicze wybierają inny cel, rolkarze skaczą przez skocznie i omijają resztę, wycieczka i biegacze schodzą z linii. Cofające auta tylko z podjazdu z wolnym torem jazdy; deska przed podjazdem nie przy przejściu krów.
+- Kałuże i błoto: kontur `blob()` z nieregularnym brzegiem; błoto mniejsze (r 0,4–0,72 m), ciemniejsza obwódka i 1–2 bryzgi obok. Start: `traffic.clearAround()` wynosi auta 80 m od rowerzysty.

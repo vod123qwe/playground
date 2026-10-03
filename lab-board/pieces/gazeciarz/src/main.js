@@ -1217,7 +1217,7 @@ function step(dt, inp) {
       crash(0, new THREE.Vector3(B.x - granny.group.position.x, 0, B.z - granny.group.position.z).setLength(2.5), n || '0'); } }
   rush += ((inp.sprint && inp.pedal > .1 && B.v > 3 && !B.crash ? 1 : 0) - rush) * Math.min(1, dt * (inp.sprint ? 3 : 5)); px.uniforms.aber.value = Math.max(rush, Math.max(0, B.v - 6.5) * .12) * FXK.blur;
   const q = track.probe(B.x, B.z, B.hint), f = track.S[q.i].f;
-  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: peds.crossing(), onCar: B.onCar, high: B.air && B.y - q.y > 1.2, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
+  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: [...peds.crossing(), ...(locals?.crossing?.() || [])], onCar: B.onCar, high: B.air && B.y - q.y > 1.2, s: q.s, d: q.d, v: B.v, along: Math.sign(Math.sin(B.yaw) * f.x + Math.cos(B.yaw) * f.z) || 1 });
   stepHot(); stepPassed(); stepPapers(dt); stepBundles(dt, B.x, B.z); foot.update(dt, {}, world); follow(dt);
 }
 // ---------- on foot: speaking to people (E), hitting them (a punch when not fighting), cars that knock him down ----------
@@ -1385,7 +1385,7 @@ function stepFoot(dt, inp) {                                           // (on fo
   const me = foot.me, q = track.probe(me.x, me.z, me.hint), f = track.S[q.i].f, v = Math.abs(me.vf);
   water.update(dt); stepFires(dt); stepTaunts(); residents.update(dt, { x: me.x, z: me.z, v, foot: true, line: quests.lineFor, said: (r, t) => logEv('said', r.G.position.x, r.G.position.z, { who: r.lines || r.key, text: t }) });
   peds.update(dt, { x: me.x, z: me.z, v, d: q.d, busy: true });
-  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: peds.crossing(), s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
+  traffic.update(dt, { clear: FIN.on ? FIN.clear : null, pace: 1 + .35 * difficulty(), cars: modes.flags.cars ?? carsNow(), bus: modes.flags.bus, peds: [...peds.crossing(), ...(locals?.crossing?.() || [])], s: q.s, d: q.d, v, along: Math.sign(Math.sin(me.yaw) * f.x + Math.cos(me.yaw) * f.z) || 1 });
   stepPapers(dt); stepBundles(dt, me.x, me.z); px.uniforms.aber.value = rush = 0;
   stepPeople(dt, inp, me); stepCarsVsWalker(me);
   for (const C of track.bundles) if (!C.used && Math.hypot(C.x - me.x, C.z - me.z) < 1) pickBundle(C);   // (walked up to: picked up)
@@ -1545,6 +1545,7 @@ function setFog(on) { scene.fog.near = on ? 12 : FOG0.near; scene.fog.far = on ?
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if (L0.region !== track.region || (L0.map || '') !== track.map) { goRegion(L0.region, id, L0.map); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; if (!(id === 'p1' && !LVM.load().done?.p1)) { C.iy = 0; C.yaw = B.yaw; C.init = false; } const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; RUN.p0 = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; if (L.titles > 1) { const A = ACT(); TK.forEach(t => B.mix[t] = 0); A.forEach((t, k) => B.mix[t] = Math.floor(B.papers / A.length) + (k < B.papers % A.length ? 1 : 0)); }
   RUN.week = null; if (L.classic) weekStart(L);
+  traffic.clearAround?.(track.probe(B.x, B.z, B.hint).s, 80);
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   // (the finish where the run starts (a whole lap): the gate and the finale's course not there yet, at home, in sight from the start;
   // both put up half way round, when home is far behind)

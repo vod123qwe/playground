@@ -45,3 +45,12 @@ Klawiatura: strzałki/WASD jazda, mysz lub przyciski rzutu, Spacja skok (w powie
 
 - pies na smyczy to shiba, krowy w stadzie na Wsi i na pastwisku to prawdziwe animowane modele (paczka zwierząt Quaternius, CC0)
 - krowy z pastwiska nie stoją już w ścianach domów
+
+### Wersja 189: psy, stado i kolizje
+
+- psy przy domach to prawdziwe animowane modele (husky i shiba, przebarwione na 6 ras)
+- stado przechodzi tylko w dwóch stałych miejscach na Wsi: brama w płocie pastwiska, znak UWAGA KROWY 35 m wcześniej; krowy idą luźno, każda swoim tempem, nie w rzędzie, i omijają przeszkody
+- kopnięta krowa: reszta stada rzuca się galopem na drugą stronę; krowa z gazetą też coś powie
+- auta i autobus stają przed krowami na jezdni
+- przechodnie, rolkarze (skaczą przez skocznie), wycieczka szkolna i biegacze omijają skocznie, ławki i kubły; auta cofające z podjazdu tylko tam, gdzie mają wolną drogę
+- kałuże i błoto mniejsze, o nieregularnym brzegu; żadnego auta tuż przy starcie
