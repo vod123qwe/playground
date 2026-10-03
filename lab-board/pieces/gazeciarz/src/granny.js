@@ -4,7 +4,7 @@
 // up (a last shake of the stick) and goes home. Let her reach you off it and she has you: over you go.
 // update(dt, R) → 'caught' the moment she gets him; R: { x, z, y, far (behind the houses), road (back on the road), busy (off his bike) }
 
-export function createGranny({ THREE, toon, probe, doors }) {
+export function createGranny({ THREE, toon, probe, doors, residents = null }) {
   const skin = toon('#e7b68f'), cardi = toon('#6d7340'), cardiD = toon('#555a30'), skirt = toon('#5a3d27'), shoe = toon('#17181b'), stickM = toon('#7b5836'), glass = toon('#d3d0c3');
   const scarfT = (() => { const c = document.createElement('canvas'); c.width = c.height = 16; const x = c.getContext('2d'); x.fillStyle = '#b3392d'; x.fillRect(0, 0, 16, 16);   // red, with small flowers
     for (const [a, b] of [[2, 3], [9, 1], [13, 7], [5, 10], [11, 13], [1, 14]]) { x.fillStyle = '#efc970'; x.fillRect(a, b, 2, 2); x.fillStyle = '#f6f3ea'; x.fillRect(a + 1, b, 1, 1); }
@@ -36,8 +36,12 @@ export function createGranny({ THREE, toon, probe, doors }) {
   { const c = M(new THREE.CylinderGeometry(.013, .013, .88, 6), stickM, stick); c.position.y = .44;
     const crook = M(new THREE.TorusGeometry(.05, .013, 5, 10, Math.PI), stickM, stick); crook.position.set(0, .88, .05); crook.rotation.y = Math.PI / 2; }
 
+  // (the real one: the granma model, once loaded, in place of the one modelled here: running after him, a finger shaken, shuffling home)
+  let real = null; residents?.spawn?.('granma').then(o => { if (!o) return; o.G.parent?.remove(o.G); for (const c of G.children) c.visible = false; stick.visible = false; G.add(o.G); real = { ...o, act: null }; });
+  function act(name, speed = 1) { if (!real) return; const a = real.acts[name]; if (!a) return; a.timeScale = speed; if (real.act === a) return; a.reset().play(); if (real.act) a.crossFadeFrom(real.act, .2, false); real.act = a; }
   const st = { state: 'none', t: 0, x: 0, z: 0, yaw: 0, gait: 0, home: null, farT: 0, shoutT: 0, mouth: new THREE.Vector3(), hint: 0, shake: 0 };
   function pose(dt, moving, angry) {
+    if (real) { act(moving ? (angry ? 'run' : 'walkold') : 'angry', moving && angry ? 1.25 : 1); real.mixer.update(dt); }
     st.gait += dt * (moving ? 9 : 0); const g = st.gait, bob = moving ? Math.abs(Math.sin(g)) * .03 : 0;
     const q = probe(st.x, st.z, st.hint); st.hint = q.i; G.position.set(st.x, q.y + bob, st.z); G.rotation.y = st.yaw;
     sk.rotation.z = moving ? Math.sin(g) * .05 : 0; body.rotation.set(.5 + (angry ? -.15 : 0), 0, moving ? Math.sin(g) * .06 : 0);

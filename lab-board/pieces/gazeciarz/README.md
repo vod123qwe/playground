@@ -29,3 +29,9 @@ Klawiatura: strzałki/WASD jazda, mysz lub przyciski rzutu, Spacja skok (w powie
 
 - jedna klatka na Kasztanowej: z 6140 do około 3450 wywołań rysowania i z 3,75 do 2,2 mln trójkątów; do pobrania około 21 MB zamiast 30 MB
 - tylko potrzebne modele ludzi; dalecy ludzie i rowery nie są rysowane, cienie rzucają tylko bliscy i duże rzeczy; nieruchome części ulicy i auta scalone po materiale; bez rowerów w ogródkach
+
+### Wersja 186: prawdziwe postacie z ruchem
+
+- dzieci przy skoczniach, wycieczka na rowerkach i babcia z laską to teraz prawdziwe modele ludzi z ruchami (Mixamo przeniesione na postacie MakeHuman), zamiast klocków
+- postacie płynnie zmieniają ruchy: kibicowanie, machanie, potknięcie po zderzeniu, bieg goniących, niesienie kubła, klaskanie emerytów
+- naprawione: przy ukrywaniu dalekich postaci wracały klocki; złodziej torebek znów się pojawia

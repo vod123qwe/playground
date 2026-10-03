@@ -381,7 +381,7 @@ export function createQuests({ THREE, track, residents, peds, hud, talk, game })
 
   // ---------- the thief: a handbag snatched, he runs; kick him (or punch), the bag; back to her, or not ----------
   function startThief() {
-    const R = R0(), lady = peds.list.find(p => p.P.key === 'lady' && p.ready), lad = peds.list.find(p => p.P.key === 'teen' && p.ready);
+    const R = R0(), lady = peds.list.find(p => p.P.key === 'lady' && p.ready), lad = peds.list.find(p => (p.P.key === 'teen' || p.P.key === 'jogger') && p.ready);
     if (!lady || !lad) return false; const dl = Math.hypot(lady.x - R.x, lady.z - R.z); if (dl < 22 || dl > 85) return false;
     lad.s = lady.s + lady.dir * 2.2; lad.side = lady.side; lad.flee = 999; lad.fleeNew = true; lad.stun = 0; lady.stun = 999; lady.faceT = 0;
     const bag = lady.pr?.handbag; if (bag) bag.visible = false;
