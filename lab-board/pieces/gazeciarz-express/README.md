@@ -6,6 +6,10 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 2: tor bez rowerzystów
+
+- rowerzyści z naprzeciwka nie wjeżdżają już na tor z przeszkodami (jechali gęsiego przez barierki i pachołki); znikają 60 m przed torem, poza zasięgiem wzroku
+
 ### Wersja 1: ulice z końcem
 
 - meta po 810 m (zawsze co najmniej 200 m przed startem pętli, więc baneru START przy mecie nie widać), reszta drogi biegnie dalej

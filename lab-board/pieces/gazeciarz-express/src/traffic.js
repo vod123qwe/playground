@@ -104,13 +104,17 @@ export function createTraffic({ THREE, track, cars, n = 6, seed = 5, makeRider =
       G.add(r.root); r.root.visible = false; bikes.push({ r, rival: true, s: 0, dir: 1, lane: 0, v: 5.6 + rnd() * .9, wait: 2 + bikes.filter(b => b.rival).length * 7, stop: 0, x: 0, z: 0, yaw: 0, snap: true, on: false }); }
     for (const b of bikes) if (b.rival && bikes.filter(q => q.rival).indexOf(b) >= n) { b.on = false; b.r.root.visible = false; } }
   function stepBikes(dt, R) {
+    // (the finale's track kept clear of the cyclists too, as of the cars: none comes onto it, one riding up to it is gone)
+    // (60 m more at each end than the cars' stretch: a cyclist gone out of sight, not at the finish line)
+    const inClear = R.clear ? (() => { const A0 = wrap(R.clear[0] - 60), B0 = wrap(R.clear[1] + 60); return s0 => { const s1 = wrap(s0); return A0 <= B0 ? s1 >= A0 && s1 <= B0 : s1 >= A0 || s1 <= B0; }; })() : () => false;
     for (const b of bikes) {
+      if (!b.rival && b.on && !b.hold && !b.fall && inClear(b.s)) { b.on = false; b.wait = 4 + rnd() * 6; b.r.root.visible = false; continue; }
       b.stop = Math.max(0, b.stop - dt);
       if (b.rival && bikes.filter(q => q.rival).indexOf(b) >= rivalsOn) continue;
       if (b.rival) { if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = R.along || 1; b.s = wrap(R.s + b.dir * (55 + rnd() * 60)); b.lane = b.dir * 1.7; b.snap = true; b.r.root.visible = true; b.v = 5.6 + rnd() * .9; }
         const rel = ahead(R.s, b.s, R.along || 1); if (!b.hold && rel < -40 && rel > -400) { b.on = false; b.wait = 16 + rnd() * 12; b.r.root.visible = false; b.dropped = (b.dropped || 0) + 1; continue; }
         if (b.dir !== (R.along || 1) && !b.fall) b.dir = R.along || 1; }
-      else if (!b.on) { if ((b.wait -= dt) > 0) continue; b.on = true; b.dir = -(R.along || 1); b.s = wrap(R.s + (R.along || 1) * (110 + rnd() * 70)); b.lane = b.dir * 2.55; b.snap = true; b.r.root.visible = true; }   // (ahead of him, coming his way)
+      else if (!b.on) { if ((b.wait -= dt) > 0) continue; const s0 = wrap(R.s + (R.along || 1) * (110 + rnd() * 70)); if (inClear(s0)) { b.wait = 2; continue; } b.on = true; b.dir = -(R.along || 1); b.s = s0; b.lane = b.dir * 2.55; b.snap = true; b.r.root.visible = true; }   // (ahead of him, coming his way)
       const rel = ahead(R.s, b.s, R.along || 1);                       // (how far ahead of him, the way he rides)
       if (!b.rival && !b.hold && (rel < -40 || rel > 320)) { b.on = false; b.wait = 6 + rnd() * 14; b.r.root.visible = false; continue; }
       // (a cyclist with him on its line ahead, standing or slow: it swerves round him, and short of him it brakes)
