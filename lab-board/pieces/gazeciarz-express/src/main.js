@@ -306,20 +306,22 @@ function padSwitch(a) { renderHelp(); const go = document.querySelector('#shop .
 // ---------- the keys: each action and the keys it is on (changed in the menu: STEROWANIE; kept in the browser) ----------
 //   modes: where it works (bike: riding, walk: on foot, fight: in a fight); two actions on one key clash only if they share a mode
 const ACTIONS = [
-  { id: 'pedal', keys: ['KeyW'], modes: ['bike', 'walk', 'fight'] }, { id: 'brake', keys: ['KeyS'], modes: ['bike', 'walk', 'fight'] },
-  { id: 'left', keys: ['KeyA'], modes: ['bike', 'walk', 'fight'] }, { id: 'right', keys: ['KeyD'], modes: ['bike', 'walk', 'fight'] },
+  // (Express: two hands, as on the old machines: the left rides (WASD or the arrows), the right throws (J left, K right) and hops (L);
+  // Space kicks)
+  { id: 'pedal', keys: ['KeyW', 'ArrowUp'], modes: ['bike', 'walk', 'fight'] }, { id: 'brake', keys: ['KeyS', 'ArrowDown'], modes: ['bike', 'walk', 'fight'] },
+  { id: 'left', keys: ['KeyA', 'ArrowLeft'], modes: ['bike', 'walk', 'fight'] }, { id: 'right', keys: ['KeyD', 'ArrowRight'], modes: ['bike', 'walk', 'fight'] },
   { id: 'sprint', keys: ['ShiftLeft', 'ShiftRight'], modes: ['bike', 'walk'] },
-  { id: 'throwL', keys: ['ArrowLeft', 'KeyQ'], modes: ['bike'] }, { id: 'throwR', keys: ['ArrowRight', 'KeyE'], modes: ['bike'] },
-  { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyC'], modes: ['bike'] },
+  { id: 'throwL', keys: ['KeyJ'], modes: ['bike'] }, { id: 'throwR', keys: ['KeyK'], modes: ['bike'] },
+  { id: 'kick', keys: ['Space'], modes: ['bike'] }, { id: 'hop', keys: ['KeyL', 'KeyC'], modes: ['bike'] },
   { id: 'mount', keys: ['KeyF'], modes: ['bike', 'walk'] }, { id: 'view', keys: ['KeyV'], modes: ['bike', 'walk', 'fight'] }, { id: 'talk', keys: ['KeyE'], modes: ['walk'] }, { id: 'chat', keys: ['KeyT'], modes: ['bike'] }, { id: 'title', keys: ['KeyX'], modes: ['bike', 'walk'] }, { id: 'inv', keys: ['KeyI'], modes: ['bike', 'walk'] }, { id: 'map', keys: ['KeyM'], modes: ['bike', 'walk'] }, { id: 'snap', keys: ['KeyQ'], modes: ['bike', 'walk'] }, { id: 'bell', keys: ['KeyB'], modes: ['bike'] },
-  { id: 'punchL', keys: ['ArrowLeft'], modes: ['fight'] }, { id: 'punchR', keys: ['ArrowRight'], modes: ['fight'] }, { id: 'high', keys: ['ArrowUp'], modes: ['fight'] },
-  { id: 'low', keys: ['ArrowDown'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
+  { id: 'punchL', keys: ['KeyJ'], modes: ['fight'] }, { id: 'punchR', keys: ['KeyK'], modes: ['fight'] }, { id: 'high', keys: ['KeyI'], modes: ['fight'] },
+  { id: 'low', keys: ['Comma'], modes: ['fight'] }, { id: 'guard', keys: ['Space'], modes: ['fight'] }, { id: 'dodge', keys: ['ShiftLeft', 'ShiftRight'], modes: ['fight'] },
   { id: 'taunt', keys: ['KeyG'], modes: ['fight'] },
-  { id: 'help', keys: ['KeyH'], modes: ['all'] }, { id: 'full', keys: ['KeyL'], modes: ['all'] }, { id: 'style', keys: ['KeyU'], modes: ['all'] },
+  { id: 'help', keys: ['KeyH'], modes: ['all'] }, { id: 'full', keys: ['KeyY'], modes: ['all'] }, { id: 'style', keys: ['KeyU'], modes: ['all'] },
   { id: 'ink', keys: ['KeyO'], modes: ['all'] }, { id: 'pixel', keys: ['KeyP'], modes: ['all'] }, { id: 'reset', keys: ['KeyR'], modes: ['all'] }];
 const BIND = {}; for (const a of ACTIONS) BIND[a.id] = [...a.keys];
-try { const saved = JSON.parse(localStorage.getItem('pt.binds') || 'null'); if (saved) for (const id in saved) if (BIND[id] && Array.isArray(saved[id])) BIND[id] = saved[id]; } catch { }
-const saveBinds = () => { try { localStorage.setItem('pt.binds', JSON.stringify(BIND)); } catch { } };
+try { const saved = JSON.parse(localStorage.getItem('gzx.binds') || 'null'); if (saved) for (const id in saved) if (BIND[id] && Array.isArray(saved[id])) BIND[id] = saved[id]; } catch { }
+const saveBinds = () => { try { localStorage.setItem('gzx.binds', JSON.stringify(BIND)); } catch { } };   // (Express's own: the two-hand keys, not the old saved ones)
 const on = (id, code) => BIND[id].includes(code);
 const keyName = c => ({ Space: 'SPACJA', ShiftLeft: 'SHIFT', ShiftRight: 'P.SHIFT', ControlLeft: 'CTRL', ControlRight: 'P.CTRL', AltLeft: 'ALT', AltRight: 'P.ALT', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
   Enter: 'ENTER', Tab: 'TAB', Backspace: 'BACKSPACE', CapsLock: 'CAPS', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Minus: '-', Equal: '=', Backquote: '`' })[c]
@@ -334,7 +336,7 @@ const clashes = (id, code) => { const A = ACTIONS.find(a => a.id === id); return
 // what each is, where (the menu's page and the help window list them so)
 const SECTIONS = [
   { title: 'NA ROWERZE', items: [['pedal', 'PEDAŁUJ'], ['brake', 'HAMUJ (NA POSTOJU: COFAJ)'], ['left', 'SKRĘĆ W LEWO'], ['right', 'SKRĘĆ W PRAWO'], ['sprint', 'SZYBCIEJ'],
-    ['throwL', 'RZUT W LEWO (KLIKNIJ: SAM LECI DO CELU W RAMCE · TRZYMAJ: SIŁA I CELOWANIE)'], ['throwR', 'RZUT W PRAWO'], ['inv', 'EKWIPUNEK ROWERU: CZĘŚCI, SLOTY, ROWER OBOK'], ['map', 'MAPA TRASY: ODCINKI, WYNIKI, WARSZTAT, ZAPIS'], ['snap', 'APARAT (ZLECENIE NA ZDJĘCIE)'], ['kick', 'KOPNIAK · W LOCIE ZE SKOCZNI: TRICK (KLIKNIJ, KRĘCI SIĘ SAM; JESZCZE RAZ: KOMBO)'], ['hop', 'PODSKOK'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
+    ['throwL', 'RZUT DO DOMÓW (KLIKNIJ: SAM LECI DO CELU · TRZYMAJ: SIŁA)'], ['throwR', 'RZUT W PRAWO (NA TORZE: TARCZE Z PRAWEJ, POZA NIM TEŻ DO DOMÓW)'], ['inv', 'EKWIPUNEK ROWERU: CZĘŚCI, SLOTY, ROWER OBOK'], ['map', 'MAPA TRASY: ODCINKI, WYNIKI, WARSZTAT, ZAPIS'], ['snap', 'APARAT (ZLECENIE NA ZDJĘCIE)'], ['kick', 'KOPNIAK (PSY, SKRZYNKI, LUSTERKO KURIERA)'], ['hop', 'PODSKOK · W LOCIE ZE SKOCZNI: TRIK (JESZCZE RAZ: KOMBO)'], ['mount', 'ZSIĄDŹ Z ROWERU'], ['view', 'NASTĘPNA KAMERA'],
     [null, 'MYSZ: LPM / PPM', 'RZUT W LEWO / W PRAWO'], [null, 'MYSZ: RUCH', 'LEKKO OBRACA WIDOK']] },
   { title: 'PIESZO', items: [['pedal', 'NAPRZÓD'], ['brake', 'DO TYŁU'], ['left', 'OBRÓT W LEWO (Z MYSZĄ: KROK W BOK)'], ['right', 'OBRÓT W PRAWO'], ['sprint', 'BIEG'],
     ['talk', 'ZAGADAJ DO KOGOŚ'], ['chat', 'Z ROWERU: POGADAJ (ZWOLNIJ PRZY KIMŚ)'], ['title', 'ZMIEŃ TYTUŁ GAZETY'], ['bell', 'DZWONEK (GDY GO MASZ)'], ['mount', 'PRZY ROWERZE: WSIĄDŹ / PODNIEŚ'], ['view', 'WIDOK Z OCZU / ZZA PLECÓW'],
@@ -410,7 +412,8 @@ function input() {
     sprint = sprint || t.sprint; holdL = holdL || t.holdL; holdR = holdR || t.holdR; kickK = kickK || e.kick; kickHold = kickHold || !!t.kickHeld; hop = hop || e.hop;
     tDx = e.lookDx * .9; tDy = e.lookDy * .9; }   // (on foot: the stick walks him, the right finger turns the camera, see onfoot)
   if (!foot.active) { holdL = holdL || mouse.lh; holdR = holdR || mouse.rh; }   // (on the bike: the left button throws left, the right one right)
-  if (track.classic && !foot.active) { const sp = hit('kick') || !!tE?.hop; hop = (hop || sp) && !B.air; kickK = hit('view') || !!tE?.kick || (sp && B.air); kickHold = !!held('view') || !!(touch.on && touch.state.kickHeld); }   // (the Classic: Space jumps, and in the air a trick; V kicks)
+  // (Express, two hands: L (or C) hops, and in the air the hop key is the trick; Space kicks)
+  if (track.classic && !foot.active) { const hp = hop || !!tE?.hop; hop = hp && !B.air; kickK = hit('kick') || !!tE?.kick || (hp && B.air); kickHold = !!held('kick') || !!(touch.on && touch.state.kickHeld); }
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
@@ -484,10 +487,11 @@ function stepAim() {                                                    // (whil
 function throwing(dt, inp) {
   if (B.crash) { B.charge = null; return; }
   // (the Classic: any throw, towards the houses: his left or his right, as the houses are for him now)
-  if (track.classic) { const A = track.S[B.hint] || track.S[0], hl = (A.r.x * track.oneSide) * Math.cos(B.yaw) - (A.r.z * track.oneSide) * Math.sin(B.yaw) > 0, any = inp.holdL || inp.holdR; inp = { ...inp, holdL: hl && any, holdR: !hl && any }; }
+  // (the Classic: every throw to the houses; on the obstacle course (targets both sides) left is left and right is right)
+  if (track.classic && !(FIN.on && FIN.entered)) { const A = track.S[B.hint] || track.S[0], hl = (A.r.x * track.oneSide) * Math.cos(B.yaw) - (A.r.z * track.oneSide) * Math.sin(B.yaw) > 0, any = inp.holdL || inp.holdR; inp = { ...inp, holdL: hl && any, holdR: !hl && any }; }
   const held = inp.holdL ? 1 : inp.holdR ? -1 : 0;
   if (!B.charge && held && B.papers > 0 && !rider.throwing) B.charge = { side: held, p: 0, t: 0 };
-  if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .85); const c = B.charge; c.t += dt;
+  if (B.charge) { B.charge.p = Math.min(1, B.charge.p + dt / .62); const c = B.charge; c.t += dt;
     c.ay = THREE.MathUtils.clamp((c.ay || 0) - (inp.dy || 0) * .005, -1, 1); c.ax = THREE.MathUtils.clamp((c.ax || 0) - (inp.dx || 0) * .005 * c.side, -1, 1);
     const still = B.charge.side > 0 ? inp.holdL : inp.holdR; if (!still) { const tap = c.t < .22, T0 = tap ? (c.side > 0 ? hot.L : hot.R) : null;   // (a tap: straight to the best on that side; held: where it was aimed, taken to a target near it)
       B.throwAt = tap ? T0?.p || null : aim.snap || null; B.throwDoor = tap ? T0?.door : aim.snapDoor; B.throwQ = tap && T0 ? tapQ(T0) : null; B.throwP = tap && !B.throwAt ? Math.max(.45, B.charge.p) : B.charge.p; B.throwC = { ax: B.charge.ax, ay: B.charge.ay }; if ((rider.throwDur = track.classic ? .3 : .5, rider.throwPaper)(B.charge.side)) { const t = curTitle(); B.papers--; B.mix[t] = Math.max(0, B.mix[t] - 1); B.throwT = t; audio.play('throw', { vol: .8 }); } B.charge = null; } }
@@ -1415,7 +1419,7 @@ function stepHurt(dt) { const fs = foot.status(), me = foot.active ? foot.me : n
 function drawHud(dt) {
   stepHurt(dt);
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
-  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : track.classic ? 'classic' : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !runUI.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
+  touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : track.classic ? 'classic' : 'bike'); touch.charge(B.charge?.p || 0); touch.titles(ACT().length > 1); touch.course(!!(FIN.on && FIN.entered)); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !runUI.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
   hudEl.style.visibility = menu.page === 'title' ? 'hidden' : '';   // (the title screen: nothing of the ride's own display behind it)
   hud.draw(dt, project, { title: menu.page === 'title', bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks(), mpMarks(), jobMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, sat: menu.page !== 'title' && LV && B.sat != null ? B.sat : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }

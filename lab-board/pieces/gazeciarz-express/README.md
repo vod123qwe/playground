@@ -6,6 +6,15 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 10: wygodne sterowanie
+
+- klawiatura na dwie ręce: **lewa jedzie** (WASD albo strzałki), **prawa rzuca i skacze**: J rzut do domów, K rzut w prawo, L podskok (C też), spacja kopniak; w locie ze skoczni podskok = trik
+- ładowanie siły rzutu szybsze (pełny pasek w 0,6 s); krótkie stuknięcie dalej samo celuje
+- na torze rzut w prawo naprawdę leci w prawo (tarcze po prawej stronie); poza torem każdy rzut leci do domów
+- pad bez zmian: lewy drążek skręt, RT gaz, LT hamulec, LB/RB rzut, A podskok, X kopniak
+- telefon: przyciski w stylu gry (pikselowe ramki, czcionka gry): pod prawym kciukiem duży czerwony RZUT i niebieski SKOK, nad nimi KOP, obok SPRINT; mały RZUT → pojawia się tylko na torze, TYTUŁ tylko na mapach z dwiema gazetami; przycisk rzutu napełnia się, gdy ładujesz siłę; po lewej miejsce na kciuk z podpowiedzią
+- uwaga: klawisze zapisują się teraz osobno dla Expressa (stare ustawienia z innych wersji nie przeszkadzają)
+
 ### Wersja 9: wybór poziomu
 
 - w menu tytułowym i w pauzie **WYBIERZ POZIOM**: pięć dni tygodnia (pon. Kasztanowa … pt. Zima) z medalami, każdy do wybrania
