@@ -6,6 +6,12 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 5: ulica narasta do toru
+
+- pierwsza trzecia ulicy spokojna: auto mniej, bez pilnych gazet, mewy rzadziej
+- od połowy „godzina szczytu” (komunikat i dzwonek): auto więcej, pilne gazety częściej, mewy częściej; wycieczka szkolna w Parku pojawia się w drugiej połowie
+- tor z przeszkodami na końcu jako kulminacja
+
 ### Wersja 4: tydzień i rosnąca trudność
 
 - trudność rośnie od Kasztanowej do Zimy: limit czasu 150 → 135 s, cel gazet 9 → 14, auta 1 → 3, a tor z przeszkodami coraz trudniejszy (na Zimie najdłuższy slalom, duży skok, obręcze)
