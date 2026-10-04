@@ -565,6 +565,7 @@ function stepPassed() { if (foot.active) return; const fx = Math.sin(B.yaw), fz 
 // a paper come down by a house: the right title for its subscriber (paid in full), the wrong one (a little, and words), or a house that takes none
 function deliver(hi, base, at, how, title, dist = 0) {
   const d = track.doors[hi], sub = d && d.sub, up = at.clone().setY(at.y + 1.3);
+  if (d && d.taken) { breakStreak(); hud.rant(up, pickOf(['JUŻ MAM PACZKĘ!', 'KURIER BYŁ PIERWSZY!', 'SPÓŹNIŁEŚ SIĘ, MŁODY!']), false); flash('Tu kurier był pierwszy.'); return false; }
   if (!sub) { breakStreak(); hud.rant(up, pickOf(['NIE ZAMAWIAŁEM!', 'ZA DARMO? NO TO BIORĘ.', 'ZNOWU ULOTKI?!', 'JA NIE CZYTAM, JA OGLĄDAM!']), false); flash('Ten dom nic nie prenumeruje'); return false; }
   if (sub === title && d.rush > performance.now()) { d.rush = 0; rushOff(d); score(5, at.clone().setY(at.y + .6), 'PILNE! +5', '#ff8a5a'); logEv('rush', at.x, at.z); audio.play('trick'); }
   if (sub === title) { satAdd(2); B.delivered = (B.delivered || 0) + 1; B.streak = (B.streak || 0) + 1; const mult = streakMult(), pts = base * mult; score(pts, at, '+' + pts + (mult > 1 ? ' x' + mult : ''), mult > 1 ? '#9fd27a' : '#efc970');
@@ -1278,6 +1279,10 @@ function localEvent(e) { director.poke();
   if (e.kind === 'catch') { if (e.p?.g) hud.rant(e.p.g.position, e.text, true, 1.95); logEv('cwaniak_catch', B.x, B.z); if (!foot.active) crash(Math.random() < .5 ? -1 : 1); else flash('Dogonili cię. Na szczęście tylko gadają.'); }
   if (e.kind === 'load') { logEv('load', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Ładunek z suwnicy! Patrz na cień na jezdni.'); }
   if (e.kind === 'forklift') { logEv('forklift', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Wózek widłowy ma pierwszeństwo. Zawsze.'); }
+  if (e.kind === 'taken') { RUN.stolen = (RUN.stolen || 0) + 1; satAdd(-3); classicMark(e.d); flash(`Kurier przejął abonenta! (${locals.courier?.V.taken || RUN.stolen})`); hud.rant(e.p.g.position.clone().setY(e.p.g.position.y + 2.4), pickOf(['DORĘCZONE!', 'PACZKA ZAMIAST GAZETY!', 'SZYBCIEJ NIŻ GAZETA!']), true, 1.95); return; }
+  if (e.kind === 'courier') { flash(e.text); return; }
+  if (e.kind === 'parcelHit') { logEv('parcel', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Paczka w głowę! Kurier celuje: zjedź z jego linii albo podskocz.'); return; }
+  if (e.kind === 'vanHit') { logEv('van', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('W furgonetkę kuriera! Wskocz na dach albo ją przeskocz.'); return; }
   if (e.kind === 'driveway') { logEv('driveway', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash(e.why === 'early' ? 'Za wcześnie! Skok już opadał, zanim doleciałeś do dachu.' : e.why === 'late' ? 'Za późno! Skacz kilka metrów przed autem, żeby być w górze nad nim.' : 'Auto wyjechało tyłem z podjazdu. Białe światła z tyłu: zaraz rusza!'); }
   if (e.kind === 'truck') { logEv('truck', B.x, B.z); crash(Math.random() < .5 ? -1 : 1); flash('Śmieciarka! Objedź ją szerokim łukiem.'); }
   if (e.kind === 'owner') { logEv('owner_kick', B.x, B.z); hud.impact(e.p.g.position.clone().add(new THREE.Vector3(0, 1.2, 0)), 'KOP!'); crash(Math.random() < .5 ? -1 : 1); flash('Dogonił cię za tę szybę. Następnym razem dociśnij gazu!'); }
@@ -1548,7 +1553,7 @@ function setFog(on) { scene.fog.near = on ? 12 : FOG0.near; scene.fog.far = on ?
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if (L0.region !== track.region || (L0.map || '') !== track.map) { goRegion(L0.region, id, L0.map); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   if (L.finish.m) L.finish = { ...L.finish, to: Math.min(L.finish.m, track.len - 200) / track.len };   // (at least 200 m of the road going on between the finish and the start behind him)
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; if (!(id === 'p1' && !LVM.load().done?.p1)) { C.iy = 0; C.yaw = B.yaw; C.init = false; } const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; RUN.p0 = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; if (L.titles > 1) { const A = ACT(); TK.forEach(t => B.mix[t] = 0); A.forEach((t, k) => B.mix[t] = Math.floor(B.papers / A.length) + (k < B.papers % A.length ? 1 : 0)); }
-  RUN.week = null; RUN.rushHour = false; if (L.classic) weekStart(L);
+  RUN.week = null; RUN.rushHour = false; locals?.courier?.clear(); if (L.classic) weekStart(L);
   traffic.clearAround?.(track.probe(B.x, B.z, B.hint).s, 80);
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   // (the finish where the run starts (a whole lap): the gate and the finale's course not there yet, at home, in sight from the start;
@@ -1817,6 +1822,7 @@ function carRoofAt(x, z) { let y = null; roofCar = null; for (const C of track.n
     if (c.roofH == null) { c.group.updateMatrixWorld(true); c.roofH = new THREE.Box3().setFromObject(c.group).max.y - c.group.position.y; }
     const top = (C.y0 || 0) + (C.trailer ? 1.55 : Math.min(c.roofH, 3.2)); if (y == null || top > y) { y = top; roofCar = C.t; } }
   // (the Classic's cars backing out of the drives: their roofs too)
+  { const CV = locals?.courier?.V; if (CV?.on) { const p = CV.g.position, C = { x: p.x, z: p.z, c: Math.cos(CV.yaw), s: Math.sin(CV.yaw), hx: CV.half[0], hz: CV.half[1] }; if (Math.abs(p.x - x) + Math.abs(p.z - z) < 8 && boxHit(C, x, z, 0)) { const top = p.y + CV.roofH; if (y == null || top > y) { y = top; roofCar = CV; } } } }
   for (const K of locals?.backers || []) { const p = K.g.position, Y = K.yawIn, C = { x: p.x, z: p.z, c: Math.cos(Y), s: Math.sin(Y), hx: K.c.half[0], hz: K.c.half[1] }; if (Math.abs(p.x - x) + Math.abs(p.z - z) > 8 || !boxHit(C, x, z, 0)) continue; const top = p.y + K.roofH; if (y == null || top > y) { y = top; roofCar = K; } }
   return y; }
 // ---------- the far people not drawn: every person is ~9 skinned meshes (~40 thousand triangles, skinned again for the shadow); beyond
@@ -1900,7 +1906,7 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   if (RUN.snaps?.length && RUN.t >= RUN.snaps[0].at) { const q = RUN.snaps.shift(); try { q.e.img = photo(camera); } catch { } }
   stepLive(dt); stepFinale(dt);
   // (Express: how far along the street, for the locals' pace; past half way the rush hour, said once)
-  { const p = streetP(); if (locals) { locals.prog = p; locals.clear = FIN.on ? FIN.clear : null; } if (LV.finish?.m && !RUN.rushHour && p > .55) { RUN.rushHour = true; flash('Godzina szczytu! Więcej aut, pilne gazety, tor już blisko.'); audio.play('bell', { vol: .5 }); } }
+  { const p = streetP(); if (locals) { locals.prog = p; locals.clear = FIN.on ? FIN.clear : null; if (LV.finish?.m) { const XL = XLV(); locals.boss = LV.id === XL[XL.length - 1]?.id; locals.endS = RUN.cps.length ? RUN.cps[RUN.cps.length - 1] * track.ds - finL() - 20 : null; } } if (LV.finish?.m && !RUN.rushHour && p > .55) { RUN.rushHour = true; flash('Godzina szczytu! Więcej aut, pilne gazety, tor już blisko.'); audio.play('bell', { vol: .5 }); } }
   if ((RUN.chk -= dt) > 0) return; RUN.chk = .1; stepJobs();
   const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
   const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;

@@ -15,6 +15,7 @@
 
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { createCourier } from './courier.js';
 
 export function createClassic({ THREE, toon, track, scene, cars, traffic = () => [], residents = null }) {
   let a = 1709; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -161,6 +162,9 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
 
   let clock = 0;
   function update(dt, R) { clock += dt; const ev = events.splice(0), W0 = api.wave; for (const mx of mixers) mx.update(dt);
+    // (Friday's boss: the courier's van, on the street the main game says (api.boss), short of the course (api.endS))
+    { const CV = courier.V; if (api.boss && !R.foot && !CV.on && !CV.done && R.s != null && api.prog > .04) { ev.push(...courier.start(R)); people.push(CV.who); }
+      if (CV.on) { ev.push(...courier.update(dt, R, api.endS)); if (!CV.on) { const k = people.indexOf(CV.who); if (k >= 0) people.splice(k, 1); } } }
     for (const f of figs) if (f.onceT > 0 && (f.onceT -= dt) <= 0) setAct(f, f.back || 'idle');
     // (the pensioners on the benches clap when he flies by them)
     if (R.air && (R.h || 0) > .7) for (const o of people) if (o.kind === 'old' && o.f && !(o.clapT > clock) && Math.hypot(R.x - o.x, R.z - o.z) < 13) { o.clapT = clock + 7; once(o.f, 'sitclap'); }
@@ -298,16 +302,18 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
       if (C.sayT <= 0 && Math.hypot(dx, dz) < 18) { C.sayT = 12; ev.push({ kind: 'shout', p: { g: C.men[0].g }, text: BINMEN() }); }
       if (!R.foot && !C.hitT && !(R.air && R.h > 3.2) && Math.abs(lx) < 1.35 && lz > -4.3 && lz < 3.8) { C.hitT = 3; ev.push({ kind: 'truck' }); } }
     return ev; }
-  function kick(p) { if (p.kind === 'cow') { const H = herd; for (const c of H.cows) { c.flee = true; c.spd = 3.4 + rnd() * 1.2; } p.cow.hitT = .6; return ['MUUUUU!', 'MUU?! MUUUU!', 'MOJE KROWY!'][rnd() * 3 | 0]; }
+  function kick(p) { if (p.kind === 'van') return courier.kick(); if (p.kind === 'cow') { const H = herd; for (const c of H.cows) { c.flee = true; c.spd = 3.4 + rnd() * 1.2; } p.cow.hitT = .6; return ['MUUUUU!', 'MUU?! MUUUU!', 'MOJE KROWY!'][rnd() * 3 | 0]; }
     return p.kind === 'old' ? 'TAK SIĘ TRAKTUJE STARSZYCH?!' : 'EJ! ŚMIECIARZA SIĘ NIE KOPIE!'; }
-  function talk(p) { if (p.kind === 'cow') return 'MUU.'; if (p.kind === 'old') { p.talks = (p.talks || 0) + 1; return p.P.talk[(p.talks - 1) % p.P.talk.length]; } return BINMEN(); }
+  function talk(p) { if (p.kind === 'van') return courier.talk(); if (p.kind === 'cow') return 'MUU.'; if (p.kind === 'old') { p.talks = (p.talks || 0) + 1; return p.P.talk[(p.talks - 1) % p.P.talk.length]; } return BINMEN(); }
   // (a paper: to a bin man, caught; onto a windscreen backing out, the driver stops; into a sprinkler, it turns the other way)
   function paper(Pp) {
+    { const cr = courier.paper(Pp); if (cr) return cr; }
     for (const p of people) { if (p.m.paperT > 0 || Math.hypot(p.x - Pp.x, p.z - Pp.z) > .9) continue; p.m.paperT = 30; if (p.kind === 'cow') return { p, text: ['MUU?', 'MUUU... (CZYTA)', 'MUU! HOROSKOP!'][rnd() * 3 | 0], who: 'cow', pts: 1, label: 'KROWA Z GAZETĄ! +1' }; if (p.kind === 'old') return { p, text: p.P.paper, who: 'old', pts: 1, label: 'DO RĄK! +1' }; return { p, text: BINPAPER(), who: 'binman', pts: 2, label: 'DLA ŚMIECIARZA! +2' }; }
     for (const K of backers) { if (!(K.st === 'out' || K.st === 'lights' || K.st === 'wait') || Math.hypot(K.g.position.x - Pp.x, K.g.position.z - Pp.z) > 1.8) continue; K.st = 'wait'; K.t = 0; return { p: { g: K.g }, text: SORRY(), who: 'driver', pts: 2, label: 'NA SZYBĘ! +2' }; }
     for (const W of sprinklers) { if (W.flipT || Math.hypot(W.p.x - Pp.x, W.p.z - Pp.z) > 1) continue; W.flipT = 2; W.dir *= -1; return { p: { g: W.g }, text: 'PSSST!', who: 'sprinkler', pts: 1, label: 'ZRASZACZ! +1' }; }
     return null; }
   // (the herd on the road: for the traffic to stop before each cow, as before someone on a zebra)
   const crossing = () => herd.on ? herd.cows.filter(c => Math.abs(c.d0 - c.prog) < track.ROAD + 1.5).map(c => ({ s: wrap(herd.i + Math.round(c.ds / ds)) * ds, d: hs * (c.d0 - c.prog) })) : [];
-  const api = { id: 'classic', wave: false, prog: 0, clear: null, crossing, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
+  const courier = createCourier({ THREE, toon, track, scene, cars, ds, wrap, pv, rnd });
+  const api = { id: 'classic', wave: false, prog: 0, clear: null, boss: false, endS: null, courier, crossing, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
 }

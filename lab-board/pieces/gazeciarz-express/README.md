@@ -6,6 +6,13 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 7: boss w piątek, kurier w żółtej furgonetce
+
+- na Zimie (piątek) jedzie przed tobą kurier: staje pod domami abonentów z paczką, a dom, do którego dotrze pierwszy, jest przejęty (bez punktów, zadowolenie w dół; gazeta tam już nic nie da)
+- gdy go dogonisz, rzuca paczkami z tylnych drzwi: w ciebie (trafienie = wywrotka), a paczki zostają na jezdni jako przeszkody (podskok C albo omiń)
+- gazeta w szybę: kurier hamuje (+3); kopniak w lusterko, gdy jedziesz obok: zjeżdża na pobocze; na dach furgonetki da się wskoczyć, da się ją przeskoczyć; wjechanie w bok = wywrotka
+- gdy ucieknie ci daleko (ponad 45 m), czeka przy krawężniku i nikogo nie przejmuje; przed torem zjeżdża w boczną
+
 ### Wersja 6: każdy tor ma swój numer
 
 - Kasztanowa: na trudnym pasie auto zaparkowane pod dużym skokiem, nad nim lecisz (albo lądujesz na dachu)
