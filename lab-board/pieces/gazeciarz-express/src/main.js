@@ -561,16 +561,16 @@ function breakStreak() { const had = (B.streak || 0) >= 2; B.streak = 0; if (had
 // a subscriber ridden past without a paper: the streak goes (counted once each time by)
 function stepPassed() { if (foot.active) return; const fx = Math.sin(B.yaw), fz = Math.cos(B.yaw);
   for (const d of track.doors) { if (!d.sub || d.done) continue; const dx = d.p.x - B.x, dz = d.p.z - B.z; if (Math.abs(dx) + Math.abs(dz) > 40) { d.seen = false; continue; } const fw = dx * fx + dz * fz, l = Math.hypot(dx, dz);
-    if (fw > 3 && l < 26) d.seen = true; else if (d.seen && fw < -9 && B.v > 2) { d.seen = false; if (B.streak > 0) { breakStreak(); flash('Minąłeś prenumeratora bez gazety'); } } } }
+    if (fw > 3 && l < 26) d.seen = true; else if (d.seen && fw < -9 && B.v > 2) { d.seen = false; if (!d.satMiss) { d.satMiss = true; satAdd(-3); } if (B.streak > 0) { breakStreak(); flash('Minąłeś prenumeratora bez gazety'); } } } }
 // a paper come down by a house: the right title for its subscriber (paid in full), the wrong one (a little, and words), or a house that takes none
 function deliver(hi, base, at, how, title, dist = 0) {
   const d = track.doors[hi], sub = d && d.sub, up = at.clone().setY(at.y + 1.3);
   if (!sub) { breakStreak(); hud.rant(up, pickOf(['NIE ZAMAWIAŁEM!', 'ZA DARMO? NO TO BIORĘ.', 'ZNOWU ULOTKI?!', 'JA NIE CZYTAM, JA OGLĄDAM!']), false); flash('Ten dom nic nie prenumeruje'); return false; }
   if (sub === title && d.rush > performance.now()) { d.rush = 0; rushOff(d); score(5, at.clone().setY(at.y + .6), 'PILNE! +5', '#ff8a5a'); logEv('rush', at.x, at.z); audio.play('trick'); }
-  if (sub === title) { B.delivered = (B.delivered || 0) + 1; B.streak = (B.streak || 0) + 1; const mult = streakMult(), pts = base * mult; score(pts, at, '+' + pts + (mult > 1 ? ' x' + mult : ''), mult > 1 ? '#9fd27a' : '#efc970');
+  if (sub === title) { satAdd(2); B.delivered = (B.delivered || 0) + 1; B.streak = (B.streak || 0) + 1; const mult = streakMult(), pts = base * mult; score(pts, at, '+' + pts + (mult > 1 ? ' x' + mult : ''), mult > 1 ? '#9fd27a' : '#efc970');
     if (B.streak % 3 === 0 && mult > 1) { hud.impact(at.clone().setY(at.y + 1.2), 'SERIA x' + mult + '!'); audio.play('trick'); }
     flash(`${how}: ${TITLES[title].short.toLowerCase()} dla prenumeratora! +${pts}${mult > 1 ? ` (seria ${B.streak}, x${mult})` : ''}`); drawStreak(); farThrow(dist, at); if (how === 'Do skrzynki') RUN.boxed = (RUN.boxed || 0) + 1; return true; }
-  breakStreak(); const n = Math.max(1, base >> 1); score(n, at, '+' + n, '#cf5a3e'); hud.rant(up, pickOf([`JA CZYTAM ${TITLES[sub].short}!`, 'TO NIE MOJA GAZETA!', 'POMYLIŁEŚ GAZETY, MŁODY!']), false); flash(`Zły tytuł: tu czytają ${TITLES[sub].short.toLowerCase()}. +${n}`); return false;
+  satAdd(-2); breakStreak(); const n = Math.max(1, base >> 1); score(n, at, '+' + n, '#cf5a3e'); hud.rant(up, pickOf([`JA CZYTAM ${TITLES[sub].short}!`, 'TO NIE MOJA GAZETA!', 'POMYLIŁEŚ GAZETY, MŁODY!']), false); flash(`Zły tytuł: tu czytają ${TITLES[sub].short.toLowerCase()}. +${n}`); return false;
 }
 const dotG = new THREE.CircleGeometry(.16, 12).rotateX(-Math.PI / 2), dotM = new THREE.MeshBasicMaterial({ color: '#1b1510', transparent: true, opacity: .45, depthWrite: false });
 const papers = [];
@@ -598,7 +598,7 @@ const shards = [];
 const cracks = [];
 function breakWindow(w, remote) {
   if (!remote) net.send({ k: 'win', i: track.windows.indexOf(w) });
-  w.broken = true; aud('glass', w.p); if (!remote) { B.windows = (B.windows || 0) + 1; logEv('window', w.p.x, w.p.z); if (track.classic && !track.doors[w.house]?.sub) score(2, w.p.clone().add(new THREE.Vector3(0, .8, 0)), 'SZYBA! +2', '#efc970'); if (track.classic) locals?.angry?.(w); } { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
+  w.broken = true; aud('glass', w.p); if (!remote) { B.windows = (B.windows || 0) + 1; logEv('window', w.p.x, w.p.z); if (track.classic && !track.doors[w.house]?.sub) score(2, w.p.clone().add(new THREE.Vector3(0, .8, 0)), 'SZYBA! +2', '#efc970'); if (track.doors[w.house]?.sub) satAdd(-4); if (track.classic) locals?.angry?.(w); } { const d = track.doors[w.house]; if (d && d.sub) { d.sub = null; if (d.plaque) d.plaque.visible = false; setTimeout(() => hud.rant(w.p.clone().add(new THREE.Vector3(0, 1.4, 0)), pickOf(['REZYGNUJĘ Z PRENUMERATY!', 'KONIEC Z GAZETAMI!', 'ODPISUJĘ SIĘ!']), false), 700); } } B.fame = (B.fame || 0) + .4; quests.onWindow(w); const m = new THREE.Mesh(new THREE.PlaneGeometry(w.hw * 1.9, w.hh * 1.9), crackM); m.position.copy(w.p).addScaledVector(w.n, .015); m.lookAt(m.position.clone().add(w.n)); scene.add(m); cracks.push(m);
   for (let k = 0; k < 12; k++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.07, .06), shardM); s.position.copy(w.p).add(new THREE.Vector3((Math.random() - .5) * .8, (Math.random() - .5) * .6, (Math.random() - .5) * .8)); scene.add(s);
     shards.push({ m: s, v: w.n.clone().multiplyScalar(1 + Math.random() * 2).add(new THREE.Vector3((Math.random() - .5) * 2, Math.random() * 2, (Math.random() - .5) * 2)), t: 0 }); }
   score(2, w.p, '+2', '#cf5a3e'); hud.rant(w.p.clone().add(new THREE.Vector3(0, .9, 0)));   // (and someone inside is not pleased)
@@ -985,7 +985,7 @@ function stepRivals(dt) { if (!LV?.rivals) return; const L0 = track.len; for (co
     if (!b.tgt) for (const mb of track.mailboxes) { if (mb.done) continue; if (mb.s0 === undefined) { const q0 = track.probe(mb.o.position.x, mb.o.position.z, -1); mb.s0 = q0.s; mb.d0 = q0.d; } const a2 = ((((mb.s0 - b.s) * b.dir) % L0) + L0) % L0; if (a2 > 3 && a2 < 16) { const d = track.doors[mb.house ?? (mb.house = nearestDoor(mb.o.position))]; if (d?.sub && !d.done) { b.tgt = mb; break; } } }
     const want = b.tgt ? Math.sign(b.tgt.d0) * Math.min(3.3, Math.abs(b.tgt.d0) - 1.2) : b.dir * 1.7; b.lane += (want - b.lane) * Math.min(1, dt * 2.2);
     for (const mb of track.mailboxes) { if (mb.done) continue; const w = mb.o.position; if (Math.abs(w.x - b.x) + Math.abs(w.z - b.z) > 6 || Math.hypot(w.x - b.x, w.z - b.z) > 2.8) continue; const hi = mb.house ?? (mb.house = nearestDoor(w)), d = track.doors[hi]; if (!d?.sub || d.done) continue;
-      mb.done = true; mb.rival = true; d.done = true; RUN.stolen = (RUN.stolen || 0) + 1; mb.flag.rotation.x = -Math.PI / 2; const rp = new THREE.Mesh(paperG, KUR_M); rp.position.copy(w).add(new THREE.Vector3(0, 1.15, 0)); rp.rotation.z = Math.PI / 2; scene.add(rp); (FIN.junk ||= []).push(rp);
+      mb.done = true; mb.rival = true; d.done = true; RUN.stolen = (RUN.stolen || 0) + 1; satAdd(-3); mb.flag.rotation.x = -Math.PI / 2; const rp = new THREE.Mesh(paperG, KUR_M); rp.position.copy(w).add(new THREE.Vector3(0, 1.15, 0)); rp.rotation.z = Math.PI / 2; scene.add(rp); (FIN.junk ||= []).push(rp);
       hud.rant(b.r.root.position.clone().setY(b.r.root.position.y + 1.9), draw('kurier', KURIER), true); if (RUN.stolen === 1) flash('Kurier podebrał skrzynkę! Gazeta prenumeratora przepadła'); logEv('rival_steal', w.x, w.z); break; } } }
 // the world's things that go on whether he rides or walks: the crossings, the Kurier's couriers, the geese
 function stepGeese(dt, inp) {
@@ -1409,7 +1409,7 @@ function drawHud(dt) {
   const fs = foot.status(), head = foot.active ? new THREE.Vector3(foot.me.x, foot.me.y + 1.9, foot.me.z) : rider.root.position.clone().add(new THREE.Vector3(0, 1.72, 0));   // (just over his cap)
   touch.setMode(foot.active ? (foot.fighting ? 'fight' : 'foot') : track.classic ? 'classic' : 'bike'); touch.show(!menu.open && !asking && !look.isOpen && !shop.isOpen && !runUI.isOpen && !book.isOpen && !(talk.isOpen && !talk.isLight)); touch.chat(!foot.active && quests.canChat);
   hudEl.style.visibility = menu.page === 'title' ? 'hidden' : '';   // (the title screen: nothing of the ride's own display behind it)
-  hud.draw(dt, project, { title: menu.page === 'title', bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks(), mpMarks(), jobMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
+  hud.draw(dt, project, { title: menu.page === 'title', bagX: menu.page !== 'title' ? hudBag.left : null, bagY: hudBag.top, marks: quests.marks().concat(subMarks(), mpMarks(), jobMarks()), mix: menu.page !== 'title' ? { order: ACT().map(t => ({ n: B.mix[t], col: TITLES[t].col, on: t === TK[B.sel] })), name: TITLES[TK[B.sel]].short } : null, quests: quests.tracker(), projEdge: projectEdge, hp: menu.page !== 'title' ? (B.hp ?? 100) : null, sat: menu.page !== 'title' && LV && B.sat != null ? B.sat : null, fame: B.fame || 0, siren: quests.siren, power: B.charge ? B.charge.p : -1, head, tired: B.tired, spent: B.spent, rattled: Math.max(0, ((B.rattled || 0) - 2.2) / 4.3), barks: barkers.filter(n => n.dog.bark > 0).map(n => new THREE.Vector3(n.dog.x, B.y + .95, n.dog.z)), papers: B.papers, points: B.points, fight: fs && fs.fight, low: fs ? fs.low : 0, star: fs && fs.star, cross: foot.active && mouse.locked && foot.view === 'first' && !(fs && fs.star), bike: bikeMark() });
 }
 // ---------- R: start again (after a yes) ----------
 let asking = false;
@@ -1729,7 +1729,7 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
   // ---------- the layout, by the stretch's difficulty D (0: the first stretch, 1: the last): a warm-up; the fork into two lanes (the
   // easy one on the left, the hard one on the right: its points count twice); the lanes joining; the run to the line. A jump's rings
   // and its air targets lie on the flight the game's own physics gives off that ramp at the speed its pad sets (so it can be flown) ----------
-  const ALL = LVM.LEVELS.filter(l => !l.soon), D = THREE.MathUtils.clamp(ALL.findIndex(l => l.id === LV.id) / Math.max(1, ALL.length - 1), 0, 1), L2 = W / 2;
+  const ALL = LVM.LEVELS.filter(l => !l.soon && (!track.classic || l.classic)), D = THREE.MathUtils.clamp(ALL.findIndex(l => l.id === LV.id) / Math.max(1, ALL.length - 1), 0, 1), L2 = W / 2;   // (Express: the difficulty over its own five streets, 0 the first, 1 the last)
   // (a jump's flight: flown once by the game's own ride() from its pad at the pad's speed, the speed held to the lip as the pad holds
   // it in play; the rider's state, the sounds, any fall kept out and put back after. → the points the rider's middle passed in the air)
   const flown = (q, v, lip) => { const keep = { ...B }, rp = rider.root.position.clone(), rq = rider.root.quaternion.clone(), rv = rider.root.visible, ap = audio.play, fx = q.f.x, fz = q.f.z, out = []; audio.play = () => { }; const q0 = track.probe(q.x, q.z, q.i);
@@ -1890,14 +1890,26 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
 // and one gives up (the door goes dark); a day without a miss wins one back; Sunday done, the week is passed (a bonus); fewer than three
 // left, it starts again ----------
 const DAYS = ['PONIEDZIAŁEK', 'WTOREK', 'ŚRODA', 'CZWARTEK', 'PIĄTEK', 'SOBOTA', 'NIEDZIELA'];
+// ---------- Express: the week is its five streets (K1 Monday … K5 Friday). Day to day carry on: the week's score, the readers' mood
+// (B.sat, 0-100, a bar under the health) and the money; a street can be ridden again, its day then counts its best ----------
+const XLV = () => LVM.LEVELS.filter(l => l.classic && !l.soon), xDay = L => Math.max(0, XLV().findIndex(l => l.id === L.id));
+function xWeek() { const S = LVM.load(); return (S.xw ||= { sat: 60, days: [] }); }
+function satAdd(n) { if (B.sat == null || !LV || RUN.done) return; B.sat = Math.max(0, Math.min(100, B.sat + n)); }
 function weekStart(L) { const S = LVM.load(), ds = track.doors; S.week ||= {}; let W = S.week[L.id];
   // (Express: a door off the street (past the finish, behind the start) never reached: no subscriber there, in the week either)
   { const N = track.N, iJ = track.startI, span = Math.round(N * L.finish.to), off = d => { const i = d.i ?? track.probe(d.p.x, d.p.z, -1).i; return ((((i - iJ) % N) + N) % N) > span; };
     ds.forEach((d, k) => { if (!off(d)) return; d.sub = null; if (W) { W.subs[k] = null; W.miss[k] = 0; } }); }
   if (!W || W.n !== ds.length) { W = S.week[L.id] = { day: 0, n: ds.length, subs: ds.map(d => d.sub || null), miss: ds.map(() => 0) }; LVM.save(); }
-  ds.forEach((d, i) => { d.sub = W.subs[i] ?? null; d.miss = W.miss[i] || 0; }); assignSubs(false, true); RUN.week = W;
-  const n = W.subs.filter(Boolean).length; setTimeout(() => flash(`${DAYS[W.day]}: ${n} abonentów. Dwa dni bez gazety i abonent rezygnuje, dzień bez pudła odzyskuje jednego.`), 1800); }
-function weekEnd() { const W = RUN.week; if (!W) return null; const ds = track.doors, of = W.subs.filter(Boolean).length; let lost = 0, all = true, warned = 0;
+  ds.forEach((d, i) => { d.sub = W.subs[i] ?? null; d.miss = W.miss[i] || 0; d.satMiss = false; }); assignSubs(false, true); RUN.week = W;
+  // (Express: the day is the street's place in the week; Monday starts a new week; the readers' mood carried from the day before)
+  const day = xDay(L); W.day = day; if (day === 0) { const S2 = LVM.load(); S2.xw = { sat: 60, days: [] }; LVM.save(); } B.sat = RUN.sat0 = xWeek().sat;
+  const n = W.subs.filter(Boolean).length; setTimeout(() => flash(`${DAYS[day]}: ${n} abonentów. Zadowolenie czytelników: ${B.sat}%.`), 1800); }
+function weekEnd(r) { const W = RUN.week; if (!W) return null;
+  // (Express: no subscriber gives up (each street comes once a week); the day's points and the readers' mood kept for the week)
+  if (LV?.classic) { const X = xWeek(), d = xDay(LV), of = W.subs.filter(Boolean).length, pts = r?.pts || 0; X.sat = B.sat ?? X.sat; if (!X.days[d] || pts >= X.days[d].pts) X.days[d] = { id: LV.id, pts, delivered: r?.delivered || 0, of };
+    const score = X.days.reduce((a, q) => a + (q?.pts || 0), 0); LVM.save(); RUN.week = null;
+    return { express: true, day: DAYS[d], next: d < 4 ? DAYS[d + 1] : null, of, left: of, lost: 0, warned: 0, back: false, over: false, full: d === 4, sat: X.sat, sat0: RUN.sat0 ?? X.sat, score }; }
+  const ds = track.doors, of = W.subs.filter(Boolean).length; let lost = 0, all = true, warned = 0;
   ds.forEach((d, i) => { if (!W.subs[i]) return; if (d.done) { W.miss[i] = 0; return; } all = false; if (++W.miss[i] >= 2) { W.subs[i] = null; W.miss[i] = 0; lost++; } else warned++; });
   let back = false; if (all) { const A = ACT(), free = ds.map((d, i) => i).filter(i => !W.subs[i] && !ds[i].mine && !ds[i].stall); if (free.length) { W.subs[free[Math.random() * free.length | 0]] = A[Math.random() * A.length | 0]; back = true; } }
   const left = W.subs.filter(Boolean).length, day = W.day, over = left < 3, full = !over && day >= 6, S = LVM.load();
@@ -1940,7 +1952,7 @@ function stepPerf(dt) { if ((PCULL.t -= dt) > 0) return; PCULL.t = .25;
   for (const e of PCULL.list) { if (!e.probe) continue; e.probe.getWorldPosition(PCULL.v); const d2 = (PCULL.v.x - B.x) ** 2 + (PCULL.v.z - B.z) ** 2, show = d2 < R2;
     for (const m of e.ms) { m.visible = show; if (e.sk) m.castShadow = show && d2 < S2; } } }
 function finishLevel() { for (const R of JOBRUN) if (!R.done && R.j.kind === 'wyscig') jobEnd(R, RUN.t <= R.limit); RUN.done = true; const L = LV, wasOpen = new Set(LVM.LEVELS.filter(l => LVM.isOpen(l.id)).map(l => l.id));
-  const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0, pts: Math.max(0, B.points - (RUN.p0 ?? B.points)) }, wk = L.classic ? weekEnd() : null; if (wk?.full) B.points += 25;
+  const r = { time: RUN.t, delivered: B.delivered || 0, thrown: B.thrown || 0, acc: B.thrown ? (B.delivered || 0) / B.thrown : 0, falls: B.falls || 0, earned: B.earned || 0, windows: B.windows || 0, pts: Math.max(0, B.points - (RUN.p0 ?? B.points)) }, wk = L.classic ? weekEnd(r) : null; if (wk?.full) B.points += 25;
   const before = LVM.starsOf(L.id), rec = LVM.record(L, r), opened = LVM.LEVELS.filter(l => LVM.isOpen(l.id) && !wasOpen.has(l.id)).map(l => l.soon ? l.name + ' (WKRÓTCE)' : l.name); saveCampaign();
   const got = LVM.rewardsFor(L.id, before, rec.best.stars), bonus = Math.round((B.earned || 0) * LVM.modBonus(RUN.mods || [])), inc = LVM.income();
   for (const g of got) { if (g.cash) B.points += g.cash; if (g.part) shop.grant(g.part[0], g.part[1]); g.name = g.cash ? `${g.cash} ZŁ` : partLabel(g.part[0], g.part[1]); }
