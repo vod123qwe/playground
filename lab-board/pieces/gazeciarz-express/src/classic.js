@@ -186,7 +186,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
         if (Gu.k > .82 && R.air && (R.h || 0) > .25) Gu.dodged = true;
         if (Gu.k >= 1.08 || R.foot) { Gu.st = 'away'; Gu.k = 0; Gu.sh.visible = false; Gu.from.copy(Gu.p); if (!R.foot) ev.push({ kind: 'gull', ok: Gu.dodged, at: Gu.p.clone() }); } }
       else if (Gu.st === 'away') { Gu.k += dt / 2.2; const i = wrap(Math.round((R.s || 0) / ds)), to = pv(i, hs * (track.PAVE + 40)); to.y += 12; Gu.p.lerpVectors(Gu.from, to, Math.min(1, Gu.k)); Gu.g.position.copy(Gu.p); Gu.g.rotation.y = Math.atan2(to.x - Gu.from.x, to.z - Gu.from.z);
-        if (Gu.k >= 1) { Gu.st = 'wait'; Gu.g.visible = false; Gu.t = 13 + rnd() * 10; } } }
+        if (Gu.k >= 1) { Gu.st = 'wait'; Gu.g.visible = false; Gu.t = (api.prog > .55 ? 7 + rnd() * 5 : api.prog < .3 ? 18 + rnd() * 10 : 13 + rnd() * 10); } } }
     // (the rollerbladers: along the road by the promenade's kerb, both ways, weaving)
     for (const K of skaters) { K.s = ((K.s + K.dir * 4.6 * dt) % L + L) % L; K.ph += dt * 2.2; const i = wrap(Math.round(K.s / ds)), A = S[i];
       { const ai = wrap(i + K.dir * Math.round(2.2 / ds)), ap = pv(ai, hs * (track.ROAD - 1.1)), bl = solidAt(ap.x, ap.z, ai, .35); if (bl?.kind === 'ramp' && !(K.jumpT > 0)) K.jumpT = .62; K.off = (K.off || 0) + (((bl && bl.kind !== 'ramp') ? 1.6 : 0) - (K.off || 0)) * Math.min(1, dt * 3); }
@@ -225,7 +225,7 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
         if (done === H.cows.length || Math.abs(rel(H.i * ds, R)) > 80) { for (const c of H.cows) { const k = people.indexOf(c.who); if (k >= 0) people.splice(k, 1); } H.on = false; H.paid = false; H.t = 22 + rnd() * 14; for (const c of H.cows) c.g.visible = false; H.farmer.g.visible = false; } } }
     // (the school trip: put 30 m ahead of him by the far kerb, riding his way slowly in a line; the teacher first)
     if (track.park && !R.foot) { const T = trip; T.t -= dt;
-      if (!T.on && T.t <= 0 && Math.abs(R.v) > 2 && R.s != null) { T.on = true; T.dir = R.along || 1; T.s = (R.s || 0) + T.dir * 34; T.hit = false; T.done = false; T.wasBehind = true; for (const K of T.kids) K.g.visible = true; ev.push({ kind: 'shout', at: pv(wrap(Math.round(T.s / ds)), os * (track.ROAD - 1)).add(V(0, 2, 0)), text: TRIP() }); }
+      if (!T.on && T.t <= 0 && Math.abs(R.v) > 2 && R.s != null && !(api.prog < .45)) { T.on = true; T.dir = R.along || 1; T.s = (R.s || 0) + T.dir * 34; T.hit = false; T.done = false; T.wasBehind = true; for (const K of T.kids) K.g.visible = true; ev.push({ kind: 'shout', at: pv(wrap(Math.round(T.s / ds)), os * (track.ROAD - 1)).add(V(0, 2, 0)), text: TRIP() }); }
       if (T.on) { T.s = ((T.s + T.dir * 2.8 * dt) % L + L) % L;
         for (const K of T.kids) { const s = ((T.s - T.dir * K.k * 2.1) % L + L) % L, i = wrap(Math.round(s / ds)), A = S[i], ai = wrap(i + T.dir * Math.round(3 / ds)), ap = pv(ai, os * (track.ROAD - 1)); K.off = (K.off || 0) + ((solidAt(ap.x, ap.z, ai, .5) ? 1.9 : 0) - (K.off || 0)) * Math.min(1, dt * 2.5); const p = pv(i, os * (track.ROAD - 1 - K.off + Math.sin(clock * 2 + K.k) * .15)); K.g.position.copy(p); K.g.rotation.y = Math.atan2(A.f.x * T.dir, A.f.z * T.dir);
           if (!R.air && !T.hit && Math.hypot(R.x - p.x, R.z - p.z) < .7) { T.hit = true; ev.push({ kind: 'bump', p: { g: K.g } }); } }
@@ -307,5 +307,5 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     return null; }
   // (the herd on the road: for the traffic to stop before each cow, as before someone on a zebra)
   const crossing = () => herd.on ? herd.cows.filter(c => Math.abs(c.d0 - c.prog) < track.ROAD + 1.5).map(c => ({ s: wrap(herd.i + Math.round(c.ds / ds)) * ds, d: hs * (c.d0 - c.prog) })) : [];
-  const api = { id: 'classic', wave: false, crossing, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
+  const api = { id: 'classic', wave: false, prog: 0, crossing, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
 }

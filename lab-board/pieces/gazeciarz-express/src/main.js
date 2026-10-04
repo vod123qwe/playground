@@ -686,7 +686,10 @@ const difficulty = () => LV ? (LV.pace - 1) / .35 : Math.min(1, trip.dist / 8000
 // the run's level: up one every kilometre (to 6): more cars out and a little quicker, dogs keener; said when it goes up
 const level = () => Math.min(6, 1 + Math.floor(trip.dist / 1000)), carsAt = l => Math.min(6, l + 1), heat = l => .55 + (l - 1) * .13;
 const LVL_SAY = ['', '', 'Więcej aut na drodze', 'Psy coraz bardziej czujne', 'Ruch jak w godzinach szczytu', 'Kierowcy się spieszą', 'Pełny poranek! Trzymaj się'];
-const carsNow = () => LV ? LV.cars : carsAt(level()), heatNow = () => LV ? LV.heat : heat(level());
+// (Express: the street builds up to its course: the first third quiet (a car fewer), the middle as set, the last stretch before the
+// course its rush hour (a car more); streetP: how far along the street he is, 0 at the start, 1 at the finish)
+function streetP() { if (!LV?.finish?.m || !RUN.cps?.length) return 0; const N = track.N, iJ = track.startI, iF = RUN.cps[RUN.cps.length - 1], span = (((iF - iJ) % N) + N) % N || 1, q = track.probe(B.x, B.z, B.hint); return Math.min(1, ((((q.i - iJ) % N) + N) % N) / span); }
+const carsNow = () => LV ? (LV.finish?.m ? Math.max(1, LV.cars + (streetP() < .3 ? -1 : streetP() > .55 ? 1 : 0)) : LV.cars) : carsAt(level()), heatNow = () => LV ? LV.heat : heat(level());
 function stepLevel() { if (LV) return; const l = level(); if (l === B.lvl) return; if (B.lvl) { flash(`POZIOM ${l}: ${LVL_SAY[l]}`); audio.play('trick'); } B.lvl = l; }
 function hurt(n, why) { if (endT > 0) return; audio.play('hurt', { vol: .6 }); B.hp = Math.max(0, (B.hp ?? 100) - n); if (B.hp <= 0) { endT = 2.4; endWhy = why || 'Zdrowie się skończyło.'; } }
 let endT = 0, endWhy = '';
@@ -1545,7 +1548,7 @@ function setFog(on) { scene.fog.near = on ? 12 : FOG0.near; scene.fog.far = on ?
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if (L0.region !== track.region || (L0.map || '') !== track.map) { goRegion(L0.region, id, L0.map); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   if (L.finish.m) L.finish = { ...L.finish, to: Math.min(L.finish.m, track.len - 200) / track.len };   // (at least 200 m of the road going on between the finish and the start behind him)
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; if (!(id === 'p1' && !LVM.load().done?.p1)) { C.iy = 0; C.yaw = B.yaw; C.init = false; } const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; RUN.p0 = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; if (L.titles > 1) { const A = ACT(); TK.forEach(t => B.mix[t] = 0); A.forEach((t, k) => B.mix[t] = Math.floor(B.papers / A.length) + (k < B.papers % A.length ? 1 : 0)); }
-  RUN.week = null; if (L.classic) weekStart(L);
+  RUN.week = null; RUN.rushHour = false; if (L.classic) weekStart(L);
   traffic.clearAround?.(track.probe(B.x, B.z, B.hint).s, 80);
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   // (the finish where the run starts (a whole lap): the gate and the finale's course not there yet, at home, in sight from the start;
@@ -1778,7 +1781,7 @@ const RUSH = { t: 10, marks: [] }, rushT = (() => { const c = document.createEle
 function rushOff(d) { const k = RUSH.marks.findIndex(m => m.d === d); if (k >= 0) { scene.remove(RUSH.marks[k].s); RUSH.marks.splice(k, 1); } }
 function stepRush(dt) { if (!track.classic || !LV || !RUN.go) return; const now = performance.now();
   for (const m of RUSH.marks.slice()) { m.s.visible = ((now / 160) | 0) % 2 === 0 || m.d.rush - now > 4000; if (m.d.done || m.d.rush <= now) { if (!m.d.done && m.d.rush) flash('Za późno z pilną gazetą.'); m.d.rush = 0; rushOff(m.d); } }
-  if ((RUSH.t -= dt) > 0 || RUSH.marks.length) return; RUSH.t = 14 + Math.random() * 8; const q = track.probe(B.x, B.z, B.hint), L0 = track.N * track.ds, al = Math.sign(Math.sin(B.yaw) * q.f.x + Math.cos(B.yaw) * q.f.z) || 1;
+  if ((RUSH.t -= dt) > 0 || RUSH.marks.length) return; { const p = streetP(); if (LV.finish?.m && p < .3) { RUSH.t = 3; return; } RUSH.t = LV.finish?.m && p > .55 ? 8 + Math.random() * 5 : 14 + Math.random() * 8; } const q = track.probe(B.x, B.z, B.hint), L0 = track.N * track.ds, al = Math.sign(Math.sin(B.yaw) * q.f.x + Math.cos(B.yaw) * q.f.z) || 1;
   const c = track.doors.filter(d => d.sub && !d.done && !d.mine).map(d => ({ d, a: ((((track.probe(d.p.x, d.p.z, d.i).s - q.s) * al) % L0) + L0) % L0 })).filter(o => o.a > 35 && o.a < 90).sort((x, y) => x.a - y.a)[0]; if (!c) return;
   c.d.rush = now + 12000; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: rushT, depthTest: false })); s.scale.set(1.6, .6, 1); s.position.copy(c.d.p).addScaledVector(c.d.n, -2.6); s.position.y += 3.2; s.renderOrder = 5; scene.add(s); RUSH.marks.push({ d: c.d, s });
   flash('PILNE! ' + TITLES[c.d.sub].short + ' za ~' + Math.round(c.a) + ' m, 12 s'); audio.play('ui'); }
@@ -1878,6 +1881,8 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   { const st = quests.police?.stops || 0; if (st > (RUN.stops ?? st)) logEv('police', B.x, B.z); RUN.stops = st; RUN.maxStreak = Math.max(RUN.maxStreak || 0, B.streak || 0); }
   if (RUN.snaps?.length && RUN.t >= RUN.snaps[0].at) { const q = RUN.snaps.shift(); try { q.e.img = photo(camera); } catch { } }
   stepLive(dt); stepFinale(dt);
+  // (Express: how far along the street, for the locals' pace; past half way the rush hour, said once)
+  { const p = streetP(); if (locals) locals.prog = p; if (LV.finish?.m && !RUN.rushHour && p > .55) { RUN.rushHour = true; flash('Godzina szczytu! Więcej aut, pilne gazety, tor już blisko.'); audio.play('bell', { vol: .5 }); } }
   if ((RUN.chk -= dt) > 0) return; RUN.chk = .1; stepJobs();
   const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
   const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;
