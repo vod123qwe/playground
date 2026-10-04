@@ -1560,7 +1560,7 @@ function setFog(on) { scene.fog.near = on ? 12 : FOG0.near; scene.fog.far = on ?
 function startLevel(id) { const L0 = LVM.LEVEL(id); if (!L0 || L0.soon) return; if (L0.region !== track.region || (L0.map || '') !== track.map) { goRegion(L0.region, id, L0.map); return; } const mods = LVM.mods(), L = LVM.withMods(L0, mods); RUN.mods = mods; if (modes.id) modes.stop(); if (mp.on) mp.stop(); if (fin.isOpen) fin.close();
   if (L.finish.m) L.finish = { ...L.finish, to: Math.min(L.finish.m, track.len - 200) / track.len };   // (at least 200 m of the road going on between the finish and the start behind him)
   LV = L; SUBR = seeded(L.seed); resetGame(); SUBR = Math.random; if (!(id === 'p1' && !LVM.load().done?.p1)) { C.iy = 0; C.yaw = B.yaw; C.init = false; } const S = LVM.load(); B.points = S.money || 0; B.lastPts = B.points; RUN.p0 = B.points; B.papers = L.papers; B.mix = { trabka: B.papers, wiesci: 0, sport: 0 }; if (L.titles > 1) { const A = ACT(); TK.forEach(t => B.mix[t] = 0); A.forEach((t, k) => B.mix[t] = Math.floor(B.papers / A.length) + (k < B.papers % A.length ? 1 : 0)); }
-  RUN.week = null; RUN.rushHour = false; locals?.courier?.clear(); if (L.classic) weekStart(L);
+  RUN.week = null; RUN.rushHour = false; RUN.adv = false; RUN.paperSeen = false; locals?.courier?.clear(); if (L.classic) weekStart(L);
   traffic.clearAround?.(track.probe(B.x, B.z, B.hint).s, 80);
   const iJ = track.startI, N = track.N, steps = Math.round(L.finish.to * 4); RUN.cps = []; for (let k = 1; k <= steps; k++) RUN.cps.push(((iJ + L.finish.dir * Math.round(N * L.finish.to * k / steps)) % N + N) % N);
   // (the finish where the run starts (a whole lap): the gate and the finale's course not there yet, at home, in sight from the start;
@@ -1905,7 +1905,11 @@ function stepFinale(dt) { if (!FIN.on || !LV) return; const me = foot.active ? f
   // the rings: through one in the air
   for (const R of FIN.rings) { R.o.rotation.z += dt * 2; if (R.got) { R.o.scale.multiplyScalar(Math.max(0, 1 - dt * 4)); continue; } const p = new THREE.Vector3(me.x, (B.y || 0) + 1, me.z); if (p.distanceTo(R.o.position) < 1.35) { R.got = true; FIN.res.rings++; finScore(3, R.o.position.clone().setY(R.o.position.y + .6), 'OBRĘCZ!'); } } }
 function logEv(kind, x, z, more) { if (!LV || RUN.done) return; const e = { kind, x, z, t: RUN.t, ...more }; if (!(RUN.log ||= []).some(q => q.kind === kind)) (RUN.snaps ||= []).push({ e, at: RUN.t + (kind === 'dog' ? .2 : .5) }); RUN.log.push(e); }
-function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
+// (Express: a street's end is the end: the paper closed (Esc, the map, the workshop) and on to the next street, or the week's end after
+// the last; JESZCZE RAZ rides it again. No riding on past the finish)
+function expressNext() { if (!RUN.paperSeen || RUN.adv || fin.isOpen || map.isOpen || menu.open || shop.isOpen || garage.isOpen || asking) return; RUN.adv = true; B.v = 0;
+  setTimeout(() => { if (!RUN.done || fin.isOpen) { RUN.adv = false; return; } const nx = (LV.after || []).find(id => LVM.LEVEL(id) && !LVM.LEVEL(id).soon); if (nx) startLevel(nx); else goFinal(); }, 350); }
+function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); lvHud.classList.remove('on'); } if (LV?.finish?.m && RUN.done) { B.v = 0; expressNext(); return; } if (!LV || RUN.done) return; const me = foot.active ? foot.me : B;
   if (!RUN.go && Math.abs(foot.active ? foot.me.vf || 0 : B.v) > .5) RUN.go = true; if (RUN.go) RUN.t += dt;
   { const chased = barkers.some(n => n.dist < 6 && Math.abs(B.v) > 1); if (chased && !RUN.dogOn && RUN.t - (RUN.dogT ?? -99) > 6) { logEv('dog', B.x, B.z); RUN.dogT = RUN.t; } RUN.dogOn = chased; }
   { const g = !!quests.gang?.chase, sr = !!quests.siren; if (g && !RUN.gangOn) logEv('gang', B.x, B.z); if (sr && !RUN.sirenOn) logEv('chase', B.x, B.z); RUN.gangOn = g; RUN.sirenOn = sr; }
@@ -2030,7 +2034,7 @@ function finishLevel() { for (const R of JOBRUN) if (!R.done && R.j.kind === 'wy
   for (const R of JOBRUN) if (!R.done && R.j.kind === 'szarlotka' && (R.j.runs = (R.j.runs || 0) + 1) >= 2) jobEnd(R, false);
   { const S = LVM.load(); for (const j of S.jobs || []) { const R = JOBRUN.find(q => q.j.id === j.id); if (R) j.runs = R.j.runs; } LVM.save(); }
   LVM.save({ mods: [] }); saveCampaign();
-  audio.play('trick'); slowmo = .9; shutter(); let data; try { data = paperData(L, r, rec, opened); } catch (e) { console.error('paper', e); paperFail(L); return; } data.week = wk; data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); setTimeout(() => { B.v *= .3; clearFinale(); try { fin.open(data); } catch (e) { console.error('paper', e); paperFail(L); } }, 1100); }
+  audio.play('trick'); slowmo = .9; shutter(); let data; try { data = paperData(L, r, rec, opened); } catch (e) { console.error('paper', e); paperFail(L); return; } data.week = wk; data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); setTimeout(() => { B.v *= .3; clearFinale(); try { fin.open(data); RUN.paperSeen = true; } catch (e) { console.error('paper', e); paperFail(L); } }, 1100); }
 // (the paper failed to come together: said so, and on to the next street (or home after the last) a moment after)
 function paperFail(L) { flash('Meta! Gazeta dziś nie wyszła, jedziemy dalej.'); setTimeout(() => { const nx = (L.after || []).find(id => LVM.LEVEL(id) && !LVM.LEVEL(id).soon); if (fin.isOpen) fin.close(); nx ? startLevel(nx) : goHome(); }, 2600); }
 // the finish's flash: the screen white a blink, the shutter's click
