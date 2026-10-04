@@ -783,7 +783,7 @@ function ride(dt, inp) {
   if (track.classic && !B.air && !back && inp.brake < .1 && !(B.boostT > 0) && (B.v > 1 || inp.pedal > .05)) a = ((inp.pedal > .05 ? 6.6 * (inp.sprint ? 1.2 : 1) : 4) - B.v) * (inp.pedal > .05 ? 1.9 : 1.1) - g * Math.sin(Math.atan(slope)) * .4;   // (the Classic: once going, rolling on at 4 m/s by himself, up to 6.6 with the pedal; stopped, he stays until the pedal)
   if (back) a = -1.6 * inp.brake - .6 * B.v;
   if (B.air) a = -.006 * B.v * Math.abs(B.v);
-  const ice = !B.air && !!track.iceAt?.(B.x, B.z); if (ice) a *= .12;
+  const ice = !B.air && (!!track.iceAt?.(B.x, B.z) || (FIN.on && (FIN.ice || []).some(I => Math.abs(I.x - B.x) + Math.abs(I.z - B.z) < I.r * 1.6 && Math.hypot(I.x - B.x, I.z - B.z) < I.r))); if (ice) a *= .12;
   if (ice && !B.onIce) { B.onIce = true; B.iceF = B.falls || 0; hud.rant(rider.root.position.clone().add(new THREE.Vector3(0, 1.9, 0)), 'ŚLIZG!', true); }
   else if (!ice && B.onIce && !B.air) { B.onIce = false; if ((B.falls || 0) === B.iceF && !B.crash) score(1, rider.root.position.clone().add(new THREE.Vector3(0, 2, 0)), 'PO LODZIE! +1', '#cfe6f2'); }
   const v0 = B.v; B.v = Math.max(-1.4, B.v + a * dt); if (!back && inp.pedal < .05 && !B.air && (Math.abs(B.v) < .1 || B.v < 0 || (v0 !== 0 && Math.sign(B.v) !== Math.sign(v0)))) B.v = 0;   // (crawling: he stops, a foot on the ground, on a hill too; back only if he walks it back)
@@ -1763,11 +1763,29 @@ function buildFinale() { clearFinale(); { const sF = RUN.cps[RUN.cps.length - 1]
   kicker(u(.68), 'plank', -L2); target(.64, -1); slalom(.6, 3 + Math.round(D * 2), 5, .55, -L2); kicker(u(.5), 'kicker', -L2); target(.47, -1, 'pop'); pad(u(.42), -L2);
   // the hard lane (right): a jump (mega from the middle of the game on) with its rings and targets in the air; a trench, a kicker before
   // it; a second, smaller jump with rings of its own
-  { const big = D > .45 ? 'mega' : 'big', j1 = jump(u(.69), big, L2, big === 'mega' ? 11 : 10, 3 + Math.round(D * 3), 1 + Math.round(D));
+  { const big = D > .45 ? 'mega' : 'big', j1 = jump(u(.69), big, L2, big === 'mega' ? 11 : 10, 3 + Math.round(D * 3), 1 + Math.round(D)); FIN.j1 = j1;
     const kM = j1.land - 7, ko = kicker(kM, 'kicker', L2); trench(kM - ko.hit.hz - 2.4, 2.2, L2 - .15, L2);
     if (kM - 30 > mergeM + 8) jump(kM - 30, 'kicker', L2, 9, 2 + Math.round(D * 2), D > .3 ? 1 : 0); }
   // the lanes joined: a swinging target, a double trench (a half each, apart: round it or hop), pop-ups, a pad to the line
   swing(.3); trench(u(.24), 2, W * .55, W * .45); trench(u(.24) - 7, 2, W * .55, -W * .45); target(.2, 1, 'pop'); target(.17, -1, 'pop'); if (D > .5) slalom(.12, 4, 5, 1.3); target(.08, 1, 'pop'); target(.06, -1, 'pop'); pad(u(.03));
+  // ---------- each street's own number on its course (Express): Kasztanowa a car parked under the big jump's flight (over it, or onto its
+  //   roof); the park a pond across the road after the lanes join, a kicker before it; the seaside a wooden pier, a long ramp with
+  //   rails to fly off into the sand; winter a strip of ice across the road (the bike slides, steering all but gone); the village has
+  //   its barn's loft ----------
+  FIN.ice = [];
+  if (track.classic && LV.finish?.m) {
+    if (THEME === 'ulica' && FIN.j1?.land != null) { const mM = (FIN.j1.lip + FIN.j1.land) / 2, q = at(mM, L2), car = track.cars.makeCar('saloon', '#3b6fa0');
+      car.group.position.set(q.x, q.y, q.z); car.group.rotation.y = q.yaw; FIN.G.add(car.group); FIN.hits.push(track.addHit(car.group, { hx: car.half[0], hz: car.half[1], h: 1.4, kind: 'hard', car: car.group }, q.i));
+      const bq = at(mM + 9, L2 + 1.6), sg = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .4), new THREE.MeshBasicMaterial({ map: cv(48, 12, g2 => { g2.fillStyle = '#efc930'; g2.fillRect(0, 0, 48, 12); g2.fillStyle = '#17181b'; g2.font = '8px PTPix'; g2.textAlign = 'center'; g2.fillText('NAD AUTEM!', 24, 9); }), side: THREE.DoubleSide }));
+      sg.position.set(bq.x, bq.y + 1.6, bq.z); sg.rotation.y = bq.yaw + Math.PI; FIN.G.add(sg); }
+    if (THEME === 'park') { const pm = u(.17); kicker(pm + 6, 'big', 0); trench(pm, 5.5, W, 0);
+      const pad2 = M('#3f8a4a'); for (let k = 0; k < 7; k++) { const q = at(pm + (Math.random() - .5) * 4, (Math.random() - .5) * W * 1.6), lp = new THREE.Mesh(new THREE.CircleGeometry(.28 + Math.random() * .2, 7), pad2); lp.rotation.x = -Math.PI / 2; lp.position.set(q.x, q.y + .09, q.z); FIN.G.add(lp); } }
+    if (THEME === 'deptak') { const pm = u(.46), o = kicker(pm, 'mega', -L2), q = at(pm, -L2), plank = M('#9e7a4f');
+      for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) { const z = -o.hit.hz + k * (o.hit.hz * 2 / 3), p2 = new THREE.Mesh(new THREE.BoxGeometry(.1, 1.1, .1), plank); p2.position.set(q.x + q.r.x * sd * (o.hit.hx + .15) + q.f.x * z, q.y + .55 + (k / 3) * 1.4, q.z + q.r.z * sd * (o.hit.hx + .15) + q.f.z * z); FIN.G.add(p2); }
+      for (let k = 0; k < 10; k++) { const lq = at(pm - o.hit.hz - 4 - k * 1.2, -L2 + (Math.random() - .5) * 2), sd2 = new THREE.Mesh(new THREE.CircleGeometry(.9, 7), M('#e0c990')); sd2.rotation.x = -Math.PI / 2; sd2.position.set(lq.x, lq.y + .04, lq.z); FIN.G.add(sd2); } }
+    if (THEME === 'zima') { const a0 = u(.52), a1 = u(.42), iceM = new THREE.MeshBasicMaterial({ color: '#cfe6f2', transparent: true, opacity: .75 });
+      for (let m = a0; m > a1; m -= 2) { const q = at(m, 0), sl = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, 2.2), iceM); sl.rotation.x = -Math.PI / 2; sl.rotation.z = -q.yaw; sl.position.set(q.x, q.y + .035, q.z); FIN.G.add(sl); FIN.ice.push({ x: q.x, z: q.z, r: 1.5 }); }
+      const q = at(a0 + 6, W + 1), sg = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .4), new THREE.MeshBasicMaterial({ map: cv(40, 12, g2 => { g2.fillStyle = '#cfe6f2'; g2.fillRect(0, 0, 40, 12); g2.fillStyle = '#17181b'; g2.font = '8px PTPix'; g2.textAlign = 'center'; g2.fillText('ŚLISKO!', 20, 9); }), side: THREE.DoubleSide })); sg.position.set(q.x, q.y + 1.6, q.z); sg.rotation.y = q.yaw + Math.PI; FIN.G.add(sg); } }
   // (the Classic: railings along both edges of the road all the way (a channel to ride), low bars across half the road to hop)
   if (track.classic) { const railM = new THREE.MeshLambertMaterial({ map: stripes }), postK = M('#9aa0a4');
     for (let m = u(.98); m > 6; m -= 4) for (const sd of [-1, 1]) { const q = at(m, sd * (W + .35)), q2 = at(m - 4, sd * (W + .35)), g = new THREE.Group(), len = Math.hypot(q2.x - q.x, q2.z - q.z);
@@ -1882,7 +1900,7 @@ function stepRun(dt) { if (LV && (modes.id || mp.on)) { LV = null; clearGate(); 
   if (RUN.snaps?.length && RUN.t >= RUN.snaps[0].at) { const q = RUN.snaps.shift(); try { q.e.img = photo(camera); } catch { } }
   stepLive(dt); stepFinale(dt);
   // (Express: how far along the street, for the locals' pace; past half way the rush hour, said once)
-  { const p = streetP(); if (locals) locals.prog = p; if (LV.finish?.m && !RUN.rushHour && p > .55) { RUN.rushHour = true; flash('Godzina szczytu! Więcej aut, pilne gazety, tor już blisko.'); audio.play('bell', { vol: .5 }); } }
+  { const p = streetP(); if (locals) { locals.prog = p; locals.clear = FIN.on ? FIN.clear : null; } if (LV.finish?.m && !RUN.rushHour && p > .55) { RUN.rushHour = true; flash('Godzina szczytu! Więcej aut, pilne gazety, tor już blisko.'); audio.play('bell', { vol: .5 }); } }
   if ((RUN.chk -= dt) > 0) return; RUN.chk = .1; stepJobs();
   const q = track.probe(me.x, me.z, B.hint), cp = RUN.cps[RUN.cp], a = ahead(q.i, cp), last = RUN.cp === RUN.cps.length - 1;
   const onRoad = Math.abs(q.d) < track.PAVE + 2 && !foot.active, passed = onRoad && (a < 3 || (RUN.prevA < 25 && a > track.len - 25)) && Math.hypot(me.x - track.S[cp].p.x, me.z - track.S[cp].p.z) < track.PAVE + 14; RUN.prevA = onRoad ? a : 1e9;

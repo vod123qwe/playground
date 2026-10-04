@@ -6,6 +6,15 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 6: każdy tor ma swój numer
+
+- Kasztanowa: na trudnym pasie auto zaparkowane pod dużym skokiem, nad nim lecisz (albo lądujesz na dachu)
+- Wieś: strych stodoły do trafienia gazetą (+8)
+- Park: staw w poprzek drogi i rampa przed nim
+- Deptak: skok z drewnianego pomostu z poręczami, lądowanie w piasku
+- Zima: pas lodu w poprzek drogi z tabliczką ŚLISKO! (rower się ślizga, prawie nie skręca)
+- auta z podjazdów nie wyjeżdżają tyłem na tor z przeszkodami
+
 ### Wersja 5: ulica narasta do toru
 
 - pierwsza trzecia ulicy spokojna: auto mniej, bez pilnych gazet, mewy rzadziej
