@@ -6,6 +6,10 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 13: czysty ekran
+
+- pomoc ze sterowaniem nie pokazuje się sama na starcie (wcześniej pamiętała stan z innej wersji pod tym samym adresem); otwiera ją tylko klawisz H, bez podpowiedzi w rogu
+
 ### Wersja 12: kopniak na padzie
 
 - naprawione: kopniak z pada (X na Xboxie, □ na PlayStation) nie działał w Klasyku; teraz działa jak spacja i przycisk KOP na telefonie

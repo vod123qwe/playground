@@ -27,6 +27,7 @@
   #keys.shut{ display:none; }
   #keysHint{ right:16px; top:14px; padding:4px 8px; background:var(--shade); border-radius:6px; opacity:.75; font-size:12px; }
   #keys:not(.shut) + #keysHint{ display:none; }
+  #keysHint{ display:none !important; }   /* (Express: no hint on the screen; H still opens the keys) */
   body.walk, body.walk #gl{ cursor:none !important; }
   body.walk #pix, body.walk #pix *, body.walk #ink, body.walk #ink *{ cursor:var(--cur) !important; }   /* (its buttons still show one) */
   @media (max-width:700px){ #keys, #keysHint{ display:none; } }
