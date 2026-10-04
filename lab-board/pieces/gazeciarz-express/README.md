@@ -6,6 +6,11 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 14: więcej gazet
+
+- na start w torbie: Kasztanowa 20, Wieś 22, Park 24, Deptak 24, Zima 26 (było 10–14)
+- paczka gazet po drodze: +10 (było +8)
+
 ### Wersja 13: czysty ekran
 
 - pomoc ze sterowaniem nie pokazuje się sama na starcie (wcześniej pamiętała stan z innej wersji pod tym samym adresem); otwiera ją tylko klawisz H, bez podpowiedzi w rogu
