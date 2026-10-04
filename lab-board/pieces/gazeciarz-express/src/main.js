@@ -1433,8 +1433,8 @@ function answer(yes) { askReset(false); if (yes) resetGame(); }
 // the menu (Esc): pause, graphics; while it is open the keys and the pointer are its own and the game waits
 // the help (H: shown or not, remembered) and full screen (L, or from the menu)
 const keysEl = document.getElementById('keys');
-function toggleKeys(v) { const on = v ?? keysEl.classList.contains('shut'); keysEl.classList.toggle('shut', !on); try { localStorage.setItem('pt.keys', on ? '1' : '0'); } catch { } }
-try { if (localStorage.getItem('pt.keys') === '1') toggleKeys(true); } catch { }
+// (the keys' help: shut at the start, always (Express); H opens it, nothing remembered)
+function toggleKeys(v) { const on = v ?? keysEl.classList.contains('shut'); keysEl.classList.toggle('shut', !on); }
 function toggleFull() { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.().catch(() => flash('Pełny ekran niedostępny w tym oknie')); } catch { flash('Pełny ekran niedostępny w tym oknie'); } }
 document.addEventListener('fullscreenchange', () => { mouse.failed = false; if (document.fullscreenElement) lockPointer(); });   // (full screen: the mouse kept in it)
 document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && mouse.hadLock && !menu.open && !asking) menu.show('pause'); mouse.hadLock = !!document.pointerLockElement; });   // (Esc let the pointer go: the game pauses, as games do)
