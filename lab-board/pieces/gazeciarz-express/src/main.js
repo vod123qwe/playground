@@ -65,6 +65,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PARTS } from './shop.js';
 import { createCRT } from './crt.js';
+import { finaleShow } from './finale.js';
 const crt = createCRT();   // (a big desktop window: the game on an old TV; see crt.js)
 { const q = new URLSearchParams(location.search), ed = EDITION;
   if (ed === 'klasyk' && !q.has('mapa') && !q.has('region') && !q.has('poziom') && !q.has('arena') && !q.has('mp')) { q.set('mapa', 'klasyk'); location.replace('?' + q.toString().replace(/=(&|$)/g, '$1')); } }
@@ -1454,7 +1455,7 @@ function titleBg() { const want = editionK; if (want === worldEd()) { TBG.el.sty
   TBG.el.removeAttribute('src'); TBG.el.style.opacity = 1; setTimeout(() => { location.search = want === 'klasyk' ? '?mapa=klasyk' : ''; }, 560); }
 function stepTitleBg(dt) { if (menu.page !== 'title' || TBG.saved) { if (menu.page !== 'title' && TBG.el.style.opacity !== '0') TBG.el.style.opacity = 0; return; } if ((TBG.t += dt) < 2.5) return; TBG.saved = true;
   try { localStorage.setItem('pt.tbg.' + worldEd(), canvas.toDataURL('image/jpeg', .8)); } catch { } }
-const editionMenu = { classic: () => editionK === 'klasyk', levels: () => XLV().map((l, k) => ({ label: `${DAYS[k].slice(0, 3)}. ${l.name.replace(/^KLASYK:\s*/, '')}${LVM.medalOf(l.id).tag}`, act: () => startLevel(l.id) })), extra: () => editionK === 'klasyk' ? [['k1', 'KLASYK 1: KASZTANOWA'], ['k2', 'KLASYK 2: WIEŚ'], ['k3', 'KLASYK 3: PARK'], ['k4', 'KLASYK 4: DEPTAK'], ['k5', 'KLASYK 5: ZIMA']].filter(([id]) => LVM.isOpen(id)).map(([id, t]) => ({ label: t + LVM.medalOf(id).tag, act: () => startLevel(id) })) : [], name: () => EDITIONS[editionK], next: () => { }, switchable: false, title: () => TITLE, subtitle: () => SUBTITLE };
+const editionMenu = { classic: () => editionK === 'klasyk', levels: () => XLV().map((l, k) => ({ label: `${DAYS[k].slice(0, 3)}. ${l.name.replace(/^KLASYK:\s*/, '')}${LVM.medalOf(l.id).tag}`, act: () => startLevel(l.id) })), extra: () => editionK === 'klasyk' ? [['k1', 'KLASYK 1: KASZTANOWA'], ['k2', 'KLASYK 2: WIEŚ'], ['k3', 'KLASYK 3: PARK'], ['k4', 'KLASYK 4: DEPTAK'], ['k5', 'KLASYK 5: ZIMA']].filter(([id]) => LVM.isOpen(id)).map(([id, t]) => ({ label: t + LVM.medalOf(id).tag, act: () => startLevel(id) })) : [], name: () => EDITIONS[editionK], next: () => { }, switchable: false, title: () => TITLE, subtitle: () => SUBTITLE, stamp: () => LVM.load().xbest || null };
 const menu = createMenu({ crt, assist: assistMenu, gore: goreMenu, radio: radioMenu, edition: editionMenu, tests: () => testRows(), onMap: () => openMap(), onPlay: () => { if (editionK === 'klasyk') { if (LV?.id !== 'k1') startLevel('k1'); return; } if (track.classic) { goRegion('peryferia', null, null); return; } flash(keysOf('map') + ': MAPA TRASY. Wybierz odcinek albo jeździj swobodnie'); }, modes: () => [{ label: 'KLASYCZNA TRASA', act: () => { if (modes.id) modes.stop(); if (mp.on) mp.stop(); } }, ...Object.entries(MODES).map(([id, m]) => ({ label: m.name, info: m.info, act: () => { if (mp.on) mp.stop(); modes.start(id); } })), { label: 'GRA PRZEZ SIEĆ (2 GRACZY)', info: 'WYŚCIG, RAZEM, BEREK, WSPÓLNA JAZDA', act: () => { if (modes.id) modes.stop(); mp.openLobby(); } }], sound: { get: k => audio.get(k), set: (k, v) => audio.set(k, v) }, hud, look, styles: MENU_STYLES, light: LIGHT, presets: PRESETS, onRestart: () => askReset(true), onFull: toggleFull, onKeys: () => toggleKeys(), controls, lab: LAB, onPlay: () => { C.init = false; },
   sens: { get: () => sens, set: v => { sens = v; try { localStorage.setItem('pt.sens', String(v)); } catch { } } } });
 addEventListener('keydown', e => { if (e.target?.closest?.('textarea, input') && e.code !== 'Escape') return; if (e.repeat && !['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(e.code)) return;
@@ -1935,39 +1936,23 @@ const DAYS = ['PONIEDZIAŁEK', 'WTOREK', 'ŚRODA', 'CZWARTEK', 'PIĄTEK', 'SOBOT
 const XLV = () => LVM.LEVELS.filter(l => l.classic && !l.soon), xDay = L => Math.max(0, XLV().findIndex(l => l.id === L.id));
 function xWeek() { const S = LVM.load(); return (S.xw ||= { sat: 60, days: [] }); }
 function satAdd(n) { if (B.sat == null || !LV || RUN.done) return; B.sat = Math.max(0, Math.min(100, B.sat + n)); }
-// ---------- Express: the week's end. Friday's paper (WRACAM DO DOMU) takes him to Chestnut Street at dusk: he rides home by himself,
-//   stops by his own house (the DOM board), and the special edition comes out: the week day by day, the readers' mood, its title and
-//   the paper's reward (paid once a week) ----------
+// ---------- Express: the week's end. After Friday's paper (WYDANIE SPECJALNE) the show at once, over the street at dusk (finale.js):
+//   the special edition spins in, the week's album day by day (each finish's photo kept in gzx.album), the score counting up, the
+//   readers' mood, the week's title stamped, fireworks; KONIEC and the title screen with the week's stamp (the best week kept: xbest).
+//   The paper's reward paid once a week ----------
 const WEEK_TITLES = [[80, 'GAZECIARZ TYGODNIA', 'Czytelnicy nie wyobrażają sobie poranka bez ciebie.', 50], [60, 'SOLIDNY TYDZIEŃ', 'Gazety docierały, ludzie się uśmiechali. Prawie zawsze.', 25],
   [40, 'TYDZIEŃ Z PRZYGODAMI', 'Było różnie, ale osiedle wciąż czyta.', 10], [0, 'CZYTELNICY CHCĄ ZMIANY', 'Redakcja zaprasza na rozmowę w poniedziałek.', 0]];
-function goFinal() { saveCampaign(); location.search = 'mapa=klasyk&play&final'; }
-function finaleScene() { const home = track.doors.find(d => d.mine); if (!home) return weekPaper();
-  const N = track.N, ds = track.ds, W = i => ((i % N) + N) % N, hi = home.i ?? track.probe(home.p.x, home.p.z, -1).i, hs = track.oneSide || -1, i0 = W(hi - Math.round(75 / ds)), S0 = track.S[i0];
-  Object.assign(B, { x: S0.p.x + S0.r.x * hs * 1.4, z: S0.p.z + S0.r.z * hs * 1.4, hint: i0, yaw: Math.atan2(S0.f.x, S0.f.z), v: 3, crash: null, air: false }); B.y = track.probe(B.x, B.z, i0).y; B.gPrev = B.y; C.init = false;
-  const dusk = document.createElement('div'); dusk.id = 'dusk'; dusk.style.cssText = 'position:fixed;inset:0;z-index:3;pointer-events:none;background:linear-gradient(180deg,rgba(255,150,80,.38),rgba(120,70,140,.42));mix-blend-mode:multiply;opacity:0;transition:opacity 2.5s';
-  document.body.appendChild(dusk); requestAnimationFrame(() => dusk.style.opacity = '1'); flash('Piątek, wieczór. Tydzień za tobą, wracasz do domu.');
-  let arrived = 0; const iv = setInterval(() => { const q = track.probe(B.x, B.z, B.hint), a = ((((hi - q.i) % N) + N) % N) * ds;
-    if (!arrived && a > 3 && a < 200) { const T = track.S[W(q.i + Math.round(6 / ds))]; B.yaw = Math.atan2(T.p.x + T.r.x * hs * 1.4 - B.x, T.p.z + T.r.z * hs * 1.4 - B.z); B.v = Math.min(Math.max(B.v, 2.5), 3.4); }
-    else { B.v = 0; if (!arrived) { arrived = performance.now(); hud.rant(home.p.clone().setY(home.p.y + 2.2), pickOf(['JUŻ JESTEŚ, SYNKU!', 'OBIAD STYGNIE!', 'NO I JAK TYDZIEŃ?']), true, 1.95); } }
-    if (arrived && performance.now() - arrived > 2200) { clearInterval(iv); weekPaper(); } }, 50); }
-function weekPaper() { const S = LVM.load(), X = S.xw || { sat: 60, days: [] }, sat = Math.round(X.sat ?? 60), T = WEEK_TITLES.find(t => sat >= t[0]), XL = XLV(), score = (X.days || []).reduce((a, q) => a + (q?.pts || 0), 0);
-  let pay = 0; if (!X.paid && (X.days || []).filter(Boolean).length >= XL.length) { pay = T[3]; X.paid = true; S.money = (S.money || 0) + pay; B.points = S.money; LVM.save(); }
-  const rows = XL.map((l, k) => { const q = X.days?.[k]; return `<tr><td>${DAYS[k].toLowerCase()}</td><td>${l.name.replace(/^KLASYK:\s*/, '')}</td><td>${q ? q.pts + ' pkt' : '—'}</td><td>${q ? q.delivered + ' / ' + q.of : '—'}</td></tr>`; }).join('');
-  const el = document.createElement('div'); el.id = 'weekpaper'; el.innerHTML = `<div class="wp"><div class="mast">TRĄBKA PORANNA</div><div class="ed">WYDANIE SPECJALNE · TYDZIEŃ GAZECIARZA</div><h1>${T[1]}</h1><p class="lead">${T[2]}</p>
-    <table><tr><th>dzień</th><th>ulica</th><th>wynik</th><th>gazety</th></tr>${rows}</table>
-    <p class="sum">Zadowolenie czytelników: <b>${sat}%</b> · Wynik tygodnia: <b>${score} pkt</b>${pay ? ` · Nagroda od redakcji: <b>+${pay} zł</b>` : ''}</p>
-    <div class="btns"><button data-a="again">NOWY TYDZIEŃ (PONIEDZIAŁEK)</button><button data-a="free">JEŹDZIJ PO OSIEDLU</button></div></div>`;
-  const st = document.createElement('style'); st.textContent = `#weekpaper{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(12,13,15,.55);font:15px/1.4 Georgia,serif}
-    #weekpaper .wp{width:min(560px,92vw);max-height:92vh;overflow:auto;background:#efe9da;color:#2b2723;padding:22px 26px;box-shadow:6px 6px 0 #17181b;border:2px solid #2b2723}
-    #weekpaper .mast{font:32px/1 PTPix,monospace;text-align:center;letter-spacing:2px;border-bottom:3px double #2b2723;padding-bottom:8px}
-    #weekpaper .ed{font:12px/1.6 PTPix,monospace;text-align:center;color:#8e2e25;margin:6px 0 10px}#weekpaper h1{font:28px/1.1 PTPix,monospace;margin:8px 0;text-align:center}
-    #weekpaper .lead{text-align:center;font-style:italic}#weekpaper table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}#weekpaper td,#weekpaper th{border-bottom:1px solid #b8ad96;padding:4px 6px;text-align:left}
-    #weekpaper th{font:11px PTPix,monospace;color:#6b665d}#weekpaper .sum{border-top:3px double #2b2723;padding-top:8px}#weekpaper .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
-    #weekpaper button{font:14px PTPix,monospace;background:#efc970;color:#17181b;border:2px solid #17181b;padding:8px 12px;box-shadow:3px 3px 0 #17181b;cursor:pointer}`;
-  document.head.appendChild(st); document.body.appendChild(el); audio.play('trick');
-  el.querySelector('[data-a="again"]').onclick = () => { el.remove(); document.getElementById('dusk')?.remove(); const XL0 = XLV()[0]; if (XL0) startLevel(XL0.id); };
-  el.querySelector('[data-a="free"]').onclick = () => { el.remove(); document.getElementById('dusk')?.remove(); }; }
-if (new URLSearchParams(location.search).has('final')) { const iv0 = setInterval(() => { if (!document.body.classList.contains('booted') || !track) return; clearInterval(iv0); setTimeout(finaleScene, 600); }, 300); }
+const ALBUM_K = 'gzx.album', loadAlbum = () => { try { return JSON.parse(localStorage.getItem(ALBUM_K) || '{}'); } catch { return {}; } };
+function saveAlbum(id, c) { try { const t = document.createElement('canvas'); t.width = 160; t.height = 120; t.getContext('2d').drawImage(c, 0, 0, 160, 120); const A = loadAlbum(); A[id] = t.toDataURL('image/jpeg', .72); localStorage.setItem(ALBUM_K, JSON.stringify(A)); } catch { } }
+let FINALE = null;
+function goFinal() { saveCampaign(); finale(); }
+function finale() { if (FINALE?.on) return; const S = LVM.load(), X = S.xw || { sat: 60, days: [] }, sat = Math.round(X.sat ?? 60), T = WEEK_TITLES.find(t => sat >= t[0]), XL = XLV(), score = (X.days || []).reduce((a, q) => a + (q?.pts || 0), 0);
+  let pay = 0; if (!X.paid && (X.days || []).filter(Boolean).length >= XL.length) { pay = T[3]; X.paid = true; S.money = (S.money || 0) + pay; B.points = S.money; }
+  if (!S.xbest || score >= S.xbest.score) S.xbest = { title: T[1], score, sat }; LVM.save();
+  const album = loadAlbum(), days = XL.map((l, k) => { const q = X.days?.[k]; return { day: DAYS[k], name: l.name.replace(/^KLASYK:\s*/, ''), pts: q ? q.pts : null, medal: q ? LVM.medalOf(l.id) : null, img: album[l.id] || null }; });
+  if (fin.isOpen) fin.close(); if (menu.open) menu.close(); if (map.isOpen) map.close(); B.v = 0; RUN.adv = true;
+  FINALE = finaleShow({ days, title: T, sat, score, pay, sound: (n, o) => audio.play(n, o), onDone: () => { FINALE = null; menu.show('title'); } }); window.FINALE = FINALE; }
+if (new URLSearchParams(location.search).has('final')) { const iv0 = setInterval(() => { if (!document.body.classList.contains('booted') || !track) return; clearInterval(iv0); setTimeout(finale, 600); }, 300); }
 
 function weekStart(L) { const S = LVM.load(), ds = track.doors; S.week ||= {}; let W = S.week[L.id];
   // (Express: a door off the street (past the finish, behind the start) never reached: no subscriber there, in the week either)
@@ -2034,7 +2019,7 @@ function finishLevel() { for (const R of JOBRUN) if (!R.done && R.j.kind === 'wy
   for (const R of JOBRUN) if (!R.done && R.j.kind === 'szarlotka' && (R.j.runs = (R.j.runs || 0) + 1) >= 2) jobEnd(R, false);
   { const S = LVM.load(); for (const j of S.jobs || []) { const R = JOBRUN.find(q => q.j.id === j.id); if (R) j.runs = R.j.runs; } LVM.save(); }
   LVM.save({ mods: [] }); saveCampaign();
-  audio.play('trick'); slowmo = .9; shutter(); let data; try { data = paperData(L, r, rec, opened); } catch (e) { console.error('paper', e); paperFail(L); return; } data.week = wk; data.pay = pay; data.money = B.points; { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); setTimeout(() => { B.v *= .3; clearFinale(); try { fin.open(data); RUN.paperSeen = true; } catch (e) { console.error('paper', e); paperFail(L); } }, 1100); }
+  audio.play('trick'); slowmo = .9; shutter(); let data; try { data = paperData(L, r, rec, opened); } catch (e) { console.error('paper', e); paperFail(L); return; } data.week = wk; data.pay = pay; data.money = B.points; if (L.classic && data.photos?.finish) saveAlbum(L.id, data.photos.finish); { const S = LVM.load(); data.jobRes = S.jobRes || []; data.shots = RUN.shots || []; S.jobRes = []; LVM.save(); } data.faces = Object.fromEntries(Object.entries(JB.PERSONAS).map(([k, p]) => [k, faceOf(p.face)])); setTimeout(() => { B.v *= .3; clearFinale(); try { fin.open(data); RUN.paperSeen = true; } catch (e) { console.error('paper', e); paperFail(L); } }, 1100); }
 // (the paper failed to come together: said so, and on to the next street (or home after the last) a moment after)
 function paperFail(L) { flash('Meta! Gazeta dziś nie wyszła, jedziemy dalej.'); setTimeout(() => { const nx = (L.after || []).find(id => LVM.LEVEL(id) && !LVM.LEVEL(id).soon); if (fin.isOpen) fin.close(); nx ? startLevel(nx) : goHome(); }, 2600); }
 // the finish's flash: the screen white a blink, the shutter's click
@@ -2209,6 +2194,7 @@ function padUI(dt) {
   if (garage.isOpen) { page('#gar .stage'); if (x(BTN.B) || x(BTN.MENU) || x(BTN.LEFT) && !d) key('Escape'); return; }
   if (shop.isOpen) { page('#shop .win'); if (x(BTN.Y)) document.querySelector('#shop .chat')?.click(); if (x(BTN.B) || x(BTN.MENU)) key('Escape'); return; }
   pad.forget();
+  if (FINALE?.on) { if (x(BTN.A) || x(BTN.B) || x(BTN.MENU)) FINALE.next(); return; }
   if (runUI.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); return; }
   if (modes.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
   if (mp.isOpen) { if (x(BTN.A) || x(BTN.MENU)) key('Enter'); if (x(BTN.B)) key('Escape'); return; }
@@ -2258,5 +2244,5 @@ function dynAudit() { const N = track.N, ds = track.ds, bin = Math.max(1, Math.r
   const run = f => { let best = 0, cur = 0; for (let k = 0; k < nb * 2; k++) { if (f(k % nb)) { cur++; best = Math.max(best, cur); } else cur = 0; } return Math.min(best, nb) * bin * ds | 0; };
   const nSub = subs.reduce((a, b) => a + b, 0);
   return { len: track.len | 0, subsPer100m: +(nSub / track.len * 100).toFixed(1), feats: feats.reduce((a, b) => a + b, 0), folk: folk.reduce((a, b) => a + b, 0), noSubM: run(k => !subs[k]), quietM: run(k => !feats[k] && !folk[k]), emptyM: run(k => !subs[k] && !feats[k] && !folk[k]) }; }
-window.PT = { THREE, tick: n => { const raf = window.requestAnimationFrame; window.requestAnimationFrame = () => 0; try { for (let k = 0; k < n; k++) frame(last + 1000 / 60); } finally { window.requestAnimationFrame = raf; } }, stepPerf, MERGED, FIN, CROSS, crossJumps, crossHidden, stepRush, TBG, titleBg, stepTitleBg, editionMenu, carRoofAt, get roofCar() { return roofCar; }, stepRivals, lateFinish, stepNight, locals, dynAudit, director, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
+window.PT = { THREE, tick: n => { const raf = window.requestAnimationFrame; window.requestAnimationFrame = () => 0; try { for (let k = 0; k < n; k++) frame(last + 1000 / 60); } finally { window.requestAnimationFrame = raf; } }, stepPerf, MERGED, FIN, CROSS, crossJumps, crossHidden, stepRush, TBG, titleBg, stepTitleBg, editionMenu, carRoofAt, get roofCar() { return roofCar; }, stepRivals, lateFinish, stepNight, locals, dynAudit, director, simRide: (n, inp = {}) => { const I = { steer: 0, pedal: 0, brake: 0, ...inp }; for (let k = 0; k < n; k++) { ride(1 / 60, I); stepFinale(1 / 60); } }, subMarks, tapQ, get hot() { return hot; }, get LV() { return LV; }, geese, radioScene, JB, LV2, liveOffer, liveTake, JOBRUN, snapJob, PHOTO_LOOK, setPhotoStyle: s => { photoStyle = s; }, photo, faceOf, photoOf, startLevel, finishLevel, finale, goHome, map, fin, LVM, RUN, unlockTitle, stuff, scene, camera, hudBag, quests, talk, shop, book, audio, hurt, endRun, runUI, deliver, TITLES, rider, track, B, px, renderer, traffic, dogs, hud, granny, foot, dismount, mount, peds, residents, aim, breakWindow, setCam, crash, setInk, dropLoot, drops, paperHits,   // (for looking in from the console; tick: the game run on by hand, n frames of 1/60 s)
   tick(n, inp = {}) { for (let i = 0; i < n; i++) step(1 / 60, { steer: 0, pedal: 0, brake: 0, sprint: false, holdL: false, holdR: false, ...inp, hop: i === 0 && !!inp.hop, kick: i === 0 && !!inp.kick }); px.render(scene, camera); drawHud(1 / 60); }, resetGame, hot, papers, modes, mp, use, get P1() { return P1; }, get P2() { return P2; }, get MPon() { return MP.on; }, net, wbikes, get myBike() { return myBike; }, INV, swapTo, bikeChoices, get garage() { return garage; }, hoops, onFootAt };

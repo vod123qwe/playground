@@ -284,6 +284,25 @@ export function createPaper({ game }) {
     /* the keys under the paper */
     #paper .bar { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; z-index: 2; }
     @media (max-width: 980px) { #paper .bar { gap: 6px; } #paper .bar .pxk span { display: none; } #paper .bar .pxk.gold span { display: inline; } }
+    #paper .xp { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+    #paper .xp .mast { grid-template-columns: auto 1fr; } #paper .xp .rule { margin: 6px 0 8px; }
+    #paper .xp-top { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px; }
+    #paper .xp-lead { display: flex; flex-direction: column; min-height: 0; } #paper .xp-lead h2 { margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    #paper .xp-ph { flex: 1 1 0; min-height: 0; width: 100%; object-fit: cover; border: 4px solid #2b2723; background: #9a968c; filter: sepia(.18) contrast(1.04); }
+    #paper .xp-side { display: flex; flex-direction: column; gap: 6px; min-height: 0; border-left: 2px solid #2b2723; padding-left: 14px; }
+    #paper .xp-medal { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #2b2723; padding: 8px 10px 6px; }
+    #paper .xp-medal b { font-weight: normal; font-size: 24px; color: var(--mc); text-shadow: 2px 2px 0 #17181b; letter-spacing: 2px; }
+    #paper .xp-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-bottom: 2px dotted #b9ad92; padding-bottom: 2px; } #paper .xp-kv span { color: #6a645c; }
+    #paper .xp-kv b { font-weight: normal; font-size: 20px; } #paper .xp-kv i.rec { font-style: normal; font-size: 12px; background: #b8483a; color: #f6f3ea; padding: 2px 4px 0; vertical-align: middle; }
+    #paper .xp-sat span { color: #6a645c; } #paper .xp-sat em { font-style: normal; color: #3f8a4a; } #paper .xp-sat em.dn { color: #b8483a; }
+    #paper .xp-bar { height: 14px; border: 3px solid #2b2723; background: #cfc4a6; margin-top: 3px; } #paper .xp-bar i { display: block; height: 100%; background: #4f9a3e; }
+    #paper .xp-map { flex: 1 1 0; min-height: 36px; width: 100%; border: 2px solid #2b2723; background: #cfd8a8; }
+    #paper .xp-tale { border-top: 2px solid #2b2723; margin-top: 10px; padding-top: 6px; } #paper .xp-tale h3 { margin-bottom: 4px; }
+    #paper .xp-tale p:not(.kick) { margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    #paper .xp-foot { margin-top: 6px; border-top: 4px solid #b8483a; padding-top: 4px; text-align: center; color: #8e2e25; letter-spacing: 1px; }
+    @media (max-width: 760px) { #paper .xp-top { grid-template-columns: 1fr; gap: 8px; } #paper .xp-side { border-left: 0; padding-left: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+      #paper .xp-medal, #paper .xp-sat { grid-column: 1 / -1; } #paper .xp-map { display: none; } #paper .xp-medal b { font-size: 16px; } #paper .xp-kv b { font-size: 16px; } #paper .xp-lead h2 { font-size: 20px; text-shadow: 2px 0 0 #2b2723; }
+      #paper .xp-ph { min-height: 60px; } #paper .xp-tale p:not(.kick) { -webkit-line-clamp: 2; } #paper .xp-tale h3 { font-size: 16px; } }
     @media (max-width: 760px) { #paper .pile { width: 86vw; } #paper .title { font-size: 32px; text-shadow: 4px 0 0 #2b2723; letter-spacing: 3px; } #paper .crest { width: 40px; height: 45px; } #paper .face { padding: 10px 12px 8px; } #paper .bar { gap: 6px; } #paper .bar .pxk span { display: none; } #paper .bar .pxk.gold span { display: inline; } }
     @media (max-width: 560px) { #paper .index { display: none; } #paper .title { font-size: 24px; text-shadow: 3px 0 0 #2b2723; letter-spacing: 2px; } #paper .slim b { font-size: 16px; } }
 `;
@@ -347,6 +366,21 @@ export function createPaper({ game }) {
     if (miss && n) a.push(`${miss} ${plural(miss, 'dom czeka', 'domy czekają', 'domów czeka')} na gazetę do jutra.`);
     a.push(rec.first ? `Czas na mecie: ${mmss(r.time)}.` : rec.beat.time ? `Czas ${mmss(r.time)} to nowy rekord tej trasy.` : `Czas ${mmss(r.time)}, rekord to wciąż ${mmss(rec.best.time)}.`);
     return a.join(' '); }
+  // (Express: one page, all on it: the masthead, the day's headline over the finish's photo; beside it the medal, the numbers, the
+  // readers' mood and the little map; under them one story from the street; and tomorrow)
+  function front() { const { L, r, rec } = D, W = D.week?.express ? D.week : null, g = rec.g.n, M = MEDALS[g], st = (D.stories || []).filter(q => q.fresh), lead = st.find(q => q.lead) || st[0], ev = (D.photos.news || []).find(n => n.kind);
+    const tale = lead ? { k: lead.kicker, h: lead.head, t: lead.text } : ev ? { k: KICK[ev.kind] || 'Z OSIEDLA', h: ev.head, t: ev.text } : { k: 'RAPORT Z TRASY', h: '', t: story() };
+    const ph = D.photos.finish || lead?.img || ev?.img, nm = s => s.replace(/^KLASYK[^:]*:\s*/, ''), nx = (D.next || []).find(x => x.id && x.open), dS = W ? W.sat - W.sat0 : 0, REC = ' <i class="rec">REKORD</i>';
+    const tom = W ? (W.full ? 'PIĄTEK ZA TOBĄ. JUTRO RANO WYDANIE SPECJALNE!' : `JUTRO: ${W.next}${nx ? ' · ' + nm(nx.name) : ''}`) : nx ? 'DALEJ: ' + nm(nx.name) : '';
+    return `<div class="xp"><div class="mast"><canvas class="crest" width="16" height="18"></canvas><div class="title">WIEŚCI ZZA PŁOTU</div></div>
+      <div class="rule"><span>NR ${D.issue}</span><span>${W ? W.day : DAYS[new Date().getDay()]}</span><span>${nm(L.name)}</span><span>CENA: 1 ZŁ</span></div>
+      <div class="xp-top"><div class="xp-lead"><p class="kick">Z OSTATNIEJ CHWILI</p><h2>${D.headline}</h2>${ph ? `<img class="xp-ph" src="${url(ph)}" alt="">` : ''}</div>
+        <div class="xp-side"><div class="xp-medal" style="--mc:${M.col}"><b>${M.name}</b>${starsH(g)}</div>
+          <div class="xp-kv"><span>PUNKTY</span><b>${r.pts || 0}${rec.beat.pts || rec.first ? REC : ''}</b></div><div class="xp-kv"><span>GAZETY</span><b>${r.delivered} / ${D.route.subs}</b></div>
+          <div class="xp-kv"><span>CZAS</span><b>${mmss(r.time)}${rec.beat.time && !rec.first ? REC : ''}</b></div><div class="xp-kv"><span>WYWROTKI</span><b>${r.falls}</b></div>
+          ${W ? `<div class="xp-sat"><span>ZADOWOLENIE ${W.sat}% <em class="${dS < 0 ? 'dn' : ''}">${dS >= 0 ? '+' : ''}${dS}</em></span><div class="xp-bar"><i style="width:${Math.max(0, Math.min(100, W.sat))}%"></i></div></div>` : ''}
+          <canvas class="xp-map" data-map="mini"></canvas></div></div>
+      <div class="xp-tale"><p class="kick">${tale.k}</p>${tale.h ? `<h3>${tale.h}</h3>` : ''}<p>${tale.t}</p></div>${tom ? `<div class="xp-foot">${tom}</div>` : ''}</div>`; }
   const portrait = (c, cls = 'pt') => c ? `<img class="${cls}" src="${url(c)}" alt="">` : '';
   // the sections' blocks, in their order. The type: a kicker (the red label over a story), the headline, a deck under it (grey), the
   // byline; paragraphs indented, not spaced; captions FOT.; rules between stories
@@ -432,7 +466,7 @@ export function createPaper({ game }) {
       else if (a === 'buy') { const r = game.buy(kind); if (r.ok) D.money = game.money?.() ?? D.money; say(r.msg, [['Rozłącz się', 'end', true]]); } else if (a === 'end') { call.onclick = null; endCall(); } }; }
   function endCall() { clearInterval(callT); call.classList.remove('on'); if (open_) build(); }
   // a page drawn into a face: its head, its columns, its corners (to turn on, to turn back), its number
-  function draw(f, p) { const P = pages[p];
+  function draw(f, p) { const P = pages[p]; if (P.one) { f.innerHTML = P.html[0]; return; }
     f.innerHTML = head(p) + `<div class="body" style="--cols:${cols}">${P.html.join('')}</div><div class="foot"><span>STR. ${p + 1} / ${pages.length}</span><span>${SEC[P.sec]}</span></div>` +
       (p < pages.length - 1 ? '<a class="ear r" data-turn="1" title="Następna strona"><i></i></a>' : '') + (p > 0 ? '<a class="ear l" data-turn="-1" title="Poprzednia strona"><i></i></a>' : ''); }
   // the masthead's name as big as fits (whole pixels of its letters: 48, 40, 32, 24)
@@ -450,6 +484,7 @@ export function createPaper({ game }) {
   // pour: each section from a new page; a block that makes the columns run over goes to the next page (alone on a page, it stays)
   let pages = [], cols = 2;
   function paginate() { const w = A.face.clientWidth; cols = w < 520 ? 1 : w < 900 ? 2 : 3; pages = [];
+    if (D.L.classic) { pages = [{ sec: 0, html: [front()], first: true, one: true }]; return; }
     for (let sec = 0; sec < SEC.length; sec++) { let cur = null; const fresh = () => { cur = { sec, html: [], first: pages.length === 0 }; pages.push(cur); }; fresh();
       for (const b of blocks(sec)) { cur.html.push(b); draw(A.face, pages.length - 1); fitTitle(A.face); const body = A.face.querySelector('.body');
         if (body.scrollWidth > body.clientWidth + 2 && cur.html.length > 1 && !(cur.html.length === 2 && cur.html[0].includes(' span'))) { cur.html.pop(); fresh(); cur.html.push(b); } } } }
@@ -460,8 +495,10 @@ export function createPaper({ game }) {
     else { draw(Bs.face, page); finish(Bs.face); Bs.el.classList.add('on'); page = p; show(p); A.el.classList.add('land'); }
     setTimeout(() => { if (fwd) { page = p; show(p); } A.el.classList.remove('fly', 'land'); Bs.el.classList.remove('on'); busy = false; }, 520); }
   // (the Classic: the next street straight from the paper, without turning to its last page)
-  const nextMap = () => D?.L?.classic ? (D.next?.find(x => x.id && x.open) || (D.week?.express && D.week.full ? { id: 'final', home: true } : null)) : null;
-  function keysBar() { const nx = nextMap(); bar.innerHTML = (page ? pxKey('STRONA', { icon: 'prev', key: '←', attrs: 'data-b="prev"' }) : '') + (nx ? pxKey(nx.home ? 'WRACAM DO DOMU' : 'NASTĘPNA MAPA', { icon: nx.home ? 'home' : 'play', key: 'N', kind: 'gold', attrs: `data-b="go" data-id="${nx.id}"` }) : '') + pxKey('JESZCZE RAZ', { icon: 'again', key: 'R', attrs: 'data-b="again"' }) + (D?.L?.classic ? '' : pxKey('DO DOMU', { icon: 'home', attrs: 'data-b="home"' })) + pxKey('MAPA', { icon: 'map', key: 'M', attrs: 'data-b="map"' }) +
+  const nextMap = () => D?.L?.classic ? (D.next?.find(x => x.id && x.open) || { id: 'final', home: true }) : null;
+  function keysBar() { const nx = nextMap(); if (D?.L?.classic) { bar.innerHTML = pxKey(nx.home ? 'WYDANIE SPECJALNE' : 'NASTĘPNA MAPA', { icon: 'play', key: 'ENTER', kind: 'gold', attrs: 'data-b="go"', nudge: true }) + pxKey('JESZCZE RAZ', { icon: 'again', key: 'R', attrs: 'data-b="again"' });
+      bar.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { close(); b.dataset.b === 'go' ? game.go(nextMap().id) : game.again(); }); return; }
+    bar.innerHTML = (page ? pxKey('STRONA', { icon: 'prev', key: '←', attrs: 'data-b="prev"' }) : '') + (nx ? pxKey(nx.home ? 'WRACAM DO DOMU' : 'NASTĘPNA MAPA', { icon: nx.home ? 'home' : 'play', key: 'N', kind: 'gold', attrs: `data-b="go" data-id="${nx.id}"` }) : '') + pxKey('JESZCZE RAZ', { icon: 'again', key: 'R', attrs: 'data-b="again"' }) + (D?.L?.classic ? '' : pxKey('DO DOMU', { icon: 'home', attrs: 'data-b="home"' })) + pxKey('MAPA', { icon: 'map', key: 'M', attrs: 'data-b="map"' }) +
       (page < pages.length - 1 ? pxKey('DALEJ', { icon: 'next', key: '→', kind: 'gold', attrs: 'data-b="next"', nudge: true }) : pxKey('NA MAPĘ', { icon: 'play', key: 'ENTER', kind: 'gold', attrs: 'data-b="map"', nudge: true }));
     bar.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { const k = b.dataset.b; if (k === 'go') { close(); game.go(b.dataset.id); return; } if (k === 'prev') turn(page - 1); else if (k === 'next') turn(page + 1); else { close(); k === 'again' ? game.again() : k === 'home' ? game.home() : game.map(); } }); }
   function build() { paginate(); page = Math.min(page, pages.length - 1); show(page); }
@@ -469,6 +506,7 @@ export function createPaper({ game }) {
   function close() { open_ = false; el.classList.remove('on'); }
   addEventListener('resize', () => { if (open_ && !busy) build(); });
   function key(e) { if (!open_) return false; const c = e.code; if (call.classList.contains('on')) { if (c === 'Escape') endCall(); e.preventDefault(); return true; }
+    if (D?.L?.classic) { if (c === 'KeyR') { close(); game.again(); } else if (['Enter', 'Space', 'KeyN', 'Escape', 'KeyM', 'NumpadEnter'].includes(c)) { const nx = nextMap(); close(); game.go(nx.id); } e.preventDefault(); return true; }
     if (c === 'ArrowRight' || c === 'KeyD' || c === 'PageDown') turn(page + 1); else if (c === 'ArrowLeft' || c === 'KeyA' || c === 'PageUp') turn(page - 1);
     else if (c === 'KeyN' && nextMap()) { close(); game.go(nextMap().id); } else if (c === 'Enter' || c === 'Space') { if (page < pages.length - 1) turn(page + 1); else { const g = A.face.querySelector('.jt [data-go]'); if (g) g.click(); else { close(); game.map(); } } } else if (c === 'KeyR') { close(); game.again(); } else if (c === 'Escape' || c === 'KeyM') { close(); game.map(); }
     e.preventDefault(); return true; }

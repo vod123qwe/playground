@@ -163,6 +163,10 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     const name = edition?.title?.() || 'GAZECIARZ', sc = Math.max(1, Math.min(2, (W - 8) / (A.width(name) * 2))), nw = A.width(name) * 2 * sc; g.save(); g.translate(Math.round(W / 2 - nw / 2), Math.round(22 - (1 - e) * 16)); g.scale(sc, sc);
     A.big(name, 0, 0, '#efc970', '#17181b'); g.restore();
     const sub = edition?.subtitle?.() || (edition?.classic?.() ? 'KLASYK: NA CZAS I NA PUNKTY' : 'PORANNA TRASA: GAZETY SAME SIĘ NIE ROZNIOSĄ'); A.text(sub, Math.round(W / 2 - A.width(sub) / 2), 58, '#f6f3ea');
+    // (the week done once: its stamp under the name, the best week's title and score)
+    { const st = edition?.stamp?.(); if (st) { const t1 = 'TYDZIEŃ UKOŃCZONY', t2 = `${st.title} · ${st.score} PKT`, w = Math.max(A.width(t1), A.width(t2)) + 12, x = Math.round(W / 2 - w / 2), y = 70;
+        g.fillStyle = 'rgba(236,227,204,.92)'; g.fillRect(x, y, w, 22); g.fillStyle = '#b8302a'; g.fillRect(x, y, w, 2); g.fillRect(x, y + 20, w, 2); g.fillRect(x, y, 2, 22); g.fillRect(x + w - 2, y, 2, 22);
+        A.text(t1, Math.round(W / 2 - A.width(t1) / 2), y + 4, '#b8302a', null); A.text(t2, Math.round(W / 2 - A.width(t2) / 2), y + 12, '#2b2723', null); } }
     const bw = 130, bx = Math.round(W / 2 - bw / 2); let y = Math.round(H - 26 - rows.length * 16 + (1 - e) * 20); hits = [];
     const panel = (x, yy, w, h, fill, edge) => { g.fillStyle = '#17181b'; g.fillRect(x + 1, yy - 1, w - 2, h + 2); g.fillRect(x - 1, yy + 1, w + 2, h - 2); g.fillRect(x, yy, w, h); g.fillStyle = edge; g.fillRect(x + 1, yy + 1, w - 2, h - 2); g.fillStyle = fill; g.fillRect(x + 2, yy + 2, w - 4, h - 4); };
     rows.forEach((r, i) => { const on = i === sel; panel(bx, y, bw, 12, on ? '#efc970' : '#25272b', on ? '#f6f3ea' : '#44484c'); A.text(r.label, Math.round(bx + bw / 2 - A.width(r.label) / 2), y + 3, on ? '#17181b' : '#d3d0c3', null); hits.push({ x: bx, y, w: bw, h: 12, i }); y += 16; });

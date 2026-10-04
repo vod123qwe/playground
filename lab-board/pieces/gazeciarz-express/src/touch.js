@@ -33,9 +33,11 @@ export function createTouch({ onCam, onMenu, onBook }) {
     /* (the game's look: chunky pixel boxes with cut corners, a dark edge and a light rim, a hard shadow; the game's pixel font) */
     #tc .base { width: 116px; height: 116px; border-radius: 22px; background: rgba(23,24,27,.35); border: 3px solid rgba(23,24,27,.8); box-shadow: inset 0 0 0 2px rgba(246,243,234,.35); }
     #tc .knob { width: 52px; height: 52px; border-radius: 12px; background: #efc970; border: 3px solid #17181b; box-shadow: inset 0 -4px 0 #b8902e; }
-    #tc .ghost { position: absolute; left: calc(max(18px, env(safe-area-inset-left)) + 58px); bottom: calc(max(20px, env(safe-area-inset-bottom)) + 70px); width: 116px; height: 116px; transform: translate(-50%, 50%);
+    #tc .ghost { position: absolute; left: calc(max(18px, env(safe-area-inset-left)) + 50px); bottom: calc(max(20px, env(safe-area-inset-bottom)) + 70px); width: 100px; height: 100px; font-size: 9px; transform: translate(-50%, 50%);
       border-radius: 22px; border: 3px dashed rgba(246,243,234,.35); pointer-events: none; display: grid; place-items: center; text-align: center; line-height: 1.5; color: rgba(246,243,234,.75); text-shadow: 1px 1px 0 #17181b; }
     #tc .ghost.gone { display: none; }
+    /* (Express: words only, no icons: the word big in the middle, the colour says the rest) */
+    #tc .btn.txt svg { display: none; } #tc .btn.txt i { position: static; font-size: 11px; letter-spacing: 0; } #tc .btn.txt.big i { font-size: 18px; letter-spacing: 2px; }
     #tc .hint { display: none; }
     #tc .btn { position: absolute; display: grid; place-items: center; pointer-events: auto; background: rgba(23,24,27,.78); border: 3px solid #17181b; color: #f6f3ea;
       clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
@@ -75,6 +77,8 @@ export function createTouch({ onCam, onMenu, onBook }) {
     full: svg('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>') };
 
   // the stick: where the left thumb first touches
+  // (the thumb's hint only till the thumb has been there once)
+  let used = false;
   const zone = el('zone'), look = el('look'), ghost = el('ghost', 'KCIUK<br>TUTAJ'), base = el('base'), knob = el('knob'), hint = el('hint', 'kciuk tutaj: jazda');
   let sid = null, ox = 0, oy = 0; const R = 52;
   const setStick = (x, y) => { let dx = x - ox, dy = y - oy; const l = Math.hypot(dx, dy); if (l > R) { dx *= R / l; dy *= R / l; }
@@ -82,10 +86,10 @@ export function createTouch({ onCam, onMenu, onBook }) {
     const sx = dx / R, sy = dy / R, dz = v => Math.abs(v) < .12 ? 0 : (Math.abs(v) - .12) / .88 * Math.sign(v);
     state.steer = dz(sx); state.pedal = Math.max(0, dz(-sy)); state.brake = Math.max(0, dz(sy)); };
   zone.addEventListener('pointerdown', e => { if (sid !== null) return; sid = e.pointerId; try { zone.setPointerCapture(sid); } catch { } ox = e.clientX; oy = e.clientY;
-    for (const o of [base, knob]) { o.style.display = 'block'; o.style.left = ox + 'px'; o.style.top = oy + 'px'; } state.stick = true; hint.style.display = 'none'; ghost.classList.add('gone'); setStick(ox, oy); e.preventDefault(); });
+    for (const o of [base, knob]) { o.style.display = 'block'; o.style.left = ox + 'px'; o.style.top = oy + 'px'; } state.stick = true; hint.style.display = 'none'; ghost.classList.add('gone'); used = true; setStick(ox, oy); e.preventDefault(); });
   zone.addEventListener('pointermove', e => { if (e.pointerId === sid) { setStick(e.clientX, e.clientY); e.preventDefault(); } });
   const stickUp = e => { if (e.pointerId !== sid) return; freeStick(); };
-  const freeStick = () => { sid = null; base.style.display = knob.style.display = 'none'; ghost.classList.remove('gone'); Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0 }); };
+  const freeStick = () => { sid = null; base.style.display = knob.style.display = 'none'; if (!used) ghost.classList.remove('gone'); Object.assign(state, { stick: false, steer: 0, pedal: 0, brake: 0 }); };
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) zone.addEventListener(ev, stickUp);
   // looking about: a finger dragged over the free right side
   let lid = null, lx = 0, ly = 0;
@@ -119,9 +123,10 @@ export function createTouch({ onCam, onMenu, onBook }) {
   const throwC = button(IC.throwL, 'RZUT', [92, 4, 16], CL, () => { state.holdL = true; }, () => { state.holdL = false; }); throwC.classList.add('big');
   const hopC = button(IC.hop, 'SKOK', [84, 106, 10], CL, () => { edges.hop = true; }); hopC.classList.add('big', 'hopb');
   const kickC = button(IC.kick, 'KOP', [62, 14, 122], CL, () => { edges.kick = true; state.kickHeld = true; }, () => { state.kickHeld = false; });
-  const throwRC = button(IC.throwR, 'RZUT', [54, 92, 112], CL, () => { state.holdR = true; }, () => { state.holdR = false; });
+  const throwRC = button(IC.throwR, 'RZUT →', [54, 92, 112], CL, () => { state.holdR = true; }, () => { state.holdR = false; });
   button(IC.fast, 'SPRINT', [50, 200, 24], CL, () => { state.sprint = true; }, () => { state.sprint = false; });
   const titleC = button(svg('<rect x="5" y="6" width="14" height="12"/><path d="M5 10h14M8 14h8"/>'), 'TYTUŁ', [50, 18, 202], CL, () => { edges.title = true; }); titleC.classList.add('hid');
+  for (const o of all) if (o.modes.length === 1 && o.modes[0] === 'classic') o.b.classList.add('txt');
   // on foot: one punch (left and right by turns), hop, talk, back on the bike (a run: the stick pushed all the way)
   let fist = 0;
   button(IC.punchR, 'cios', [78, 58, 14], ['foot'], () => { edges[(fist ^= 1) ? 'punchL' : 'punchR'] = true; });

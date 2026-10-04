@@ -6,6 +6,12 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 16: gazeta na jedną stronę i finał z przytupem
+
+- po każdej ulicy jedna strona Wieści zza płotu: nagłówek dnia nad zdjęciem z mety, medal z gwiazdkami, punkty, gazety, czas, wywrotki, zadowolenie czytelników, mapka trasy, jedna historia z ulicy i co jutro; z gazety zniknęły działy po wersji 3D (telefon do warsztatu, zlecenia, ogłoszenia, umowa na jutro)
+- po piątku od razu wydanie specjalne: gazeta wiruje w ekran, album tygodnia (pięć zdjęć z met z medalami i punktami, wynik liczy się na żywo), pasek zadowolenia, pieczątka z tytułem tygodnia, fajerwerki, potem KONIEC i menu z pieczątką TYDZIEŃ UKOŃCZONY (najlepszy tydzień); klawisz, klik albo A na padzie przeskakuje dalej
+- przyciski dotykowe bez ikonek, same napisy; podpowiedź kciuka znika po pierwszym dotyku
+
 ### Wersja 15: koniec etapu to koniec
 
 - po mecie są tylko dwie drogi: następna mapa albo powtórka (JESZCZE RAZ); zamknięcie gazety (Esc, mapa, warsztat) od razu przenosi na kolejną mapę, po Zimie do finału tygodnia
