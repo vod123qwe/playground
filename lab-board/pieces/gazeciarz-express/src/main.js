@@ -1924,6 +1924,40 @@ const DAYS = ['PONIEDZIAŁEK', 'WTOREK', 'ŚRODA', 'CZWARTEK', 'PIĄTEK', 'SOBOT
 const XLV = () => LVM.LEVELS.filter(l => l.classic && !l.soon), xDay = L => Math.max(0, XLV().findIndex(l => l.id === L.id));
 function xWeek() { const S = LVM.load(); return (S.xw ||= { sat: 60, days: [] }); }
 function satAdd(n) { if (B.sat == null || !LV || RUN.done) return; B.sat = Math.max(0, Math.min(100, B.sat + n)); }
+// ---------- Express: the week's end. Friday's paper (WRACAM DO DOMU) takes him to Chestnut Street at dusk: he rides home by himself,
+//   stops by his own house (the DOM board), and the special edition comes out: the week day by day, the readers' mood, its title and
+//   the paper's reward (paid once a week) ----------
+const WEEK_TITLES = [[80, 'GAZECIARZ TYGODNIA', 'Czytelnicy nie wyobrażają sobie poranka bez ciebie.', 50], [60, 'SOLIDNY TYDZIEŃ', 'Gazety docierały, ludzie się uśmiechali. Prawie zawsze.', 25],
+  [40, 'TYDZIEŃ Z PRZYGODAMI', 'Było różnie, ale osiedle wciąż czyta.', 10], [0, 'CZYTELNICY CHCĄ ZMIANY', 'Redakcja zaprasza na rozmowę w poniedziałek.', 0]];
+function goFinal() { saveCampaign(); location.search = 'mapa=klasyk&play&final'; }
+function finaleScene() { const home = track.doors.find(d => d.mine); if (!home) return weekPaper();
+  const N = track.N, ds = track.ds, W = i => ((i % N) + N) % N, hi = home.i ?? track.probe(home.p.x, home.p.z, -1).i, hs = track.oneSide || -1, i0 = W(hi - Math.round(75 / ds)), S0 = track.S[i0];
+  Object.assign(B, { x: S0.p.x + S0.r.x * hs * 1.4, z: S0.p.z + S0.r.z * hs * 1.4, hint: i0, yaw: Math.atan2(S0.f.x, S0.f.z), v: 3, crash: null, air: false }); B.y = track.probe(B.x, B.z, i0).y; B.gPrev = B.y; C.init = false;
+  const dusk = document.createElement('div'); dusk.id = 'dusk'; dusk.style.cssText = 'position:fixed;inset:0;z-index:3;pointer-events:none;background:linear-gradient(180deg,rgba(255,150,80,.38),rgba(120,70,140,.42));mix-blend-mode:multiply;opacity:0;transition:opacity 2.5s';
+  document.body.appendChild(dusk); requestAnimationFrame(() => dusk.style.opacity = '1'); flash('Piątek, wieczór. Tydzień za tobą, wracasz do domu.');
+  let arrived = 0; const iv = setInterval(() => { const q = track.probe(B.x, B.z, B.hint), a = ((((hi - q.i) % N) + N) % N) * ds;
+    if (!arrived && a > 3 && a < 200) { const T = track.S[W(q.i + Math.round(6 / ds))]; B.yaw = Math.atan2(T.p.x + T.r.x * hs * 1.4 - B.x, T.p.z + T.r.z * hs * 1.4 - B.z); B.v = Math.min(Math.max(B.v, 2.5), 3.4); }
+    else { B.v = 0; if (!arrived) { arrived = performance.now(); hud.rant(home.p.clone().setY(home.p.y + 2.2), pickOf(['JUŻ JESTEŚ, SYNKU!', 'OBIAD STYGNIE!', 'NO I JAK TYDZIEŃ?']), true, 1.95); } }
+    if (arrived && performance.now() - arrived > 2200) { clearInterval(iv); weekPaper(); } }, 50); }
+function weekPaper() { const S = LVM.load(), X = S.xw || { sat: 60, days: [] }, sat = Math.round(X.sat ?? 60), T = WEEK_TITLES.find(t => sat >= t[0]), XL = XLV(), score = (X.days || []).reduce((a, q) => a + (q?.pts || 0), 0);
+  let pay = 0; if (!X.paid && (X.days || []).filter(Boolean).length >= XL.length) { pay = T[3]; X.paid = true; S.money = (S.money || 0) + pay; B.points = S.money; LVM.save(); }
+  const rows = XL.map((l, k) => { const q = X.days?.[k]; return `<tr><td>${DAYS[k].toLowerCase()}</td><td>${l.name.replace(/^KLASYK:\s*/, '')}</td><td>${q ? q.pts + ' pkt' : '—'}</td><td>${q ? q.delivered + ' / ' + q.of : '—'}</td></tr>`; }).join('');
+  const el = document.createElement('div'); el.id = 'weekpaper'; el.innerHTML = `<div class="wp"><div class="mast">TRĄBKA PORANNA</div><div class="ed">WYDANIE SPECJALNE · TYDZIEŃ GAZECIARZA</div><h1>${T[1]}</h1><p class="lead">${T[2]}</p>
+    <table><tr><th>dzień</th><th>ulica</th><th>wynik</th><th>gazety</th></tr>${rows}</table>
+    <p class="sum">Zadowolenie czytelników: <b>${sat}%</b> · Wynik tygodnia: <b>${score} pkt</b>${pay ? ` · Nagroda od redakcji: <b>+${pay} zł</b>` : ''}</p>
+    <div class="btns"><button data-a="again">NOWY TYDZIEŃ (PONIEDZIAŁEK)</button><button data-a="free">JEŹDZIJ PO OSIEDLU</button></div></div>`;
+  const st = document.createElement('style'); st.textContent = `#weekpaper{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(12,13,15,.55);font:15px/1.4 Georgia,serif}
+    #weekpaper .wp{width:min(560px,92vw);max-height:92vh;overflow:auto;background:#efe9da;color:#2b2723;padding:22px 26px;box-shadow:6px 6px 0 #17181b;border:2px solid #2b2723}
+    #weekpaper .mast{font:32px/1 PTPix,monospace;text-align:center;letter-spacing:2px;border-bottom:3px double #2b2723;padding-bottom:8px}
+    #weekpaper .ed{font:12px/1.6 PTPix,monospace;text-align:center;color:#8e2e25;margin:6px 0 10px}#weekpaper h1{font:28px/1.1 PTPix,monospace;margin:8px 0;text-align:center}
+    #weekpaper .lead{text-align:center;font-style:italic}#weekpaper table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}#weekpaper td,#weekpaper th{border-bottom:1px solid #b8ad96;padding:4px 6px;text-align:left}
+    #weekpaper th{font:11px PTPix,monospace;color:#6b665d}#weekpaper .sum{border-top:3px double #2b2723;padding-top:8px}#weekpaper .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+    #weekpaper button{font:14px PTPix,monospace;background:#efc970;color:#17181b;border:2px solid #17181b;padding:8px 12px;box-shadow:3px 3px 0 #17181b;cursor:pointer}`;
+  document.head.appendChild(st); document.body.appendChild(el); audio.play('trick');
+  el.querySelector('[data-a="again"]').onclick = () => { el.remove(); document.getElementById('dusk')?.remove(); const XL0 = XLV()[0]; if (XL0) startLevel(XL0.id); };
+  el.querySelector('[data-a="free"]').onclick = () => { el.remove(); document.getElementById('dusk')?.remove(); }; }
+if (new URLSearchParams(location.search).has('final')) { const iv0 = setInterval(() => { if (!document.body.classList.contains('booted') || !track) return; clearInterval(iv0); setTimeout(finaleScene, 600); }, 300); }
+
 function weekStart(L) { const S = LVM.load(), ds = track.doors; S.week ||= {}; let W = S.week[L.id];
   // (Express: a door off the street (past the finish, behind the start) never reached: no subscriber there, in the week either)
   { const N = track.N, iJ = track.startI, span = Math.round(N * L.finish.to), off = d => { const i = d.i ?? track.probe(d.p.x, d.p.z, -1).i; return ((((i - iJ) % N) + N) % N) > span; };
@@ -2074,7 +2108,7 @@ const fin = createPaper({ game: { JB,  jobs: () => LVM.load().jobs || [], slots:
     if (B.points < J.cost) return { ok: false, msg: 'Bez pieniędzy to ja ci mogę najwyżej powiedzieć dzień dobry, kochaniutki.' }; B.points -= J.cost; if (J.item === 'sluchawka') S.owned.sluchawka = true; if (J.item === 'licznik') { S.owned.licznik = J.skin; cyclo.skin(J.skin); }
     S.money = B.points; LVM.save(); return { ok: true, msg: J.done + ' ' + pickOf(['I nie mów nikomu, skąd masz.', 'Interes zrobiony. Nie znamy się.', 'Proszę bardzo. Paragonu nie będzie, bo paragon to papier, a papier się pali.']) }; },
   buyNotes: () => { const S = LVM.load(), c = JB.JOBS.notes.cost; if ((S.slots || 2) >= 4) return { ok: false, msg: 'Większego notesu nie mam. Większy to już segregator.' }; if (B.points < c) return { ok: false, msg: 'Sześćdziesiąt złotych, kochanieńki. Wróć z pieniążkami.' }; B.points -= c; S.slots = (S.slots || 2) + 1; S.money = B.points; LVM.save(); return { ok: true, msg: 'Proszę bardzo, notes z twardą okładką. Teraz zmieścisz więcej spraw.' }; },
- mods: () => LVM.mods(), setMod: (id, on) => LVM.setMod(id, on), MODS: LVM.MODS, modBonus: ids => LVM.modBonus(ids), rewards: id => ({ R: LVM.REWARDS[id] || {}, got: LVM.load().got || {} }), partName: (k, i) => partLabel(k, i), coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
+ mods: () => LVM.mods(), setMod: (id, on) => LVM.setMod(id, on), MODS: LVM.MODS, modBonus: ids => LVM.modBonus(ids), rewards: id => ({ R: LVM.REWARDS[id] || {}, got: LVM.load().got || {} }), partName: (k, i) => partLabel(k, i), coupon: want => { const S = LVM.load(); if (S.coupon) return null; const k = (PARTS[want] && want) || Object.keys(PARTS).find(q => PARTS[q].tiers.some((t, i) => i > myBike.parts[q] && t.price)) || 'kola', c = { k, pct: .2, name: PARTS[k].name }; LVM.save({ coupon: c }); return c; }, map: () => openMap(), again: () => startLevel(LV.id), home: () => goHome(), go: id => id === 'final' ? goFinal() : id && startLevel(id), money: () => B.points, shop: () => { fin.close(); reFin = true; shop.open(); }, sound: n => audio.play(n) } });
 // the map's model (dio.js): drawn instead of the world while the map is open
 const dio = createDiorama({ THREE, toon, REGIONS: LVM.REGIONS, RC: MAP_RC, PTS: MAP_PTS });
 { const st = document.createElement('style'); st.textContent = 'body.mapopen #hudpx, body.mapopen #hud, body.mapopen #lvhud, body.mapopen #radio, body.mapopen #note { visibility: hidden; }'; document.head.appendChild(st); }

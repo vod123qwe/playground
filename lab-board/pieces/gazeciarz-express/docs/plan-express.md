@@ -13,7 +13,7 @@ Skąd: analiza poziomów v3 (dane z gry): trudność prawie nie rosła (dystans 
 - **Zakończenie**: po K5 scenka powrotu do domu (piątkowy wieczór, Kasztanowa, tabliczka DOM) i wydanie specjalne gazety z podsumowaniem tygodnia i tytułem. Bez tygodnia 2.
 - Wcześniej (v3): wywrotka na torze nie zabiera życia; tor przygotowany na starcie; abonenci tylko na ulicy.
 
-## Etapy
+## Etapy (wszystkie zrobione 04.10.2026: v4 krzywa + tydzień, v5 dynamika, v6 tory, v7 boss, v8 finał)
 
 1. Krzywa trudności: trudność toru liczona po mapach Expressa (0 → 1), cele czasu i gazet rosnące, ruch rosnący.
 2. Tydzień = 5 map + pasek zadowolenia + wynik tygodnia.

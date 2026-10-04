@@ -6,6 +6,12 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 8: finał tygodnia
+
+- po mecie Zimy w gazecie przycisk **WRACAM DO DOMU** (klawisz N): Kasztanowa o zmierzchu, gazeciarz sam podjeżdża pod swój dom (tabliczka DOM), mama woła z progu
+- potem **wydanie specjalne** Trąbki: tytuł tygodnia według zadowolenia czytelników (Gazeciarz tygodnia, Solidny tydzień, Tydzień z przygodami, Czytelnicy chcą zmiany), dzień po dniu wynik i gazety, wynik tygodnia, nagroda od redakcji (raz na tydzień)
+- z wydania: nowy tydzień od poniedziałku albo jazda po osiedlu
+
 ### Wersja 7: boss w piątek, kurier w żółtej furgonetce
 
 - na Zimie (piątek) jedzie przed tobą kurier: staje pod domami abonentów z paczką, a dom, do którego dotrze pierwszy, jest przejęty (bez punktów, zadowolenie w dół; gazeta tam już nic nie da)
