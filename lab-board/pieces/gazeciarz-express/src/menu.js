@@ -6,7 +6,7 @@
 // what it does and its key; Enter or a click on one waits for a new key (Esc: leave it). It scrolls when longer than the picture.
 // createMenu({ hud, look, styles, light, presets, onRestart, onClose }) → { get open, show(page), close(), key(e), pointer(type, x, y) }
 
-export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys, sens, controls, lab, onPlay, sound, modes, onMap, assist, tests, gore, radio, edition }) {
+export function createMenu({ hud, look, styles, light, presets, onRestart, onClose, onFull, onKeys, sens, controls, lab, onPlay, sound, modes, onMap, assist, tests, gore, radio, edition, crt }) {
   // its own canvas, the same size whatever the game's pixels are (so the menu does not grow or shrink as they change)
   const cv = document.createElement('canvas'); Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', imageRendering: 'pixelated', pointerEvents: 'none', zIndex: 5 });
   document.body.appendChild(cv); const g = cv.getContext('2d'), wr = hud.writer(g), MH = 270;
@@ -46,6 +46,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'button', label: 'STEROWANIE', act: () => controls ? show('keys') : (close(), onKeys?.()) },
       { type: 'button', label: document.fullscreenElement ? 'EKRAN: ZWYKŁE OKNO' : 'EKRAN: PEŁNY EKRAN', act: () => { onFull?.(); setTimeout(() => { rows = build(); }, 300); } },
       ...(assist ? [{ type: 'button', label: 'ASYSTA RZUTU: ' + assist.name(), act: () => { assist.next(); rows = build(); } }] : []),
+      ...(crt ? [{ type: 'button', label: 'KINESKOP: ' + (crt.on ? 'WŁĄCZONY' : 'WYŁĄCZONY'), act: () => { crt.toggle(); rows = build(); } }] : []),
       ...(gore && !CL ? [{ type: 'button', label: 'KREW: ' + gore.name(), act: () => { gore.next(); rows = build(); } }] : []),
       ...(radio && !CL ? [{ type: 'button', label: 'JANUSZ W SŁUCHAWCE: ' + radio.name(), act: () => { radio.next(); rows = build(); } }] : []),
       { type: 'button', label: 'WRÓĆ', act: () => goBack() }];
