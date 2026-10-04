@@ -6,6 +6,13 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 3: uczciwy finał
+
+- wywrotka na torze z przeszkodami nie zabiera życia (kosztuje czas i punkty), więc tor nie kończy przejazdu tuż przed metą
+- tor przygotowuje się na starcie mapy (grafika gotowa wcześniej), mniejsze szarpnięcie, gdy pojawia się w połowie trasy
+- zabezpieczenie mety: gdyby gazeta z wynikiem się nie złożyła, gra mimo to jedzie dalej (kolejna mapa albo dom)
+- abonenci tylko na ulicy: domy za metą i za startem nie liczą się do tygodnia pracy (wcześniej zawsze „pominięci” i rezygnowali)
+
 ### Wersja 2: tor bez rowerzystów
 
 - rowerzyści z naprzeciwka nie wjeżdżają już na tor z przeszkodami (jechali gęsiego przez barierki i pachołki); znikają 60 m przed torem, poza zasięgiem wzroku
