@@ -267,7 +267,9 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
         if (dist < 1.2 && !R.foot) { if ((R.h || 0) > 1.1 && clock - Sh.done > 6) { Sh.done = clock; ev.push({ kind: 'overhead', p: { g: K.g } }); for (const k2 of Sh.kids) once(k2, 'wave'); } else if (!R.air && !(K.hitT > clock)) { K.hitT = clock + 3; ev.push({ kind: 'bump', p: { g: K.g } }); once(K, 'hit'); } } } }
     // (the drives: lights on as he comes (25 m off, the way he rides), out it backs, a wait at the road's edge, back in)
     for (const K of backers) { const A = S[K.i], ahead = ((((K.i * ds - (R.s ?? 0)) * (R.along || 1)) % L) + L * 1.5) % L - L / 2;
-      if (K.st === 'in' && ahead > 6 && ahead < 26 && Math.abs(R.v) > 1) { K.st = 'lights'; K.t = 0; }
+      // (a drive on the finale's course: its car stays in, the course is for him)
+      const onCourse = api.clear && (() => { const s0 = K.i * ds, a0 = ((api.clear[0] - 10) % L + L) % L, b0 = ((api.clear[1] + 10) % L + L) % L; return a0 <= b0 ? s0 >= a0 && s0 <= b0 : s0 >= a0 || s0 <= b0; })();
+      if (K.st === 'in' && !onCourse && ahead > 6 && ahead < 26 && Math.abs(R.v) > 1) { K.st = 'lights'; K.t = 0; }
       K.t += dt; if (K.st === 'lights' && K.t > .9 && !traffic().some(b => !b.t?.r && Math.hypot(b.x - A.p.x, b.z - A.p.z) < 18)) { K.st = 'out'; K.t = 0; if (!track.parked.includes(K.P0)) track.parked.push(K.P0); } if (K.st === 'out') { K.d += (K.d1 - K.d) > 0 ? Math.min(K.d1 - K.d, 2.2 * dt) : Math.max(K.d1 - K.d, -2.2 * dt); if (Math.abs(K.d - K.d1) < .02) { K.st = 'wait'; K.t = 0; } }
       if (K.st === 'wait' && K.t > 2.6) { K.st = 'back'; K.t = 0; } if (K.st === 'back') { K.d += (K.d0 - K.d) > 0 ? Math.min(K.d0 - K.d, 1.6 * dt) : Math.max(K.d0 - K.d, -1.6 * dt); if (Math.abs(K.d - K.d0) < .02) { K.st = 'rest'; K.t = 0; } }
       if (K.st === 'rest') { const ix = track.parked.indexOf(K.P0); if (ix >= 0) track.parked.splice(ix, 1); }
@@ -307,5 +309,5 @@ export function createClassic({ THREE, toon, track, scene, cars, traffic = () =>
     return null; }
   // (the herd on the road: for the traffic to stop before each cow, as before someone on a zebra)
   const crossing = () => herd.on ? herd.cows.filter(c => Math.abs(c.d0 - c.prog) < track.ROAD + 1.5).map(c => ({ s: wrap(herd.i + Math.round(c.ds / ds)) * ds, d: hs * (c.d0 - c.prog) })) : [];
-  const api = { id: 'classic', wave: false, prog: 0, crossing, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
+  const api = { id: 'classic', wave: false, prog: 0, clear: null, crossing, people, lights, update, kick, talk, paper, angry, backers, sprinklers, cart, flocks, strollers, gull: GULL, skaters, herd, trip }; return api;
 }
