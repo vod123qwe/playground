@@ -1393,7 +1393,7 @@ function stepDrops(dt) { const me = foot.active ? foot.me : null, px_ = me ? me.
       if (d.kind === 'papers') { B.papers += 4; hud.pop(lift, '+4', '#f6f3ea'); flash('Jego gazety. Teraz twoje. +4'); }
       if (d.kind === 'bun') { if (me) me.hp = Math.min(100, me.hp + 30); B.hp = Math.min(100, (B.hp ?? 100) + 30); hud.pop(lift, '+30 HP', '#9fd27a'); flash('Bułka z makiem. Siły wracają.'); } }
     if (near || (d.t > 60 && !d.onPick)) { scene.remove(d.g); drops.splice(k, 1); } } }
-function pickBundle(C) { C.used = true; audio.play('rustle'); C.o.visible = false; B.papers += 8; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+8', '#f6f3ea'); flash('Paczka gazet! +8'); }
+function pickBundle(C) { C.used = true; audio.play('rustle'); C.o.visible = false; B.papers += 10; hud.pop(C.o.position.clone().setY(C.o.position.y + .6), '+10', '#f6f3ea'); flash('Paczka gazet! +10'); }
 function stepFoot(dt, inp) {                                           // (on foot: him walking or fighting; the world goes on round him)
   foot.update(dt, { fwd: inp.pedal - inp.brake, side: inp.steer, run: inp.sprint, atkL: foot.fighting && inp.atkL, atkR: foot.fighting && inp.atkR, up: inp.up, down: inp.down, guard: inp.guard, dodge: inp.dodge, taunt: inp.taunt, dx: inp.dx, dy: inp.dy, lmb: inp.lmb, rmb: inp.rmb, locked: inp.locked, touch: inp.touch, jump: inp.hop || (!foot.fighting && inp.kick) }, world);
   if (!foot.active) return;
