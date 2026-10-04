@@ -2,9 +2,15 @@
 
 Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz spod domu na Kasztanowej, roznosisz gazety przez mniej więcej półtorej minuty, na końcu ulicy czeka tor z przeszkodami w klimacie mapy, potem gazeta z wynikiem i od razu kolejna mapa: Wieś, Park, Deptak, Zima.
 
-![Okładka](docs/okladka.jpg)
+![Okładka](docs/okladka-kaseta.jpg)
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
+
+### Wersja 11: kineskop i kaseta
+
+- **tryb kineskopu** (do wypróbowania): cała gra na starym telewizorze: obudowa, zaokrąglony ekran, linie skanowania, maska luminoforu, ciemne rogi, połysk szkła, napis i dioda pod ekranem; ładowanie jak kaseta wideo (szum, KASETA // ODTWARZANIE, licznik), start jak włączenie telewizora (biała linia otwiera obraz)
+- włączanie: **USTAWIENIA → KINESKOP** (zapamiętane) albo `?crt=1` w adresie; na razie domyślnie wyłączony, docelowo sam od 1280×720 na komputerze
+- nowa okładka na planszy laba: kaseta 8-bit z etykietą gry
 
 ### Wersja 10: wygodne sterowanie
 
