@@ -6,6 +6,14 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 4: tydzień i rosnąca trudność
+
+- trudność rośnie od Kasztanowej do Zimy: limit czasu 150 → 135 s, cel gazet 9 → 14, auta 1 → 3, a tor z przeszkodami coraz trudniejszy (na Zimie najdłuższy slalom, duży skok, obręcze)
+- tydzień pracy = pięć map: Kasztanowa poniedziałek, Wieś wtorek, Park środa, Deptak czwartek, Zima piątek; w piątek premia za cały tydzień
+- pasek **zadowolenia czytelników** pod paskiem życia: rośnie za gazetę dla abonenta, spada za pominiętego abonenta, zły tytuł, wybitą szybę abonenta i skrzynkę przejętą przez kuriera; przechodzi z dnia na dzień
+- w gazecie po każdym dniu: zadowolenie i wynik tygodnia
+- plan kolejnych etapów (dynamika, tor ze znakiem firmowym mapy, boss: kurier w żółtej furgonetce, finał z powrotem do domu): `docs/plan-express.md`
+
 ### Wersja 3: uczciwy finał
 
 - wywrotka na torze z przeszkodami nie zabiera życia (kosztuje czas i punkty), więc tor nie kończy przejazdu tuż przed metą
