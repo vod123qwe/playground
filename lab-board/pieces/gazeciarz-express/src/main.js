@@ -415,7 +415,8 @@ function input() {
     tDx = e.lookDx * .9; tDy = e.lookDy * .9; }   // (on foot: the stick walks him, the right finger turns the camera, see onfoot)
   if (!foot.active) { holdL = holdL || mouse.lh; holdR = holdR || mouse.rh; }   // (on the bike: the left button throws left, the right one right)
   // (Express, two hands: L (or C) hops, and in the air the hop key is the trick; Space kicks)
-  if (track.classic && !foot.active) { const hp = hop || !!tE?.hop; hop = hp && !B.air; kickK = hit('kick') || !!tE?.kick || (hp && B.air); kickHold = !!held('kick') || !!(touch.on && touch.state.kickHeld); }
+  // (kickK and kickHold keep what came before: Space, the pad's X / □, the touch button; the pad's kick was lost here till v12)
+  if (track.classic && !foot.active) { const hp = hop || !!tE?.hop; hop = hp && !B.air; kickK = kickK || hit('kick') || !!tE?.kick || (hp && B.air); kickHold = kickHold || !!held('kick') || !!(touch.on && touch.state.kickHeld); }
   const edge0 = new Set(edge), hit0 = id => BIND[id].some(c => edge0.has(c)); edge.clear(); const m0 = { ...mouse }; mouse.dx = mouse.dy = 0; mouse.l = false; m0.dx *= sens * .5; m0.dy *= sens * .5;
   if (!m0.locked && m0.used && m0.inside && foot.active && !foot.fighting && Math.abs(m0.nx) > .72) m0.dx += Math.sign(m0.nx) * (Math.abs(m0.nx) - .72) / .28 * 11 * sens * .5;   // (at the edge: on turning)
   return { steer: THREE.MathUtils.clamp(steer, -1, 1), pedal, brake, sprint: !!sprint, hop, kick: kickK, kickHold, holdL: !!holdL, holdR: !!holdR,
