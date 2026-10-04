@@ -2,7 +2,9 @@
 
 Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz spod domu na Kasztanowej, roznosisz gazety przez mniej więcej półtorej minuty, na końcu ulicy czeka tor z przeszkodami w klimacie mapy, potem gazeta z wynikiem i od razu kolejna mapa: Wieś, Park, Deptak, Zima.
 
-Wydzielony z **Gazeciarza** (folder `gazeciarz`, tam ulice są pętlami, poziom to pełne okrążenie). Osobny zapis (`gzx.save`), osobny port (8810), osobny kafel w labie.
+![Okładka](docs/okladka.jpg)
+
+Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
 ### Wersja 1: ulice z końcem
 
