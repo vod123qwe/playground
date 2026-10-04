@@ -6,6 +6,10 @@ Gazeciarz w jedną stronę (pixel art, three.js). Ulice mają koniec: startujesz
 
 Jedyna wersja Gazeciarza. Wersja z pętlami (poziom = pełne okrążenie) jest w archiwum `.archive/gazeciarz-petle` od 04.10.2026. Zapis `gzx.save`, port 8810.
 
+### Wersja 9: wybór poziomu
+
+- w menu tytułowym i w pauzie **WYBIERZ POZIOM**: pięć dni tygodnia (pon. Kasztanowa … pt. Zima) z medalami, każdy do wybrania
+
 ### Wersja 8: finał tygodnia
 
 - po mecie Zimy w gazecie przycisk **WRACAM DO DOMU** (klawisz N): Kasztanowa o zmierzchu, gazeciarz sam podjeżdża pod swój dom (tabliczka DOM), mama woła z progu

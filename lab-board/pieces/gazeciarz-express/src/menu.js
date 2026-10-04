@@ -20,7 +20,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
   function build() {
     const S = look.S, CL = !!edition?.classic?.();   // (the Classic: its own menu, none of Poranna Trasa's modes, tests, voice on the earpiece, blood)
     if (page === 'title') return [
-      ...(edition ? [...(edition.switchable === false ? [] : [{ type: 'button', label: 'WERSJA: ' + edition.name(), act: () => { edition.next(); rows = build(); } }]), ...(edition.extra?.() || []).map(o => ({ type: 'button', label: o.label, act: () => { close(); o.act(); } }))] : []),
+      ...(edition ? [...(edition.switchable === false ? [] : [{ type: 'button', label: 'WERSJA: ' + edition.name(), act: () => { edition.next(); rows = build(); } }]), ...(edition.levels ? [{ type: 'button', label: 'WYBIERZ POZIOM', act: () => show('levels') }] : (edition.extra?.() || []).map(o => ({ type: 'button', label: o.label, act: () => { close(); o.act(); } })))] : []),
       { type: 'button', label: 'GRAJ', act: () => { close(); onPlay?.(); } },
       ...(onMap ? [{ type: 'button', label: 'MAPA TRASY', act: () => { close(); onMap(); } }] : []),
       ...(modes && !CL ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
@@ -31,6 +31,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     if (page === 'pause') return [
       ...(/[?&]arena=/.test(location.search) ? [{ type: 'button', label: '← WRÓĆ DO WARSZTATU', act: () => { location.href = 'studio.html'; } }] : []),
       { type: 'button', label: 'WRÓĆ DO GRY', act: () => close() },
+      ...(edition?.levels ? [{ type: 'button', label: 'WYBIERZ POZIOM', act: () => show('levels') }] : []),
       ...(onMap ? [{ type: 'button', label: 'MAPA TRASY', act: () => { close(); onMap(); } }] : []),
       ...(modes && !CL ? [{ type: 'button', label: 'TRYBY GRY', act: () => show('modes') }] : []),
       { type: 'button', label: 'USTAWIENIA', act: () => show('settings') },
@@ -38,6 +39,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
       { type: 'button', label: 'ZACZNIJ OD NOWA', act: () => { close(); onRestart(); } },
       ...(/[?&]arena=/.test(location.search) ? [] : [{ type: 'button', label: 'WARSZTAT (ASSETY)', act: () => { location.href = 'studio.html'; } }]),
       ...(lab ? [{ type: 'button', label: '← WRÓĆ DO LABU', act: () => { location.href = lab; } }] : [])];
+    if (page === 'levels') return [{ type: 'head', label: 'TYDZIEŃ GAZECIARZA' }, ...edition.levels().map(o => ({ type: 'button', label: o.label, act: () => { close(); o.act(); } })), { type: 'button', label: 'WRÓĆ', act: () => goBack() }];
     if (page === 'settings') return [
       { type: 'button', label: 'GRAFIKA', act: () => show('gfx') },
       ...(sound ? [{ type: 'button', label: 'DŹWIĘK', act: () => show('snd') }] : []),
@@ -69,7 +71,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     return r;
   }
   const back = {}; function goBack() { show(back[page] || parent, true); }
-  function show(p, isBack) { if (!isBack && page && p !== page) back[p] = page; if ((p === 'keys' || p === 'gfx' || p === 'snd' || p === 'modes' || p === 'settings' || p === 'tests') && (page === 'title' || page === 'pause')) parent = page; page = p; t = 0; capture = null; window.PT_capturing = false; scroll = scrollT = 0; rows = build(); sel = Math.max(0, rows.findIndex(pickable)); }
+  function show(p, isBack) { if (!isBack && page && p !== page) back[p] = page; if ((p === 'keys' || p === 'gfx' || p === 'snd' || p === 'modes' || p === 'settings' || p === 'tests' || p === 'levels') && (page === 'title' || page === 'pause')) parent = page; page = p; t = 0; capture = null; window.PT_capturing = false; scroll = scrollT = 0; rows = build(); sel = Math.max(0, rows.findIndex(pickable)); }
   // (wiped at once: with the map open over it the game draws no frame, and the last picture of the menu stayed under the map)
   function close() { page = null; drag = null; capture = null; window.PT_capturing = false; g.clearRect(0, 0, cv.width, cv.height); onClose && onClose(); }
   const valOf = row => row.get ? row.get() : look.S[row.key];                    // (a slider's value: in the look, or kept by its own get / set)
@@ -113,7 +115,7 @@ export function createMenu({ hud, look, styles, light, presets, onRestart, onClo
     g.clearRect(0, 0, A.W, A.H); if (!page) return; t += dt; const W = A.W, H = A.H, k = Math.min(1, t / .14), e = 1 - Math.pow(1 - k, 3), side = page === 'gfx', keysPage = page === 'keys';
     if (page === 'title') { drawTitle(dt); return; }
     g.fillStyle = '#0c0d0f'; if (!side) for (let y = 0; y < H; y++) for (let x = (y % 2); x < W; x += 2) g.fillRect(x, y, 1, 1);   // (pause: a dither over the picture; graphics: none, so the change shows)
-    const rowH = r => r.type === 'styles' ? 11 + Math.ceil(r.options.length / 2) * 12 : r.type === 'button' ? 16 : r.type === 'head' ? 15 : r.type === 'bind' || r.type === 'info' ? 10 : 13, title = page === 'pause' ? 'PAUZA' : page === 'modes' ? 'TRYBY GRY' : page === 'snd' ? 'DŹWIĘK' : page === 'settings' ? 'USTAWIENIA' : page === 'tests' ? 'TESTY' : keysPage ? 'STEROWANIE' : 'GRAFIKA';
+    const rowH = r => r.type === 'styles' ? 11 + Math.ceil(r.options.length / 2) * 12 : r.type === 'button' ? 16 : r.type === 'head' ? 15 : r.type === 'bind' || r.type === 'info' ? 10 : 13, title = page === 'pause' ? 'PAUZA' : page === 'levels' ? 'WYBIERZ POZIOM' : page === 'modes' ? 'TRYBY GRY' : page === 'snd' ? 'DŹWIĘK' : page === 'settings' ? 'USTAWIENIA' : page === 'tests' ? 'TESTY' : keysPage ? 'STEROWANIE' : 'GRAFIKA';
     const full = rows.reduce((a, r) => a + rowH(r), 0), view = Math.min(full, H - 60), pw = Math.min(W - 8, page === 'pause' ? 196 : keysPage ? 340 : page === 'modes' ? 300 : 236), ph = 34 + view + 8;
     // scrolled so the chosen row is in view
     { let yy = 0; for (let i = 0; i < sel; i++) yy += rowH(rows[i]); const hh = rowH(rows[sel] || {}); if (yy - scrollT < 10) scrollT = Math.max(0, yy - 10); if (yy + hh - scrollT > view - 10) scrollT = Math.min(full - view, yy + hh - view + 10); scrollT = Math.max(0, Math.min(full - view, scrollT)); scroll += (scrollT - scroll) * Math.min(1, dt * 14); }
