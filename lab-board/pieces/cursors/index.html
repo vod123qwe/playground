@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script src="../../shared/lab-lock.js?v=1"></script>
+<script src="../../shared/lab-lock.js?v=3"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cursors · lab</title>
 <meta name="theme-color" content="#f3f2ee">
@@ -136,8 +136,8 @@ const LOOKS = ['Pixel', 'Spotlight', 'Goo', 'Snap'];
 const DEF = { look: 'Pixel',
   px_cell: 8, px_life: 450, px_trail: 40, px_color: '#b8ada0', px_blend: true, px_burst: true,
   rv_r: 130, rv_soft: .55, rv_veil: .92, rv_follow: .16, rv_grow: 1.5,
-  go_n: 9, go_size: 34, go_follow: .3, go_goo: 10,
-  sn_dot: 18, sn_pad: 8, sn_mag: 6, sn_k: .2 };
+  go_n: 16, go_size: 46, go_follow: .33, go_goo: 14,   // (Jarek's tuning, 05.10)
+  sn_dot: 23, sn_pad: 13, sn_mag: 6, sn_k: .11 };
 let P = (() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF }; } })();
 if (!LOOKS.includes(P.look)) P.look = DEF.look;
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
