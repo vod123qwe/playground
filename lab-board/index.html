@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="shared/lab-lock.js?v=3" data-back="0"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>lab board</title>
 <meta name="description" content="Infinite draggable board of experiments; click a piece to open its side panel.">
@@ -342,6 +343,10 @@
   .gv-cur b svg{display:block; width:7px; height:12px}
   .gv-cur b.l{left:-17px} .gv-cur b.r{left:10px}
   .gv-cur.over b{opacity:1}
+  .gv-cur i{display:none}   /* (the dot and the ring are the goo now) */
+  /* the lab's Goo cursor: blobs that trail the pointer as a tail and, where the wall can be swiped, gather into a ring round it */
+  .gv-goo{position:fixed; inset:0; z-index:12; pointer-events:none; filter:url(#gv-goo-f); mix-blend-mode:difference; opacity:0; transition:opacity .25s}
+  .gv-goo.on{opacity:1} .gv-goo i{position:absolute; left:0; top:0; border-radius:50%; background:#fff; will-change:transform}
   .gv-cur.drag b.l{transform:translateX(calc(-6px + var(--sp, 0) * -6px))} .gv-cur.drag b.r{transform:translateX(calc(6px + var(--sp, 0) * 6px))}
   body.gridmode.has-gvcur .gv-scroll, body.gridmode.has-gvcur .gv-scroll *{cursor:none}
   .gv-empty{background:var(--gv-empty); display:grid; place-items:center; color:var(--muted); font-size:12.5px; cursor:inherit}
@@ -359,6 +364,7 @@
       <div class="gv-theme" role="group" aria-label="Theme"><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></div></header>
     <div class="gv-scroll" id="gv-scroll"><div class="gv-track" id="gv-track"></div></div>
     <div class="gv-cur" id="gv-cur" aria-hidden="true"><div class="gv-cur-in" id="gv-cur-in"><i></i><b class="l"><svg viewBox="0 0 7 12" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1L1 6l5 5"/></svg></b><b class="r"><svg viewBox="0 0 7 12" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l5 5-5 5"/></svg></b></div></div>
+    <div class="gv-goo" id="gv-goo" aria-hidden="true"></div><svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="gv-goo-f" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10"/></filter></svg>
   </section>
   <div class="board" id="board">
     <canvas id="gl"></canvas>
@@ -1981,6 +1987,12 @@ const GV = (() => {
     document.body.classList.add('has-gvcur');
     const cur = document.getElementById('gv-cur'), inner = document.getElementById('gv-cur-in');
     const C = { x: -100, y: -100, tx: -100, ty: -100, vx: 0, sx: 1, sy: 1, svx: 0, svy: 0, press: 0, pv: 0, raf: 0, seen: false };
+    // (the goo: 16 blobs, each following the one before; over the wall they leave the tail and take their places on a ring round the
+    // pointer, small and even, so the blur melts them into one ring: a morph from the tail to the swipe cursor and back)
+    const gooEl = document.getElementById('gv-goo'), GN = 16, GS = 46, G = [];
+    for (let i = 0; i < GN; i++) { const el = document.createElement('i'), s = GS * (1 - i / GN * .7); el.style.width = el.style.height = s + 'px'; el.style.marginLeft = el.style.marginTop = -s / 2 + 'px'; gooEl.appendChild(el);
+      G.push({ el, s, x: { p: -100, v: 0 }, y: { p: -100, v: 0 }, k: { p: 0, v: 0 } }); }
+    const gs = (o, to, k, d = .58) => { o.v = (o.v + (to - o.p) * k) * d; o.p += o.v; return Math.abs(to - o.p) > .05 || Math.abs(o.v) > .05; };
     const run = () => { C.x += (C.tx - C.x) * .32; C.y += (C.ty - C.y) * .32;
       const dx = C.tx - C.x; C.vx += (dx - C.vx) * .25; const sp = Math.min(1, Math.abs(C.vx) / 40), dragging = !!(down && moved);
       const wx = dragging ? 1 + sp * .45 : 1, wy = dragging ? 1 - sp * .18 : 1;
@@ -1989,13 +2001,18 @@ const GV = (() => {
       cur.style.transform = `translate(${C.x.toFixed(1)}px, ${C.y.toFixed(1)}px)`;
       inner.style.transform = `scale(${(C.sx * k).toFixed(3)}, ${(C.sy * k).toFixed(3)})`; cur.style.setProperty('--sp', sp.toFixed(2));
       cur.classList.toggle('drag', dragging);
-      C.raf = (Math.abs(C.tx - C.x) + Math.abs(C.ty - C.y) > .1 || Math.abs(C.sx - wx) + Math.abs(C.sy - wy) > .002 || Math.abs(C.press - (down ? 1 : 0)) > .002) ? requestAnimationFrame(run) : 0; };
+      const ring = cur.classList.contains('over'), shown = cur.classList.contains('on'); gooEl.classList.toggle('on', shown); let gm = false, tx = C.tx, ty = C.ty;
+      for (let i = 0; i < GN; i++) { const b = G[i], a = i / GN * Math.PI * 2;
+        const gx = ring ? C.tx + Math.cos(a) * 27 * C.sx : tx, gy = ring ? C.ty + Math.sin(a) * 27 * C.sy : ty, sc = (ring ? 13 / b.s : 1) * k;
+        if (gs(b.x, gx, ring ? .24 : .33)) gm = true; if (gs(b.y, gy, ring ? .24 : .33)) gm = true; if (gs(b.k, sc, .2, .62)) gm = true;
+        b.el.style.transform = `translate(${b.x.p.toFixed(1)}px, ${b.y.p.toFixed(1)}px) scale(${Math.max(0, b.k.p).toFixed(3)})`; tx = b.x.p; ty = b.y.p; }
+      C.raf = (gm || Math.abs(C.tx - C.x) + Math.abs(C.ty - C.y) > .1 || Math.abs(C.sx - wx) + Math.abs(C.sy - wy) > .002 || Math.abs(C.press - (down ? 1 : 0)) > .002) ? requestAnimationFrame(run) : 0; };
     const kick = () => { if (!C.raf) C.raf = requestAnimationFrame(run); };
-    addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; C.tx = e.clientX; C.ty = e.clientY; if (!C.seen) { C.seen = true; C.x = C.tx; C.y = C.ty; }
+    addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; C.tx = e.clientX; C.ty = e.clientY; if (!C.seen) { C.seen = true; C.x = C.tx; C.y = C.ty; for (const b of G) { b.x.p = C.tx; b.y.p = C.ty; } }
       const onGrid = document.body.classList.contains('gridmode') && !!(e.target.closest && e.target.closest('.gv-scroll'));
       cur.classList.toggle('on', document.body.classList.contains('gridmode') && !(e.target.closest && e.target.closest('.gv-chips'))); cur.classList.toggle('over', onGrid || !!(down && moved)); kick(); }, { passive: true });
     addEventListener('pointerdown', kick); addEventListener('pointerup', kick);
-    document.addEventListener('pointerleave', () => cur.classList.remove('on')); addEventListener('blur', () => cur.classList.remove('on'));
+    document.addEventListener('pointerleave', () => { cur.classList.remove('on'); gooEl.classList.remove('on'); }); addEventListener('blur', () => { cur.classList.remove('on'); gooEl.classList.remove('on'); });
   }
   return { layout };
 })();
