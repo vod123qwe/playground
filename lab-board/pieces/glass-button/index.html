@@ -7,14 +7,14 @@
 <meta name="description" content="A button made of a real, ray-traced solid of glass with a tuning panel: shape, dome or dish, refraction, light, label and layout. The label is printed on its surface and a clear glass bead with a holographic star is set into it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=Inter+Tight:wght@400..600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
 <style>
   :root{ --ink:#1b1c20; --ease:cubic-bezier(.2,.8,.2,1); --spring:cubic-bezier(.2,1.6,.4,1); }
   *{box-sizing:border-box}
   html,body{height:100%; margin:0}
   body{
     background:linear-gradient(135deg, #e7e8eb 0%, #c3c6cb 50%, #8f959c 100%);
-    color:var(--ink); font-family:"Inter Tight", system-ui, sans-serif; overflow:hidden;
+    color:var(--ink); font-family:var(--lab-font); overflow:hidden;
     -webkit-font-smoothing:antialiased; touch-action:none; user-select:none; -webkit-user-select:none;
   }
   body.dark{background:linear-gradient(135deg, #2a2c31 0%, #1c1d21 50%, #111215 100%)}
@@ -36,7 +36,7 @@
   body.booting .boot{opacity:1}
   .boot > div{display:grid; justify-items:center; gap:14px}
   .boot .ring{width:30px; height:30px; border-radius:50%; border:2px solid rgba(20,20,20,.1); border-top-color:rgba(20,20,20,.5); animation:boot-spin .9s linear infinite}
-  .boot p{margin:0; font:600 12.5px/1 "Inter", system-ui, sans-serif; color:rgba(20,20,20,.5)}
+  .boot p{margin:0; font:600 12.5px/1 var(--lab-font); color:rgba(20,20,20,.5)}
   body.dark .boot .ring{border-color:rgba(255,255,255,.12); border-top-color:rgba(255,255,255,.6)} body.dark .boot p{color:rgba(255,255,255,.6)}
   @keyframes boot-spin{to{transform:rotate(360deg)}}
   @media (prefers-reduced-motion:reduce){ .boot .ring{animation-duration:2.4s} }
@@ -246,8 +246,8 @@
   @media (max-width:520px){ .meta.bottom{flex-direction:column; gap:4px} }
   @media (prefers-reduced-motion:reduce){ .menu, .panel, .stage{transition-duration:.01s} }
 
-  /* ---------- the chrome: Inter semibold, white pills, no borders ---------- */
-  .panel, .tune, .chip, .tilt, .hints, .meta{font-family:"Inter", system-ui, sans-serif}
+  /* ---------- the chrome: the lab typeface (SF Pro / Geist) semibold, white pills, no borders ---------- */
+  .panel, .tune, .chip, .tilt, .hints, .meta{font-family:var(--lab-font)}
   .panel{font-weight:600} .panel .hint, .panel .ph p, .row .v, .row .v .num{font-weight:500}
   .meta.top{top:16px; left:16px; right:auto}
   .meta a.back{display:grid; place-items:center; width:46px; height:46px; border-radius:999px; background:#fff; color:#1b1c20;
@@ -290,7 +290,7 @@
   body.dark .bl .chip{color:#fff; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
   body.dark .bl .chip.reset:hover{background:rgba(255,255,255,.08)}
   body.still .bl{display:none}
-  .comps{position:relative; font-family:"Inter", system-ui, sans-serif; font-size:13.5px; font-weight:600}
+  .comps{position:relative; font-family:var(--lab-font); font-size:13.5px; font-weight:600}
   .cbtn{display:flex; align-items:center; gap:10px; height:46px; padding:0 14px 0 20px; border:0; border-radius:999px; background:#fff; color:#1b1c20; font:inherit; cursor:pointer}
   .cbtn .ct{display:grid; gap:1px; text-align:left; line-height:1.15}
   .cbtn .ct small{font-size:10.5px; font-weight:500; letter-spacing:.02em; color:rgba(20,20,20,.48)}   /* a small header above the value */
@@ -313,7 +313,7 @@
   .vars.dragging{cursor:grabbing}
   .vars .vn{display:inline-block}
   .vars{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; color:#1b1c20;
-        font-family:"Inter", system-ui, sans-serif; font-size:13.5px; font-weight:600; box-shadow:none}
+        font-family:var(--lab-font); font-size:13.5px; font-weight:600; box-shadow:none}
   .vars button{display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:999px; background:transparent; color:inherit; cursor:pointer}
   .vars button:hover{background:rgba(20,20,20,.06)} .vars button svg{width:18px; height:18px}
   .vars button:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:1px}
@@ -326,12 +326,12 @@
   .cmp i{position:absolute; left:50%; top:50%; width:36px; height:36px; margin:-18px 0 0 -18px; border-radius:999px; background:#fff}
   .cmp i::before, .cmp i::after{content:""; position:absolute; top:12px; border:6px solid transparent}
   .cmp i::before{left:3px; border-right-color:#1b1c20} .cmp i::after{right:3px; border-left-color:#1b1c20}
-  .cmp span{position:absolute; top:78px; padding:7px 12px; border-radius:999px; background:#fff; color:#1b1c20; font:600 12.5px "Inter", system-ui, sans-serif; white-space:nowrap}
+  .cmp span{position:absolute; top:78px; padding:7px 12px; border-radius:999px; background:#fff; color:#1b1c20; font:600 12.5px var(--lab-font); white-space:nowrap}
   .cmp .cb{right:34px} .cmp .ca{left:34px}
 
   /* ---------- the panel: edge to edge, minimal, roomy ---------- */
   .panel{top:0; right:0; bottom:0; width:384px; padding:0 28px; font-size:13px;
-         background:#fff; box-shadow:-1px 0 0 rgba(20,20,20,.08), -40px 0 80px -60px rgba(20,24,30,.45)}
+         background:#fff; box-shadow:-1px 0 0 rgba(20,20,20,.06), -24px 0 48px -40px rgba(20,24,30,.12)}
 
   .ph{position:sticky; top:0; z-index:3; display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
       margin:0 -28px; padding:30px 28px 24px; background:#fff; border-bottom:1px solid rgba(20,20,20,.09)}
@@ -358,32 +358,48 @@
   .acts button{padding:10px 12px; font-size:12.5px}
   @media (min-width:761px){ body.tuning .stage{right:384px} body.tuning .chip{left:calc(50% - 192px)} }
   @media (max-width:760px){
-    .panel{top:auto; left:0; right:0; bottom:0; width:auto; max-height:62vh; padding:0 22px; box-shadow:0 -1px 0 rgba(20,20,20,.08), 0 -30px 60px -40px rgba(20,24,30,.45)}
+    .panel{top:auto; left:0; right:0; bottom:0; width:auto; max-height:62vh; padding:0 22px; box-shadow:0 -1px 0 rgba(20,20,20,.06), 0 -20px 40px -32px rgba(20,24,30,.12)}
     .ph{margin:0 -22px; padding:22px 22px 18px} .grp{margin:0 -22px; padding:0 22px}
     .gh{top:86px; width:calc(100% + 44px); margin:0 -22px; padding:0 22px} .acts{margin:0 -22px; padding:14px 22px 18px}
     body.tuning .stage{bottom:62vh}
   }
-  /* ---------- the panel: sharp, flat, minimal ---------- */
-  .panel, .panel *{border-radius:0 !important}
-  .panel::-webkit-scrollbar-thumb{border-radius:0}
-  .gh, .acts{background:#fff}
-  .gh{font-size:12.5px; font-weight:600; letter-spacing:.01em}
-  .presets button, .acts button, .row .act, .row input[type=text], .seg{box-shadow:inset 0 0 0 1px rgba(20,20,20,.12); background:transparent}
-  .presets button:hover, .acts button:hover, .row .act:hover{background:rgba(20,20,20,.05)}
-  .presets button[aria-pressed=true]{background:var(--ink); color:#fff; box-shadow:none}
-  .seg{padding:0; gap:0} .seg button{padding:5px 11px} .seg button[aria-pressed=true]{box-shadow:none; background:var(--ink); color:#fff}
-  .row input[type=range]::-webkit-slider-thumb{width:12px; height:12px; margin-top:-5px; box-shadow:0 0 0 1px rgba(20,20,20,.35)}
-  .row input[type=range]::-moz-range-thumb{width:12px; height:12px; box-shadow:0 0 0 1px rgba(20,20,20,.35)}
-  .bgs button{box-shadow:inset 0 0 0 1px rgba(20,20,20,.12)} .bgs button[aria-pressed=true]{box-shadow:0 0 0 2px var(--ink)}
 </style>
-<link rel="stylesheet" href="../../shared/lab-ui.css">
-<style>.panel.lab-ui{--ui-pad:28px} .ui-value .pre{margin-right:6px; color:var(--ui-muted); font-size:12px} .ui-value .pre:empty{display:none} .panel .gh{font-weight:600}
-  .panel .ui-slider input::-webkit-slider-runnable-track{border-radius:4px !important}
-  .panel .ui-slider input::-moz-range-track{border-radius:4px !important} .panel .ui-slider input::-moz-range-progress{border-radius:4px !important}
-  .panel .ui-slider input::-webkit-slider-thumb{border-radius:50% !important} .panel .ui-slider input::-moz-range-thumb{border-radius:50% !important}   /* the panel is sharp, the slider stays round; one browser prefix per rule, or it is dropped */</style>
-<script src="../../shared/lab-ui.js"></script>
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>.ui-value .pre{margin-right:6px; color:var(--ui-muted); font-size:12px} .ui-value .pre:empty{display:none} .panel .gh{font-weight:600}
+  /* ---------- the panel: the lab's card (lab-ui soft lab-card, shared); the stage closes into a box (.lab-frame) ---------- */
+  :root{--morph:.55s cubic-bezier(.3,1.12,.4,1)}
+  .panel{font-weight:500}
+  .ph{margin:0 -20px; padding:22px 20px 12px; border-bottom:0; background:var(--ui-bg)}
+  .ph h2{font-size:17px; letter-spacing:-.01em; line-height:1.2} .ph p{margin-top:10px; font-size:13px; line-height:1.45; color:var(--ui-muted)}
+  .pc{width:32px; height:32px; margin:-4px -6px 0 0; border-radius:999px; transition:background .2s} .pc:hover{background:var(--ui-field)}
+  .grp{margin:0 -20px; padding:0 20px} .grp + .grp{border-top:1px solid var(--ui-line)}
+  .gh{position:relative; top:auto; width:calc(100% + 40px); margin:0 -20px; padding:0 20px; height:50px; font-size:13px; background:transparent}
+  .grp.open .gi{padding:2px 0 16px}
+  .row{padding:6px 0}
+  .presets{gap:6px; margin-top:0}
+  .presets button, .row .act{height:32px; padding:0 14px; border:0; border-radius:999px; background:var(--ui-field); box-shadow:none; font-size:12.5px; font-weight:500; color:var(--ui-ink);
+    transition:background .2s, color .2s, scale .3s var(--ui-spring)}
+  .presets button:hover, .row .act:hover{background:var(--ui-field-hi)} .presets button:active, .row .act:active{scale:.95}
+  .presets button[aria-pressed=true]{background:var(--ui-on); color:var(--ui-on-text); box-shadow:none}
+  .row input[type=text]{padding:9px 12px; border:0; border-radius:12px; background:var(--ui-field); box-shadow:none; font:inherit; color:var(--ui-ink)}
+  .row.wide .ui-seg{grid-column:1 / -1; margin-top:6px} .row.wide .ui-seg button{flex:1}
+  .bgs{gap:8px} .panel .bgs button{border-radius:12px} .bgs button[aria-pressed=true]{box-shadow:0 0 0 2px var(--ui-bg), 0 0 0 4px var(--ui-on)}
+  .grads button[aria-pressed=true]{box-shadow:0 0 0 2px var(--ui-bg), 0 0 0 4px var(--ui-on)}
+  .acts{z-index:2; margin:auto -20px 0; padding:14px 20px 20px; border-top:0; background:var(--ui-bg); -webkit-backdrop-filter:none; backdrop-filter:none}
+  /* (the chrome steps into the box) */
+  .meta.top{transition:top var(--morph), left var(--morph)} body.tuning .meta.top{top:30px; left:30px}
+  .dock{transition:left var(--morph), bottom var(--morph)} .bl{transition:left var(--morph), bottom var(--morph)} .tr{transition:right var(--morph), top var(--morph)}
+  .stage{transition:inset var(--morph), opacity .6s ease}
+  @media (min-width:761px){
+    body.tuning .stage{inset:16px 368px 16px 16px}
+    body.tuning .dock, body.tuning .chip{left:calc(50% - 176px)} body.tuning .dock{bottom:calc(34px + env(safe-area-inset-bottom))}
+    body.tuning .bl{left:30px; bottom:34px} body.tuning .tr{top:30px; right:382px}
+  }
+  @media (max-width:760px){ body.tuning .stage{inset:8px 8px calc(56vh + 16px) 8px} }</style>
+<script src="../../shared/lab-ui.js?v=19"></script>
 </head>
 <body class="booting">
+<div class="lab-frame" aria-hidden="true"></div>
 <canvas id="gl" aria-hidden="true"></canvas>
 <div class="boot" role="status" aria-live="polite"><div><div class="ring" aria-hidden="true"></div><p>Polishing the glass…</p></div></div>
 <div class="meta top"><a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a></div>
@@ -431,7 +447,7 @@
   <div class="tilt-x"><b id="tilt-t">Tilt to play with the light</b><p>Allow motion access and the glass follows your phone.</p></div>
   <div class="tilt-b"><button type="button" id="tilt-no">Not now</button><button type="button" id="tilt-yes">Allow motion</button></div>
 </div>
-<aside class="panel lab-ui" id="panel" aria-label="Customize the button"></aside>
+<aside class="panel lab-ui soft lab-card" id="panel" aria-label="Customize the button"></aside>
 <div class="drop" aria-hidden="true">Drop an image or a video to put it under the glass</div>
 <input type="file" id="bgfile" accept="image/*,video/*" hidden>
 <div class="hand" id="hand" aria-hidden="true"><svg viewBox="-2 -2 28 28" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="h-open"><g class="halo"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g><g class="ink"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></g></g><g class="h-grab"><g class="halo"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g><g class="ink"><path d="M18 11.5V9a2 2 0 0 0-4 0v1.4"/><path d="M14 10V8a2 2 0 0 0-4 0v2"/><path d="M10 9.9V9a2 2 0 0 0-4 0v5"/><path d="M6 14a2 2 0 0 0-4 0"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8 2 2 0 1 1 4 0"/></g></g></svg></div>
@@ -499,7 +515,7 @@ const DEF = {
 const SIGNATURE = {                                   // the Midnight glass over the light grid
   pressGrow: .09, dome: -.97, wall: .73, under: 1, profile: 5.95, edge: .4, lift: .54,
   ior: 1.73, disp: .128, tint: '#e63d97', tintK: 0, follow: false, lightEl: 59, key: 2.66, env: 1.82, rim: 2.34, shadow: .59,
-  beadSize: 1.74, sink: 1.33, smoke: .32, starSize: .41, starMotion: 0, icon: 'pulse', orbLight: 1.66, ringK: 1.84, iris: 1.72,
+  beadSize: 1.74, sink: 1.33, smoke: .32, starSize: .41, starMotion: 0, icon: 'orb', orbLight: 1.66, ringK: 1.84, iris: 1.72,
   pulseSpeed: 1.92, pulseLight: .9, orbSpeed: 1.34, orbGlow: .55, embSize: 1.8, embDepth: .69, embFrost: 0,
   inkA: .98, scale: 1.42, h: 4.27, pl: 1, pr: 2, gap: 1.2, weight: 540,
   bg: 'grid', bgColor: '#000000', gridDensity: 1.31, bgScale: 3, grid: .02, sound: 'pop', volume: .16,
@@ -510,7 +526,7 @@ const SIGNATURE = {                                   // the Midnight glass over
 const MIDNIGHT = {
   pressGrow: .09, dome: -.97, wall: .73, under: 1, profile: 5.95, edge: .4, lift: .54,
   ior: 1.73, disp: .128, tint: '#e63d97', tintK: 0, follow: false, lightEl: 59, key: 2.66, env: 1.82, rim: 2.34, shadow: .59,
-  beadSize: 1.74, sink: 1.33, smoke: .32, starSize: .41, starMotion: 0, icon: 'pulse',
+  beadSize: 1.74, sink: 1.33, smoke: .32, starSize: .41, starMotion: 0, icon: 'orb',
   orbLight: 1.66, ringK: 1.84, iris: 1.72, pulseSpeed: 1.92, pulseLight: .9, orbSpeed: 1.34, orbGlow: .55,
   embSize: 1.8, embDepth: .69, embFrost: 0, ink: '#f2f3f5', inkA: .98, scale: 1.42, h: 4.27, pl: 1, pr: 2, gap: 1.2, weight: 540,
   bg: 'color', bgColor: '#000000', gridDensity: 1.31, bgScale: 3, grid: .02, sound: 'pop', volume: .16,
@@ -1001,7 +1017,7 @@ function pageStops(proc) {
   return (PAGES[proc] || PAGES.light).neutral;
 }
 const css3 = c => `rgb(${c.map(v => Math.round(v * 255)).join(',')})`;
-const FONT = '"Inter Tight", system-ui, sans-serif';
+const FONT = '-apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif';
 const BGS = [
   { id: 'grid', name: 'Grid', proc: 'light' },
   { id: 'grid-dark', name: 'Grid dark', proc: 'dark' },
@@ -1321,36 +1337,16 @@ function showVariant() { const i = lookNow(); document.getElementById('var-name'
 let lookIdx = -1;
 function stepVariant(d) {
   const names = Object.keys(curLooks());
-  const i = lookNow(); lookIdx = i >= 0 ? i : (lookIdx >= 0 ? lookIdx % names.length : (d > 0 ? -1 : 0));
+  // (Custom, after a hand change: on from the look it came from (P.look), in the panel's order, not back to the first)
+  const i = lookNow(), from = names.indexOf(P.look); lookIdx = i >= 0 ? i : from >= 0 ? from : (lookIdx >= 0 ? lookIdx % names.length : (d > 0 ? -1 : 0));
   lookIdx = (lookIdx + d + names.length) % names.length;
   applyPreset(names[lookIdx]); click(false, .6);
   if (!reduce && varName.animate) varName.animate([{ transform: `translateX(${d * 14}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-document.getElementById('var-prev').addEventListener('click', () => { if (!varDrag.moved) stepVariant(-1); });
-document.getElementById('var-next').addEventListener('click', () => { if (!varDrag.moved) stepVariant(1); });
+// the variants pill: the lab's shared one (tap the arrows, or grab it and swipe; shared/lab-ui.js)
 const varsEl = document.querySelector('.vars'), varName = document.getElementById('var-name');
-const varDrag = { id: null, x0: 0, dx: 0, moved: false };
-const band = dx => dx * 0.45 / (1 + Math.abs(dx) / 160);                 // rubber band: follows, then resists
-varsEl.addEventListener('pointerdown', e => {
-  if (e.button !== 0) return;
-  varDrag.id = e.pointerId; varDrag.x0 = e.clientX; varDrag.dx = 0; varDrag.moved = false;
-  varsEl.style.transition = 'none';                      // capture only once it moves, so a plain click still reaches the arrow
-});
-varsEl.addEventListener('pointermove', e => {
-  if (e.pointerId !== varDrag.id) return;
-  varDrag.dx = e.clientX - varDrag.x0;
-  if (!varDrag.moved && Math.abs(varDrag.dx) > 6) { varDrag.moved = true; varsEl.classList.add('dragging'); try { varsEl.setPointerCapture(e.pointerId); } catch (err) {} }
-  if (varDrag.moved) varsEl.style.transform = `translateX(${band(varDrag.dx)}px) scale(${1 + Math.min(Math.abs(varDrag.dx), 200) / 4000})`;
-});
-function endVarDrag(e) {
-  if (e.pointerId !== varDrag.id) return;
-  varDrag.id = null; varsEl.classList.remove('dragging');
-  varsEl.style.transition = reduce ? 'none' : 'transform .55s cubic-bezier(.2,1.6,.4,1)'; varsEl.style.transform = '';
-  if (varDrag.moved && Math.abs(varDrag.dx) > 44) stepVariant(varDrag.dx < 0 ? 1 : -1);   // swipe left: next, right: previous
-  setTimeout(() => { varDrag.moved = false; }, 0);
-}
-varsEl.addEventListener('pointerup', endVarDrag);
-varsEl.addEventListener('pointercancel', endVarDrag);
+LabUI.variants(varsEl, { prev: document.getElementById('var-prev'), next: document.getElementById('var-next'), onStep: d => stepVariant(d),
+  items: () => Object.keys(curLooks()), current: () => { const i = lookNow(); return i >= 0 ? Object.keys(curLooks())[i] : P.look; }, onPick: n => { applyPreset(n); click(false, .6); } });
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, select, textarea, .menu, .segc, .comps')) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); stepVariant(-1); }
@@ -1449,7 +1445,7 @@ function buildPanel() {
     }
     else if (c.t === 'seg' && c.o.length > 3) {           // many options: the segmented control gets its own line
       row.classList.add('wide');
-      inp = el('div', 'seg full'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
+      inp = el('div', 'seg ui-seg full'); inp.setAttribute('role', 'group'); inp.setAttribute('aria-label', c.l);
       for (const o of c.o) { const b = el('button', null, o); b.type = 'button'; b.dataset.v = o; b.addEventListener('click', () => { set(c.k, o); syncInputs(); }); inp.appendChild(b); }
       row.appendChild(inp);
     }
@@ -1464,6 +1460,7 @@ function buildPanel() {
       const pr = el('span', 'pre'); ctl.row.querySelector('.ui-value').prepend(pr); inp._pre = pr; pr.textContent = pre(c, P[c.k]);
     }
     if (!inp._ctl) { inp.id = id; body.appendChild(row); inp._row = row; }
+    if (c.t === 'seg') LabUI.segThumb(inp);                // (the thumb slides to the chosen option)
     inputs[c.k] = inp;
   }
   const acts = el('div', 'acts');
@@ -1581,7 +1578,7 @@ function paintLabel() {
     const sc = Math.min(RS * 2 * (geo.zq || 1), 4096 / Math.max(w, 1));
     lab.width = Math.max(1, Math.ceil(w * sc)); lab.height = Math.max(1, Math.ceil(h * sc));
     const g = lg; g.setTransform(sc, 0, 0, sc, -x0 * sc, -y0 * sc); g.clearRect(x0, y0, w, h);
-    g.fillStyle = P.ink; g.font = `${P.weight} ${geo.font} "Inter Tight", system-ui, sans-serif`; g.textBaseline = 'middle';
+    g.fillStyle = P.ink; g.font = `${P.weight} ${geo.font} -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif`; g.textBaseline = 'middle';
     [P.segA, P.segB].forEach((t, i) => { const r = geo.seg[i]; g.fillText(t, r.left, r.top + r.height / 2 + 1); });
     geo.rect = [x0, y0, w, h]; labelDirty = false; return;
   }
@@ -1593,7 +1590,7 @@ function paintLabel() {
   lab.width = Math.max(1, Math.ceil(w * sc)); lab.height = Math.max(1, Math.ceil(h * sc));
   const g = lg; g.setTransform(sc, 0, 0, sc, -x0 * sc, -y0 * sc); g.clearRect(x0, y0, w, h);
   const L = geo.label, C = geo.chev;
-  g.fillStyle = P.ink; g.font = `${P.weight} ${geo.font} "Inter Tight", system-ui, sans-serif`; g.textBaseline = 'middle';
+  g.fillStyle = P.ink; g.font = `${P.weight} ${geo.font} -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif`; g.textBaseline = 'middle';
   g.fillText(labelEl.textContent, L.left, L.top + L.height / 2 + 1);
   if (P.chevron) {
     g.save(); g.translate(C.left + C.width / 2, C.top + C.height / 2); if (s.open) g.rotate(Math.PI);
@@ -1602,7 +1599,7 @@ function paintLabel() {
   }
   for (const li of items) {                             // the menu items, printed on the menu's glass
     const dot = li.querySelector('.dot'), nm = li.querySelector('.nm');
-    const font = el => { const c = getComputedStyle(el); return `${c.fontWeight} ${c.fontSize} "Inter Tight", system-ui, sans-serif`; };
+    const font = el => { const c = getComputedStyle(el); return `${c.fontWeight} ${c.fontSize} -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif`; };
     g.fillStyle = P.ink; g.textBaseline = 'middle';
     const nr = nm.getBoundingClientRect(); g.font = font(nm); g.fillText(nm.textContent, nr.left, nr.top + nr.height / 2 + 0.5);
 

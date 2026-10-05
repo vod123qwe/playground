@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../shared/lab-lock.js?v=1"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Line Studio · lab</title>
+<meta name="theme-color" content="#121314">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* Figures in the manner of a technical plate, thin lines over quiet fills on a dotted ground, nothing written round them.
+     Shelf: VHS tapes standing spine out; point at one and it slides out a little; take it (press and drag) and carry it along the
+     shelf while the others part where you hold it; let go and it slides into the gap, the bookend closing up. A click without a drag
+     pulls it half out, as if to read the spine. Carousel: audio cassettes standing one behind the other, a band running left to right across the page like a hero's slider; scroll (or drag them) and the row slides along, settling so that one stands in the middle, pulled up out of the row with its face to you. Everywhere: drag the empty ground to turn
+     the view, the wheel (on the carousel with Ctrl or a pinch) or the − / + to zoom. Motion eases in without springs: nothing
+     overshoots. three.js: every part a fill plus its hard edges as lines; the details drawn on the faces. */
+  :root { --page: #17181b; --plate: #121314; --dot: rgba(255,255,255,.07); --morph: .55s cubic-bezier(.3,1.12,.4,1); --ease: cubic-bezier(.22,.61,.36,1); }
+  body.light { --page: #fff; --plate: #f4f3ef; --dot: rgba(20,20,20,.09); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--page); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
+
+  /* ---------- the plate: the whole screen, a dotted ground; while Customize is open a rounded box beside the card ---------- */
+  .plate { position: fixed; inset: 0; border-radius: 0; overflow: hidden; touch-action: none; cursor: move; transition: inset var(--morph), border-radius var(--morph), background-color .4s;
+    background: var(--plate); }   /* (no dots anywhere in this piece: Jarek) */
+  .plate.nodots { background: var(--plate-own, var(--plate)); }   /* (a figure with its own ground, no dots) */
+  .plate.over { cursor: grab; } .plate.dragging, .plate.dragging * { cursor: grabbing; }
+  body.tuning .plate { inset: 16px 368px 16px 16px; border-radius: 26px; }
+  .plate canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* ---------- the chrome (as the other lab pieces): back, Light / Dark, Customize, the figures' pill, the view's − + ⟲ ---------- */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; transition: top var(--morph), left var(--morph), translate .2s var(--ease); }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #1c1c1f; font: 600 13px var(--lab-font); transition: top var(--morph), left var(--morph); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(255,255,255,.5); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #fff; } .mode button[aria-checked=true] { color: #1b1c20; }
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 6; transform: translateX(-50%); transition: left var(--morph), bottom var(--morph); }
+  .view { position: fixed; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 6; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #1c1c1f; transition: right var(--morph), bottom var(--morph); }
+  .view button { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 999px; background: transparent; color: rgba(255,255,255,.7); cursor: pointer; transition: background .2s, color .2s, scale .3s cubic-bezier(.3,1.35,.45,1); }
+  .view button:hover { background: rgba(255,255,255,.08); color: #fff; } .view button:active { scale: .92; } .view svg { width: 18px; height: 18px; }
+  body.light .back, body.light .tune, body.light .mode, body.light .view { background: #fff; color: #1b1c20; }
+  body.light .mode button { color: rgba(20,20,20,.55); } body.light .mode button:hover { color: #1b1c20; } body.light .mode button[aria-checked=true] { color: #fff; }
+  body.light .view button { color: rgba(20,20,20,.65); } body.light .view button:hover { background: rgba(20,20,20,.06); color: #1b1c20; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .dock, body.bare .view { display: none; }
+  body.bare .plate { inset: 0; border-radius: 0; transition: none; }
+
+  /* ---------- the panel: the lab's card ---------- */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .mode { left: calc(50% - 176px); } body.tuning .dock { left: calc(50% - 176px); bottom: calc(34px + env(safe-area-inset-bottom)); }
+    body.tuning .view { right: 382px; bottom: calc(34px + env(safe-area-inset-bottom)); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .plate { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; }
+    body.tuning .dock, body.tuning .view { display: none; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="plate" id="plate" aria-label="A figure: drag the ground to turn it, the wheel to zoom"></main>
+<div class="dock"><div class="vars" id="vars" role="group" aria-label="Figures">
+  <button id="prev" type="button" aria-label="Previous figure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm">Shelf</span>
+  <button id="next" type="button" aria-label="Next figure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<div class="view" role="group" aria-label="The view">
+  <button type="button" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg></button>
+  <button type="button" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button>
+  <button type="button" id="zreset" aria-label="Back to the first view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/></svg></button>
+</div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the figure"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.line-studio.v4';
+const DEF = { fig: 'Shelf', count: 8, peek: .35, follow: .11, tilt: true, cN: 21, ai: false };
+let P = (() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF }; } })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), plate = $('plate'), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+const FIGS_ORDER = ['Shelf', 'Carousel', 'Cranes']; if (!FIGS_ORDER.includes(P.fig)) P.fig = 'Shelf';
+
+// ---------- the renderer, an orthographic camera ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); plate.prepend(renderer.domElement);
+const scene = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 300);
+scene.add(new THREE.AmbientLight(0xffffff, 2.5)); const sun = new THREE.DirectionalLight(0xffffff, 1.3); sun.position.set(-6, 10, 8); scene.add(sun);
+
+// ---------- the drawing: materials (a fill, its lines, the bright lines of what you point at or hold) and outline helpers ----------
+const M = {
+  fill: new THREE.MeshLambertMaterial({ color: 0x19191a, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  line: new THREE.LineBasicMaterial({ color: 0x4d4d50 }),
+  hi: new THREE.LineBasicMaterial({ color: 0xe6e6e6 }) };
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const box = (w, h, d, parent, x = 0, y = 0, z = 0) => { const g = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(g, M.fill), e = new THREE.LineSegments(new THREE.EdgesGeometry(g), M.line);
+  m.position.set(x, y, z); e.position.set(x, y, z); parent.add(m, e); return m; };
+const segs = (pts, parent, mat = M.line) => { const l = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat); parent.add(l); return l; };
+function rrect(cx, cz, w, d, r, y) { const pts = [], c = [[cx + w / 2 - r, cz - d / 2 + r, -Math.PI / 2], [cx + w / 2 - r, cz + d / 2 - r, 0], [cx - w / 2 + r, cz + d / 2 - r, Math.PI / 2], [cx - w / 2 + r, cz - d / 2 + r, Math.PI]], ring = [];
+  for (const [x, z, a0] of c) for (let i = 0; i <= 6; i++) { const a = a0 + i / 6 * Math.PI / 2; ring.push(V(x + Math.cos(a) * r, y, z + Math.sin(a) * r)); }
+  for (let i = 0; i < ring.length; i++) pts.push(ring[i], ring[(i + 1) % ring.length]); return pts; }
+const rrectFront = (cx, cy, w, h, r, z) => rrect(cx, -cy, w, h, r, 0).map(p => V(p.x, -p.z, z));
+function circle(cx, cz, r, y, n = 40) { const pts = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, b = (i + 1) / n * Math.PI * 2; pts.push(V(cx + Math.cos(a) * r, y, cz + Math.sin(a) * r), V(cx + Math.cos(b) * r, y, cz + Math.sin(b) * r)); } return pts; }
+const circleFront = (cx, cy, r, z, n) => circle(cx, -cy, r, 0, n).map(p => V(p.x, -p.z, z));
+function tex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.textBaseline = 'middle'; draw(x);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; t.colorSpace = THREE.SRGBColorSpace; return t; }
+const MONO = '"Geist Mono", ui-monospace, monospace';
+const rnd = s => { const v = Math.sin(s * 12.9898) * 43758.5453; return v - Math.floor(v); };
+// (no spring anywhere: each value eases straight to where it goes, slowing as it arrives; nothing overshoots, nothing wobbles)
+const ease = (s, to, k) => { s.p += (to - s.p) * k; if (Math.abs(to - s.p) < .0005) s.p = to; return s.p !== to; };
+const paints = [];                                          // (each figure's own repaint of its bright and quiet parts)
+
+// =============================================== Fig 5.1 · the shelf ===============================================
+const TW = 7.4, TH = 1, TD = 4.1, PITCH = TH + .07, B = .3, DS = TD + .7, HI = TW + 1.1;
+const shelfG = new THREE.Group(); scene.add(shelfG);
+const vhsLabel = name => tex(1040, 100, x => { x.font = `500 54px ${MONO}`; x.fillText(name, 18, 52); x.textAlign = 'right'; x.font = `400 40px ${MONO}`; x.fillText('E-180 · SP', 1022, 52); });
+function makeTape(i) { const g = new THREE.Group(), body = new THREE.Group(), me = { g, i, name: `TAPE ${String(i + 1).padStart(2, '0')}`, lines: [], labels: [], fills: [],
+    x: { p: 0 }, y: { p: 0 }, z: { p: 0 }, peek: false, bz: -(rnd(i * 3.7 + 1) * .35) };
+  body.rotation.z = -Math.PI / 2; body.position.set(-TH / 2, TW / 2, 0); g.add(body);           // (built lying, stood on its end: window to the right, label up the spine)
+  const geo = new THREE.BoxGeometry(TW, TH, TD), fill = new THREE.Mesh(geo, M.fill); fill.position.y = TH / 2; fill.userData.tape = me; body.add(fill); me.fills.push(fill);
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo), M.line); edge.position.y = TH / 2; body.add(edge); me.lines.push(edge);
+  const y = TH + .004, top = [...rrect(0, -.15, 3.3, 1.55, .32, y)];
+  for (const x of [-.95, .95]) { top.push(...circle(x, -.15, .6, y, 48), ...circle(x, -.15, .19, y, 24));
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + i; top.push(V(x + Math.cos(a) * .19, y, -.15 + Math.sin(a) * .19), V(x + Math.cos(a) * .31, y, -.15 + Math.sin(a) * .31)); } }
+  top.push(...rrect(-2.75, -.15, 1.45, 3.05, .1, y), ...rrect(2.75, -.15, 1.45, 3.05, .1, y), V(-TW / 2 + .22, y, -TD / 2 + .42), V(TW / 2 - .22, y, -TD / 2 + .42));
+  for (const [z, l] of [[-1.05, 1.0], [-.75, .7], [-.45, .85]]) top.push(V(-3.3, y, z), V(-3.3 + l, y, z));
+  me.lines.push(segs(top, body));
+  const zf = TD / 2 + .004; me.lines.push(segs(rrectFront(0, TH / 2, 5.7, .66, .06, zf), body));
+  const lab = new THREE.Mesh(new THREE.PlaneGeometry(5.3, .51), new THREE.MeshBasicMaterial({ map: vhsLabel(me.name), transparent: true, depthWrite: false, color: M.line.color.clone() }));
+  lab.position.set(0, TH / 2, zf + .003); body.add(lab); me.labels.push(lab); return me; }
+let shelf = null, bookend = null, Wi = 1, X0 = 0, tapes = [], order = [], hovered = null, drag = null;
+const slotX = k => X0 + .2 + PITCH * (k + .5), baseZ = t => DS / 2 - TD / 2 - .12 + t.bz;
+function buildShelf() { for (const o of [...shelfG.children]) { shelfG.remove(o); o.traverse(c => { c.geometry?.dispose(); if (c.material?.map) { c.material.map.dispose(); c.material.dispose(); } }); }
+  shelf = new THREE.Group(); shelfG.add(shelf); Wi = P.count * PITCH + 2.6; X0 = -Wi / 2;
+  box(Wi + 2 * B, B, DS, shelf, 0, -B / 2, 0); box(Wi + 2 * B, B, DS, shelf, 0, HI + B / 2, 0);
+  box(B, HI + 2 * B, DS, shelf, -Wi / 2 - B / 2, HI / 2, 0); box(B, HI + 2 * B, DS, shelf, Wi / 2 + B / 2, HI / 2, 0);
+  box(Wi + 2 * B, HI + 2 * B, .08, shelf, 0, HI / 2, -DS / 2 - .04);
+  for (const x of [-Wi / 2 + .25, Wi / 2 - .25]) for (const z of [-DS / 2 + .35, DS / 2 - .35]) box(.4, .22, .4, shelf, x, -B - .11, z);
+  const holes = []; for (const z of [-DS / 2 + .6, DS / 2 - .6]) for (let k = 1; k < 9; k++) { const y = k * HI / 9; for (let a = 0; a < 12; a++) { const t = a / 12 * Math.PI * 2, u = (a + 1) / 12 * Math.PI * 2;
+    holes.push(V(-Wi / 2 + .004, y + Math.sin(t) * .06, z + Math.cos(t) * .06), V(-Wi / 2 + .004, y + Math.sin(u) * .06, z + Math.cos(u) * .06)); } }
+  segs(holes, shelf);
+  bookend = new THREE.Group(); shelf.add(bookend); box(.07, 3.4, 2.6, bookend, 0, 1.7, 0); box(1.5, .05, 2.6, bookend, .75, .025, 0); bookend.userData.x = { p: 0 };
+  tapes = Array.from({ length: P.count }, (_, i) => makeTape(i)); order = tapes.slice(); drag = null; hovered = null;
+  tapes.forEach((t, k) => { shelfG.add(t.g); t.x.p = slotX(k); t.z.p = baseZ(t); t.g.position.set(t.x.p, 0, t.z.p); }); bookend.userData.x.p = slotX(order.length) - PITCH / 2 + .1; }
+paints.push(c => { for (const t of tapes) { const on = t === hovered || (drag && drag.moved && drag.tape === t) || t.peek; for (const l of t.lines) l.material = on ? M.hi : M.line; for (const l of t.labels) l.material.color.set(on ? c.hi : c.line); } });
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), frontPlane = new THREE.Plane(), hitP = new THREE.Vector3();
+const PULL = () => DS / 2 + 1.7;
+const pickTape = () => { ray.setFromCamera(ndc, cam); const h = ray.intersectObjects(tapes.flatMap(t => t.fills), false)[0]; return h ? h.object.userData.tape : null; };
+const alongShelf = () => { ray.setFromCamera(ndc, cam); frontPlane.set(V(0, 0, 1), -(PULL() + TD / 2)); return ray.ray.intersectPlane(frontPlane, hitP) ? hitP.x : null; };
+const insAt = x => Math.max(0, Math.min(order.length, Math.round((x - X0 - .2) / PITCH - .5)));
+function setHover(t) { if (t === hovered) return; hovered = t; plate.classList.toggle('over', !!t); paint(); wake(); }
+function take(t) { drag = { tape: t, moved: false, sx: 0, sy: 0, x: t.x.p, ins: order.indexOf(t) }; }
+function carry(x) { const d = drag; if (!d.moved) { d.moved = true; order.splice(order.indexOf(d.tape), 1); d.tape.peek = false; plate.classList.add('dragging'); paint(); }
+  d.x = Math.max(X0 - .6, Math.min(-X0 + .6, x)); d.ins = insAt(d.x); wake(); }
+function drop() { const d = drag; drag = null; plate.classList.remove('dragging');
+  if (d.moved) order.splice(d.ins, 0, d.tape); else { const was = d.tape.peek; tapes.forEach(t => t.peek = false); d.tape.peek = !was; }   // (a click: half out to read it, again: back in)
+  paint(); wake(); }
+const SHELF = { g: shelfG, az: .5, el: .42, cy: () => HI / 2 - .3,
+  span: a => { const w = Wi + 2 * B + 1.5, h = HI + 2.6; return Math.max(h * 1.35, w * 1.12 / a) * 1.43; },
+  build: buildShelf,
+  down(e) { const t = pickTape(); if (!t) { if (tapes.some(x => x.peek)) { tapes.forEach(x => x.peek = false); paint(); } return false; }
+    take(t); drag.sx = e.clientX; drag.sy = e.clientY; return true; },
+  move(e) { if (drag) { if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return; const x = alongShelf(); if (x != null) carry(x); } else setHover(pickTape()); },
+  up() { if (drag) drop(); }, leave() { if (!drag) setHover(null); },
+  frame() { let busy = false; const k = reduce ? 1 : P.follow, gapAt = drag && drag.moved ? drag.ins : -1;
+    order.forEach((t, i) => { const slot = gapAt >= 0 && i >= gapAt ? i + 1 : i; let tz = baseZ(t); if (t.peek) tz += 2; else if (t === hovered && !drag) tz += P.peek * 1.6;
+      if (ease(t.x, slotX(slot), k)) busy = true; if (ease(t.z, tz, k)) busy = true; if (ease(t.y, 0, k)) busy = true; });
+    if (drag && drag.moved) { const t = drag.tape; if (ease(t.x, drag.x, Math.min(1, k * 2.6))) busy = true; if (ease(t.z, PULL(), k)) busy = true; if (ease(t.y, .25, k)) busy = true; }
+    const n = order.length + (gapAt >= 0 ? 1 : 0); if (ease(bookend.userData.x, slotX(n) - PITCH / 2 + .1, k * .8)) busy = true;
+    for (const t of tapes) t.g.position.set(t.x.p, t.y.p, t.z.p); bookend.position.x = bookend.userData.x.p; return busy || !!drag; },
+  panel(g, sl) { sl(g, 'count', 'Tapes', 4, 12, 1, '', true); sl(g, 'peek', 'Comes out on hover', 0, 1, .05); } };
+
+// =============================================== Fig 5.2 · the carousel ===============================================
+const CW = 6.4, CH = 4.0, CT = .72;
+const carG = new THREE.Group(); scene.add(carG);
+const cassLabel = (name, side) => tex(1024, 216, x => { x.font = `500 66px ${MONO}`; x.fillText(name, 24, 68); x.textAlign = 'right'; x.font = `500 52px ${MONO}`; x.fillText(`SIDE ${side}`, 1000, 68);
+  x.textAlign = 'left'; x.font = `400 42px ${MONO}`; x.fillText('C-60 · TYPE I · NORMAL', 24, 160); x.fillRect(24, 112, 976, 3); });
+function makeCass(i) { const g = new THREE.Group(), me = { g, i, name: `MIXTAPE ${String(i + 1).padStart(2, '0')}`, lines: [], labels: [], fills: [], out: { p: 0 }, lift: { p: 0 } };
+  const geo = new THREE.BoxGeometry(CW, CH, CT), fill = new THREE.Mesh(geo, M.fill); fill.position.y = CH / 2; fill.userData.cass = me; g.add(fill); me.fills.push(fill);
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo), M.line); edge.position.y = CH / 2; g.add(edge); me.lines.push(edge);
+  const face = z => { const p = [...rrectFront(0, CH - 1.02, CW - .6, 1.5, .14, z), ...rrectFront(0, 1.55, 3.3, 1.0, .24, z)];   // (the label, the window)
+    for (const x of [-1.62, 1.62]) { p.push(...circleFront(x, 1.55, .44, z, 40), ...circleFront(x, 1.55, .17, z, 20));
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + i * .7; p.push(V(x + Math.cos(a) * .17, 1.55 + Math.sin(a) * .17, z), V(x + Math.cos(a) * .28, 1.55 + Math.sin(a) * .28, z)); } }
+    p.push(V(-1.18, 1.18, z), V(1.18, 1.18, z));                                                       // (the tape across the window)
+    p.push(V(-2.35, .06, z), V(-1.95, .92, z), V(-1.95, .92, z), V(1.95, .92, z), V(1.95, .92, z), V(2.35, .06, z));   // (the head opening)
+    p.push(...circleFront(-1.15, .45, .12, z, 16), ...circleFront(1.15, .45, .12, z, 16), ...rrectFront(0, .45, .62, .34, .04, z));
+    for (const [x, y] of [[-2.88, .3], [2.88, .3], [-2.88, CH - .3], [2.88, CH - .3]]) p.push(...circleFront(x, y, .07, z, 12));
+    return p; };
+  me.lines.push(segs(face(CT / 2 + .004), g), segs(face(-CT / 2 - .004).map(v => V(-v.x, v.y, v.z)), g));
+  for (const [z, s, ry] of [[CT / 2 + .007, 'A', 0], [-CT / 2 - .007, 'B', Math.PI]]) {
+    const lab = new THREE.Mesh(new THREE.PlaneGeometry(CW - 1.0, (CW - 1.0) * 216 / 1024), new THREE.MeshBasicMaterial({ map: cassLabel(me.name, s), transparent: true, depthWrite: false, color: M.line.color.clone() }));
+    lab.position.set(0, CH - 1.02, z); lab.rotation.y = ry; g.add(lab); me.labels.push(lab); }
+  return me; }
+// (the row: cassettes stand one behind the other in a long tray, running from the lower left to the upper right; the whole tray
+// slides along under a fixed view, and the one that comes to the middle is pulled up out of the row, its face to you)
+const GAP = 1.15, rack = new THREE.Group(); carG.add(rack);
+let cass = [], cs = { p: 0 }, sTo = 0, snapT = 0, cdrag = null, chov = null;
+const clampS = v => v;   // (no ends to keep to)
+function buildCarousel() { for (const o of [...rack.children]) { rack.remove(o); o.traverse(c => { c.geometry?.dispose(); if (c.material?.map) { c.material.map.dispose(); c.material.dispose(); } }); }
+  const N = P.cN;                                                                                            // (no tray: the cassettes alone, a band across the page)
+  cass = Array.from({ length: N }, (_, i) => makeCass(i)); cass.forEach(c => rack.add(c.g));
+  cs.p = sTo = Math.floor((N - 1) / 2); }
+const snapLater = () => { clearTimeout(snapT); snapT = setTimeout(() => { sTo = Math.round(sTo); wake(); }, 140); };
+const frontOf = () => cass[((Math.round(cs.p) % cass.length) + cass.length) % cass.length];
+paints.push(c => { const f = cass.length ? frontOf() : null; for (const m of cass) { const on = (m === f && Math.abs(off(cass.indexOf(m))) < .35) || m === chov; for (const l of m.lines) l.material = on ? M.hi : M.line; for (const l of m.labels) l.material.color.set(on ? c.hi : c.line); } });
+const pickCass = () => { ray.setFromCamera(ndc, cam); const h = ray.intersectObjects(cass.flatMap(c => c.fills), false)[0]; return h ? h.object.userData.cass : null; };
+const pxPerStep = () => H * VIEW.z.p / CAR.span(W / H) * SIDE;          // (how far the pointer goes for one cassette along the row)
+const SIDE = 1.85;                                                   // (how far apart the turned-away ones stand)
+// (endless: an offset from the middle is taken round the ring of cassettes, so the row never runs out; the ones that jump from one
+// end to the other do it out of sight, past the edges)
+const off = i => { const n = cass.length; let o = ((i - cs.p) % n + n) % n; if (o >= n / 2) o -= n; return o; };
+const CAR = { g: carG, az: .401, el: .444, flowAz: Math.PI / 4, cy: () => CH * .55,   // (the camera as Jarek turned it: the row runs across the whole width; the flow itself keeps its own angle)
+  span: () => 24.2,                                                                                         // (as Jarek zoomed it)
+  build: buildCarousel,
+  nudge(d) { sTo = Math.round(sTo) + d; wake(); },
+  down(e) { const c = pickCass(); if (!c) return false; cdrag = { x0: e.clientX, y0: e.clientY, s0: sTo, moved: false, c }; clearTimeout(snapT); return true; },
+  move(e) { if (cdrag) { const dx = e.clientX - cdrag.x0, dy = e.clientY - cdrag.y0; if (!cdrag.moved && Math.hypot(dx, dy) < 5) return; cdrag.moved = true; plate.classList.add('dragging');
+      sTo = cdrag.s0 - (dx - .25 * dy) / pxPerStep(); wake(); return; }      // (along the row: dragging right brings the left ones in)
+    const c = pickCass(); if (c !== chov) { chov = c; plate.classList.toggle('over', !!c); paint(); wake(); } },
+  up() { if (!cdrag) return; const d = cdrag; cdrag = null; plate.classList.remove('dragging');
+    sTo = d.moved ? Math.round(sTo) : cs.p + off(cass.indexOf(d.c)); wake(); },                                    // (a click: bring that one to the middle)
+  leave() { if (chov) { chov = null; plate.classList.remove('over'); paint(); } },
+  wheel(e) { sTo += (e.deltaY + e.deltaX) * .006; snapLater(); wake(); },
+  frame() { let busy = false; const k = reduce ? 1 : P.follow;
+    if (ease(cs, sTo, cdrag ? Math.min(1, k * 2.6) : k)) busy = true;
+    // (each cassette's place from how far it is from the middle: the middle one faces you and comes forward; the others turn away,
+    // edge on, packed close, the row running across the page and rising a little to the right)
+    const ra = CAR.flowAz + .25, R = V(Math.cos(ra), 0, -Math.sin(ra)), Fw = V(Math.sin(CAR.flowAz), 0, Math.cos(CAR.flowAz));
+    for (let i = 0; i < cass.length; i++) { const c = cass[i], o = off(i), a = Math.abs(o), sg = Math.sign(o), t = Math.min(a, 1), w = Math.max(0, 1 - a / .7), sm = w * w * (3 - 2 * w);
+      const along = sg * (t * CW * .8 + Math.max(a - 1, 0) * SIDE), fwd = sm * 1.9 - t * .5;
+      if (ease(c.out, c === chov && sm < .5 ? .35 : 0, Math.min(1, k * 1.6))) busy = true;
+      c.g.position.set(R.x * along + Fw.x * fwd, sm * .3 + c.out.p, R.z * along + Fw.z * fwd); c.g.rotation.y = CAR.flowAz - sg * t * 1.15; }
+    paint(); return busy || !!cdrag; },
+  panel(g, sl) { sl(g, 'cN', 'Cassettes', 9, 31, 1, '', true); } };
+
+// =============================================== Fig 5.3 · gantries, noughts and crosses ===============================================
+// (a built-up platform: nine sockets in the middle, a rail with a scale along each side, a bay with a stack of boxes at each end.
+// Two gantry cranes ride the same rails, the crosses' parked at the front, the noughts' at the back. The one whose turn it is takes a
+// box from its bay (a row of them); then it follows the pointer, the bridge along the rails, the carriage along the bridge, settling over the
+// square under it; a click lowers the box into the socket, lets go, and it goes home; then the other takes its turn. Three in a row:
+// they light, a line runs through them, every box sinks away into its socket, the bays fill again and it starts over)
+const PG = 2.85, BOXS = 1.3, TOP = .8, PAD = .12, RX = 6.3, PARK = 7.2, HT = 5.2, STACK = 5;
+const ttG = new THREE.Group(); scene.add(ttG);
+const SOCK_Y = TOP + PAD;                                                        // (a box's floor in its socket)
+function makeBox(mark) { const g = new THREE.Group(), me = { g, mark, lines: [], fills: [], vy: 0 };
+  const geo = new THREE.BoxGeometry(BOXS, BOXS, BOXS), f = new THREE.Mesh(geo, M.fill); g.add(f); me.fills.push(f);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), M.line); g.add(e); me.lines.push(e);
+  const h = BOXS / 2 + .004, m = BOXS * .26, p = [];
+  if (mark === 'X') p.push(V(-m, h, -m), V(m, h, m), V(-m, h, m), V(m, h, -m), V(-m, -m, h), V(m, m, h), V(-m, m, h), V(m, -m, h), V(h, -m, -m), V(h, m, m), V(h, m, -m), V(h, -m, m));
+  else p.push(...circle(0, 0, m * 1.05, h, 32), ...circleFront(0, 0, m * 1.05, h, 32), ...circleFront(0, 0, m * 1.05, h, 32).map(v => V(h, v.y, -v.x)));
+  me.lines.push(segs(p, g)); return me; }
+const cellAt = i => V(((i % 3) - 1) * PG, 0, (Math.floor(i / 3) - 1) * PG);
+const cyl = (r, h, parent, x, y, z, n = 20) => { const geo = new THREE.CylinderGeometry(r, r, h, n), m = new THREE.Mesh(geo, M.fill), e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), M.line); m.position.set(x, y, z); e.position.set(x, y, z); parent.add(m, e); };
+function makeGantry(mark) { const parkZ = mark === 'X' ? PARK : -PARK, g = new THREE.Group(), me = { g, mark, parkZ, z: { p: parkZ }, x: { p: 0 }, ext: { p: 0 }, lines: [], stack: [], carry: null, phase: 'idle', tx: 0, tz: parkZ, te: 0 };
+  ttG.add(g); g.position.z = parkZ;
+  for (const s of [-1, 1]) { box(1.3, .45, 1.7, g, s * RX, TOP + .5, 0); box(.9, HT, .9, g, s * RX, TOP + .72 + HT / 2, 0);   // (a truck on the rail, a tower)
+    segs([...circleFront(0, 0, .16, .86, 16).map(v => V(s * RX + v.x - .35, TOP + .45 + v.y, v.z)), ...circleFront(0, 0, .16, .86, 16).map(v => V(s * RX + v.x + .35, TOP + .45 + v.y, v.z))], g); }
+  const lad = []; for (const s of [-1, 1]) { const x = s * (RX + .452); for (let y = TOP + 1.2; y < TOP + .72 + HT - .2; y += .38) lad.push(V(x, y, -.22), V(x, y, .22)); lad.push(V(x, TOP + 1.1, -.22), V(x, TOP + .72 + HT - .1, -.22), V(x, TOP + 1.1, .22), V(x, TOP + .72 + HT - .1, .22)); } segs(lad, g);   // (a ladder up each tower)
+  const BY = TOP + .72 + HT + .3; box(RX * 2 + .9, .6, .7, g, 0, BY, 0);                                                        // (the bridge)
+  const ch = []; for (let x = -RX + .8, k = 0; x < RX - .8; x += .35, k++) ch.push(V(x, BY + .3 + (k % 2 ? .14 : .02), -.22), V(x + .35, BY + .3 + (k % 2 ? .02 : .14), -.22)); segs(ch, g);   // (the cable chain)
+  const tk = []; for (let x = -RX + .6; x <= RX - .6; x += .4) tk.push(V(x, BY - .3 + .004, .352), V(x, BY - .3 + (Math.round((x + RX) / .4) % 5 ? .14 : .26), .352)); segs(tk, g);
+  const car = new THREE.Group(); car.position.y = BY; g.add(car); me.car = car; box(1.3, 1.1, 1.3, car, 0, .1, 0); box(.5, .5, .5, car, 0, .85, 0);
+  const head = new THREE.Group(); car.add(head); me.head = head;
+  // (the head: a sleeve under the carriage, a tube that telescopes out of it (so nothing parts as it comes down), the gripper, four fingers
+  // that open round a box and close on its sides)
+  box(.56, 1.0, .56, car, 0, -.95, 0);
+  const tg = new THREE.BoxGeometry(.3, 1, .3); tg.translate(0, -.5, 0); const tube = new THREE.Group(); tube.position.y = -1.2; car.add(tube); me.tube = tube;
+  tube.add(new THREE.Mesh(tg, M.fill), new THREE.LineSegments(new THREE.EdgesGeometry(tg), M.line));
+  box(1.6, .32, 1.6, head, 0, -2.85, 0); cyl(.12, .45, head, -.45, -2.47, 0, 16); cyl(.12, .45, head, .45, -2.47, 0, 16);   // (the gripper, its two pistons)
+  me.fingers = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => { const f = new THREE.Group(); head.add(f); box(.14, .85, .14, f, 0, -3.43, 0); f.userData.s = [sx, sz]; return f; });
+  me.grip = { p: 0 };
+  g.traverse(o => { if (o.isLineSegments) me.lines.push(o); });
+  me.gripY0 = BY - 3.01;                                                           // (the gripper's underside with the head up)
+  me.tubeLen = ext => 2.69 + ext - 1.2;                                            // (from the sleeve to the gripper)
+  return me; }
+let gantries = [], placed = Array(9).fill(null), boxesOn = Array(9).fill(null), turn = 'X', endState = null, cellHover = -1, fallers = [], winMesh = null, socketLines = [];
+function buildCranes() { for (const o of [...ttG.children]) { ttG.remove(o); o.traverse(c => c.geometry?.dispose()); }
+  const PW = RX * 2 + 2.4, PD = PARK * 2 + 3;
+  box(PW + 1, .35, PD + 1, ttG, 0, -.175, 0); box(PW, TOP, PD, ttG, 0, TOP / 2, 0); box(PW - .7, .06, PD - .7, ttG, 0, TOP + .03, 0);   // (a plinth, the platform, its inset top)
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (const k of [0, 1]) cyl(.13, .07, ttG, x * (PW / 2 - .35 - k * 1.1), TOP + .095, z * (PD / 2 - .35), 14);   // (bolts)
+  for (const z of [-PD / 2 + 2.2, PD / 2 - 2.2, 0]) for (const x of [-1, 1]) cyl(.13, .07, ttG, x * (PW / 2 - .35), TOP + .095, z, 14);
+  const vents = []; for (let k = 0; k < 9; k++) { const x = -1.6 + k * .4; vents.push(V(x, .2, PD / 2 + .004), V(x, .6, PD / 2 + .004)); } for (let k = 0; k < 14; k++) { const z = -2.6 + k * .4; vents.push(V(PW / 2 + .004, .2, z), V(PW / 2 + .004, .6, z)); } segs(vents, ttG);
+  const con = new THREE.Group(); con.position.set(PW / 2 - 1.05, TOP, -PG * 1.7); ttG.add(con); box(1.3, .55, 2.4, con, 0, .275, 0);       // (the console)
+  segs([...rrect(0, -.55, .95, .9, .08, .554), ...circle(-.2, .45, .13, .554, 16), ...circle(.2, .45, .13, .554, 16), ...circle(0, .85, .09, .554, 12)], con);
+  for (const s of [-1, 1]) { box(.4, .3, PD - .4, ttG, s * RX, TOP + .15, 0); const t = []; for (let z = -PD / 2 + .6; z <= PD / 2 - .6; z += .4) { const k = Math.round((z + PD / 2) / .4); t.push(V(s * (RX + .45), TOP + .065, z), V(s * (RX + .45 + (k % 5 ? .18 : .34)), TOP + .065, z)); } segs(t, ttG);
+    for (const z of [-PD / 2 + .5, PD / 2 - .5]) box(.7, .55, .5, ttG, s * RX, TOP + .27, z); }                                   // (rails, their scales, stops)
+  socketLines = []; for (let i = 0; i < 9; i++) { const c = cellAt(i); box(PG - .3, PAD, PG - .3, ttG, c.x, TOP + PAD / 2, c.z); socketLines.push(segs(rrect(c.x, c.z, BOXS + .3, BOXS + .3, .16, SOCK_Y + .004), ttG));
+    const q = PG / 2 - .1, L = .35, y = SOCK_Y + .004, cm = []; for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cm.push(V(c.x + sx * q, y, c.z + sz * q), V(c.x + sx * (q - L), y, c.z + sz * q), V(c.x + sx * q, y, c.z + sz * q), V(c.x + sx * q, y, c.z + sz * (q - L)));
+    cm.push(...rrect(c.x, c.z, BOXS + .6, BOXS + .6, .22, y)); segs(cm, ttG); }   // (a second outline, corner marks)
+  for (const z of [PARK, -PARK]) { box(8.2, .2, 2.0, ttG, 0, TOP + .1, z); const h = []; for (let x = -3.9; x < 3.9; x += .5) h.push(V(x, TOP + .204, z + .95), V(x + .45, TOP + .204, z + .55)); segs(h, ttG); }   // (the bays, hatched at their edge)
+  gantries = [makeGantry('X'), makeGantry('O')];
+  for (const gt of gantries) { gt.stack = []; for (let k = 0; k < STACK; k++) { const b = makeBox(gt.mark); b.g.position.set(bayX(k), TOP + .2 + BOXS / 2, gt.parkZ); ttG.add(b.g); gt.stack.push(b); } }
+  placed = Array(9).fill(null); boxesOn = Array(9).fill(null); turn = 'X'; endState = null; fallers = []; startTurn(); }
+const active = () => gantries.find(g => g.mark === turn);
+const bayX = k => (k - (STACK - 1) / 2) * 1.5;                                             // (the boxes in a bay stand in a row)
+function startTurn() { const g = active(); if (!g || !g.stack.length) return; g.phase = 'fetch'; g.tx = bayX(g.stack.length - 1); g.tz = g.parkZ; g.te = stackGrip(g); paint(); wake(); }
+const stackGrip = g => g.gripY0 - (TOP + .2 + BOXS) + .02;                                  // (how far the head comes down to a box in the bay)
+const placeExt = g => g.gripY0 - (SOCK_Y + BOXS) + .02;                                     // (how far down to set a box in a socket)
+const LINES3 = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+const winner = b => LINES3.find(l => b[l[0]] && b[l[0]] === b[l[1]] && b[l[1]] === b[l[2]]);
+function play(i) { const g = active(); if (!g || g.phase !== 'ready' || placed[i] || endState) return; placed[i] = turn; g.cell = i; const c = cellAt(i); g.tx = c.x; g.tz = c.z; g.phase = 'go'; paint(); wake(); }
+function aiMove() { const b = placed, free = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(i => !b[i]); if (!free.length) return;
+  const tryFor = m => free.find(i => { const t = b.slice(); t[i] = m; return winner(t); });
+  play(tryFor('O') ?? tryFor('X') ?? (b[4] ? undefined : 4) ?? free.filter(i => [0, 2, 6, 8].includes(i))[0] ?? free[Math.floor(Math.random() * free.length)]); }
+const deck = new THREE.Plane(V(0, 1, 0), -(SOCK_Y + .01)), deckHit = new THREE.Vector3();
+function cellUnder() { ray.setFromCamera(ndc, cam); if (!ray.ray.intersectPlane(deck, deckHit)) return -1; const cx = Math.round(deckHit.x / PG), cz = Math.round(deckHit.z / PG);
+  return Math.abs(deckHit.x) < PG * 1.6 && Math.abs(deckHit.z) < PG * 1.6 && Math.abs(cx) <= 1 && Math.abs(cz) <= 1 ? (cz + 1) * 3 + (cx + 1) : -1; }
+const human = () => !(P.ai && turn === 'O');
+const puffTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(.45, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+const puffs = [];
+function puff(x, y, z) { if (reduce) return; const col = mode === 'dark' ? 0xf0e2d0 : 0x9a968e;
+  for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2 + Math.random() * .4, sp = .012 + Math.random() * .016, m = new THREE.SpriteMaterial({ map: puffTex, color: col, transparent: true, depthWrite: false, opacity: 0 }), s = new THREE.Sprite(m);
+    s.position.set(x + Math.cos(a) * (BOXS * .55), y + .12 + Math.random() * .15, z + Math.sin(a) * (BOXS * .55)); s.scale.setScalar(.5); ttG.add(s);
+    puffs.push({ s, vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: .004 + Math.random() * .005, t0: performance.now(), life: 900 + Math.random() * 500, sz: .5 + Math.random() * .3 }); } }
+function stepPuffs(now) { for (let i = puffs.length - 1; i >= 0; i--) { const p = puffs[i], t = (now - p.t0) / p.life;
+    if (t >= 1) { ttG.remove(p.s); p.s.material.dispose(); puffs.splice(i, 1); continue; }
+    p.s.position.x += p.vx; p.s.position.z += p.vz; p.s.position.y += p.vy; p.vx *= .97; p.vz *= .97; p.s.scale.setScalar(p.sz + t * 1.6);
+    p.s.material.opacity = (t < .12 ? t / .12 : 1 - (t - .12) / .88) * (mode === 'dark' ? .22 : .3); } }
+const CRANES = { g: ttG, az: Math.PI / 4 + .1, el: .58, cy: () => 2.6,
+  span: () => 30,
+  build: buildCranes,
+  down() { const i = cellUnder(); if (i < 0) return false; const g = active(); if (human() && g && g.phase === 'ready' && !placed[i]) play(i); return true; },
+  move() { const i = cellUnder(), g = active();
+    if (g && g.phase === 'ready' && human() && i >= 0) { const c = cellAt(i); g.tx = c.x; g.tz = c.z; }             // (the crane goes over the square the pointer is on)
+    const h = i >= 0 && !placed[i] && human() && !endState ? i : -1; if (h !== cellHover) { cellHover = h; plate.classList.toggle('over', h >= 0); paint(); } wake(); },
+  up() { }, leave() { if (cellHover >= 0) { cellHover = -1; plate.classList.remove('over'); paint(); } },
+  frame() { const now = performance.now(), k = reduce ? 1 : Math.min(.2, P.follow * .6); let busy = !!endState || puffs.length > 0;   // (calm: the bridge and the carriage glide, the head comes down slower still)
+    for (const g of gantries) { const mz = ease(g.z, g.tz, k), mx = ease(g.x, g.tx, k), me = ease(g.ext, g.te, Math.min(1, k * .85)), mg = ease(g.grip, g.tg || 0, reduce ? 1 : .13); if (mz || mx || me || mg) busy = true;
+      const there = !mz && !mx, down = !me, held = !mg;
+      if (g.phase === 'fetch' && there && down) { g.tg = 1; g.phase = 'close'; }                                   // (down round the box: the fingers close on it)
+      else if (g.phase === 'close' && held) { g.carry = g.stack.pop(); g.te = 0; g.phase = 'lift'; paint(); }
+      else if (g.phase === 'lift' && down) { g.phase = 'ready'; paint(); if (!human()) setTimeout(aiMove, 350); else if (cellHover >= 0) { const c = cellAt(cellHover); g.tx = c.x; g.tz = c.z; } }
+      else if (g.phase === 'go' && there) { g.te = placeExt(g); g.phase = 'lower'; }
+      else if (g.phase === 'lower' && down) { const b = g.carry, c = cellAt(g.cell); g.carry = null; b.g.position.set(c.x, SOCK_Y + BOXS / 2, c.z); boxesOn[g.cell] = b; puff(c.x, SOCK_Y, c.z); g.tg = 0; g.phase = 'open'; paint(); }   // (set down: a little dust)
+      else if (g.phase === 'open' && held) { g.te = 0; g.phase = 'raise'; }
+      else if (g.phase === 'raise' && down) { g.tx = 0; g.tz = g.parkZ; g.phase = 'home'; }
+      else if (g.phase === 'home' && there) { g.phase = 'idle'; const w = winner(placed);
+        if (w || placed.every(Boolean)) endState = { t0: now, line: w || null }; else { turn = turn === 'X' ? 'O' : 'X'; startTurn(); }
+        paint(); }
+      if (g.phase !== 'idle' && g.phase !== 'ready') busy = true;
+      g.g.position.z = g.z.p; g.car.position.x = g.x.p; g.head.position.y = -g.ext.p; g.tube.scale.y = g.tubeLen(g.ext.p);
+      const fo = BOXS / 2 + .3 - g.grip.p * .23; for (const f of g.fingers) f.position.set(f.userData.s[0] * fo, 0, f.userData.s[1] * fo);
+      if (g.carry) g.carry.g.position.set(g.x.p, g.gripY0 - g.ext.p - BOXS / 2 - .02, g.z.p); }
+    stepPuffs(now);
+    if (endState) { const t = (now - endState.t0) / 1000;
+      if (endState.line && !winMesh) { const a = cellAt(endState.line[0]), b = cellAt(endState.line[2]), y = SOCK_Y + BOXS + .06, d = b.clone().sub(a).normalize().multiplyScalar(PG * .36);
+        winMesh = segs([V(a.x - d.x, y, a.z - d.z), V(b.x + d.x, y, b.z + d.z)], ttG, M.hi); paint(); }
+      if (t > (endState.line ? 1.4 : .8) && !fallers.length && boxesOn.some(Boolean)) { fallers = boxesOn.filter(Boolean); boxesOn = Array(9).fill(null); if (winMesh) { ttG.remove(winMesh); winMesh.geometry.dispose(); winMesh = null; } paint(); }
+      for (const b of fallers) { b.vy -= .012; b.g.position.y += b.vy; }                                    // (they sink away into their sockets)
+      if (t > 3.4) { for (const b of fallers) { ttG.remove(b.g); b.g.traverse(o => o.geometry?.dispose()); } fallers = [];
+        for (const gt of gantries) while (gt.stack.length < STACK) { const kk = gt.stack.length, b = makeBox(gt.mark); b.g.position.set(bayX(kk), TOP + .2 + BOXS / 2, gt.parkZ); ttG.add(b.g); gt.stack.push(b); }
+        placed = Array(9).fill(null); turn = 'X'; endState = null; startTurn(); } }
+    return busy || !!endState; },   // (a game that has just ended keeps the frame going)
+  panel(g, sl) { ctl.ai = LabUI.check(g, { label: 'The noughts crane plays itself', value: P.ai, onChange: v => { P.ai = v; save(); const a = active(); if (v && turn === 'O' && a && a.phase === 'ready') setTimeout(aiMove, 300); } }); } };
+paints.push(c => { if (!gantries.length) return;
+  for (const g of gantries) { const on = !endState && g.mark === turn; for (const l of g.lines) l.material = on ? M.hi : M.line; if (g.carry) for (const l of g.carry.lines) l.material = M.hi; for (const b of g.stack) for (const l of b.lines) l.material = M.line; }
+  const wins = endState && endState.line ? endState.line : []; boxesOn.forEach((b, i) => { if (b) for (const l of b.lines) l.material = wins.includes(i) ? M.hi : M.line; });
+  socketLines.forEach((l, i) => { l.material = i === cellHover ? M.hi : M.line; }); });
+
+// ---------- which figure is on ----------
+const FIGS = { Shelf: SHELF, Carousel: CAR, Cranes: CRANES };
+let F = FIGS[P.fig];
+function setFig(n, keep) { P.fig = n; if (!keep) save(); F = FIGS[n]; for (const f of Object.values(FIGS)) f.g.visible = f === F;
+  $('nm').textContent = n; resetView(true); buildPanel(); paint(); wake(); }
+const VARS = LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: d => setFig(FIGS_ORDER[(FIGS_ORDER.indexOf(P.fig) + d + FIGS_ORDER.length) % FIGS_ORDER.length]),
+  items: () => FIGS_ORDER, current: () => P.fig, onPick: n => setFig(n) });
+
+// ---------- light and dark ----------
+// (one palette for every figure: the colours of the lab's buttons, dark or light)
+const PAL = { dark: { bg: '#0e0e10', fill: 0x1c1c1f, line: 0x3d3d42, hi: 0xf2f2f0 }, light: { bg: '#f3f2ee', fill: 0xffffff, line: 0xc4c1ba, hi: 0x1b1c20 } };
+let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || localStorage.getItem('lab.line-studio.v3.mode') || localStorage.getItem('lab.line-studio.v2.mode') || 'dark'; } catch { return 'dark'; } })();
+function paint() { const c = PAL[mode]; M.fill.color.set(c.fill); M.line.color.set(c.line); M.hi.color.set(c.hi); for (const p of paints) p(c);
+  plate.style.background = c.bg; }
+function setMode(m) { mode = m; try { localStorage.setItem(KEY + '.mode', m); } catch { }
+  document.body.classList.toggle('light', m === 'light'); document.body.classList.toggle('dark', m === 'dark');   // (dark too: the shared Light / Dark pill reads it)
+  $('panel').classList.toggle('dark', m === 'dark'); $('vars').classList.toggle('dark', m === 'dark'); paint();
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m)));
+  document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#121314' : '#f4f3ef'; wake(); }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the view: turned by dragging the ground, zoomed by the wheel or − / +; the pointer leans it a hair ----------
+const VIEW = { dAz: { p: 0 }, dEl: { p: 0 }, z: { p: 1 }, tAz: 0, tEl: 0, tz: 1, lAz: { p: 0 }, lEl: { p: 0 }, tlAz: 0, tlEl: 0 };
+function resetView(now) { VIEW.tAz = VIEW.tEl = 0; VIEW.tz = 1; if (now) { VIEW.dAz.p = VIEW.dEl.p = 0; VIEW.z.p = 1; } wake(); }
+const zoomBy = f => { VIEW.tz = Math.max(.45, Math.min(3, VIEW.tz * f)); wake(); };
+$('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25); $('zreset').onclick = () => resetView(false);
+let W = 1, H = 1; new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1; renderer.setSize(W, H, false); wake(); }).observe(plate);
+function placeCam() { const a = W / H, S = F.span(a) / VIEW.z.p, az = F.az + VIEW.dAz.p + VIEW.lAz.p, el = Math.max(.06, Math.min(1.4, F.el + VIEW.dEl.p + VIEW.lEl.p)), r = 80, cy = F.cy();
+  cam.left = -S * a / 2; cam.right = S * a / 2; cam.top = S / 2; cam.bottom = -S / 2; cam.updateProjectionMatrix();
+  cam.position.set(Math.sin(az) * Math.cos(el) * r, cy + Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r); cam.lookAt(0, cy, 0); }
+
+// ---------- the pointer: the figure gets it first (a tape, a cassette); the empty ground turns the view ----------
+let orbit = null;
+function setNdc(e) { const r = plate.getBoundingClientRect(), px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+  ndc.set(px * 2 - 1, -(py * 2 - 1)); if (P.tilt && !orbit) { VIEW.tlAz = (px - .5) * .06; VIEW.tlEl = (py - .5) * -.04; } }
+if (!DEMO) {
+  plate.addEventListener('pointerdown', e => { if (e.button !== 0 && e.button !== 2) return; setNdc(e); placeCam();
+    if (e.button === 0 && F.down(e)) { try { plate.setPointerCapture(e.pointerId); } catch { } return; }
+    orbit = { x: e.clientX, y: e.clientY, az: VIEW.tAz, el: VIEW.tEl }; plate.classList.add('dragging'); try { plate.setPointerCapture(e.pointerId); } catch { } });
+  plate.addEventListener('pointermove', e => { setNdc(e);
+    if (orbit) { VIEW.tAz = orbit.az - (e.clientX - orbit.x) * .006; VIEW.tEl = Math.max(-.36, Math.min(.85, orbit.el + (e.clientY - orbit.y) * .004)); VIEW.dAz.p = VIEW.tAz; VIEW.dEl.p = VIEW.tEl; }
+    else F.move(e); wake(); });
+  const up = () => { if (orbit) { orbit = null; plate.classList.remove('dragging'); wake(); return; } F.up(); };
+  plate.addEventListener('pointerup', up); plate.addEventListener('pointercancel', up);
+  plate.addEventListener('pointerleave', () => { if (!orbit) { F.leave(); VIEW.tlAz = VIEW.tlEl = 0; wake(); } });
+  plate.addEventListener('contextmenu', e => e.preventDefault());
+  plate.addEventListener('wheel', e => { e.preventDefault(); if (e.ctrlKey || e.metaKey || !F.wheel) zoomBy(Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015))); else F.wheel(e); }, { passive: false });
+  addEventListener('keydown', e => { if (e.target.closest?.('input, .panel')) return; if (e.key === '+' || e.key === '=') zoomBy(1.25); if (e.key === '-') zoomBy(1 / 1.25); if (e.key === '0') resetView(false);
+    if (F === CAR && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) CAR.nudge(e.key === 'ArrowLeft' ? -1 : 1); });
+}
+
+// ---------- the frame ----------
+let raf = 0; const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
+function frame() { raf = 0; let busy = F.frame();
+  if (ease(VIEW.z, VIEW.tz, .14)) busy = true; if (!orbit) { if (ease(VIEW.dAz, VIEW.tAz, .1)) busy = true; if (ease(VIEW.dEl, VIEW.tEl, .1)) busy = true; }
+  if (ease(VIEW.lAz, P.tilt ? VIEW.tlAz : 0, .05)) busy = true; if (ease(VIEW.lEl, P.tilt ? VIEW.tlEl : 0, .05)) busy = true;
+  placeCam(); renderer.render(scene, cam); if (busy || orbit) wake(); }
+
+// ---------- the panel ----------
+const panel = $('panel'); let ctl = {};
+function buildPanel() { panel.innerHTML = ''; ctl = {};
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2></h2><p></p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('h2').textContent = P.fig; head.querySelector('p').textContent = { Shelf: 'VHS tapes on a shelf: take one out and put it where you want it.', Carousel: 'Cassettes in a row: scroll or drag along it; the one that comes to the middle faces you, the row never ends.', Cranes: 'Noughts and crosses with two gantry cranes on the rails: move over a square and the one whose turn it is goes there; click and it lowers the box. Three in a row and they all sink away.' }[P.fig];
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v, rebuild) => { P[k] = v; save(); if (rebuild) { F.build(); paint(); } wake(); };
+  const sl = (g, k, label, min, max, st, unit, rebuild) => ctl[k] = LabUI.slider(g, { label, min, max, step: st, unit, value: P[k], def: DEF[k], onInput: v => set(k, v, rebuild) });
+  const g = LabUI.group(panel, 'Figure', { key: KEY + '.g.fig' }); F.panel(g, sl); sl(g, 'follow', 'Speed', .04, .25, .005);
+  ctl.tilt = LabUI.check(g, { label: 'Lean with the pointer', value: P.tilt, onChange: v => set('tilt', v) });
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { const fig = P.fig; P = { ...DEF, fig }; save(); SHELF.build(); CAR.build(); CRANES.build(); buildPanel(); resetView(false); paint(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { VARS.close(true); document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- start; the board's box: ?thumb=1 the still (&mode=light, &fig=Carousel), ?demo=1 the figure moving on its own ----------
+if (BARE) { document.body.classList.add('bare'); const fig = FIGS_ORDER.includes(q.get('fig')) ? q.get('fig') : 'Shelf'; P = { ...DEF, fig }; mode = q.get('mode') === 'light' ? 'light' : 'dark'; }
+SHELF.build(); CAR.build(); CRANES.build(); setMode(mode); setFig(P.fig, true);
+document.fonts.ready.then(() => { for (const t of tapes) for (const l of t.labels) { l.material.map.dispose(); l.material.map = vhsLabel(t.name); }
+  for (const c of cass) c.labels.forEach((l, j) => { l.material.map.dispose(); l.material.map = cassLabel(c.name, j ? 'B' : 'A'); }); wake(); });   // (the labels again once the type is in)
+if (DEMO) setInterval(() => { if (F === CAR) CAR.nudge(1); else if (!drag && order.length > 2) { const t = order[Math.floor(Math.random() * order.length)], from = t.x.p; let to = order.indexOf(t);
+    while (to === order.indexOf(t)) to = Math.floor(Math.random() * order.length); const toX = slotX(to), t0 = performance.now(); take(t);
+    const stepFn = () => { const u = Math.min(1, (performance.now() - t0) / 1400), e = u < .5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2; carry(from + (toX - from) * e); if (u < 1) requestAnimationFrame(stepFn); else setTimeout(drop, 250); };
+    requestAnimationFrame(stepFn); } }, 3200);
+LabUI.segThumb($('mode'));
+window.FIG = { THREE, shelfG, tapes: () => tapes, setFig, take, carry, drop, slotX, order: () => order, CAR, VIEW, s: () => cs.p, zoomBy, scene, cam, F: () => F, gantries: () => gantries, play, placed: () => placed };
+</script>
+</body>
+</html>

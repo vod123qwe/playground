@@ -6,12 +6,12 @@
 <title>Apartment Walk · lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../shared/lab-ui.css">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
 <style>
   :root{ --ink:#1b1c20; --muted:rgba(20,20,20,.5); --line:rgba(20,20,20,.1); --ease:cubic-bezier(.22,.61,.36,1); }
   *{box-sizing:border-box}
-  html, body{margin:0; height:100%; overflow:hidden; background:#e8e5df; color:var(--ink); font:500 13.5px/1.4 "Inter", system-ui, sans-serif; -webkit-font-smoothing:antialiased}
+  html, body{margin:0; height:100%; overflow:hidden; background:#e8e5df; color:var(--ink); font:500 13.5px/1.4 var(--lab-font); -webkit-font-smoothing:antialiased}
   #gl{position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; outline:none}
   body.walk #gl{cursor:grab} body.walk.looking #gl{cursor:grabbing}
   button{font:inherit; color:inherit}
@@ -66,7 +66,7 @@
   .spot .dot{position:relative; width:18px; height:18px; border-radius:50%; background:#fff; color:var(--ink); display:grid; place-items:center; transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
   .spot svg{display:block; width:10px; height:10px; opacity:0; transform:scale(.6); transition:opacity .18s, transform .3s cubic-bezier(.34,1.56,.64,1)}
   .spot .nm{position:absolute; top:calc(100% + 3px); left:50%; transform:translate(-50%, -3px); padding:4px 9px; border-radius:999px; background:rgba(255,255,255,.94); color:var(--ink);
-        font:600 11.5px/1 Inter, sans-serif; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .18s, transform .25s cubic-bezier(.2,.8,.2,1)}
+        font:600 11.5px/1 var(--lab-font); white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .18s, transform .25s cubic-bezier(.2,.8,.2,1)}
   .spot:hover .dot, .spot:focus-visible .dot{transform:scale(1.3)} .spot:hover::before, .spot:focus-visible::before{opacity:0; transform:scale(1.3)}
   .spot:hover::after, .spot:focus-visible::after{animation:spotping .7s cubic-bezier(.2,.8,.2,1) 1}
   .spot:hover svg, .spot:focus-visible svg{opacity:1; transform:none} .spot:hover .nm, .spot:focus-visible .nm{opacity:1; transform:translate(-50%, 0)}
@@ -86,7 +86,7 @@
   .clock:active{cursor:grabbing} .clock:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:3px} .clock svg{display:block; width:100%; height:100%}
   @media (min-width:761px){ body.tuning .clock{right:400px} }
   @media (max-width:760px){ .clock{top:72px; bottom:auto; width:76px; height:76px} .clock .sub{display:none} }
-  .hint kbd{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:6px; background:rgba(20,20,20,.07); font:600 11px/1 "Inter", sans-serif}
+  .hint kbd{display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:6px; background:rgba(20,20,20,.07); font:600 11px/1 var(--lab-font)}
   @media (max-width:760px){ .hint{height:32px; font-size:11.5px} }
   @media (pointer:coarse){ .hint .keys{display:none} } @media (pointer:fine){ .hint .touch{display:none} }
 
@@ -194,8 +194,22 @@
   .hand .h-grab{opacity:0; transform:scale(.9)}
   body.hand-grab .hand .h-open{opacity:0; transform:scale(1.06)} body.hand-grab .hand .h-grab{opacity:1; transform:none}
   @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+  /* ---------- Customize: the lab's card (lab-ui soft lab-card, shared) and the stage closed into a box (.lab-frame); the chrome steps in ---------- */
+  :root{--morph:.55s cubic-bezier(.3,1.12,.4,1)}
+  .panel{z-index:6}
+  .ph{margin:0 -20px; padding:22px 20px 12px; border-bottom:0; background:var(--ui-bg)}
+  .ph h2{font-size:17px; letter-spacing:-.01em; line-height:1.2} .ph p{margin:10px 0 0; font-size:13px; line-height:1.45; color:var(--ui-muted)}
+  .ph button{border-radius:999px; color:var(--ui-ink); transition:background .2s} .ph button:hover{background:var(--ui-field)} .ph svg{width:18px; height:18px}
+  .back{transition:top var(--morph), left var(--morph)} .tr{transition:right var(--morph), top var(--morph)} .dock{transition:left var(--morph), bottom var(--morph)}
+  body.tuning .back{top:30px; left:30px}
+  .overlay{clip-path:inset(0px 0px 0px 0px round 0px); transition:clip-path var(--morph), opacity .5s ease}   /* (labels on the piece stay inside the box) */
+  @media (min-width:761px){ body.tuning .overlay{clip-path:inset(16px 368px 16px 16px round 26px)} }
+  @media (min-width:761px){ body.tuning .tr{top:30px; right:382px} body.tuning .dock{left:calc(50% - 176px); bottom:calc(34px + env(safe-area-inset-bottom))} }
+  .clock{transition:right var(--morph), bottom var(--morph)} .hint{transition:left var(--morph), bottom var(--morph)}
+  @media (min-width:761px){ body.tuning .clock{right:382px; bottom:calc(34px + env(safe-area-inset-bottom))} body.tuning .hint{left:calc(50% - 176px); max-width:calc(100vw - 400px)} }
 </style>
 <body>
+<div class="lab-frame" aria-hidden="true"></div>
 <canvas id="gl" tabindex="0" aria-label="The apartment in 3D"></canvas>
 <div class="loading" id="loading" role="status" aria-live="polite"><div class="build">
   <svg class="bricks" viewBox="0 0 30 23" aria-hidden="true">
@@ -263,9 +277,9 @@
   <div class="meter"><i id="shot-bar"></i></div>
   <div class="row2"><span id="shot-n">0 / 0</span><span class="bt"><button type="button" id="shot-save" hidden>Save now</button><button type="button" id="shot-x">Cancel</button></span></div>
 </div></div>
-<aside class="panel lab-ui" id="panel" aria-label="Customize the view"></aside>
+<aside class="panel lab-ui soft lab-card" id="panel" aria-label="Customize the view"></aside>
 
-<script src="../../shared/lab-ui.js"></script>
+<script src="../../shared/lab-ui.js?v=19"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
@@ -1590,7 +1604,7 @@ function drawMini() {
   g.clearRect(0, 0, mini.width, mini.height);
   { const cx = mini.width - 40, cy = 40; g.fillStyle = 'rgba(27,28,32,.07)'; g.beginPath(); g.arc(cx, cy, 28, 0, 7); g.fill();   // north is to the left on the drawing
     g.fillStyle = '#1b1c20'; g.beginPath(); g.moveTo(cx - 22, cy); g.lineTo(cx - 4, cy - 9); g.lineTo(cx - 4, cy + 9); g.closePath(); g.fill();
-    g.font = '700 22px Inter, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('N', cx + 11, cy + 1); }
+    g.font = '700 22px -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('N', cx + 11, cy + 1); }
   g.fillStyle = '#ece8e1'; g.beginPath(); A.balconies.forEach(b => path(b.outer)); g.fill();
   g.fillStyle = '#f4efe7'; g.beginPath(); path(A.floor.outer); g.fill();
   const here = roomAt(P.x, P.z); if (here) { g.fillStyle = 'rgba(27,28,32,.07)'; g.beginPath(); path(here.outline); g.fill(); }

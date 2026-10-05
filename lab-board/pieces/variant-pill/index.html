@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Variant Pill · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* The lab's variant switch on its own, as the Like Button shows its heart: one element in the middle of a quiet page. A pill,
+     ‹ Name ›, and three ways to change what is on: the arrows; grabbing the pill and swiping (it follows with resistance and springs
+     back; past the threshold it steps); a tap on the name, which grows the pill up into a menu of all of them (a morph) and folds back
+     on a pick. Light or dark on top; Customize tunes the feel (shared/lab-ui.js LabUI.variants, cfg). */
+  :root { --bg: #f3f2ee; --ink: #1b1c20; --ease: cubic-bezier(.22,.61,.36,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
+  body.dark { --bg: #0e0e10; --ink: #f2f2f0; }
+  /* (Customize: the page draws back to a lighter ground and the stage morphs into a rounded box beside the card) */
+  :root { --page: #fff; --box: #f3f2ee; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  body.dark { --page: #17181b; --box: #151517; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; border-radius: 0; background: var(--bg);
+    transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { background: var(--box); border-radius: 26px; }
+  .hold { --k: 1.5; position: relative; display: grid; place-items: center; scale: var(--k); transition: translate .52s cubic-bezier(.2,.9,.25,1.04); }   /* (translate: down by half the menu while it is open, so pill and menu sit centred) */   /* (the pill and its menu grow together) */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); transition: left .45s var(--ease); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  .hint { position: fixed; left: 50%; bottom: 28px; translate: -50% 0; font-size: 13px; opacity: .45; white-space: nowrap; transition: left .45s var(--ease); }
+  /* the demo's finger: a soft dot showing the gesture (the board's live preview) */
+  .finger { position: fixed; z-index: 9; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; background: rgba(20,20,20,.16); box-shadow: inset 0 0 0 2px rgba(255,255,255,.7); pointer-events: none; opacity: 0; transition: opacity .25s, scale .2s; }
+  .finger.down { scale: .8; background: rgba(20,20,20,.26); }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .hint, body.bare .panel { display: none; }
+  /* (the demo: the pill in the middle of the box, as at rest; with three variants its menu still fits above it) */
+  /* the panel: a card beside the stage (the lab's shared controls in their soft look: lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  .play-intro { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-field); font: 500 12.5px var(--lab-font); color: var(--ui-ink); cursor: pointer; transition: background .2s, scale .3s var(--ui-spring); }
+  .play-intro:hover { background: var(--ui-field-hi); } .play-intro:active { scale: .95; }
+  .vars button[hidden] { display: none; }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode, body.tuning .hint { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint { display: none; }
+    body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage"><div class="hold">
+  <div class="vars" id="vars" role="group" aria-label="Variants">
+    <button id="prev" type="button" aria-label="Previous variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <span class="vn" id="nm">Signature</span>
+    <button id="next" type="button" aria-label="Next variant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>
+</div></main>
+<p class="hint">Tap the arrows, swipe the pill, or tap the name</p>
+<div class="finger" id="finger" aria-hidden="true"></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the variant pill"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings: the pill's size and its feel; kept in the browser ----------
+const KEY = 'lab.variant-pill.v1';
+const DEF = { count: 3, arrows: true, intro: true, size: 1.5, stretch: .6, lift: 1.06, band: .45, threshold: 44, back: 550, bounce: 1.6, morph: 520, overshoot: 1.06, radius: 22, stagger: 32 };
+let P = (() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF }; } })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), vars = $('vars');
+// (the sample names; Variants takes the first few)
+const POOL = ['Signature', 'Midnight', 'Frost', 'Ember', 'Lilac', 'Dish', 'Aurora', 'Sand'];
+let names = POOL.slice(0, P.count);
+let cur = 'Signature';
+const step = d => { cur = names[(names.indexOf(cur) + d + names.length) % names.length]; $('nm').textContent = cur; };
+const V = LabUI.variants(vars, { prev: $('prev'), next: $('next'), name: $('nm'), onStep: step, items: () => names, current: () => cur, onPick: n => { cur = n; $('nm').textContent = n; },
+  cfg: () => ({ stretch: P.stretch, lift: P.lift, band: P.band, threshold: P.threshold, back: P.back, bounce: P.bounce, morph: P.morph, overshoot: P.overshoot, radius: P.radius, stagger: P.stagger }) });
+function apply() { document.querySelector('.hold').style.setProperty('--k', P.size);
+  names = POOL.slice(0, P.count); if (!names.includes(cur)) { cur = names[0]; $('nm').textContent = cur; }
+  $('prev').hidden = $('next').hidden = !P.arrows; }
+// ---------- the intro (the first visit, or Play intro): the pill shows it can be grabbed: pulled to the left it stretches, lets go
+// and springs to the next one; a beat; pulled to the right, back to where it was ----------
+const waitI = ms => new Promise(r => setTimeout(r, ms));
+let introOn = false;
+async function intro() { if (introOn || matchMedia('(prefers-reduced-motion: reduce)').matches) return; introOn = true;
+  const pull = async (dx, d) => {
+    // (held by the leading end, as a thumb would take it)
+    const x = dx * P.band / (1 + Math.abs(dx) / 160), c = V.pose(x, 560, 'cubic-bezier(.45,0,.2,1)', dx < 0 ? .15 : .85), k = P.stretch ? 1 : 1 + Math.abs(x) / 900;
+    const from = { transform: 'none' }, to = { transform: `translateX(${c}px) scaleX(${k})` };
+    await vars.animate([from, to], { duration: 560, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' }).finished;
+    await waitI(140); step(d); V.flash(d);
+    V.pose(0, P.back, `cubic-bezier(.2,${P.bounce},.4,1)`);
+    const back = vars.animate([to, from], { duration: P.back, easing: `cubic-bezier(.2,${P.bounce},.4,1)`, fill: 'forwards' });
+    await back.finished; vars.getAnimations().forEach(a => a.cancel()); };
+  try { await pull(-130, 1); await waitI(700); await pull(110, -1); } finally { introOn = false; } }
+
+// ---------- light and dark ----------
+let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); vars.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0e0e10' : '#f3f2ee'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The pill’s feel: the swipe, the spring, the menu’s morph.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); apply(); };
+  const sl = (g, k, label, min, max, step, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g0 = LabUI.group(panel, 'Content', { key: KEY + '.g.content' }); sl(g0, 'count', 'Variants', 2, 8, 1);
+  ctl.arrows = LabUI.check(g0, { label: 'Arrows', value: P.arrows, onChange: v => set('arrows', v) });
+  ctl.intro = LabUI.check(g0, { label: 'Intro on the first visit', value: P.intro, onChange: v => set('intro', v) });
+  { const r = document.createElement('div'); r.className = 'ui-row'; r.innerHTML = '<span class="ui-label">Show the swipe</span><button type="button" class="play-intro">Play intro</button>'; g0.appendChild(r);
+    r.querySelector('button').onclick = () => { openPanel(false); setTimeout(intro, 450); }; }
+  const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' }); sl(g1, 'size', 'Size', .8, 2.4, .05, '×'); sl(g1, 'radius', 'Menu corners', 8, 32, 1, 'px');
+  const g2 = LabUI.group(panel, 'Swipe', { key: KEY + '.g.swipe' }); sl(g2, 'stretch', 'Stretch', 0, 1, .05); sl(g2, 'lift', 'Press lift', 1, 1.15, .01, '×'); sl(g2, 'band', 'Follow', .15, .9, .01); sl(g2, 'threshold', 'Swipe to step', 16, 120, 2, 'px'); sl(g2, 'back', 'Spring back', 200, 1200, 10, 'ms'); sl(g2, 'bounce', 'Bounce', 1, 2.4, .05);
+  const g3 = LabUI.group(panel, 'Menu', { key: KEY + '.g.menu' }); sl(g3, 'morph', 'Morph time', 200, 1200, 10, 'ms'); sl(g3, 'overshoot', 'Overshoot', 1, 1.6, .01); sl(g3, 'stagger', 'Options one by one', 0, 90, 2, 'ms');
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); apply(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { V.close(true); document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+buildPanel(); apply(); setMode(mode);
+// (the first visit: the intro once the page has settled; remembered after)
+{ const q0 = new URLSearchParams(location.search); let seen = false; try { seen = localStorage.getItem(KEY + '.introSeen') === '1'; } catch { }
+  if (P.intro && !seen && !q0.has('thumb') && !q0.has('demo')) setTimeout(() => { intro(); try { localStorage.setItem(KEY + '.introSeen', '1'); } catch { } }, 800); }
+
+// ---------- the board's box: ?thumb=1 the still (light, the pill at rest), ?demo=1 the live preview: a finger swipes the pill, taps
+// the arrow, opens the menu and picks, in a loop. Neither touches the saved settings ----------
+const q = new URLSearchParams(location.search);
+if (q.has('demo')) { document.documentElement.style.visibility = 'hidden'; document.fonts.ready.then(() => requestAnimationFrame(() => { document.documentElement.style.visibility = ''; })); }   // (the board's live box: shown only once the type is in, so it lands exactly on the still picture under it)
+if (q.has('thumb') || q.has('demo')) { document.body.classList.add('bare'); P = { ...DEF }; setMode('light'); const fit = () => { P.size = Math.max(.75, Math.min(innerWidth / 330, innerHeight / 268)); apply(); }; fit(); addEventListener('resize', fit); }
+if (q.has('demo')) { document.body.classList.add('demo');
+  const f = $('finger'), wait = ms => new Promise(r => setTimeout(r, ms)), band = dx => dx * P.band / (1 + Math.abs(dx) / 160);
+  const at = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const move = async (x, y, ms) => { f.style.transition = `left ${ms}ms cubic-bezier(.4,0,.2,1), top ${ms}ms cubic-bezier(.4,0,.2,1), opacity .25s, scale .2s`; f.style.left = x + 'px'; f.style.top = y + 'px'; await wait(ms); };
+  const tap = async el => { const [x, y] = at(el); await move(x, y, 520); f.classList.add('down'); await wait(130); f.classList.remove('down'); el.click(); await wait(120); };
+  (async () => { await document.fonts.ready; await wait(500); let [cx, cy] = at($('nm')); f.style.left = (cx + 140) + 'px'; f.style.top = (cy + 90) + 'px'; f.style.opacity = 1; await wait(300);
+    for (;;) { [cx, cy] = at($('nm'));
+      // a swipe to the left, held by its left end (as a thumb takes it): the pill stretches after the finger like a drop, its far end
+      // anchored, then springs back on the next one
+      const pr = vars.getBoundingClientRect(), gx = pr.left + pr.width * .15;
+      await move(gx, cy, 500); f.classList.add('down'); vars.style.transition = 'none';
+      for (let k = 1; k <= 16; k++) { const dx = -k * 7, x = band(dx), c = V.pose(x, 0, null, .15); f.style.transition = 'none'; f.style.left = (gx + dx) + 'px';
+        vars.style.transform = `translateX(${c}px)` + (P.stretch ? '' : ` scale(${1 + Math.min(Math.abs(dx), 200) / 4000})`); await wait(22); }
+      await wait(160); f.classList.remove('down'); vars.style.transition = `transform ${P.back}ms cubic-bezier(.2,${P.bounce},.4,1)`; vars.style.transform = ''; V.pose(0, P.back, `cubic-bezier(.2,${P.bounce},.4,1)`); step(1); V.flash(1); await wait(1300);
+      await tap($('next')); await wait(1100);
+      await tap($('nm')); await wait(1150);
+      const opts = [...document.querySelectorAll('.lv-opt')], i = opts.findIndex(b => b.getAttribute('aria-selected') === 'true'), pick = opts[(i + 2) % opts.length];
+      await tap(pick); await wait(1400);
+      [cx, cy] = at($('nm')); await move(cx + 140, cy + 90, 500); await wait(600);
+    } })();
+}
+// (the menu grows up out of the pill; while it is open the pair is centred: the pill moves down by half of what grew above it)
+new MutationObserver(() => { const hold = document.querySelector('.hold'), m = document.querySelector('.lv-menu');
+  hold.style.translate = vars.classList.contains('menu-open') && m ? `0 ${(m.offsetHeight - vars.offsetHeight) * P.size / 2}px` : ''; }).observe(vars, { attributes: true, attributeFilter: ['class'] });
+LabUI.segThumb($('mode'));   // (Light / Dark: the thumb slides)
+</script>
+</body>
+</html>
