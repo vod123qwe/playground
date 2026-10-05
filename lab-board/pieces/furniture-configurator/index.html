@@ -6,12 +6,12 @@
 <title>Furniture Configurator · lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../shared/lab-ui.css">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
 <style>
   :root{ --ink:#1b1c20; --muted:rgba(20,20,20,.5); --line:rgba(20,20,20,.1); --ease:cubic-bezier(.22,.61,.36,1); }
   *{box-sizing:border-box}
-  html, body{margin:0; height:100%; overflow:hidden; background:#e8e5df; color:var(--ink); font:500 13.5px/1.4 "Inter", system-ui, sans-serif; -webkit-font-smoothing:antialiased}
+  html, body{margin:0; height:100%; overflow:hidden; background:#e8e5df; color:var(--ink); font:500 13.5px/1.4 var(--lab-font); -webkit-font-smoothing:antialiased}
   #gl{position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none}
   button{font:inherit; color:inherit}
 
@@ -125,8 +125,20 @@
   .loading{position:fixed; inset:0; z-index:8; display:grid; place-items:center; pointer-events:none; color:var(--muted); font-weight:600; transition:opacity .5s ease}
   body.ready .loading{opacity:0}
   @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+  /* ---------- Customize: the lab's card (lab-ui soft lab-card, shared) and the stage closed into a box (.lab-frame); the chrome steps in ---------- */
+  :root{--morph:.55s cubic-bezier(.3,1.12,.4,1)}
+  .panel{z-index:6}
+  .ph{margin:0 -20px; padding:22px 20px 12px; border-bottom:0; background:var(--ui-bg)}
+  .ph h2{font-size:17px; letter-spacing:-.01em; line-height:1.2} .ph p{margin:10px 0 0; font-size:13px; line-height:1.45; color:var(--ui-muted)}
+  .ph button{border-radius:999px; color:var(--ui-ink); transition:background .2s} .ph button:hover{background:var(--ui-field)} .ph svg{width:18px; height:18px}
+  .back{transition:top var(--morph), left var(--morph)} .tr{transition:right var(--morph), top var(--morph)} .dock{transition:left var(--morph), bottom var(--morph)}
+  body.tuning .back{top:30px; left:30px}
+  .overlay{clip-path:inset(0px 0px 0px 0px round 0px); transition:clip-path var(--morph), opacity .5s ease}   /* (labels on the piece stay inside the box) */
+  @media (min-width:761px){ body.tuning .overlay{clip-path:inset(16px 368px 16px 16px round 26px)} }
+  @media (min-width:761px){ body.tuning .tr{top:30px; right:382px} body.tuning .dock{left:calc(50% - 176px); bottom:calc(34px + env(safe-area-inset-bottom))} }
+  .status{transition:left var(--morph), bottom var(--morph)} body.tuning .status{left:30px; bottom:calc(34px + env(safe-area-inset-bottom))}
 </style>
-<script src="../../shared/lab-ui.js"></script>
+<script src="../../shared/lab-ui.js?v=19"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
@@ -138,6 +150,7 @@
 </script>
 </head>
 <body>
+<div class="lab-frame" aria-hidden="true"></div>
 <canvas id="gl" aria-label="The sideboard in 3D"></canvas>
 <div class="loading" id="loading">Loading the workshop…</div>
 <div class="overlay" id="overlay"></div>
@@ -168,7 +181,7 @@
 
 <div class="status" id="status" aria-live="polite"><i></i><span>Live preview</span></div>
 <div class="bar" id="bar" role="toolbar" aria-label="This segment"></div>
-<aside class="panel lab-ui" id="panel" aria-label="Customize the furniture"></aside>
+<aside class="panel lab-ui soft lab-card" id="panel" aria-label="Customize the furniture"></aside>
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-t"><div class="card">
   <b id="m-t">Rendering</b><p id="m-p">Tracing light through the scene.</p>
   <div class="meter"><i id="m-bar"></i></div>
@@ -394,7 +407,7 @@ function resize() {
   renderer.setSize(w, h, false); camera.aspect = w / h;
   camera.fov = w < 760 ? 42 : 30;
   // the open panel covers the right: the view slides over so the furniture stays in the free part
-  if (document.body.classList.contains('tuning') && w > 760) camera.setViewOffset(w, h, 192, 0, w, h); else camera.clearViewOffset();
+  if (document.body.classList.contains('tuning') && w > 760) camera.setViewOffset(w, h, 176, 0, w, h); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
   if (typeof fitDistance === 'function' && C) fitTo = fitDistance();
   ptScene();
@@ -575,8 +588,8 @@ let lastSig = '', fitTo = 0;
 function fitDistance() {
   const free = document.body.classList.contains('tuning') && innerWidth > 760 ? (innerWidth - 384) / innerHeight : camera.aspect;   // the part the panel leaves
   const vf = THREE.MathUtils.degToRad(camera.fov), hf = 2 * Math.atan(Math.tan(vf / 2) * free);
-  const needW = (C.W * .5 + 30) / Math.tan(hf / 2), needH = ((C.leg + C.H) * .5 + 40) / Math.tan(vf / 2);
-  return clamp(Math.max(needW, needH) + C.D / 2, controls.minDistance, controls.maxDistance);
+  const needW = (C.W * .5 + (document.body.classList.contains('tuning') ? 48 : 30)) / Math.tan(hf / 2), needH = ((C.leg + C.H) * .5 + 40) / Math.tan(vf / 2);
+  return clamp((Math.max(needW, needH) + C.D / 2) * 1.18, controls.minDistance, controls.maxDistance);   // (a little more air around it: Jarek, 05.10)
 }
 let lastSize = '';
 function changed(rebuildOverlay) {
@@ -717,24 +730,8 @@ function stepLook(d) {
   const names = Object.keys(LOOKS), i = names.indexOf(lookName); applyLook(names[(i < 0 ? 0 : i + d + names.length) % names.length]);
   const vn = $('v-name'); if (!reduce && vn.animate) vn.animate([{ transform: `translateX(${d * 14}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-// the variants pill: tap the arrows, or grab it and swipe; it follows with resistance, then springs back (like the glass button's)
-const varsEl = document.querySelector('.vars'), vDrag = { id: null, x0: 0, dx: 0, moved: false };
-const band = dx => dx * 0.45 / (1 + Math.abs(dx) / 160);
-varsEl.addEventListener('pointerdown', e => { if (e.button !== 0) return; vDrag.id = e.pointerId; vDrag.x0 = e.clientX; vDrag.dx = 0; vDrag.moved = false; varsEl.style.transition = 'none'; });
-varsEl.addEventListener('pointermove', e => {
-  if (e.pointerId !== vDrag.id) return; vDrag.dx = e.clientX - vDrag.x0;
-  if (!vDrag.moved && Math.abs(vDrag.dx) > 6) { vDrag.moved = true; varsEl.classList.add('dragging'); try { varsEl.setPointerCapture(e.pointerId); } catch (err) {} }
-  if (vDrag.moved) varsEl.style.transform = `translateX(${band(vDrag.dx)}px) scale(${1 + Math.min(Math.abs(vDrag.dx), 200) / 4000})`;
-});
-const vEnd = e => {
-  if (e.pointerId !== vDrag.id) return; vDrag.id = null; varsEl.classList.remove('dragging');
-  varsEl.style.transition = reduce ? 'none' : 'transform .55s cubic-bezier(.2,1.6,.4,1)'; varsEl.style.transform = '';
-  if (vDrag.moved && Math.abs(vDrag.dx) > 44) stepLook(vDrag.dx < 0 ? 1 : -1);          // swipe left: next, right: previous
-  setTimeout(() => { vDrag.moved = false; }, 0);
-};
-varsEl.addEventListener('pointerup', vEnd); varsEl.addEventListener('pointercancel', vEnd);
-$('v-prev').addEventListener('click', () => { if (!vDrag.moved) stepLook(-1); });
-$('v-next').addEventListener('click', () => { if (!vDrag.moved) stepLook(1); });
+// the variants pill: the lab's shared one (tap the arrows, or grab it and swipe; shared/lab-ui.js)
+LabUI.variants(document.querySelector('.vars'), { prev: $('v-prev'), next: $('v-next'), onStep: stepLook, items: () => Object.keys(LOOKS), current: () => lookName, onPick: n => applyLook(n) });
 
 // ---------- export ----------
 const xBtn = $('exp-btn'), xMenu = $('exp-menu');
@@ -804,7 +801,7 @@ function cutList() {
 function planSvg() {                                   // front view with dimension lines, and a side section
   const { W, H, D, leg } = C, top = leg + H + (S.lip ? LIP : 0), pad = 60, sc = 3.4;
   const X = x => pad + (x + W / 2) * sc, Y = y => pad + (top - y) * sc;
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W * sc + pad * 2 + D * sc + 80} ${top * sc + pad * 2 + 30}" font-family="Inter, system-ui, sans-serif" font-size="15">`;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W * sc + pad * 2 + D * sc + 80} ${top * sc + pad * 2 + 30}" font-family="-apple-system, BlinkMacSystemFont, 'Geist', system-ui, sans-serif" font-size="15">`;
   s += `<defs><marker id="a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 2L10 5L0 8z" fill="#1b1c20"/></marker></defs>`;
   const rect = (x0, y0, x1, y1, fill = 'none', w = 1.2) => `<rect x="${Math.min(X(x0), X(x1))}" y="${Math.min(Y(y0), Y(y1))}" width="${Math.abs(X(x1) - X(x0))}" height="${Math.abs(Y(y1) - Y(y0))}" fill="${fill}" stroke="#1b1c20" stroke-width="${w}"/>`;
   const dim = (x0, y0, x1, y1, txt, off) => {
@@ -844,8 +841,8 @@ function exportPlan() {
   const { rows, hw } = cutList(), date = new Date().toLocaleDateString('en-GB');
   const img = renderer.domElement.toDataURL('image/jpeg', .9);
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Sideboard ${stamp()} · plan</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>@page{size:A4 landscape; margin:14mm} body{font:500 11.5px/1.45 Inter, system-ui, sans-serif; color:#1b1c20; margin:24px}
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<style>@page{size:A4 landscape; margin:14mm} body{font:500 11.5px/1.45 var(--lab-font); color:#1b1c20; margin:24px}
 h1{font-size:20px; margin:0} .sub{color:#777; margin:2px 0 18px} .draw{margin:8px 0 22px; padding:10px 0 4px; border-top:1px solid #e5e2dc; border-bottom:1px solid #e5e2dc} .grid{display:grid; grid-template-columns:1.1fr 1fr; gap:24px; align-items:start; page-break-inside:avoid}
 img{width:100%; border-radius:10px} svg{width:100%; height:auto} table{width:100%; border-collapse:collapse; margin:8px 0 20px} th, td{text-align:left; padding:6px 8px; border-bottom:1px solid #e5e2dc}
 th{font-weight:600; background:#f6f4f0} td.n{text-align:right; font-variant-numeric:tabular-nums} h2{font-size:13px; margin:22px 0 4px} .spec td:first-child{color:#777; width:45%}

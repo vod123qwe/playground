@@ -1,4 +1,6 @@
+:root{--lab-font:-apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif}
 /* Lab UI · one style for the customise panels of every lab piece
+   The lab's typeface: SF Pro on Apple devices (-apple-system), Geist everywhere else (load Geist from Google Fonts on the page): --lab-font
    Sliders, value fields, segmented choices, checks, colour wells and collapsible groups.
    Put class="lab-ui" (or "lab-ui dark") on the panel. Built by lab-ui.js, plain CSS otherwise. */
 
@@ -8,7 +10,7 @@
   --ui-track:rgba(20,20,20,.12); --ui-fill:#1b1c20; --ui-thumb:#fff; --ui-ring:rgba(20,20,20,.26); --ui-focus:rgba(20,20,20,.38); --ui-halo:rgba(20,20,20,.1);
   --ui-on:#1b1c20; --ui-on-text:#fff;
   --ui-ease:cubic-bezier(.22,.61,.36,1);
-  color:var(--ui-ink); background:var(--ui-bg); font:500 13px/1.4 "Inter", system-ui, sans-serif; -webkit-font-smoothing:antialiased;
+  color:var(--ui-ink); background:var(--ui-bg); font:500 13px/1.4 var(--lab-font); -webkit-font-smoothing:antialiased;
 }
 .lab-ui.dark{
   --ui-ink:#f2f2f0; --ui-text:rgba(255,255,255,.78); --ui-muted:rgba(255,255,255,.5); --ui-line:rgba(255,255,255,.1);
@@ -122,3 +124,129 @@
   .ui-row.scrub .ui-label{cursor:default}
 }
 @media (prefers-reduced-motion:reduce){ .lab-ui *{transition:none !important} }
+
+/* ---------- the variants pill (LabUI.variants): a white pill, ‹ Name ›, grabbed and swiped; .dark on a dark page ---------- */
+.lab-vars{display:flex; align-items:center; gap:2px; height:46px; padding:0 5px; border-radius:999px; background:#fff; color:#1b1c20;
+          font:600 13.5px/1 var(--lab-font); touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; will-change:transform}
+.lab-vars.dragging{cursor:grabbing}
+.lab-vars button{display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:999px; background:transparent; color:inherit; cursor:pointer}
+.lab-vars button:hover{background:rgba(20,20,20,.06)} .lab-vars button svg{width:18px; height:18px}
+.lab-vars button:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:1px}
+.lab-vars .vn{display:inline-block; min-width:76px; padding:0 4px; text-align:center; white-space:nowrap}
+.lab-vars.dark{background:#1c1c1f; color:#f2f2f0} .lab-vars.dark button:hover{background:rgba(255,255,255,.08)} .lab-vars.dark button:focus-visible{outline-color:rgba(255,255,255,.5)}
+
+/* ---------- the variants menu (LabUI.variants with items): the pill grown up into a panel, the options in it ---------- */
+.lab-vars{position:relative; z-index:1}
+.lab-vars .lv-name{cursor:pointer; border-radius:999px; padding:9px 10px; margin:0 -6px; transition:background .2s}
+.lab-vars .lv-name:hover{background:rgba(20,20,20,.06)} .lab-vars.dark .lv-name:hover{background:rgba(255,255,255,.08)}
+.lab-vars .lv-name:focus-visible{outline:2px solid rgba(20,20,20,.35); outline-offset:1px}
+.lv-menu{position:absolute; z-index:0; background:#fff; color:#1b1c20; border-radius:22px; box-shadow:0 18px 40px -18px rgba(20,24,30,.35); font:600 13.5px/1 var(--lab-font, system-ui); overflow:hidden}
+.lv-menu.dark{background:#1c1c1f; color:#f2f2f0}
+.lv-list{display:flex; flex-direction:column; padding:6px 6px 0; max-height:var(--lv-list); overflow:auto; scrollbar-width:none}
+.lv-opt{display:flex; align-items:center; justify-content:space-between; gap:10px; height:42px; flex:none; padding:0 14px; border:0; border-radius:14px; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer}
+.lv-opt:hover, .lv-opt:focus-visible{background:rgba(20,20,20,.06); outline:none} .lv-menu.dark .lv-opt:hover, .lv-menu.dark .lv-opt:focus-visible{background:rgba(255,255,255,.08)}
+.lv-opt svg{width:16px; height:16px; opacity:0} .lv-opt[aria-selected=true] svg{opacity:1}
+/* (a light hover on the options: the name drifts a touch to the right, the tick stays) */
+.lv-opt span{transition:transform .32s cubic-bezier(.2,.8,.3,1)}
+.lv-opt:hover span, .lv-opt:focus-visible span{transform:translateX(3px)}
+@media (prefers-reduced-motion: reduce){ .lv-opt span{transition:none} .lv-opt:hover span, .lv-opt:focus-visible span{transform:none} }
+
+/* ---------- soft: the quiet look (class="lab-ui soft"). Flat like iOS, motion like Material Expressive, all of it muted:
+   a slider is a filled bar with its name inside and its value at the end (drag anywhere on it, click the number to type);
+   a choice is a pill track with one white thumb that slides to the chosen option; a check is a switch whose knob stretches
+   while pressed; the actions at the bottom are full pills, the last one filled. Sits on a card (the page draws the card). ---------- */
+.lab-ui.soft{--ui-field:rgba(20,20,20,.045); --ui-field-hi:rgba(20,20,20,.07); --ui-bar:rgba(20,20,20,.085); --ui-bar-hi:rgba(20,20,20,.12); --ui-line:rgba(20,20,20,.07);
+  --ui-spring:cubic-bezier(.3,1.35,.45,1)}
+.lab-ui.soft.dark{--ui-card-line:rgba(255,255,255,.08); --ui-field:rgba(255,255,255,.055); --ui-field-hi:rgba(255,255,255,.085); --ui-bar:rgba(255,255,255,.11); --ui-bar-hi:rgba(255,255,255,.16); --ui-line:rgba(255,255,255,.08)}
+.soft .ui-gh{padding:16px 0 10px; font-size:13px}
+.soft .ui-gi{padding-bottom:12px}
+.soft .ui-row + .ui-row{margin-top:8px}
+.soft .ui-label{color:var(--ui-ink)}
+
+/* the slider: a bar */
+.soft .ui-row.scrub{position:relative; isolation:isolate; min-height:42px; padding:0 8px 0 14px; border-radius:12px; background:var(--ui-field); overflow:hidden;
+  transition:scale .35s var(--ui-spring), box-shadow .2s}
+.soft .ui-row.scrub .ui-slider{position:absolute; inset:0; z-index:0; height:auto; margin:0; grid-area:auto}   /* (auto placement: then the bar is the row's whole box, edge to edge, not its padded grid area) */
+.soft .ui-row.scrub .ui-slider::before{content:""; position:absolute; inset:0 auto 0 0; width:var(--p, 50%); background:var(--ui-bar); transition:width .14s var(--ui-ease), background .2s}
+.soft .ui-row.scrub .ui-slider::after{content:""; position:absolute; top:50%; left:var(--p, 50%); width:2px; height:14px; margin:-7px 0 0 -3px; border-radius:2px; background:var(--ui-ink); opacity:0;
+  transition:left .14s var(--ui-ease), opacity .2s, height .35s var(--ui-spring), margin .35s var(--ui-spring)}   /* the edge: a hairline that shows on hover, grows while dragged */
+.soft .ui-row.scrub:hover .ui-slider::before{background:var(--ui-bar-hi)}
+.soft .ui-row.scrub:hover .ui-slider::after{opacity:.22}
+.soft .ui-row.scrub:active{scale:.988}
+.soft .ui-row.scrub:active .ui-slider::after{opacity:.4; height:22px; margin-top:-11px}
+.soft .ui-row.scrub .ui-slider input{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:ew-resize}
+.soft .ui-row.scrub .ui-label, .soft .ui-row.scrub .ui-value{position:relative; z-index:1}
+.soft .ui-row.scrub .ui-label{pointer-events:none}
+.soft .ui-row.scrub .ui-value{color:var(--ui-ink)}
+.soft .ui-row.scrub .ui-num{margin-right:0}
+.soft .ui-row.scrub .ui-num:hover{background:var(--ui-bg)}
+.soft .ui-row.scrub:has(input:focus-visible){box-shadow:0 0 0 2px var(--ui-bg), 0 0 0 4px var(--ui-focus)}
+.soft .ui-row.scrub .ui-def{top:auto; bottom:5px; left:calc(100% * var(--d)); width:3px; height:3px; margin:0 0 0 -1.5px; border-radius:50%}
+.soft .ui-row.scrub .ui-hint{display:none}
+
+/* the choice: a track with a sliding thumb */
+.soft .ui-row:has(> .ui-seg) > span:not(.ui-label){display:none}
+.soft .ui-seg{position:relative; grid-column:auto; flex-wrap:nowrap; gap:0; margin:0; padding:3px; border-radius:999px; background:var(--ui-field)}
+.soft .ui-seg::before{content:""; position:absolute; left:var(--sx, 3px); top:var(--sy, 3px); width:var(--sw, 0); height:var(--sh, 0); border-radius:999px; background:var(--ui-bg);
+  box-shadow:0 0 0 .5px rgba(20,20,20,.08), 0 1px 3px rgba(20,20,20,.1); transition:left .45s var(--ui-spring), top .45s var(--ui-spring), width .45s var(--ui-spring), height .45s var(--ui-spring)}
+.soft.dark .ui-seg::before{background:rgba(255,255,255,.14); box-shadow:none}
+.soft .ui-seg button, .soft .ui-seg button[aria-pressed=true], .soft .ui-seg button:hover{position:relative; z-index:1; min-height:30px; padding:0 13px; border-radius:999px; background:transparent; font-weight:500; font-size:12.5px}
+.soft .ui-seg button{color:var(--ui-muted)} .soft .ui-seg button:hover, .soft .ui-seg button[aria-pressed=true]{color:var(--ui-ink)}
+.soft .ui-seg button:active{transform:scale(.94)}
+.soft .ui-row.stack .ui-seg{grid-column:1 / -1; flex-wrap:wrap; margin-top:6px; border-radius:16px}
+
+/* the check: a switch */
+.soft .ui-check{position:relative; display:block; width:38px; height:22px; border-radius:999px; background:var(--ui-track); box-shadow:none; transition:background .25s}
+.soft .ui-check::after{content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; margin:0; border:0; border-radius:999px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2);
+  opacity:1; transform:none; transition:left .4s var(--ui-spring), width .25s var(--ui-ease)}
+.soft .ui-check:checked{background:var(--ui-on)}
+.soft .ui-check:checked::after{left:18px; transform:none}
+.soft .ui-check:active::after{width:22px} .soft .ui-check:checked:active::after{left:14px}
+.soft.dark .ui-check:checked::after{background:var(--ui-on-text)}
+.soft .ui-check:focus-visible{outline-offset:3px}
+
+/* the actions at the bottom: full pills, stacked, the last one filled */
+.soft .acts{flex-direction:column; gap:8px; border-top:0}
+.soft .acts button{flex:none; height:40px; padding:0 16px; border:0; border-radius:999px; background:transparent; box-shadow:inset 0 0 0 1px var(--ui-track); color:var(--ui-ink);
+  font:600 13px var(--lab-font); cursor:pointer; transition:background .2s, scale .3s var(--ui-spring)}
+.soft .acts button:hover{background:var(--ui-field)}
+.soft .acts button:last-child{background:var(--ui-on); color:var(--ui-on-text); box-shadow:none}
+.soft .acts button:last-child:hover{background:var(--ui-on); opacity:.9}
+.soft .acts button:active{scale:.97}
+@media (pointer:coarse){ .soft .ui-row.scrub{min-height:48px} .soft .ui-seg button{min-height:38px} .soft .ui-check{width:44px; height:26px} .soft .ui-check::after{width:22px; height:22px}
+  .soft .ui-check:checked::after{left:20px} }
+
+/* the stretch (LabUI.variants cfg.stretch > 0): the pill's shape is its ::before and gets a little wider while pulled, so the name stays crisp */
+.lab-vars.lv-stretch{background:transparent}
+.lab-vars.lv-stretch::before{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit; background:#fff; scale:var(--lv-sa, 1) 1; transition:scale var(--lv-t, 0ms) var(--lv-e, ease)}
+.lab-vars.lv-stretch > button{transition:translate var(--lv-t, 0ms) var(--lv-e, ease), background .2s}
+.lab-vars.lv-stretch > button:first-of-type{translate:calc(var(--lv-w, 0px) * -1) 0} .lab-vars.lv-stretch > button:last-of-type{translate:var(--lv-w, 0px) 0}
+.lab-vars.lv-stretch.dark::before{background:#1c1c1f}
+
+/* ---------- a page's segmented pill (class="lab-seg"): the chosen option's thumb slides to it with a soft spring (lab-ui.js segThumb);
+   the page keeps its own pill and colours, the chosen button's own fill goes. --seg-on: the thumb ---------- */
+.lab-seg{position:relative; isolation:isolate; --seg-on:#1b1c20}
+.dark .lab-seg, .lab-seg.dark{--seg-on:#f2f2f0}
+.lab-seg::before{content:""; position:absolute; z-index:-1; left:var(--sx, 4px); top:var(--sy, 4px); width:var(--sw, 0); height:var(--sh, 0); border-radius:999px; background:var(--seg-on); transition:background .3s}
+.lab-seg.ready::before{transition:left .5s cubic-bezier(.3,1.3,.45,1), width .5s cubic-bezier(.3,1.3,.45,1), background .3s}
+.lab-seg > button[aria-checked=true], .lab-seg > button[aria-pressed=true]{background:transparent !important}
+.lab-seg > button{transition:color .35s, scale .3s cubic-bezier(.3,1.35,.45,1) !important}
+.lab-seg > button:active{scale:.94}
+@media (prefers-reduced-motion:reduce){ .lab-seg.ready::before{transition:none} }
+
+/* ---------- the card (class="lab-ui soft lab-card" on a piece's panel): Customize as a white card beside the stage, a hairline,
+   no shadow; the piece keeps its own open / close. On phones a sheet with the same corners ---------- */
+.lab-ui.lab-card{top:16px; right:16px; bottom:16px; left:auto; width:340px; height:auto; max-height:none; padding:0 20px; --ui-pad:20px; border-radius:26px;
+  background:var(--ui-bg); border:1px solid var(--ui-card-line, rgba(20,20,20,.08)); box-shadow:none; display:flex; flex-direction:column; overflow:auto; scrollbar-width:none;
+  -webkit-backdrop-filter:none; backdrop-filter:none}
+.lab-ui.lab-card::-webkit-scrollbar{width:0}
+.lab-ui.lab-card .acts{margin-top:auto}
+@media (max-width:760px){ .lab-ui.lab-card{top:auto; left:8px; right:8px; bottom:8px; width:auto; max-height:56vh; height:auto} }
+
+/* ---------- the stage as a box while Customize is open, for pieces drawn on a full-screen canvas: a frame in the page's colour closes
+   in around the piece and leaves a rounded box beside the card (<div class="lab-frame"></div> right after the canvas) ---------- */
+.lab-frame{--lab-page:#fff; position:fixed; inset:0; z-index:1; border-radius:0; pointer-events:none; box-shadow:0 0 0 100vmax var(--lab-page);
+  transition:inset .55s cubic-bezier(.3,1.12,.4,1), border-radius .55s cubic-bezier(.3,1.12,.4,1), box-shadow .4s}
+body.dark .lab-frame, .lab-frame.dark{--lab-page:#17181b}
+body.tuning .lab-frame{inset:16px 368px 16px 16px; border-radius:26px}
+@media (max-width:760px){ body.tuning .lab-frame{inset:8px 8px calc(56vh + 16px) 8px; border-radius:22px} }

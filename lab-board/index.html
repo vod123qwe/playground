@@ -7,7 +7,7 @@
 <meta name="description" content="Infinite draggable board of experiments; click a piece to open its side panel.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&family=Geist:wght@400..700&display=swap" rel="stylesheet">
 <script>(function(){var t=new URLSearchParams(location.search).get('theme');document.documentElement.dataset.theme=t||'dark';})();</script>
 <style>
   :root{
@@ -271,10 +271,95 @@
   @media (prefers-reduced-motion:reduce){
     .panel,.dim,.board{transition-duration:.25s}
   }
+
+  /* ---------- the grid (05.10.2026, after a portfolio grid Jarek liked): the default view. The experiments as closed, rounded boxes in a few rows,
+     each as wide as its picture wants (a wall of bricks), the whole wall travels sideways (wheel, drag, swipe); filters on top,
+     a light or dark page. The 3D spaces stay behind the space switch. ---------- */
+  .grid-view{position:fixed; inset:0; z-index:3; display:none; flex-direction:column; background:#fff; color:#141414; font-family:-apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif}
+  body.gridmode .grid-view{display:flex}
+  body.gridmode .cursor, body.gridmode .grain, body.gridmode .overlay, body.gridmode .review, body.gridmode .options, body.gridmode .opt-scrim{display:none !important}
+  body.gridmode .stage{touch-action:auto}   /* (the stage blocks touch gestures for the 3D board; the grid inside it needs the native swipe) */
+  .grid-view{--gv-card:#f2f2f2; --gv-line:rgba(20,20,20,.08); --gv-empty:#f6f6f6; --gv-pill:rgba(255,255,255,.88); --gv-pill-ink:#141414; --gv-chip:#f2f2f2; --gv-chip-on:#141414; --gv-chip-on-ink:#fff; --muted:#8a8a8a; --ink:#141414}
+  .gv-head{flex:none; display:flex; align-items:center; padding:18px var(--gutter) 6px}
+  .gv-brand{font-weight:600; font-size:15px; letter-spacing:-.01em} .gv-brand span{margin-left:8px; color:var(--muted); font-weight:500}
+  .gv-chips{display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch} .gv-chips::-webkit-scrollbar{display:none}
+  .gv-chips button{flex:none; height:36px; padding:0 15px; border:0; border-radius:999px; background:var(--gv-chip); color:var(--ink); font:500 13.5px/1 -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif; cursor:pointer; transition:background .25s, color .25s}
+  .gv-chips button:hover{background:#e9e9e9}
+  .gv-chips button[aria-pressed=true]{background:var(--gv-chip-on); color:var(--gv-chip-on-ink)}
+  .gv-brand, .gv-theme{display:none !important}
+  .gv-theme{justify-self:end; display:flex; gap:2px; padding:3px; border-radius:999px; background:var(--gv-chip)}
+  .gv-theme button{height:32px; padding:0 13px; border:0; border-radius:999px; background:transparent; color:var(--muted); font:500 13px/1 -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif; cursor:pointer}
+  .gv-theme button[aria-pressed=true]{background:var(--gv-chip-on); color:var(--gv-chip-on-ink)}
+  .gv-scroll{position:relative; flex:1; min-height:0; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; overscroll-behavior-x:contain; cursor:grab; -webkit-overflow-scrolling:touch}
+  .gv-scroll::-webkit-scrollbar{display:none} .gv-scroll.dragging{cursor:grabbing} .gv-scroll.dragging .gv-card{pointer-events:none}
+  .gv-track{position:relative; height:100%; perspective:1500px}
+  .gv-card{position:absolute; display:block; border-radius:28px; overflow:hidden; background:var(--gv-card); color:inherit; text-decoration:none; isolation:isolate;
+           transition:left .55s cubic-bezier(.2,.8,.2,1), top .55s cubic-bezier(.2,.8,.2,1), width .55s cubic-bezier(.2,.8,.2,1), opacity .35s; backface-visibility:hidden}
+  .gv-card::after{content:''; position:absolute; inset:0; z-index:3; border-radius:inherit; box-shadow:inset 0 0 0 1px var(--gv-line); pointer-events:none}
+  .gv-card img, .gv-card video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; --zs:1; transform:translateX(var(--px, 0px)) scale(calc(var(--zs) + var(--pz, 0))); transition:transform .6s cubic-bezier(.2,.8,.2,1), opacity .35s}
+  .gv-track.moving .gv-card img, .gv-track.moving .gv-card video{transition:opacity .35s}
+  .gv-card video{opacity:0} .gv-card.playing video{opacity:1}
+  .gv-card:hover img, .gv-card:hover video{--zs:1.025}
+  .gv-card:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
+  .gv-card.hide{opacity:0; pointer-events:none}
+  .gv-label{position:absolute; left:14px; bottom:14px; z-index:2; display:flex; align-items:center; gap:8px; max-width:calc(100% - 28px); height:36px; padding:0 16px; border-radius:999px;
+            background:var(--gv-pill); color:var(--gv-pill-ink); -webkit-backdrop-filter:blur(12px) saturate(1.3); backdrop-filter:blur(12px) saturate(1.3); font-size:13px; font-weight:600; white-space:nowrap}
+  .gv-label b{font-weight:600; overflow:hidden; text-overflow:ellipsis}
+  .gv-tag{flex:none; height:22px; padding:0 9px; border-radius:999px; display:grid; place-items:center; background:color-mix(in srgb, var(--gv-pill-ink) 8%, transparent); color:color-mix(in srgb, var(--gv-pill-ink) 62%, transparent); font-size:11px; font-weight:500}
+  .gv-top{position:absolute; left:14px; top:14px; z-index:2; display:flex; gap:6px}
+  .gv-top span{height:26px; padding:0 10px; border-radius:999px; display:grid; place-items:center; background:rgba(255,255,255,.86); color:#141414; font-size:12px; font-weight:600;
+               -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 0 0 1px rgba(20,20,20,.06)}
+  .gv-top span.new, .gv-top span.wip{background:#141414; color:#fff; box-shadow:none}
+  /* (a piece still being made: its cover blurred under a hatched veil, a lock in the middle; it asks for the password inside: shared/lab-lock.js) */
+  .gv-card.locked img{filter:blur(9px) saturate(.75); --zs:1.08}
+  .gv-lock{position:absolute; inset:0; z-index:2; display:grid; place-items:center; pointer-events:none;
+    background:repeating-linear-gradient(135deg, rgba(20,20,20,.07) 0 12px, rgba(20,20,20,0) 12px 24px), rgba(243,242,238,.5)}
+  .gv-lock div{display:flex; flex-direction:column; align-items:center; gap:10px}
+  .gv-lock i{display:grid; place-items:center; width:54px; height:54px; border-radius:999px; background:#141414; color:#fff; transition:transform .5s cubic-bezier(.3,1.5,.5,1)}
+  .gv-lock i svg{width:22px; height:22px}
+  .gv-lock b{display:grid; place-items:center; height:28px; padding:0 12px; border-radius:999px; background:rgba(255,255,255,.92); color:#141414; font-size:12px; font-weight:600}
+  .gv-card.locked:hover .gv-lock i{transform:scale(1.07) rotate(-8deg)}
+  .gv-go{position:absolute; right:14px; top:14px; z-index:2; width:36px; height:36px; border-radius:999px; display:grid; place-items:center; background:#fff; color:#141414;
+         box-shadow:inset 0 0 0 1px rgba(20,20,20,.06); transition:opacity .3s, transform .45s cubic-bezier(.2,.8,.2,1)} .gv-go svg{width:16px; height:16px}
+  @media (hover:hover){
+    .gv-card .gv-label, .gv-card .gv-go{opacity:0; transform:translateY(6px)}
+    .gv-card:hover .gv-label, .gv-card:hover .gv-go, .gv-card:focus-visible .gv-label, .gv-card:focus-visible .gv-go{opacity:1; transform:none}
+    .gv-label{transition:opacity .3s, transform .45s cubic-bezier(.2,.8,.2,1)}
+  }
+  .gv-card iframe{position:absolute; inset:0; z-index:1; width:100%; height:100%; border:0; pointer-events:none; opacity:0; transition:opacity .35s}
+  .gv-card.live iframe{opacity:1}
+  .gv-vars{position:absolute; right:14px; bottom:14px; z-index:2; height:36px; padding:0 13px 0 11px; border-radius:999px; display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.88); color:#141414;
+           -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); font-size:12.5px; font-weight:600; transition:opacity .3s, transform .45s cubic-bezier(.2,.8,.2,1)} .gv-vars svg{width:16px; height:16px}
+  @media (hover:hover){ .gv-card .gv-vars{opacity:0; transform:translateY(6px)} .gv-card:hover .gv-vars, .gv-card:focus-visible .gv-vars{opacity:1; transform:none} }
+  /* the cursor (a mouse only): a small dot; over the wall a ring with ‹ › that says it can be dragged; dragging, the ring stretches the
+     way it goes, more the faster, the arrows parting; a press squeezes it. Drawn in difference, so it shows on white and on pictures */
+  .gv-cur{position:fixed; left:0; top:0; z-index:12; width:0; height:0; pointer-events:none; mix-blend-mode:difference; opacity:0; transition:opacity .25s}
+  .gv-cur.on{opacity:1}
+  .gv-cur i{position:absolute; left:-5px; top:-5px; width:10px; height:10px; border-radius:50%; background:#fff;
+            transition:width .38s cubic-bezier(.2,.9,.3,1.2), height .38s cubic-bezier(.2,.9,.3,1.2), left .38s cubic-bezier(.2,.9,.3,1.2), top .38s cubic-bezier(.2,.9,.3,1.2), background .25s, box-shadow .25s}
+  .gv-cur.over i{left:-30px; top:-30px; width:60px; height:60px; background:transparent; box-shadow:inset 0 0 0 1.5px #fff}
+  .gv-cur b{position:absolute; top:-6px; width:7px; height:12px; opacity:0; transition:opacity .25s, transform .38s cubic-bezier(.2,.9,.3,1.2)}
+  .gv-cur b svg{display:block; width:7px; height:12px}
+  .gv-cur b.l{left:-17px} .gv-cur b.r{left:10px}
+  .gv-cur.over b{opacity:1}
+  .gv-cur.drag b.l{transform:translateX(calc(-6px + var(--sp, 0) * -6px))} .gv-cur.drag b.r{transform:translateX(calc(6px + var(--sp, 0) * 6px))}
+  body.gridmode.has-gvcur .gv-scroll, body.gridmode.has-gvcur .gv-scroll *{cursor:none}
+  .gv-empty{background:var(--gv-empty); display:grid; place-items:center; color:var(--muted); font-size:12.5px; cursor:inherit}
+  .gv-empty span{opacity:.7}
+  .gv-in{animation:gvIn .7s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes gvIn{from{opacity:0; transform:translateY(18px) scale(.98)}}
+  @media (max-width:760px){ .gv-head{grid-template-columns:1fr auto; gap:12px} .gv-chips{grid-column:1 / -1; grid-row:2} .gv-card{border-radius:22px} }
+  @media (prefers-reduced-motion:reduce){ .gv-in{animation:none} .gv-card, .gv-card img, .gv-card video{transition:none} }
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
+  <section class="grid-view" id="grid-view" aria-label="Experiments">
+    <header class="gv-head"><div class="gv-brand">Lab<span id="gv-count"></span></div><nav class="gv-chips" id="gv-chips" aria-label="Filter"></nav>
+      <div class="gv-theme" role="group" aria-label="Theme"><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></div></header>
+    <div class="gv-scroll" id="gv-scroll"><div class="gv-track" id="gv-track"></div></div>
+    <div class="gv-cur" id="gv-cur" aria-hidden="true"><div class="gv-cur-in" id="gv-cur-in"><i></i><b class="l"><svg viewBox="0 0 7 12" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1L1 6l5 5"/></svg></b><b class="r"><svg viewBox="0 0 7 12" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l5 5-5 5"/></svg></b></div></div>
+  </section>
   <div class="board" id="board">
     <canvas id="gl"></canvas>
     <div class="slots" id="slots"></div>
@@ -300,7 +385,7 @@
     <div class="opt-grab" aria-hidden="true"></div>
     <div class="opt-head"><strong>Review</strong><button class="opt-x" id="opt-x" type="button">close</button></div>
     <section class="opt-sec"><h3>space <span class="opt-hint">układ kafli w przestrzeni</span></h3>
-      <div class="switch" id="space-switch"><button data-v="plane">plane</button><button data-v="field">field</button><button data-v="tunnel">tunnel</button><button data-v="ring">ring</button><button data-v="sphere">sphere</button><button data-v="stack">stack</button></div>
+      <div class="switch" id="space-switch"><button data-v="grid">grid</button><button data-v="plane">plane</button><button data-v="field">field</button><button data-v="tunnel">tunnel</button><button data-v="ring">ring</button><button data-v="sphere">sphere</button><button data-v="stack">stack</button></div>
       <p class="opt-desc" id="desc-space"></p></section>
     <section class="opt-sec"><h3>hover <span class="opt-hint">myszą: najedź · telefon: przytrzymaj kafel</span></h3>
       <div class="switch" id="hover-switch"><button data-v="none">none</button><button data-v="lift">lift</button><button data-v="lens">lens</button><button data-v="focus">focus</button><button data-v="depth">depth</button><button data-v="topo">topo</button><button data-v="scan">scan</button><button data-v="dof">dof</button><button data-v="light">light</button><button data-v="relief">relief</button></div>
@@ -404,14 +489,14 @@ const CFG = {
   entrance: { time: 1.1, drop: 340, push: 1.8 },
   planeSegments: 28,
   // space layouts: tiles live in real 3D instead of on the flat board
-  layout: (new URLSearchParams(location.search).get('space')) || 'plane',   // plane · field · tunnel · ring · sphere · stack
+  layout: (new URLSearchParams(location.search).get('space')) || 'grid',    // grid (the default, a flat wall of boxes) · plane · field · tunnel · ring · sphere · stack
   space: { wheel: 7, maxV: 5200, travDecay: 0.9, dolly: 700, bend: 0.3,
            drift: { field: 70, tunnel: 110, ring: 20, sphere: 26, stack: 0 },
            fieldCount: 34, fieldDepth: 5200, tunnelPerWall: 9, tunnelSpacing: 760, stackGap: 1100, sphereCount: 54 },               // finer mesh so the relief mode reads as a surface, not facets
   cursor: { dot: 8, ring: 40, press: 14, magnet: 0.12, follow: 0.35, pulseMax: 1.2, pulseDecay: 0.9 },
   card: { openPush: 0.18 },        // vertical bend impulse when a card lifts off the field
   words: { step: 44, minGap: 150, enter: 220, hold: 900, exit: 240, max: 7, spread: 34 }, // hover words: px travelled per word, ms between, timings
-  theme: (new URLSearchParams(location.search).get('theme')) || 'dark',   // 'light' paper · 'dark' graphite (Material "Color" sheet mood)
+  theme: (new URLSearchParams(location.search).get('theme')) || 'light',   // 'light' paper · 'dark' graphite (Material "Color" sheet mood)
   covers: (new URLSearchParams(location.search).get('covers')) || 'plain', // 'plain' = dark grey where no thumbnail yet · 'circle' / 'mixed' = colour field + shape · 'motif' = v1 sketches
   plain: '#262626',
   plainEmpty: '#1e1e1e',           // an empty slot waiting for the next experiment                // the "no thumbnail yet" grey
@@ -419,17 +504,18 @@ const CFG = {
 
 // ---------- content (placeholder data: Jarek's own experiments) ----------
 const PIECES = [
-  { slug:'glass-button', title:'Glass Button', what:'An Ask AI button made of real, ray-traced glass. Hold it and it swells, let go and the menu (Write, Summarise, Translate) flows out of it; the label is printed on the surface and the icon is a glass bead with a symbol, a flowing orb or a carving. A panel tunes shape, refraction, light, glow and sound; hold the wheel to orbit.', year:'2026', kind:'interaction', live:'pieces/glass-button/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/glass-button', image:'thumbs/glass-button.jpg', depth:'thumbs/depth/glass-button.png', video:'thumbs/glass-button-hover.webm', words:['glass', 'light', 'spectral', 'mercury'], rect:{x:560,y:70,w:460,h:260} },
+  { slug:'glass-button', variants:6, title:'Glass Button', what:'An Ask AI button made of real, ray-traced glass. Hold it and it swells, let go and the menu (Write, Summarise, Translate) flows out of it; the label is printed on the surface and the icon is a glass bead with a symbol, a flowing orb or a carving. A panel tunes shape, refraction, light, glow and sound; hold the wheel to orbit.', year:'2026', kind:'interaction', live:'pieces/glass-button/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/glass-button', image:'thumbs/glass-button.jpg', depth:'thumbs/depth/glass-button.png', video:'thumbs/glass-button-hover.webm', words:['glass', 'light', 'spectral', 'mercury'], rect:{x:560,y:70,w:460,h:260} },
   // empty slots: the next experiments land here
-  { empty:true, rect:{x:90,y:100,w:330,h:460} },
-  { empty:true, rect:{x:1160,y:140,w:270,h:480} },
-  { slug:'furniture-configurator', title:'Furniture Configurator', what:'A sideboard you build by hand in 3D: drag the sides, the dividers and the shelves (on a 5 cm grid), click a front to make it a door, drawers, shelves or a niche. Photo oak and real window light; when you stop, it is path traced. Exports a 4K render and a plan for the joiner with a cut list.', year:'2026', kind:'configurator', live:'pieces/furniture-configurator/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/furniture-configurator', image:'thumbs/furniture-configurator.jpg', depth:'thumbs/depth/furniture-configurator.png', video:'thumbs/furniture-configurator-hover.webm', words:['oak', 'light', 'joinery', 'path traced'], rect:{x:1570,y:60,w:440,h:230} },
-  { empty:true, rect:{x:2150,y:120,w:280,h:500} },
-  { empty:true, rect:{x:2570,y:70,w:320,h:450} },
-  { slug:'gazeciarz-express', title:'Gazeciarz Express', what:'The paper round one way: streets that end. Off from home down Chestnut Street, a minute and a half of papers, then an obstacle course in the street’s own things (hay bales in the village, flower pots in the park, deck chairs by the sea, snowmen in winter), the paper with your score, and straight on to the next street.', year:'2026', kind:'game', live:'pieces/gazeciarz-express/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/gazeciarz-express', image:'thumbs/gazeciarz-express.jpg', words:['arcade', 'one way', 'obstacle course', 'three.js'], rect:{x:100,y:680,w:480,h:250} },
+  { slug:'like-button', fresh:true, preview:'pieces/like-button/?demo=1', variants:2, title:'Like Button', what:'A like, made to feel like a small reward. Press and the heart dips under the finger; let go and it fills, a ring and a spray of dots burst round it and the count rolls on by one. Two looks: Classic (a crisp burst) and Liquid (the colour poured in with a wave). Light and dark; a panel tunes every layer, small hearts floating up included.', year:'2026', kind:'interaction', live:'pieces/like-button/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/like-button', image:'thumbs/like-button.jpg', words:['heart', 'burst', 'liquid', 'reward'], rect:{x:90,y:100,w:330,h:460} },
+  { slug:'variant-pill', fresh:true, preview:'pieces/variant-pill/?demo=1', title:'Variant Pill', what:'The lab’s variant switch on its own: a pill with the name of what is on. Tap the arrows, grab it and swipe (it follows with resistance and springs back), or tap the name and the pill grows up into a menu of all of them, then folds back on a pick. Light or dark; a panel tunes the swipe, the spring and the morph.', year:'2026', kind:'interaction', live:'pieces/variant-pill/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/variant-pill', image:'thumbs/variant-pill.jpg?v=3', words:['swipe', 'morph', 'menu', 'spring'], rect:{x:1160,y:140,w:520,h:400} },
+
+  { slug:'furniture-configurator', variants:3, title:'Furniture Configurator', what:'A sideboard you build by hand in 3D: drag the sides, the dividers and the shelves (on a 5 cm grid), click a front to make it a door, drawers, shelves or a niche. Photo oak and real window light; when you stop, it is path traced. Exports a 4K render and a plan for the joiner with a cut list.', year:'2026', kind:'configurator', live:'pieces/furniture-configurator/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/furniture-configurator', image:'thumbs/furniture-configurator.jpg?v=2', depth:'thumbs/depth/furniture-configurator.png', video:'thumbs/furniture-configurator-hover.webm', words:['oak', 'light', 'joinery', 'path traced'], rect:{x:1570,y:60,w:440,h:230} },
+  { slug:'cursors', locked:true, preview:'pieces/cursors/?demo=1', variants:4, title:'Cursors', what:'Four cursors over one page, each with a ground to work on: Pixel (a trail of pixels on a grid that shrink and fade, a burst on a click, blended by difference), Spotlight (the page under a veil, the cursor a soft light that opens it), Goo (blobs that melt into one another and invert what they cover) and Snap (a dot that becomes the outline of what you can press, and pulls it). Light or dark; a panel tunes the one on.', year:'2026', kind:'interaction', live:'pieces/cursors/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/cursors', image:'thumbs/cursors.jpg', words:['cursor', 'trail', 'hover', 'blend'], rect:{x:2150,y:120,w:400,h:300} },
+  { slug:'line-studio', locked:true, variants:3, title:'Line Studio', what:'Figures drawn like a technical plate, thin lines over quiet fills. Shelf: VHS tapes on a shelf; take one out, carry it along, drop it into the gap. Carousel: audio cassettes in an endless cover flow across the page; scroll and the one in the middle faces you. Cranes: noughts and crosses played by two tower cranes that bring the boxes; three in a row and the trapdoors drop them all. Drag the ground to turn the view, the wheel or − / + to zoom. Dark or light.', year:'2026', kind:'interaction', live:'pieces/line-studio/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/line-studio', image:'thumbs/line-studio.jpg?v=4', words:['three.js', 'line art', 'isometric', 'cassettes', 'cranes'], rect:{x:2570,y:70,w:420,h:315} },
+  { slug:'gazeciarz-express', title:'Gazeciarz Express', what:'The paper round one way: streets that end. Off from home down Chestnut Street, a minute and a half of papers, then an obstacle course in the street’s own things (hay bales in the village, flower pots in the park, deck chairs by the sea, snowmen in winter), the paper with your score, and straight on to the next street.', year:'2026', kind:'game', live:'pieces/gazeciarz-express/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/gazeciarz-express', image:'thumbs/gazeciarz-express.jpg', video:'thumbs/gazeciarz-express-hover.webm', words:['arcade', 'one way', 'obstacle course', 'three.js'], rect:{x:100,y:680,w:480,h:312} },
   { empty:true, rect:{x:700,y:480,w:260,h:460} },
   { empty:true, rect:{x:1080,y:760,w:300,h:300} },
-  { slug:'apartment-walk', title:'Apartment Walk', what:'A flat traced from its floor plan into 3D, in real centimetres: walls and piers straight from the drawing, 14 openings sized as in the architect’s plan, three balconies. Look at it from above and cut the walls at any height, or step in and walk it at eye height (WASD, or a stick on the phone).', year:'2026', kind:'walkthrough', live:'pieces/apartment-walk/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/apartment-walk', image:'thumbs/apartment-walk.jpg', depth:'thumbs/depth/apartment-walk.png', words:['floor plan', 'real cm', 'walk', 'three.js'], rect:{x:1520,y:420,w:460,h:250} },
+  { slug:'apartment-walk', title:'Apartment Walk', what:'A flat traced from its floor plan into 3D, in real centimetres: walls and piers straight from the drawing, 14 openings sized as in the architect’s plan, three balconies. Look at it from above and cut the walls at any height, or step in and walk it at eye height (WASD, or a stick on the phone).', year:'2026', kind:'walkthrough', live:'pieces/apartment-walk/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/apartment-walk', image:'thumbs/apartment-walk.jpg', video:'thumbs/apartment-walk-hover.webm', depth:'thumbs/depth/apartment-walk.png', words:['floor plan', 'real cm', 'walk', 'three.js'], rect:{x:1520,y:420,w:460,h:250} },
   { empty:true, rect:{x:2080,y:740,w:270,h:480} },
   { empty:true, rect:{x:2490,y:640,w:450,h:240} },   // (GTB Gazeciarz hidden 04.10.2026, its piece kept in pieces/poranna-trasa; the tile was: { slug:'poranna-trasa', title:'GTB Gazeciarz', what:'The open town of the paper round in pixel-art 3D. Ride a loop of autumn suburbs, throw papers onto porches and into mailboxes, jump ramps and hold a trick, dodge dogs, a granny with a cane and the traffic. Get off and walk: talk to people, and a cyclist you kicked gets up for a first-person fist fight (the mouse picks the side of the punch).', year:'2026', kind:'game', live:'pieces/poranna-trasa/', code:'https://github.com/vod123qwe/playground/tree/main/lab-board/pieces/poranna-trasa', image:'thumbs/poranna-trasa.jpg', depth:'thumbs/depth/poranna-trasa.png', words:['pixel art', 'paper round', 'fist fight', 'three.js'], rect:{x:2490,y:640,w:450,h:240} } )
   { empty:true, rect:{x:140,y:1050,w:260,h:470} },
@@ -1013,7 +1099,7 @@ function layout(ox, oy) {
 }
 
 // ---------- space layouts ----------
-const LAYOUT_ORDER = ['plane', 'field', 'tunnel', 'ring', 'sphere', 'stack'];
+const LAYOUT_ORDER = ['grid', 'plane', 'field', 'tunnel', 'ring', 'sphere', 'stack'];
 const camU = { x: 0, y: 0 };                         // unwrapped pan (cam.x/cam.y wrap with the board)
 let trav = 0, travVel = 0;                           // travel along the layout's own axis (fly, spin)
 const fract = v => v - Math.floor(v);
@@ -1197,6 +1283,7 @@ var DESC = {                                  // var: the covers switch initiali
     relief: 'Kafel wypycha się w bryłę według głębi i mocniej przechyla. Najmocniejsze 3D, najwięcej artefaktów.',
   },
   space: {
+    grid: 'Siatka zaokrąglonych pudełek w kilku rzędach, przewijana w bok (kółko, przeciągnięcie, palec); filtry u góry, jasny lub ciemny motyw.',
     plane: 'Płaska, nieskończona plansza, jak dotąd. Drag przesuwa, scroll zoomuje.',
     field: 'Pole głębi: kafle rozsiane w przestrzeni, lecisz przez nie, a bliskie przelatują obok kamery poza ekran. Scroll = lot, drag = rozglądanie z paralaksą.',
     tunnel: 'Tunel: kafle na ścianach, podłodze i suficie mijają cię po bokach. Scroll albo drag w pionie = lot, drag w poziomie obraca tunel.',
@@ -1235,13 +1322,16 @@ document.getElementById('rv-group').addEventListener('click', () => { const ks =
 const spaceSwitch = document.getElementById('space-switch');
 function hintText() {
   const touch = !finePointer, L = CFG.layout;
+  if (L === 'grid') return '';
   if (L === 'plane') return touch ? 'drag to pan · pinch to zoom · ' : 'drag to pan · scroll to zoom · ';
   if (L === 'sphere') return touch ? 'drag to spin · pinch to zoom · ' : 'drag to spin · scroll to zoom · ';
   if (L === 'ring') return touch ? 'drag to spin · ' : 'drag or scroll to spin · ';
   return touch ? 'drag up to fly · pinch to push in · ' : 'scroll to fly · drag to look around · ';
 }
 function setLayout(v, init) {
-  CFG.layout = LAYOUT_ORDER.includes(v) ? v : 'plane';
+  CFG.layout = LAYOUT_ORDER.includes(v) ? v : 'grid';
+  document.body.classList.toggle('gridmode', CFG.layout === 'grid'); if (CFG.layout === 'grid' && window.GV) GV.layout();
+  if (CFG.layout === 'grid') setOptions(false);
   trav = 0; travVel = 0; zoomT = 0; if (!init) clearHover();   // cursor code is further down the file; skip on first call
   spaceSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.layout)); setDesc('space', CFG.layout);
   const hEl = document.getElementById('hint'); if (hEl) hEl.textContent = hintText();   // (the hint is off: a clean view)
@@ -1299,10 +1389,12 @@ const themeSwitch = document.getElementById('theme-switch');
 function setTheme(v) {
   CFG.theme = v; document.documentElement.dataset.theme = v;
   themeSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === v));
+  document.querySelectorAll('.gv-theme button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === v)));
   const u = new URL(location.href); u.searchParams.set('theme', v); history.replaceState(null, '', u);
   if (CFG.covers === 'motif') repaintCovers();     // motif sketches pick their paper from the theme
 }
 themeSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTheme(b.dataset.v); });
+document.querySelectorAll('.gv-theme button').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.t)));
 setTheme(CFG.theme);
 coversSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.covers)); setDesc('covers', CFG.covers);
 
@@ -1310,6 +1402,7 @@ function frame(t) {
   requestAnimationFrame(frame);
   const dt = lastT ? Math.min((t - lastT) / 1000, 1 / 30) : 1 / 60; lastT = t;
   if (innerWidth !== lastIW || innerHeight !== lastIH) { lastIW = innerWidth; lastIH = innerHeight; resize(); }
+  if (CFG.layout === 'grid') return;
   if (!centered && vw > 1 && !location.hash.slice(2)) {          // open on the first real piece, centred
     centered = true; const f0 = PIECES.find(q => !q.empty);
     if (f0) { cam.x = wrap(f0.rect.x + f0.rect.w / 2 - vw / 2 / T, CFG.cluster.w); cam.y = wrap(f0.rect.y + f0.rect.h / 2 - vh / 2 / T, CFG.cluster.h); }
@@ -1426,6 +1519,7 @@ function endTouch(e) {
 board.addEventListener('pointerup', endTouch); board.addEventListener('pointercancel', endTouch);
 board.addEventListener('dragstart', e => e.preventDefault());
 window.addEventListener('wheel', e => {
+  if (CFG.layout === 'grid') return;
   if (locked || (e.target.closest && e.target.closest('.options'))) return; e.preventDefault();
   const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;              // lines → px
   if (CFG.layout === 'plane' || CFG.layout === 'sphere') zoomT = clamp(zoomT - d * CFG.zoom.gain, -CFG.zoom.range, CFG.zoom.range);   // the level you leave it at is where it stays
@@ -1779,6 +1873,134 @@ function route() {
 function closeDetail() { if (openedHere) { openedHere = false; history.back(); } else { history.replaceState(null, '', location.pathname + location.search); route(); } }
 dim.addEventListener('click', closeDetail);
 window.addEventListener('hashchange', route); route();
+
+// ---------- the grid: the experiments as rounded boxes in rows, the wall travels sideways ----------
+const GV = (() => {
+  const view = document.getElementById('grid-view'), sc = document.getElementById('gv-scroll'), track = document.getElementById('gv-track'), chipsEl = document.getElementById('gv-chips');
+  const real = PIECES.map((p, i) => ({ p, i })).filter(q => !q.p.empty), empties = PIECES.filter(p => p.empty).slice(0, 8);
+  const KIND = { interaction: 'Interaction', game: 'Game', configurator: 'Configurator', walkthrough: 'Walkthrough' };
+  const label = k => KIND[k] || (k ? k[0].toUpperCase() + k.slice(1) : '');
+  let filter = 'all';
+  document.getElementById('gv-count').textContent = `${real.length} experiments`;
+  // the filters: All and the kinds there are
+  const kinds = [...new Set(real.map(q => q.p.kind).filter(Boolean))];
+  for (const k of ['all', ...kinds]) { const b = document.createElement('button'); b.type = 'button'; b.textContent = k === 'all' ? 'All' : label(k); b.dataset.k = k; b.setAttribute('aria-pressed', String(k === filter));
+    b.addEventListener('click', () => { filter = k; chipsEl.querySelectorAll('button').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.k === k))); layout(true); sc.scrollTo({ left: 0, behavior: reduceMotion ? 'auto' : 'smooth' }); }); chipsEl.appendChild(b); }
+  // the boxes: a picture (a video on hover), the title and its kind in a small pill; the empty ones wait for the next experiments
+  const cards = [];
+  real.forEach(({ p, i }, n) => {
+    const a = document.createElement('a'); a.className = 'gv-card'; a.draggable = false; a.href = p.live || `#/${p.slug}`; a.dataset.kind = p.kind || ''; a.setAttribute('aria-label', `${p.title}, ${label(p.kind)}`);
+    const img = document.createElement('img'); img.alt = ''; img.draggable = false; img.loading = n < 6 ? 'eager' : 'lazy'; img.src = p.image || coverUrl(i); a.appendChild(img);
+    if (p.locked) { a.classList.add('locked'); a.setAttribute('aria-label', `${p.title}, work in progress, locked`); const lk = document.createElement('span'); lk.className = 'gv-lock'; lk.setAttribute('aria-hidden', 'true');
+      lk.innerHTML = '<div><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></i><b>Work in progress</b></div>'; a.appendChild(lk); }
+    if (p.video) { const v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'none'; v.dataset.src = p.video; a.appendChild(v);
+      const play = on => { if (on) { if (!v.src) v.src = v.dataset.src; v.play().then(() => a.classList.add('playing')).catch(() => { }); } else { a.classList.remove('playing'); v.pause(); } };
+      a.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') play(true); }); a.addEventListener('pointerleave', () => play(false));
+      a.addEventListener('focus', () => play(true)); a.addEventListener('blur', () => play(false));
+      let hold = 0; a.addEventListener('touchstart', () => { hold = setTimeout(() => play(true), 260); }, { passive: true }); a.addEventListener('touchend', () => { clearTimeout(hold); setTimeout(() => play(false), 1600); }); }
+    // (a live preview: the piece in its demo mode, loaded on hover over the still picture, gone again when the pointer leaves)
+    if (p.preview && !p.locked) { let fr = null, gone = 0; const live = on => { clearTimeout(gone);
+        if (on) { if (!fr) { fr = document.createElement('iframe'); fr.title = ''; fr.setAttribute('aria-hidden', 'true'); fr.tabIndex = -1; fr.loading = 'eager'; fr.addEventListener('load', () => a.classList.add('live')); fr.src = p.preview; a.appendChild(fr); } else a.classList.add('live'); }
+        else { a.classList.remove('live'); gone = setTimeout(() => { fr?.remove(); fr = null; }, 400); } };
+      a.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') live(true); }); a.addEventListener('pointerleave', () => live(false));
+      a.addEventListener('focus', () => live(true)); a.addEventListener('blur', () => live(false));
+      let hold2 = 0; a.addEventListener('touchstart', () => { hold2 = setTimeout(() => live(true), 260); }, { passive: true }); a.addEventListener('touchend', () => { clearTimeout(hold2); setTimeout(() => live(false), 2600); }); }
+    if (p.variants) { const vv = document.createElement('span'); vv.className = 'gv-vars'; vv.title = `${p.variants} variants`; vv.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 4.5H7.5a3 3 0 0 0-3 3V16"/></svg><span></span>'; vv.lastChild.textContent = p.variants; a.appendChild(vv); a.setAttribute('aria-label', `${p.title}, ${label(p.kind)}, ${p.variants} variants${p.locked ? ', work in progress, locked' : ''}`); }
+    const lab = document.createElement('span'); lab.className = 'gv-label'; lab.innerHTML = '<b></b>'; lab.firstChild.textContent = p.title; a.appendChild(lab);
+    const top = document.createElement('span'); top.className = 'gv-top'; top.innerHTML = (p.locked ? '<span class="wip">WIP</span>' : p.fresh ? '<span class="new">New</span>' : '') + '<span></span>'; top.lastChild.textContent = label(p.kind); a.appendChild(top);
+    const go = document.createElement('span'); go.className = 'gv-go'; go.setAttribute('aria-hidden', 'true'); go.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>'; a.appendChild(go);
+    a.addEventListener('click', e => { if (moved || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) { if (moved) e.preventDefault(); return; } e.preventDefault(); if (p.live && CFG.detail === 'page') goLive(p); else { openedHere = true; location.hash = `/${p.slug}`; } });
+    track.appendChild(a); cards.push({ el: a, ar: p.rect ? p.rect.w / p.rect.h : 1.4, kind: p.kind });
+  });
+  empties.forEach(p => { const d = document.createElement('div'); d.className = 'gv-card gv-empty'; d.innerHTML = '<span>Next experiment</span>'; d.setAttribute('aria-hidden', 'true'); track.appendChild(d); cards.push({ el: d, ar: p.rect.w / p.rect.h, empty: true }); });
+  // the wall: rows that fill the height; each box as wide as its picture wants (clamped), laid into the shortest row (bricks)
+  let first = true;
+  function layout(animate) {
+    const H = sc.clientHeight, gut = parseFloat(getComputedStyle(view).getPropertyValue('--gutter')) || 24, gap = innerWidth < 760 ? 10 : 14, pad = 16;
+    // (room kept under the wall for the space switch at the bottom)
+    const below = 22, rows = H < 460 ? 1 : 2,   // (Jarek: at most two rows, filling the screen's height: big boxes)
+      rh = Math.max(120, (H - pad - below - gap * (rows - 1)) / rows), x = new Array(rows).fill(gut);
+    for (const c of cards) {
+      const on = filter === 'all' || (!c.empty && c.kind === filter);
+      c.el.classList.toggle('hide', !on); if (!on) continue;
+      let r = 0; for (let k = 1; k < rows; k++) if (x[k] < x[r] - 1) r = k;
+      const w = Math.round(rh * Math.min(2.2, Math.max(1, c.ar)));   // (at least square, Jarek 05.10)
+      Object.assign(c.el.style, { left: x[r] + 'px', top: (pad + r * (rh + gap)) + 'px', width: w + 'px', height: rh + 'px' }); c.x = x[r]; c.w = w; x[r] += w + gap;
+    }
+    track.style.width = (Math.max(...x) - gap + gut) + 'px';
+    if (first) { first = false; cards.forEach((c, n) => { c.el.style.animationDelay = (n * 45) + 'ms'; c.el.classList.add('gv-in'); }); }
+  }
+  // ---------- travel: the wheel's turns move the wall sideways (eased), a mouse drags it and lets it coast, a finger swipes it natively;
+  // past either end it stretches like a band and springs back ----------
+  const maxL = () => sc.scrollWidth - sc.clientWidth, cl = (v, a, b) => Math.max(a, Math.min(b, v));
+  let target = 0, raf = 0;
+  sc.addEventListener('wheel', e => { if (!document.body.classList.contains('gridmode')) return; const d = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * (e.deltaMode === 1 ? 16 : 1);
+    e.preventDefault(); stopCoast(); target = cl((raf ? target : sc.scrollLeft) + d, 0, maxL());
+    if (!raf) { const step = () => { const now = sc.scrollLeft, dd = target - now; if (Math.abs(dd) < .5) { sc.scrollLeft = target; raf = 0; return; } sc.scrollLeft = now + dd * .14; raf = requestAnimationFrame(step); }; raf = requestAnimationFrame(step); } }, { passive: false });
+  // the coast after a mouse throw
+  let coast = 0, cv = 0; const stopCoast = () => { cancelAnimationFrame(coast); coast = 0; };
+  const throwIt = v => { stopCoast(); cv = v; const go = () => { cv *= .95; const nl = sc.scrollLeft + cv; sc.scrollLeft = cl(nl, 0, maxL()); if ((nl < 0 || nl > maxL()) ) { F.ob += -cv * .5; cv = 0; } if (Math.abs(cv) > .25) coast = requestAnimationFrame(go); else coast = 0; }; coast = requestAnimationFrame(go); };
+
+  // ---------- the feel: depth, not a lean. Moving, the wall falls back into the screen and curves like the inside of a drum; each box
+  // turns against the travel (panels in a draught), more the faster; the pictures slide a little inside their boxes (parallax). A press
+  // pushes the wall in under the finger. All on springs, back flat and still when it stops ----------
+  const F = { last: 0, vel: 0, rot: 0, rv: 0, z: 0, zv: 0, ob: 0, obv: 0, raf: 0, flat: true };
+  const feel = () => {
+    const l = sc.scrollLeft, v = l - F.last; F.last = l; F.vel += (v - F.vel) * .28;
+    const sp = Math.abs(F.vel), W = sc.clientWidth, cx = l + W / 2;
+    F.rv += (cl(-F.vel * .5, -18, 18) - F.rot) * .14; F.rv *= .72; F.rot += F.rv;
+    F.zv += ((-Math.min(sp * 6, 120) - (down ? 46 : 0)) - F.z) * .12; F.zv *= .74; F.z += F.zv;
+    F.obv += -F.ob * .14; F.obv *= .7; if (!down || down.touch) F.ob += F.obv;
+    const still = Math.abs(F.rot) < .02 && Math.abs(F.rv) < .02 && Math.abs(F.z) < .1 && Math.abs(F.zv) < .1 && Math.abs(F.ob) < .2 && Math.abs(F.vel) < .05 && !down;
+    if (still) { F.raf = 0; if (!F.flat) { F.flat = true; track.classList.remove('moving'); track.style.transform = ''; for (const c of cards) { c.el.style.transform = ''; c.el.style.removeProperty('--px'); c.el.style.removeProperty('--pz'); } } return; }
+    F.flat = false; track.classList.add('moving'); track.style.perspectiveOrigin = `${cx}px 50%`;
+    track.style.transform = Math.abs(F.ob) > .2 ? `translateX(${F.ob.toFixed(2)}px)` : '';
+    const bend = Math.min(sp * 1.5, 20), px = cl(F.vel * 1.6, -34, 34), pz = Math.min(sp * .004, .06) + .02 * (1 - Math.exp(-sp));
+    for (const c of cards) { if (c.el.classList.contains('hide') || c.w == null) continue;
+      const dx = (c.x + c.w / 2 - cx) / W; if (Math.abs(dx) > 1.2) { if (c.el.style.transform) c.el.style.transform = ''; continue; }
+      c.el.style.transform = `translateZ(${(F.z - Math.abs(dx) * bend * 3.5).toFixed(1)}px) rotateY(${(F.rot - dx * bend).toFixed(2)}deg)`;
+      c.el.style.setProperty('--px', px.toFixed(1) + 'px'); c.el.style.setProperty('--pz', pz.toFixed(3)); }
+    F.raf = requestAnimationFrame(feel); };
+  const kickFeel = () => { if (reduceMotion) return; if (!F.raf) { F.last = sc.scrollLeft; F.raf = requestAnimationFrame(feel); } };
+  sc.addEventListener('scroll', kickFeel, { passive: true });
+  let down = null, moved = false;
+  sc.addEventListener('pointerdown', e => { if (e.button !== 0) return; stopCoast();
+    if (e.pointerType === 'mouse') { down = { x: e.clientX, l: sc.scrollLeft, lx: e.clientX, lt: performance.now(), v: 0 }; moved = false; } else down = { touch: true }; kickFeel(); });
+  addEventListener('pointermove', e => { if (!down || down.touch) return; const dx = e.clientX - down.x; if (!moved && Math.abs(dx) > 5) { moved = true; sc.classList.add('dragging'); }
+    if (!moved) return; cancelAnimationFrame(raf); raf = 0;
+    const want = down.l - dx, m = maxL(), over = want < 0 ? want : want > m ? want - m : 0;
+    sc.scrollLeft = cl(want, 0, m); F.ob = over ? -over * .35 / (1 + Math.abs(over) / 400) : 0;   // (the band past the ends)
+    const now = performance.now(), dt = Math.max(8, now - down.lt); down.v = down.v * .6 + (-(e.clientX - down.lx) / dt * 16.7) * .4; down.lx = e.clientX; down.lt = now; kickFeel(); });
+  const up = () => { if (!down) return; const d = down; down = null; sc.classList.remove('dragging'); if (!d.touch && moved && performance.now() - d.lt < 90) throwIt(d.v); kickFeel(); setTimeout(() => { moved = false; }, 0); };
+  addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  sc.addEventListener('dragstart', e => e.preventDefault());   // (a swipe is never the browser dragging a card's link or picture away)
+  new ResizeObserver(() => { if (document.body.classList.contains('gridmode')) layout(); }).observe(sc);
+  // ---------- the cursor (a mouse only): it trails the pointer a touch (a spring), turns into the drag ring over the wall, stretches
+  // with the drag's speed along its direction, squeezes under a press ----------
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches && !reduceMotion) {
+    document.body.classList.add('has-gvcur');
+    const cur = document.getElementById('gv-cur'), inner = document.getElementById('gv-cur-in');
+    const C = { x: -100, y: -100, tx: -100, ty: -100, vx: 0, sx: 1, sy: 1, svx: 0, svy: 0, press: 0, pv: 0, raf: 0, seen: false };
+    const run = () => { C.x += (C.tx - C.x) * .32; C.y += (C.ty - C.y) * .32;
+      const dx = C.tx - C.x; C.vx += (dx - C.vx) * .25; const sp = Math.min(1, Math.abs(C.vx) / 40), dragging = !!(down && moved);
+      const wx = dragging ? 1 + sp * .45 : 1, wy = dragging ? 1 - sp * .18 : 1;
+      C.svx += (wx - C.sx) * .2; C.svx *= .7; C.sx += C.svx; C.svy += (wy - C.sy) * .2; C.svy *= .7; C.sy += C.svy;
+      C.pv += ((down ? 1 : 0) - C.press) * .3; C.pv *= .6; C.press += C.pv; const k = 1 - C.press * .14;
+      cur.style.transform = `translate(${C.x.toFixed(1)}px, ${C.y.toFixed(1)}px)`;
+      inner.style.transform = `scale(${(C.sx * k).toFixed(3)}, ${(C.sy * k).toFixed(3)})`; cur.style.setProperty('--sp', sp.toFixed(2));
+      cur.classList.toggle('drag', dragging);
+      C.raf = (Math.abs(C.tx - C.x) + Math.abs(C.ty - C.y) > .1 || Math.abs(C.sx - wx) + Math.abs(C.sy - wy) > .002 || Math.abs(C.press - (down ? 1 : 0)) > .002) ? requestAnimationFrame(run) : 0; };
+    const kick = () => { if (!C.raf) C.raf = requestAnimationFrame(run); };
+    addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; C.tx = e.clientX; C.ty = e.clientY; if (!C.seen) { C.seen = true; C.x = C.tx; C.y = C.ty; }
+      const onGrid = document.body.classList.contains('gridmode') && !!(e.target.closest && e.target.closest('.gv-scroll'));
+      cur.classList.toggle('on', document.body.classList.contains('gridmode') && !(e.target.closest && e.target.closest('.gv-chips'))); cur.classList.toggle('over', onGrid || !!(down && moved)); kick(); }, { passive: true });
+    addEventListener('pointerdown', kick); addEventListener('pointerup', kick);
+    document.addEventListener('pointerleave', () => cur.classList.remove('on')); addEventListener('blur', () => cur.classList.remove('on'));
+  }
+  return { layout };
+})();
+window.GV = GV;
+document.body.classList.toggle('gridmode', CFG.layout === 'grid'); if (CFG.layout === 'grid') GV.layout();
 
 // ---------- debug ----------
 window.LB = { cfg: CFG, state: () => ({ mode, cam: { ...cam }, strength: { ...strength }, zoom: { target: zoomT, value: zoomV, velocity: zoomVel }, T, vw, vh, instances: instances.length, gl: !!R, openIndex, cardState }), zoom: z => { zoomT = clamp(z, -CFG.zoom.range, CFG.zoom.range); }, push: (vx, vy) => { cam.vx += vx; cam.vy += vy; setMode('momentum'); } };

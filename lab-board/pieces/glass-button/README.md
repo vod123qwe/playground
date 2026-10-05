@@ -115,3 +115,8 @@ Gdy urządzenie nie umie rysować do buforów float, scena rysuje się jak wcze�
 **Łapka przy spacji:** zamiast systemowego kursora pojawia się minimalistyczna, konturowa dłoń (ciemna kreska z białą obwódką, czytelna na jasnym i ciemnym tle). Przy przeciąganiu płynnie przechodzi w zaciśniętą, lekko przechyla się w stronę ruchu i rozciąga wzdłuż niego, a po puszczeniu spacji znika. **Lista komponentów** otwiera się spokojnie: 0,34 s przenikania i 0,42 s łagodnego zsunięcia (bez sprężyny), pozycje pojawiają się z drobnym opóźnieniem; przy ograniczonym ruchu bez animacji.
 
 **Panel na wspólnym stylu Lab UI** (`../../shared/lab-ui.*`): wszystkie 67 suwaków buduje LabUI (tor 4 px, kulka 18 px, na dotyku 44 px; liczba do wpisania; przeciąganie etykiety; podwójne kliknięcie i znacznik = wartość z bieżącego wariantu), checkboxy i kafelki mają wspólne klasy. Grupy, nagłówek i przyciski na dole bez zmian.
+
+
+## 2026-10-05: orb w Signature i Midnight, kolejność wariantów
+
+Signature i Midnight mają ikonkę **orb** (płynąca plazma w kulce) zamiast pulse (ustawienia Jarka, poza ikonką identyczne z Signature). Pasek wariantów i strzałki idą zawsze w kolejności z panelu Presets: 1 Signature, 2 Midnight, 3 Frost, 4 Ember, 5 Lilac, 6 Dish. Po ręcznej zmianie (Custom) strzałka idzie dalej od wariantu, z którego zmiana wyszła, a nie wraca na początek. Pasek to wspólny `LabUI.variants` (shared/lab-ui), krój labu SF Pro / Geist.

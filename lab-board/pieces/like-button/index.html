@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Like Button · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist:wght@500;600&family=Instrument+Sans:wght@500;600&family=Albert+Sans:wght@500;600&family=Public+Sans:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* A like button, the reward in a heart: pressed, the heart dips a touch under the finger; let go, colour pours into it from below
+     with a wave; full, it comes back with a small, soft bounce (always in proportion, never stretched) while a ring and a spray of dots burst round it and a few small hearts
+     float up; the count rolls on by one. Pressed again, it simply drains: no fireworks for taking a like back. Every layer can be
+     tuned or switched off in the panel; presets on the arrows at the bottom. */
+  :root { --font: var(--lab-font); --bg: #f3f2ee; --ink: #1b1c20; --heart: #ff2d55; --ease: cubic-bezier(.22,.61,.36,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; transition: background .4s; }
+  /* (Customize: the page draws back to a lighter ground and the stage morphs into a rounded box beside the card, as in Variant Pill) */
+  :root { --page: #fff; --box: var(--bg); --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  body.dark { --page: #17181b; --box: #151517; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; border-radius: 0; background: var(--bg); transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { background: var(--box); border-radius: 26px; }
+  .anchor { position: relative; }
+
+  /* ---------- the button ---------- */
+  .like { --s: 1; position: relative; display: inline-flex; align-items: center; gap: calc(12px * var(--s)); height: calc(64px * var(--s)); padding: 0 calc(28px * var(--s)) 0 calc(22px * var(--s));
+    border: 0; border-radius: 999px; background: #fff; color: var(--ink); font: 600 calc(19px * var(--s)) / 1 var(--font); letter-spacing: -.01em; cursor: pointer;
+    box-shadow: none; transition: transform var(--rel-dur, .45s) var(--rel-ease, cubic-bezier(.3,1.3,.5,1)); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .like:hover { background: #fff; }
+  .like.down { transform: scale(var(--press, .975)); transition: transform var(--press-dur, .12s) var(--press-ease, cubic-bezier(.22,.61,.36,1)); }
+  .like:focus-visible { outline: 2px solid rgba(20,20,20,.4); outline-offset: 4px; }
+  .heart { position: relative; width: calc(30px * var(--s)); height: calc(30px * var(--s)); flex: none; overflow: visible; }
+  .heart svg { width: 100%; height: 100%; overflow: visible; display: block; }
+  .heart .outline { fill: none; stroke: var(--ink); stroke-width: 1.9; stroke-linejoin: round; }
+  .like.on .heart .outline { stroke: var(--heart); }
+  .heart .liquid { fill: var(--heart); }
+  .count { display: inline-flex; color: rgba(20,20,20,.48); font-variant-numeric: tabular-nums; font-weight: 500; margin-left: calc(-2px * var(--s)); }
+  .count .sep { margin-right: .45em; } .count.hide { display: none; }
+  .dg { position: relative; display: inline-block; height: 1.2em; overflow: hidden; line-height: 1.2em; }
+  .dg span { display: block; } .dg .nx { position: absolute; left: 0; top: 0; }
+  .like.on .count { color: var(--heart); }
+  canvas.fx { position: absolute; pointer-events: none; z-index: 3; }
+
+  /* ---------- the page's chrome (as the other lab pieces: a round back button, a white Customize pill, a variant pill) ---------- */
+  .back { position: fixed; top: 16px; left: 16px; z-index: 6; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; transition: top var(--morph), left var(--morph), translate .2s var(--ease); }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { position: fixed; top: 16px; right: 16px; z-index: 6; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20;
+    font: 600 14px var(--font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; }
+  body.tuning .tune { opacity: 0; pointer-events: none; }
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); transition: left var(--morph), bottom var(--morph); }   /* (the pill itself: shared/lab-ui.css .lab-vars) */
+  .mode { position: fixed; top: 16px; left: 50%; z-index: 6; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--font); transition: left var(--morph), top var(--morph); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; transition: background .25s, color .25s; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  @media (min-width: 761px) { body.tuning .mode, body.tuning .hint { left: calc(50% - 176px); } }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  body.dark { --ink: #f2f2f0; }
+  body.dark .like { background: #1c1c1f; color: #f2f2f0; } body.dark .like:hover { background: #1c1c1f; }
+  body.dark .count { color: rgba(255,255,255,.45); } body.dark .like.on .count { color: var(--heart); }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button:hover { color: #fff; } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  body.dark .hint { color: rgba(255,255,255,.4); }
+  body.dark .like:focus-visible, body.dark .tune:focus-visible { outline-color: rgba(255,255,255,.5); }
+  .hint { position: fixed; left: 50%; top: calc(50% + 70px); transform: translateX(-50%); font: 500 13px var(--font); color: rgba(20,20,20,.42); transition: opacity .6s, left .45s var(--ease); pointer-events: none; }
+  .hint.gone { opacity: 0; }
+
+  /* ---------- the panel: a card beside the stage (the lab's shared controls in their soft look: lab-ui soft) ---------- */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 6px; }
+  .presets button { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-field); font: 500 12.5px var(--font); cursor: pointer; color: var(--ui-ink); transition: background .2s, color .2s, scale .3s var(--ui-spring); }
+  .lab-ui { font-family: var(--font); }   /* (the panel in the lab's typeface) */
+  .presets button:hover { background: var(--ui-field-hi); } .presets button:active { scale: .95; } .presets button.on { background: var(--ui-on); color: var(--ui-on-text); }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .dock { left: calc(50% - 176px); bottom: calc(34px + env(safe-area-inset-bottom)); } }
+  @media (max-width: 760px) {
+    .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .dock { display: none; }
+    body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .like, .like.down { transition: none; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage">
+  <div class="anchor" id="anchor">
+    <button class="like" id="like" type="button" aria-pressed="false">
+      <span class="heart" id="heart" aria-hidden="true"><svg viewBox="0 0 24 24">
+        <defs><clipPath id="hclip"><path id="hshape" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></clipPath></defs>
+        <g id="hbody"><g clip-path="url(#hclip)"><path class="liquid" id="liquid" d=""/></g>
+        <path class="outline" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></g>
+      </svg></span>
+      <span class="label" id="label">Like</span>
+      <span class="count" id="count" aria-live="polite"></span>
+    </button>
+    <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+  </div>
+  <p class="hint" id="hint">Tap the heart</p>
+</main>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Looks">
+  <button id="prev" type="button" aria-label="Previous look"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm" aria-live="polite">Classic</span>
+  <button id="next" type="button" aria-label="Next look"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the like button"></aside>
+
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- settings: every layer of the moment, its timing and its look; kept in the browser ----------
+const KEY = 'lab.like-button.v1';
+const DEF = { heart: '#ff2d55', bg: '#f3f2ee', bgDark: '#0e0e10', scale: 1, speed: 1, squash: .08,
+  fill: true, fillMs: 300, wave: 1.6,
+  jelly: true, jellyK: 1, jellyAmt: .1,
+  burst: true, ring: true, burstSize: 1, dots: 14, palette: 'confetti',
+  float: true, floatN: 5, count: true, start: 364, look: 'Classic', btnPress: 2.5, pressEase: 'smooth', pressMs: 120, relEase: 'spring', relMs: 450 };
+// (Jarek's two, tuned by him in the panel: Classic a quick dip and a crisp burst of a few dots; Liquid the colour poured in, a ring of dots in the heart's tones)
+const LOOKS = {
+  Classic: { squash: .12, fill: false, jellyK: 2, burstSize: 1.2, dots: 7, float: false },
+  Liquid: { fillMs: 500, dots: 24, palette: 'heart', float: false },
+};
+let P = (() => { try { return { ...DEF, ...LOOKS.Classic, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF, ...LOOKS.Classic }; } })();
+if (P.look && !LOOKS[P.look]) P.look = '';
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k] || k in LOOKS.Classic) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const PALETTES = { confetti: ['#ff2d55', '#ff9500', '#ffcc00', '#34c759', '#5ac8fa', '#af52de'], heart: null, mono: ['#1b1c20', '#8a8a8f'] };
+let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+const bgKey = () => mode === 'dark' ? 'bgDark' : 'bg';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const $ = id => document.getElementById(id);
+const btn = $('like'), heartEl = $('heart'), body = $('hbody'), liquid = $('liquid'), countEl = $('count'), cv = $('fx'), g = cv.getContext('2d');
+let liked = false, count = P.start, fillLv = 0;   // fillLv: 0 empty … 1 full
+
+// ---------- the liquid: a wavy surface rising inside the heart's outline (the heart is the clip) ----------
+let wavePh = 0, fillFrom = 0, fillTo = 0, fillT0 = 0, fillDur = 1;
+function drawLiquid(amp) { const y = 22.4 - fillLv * 21.6, a = amp * Math.sqrt(Math.max(0, 1 - fillLv)) + (fillLv > 0 && fillLv < 1 ? .25 : 0);
+  let d = `M-2 ${y}`; for (let x = -2; x <= 26; x += 1) d += ` L${x} ${(y + Math.sin(x * .55 + wavePh) * a * .5).toFixed(2)}`; liquid.setAttribute('d', d + ' L26 26 L-2 26Z'); }
+// ---------- the heart's spring: one scale, the same both ways (the heart keeps its shape), a little dip and a soft return ----------
+const J = { s: 1, v: 0 };
+function setBody() { const s = Math.min(1.25, Math.max(.75, J.s)); body.setAttribute('transform', `translate(12 13) scale(${s.toFixed(4)}) translate(-12 -13)`); }
+
+// ---------- the fireworks: one canvas round the heart (a ring, two spokes of dots, small hearts floating up) ----------
+const fx = { ring: null, dots: [], hearts: [] };
+const HPATH = new Path2D('M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z');
+let CX = 0, CY = 0, HS = 30;
+function placeFx() { const a = $('anchor').getBoundingClientRect(), h = heartEl.getBoundingClientRect(), W = 420, H = 560, dpr = Math.min(devicePixelRatio || 1, 2);
+  HS = h.width; CX = h.left - a.left + h.width / 2; CY = h.top - a.top + h.height / 2;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.left = (CX - W / 2) + 'px'; cv.style.top = (CY - H * .68) + 'px';
+  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0); }   // (a new size clears the canvas: only when it really changes)
+  fxO = { x: W / 2, y: H * .68 }; }
+let fxO = { x: 0, y: 0 };
+const colOf = i => { const p = P.palette === 'mono' && mode === 'dark' ? ['#f2f2f0', '#8a8a8f'] : PALETTES[P.palette]; return p ? p[i % p.length] : shade(P.heart, (i % 3) * .14); };
+function shade(hex, k) { const n = parseInt(hex.slice(1), 16), r = n >> 16, gg = n >> 8 & 255, b = n & 255, m = v => Math.round(v + (255 - v) * k); return `rgb(${m(r)},${m(gg)},${m(b)})`; }
+function burst() { const t = now(), R = HS * P.burstSize;
+  if (P.ring) fx.ring = { t0: t, R };
+  if (P.burst && !reduced) for (let i = 0; i < P.dots; i++) { const a = i / P.dots * Math.PI * 2 - Math.PI / 2; for (let j = 0; j < 2; j++) fx.dots.push({ t0: t + j * 30, a: a + (j ? .22 : 0), d0: R * .55, d1: R * (j ? 1.25 : 1.55), r: HS * (j ? .06 : .085), c: colOf(i * 2 + j), life: 520 + j * 90 }); }
+  if (P.float && !reduced) for (let i = 0; i < P.floatN; i++) fx.hearts.push({ t0: t + i * 70 + Math.random() * 60, x: (Math.random() - .5) * HS * 1.4, rise: HS * (3.2 + Math.random() * 2.6), sway: (Math.random() - .5) * HS * .9, s: .32 + Math.random() * .3, rot: (Math.random() - .5) * .5, c: Math.random() < .7 ? P.heart : colOf(i), life: 1300 + Math.random() * 500 }); }
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+function drawFx(t) { g.clearRect(0, 0, cv.width, cv.height); let busy = false; const S = P.speed;
+  if (fx.ring) { const k = Math.max(0, (t - fx.ring.t0) / (360 / S)); if (k >= 1) fx.ring = null; else { busy = true; const e = easeOut(k), r = fx.ring.R * (.45 + e * .75), w = fx.ring.R * .42 * (1 - e);
+    g.beginPath(); g.arc(fxO.x, fxO.y, r, 0, Math.PI * 2); g.strokeStyle = P.heart; g.globalAlpha = .9 * (1 - k * .4); g.lineWidth = Math.max(.01, w); g.stroke(); g.globalAlpha = 1; } }
+  fx.dots = fx.dots.filter(d => { const k = (t - d.t0) / (d.life / S); if (k >= 1) return false; busy = true; if (k < 0) return true; const e = easeOut(k), dist = d.d0 + (d.d1 - d.d0) * e, r = d.r * (1 - Math.pow(k, 1.6));
+    g.beginPath(); g.arc(fxO.x + Math.cos(d.a) * dist, fxO.y + Math.sin(d.a) * dist, Math.max(.01, r), 0, Math.PI * 2); g.fillStyle = d.c; g.fill(); return true; });
+  fx.hearts = fx.hearts.filter(h => { const k = (t - h.t0) / (h.life / S); if (k >= 1) return false; busy = true; if (k < 0) return true; const e = easeOut(k), y = fxO.y - HS * .4 - h.rise * e, x = fxO.x + h.x + Math.sin(k * 5 + h.rot * 9) * h.sway * k;
+    const s = h.s * Math.min(1, k * 6) * (1 - k * .25) * HS / 24, a = k < .15 ? k / .15 : 1 - Math.pow((k - .15) / .85, 2);
+    g.save(); g.translate(x, y); g.rotate(h.rot + Math.sin(k * 4) * .15); g.scale(s, s); g.translate(-12, -13); g.globalAlpha = Math.max(0, a); g.fillStyle = h.c; g.fill(HPATH); g.restore(); return true; });
+  g.globalAlpha = 1; return busy; }
+
+// ---------- the count: each digit that changes rolls (up for +1, down for −1), on a little spring ----------
+function renderCount(prev) { countEl.classList.toggle('hide', !P.count); if (!P.count) return; const s = fmtN(count), o = prev == null ? s : fmtN(prev), up = prev == null || count > prev;
+  countEl.innerHTML = '<span class="sep">·</span>'; const pad = Math.max(s.length, o.length), S2 = s.padStart(pad, ' '), O2 = o.padStart(pad, ' ');
+  for (let i = 0; i < pad; i++) { if (S2[i] === ' ') continue; const dg = document.createElement('span'); dg.className = 'dg'; const cur = document.createElement('span'); cur.textContent = S2[i]; dg.appendChild(cur); countEl.appendChild(dg);
+    if (prev != null && S2[i] !== O2[i] && !reduced) { const old = document.createElement('span'); old.className = 'nx'; old.textContent = O2[i] === ' ' ? '' : O2[i]; dg.appendChild(old); const d = up ? -1 : 1, ms = 420 / P.speed;
+      cur.animate([{ transform: `translateY(${-d * 100}%)` }, { transform: 'translateY(0)' }], { duration: ms, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      old.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${d * 100}%)`, opacity: 0 }], { duration: ms * .8, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }).onfinish = () => old.remove(); } } }
+const fmtN = n => n >= 10000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n);
+
+// ---------- the moment ----------
+const now = () => window.__now ? window.__now() : performance.now();
+// (the easing curves: their CSS for the pill, their function for the heart's dip, so both move alike)
+const EASES = { smooth: ['cubic-bezier(.22,.61,.36,1)', x => 1 - Math.pow(1 - x, 3)], snappy: ['cubic-bezier(.16,1,.3,1)', x => 1 - Math.pow(2, -10 * x)],
+  soft: ['cubic-bezier(.45,0,.25,1)', x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2], linear: ['linear', x => x],
+  spring: ['cubic-bezier(.3,1.3,.5,1)', null], bouncy: ['cubic-bezier(.34,1.8,.5,1)', null] };
+let pressed = false, phase = 'idle', fillDoneAt = 0, pressT0 = 0;
+function press() { if (pressed) return; pressed = true; pressT0 = now(); J.v = 0; btn.classList.add('down'); kick(); }
+function release(go) { if (!pressed) return; pressed = false; btn.classList.remove('down'); if (go) toggle(); else { kick(); } }
+function toggle() { const prev = count; liked = !liked; btn.classList.toggle('on', liked); btn.setAttribute('aria-pressed', liked); count += liked ? 1 : -1; renderCount(prev); $('hint').classList.add('gone');
+  if (liked) { if (P.fill && !reduced) { fillFrom = fillLv; fillTo = 1; fillT0 = now(); fillDur = P.fillMs / P.speed; phase = 'fill'; } else { fillLv = 1; pop(); } }
+  else { fillFrom = fillLv; fillTo = 0; fillT0 = now(); fillDur = 180 / P.speed; phase = 'drain'; J.s = .97; J.v = 0; }
+  kick(); }
+// full: a small push outward on the spring, the fireworks go
+function pop() { phase = 'idle'; if (P.jelly && !reduced) { J.s = Math.min(J.s, 1 - P.jellyAmt * .4); J.v = P.jellyAmt * 15; } else { J.s = 1; J.v = 0; } burst(); }
+let raf = 0, last = now();
+function kick() { if (!raf) { last = now(); raf = requestAnimationFrame(frame); } }
+// (the clock is the page's own, not the frame's stamp: that can be a little older than the click that started a burst)
+function frame() { const t = now(), dt = Math.max(0, Math.min(.033, (t - last) / 1000)); last = t; let busy = false;
+  if (phase === 'fill' || phase === 'drain') { const k = Math.min(1, (t - fillT0) / fillDur), e = phase === 'fill' ? 1 - Math.pow(1 - k, 2.2) : k * k; fillLv = fillFrom + (fillTo - fillFrom) * e; busy = true;
+    if (k >= 1) { fillLv = fillTo; if (phase === 'fill') pop(); else phase = 'idle'; } }
+  wavePh += dt * 9 * P.speed; drawLiquid(P.wave);
+  { const kS = 420 * P.jellyK * P.speed * P.speed, c = 2 * Math.sqrt(kS) * .55;
+    if (pressed) { if (!reduced) { const k = Math.min(1, (t - pressT0) / Math.max(1, P.pressMs)), f = (EASES[P.pressEase] || EASES.smooth)[1] || EASES.smooth[1]; J.s = 1 - P.squash * f(k); } }
+    else { J.v += (-kS * (J.s - 1) - c * J.v) * dt; J.s += J.v * dt; }
+    if (Math.abs(J.s - 1) > .0008 || Math.abs(J.v) > .01) busy = true; else if (!pressed) { J.s = 1; J.v = 0; } setBody(); }
+  if (drawFx(t)) busy = true;
+  if (pressed || (fillLv > 0 && fillLv < 1)) busy = true;
+  raf = busy ? requestAnimationFrame(frame) : 0; }
+
+// pointer: down squashes, up on the button likes; dragged off and let go: nothing (as a native button)
+btn.addEventListener('pointerdown', e => { if (e.button !== 0) return; press(); });
+btn.addEventListener('pointerup', () => release(true));
+btn.addEventListener('pointerleave', () => release(false));
+btn.addEventListener('pointercancel', () => release(false));
+btn.addEventListener('click', e => { if (e.detail === 0) { press(); release(true); } });   // (keyboard: Enter and Space click with detail 0)
+btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); press(); } });
+btn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); release(true); } });
+
+// ---------- applying the settings ----------
+function apply() { const bg = P[bgKey()]; document.documentElement.style.setProperty('--heart', P.heart); document.documentElement.style.setProperty('--bg', bg); document.querySelector('meta[name=theme-color]').content = bg;
+  document.body.classList.toggle('dark', mode === 'dark'); panel.classList.toggle('dark', mode === 'dark'); $('vars').classList.toggle('dark', mode === 'dark'); document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', b.dataset.m === mode));
+  btn.style.setProperty('--s', P.scale); btn.style.setProperty('--press', 1 - P.btnPress / 100);
+  btn.style.setProperty('--press-dur', P.pressMs + 'ms'); btn.style.setProperty('--press-ease', (EASES[P.pressEase] || EASES.smooth)[0]); btn.style.setProperty('--rel-dur', P.relMs + 'ms'); btn.style.setProperty('--rel-ease', (EASES[P.relEase] || EASES.spring)[0]); renderCount(null); placeFx(); requestAnimationFrame(placeFx); $('nm').textContent = P.look || 'Custom'; drawLiquid(P.wave); }
+addEventListener('resize', () => placeFx());
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>Every part of the moment, its timing and its look.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; P.look = ''; if (k === 'start') count = v + (liked ? 1 : 0); save(); apply(); markPresets(); };
+  const pre = LabUI.group(panel, 'Presets', { key: KEY + '.g.pre' }), pb = document.createElement('div'); pb.className = 'presets'; pre.appendChild(pb);
+  for (const n of Object.keys(LOOKS)) { const b = document.createElement('button'); b.type = 'button'; b.textContent = n; b.dataset.n = n; b.onclick = () => applyLook(n, true); pb.appendChild(b); }
+  const sl = (gp, k, label, min, max, step, unit, format) => ctl[k] = LabUI.slider(gp, { label, min, max, step, unit, value: P[k], def: DEF[k], format, onInput: v => set(k, v) });
+  const ck = (gp, k, label, hint) => ctl[k] = LabUI.check(gp, { label, value: P[k], hint, onChange: v => { set(k, v); vis(); } });
+  const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' });
+  ctl.heart = LabUI.color(g1, { label: 'Heart', value: P.heart, onInput: v => set('heart', v) });
+  ctl.bg = LabUI.color(g1, { label: 'Background', value: P[bgKey()], onInput: v => set(bgKey(), v) });
+  sl(g1, 'scale', 'Size', .6, 2, .05, '×');
+  const g2 = LabUI.group(panel, 'Timing', { key: KEY + '.g.time' });
+  sl(g2, 'speed', 'Speed', .4, 2, .05, '×');
+  // (how much the press takes in: the whole pill, and the heart inside it)
+  const gP = LabUI.group(panel, 'Press', { key: KEY + '.g.press' });
+  sl(gP, 'btnPress', 'Button shrink', 0, 20, .5, '%'); sl(gP, 'squash', 'Heart dip', 0, .3, .01);
+  ctl.pressEase = LabUI.seg(gP, { label: 'Press easing', options: [['smooth', 'Smooth'], ['snappy', 'Snappy'], ['soft', 'Soft'], ['linear', 'Linear']], value: P.pressEase, onChange: v => set('pressEase', v) });
+  sl(gP, 'pressMs', 'Press time', 20, 500, 10, 'ms');
+  ctl.relEase = LabUI.seg(gP, { label: 'Release easing', options: [['spring', 'Spring'], ['bouncy', 'Bouncy'], ['smooth', 'Smooth'], ['snappy', 'Snappy']], value: P.relEase, onChange: v => set('relEase', v) });
+  sl(gP, 'relMs', 'Release time', 80, 1200, 10, 'ms');
+  const g3 = LabUI.group(panel, 'Liquid fill', { key: KEY + '.g.fill' });
+  ck(g3, 'fill', 'Pour the colour in'); sl(g3, 'fillMs', 'Fill time', 120, 1200, 10, 'ms'); sl(g3, 'wave', 'Wave', 0, 4, .1);
+  const g4 = LabUI.group(panel, 'Bounce', { key: KEY + '.g.jelly' });
+  ck(g4, 'jelly', 'Bounce back'); sl(g4, 'jellyAmt', 'Amount', 0, .3, .01); sl(g4, 'jellyK', 'Stiffness', .4, 2, .05, '×');
+  const g5 = LabUI.group(panel, 'Burst', { key: KEY + '.g.burst' });
+  ck(g5, 'ring', 'Ring'); ck(g5, 'burst', 'Dots'); sl(g5, 'burstSize', 'Size', .4, 2, .05, '×'); sl(g5, 'dots', 'Dots', 4, 28, 1);
+  ctl.palette = LabUI.seg(g5, { label: 'Colours', options: [['confetti', 'Confetti'], ['heart', 'Heart'], ['mono', 'Mono']], value: P.palette, onChange: v => set('palette', v) });
+  const g6 = LabUI.group(panel, 'Floating hearts', { key: KEY + '.g.float' });
+  ck(g6, 'float', 'Hearts float up'); sl(g6, 'floatN', 'How many', 1, 16, 1);
+  const g7 = LabUI.group(panel, 'Count', { key: KEY + '.g.count' });
+  ck(g7, 'count', 'Show the count'); sl(g7, 'start', 'Starts at', 0, 99999, 1);
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset to Classic</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => applyLook('Classic', true);
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k] && k !== 'look') d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); };
+  vis(); markPresets(); }
+// (options that only matter when their layer is on)
+function vis() { const show = (k, on) => { if (ctl[k]) ctl[k].row.style.display = on ? '' : 'none'; };
+  show('fillMs', P.fill); show('wave', P.fill); show('jellyAmt', P.jelly); show('jellyK', P.jelly); show('burstSize', P.burst || P.ring); show('dots', P.burst); show('palette', P.burst || P.float); show('floatN', P.float); show('start', P.count); }
+function markPresets() { panel.querySelectorAll('.presets button').forEach(b => b.classList.toggle('on', b.dataset.n === P.look)); }
+function applyLook(n, demo) { P = { ...DEF, ...LOOKS[n], heart: P.heart, bg: P.bg, bgDark: P.bgDark, scale: P.scale, start: P.start, look: n }; save(); for (const k in ctl) ctl[k].set?.(k === 'bg' ? P[bgKey()] : P[k]); vis(); markPresets(); apply();
+  if (demo && !liked) { press(); setTimeout(() => release(true), 90); } }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', on); setTimeout(placeFx, 600); }
+$('tune').onclick = () => openPanel(true);
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => { mode = b.dataset.m; try { localStorage.setItem(KEY + '.mode', mode); } catch { } ctl.bg?.set(P[bgKey()]); apply(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') openPanel(false); });
+const names = Object.keys(LOOKS), step = d => { const i = names.indexOf(P.look); applyLook(names[((i < 0 ? 0 : i) + d + names.length) % names.length], false); if (liked) { liked = false; fillLv = 0; btn.classList.remove('on'); count -= 1; renderCount(null); } press(); setTimeout(() => release(true), 90); };
+LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: step, items: () => names, current: () => P.look,
+  onPick: n => { applyLook(n, false); if (liked) { liked = false; fillLv = 0; btn.classList.remove('on'); count -= 1; renderCount(null); } press(); setTimeout(() => release(true), 90); } });
+addEventListener('keydown', e => { if (e.target.closest?.('input, .panel')) return; if (e.key === 'ArrowRight') step(1); if (e.key === 'ArrowLeft') step(-1); });
+
+buildPanel(); apply(); drawLiquid(P.wave); setBody();
+// (?thumb=1: the lab board's thumbnail: no chrome, the default look, bigger, frozen a moment after the like, the burst and the hearts out)
+// (the lab board's box: ?thumb=1 the still picture (the button at rest, before the like; ?thumb=burst a moment after it), ?demo=1 the
+// live preview on hover: no chrome, the button sized to the box, liking and taking it back in a loop. Neither touches the saved settings)
+{ const q = new URLSearchParams(location.search), th = q.get('thumb'), demo = q.has('demo');
+  if (th != null || demo) { P = { ...DEF, ...LOOKS.Classic }; mode = 'light'; document.getElementById('mode').style.display = 'none'; document.querySelectorAll('.back, .tune, .dock, .hint, .panel').forEach(e => e.style.display = 'none');
+    const fit = () => { P.scale = Math.max(.8, Math.min(innerWidth, innerHeight) / 380); apply(); }; fit(); addEventListener('resize', fit);
+    if (th === 'burst') document.fonts.ready.then(() => { placeFx(); LIKE.at(150); });
+    if (demo) { const wait = ms => new Promise(r => setTimeout(r, ms));
+      (async () => { await document.fonts.ready; placeFx(); await wait(350);
+        for (;;) { press(); await wait(160); release(true); await wait(1900); press(); await wait(90); release(true); await wait(1100); } })(); } } }
+// (for looking in from the console: LIKE.at(ms) freezes the clock and shows the moment ms after a like; LIKE.live() lets it run again)
+let clock = null; const realNow = now;
+window.LIKE = { get P() { return P; }, toggle: () => { press(); release(true); }, applyLook,
+  at(ms) { if (clock == null) { cancelAnimationFrame(raf); raf = 0; liked = false; fillLv = 0; btn.classList.remove('on'); clock = realNow(); window.__now = () => clock; press(); release(true); }
+    cancelAnimationFrame(raf); raf = 0; const t0 = clock; let t = t0; while (t < t0 + ms) { t = Math.min(t0 + ms, t + 16); clock = t; frame(t); cancelAnimationFrame(raf); raf = 0; } },
+  live() { clock = null; delete window.__now; kick(); }, fx, get state() { return { fillLv, phase, liked, HS, CX, CY, fxO, J: { ...J } }; } };
+LabUI.segThumb($('mode'));   // (Light / Dark: the thumb slides)
+</script>
+</body>
+</html>
