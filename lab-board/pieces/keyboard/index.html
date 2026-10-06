@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../shared/lab-lock.js?v=3"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keyboard · lab</title>
+<meta name="theme-color" content="#f4f3ef">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* A flat Mac keyboard drawn like Line Interactions: low keys in an aluminium slab, thin lines over quiet fills, every key a rounded
+     cap with its legend printed on top in the lab's type, the keys laid out as on a flat low-profile keyboard with command and option keys. Point at a key and it lights; click it, or type
+     on your own keyboard, and it goes down with a soft click and comes back up (the click synthesised on the spot, Soft, Thock or Crisp).
+     Drag the ground to turn it, the wheel or − / + to zoom. */
+  :root { --page: #17181b; --plate: #121314; --morph: .55s cubic-bezier(.3,1.12,.4,1); --ease: cubic-bezier(.22,.61,.36,1); }
+  body.light { --page: #fff; --plate: #f4f3ef; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--page); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
+  .plate { position: fixed; inset: 0; overflow: hidden; touch-action: none; cursor: move; background: var(--plate); transition: inset var(--morph), border-radius var(--morph), background-color .4s; }
+  .plate.over { cursor: pointer; } .plate.dragging, .plate.dragging * { cursor: grabbing; }
+  body.tuning .plate { inset: 16px 368px 16px 16px; border-radius: 26px; }
+  .plate canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; transition: top var(--morph), left var(--morph), translate .2s var(--ease); }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #1c1c1f; font: 600 13px var(--lab-font); transition: top var(--morph), left var(--morph); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(255,255,255,.5); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #fff; } .mode button[aria-checked=true] { color: #1b1c20; }
+  .hint { position: fixed; left: 50%; bottom: calc(30px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 6; font-size: 13px; color: #1b1c20; opacity: .45; white-space: nowrap; pointer-events: none; transition: left var(--morph); }
+  body:not(.light) .hint { color: #f2f2f0; }
+  .view { position: fixed; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 6; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #1c1c1f; transition: right var(--morph), bottom var(--morph); }
+  .view button { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 999px; background: transparent; color: rgba(255,255,255,.7); cursor: pointer; transition: background .2s, color .2s; }
+  .view button:hover { background: rgba(255,255,255,.08); color: #fff; } .view svg { width: 18px; height: 18px; }
+  body.light .back, body.light .tune, body.light .mode, body.light .view { background: #fff; color: #1b1c20; }
+  body.light .mode button { color: rgba(20,20,20,.55); } body.light .mode button:hover { color: #1b1c20; } body.light .mode button[aria-checked=true] { color: #fff; }
+  body.light .view button { color: rgba(20,20,20,.65); } body.light .view button:hover { background: rgba(20,20,20,.06); color: #1b1c20; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .view, body.bare .hint { display: none; }
+  body.bare .plate { inset: 0; border-radius: 0; transition: none; }
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .play-intro { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-field); font: 500 12.5px var(--lab-font); color: var(--ui-ink); cursor: pointer; } .play-intro:hover { background: var(--ui-field-hi); }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .mode, body.tuning .hint { left: calc(50% - 176px); } body.tuning .view { right: 382px; bottom: calc(34px + env(safe-area-inset-bottom)); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .plate { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; }
+    body.tuning .view, body.tuning .hint { display: none; } }
+</style>
+</head>
+<body class="light">
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="plate" id="plate" aria-label="A flat keyboard: click a key or type on your own keyboard; drag the ground to turn it"></main>
+<p class="hint">Click a key, or type</p>
+<div class="view" role="group" aria-label="The view">
+  <button type="button" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg></button>
+  <button type="button" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button>
+  <button type="button" id="zreset" aria-label="Back to the first view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/></svg></button>
+</div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the keyboard"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.keyboard.v1';
+const DEF = { sound: true, vol: .6, click: 'soft', travel: .55 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), plate = $('plate');
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+if (BARE) P = { ...DEF };
+
+// ---------- the renderer, an orthographic camera, the drawing (as in Line Interactions) ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); plate.prepend(renderer.domElement);
+const scene = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 300);
+scene.add(new THREE.AmbientLight(0xffffff, 2.5)); const sun = new THREE.DirectionalLight(0xffffff, 1.3); sun.position.set(-6, 10, 8); scene.add(sun);
+const M = { fill: new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  line: new THREE.LineBasicMaterial({ color: 0xc4c1ba }), hi: new THREE.LineBasicMaterial({ color: 0x1b1c20 }) };
+const PAL = { dark: { bg: '#121314', fill: 0x1c1c1f, line: 0x3d3d42, hi: 0xf2f2f0 }, light: { bg: '#f4f3ef', fill: 0xffffff, line: 0xc4c1ba, hi: 0x1b1c20 } };
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const segs = (pts, parent, mat = M.line) => { const l = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat); parent.add(l); return l; };
+const ease = (s, to, k) => { s.p += (to - s.p) * k; if (Math.abs(to - s.p) < .0005) s.p = to; return s.p !== to; };
+function rrect(cx, cz, w, d, r, y) { const pts = [], c = [[cx + w / 2 - r, cz - d / 2 + r, -Math.PI / 2], [cx + w / 2 - r, cz + d / 2 - r, 0], [cx - w / 2 + r, cz + d / 2 - r, Math.PI / 2], [cx - w / 2 + r, cz - d / 2 + r, Math.PI]], ring = [];
+  for (const [x, z, a0] of c) for (let i = 0; i <= 6; i++) { const a = a0 + i / 6 * Math.PI / 2; ring.push(V(x + Math.cos(a) * r, y, z + Math.sin(a) * r)); }
+  for (let i = 0; i < ring.length; i++) pts.push(ring[i], ring[(i + 1) % ring.length]); return pts; }
+const ROUND = (w, d, r) => { const s = new THREE.Shape(), x = w / 2, z = d / 2; s.moveTo(-x + r, -z); s.lineTo(x - r, -z); s.absarc(x - r, -z + r, r, -Math.PI / 2, 0); s.lineTo(x, z - r);
+  s.absarc(x - r, z - r, r, 0, Math.PI / 2); s.lineTo(-x + r, z); s.absarc(-x + r, z - r, r, Math.PI / 2, Math.PI); s.lineTo(-x, -z + r); s.absarc(-x + r, -z + r, r, Math.PI, Math.PI * 1.5); return s; };
+let sils = [];
+function prism(w, d, h, r, parent) { const g = new THREE.Group(); parent.add(g);
+  const geo = new THREE.ExtrudeGeometry(ROUND(w, d, r), { depth: h, bevelEnabled: false, curveSegments: 5 }); geo.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(geo, M.fill); g.add(m); const loops = segs([...rrect(0, 0, w, d, r, 0), ...rrect(0, 0, w, d, r, h)], g);
+  const sil = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, h, 0), V(0, 0, 0), V(0, h, 0)]), M.line); g.add(sil);
+  const me = { g, m, w, d, h, r, sil, lines: [loops, sil] }; sils.push(me); return me; }
+const _v = new THREE.Vector3(), _q = new THREE.Quaternion();
+function updateSils() { for (const s of sils) { cam.getWorldDirection(_v); s.g.getWorldQuaternion(_q); _v.applyQuaternion(_q.invert()); const a = Math.atan2(_v.z, _v.x), pos = s.sil.geometry.attributes.position;
+  [a + Math.PI / 2, a - Math.PI / 2].forEach((t, k) => { const c = Math.cos(t), n = Math.sin(t), x = Math.sign(c) * (s.w / 2 - s.r) + s.r * c, z = Math.sign(n) * (s.d / 2 - s.r) + s.r * n;
+    pos.setXYZ(k * 2, x, 0, z); pos.setXYZ(k * 2 + 1, x, s.h, z); }); pos.needsUpdate = true; s.sil.geometry.computeBoundingSphere(); } }
+function tex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.textBaseline = 'middle'; draw(x);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; t.colorSpace = THREE.SRGBColorSpace; return t; }
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const hitOf = meshes => { ray.setFromCamera(ndc, cam); return ray.intersectObjects(meshes, false)[0] || null; };
+const KB = new THREE.Group(); scene.add(KB);
+
+// =============================================== sound: small, quiet, made on the spot ===============================================
+// (no files: every sound is synthesised when it plays. A key's click is a short burst of noise through a band filter over a soft low
+// knock; a tick (moving from one thing to the next under the pointer) a tiny sine blip, its pitch from a pentatonic scale; a thud a low
+// sine with a breath of noise. All of it quiet, and the browser only lets it start after the first click or key)
+const SND = { ctx: null, out: null, noise: null, last: {} };
+function snd() { if (!P.sound) return null; if (!SND.ctx) { try { SND.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+    SND.out = SND.ctx.createGain(); const comp = SND.ctx.createDynamicsCompressor(), lp = SND.ctx.createBiquadFilter(); comp.threshold.value = -14; comp.ratio.value = 4; lp.type = 'lowpass'; lp.frequency.value = 5200; lp.Q.value = .5;
+    // (a soft top: a low-pass takes the hiss off every sound)
+    SND.out.connect(lp).connect(comp).connect(SND.ctx.destination);
+    const n = SND.ctx.createBuffer(1, SND.ctx.sampleRate * .3, SND.ctx.sampleRate), d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; SND.noise = n; }
+  if (SND.ctx.state === 'suspended') SND.ctx.resume(); SND.out.gain.value = P.vol; return SND.ctx; }
+const rate = (k, ms) => { const t = performance.now(); if (t - (SND.last[k] || 0) < ms) return false; SND.last[k] = t; return true; };
+function env(c, g, t, a, d, peak) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); }
+function burst(c, t, f, q, peak, d, type = 'bandpass') { const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = SND.noise; bp.type = type; bp.frequency.value = f; bp.Q.value = q; s.connect(bp).connect(g).connect(SND.out); env(c, g, t, .001, d, peak); s.start(t, Math.random() * .2); s.stop(t + d + .05); }
+function tone(c, t, f, type, peak, d, f2, a = .002) { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); o.connect(g).connect(SND.out); env(c, g, t, a, d, peak); o.start(t); o.stop(t + d + .05); }
+const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28, 31, 33];
+// (three characters of key, picked in the panel: Soft (the default: a muffled tap, low-passed noise and a round low knock), Thock (deeper
+// and rounder, like a bigger cap), Crisp (brighter, still gentle). The ticks are low, soft-edged sine blips with no click at the start)
+const CLICKS = {
+  soft:  { down: [[1500, .7, .32, .022, 'lowpass']], knock: [210, 'sine', .2, .04, 150], up: [[1900, .7, .12, .014, 'lowpass']] },
+  thock: { down: [[900, .7, .3, .03, 'lowpass']], knock: [140, 'sine', .32, .07, 95], up: [[1300, .7, .1, .018, 'lowpass']] },
+  crisp: { down: [[2600, .9, .38, .02, 'bandpass'], [900, .6, .12, .015, 'bandpass']], knock: [260, 'triangle', .14, .035, 180], up: [[3200, 1, .14, .012, 'bandpass']] } };
+const SFX = {
+  key(big, up) { const c = snd(); if (!c) return; const t = c.currentTime, v = .92 + Math.random() * .16, K = CLICKS[P.click] || CLICKS.soft;
+    if (up) { for (const [f, q, pk, d, ty] of K.up) burst(c, t, f * v, q, pk, d, ty); return; }
+    for (const [f, q, pk, d, ty] of K.down) burst(c, t, f * v * (big ? .8 : 1), q, pk * (big ? 1.1 : 1), d * (big ? 1.25 : 1), ty);
+    const [kf, kt, kp, kd, kf2] = K.knock; tone(c, t, kf * (big ? .8 : 1) * v, kt, kp, kd * (big ? 1.3 : 1), kf2 * (big ? .8 : 1), .003); },
+  tick(step, k = 'tick') { if (!rate(k, 55)) return; const c = snd(); if (!c) return; const t = c.currentTime, f = 520 * 2 ** (PENTA[Math.max(0, Math.min(PENTA.length - 1, step))] / 12);
+    tone(c, t, f, 'sine', .07, .09, f * .985, .006); },
+  press() { const c = snd(); if (!c) return; const t = c.currentTime; tone(c, t, 240, 'sine', .22, .12, 170, .004); burst(c, t, 900, .7, .12, .04, 'lowpass'); },
+  thud() { const c = snd(); if (!c) return; const t = c.currentTime; tone(c, t, 150, 'sine', .3, .2, 85, .004); burst(c, t, 500, .7, .18, .08, 'lowpass'); } };
+for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => { if (P.sound) snd(); }, { capture: true });   // (made, or woken, inside the first gesture, so the browser lets it sound)
+
+const KB_U = .5, KB_GAP = .06, KB_T = .075, KB_BASE = .16;
+const fnW = (15 - 2.5) / 12;
+const KB_ROWS = [
+  { h: .6, keys: [['esc', 1.5, 'Escape', 'small'], ...Array.from({ length: 12 }, (_, i) => ['F' + (i + 1), fnW, 'F' + (i + 1), 'fkey']), ['', 1, 'Power', 'power']] },
+  { h: 1, keys: [['`', 1, 'Backquote', 'two', '~'], ...'1234567890'.split('').map((d, i) => [d, 1, 'Digit' + d, 'two', '!@#$%^&*()'[i]]), ['-', 1, 'Minus', 'two', '_'], ['=', 1, 'Equal', 'two', '+'], ['delete', 2, 'Backspace', 'right']] },
+  { h: 1, keys: [['tab', 1.5, 'Tab', 'left'], ...'QWERTYUIOP'.split('').map(c => [c, 1, 'Key' + c, 'letter']), ['[', 1, 'BracketLeft', 'two', '{'], [']', 1, 'BracketRight', 'two', '}'], ['\\', 1.5, 'Backslash', 'two', '|']] },
+  { h: 1, keys: [['caps lock', 1.75, 'CapsLock', 'left'], ...'ASDFGHJKL'.split('').map(c => [c, 1, 'Key' + c, 'letter']), [';', 1, 'Semicolon', 'two', ':'], ["'", 1, 'Quote', 'two', '"'], ['return', 2.25, 'Enter', 'right']] },
+  { h: 1, keys: [['shift', 2.25, 'ShiftLeft', 'left'], ...'ZXCVBNM'.split('').map(c => [c, 1, 'Key' + c, 'letter']), [',', 1, 'Comma', 'two', '<'], ['.', 1, 'Period', 'two', '>'], ['/', 1, 'Slash', 'two', '?'], ['shift', 2.75, 'ShiftRight', 'right']] },
+  { h: 1, keys: [['fn', 1, 'Fn', 'left'], ['control', 1, 'ControlLeft', 'mod', '⌃'], ['option', 1, 'AltLeft', 'mod', '⌥'], ['command', 1.25, 'MetaLeft', 'mod', '⌘'], ['', 5.5, 'Space', 'space'],
+    ['command', 1.25, 'MetaRight', 'modr', '⌘'], ['option', 1, 'AltRight', 'modr', '⌥'], ['ARROWS', 3]] }];
+let kbKeys = [], kbHover = null, kbHeld = null;
+function kbLegend(k) { const pw = 96, W = Math.round(k.w * pw), Hh = Math.round(k.h * pw), [main, , , kind, alt] = k.spec;
+  return tex(W, Hh, x => { x.clearRect(0, 0, W, Hh); x.fillStyle = '#fff'; const f = s => `500 ${s}px Geist, system-ui, sans-serif`, pad = 12;
+    if (kind === 'letter') { x.font = f(30); x.textAlign = 'center'; x.fillText(main, W / 2, Hh / 2 + 1); }
+    else if (kind === 'two') { x.font = f(22); x.textAlign = 'center'; x.fillText(alt, W / 2, Hh * .33); x.fillText(main, W / 2, Hh * .7); }
+    else if (kind === 'fkey') { x.font = f(17); x.textAlign = 'center'; x.fillText(main, W / 2, Hh / 2 + 1); }
+    else if (kind === 'small' || kind === 'left') { x.font = f(17); x.textAlign = 'left'; x.fillText(main, pad, Hh - pad - 8); }
+    else if (kind === 'right') { x.font = f(17); x.textAlign = 'right'; x.fillText(main, W - pad, Hh - pad - 8); }
+    else if (kind === 'mod' || kind === 'modr') { x.font = f(22); x.textAlign = kind === 'mod' ? 'right' : 'left'; x.fillText(alt, kind === 'mod' ? W - pad : pad, pad + 14); x.font = f(15); x.textAlign = kind === 'mod' ? 'left' : 'right'; x.fillText(main, kind === 'mod' ? pad : W - pad, Hh - pad - 8); }
+    else if (kind === 'arrow') { x.font = f(18); x.textAlign = 'center'; x.fillText(main, W / 2, Hh / 2 + 1); }
+    else if (kind === 'power') { x.strokeStyle = '#fff'; x.lineWidth = 2.5; x.beginPath(); x.arc(W / 2, Hh / 2, Hh * .26, 0, Math.PI * 2); x.stroke(); } }); }
+function build() { for (const o of [...KB.children]) { KB.remove(o); o.traverse(c => { c.geometry?.dispose(); if (c.material?.map) c.material.map.dispose(); }); } sils = []; kbKeys = []; kbHover = kbHeld = null;
+  const rowsH = KB_ROWS.reduce((a, r) => a + r.h, 0), BW = 15 * KB_U + .36, BD = rowsH * KB_U + .36, base = prism(BW, BD, KB_BASE, .26, KB); base.g.position.y = -KB_BASE;
+  let z = -rowsH * KB_U / 2;
+  const add = (spec, x, zc, w, h) => { const g = new THREE.Group(); g.position.set(x, 0, zc); KB.add(g); const cw = w * KB_U - KB_GAP, cd = h * KB_U - KB_GAP;
+    const pr = prism(cw, cd, KB_T, Math.min(.055, cw / 2 - .001, cd / 2 - .001), g);
+    const k = { g, pr, m: pr.m, spec, code: spec[2], w, h, big: w >= 1.5 || spec[3] === 'space', d: { p: 0 }, down: false, lines: pr.lines };
+    const lm = new THREE.MeshBasicMaterial({ map: kbLegend(k), transparent: true, depthWrite: false }), lg = new THREE.Mesh(new THREE.PlaneGeometry(cw * .94, cd * .94).rotateX(-Math.PI / 2), lm); lg.position.y = KB_T + .002; pr.g.add(lg); k.legend = lg;
+    kbKeys.push(k); return k; };
+  for (const row of KB_ROWS) { let x = -15 * KB_U / 2; const zc = z + row.h * KB_U / 2;
+    for (const spec of row.keys) { const w = spec[1];
+      if (spec[0] === 'ARROWS') { const hz = KB_U / 4; add(['◀', 1, 'ArrowLeft', 'arrow'], x + KB_U / 2, zc + hz, 1, .5); add(['▲', 1, 'ArrowUp', 'arrow'], x + KB_U * 1.5, zc - hz, 1, .5); add(['▼', 1, 'ArrowDown', 'arrow'], x + KB_U * 1.5, zc + hz, 1, .5); add(['▶', 1, 'ArrowRight', 'arrow'], x + KB_U * 2.5, zc + hz, 1, .5); x += 3 * KB_U; continue; }
+      add(spec, x + w * KB_U / 2, zc, w, row.h); x += w * KB_U; }
+    z += row.h * KB_U; }
+  paint(); }
+// (a key goes down with a click and comes back with a softer one; the cap gives at the top, its foot stays on the slab, so the line
+// where it meets the slab is always drawn. No sound for the pointer passing over: the click is the sound)
+function kbPress(k, on) { if (!k || k.down === on) return; k.down = on; if (!BARE) SFX.key(k.big, !on); paint(); wake(); }
+function paint() { const c = PAL[mode]; M.fill.color.set(c.fill); M.line.color.set(c.line); M.hi.color.set(c.hi); plate.style.background = c.bg;
+  for (const k of kbKeys) { const on = k === kbHover || k.down; for (const l of k.lines) l.material = on ? M.hi : M.line; k.legend.material.color.set(c.hi); k.legend.material.opacity = on ? 1 : .55; } wake(); }
+
+// ---------- light and dark ----------
+let mode = BARE ? (q.get('mode') === 'dark' ? 'dark' : 'light') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { }
+  document.body.classList.toggle('light', m === 'light'); document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#121314' : '#f4f3ef'; paint(); }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the view ----------
+const VIEW = { az: .22, el: .78, dAz: { p: 0 }, dEl: { p: 0 }, tAz: 0, tEl: 0, z: { p: 1 }, tz: 1 };
+const zoomBy = f => { VIEW.tz = Math.max(.45, Math.min(3, VIEW.tz * f)); wake(); };
+$('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25); $('zreset').onclick = () => { VIEW.tAz = VIEW.tEl = 0; VIEW.tz = 1; wake(); };
+// (on the board, the live box draws into the still's own frame, cropped to the box the way the still's picture is covered into it)
+let W = 1, H = 1; const FRAME = 450 / 240;
+new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
+  if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
+  renderer.setSize(W, H, false); wake(); }).observe(plate);
+function placeCam() { const a = W / H, S = Math.max(4.6, 9.2 / a) / VIEW.z.p, az = VIEW.az + VIEW.dAz.p, el = Math.max(.06, Math.min(1.45, VIEW.el + VIEW.dEl.p));
+  cam.left = -S * a / 2; cam.right = S * a / 2; cam.top = S / 2; cam.bottom = -S / 2; cam.updateProjectionMatrix();
+  cam.position.set(Math.sin(az) * Math.cos(el) * 80, Math.sin(el) * 80, Math.cos(az) * Math.cos(el) * 80); cam.lookAt(0, 0, 0); }
+
+// ---------- the pointer and your own keyboard ----------
+let orbit = null;
+const setNdc = e => { const r = plate.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); };
+if (!DEMO) {
+  plate.addEventListener('pointerdown', e => { if (e.button !== 0) return; setNdc(e); const h = hitOf(kbKeys.map(k => k.m)); try { plate.setPointerCapture(e.pointerId); } catch { }
+    if (h) { kbHeld = kbKeys.find(k => k.m === h.object); kbPress(kbHeld, true); return; }
+    orbit = { x: e.clientX, y: e.clientY, az: VIEW.tAz, el: VIEW.tEl }; plate.classList.add('dragging'); });
+  plate.addEventListener('pointermove', e => { setNdc(e);
+    if (orbit) { VIEW.tAz = orbit.az - (e.clientX - orbit.x) * .006; VIEW.tEl = Math.max(-.6, Math.min(.7, orbit.el + (e.clientY - orbit.y) * .004)); VIEW.dAz.p = VIEW.tAz; VIEW.dEl.p = VIEW.tEl; wake(); return; }
+    const h = hitOf(kbKeys.map(k => k.m)), k = h ? kbKeys.find(q => q.m === h.object) : null; if (k !== kbHover) { kbHover = k; paint(); } plate.classList.toggle('over', !!k); });
+  const up = () => { if (kbHeld) { kbPress(kbHeld, false); kbHeld = null; } orbit = null; plate.classList.remove('dragging'); }; plate.addEventListener('pointerup', up); plate.addEventListener('pointercancel', up);
+  plate.addEventListener('pointerleave', () => { if (!orbit && kbHover) { kbHover = null; plate.classList.remove('over'); paint(); } });
+  plate.addEventListener('wheel', e => { e.preventDefault(); zoomBy(Math.exp(-e.deltaY * .0015)); }, { passive: false });
+  addEventListener('keydown', e => { if (e.target.closest?.('input, .panel')) return; if (e.key === 'Escape' && document.body.classList.contains('tuning')) { openPanel(false); return; }
+    const k = kbKeys.find(q => q.code === e.code); if (!k) return; if (!['F5', 'F11', 'F12'].includes(e.code) && !(e.metaKey && e.code !== 'MetaLeft' && e.code !== 'MetaRight')) e.preventDefault(); if (!e.repeat) kbPress(k, true); }, true);
+  addEventListener('keyup', e => { const k = kbKeys.find(q => q.code === e.code); if (k) kbPress(k, false); }, true);
+  addEventListener('blur', () => { for (const k of kbKeys) if (k.down) kbPress(k, false); });
+}
+
+// ---------- the frame ----------
+let raf = 0; const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
+function frame() { raf = 0; let busy = false;
+  for (const k of kbKeys) { if (ease(k.d, k.down ? 1 : 0, k.down ? .55 : .3)) busy = true; k.pr.g.scale.y = 1 - k.d.p * P.travel; }
+  if (ease(VIEW.z, VIEW.tz, .14)) busy = true; if (!orbit) { if (ease(VIEW.dAz, VIEW.tAz, .1)) busy = true; if (ease(VIEW.dEl, VIEW.tEl, .1)) busy = true; }
+  placeCam(); updateSils(); renderer.render(scene, cam); if (busy || orbit) wake(); }
+
+// ---------- the panel ----------
+const panel = $('panel'); let ctl = {};
+function buildPanel() { panel.innerHTML = ''; ctl = {};
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Keyboard</h2><p>A flat low-profile keyboard: click a key, or type on your own; each key goes down with a soft click.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); wake(); };
+  const sl = (g, k, label, min, max, st, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step: st, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g0 = LabUI.group(panel, 'Keys', { key: KEY + '.g.keys' }); sl(g0, 'travel', 'Travel', .2, .8, .05);
+  const gs = LabUI.group(panel, 'Sound', { key: KEY + '.g.sound' }); ctl.sound = LabUI.check(gs, { label: 'Sound', value: P.sound, onChange: v => set('sound', v) }); sl(gs, 'vol', 'Volume', 0, 1, .05);
+  ctl.click = LabUI.seg(gs, { label: 'Click', options: [['soft', 'Soft'], ['thock', 'Thock'], ['crisp', 'Crisp']], value: P.click, onChange: v => { set('click', v); SFX.key(false); setTimeout(() => SFX.key(false, true), 90); } });
+  { const r = document.createElement('div'); r.className = 'ui-row'; r.innerHTML = '<span class="ui-label">Hear it</span><button type="button" class="play-intro">Test</button>'; gs.appendChild(r); r.querySelector('button').onclick = () => { SFX.key(false); setTimeout(() => SFX.key(false, true), 90); }; }
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); buildPanel(); wake(); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+
+// ---------- start; the board's box: ?thumb=1 the still, ?demo=1 the keys typing a few words on their own ----------
+if (BARE) document.body.classList.add('bare');
+setMode(mode); build(); buildPanel(); LabUI.segThumb($('mode'));
+document.fonts.ready.then(() => { for (const k of kbKeys) { k.legend.material.map.dispose(); k.legend.material.map = kbLegend(k); } wake(); });   // (the legends again once the type is in)
+if (DEMO) { const words = ['hello lab', 'line style', 'soft keys'], codeOf = ch => ch === ' ' ? 'Space' : 'Key' + ch.toUpperCase(); let w = 0;
+  const type = async () => { await new Promise(r => setTimeout(r, 900)); for (;;) { for (const ch of words[w++ % words.length]) { const k = kbKeys.find(q => q.code === codeOf(ch)); kbPress(k, true); await new Promise(r => setTimeout(r, 110)); kbPress(k, false); await new Promise(r => setTimeout(r, 70 + Math.random() * 90)); }
+    const r = kbKeys.find(q => q.code === 'Enter'); kbPress(r, true); await new Promise(res => setTimeout(res, 140)); kbPress(r, false); await new Promise(res => setTimeout(res, 1300)); } }; type(); }
+window.KEYS = { P: () => P, keys: () => kbKeys, press: kbPress, sfx: SFX };
+</script>
+</body>
+</html>
