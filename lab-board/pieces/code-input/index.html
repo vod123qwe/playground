@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Code Input · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* A one-time code field, as in signing up with a phone: two rounded boxes of three slots, thin dividers between them, the code
+     typed in as one. Empty, each slot holds a small asterisk, a cipher waiting; a digit coming in turns it away. With the last one in,
+     a short beat of checking, then the verdict: a wrong code shakes the row left and right, small and dying away, the boxes go red,
+     and the digits leave one by one from the right (the asterisks coming back) until the caret is in the first slot again; a right
+     one turns them green. No copy but the verdict. One real input under the boxes (numeric keyboard, SMS autofill, paste); the boxes
+     only draw it. Light or dark on top; Customize tunes the shake and the beat. */
+  :root { --bg: #f3f2ee; --ink: #1b1c20; --muted: rgba(20,20,20,.52); --box: #fff; --line: rgba(20,20,20,.12); --line-hi: rgba(20,20,20,.28);
+    --ph: rgba(20,20,20,.3); --bad: #d2463f; --good: #1d9a57; --ease: cubic-bezier(.22,.61,.36,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; transition: background .4s; -webkit-font-smoothing: antialiased; }
+  body.dark { --bg: #0e0e10; --ink: #f2f2f0; --muted: rgba(255,255,255,.5); --box: #1c1c1f; --line: rgba(255,255,255,.1); --line-hi: rgba(255,255,255,.3); --ph: rgba(255,255,255,.32); --bad: #ff6a5f; --good: #3dcb7f; }
+  /* (Customize: the page draws back to a lighter ground and the stage morphs into a rounded box beside the card) */
+  :root { --page: #fff; --boxbg: #f3f2ee; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  body.dark { --page: #17181b; --boxbg: #151517; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { background: var(--boxbg); border-radius: 26px; }
+  .hold { --k: 1; position: relative; display: grid; justify-items: center; scale: var(--k); }
+  /* the field: rounded boxes of slots, a hairline between slots; the one real input lying over them all */
+  .otp { position: relative; display: flex; gap: 12px; }
+  .grp { display: flex; align-items: center; height: 76px; padding: 0 8px; border-radius: 26px; background: var(--box); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .2s var(--ease); }
+  .otp.focus .grp.on { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .otp.bad .grp { box-shadow: inset 0 0 0 1.5px var(--bad); } .otp.good .grp { box-shadow: inset 0 0 0 1.5px var(--good); }
+  .sep { flex: none; width: 1px; height: 28px; background: var(--line); }
+  .cell { position: relative; width: 50px; height: 100%; display: grid; place-items: center; font: 600 30px/1 var(--lab-font); font-variant-numeric: tabular-nums; transition: color .25s; }
+  .cell > * { grid-area: 1 / 1; }
+  .cell .star { width: 12px; height: 12px; color: var(--ph); transition: transform .32s var(--ease), opacity .22s; }
+  .cell.full .star, .otp.focus .cell.on .star { transform: scale(0) rotate(90deg); opacity: 0; }   /* (the asterisk turns away for a digit, or for the caret) */
+  .cell .caret { width: 2px; height: 30px; border-radius: 1px; background: var(--ink); opacity: 0; }
+  .otp.focus .cell.on .caret { animation: blink 1.05s steps(1) infinite; }
+  @keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+  .otp.bad .cell { color: var(--bad); } .otp.good .cell { color: var(--good); }
+  .otp.busy .cell .d { opacity: .45; transition: opacity .2s; }
+  .otp input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; outline: none; background: transparent; color: transparent; caret-color: transparent;
+    font-size: 16px; letter-spacing: 40px; cursor: text; -webkit-text-fill-color: transparent; }
+  .otp input::selection { background: transparent; }
+  /* the verdict, the only words: under the field, out of the layout so the field stays in the middle */
+  .msg { position: absolute; top: 100%; left: 50%; height: 20px; margin-top: 16px; white-space: nowrap; font-size: 13.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;
+    opacity: 0; translate: -50% -4px; transition: opacity .2s, translate .25s var(--ease); }
+  .msg.show { opacity: 1; translate: -50% 0; } .msg.bad { color: var(--bad); } .msg.good { color: var(--good); } .msg svg { width: 16px; height: 16px; }
+  /* the corner controls (as on every piece) */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); transition: left .45s var(--ease); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel { display: none; }
+  /* the panel: a card beside the stage (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; }
+    body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; } }
+  @media (max-width: 420px) { .cell { width: 38px; font-size: 24px; } .grp { height: 60px; padding: 0 4px; border-radius: 19px; } .otp { gap: 8px; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage"><div class="hold" id="hold">
+<div class="otp" id="otp"><input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" aria-label="Verification code" aria-describedby="msg"></div>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+</div></main>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the code input"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.code-input.v1';
+const DEF = { digits: 6, split: true, outcome: 'wrong', check: 380, dist: 8, shake: 440, swings: 4, hold: 260, stagger: 40, haptic: true, size: 1 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), otp = $('otp'), inp = $('code'), msg = $('msg');
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+// ---------- the boxes: drawn from the input's value; the one the next digit goes into is "on" ----------
+let cells = [], val = '', busy = false, tries = 0, fake = false;   // (fake: the board's still shows the focus without the page having it)
+const STAR = '<svg class="star" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1v10M1.67 3.5l8.66 5M1.67 8.5l8.66-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+let groups = [];
+function build() { otp.querySelectorAll('.grp').forEach(n => n.remove());
+  cells = []; groups = []; const half = P.split && P.digits % 2 === 0 ? P.digits / 2 : P.digits; let g = null;
+  for (let i = 0; i < P.digits; i++) { if (i % half === 0) { g = document.createElement('div'); g.className = 'grp'; g.setAttribute('aria-hidden', 'true'); otp.insertBefore(g, inp); groups.push(g); }
+    else { const sep = document.createElement('span'); sep.className = 'sep'; g.appendChild(sep); }
+    const c = document.createElement('span'); c.className = 'cell'; c.innerHTML = '<span class="d"></span>' + STAR + '<span class="caret"></span>'; c._g = g; g.appendChild(c); cells.push(c); }
+  inp.maxLength = P.digits; inp.setAttribute('aria-label', `Verification code, ${P.digits} digits`); val = ''; inp.value = ''; paint(); }
+function paint(fresh = -1) { const on = Math.min(val.length, P.digits - 1);
+  cells.forEach((c, i) => { const d = val[i] || '', el = c.firstChild; if (el.textContent !== d) el.textContent = d;
+    c.classList.toggle('full', !!d); c.classList.toggle('on', i === on && !busy && (val.length < P.digits || i === P.digits - 1));
+    if (i === fresh && d && !still()) el.animate([{ opacity: 0, transform: 'translateY(8px) scale(.82)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.22,.61,.36,1)' }); });
+  groups.forEach(g => g.classList.toggle('on', !busy && !!g.querySelector('.cell.on')));
+  otp.classList.toggle('focus', fake || document.activeElement === inp); }
+inp.addEventListener('focus', () => paint()); inp.addEventListener('blur', () => paint());
+inp.addEventListener('input', () => { if (busy) { inp.value = val; return; }
+  const next = inp.value.replace(/\D/g, '').slice(0, P.digits), grew = next.length > val.length; val = next; inp.value = val;
+  if (val.length && msg.classList.contains('bad')) say('');   // (typing again: the message goes)
+  paint(grew ? val.length - 1 : -1); if (val.length === P.digits) verify(); });
+// (the caret always sits at the end: a click anywhere on the boxes types on, it never lands between digits)
+const toEnd = () => { const n = inp.value.length; try { inp.setSelectionRange(n, n); } catch { } };
+['click', 'keyup', 'select'].forEach(t => inp.addEventListener(t, toEnd));
+inp.addEventListener('keydown', e => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'ArrowUp', 'ArrowDown'].includes(e.key)) e.preventDefault(); });
+
+const ICON = { bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>',
+  good: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' };
+function say(text, kind) { msg.className = 'msg' + (text ? ' show ' + kind : ''); if (text) msg.innerHTML = ICON[kind] + '<span></span>', msg.lastChild.textContent = text; }
+
+// ---------- the verdict ----------
+// (a beat of checking; then wrong: the row shakes, small and dying away (each swing smaller than the last), red; a short hold; the
+// digits leave from the right, one by one, and the caret is back in the first box. Right: green and a tick, then it starts over)
+function shakeFrames() { const f = [{ transform: 'translateX(0)' }], n = Math.max(1, Math.round(P.swings));
+  for (let i = 0; i < n; i++) { const a = P.dist * (1 - i / n), s = i % 2 ? 1 : -1; f.push({ transform: `translateX(${s * a}px)` }); }
+  f.push({ transform: 'translateX(0)' }); return f; }
+async function verify() { busy = true; tries++; otp.classList.add('busy'); paint(); await wait(P.check); otp.classList.remove('busy');
+  const ok = P.outcome === 'right' || (P.outcome === 'alternate' && tries % 2 === 0);
+  if (ok) { otp.classList.add('good'); say('Verified', 'good'); await wait(1800); otp.classList.remove('good'); say(''); await clear(); busy = false; paint(); return; }
+  otp.classList.add('bad'); say('That code didn’t work. Try again.', 'bad');
+  if (P.haptic && !BARE && navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) try { navigator.vibrate([18, 40, 18]); } catch { }
+  if (!still()) await otp.animate(shakeFrames(), { duration: P.shake, easing: 'cubic-bezier(.36,.07,.19,.97)' }).finished;
+  await wait(P.hold); otp.classList.remove('bad'); await clear(); busy = false; paint(); }
+async function clear() { for (let i = val.length - 1; i >= 0; i--) { const el = cells[i].firstChild;
+    if (!still() && P.stagger) { el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-6px) scale(.82)' }], { duration: 160, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' }); }
+    val = val.slice(0, i); setTimeout(() => cells[i] && cells[i].classList.remove('full'), still() ? 0 : 90); if (!still() && P.stagger) await wait(P.stagger); }
+  await wait(still() || !P.stagger ? 0 : 160); inp.value = ''; cells.forEach(c => c.firstChild.getAnimations().forEach(a => a.cancel())); paint(); }
+
+// ---------- light and dark ----------
+let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0e0e10' : '#f3f2ee'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function apply(rebuild) { $('hold').style.setProperty('--k', P.size); if (rebuild) build(); }
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The code, the verdict, and how the row shakes off a wrong one.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v, re) => { P[k] = v; save(); apply(re); };
+  const sl = (g, k, label, min, max, step, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g0 = LabUI.group(panel, 'Code', { key: KEY + '.g.code' });
+  ctl.digits = LabUI.seg(g0, { label: 'Digits', options: [[4, '4'], [5, '5'], [6, '6']], value: P.digits, onChange: v => set('digits', +v, true) });
+  ctl.split = LabUI.check(g0, { label: 'Split in half', value: P.split, onChange: v => set('split', v, true) });
+  ctl.outcome = LabUI.seg(g0, { label: 'The code is', options: [['wrong', 'Wrong'], ['right', 'Right'], ['alternate', 'In turn']], value: P.outcome, onChange: v => { tries = 0; set('outcome', v); } });
+  const g1 = LabUI.group(panel, 'Shake', { key: KEY + '.g.shake' }); sl(g1, 'dist', 'Distance', 2, 24, 1, 'px'); sl(g1, 'swings', 'Swings', 2, 8, 1); sl(g1, 'shake', 'Time', 200, 1000, 10, 'ms');
+  const g2 = LabUI.group(panel, 'Beat', { key: KEY + '.g.beat' }); sl(g2, 'check', 'Checking', 0, 1200, 20, 'ms'); sl(g2, 'hold', 'Hold the red', 0, 1200, 20, 'ms'); sl(g2, 'stagger', 'Clear one by one', 0, 120, 5, 'ms');
+  ctl.haptic = LabUI.check(g2, { label: 'Buzz on a phone', value: P.haptic, onChange: v => set('haptic', v) });
+  const g3 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' }); sl(g3, 'size', 'Size', .7, 1.8, .05, '×');
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); apply(true); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); if (!on) setTimeout(() => inp.focus({ preventScroll: true }), 300); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+buildPanel(); apply(true); setMode(mode); LabUI.segThumb($('mode'));
+
+// ---------- the board's box: ?thumb=1 the still (four digits in, the caret on the fifth), ?demo=1 a code typed, shaken off, again ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF }; setMode('light'); build(); fake = true;
+  const fit = () => { P.size = Math.max(.6, Math.min(innerWidth / 600, innerHeight / 300)); apply(); }; fit(); addEventListener('resize', fit); }
+if (q.has('thumb')) { val = '4829'; inp.value = val; paint(); }
+else if (DEMO) { document.documentElement.style.visibility = 'hidden'; document.fonts.ready.then(() => requestAnimationFrame(() => { document.documentElement.style.visibility = ''; }));
+  // (it starts from the still on the board, four digits in, so the live box lands on the picture under it, and types on)
+  (async () => { await document.fonts.ready; const codes = ['482915', '730264', '159083']; val = '4829'; inp.value = val; paint(); await wait(700);
+    for (let n = 0; ; n++) { for (const ch of codes[n % codes.length].slice(val.length)) { val += ch; inp.value = val; paint(val.length - 1); await wait(150 + Math.random() * 90); }
+      await verify(); await wait(1300); } })(); }
+else setTimeout(() => inp.focus({ preventScroll: true }), 150);
+window.CODE = { get P() { return P; }, verify, build };
+</script>
+</body>
+</html>

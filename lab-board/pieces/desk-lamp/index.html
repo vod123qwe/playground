@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../shared/lab-lock.js?v=3"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Desk Lamp · lab</title>
+<meta name="theme-color" content="#0e0e10">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* A desk lamp, flat and plain, in the dark: one grey silhouette (a drum base, two rigid arms with joints, a bell shade), but built
+     in 3D, so it turns all the way round and shows its depth: the arms foreshorten, the shade's lit opening shows from the front and
+     hides from behind. Its light is a cone (45° by default) of pure white, hard-edged, out of the opening, ending in a pool on the
+     desk; nothing glows, nothing is blurred. Take the lamp by its base or an arm and move it; take the shade and drag: sideways
+     turns it round, up and down tips the shade. One canvas: the dark, the white light, the lamp drawn over it. */
+  :root { --bg: #0e0e10; --page: #17181b; --morph: .55s cubic-bezier(.3,1.12,.4,1); --ease: cubic-bezier(.22,.61,.36,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--page); font-family: var(--lab-font); overflow: hidden; }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); touch-action: none; transition: inset var(--morph), border-radius var(--morph); }
+  .stage.grab { cursor: grab; } .stage.aim { cursor: ew-resize; } .stage.dragging { cursor: grabbing; }
+  body.tuning .stage { inset: 16px 368px 16px 16px; border-radius: 26px; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .back, .tune { position: fixed; top: 16px; z-index: 6; }
+  body.tuning .back { top: 30px; left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; transition: top var(--morph), left var(--morph), translate .2s var(--ease); }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  body.bare .back, body.bare .tune, body.bare .panel { display: none; }
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(255,255,255,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .back { top: 18px; left: 18px; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="A desk lamp in the dark: drag the lamp to move it, drag the shade sideways to turn it round and up or down to tip it"><canvas id="cv"></canvas></main>
+<aside class="panel lab-ui soft dark" id="panel" aria-label="Customize the lamp"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.desk-lamp.v1';
+const DEF = { cone: 45, view: 16, size: 1 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === 'number') p[k] = o[k]; } catch { } return p; })();   // (only the settings that still exist)
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+
+// ---------- the lamp: a small 3D body, drawn flat ----------
+// (its own units, y up, the desk at y = 0, the base's centre at the origin. The view is a plain orthographic one from a little above,
+// so nothing gets bigger or smaller with distance: the lamp stays a flat silhouette, but turning it shows its depth, the arms
+// foreshortening, the shade's opening coming into view from the front and hiding from behind)
+const L = { x: 0, y: 0, fx: .36, fy: .78, yaw: .45, pitch: 40 * Math.PI / 180 };   // (fx, fy: where the base stands as a share of the stage; yaw turns the whole lamp round, pitch tips the shade)
+const ARM = { pivot: 30, lower: 172, lean: 20, upper: 158, rise: 24 };       // (the pivot's height, the lower arm leaning back, the upper arm rising forward; lengths and degrees)
+const SHADE = { back: 30, len: 112, mouth: 68 };                               // (the radius of its rounded back, its length, the radius of its opening)
+let W = 1, H = 1, dpr = 1, unit = 1;
+function size() { dpr = Math.min(devicePixelRatio || 1, 2); W = stage.clientWidth || 1; H = stage.clientHeight || 1; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  unit = Math.min(W, H) / 680 * P.size; L.x = L.fx * W; L.y = L.fy * H; draw(); }
+new ResizeObserver(size).observe(stage);
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], norm = a => mul(a, 1 / (Math.hypot(...a) || 1));
+const rad = d => d * Math.PI / 180;
+let view = { c: 1, s: 0 };
+const proj = p => [L.x + p[0] * unit, L.y - (p[1] * view.c - p[2] * view.s) * unit];
+const toEye = () => [0, view.s, view.c];                                      // (from the lamp towards the viewer)
+function pose() {                                                             // (where every part is, for the lamp's yaw and the shade's pitch)
+  const f = [Math.cos(L.yaw), 0, Math.sin(L.yaw)], up = [0, 1, 0];
+  const p0 = [0, ARM.pivot, 0], p1 = add(p0, add(mul(f, -Math.sin(rad(ARM.lean)) * ARM.lower), mul(up, Math.cos(rad(ARM.lean)) * ARM.lower)));
+  const p2 = add(p1, add(mul(f, Math.cos(rad(ARM.rise)) * ARM.upper), mul(up, Math.sin(rad(ARM.rise)) * ARM.upper)));
+  const a = norm(add(mul(f, Math.cos(L.pitch)), mul(up, -Math.sin(L.pitch))));   // (the shade's axis: pitch 0 is level, 90° straight down)
+  const e1 = norm(cross(f, up)), e2 = norm(cross(a, e1));                      // (across the shade: e1 is always level, so this never degenerates)
+  return { f, p0, p1, p2, a, e1, e2 }; }
+function ring(c, e1, e2, r, n) { const out = []; for (let k = 0; k < n; k++) { const t = k / n * Math.PI * 2; out.push(add(c, add(mul(e1, Math.cos(t) * r), mul(e2, Math.sin(t) * r)))); } return out; }
+function hull(pts) { pts = pts.slice().sort((p, q) => p[0] - q[0] || p[1] - q[1]); if (pts.length < 3) return pts;
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], hi = [];
+  for (const p of pts) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (hi.length > 1 && cr(hi[hi.length - 2], hi[hi.length - 1], p) <= 0) hi.pop(); hi.push(p); }
+  return lo.slice(0, -1).concat(hi.slice(0, -1)); }
+const poly = (path, pts) => { pts.forEach((p, i) => i ? path.lineTo(p[0], p[1]) : path.moveTo(p[0], p[1])); path.closePath(); };
+
+// ---------- drawing: the dark, the white light, the lamp over it in one flat grey ----------
+// (the light: the cone out of the shade's opening, each of its edge rays stopped where it meets the desk, so a pool of white lies on
+// the desk and the beam joins it to the shade; aimed up, it runs on out past the edges. Two colours only, no glow, no blur)
+const GREY = '#5c5c63', LIGHT = '#fff';
+function draw() {
+  view = { c: Math.cos(rad(P.view)), s: Math.sin(rad(P.view)) };
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const k = pose(), { a, e1, e2 } = k, half = rad(Math.max(5, Math.min(P.cone / 2, 75))), far = 6000;
+  const mouthC = add(k.p2, mul(a, SHADE.len)), apex = add(mouthC, mul(a, -SHADE.mouth / Math.tan(half)));
+  // (the light)
+  const beam = [];
+  for (const m of ring(mouthC, e1, e2, SHADE.mouth, 72)) { const d = norm(add(m, mul(apex, -1))); let t = far; if (d[1] < -1e-4) t = Math.min(far, Math.max(0, -m[1] / d[1]));
+    beam.push(proj(m), proj(add(m, mul(d, t)))); }
+  ctx.fillStyle = LIGHT; const bp = new Path2D(); poly(bp, hull(beam)); ctx.fill(bp);
+  ctx.fillStyle = GREY; ctx.strokeStyle = GREY; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // (the base: a low drum on the desk, a collar on it)
+  const base = new Path2D(), X = [1, 0, 0], Z = [0, 0, 1];
+  poly(base, hull([...ring([0, 0, 0], X, Z, 72, 48), ...ring([0, 16, 0], X, Z, 68, 48)].map(proj)));
+  poly(base, hull([...ring([0, 14, 0], X, Z, 20, 24), ...ring([0, ARM.pivot, 0], X, Z, 16, 24)].map(proj))); ctx.fill(base);
+  // (the arms: rigid, straight, a joint at each end)
+  const P0 = proj(k.p0), P1 = proj(k.p1), P2 = proj(k.p2);
+  ctx.lineWidth = 13 * unit; ctx.beginPath(); ctx.moveTo(...P0); ctx.lineTo(...P1); ctx.lineTo(...P2); ctx.stroke();
+  for (const [p, r] of [[P0, 13], [P1, 11], [P2, 12]]) { ctx.beginPath(); ctx.arc(p[0], p[1], r * unit, 0, Math.PI * 2); ctx.fill(); }
+  // (the shade: a rounded back flaring out into a bell, drawn as the union of its rings, so its outline is right from any side)
+  // (each pair of neighbouring rings is one short frustum, its outline the hull of the two; their union is smooth from any side)
+  const shade = new Path2D(); let prev = null;
+  for (let i = 0; i <= 30; i++) { const u = -SHADE.back + i / 30 * (SHADE.back + SHADE.len), r = u < 0 ? Math.sqrt(Math.max(0, SHADE.back ** 2 - u * u)) : SHADE.back + (SHADE.mouth - SHADE.back) * (u / SHADE.len) ** 2;
+    const rp = ring(add(k.p2, mul(a, u)), e1, e2, Math.max(r, .01), 48).map(proj); if (prev) poly(shade, hull([...prev, ...rp])); prev = rp; }
+  ctx.fill(shade);
+  // (the opening: seen only from the front, white, the light inside)
+  if (dot(a, toEye()) > 0) { const mp = new Path2D(); poly(mp, ring(mouthC, e1, e2, SHADE.mouth, 64).map(proj)); ctx.fillStyle = ctx.strokeStyle = LIGHT; ctx.lineWidth = 1.5; ctx.fill(mp); ctx.stroke(mp); }   // (a hairline of white so no seam shows against the beam)
+  hit.base = base; hit.shade = shade; hit.arm = [P0, P1, P2]; }
+const hit = {};
+const nearArm = (x, y) => { const [a, b, c] = hit.arm || []; if (!a) return false; const d = (p, q) => { const vx = q[0] - p[0], vy = q[1] - p[1], t = Math.max(0, Math.min(1, ((x - p[0]) * vx + (y - p[1]) * vy) / (vx * vx + vy * vy || 1))); return Math.hypot(x - p[0] - vx * t, y - p[1] - vy * t); };
+  return Math.min(d(a, b), d(b, c)) < 16 * unit; };
+function partAt(x, y) { if (hit.shade && ctx.isPointInPath(hit.shade, x * dpr, y * dpr)) return 'shade';
+  if (hit.base && ctx.isPointInPath(hit.base, x * dpr, y * dpr)) return 'body'; if (nearArm(x, y)) return 'body'; return null; }
+
+// ---------- the hand: move the lamp by its base or arms; take the shade to turn it all the way round and tip it ----------
+// (the shade works like a turntable: drag sideways and the lamp turns about its stand, any amount, round and round; drag up or down
+// and the shade tips, from pointing at the ceiling to pointing back under itself)
+let drag = null;
+const local = e => { const r = stage.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+if (!DEMO) {
+  stage.addEventListener('pointerdown', e => { const [x, y] = local(e), part = partAt(x, y); if (!part) return;
+    drag = { part, x, y, dx: x - L.x, dy: y - L.y, yaw: L.yaw, pitch: L.pitch }; stage.classList.add('dragging'); try { stage.setPointerCapture(e.pointerId); } catch { } });
+  stage.addEventListener('pointermove', e => { const [x, y] = local(e); if (drag) { handle(x, y); return; } const part = partAt(x, y); stage.classList.toggle('grab', part === 'body'); stage.classList.toggle('aim', part === 'shade'); });
+  const up = () => { drag = null; stage.classList.remove('dragging'); }; stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+}
+function handle(x, y) { if (drag.part === 'body') { L.x = Math.max(40, Math.min(W - 40, x - drag.dx)); L.y = Math.max(80, Math.min(H - 6, y - drag.dy)); L.fx = L.x / W; L.fy = L.y / H; }
+  else { L.yaw = drag.yaw - (x - drag.x) * .011; L.pitch = Math.max(rad(-80), Math.min(rad(150), drag.pitch + (y - drag.y) * .009)); }
+  draw(); }
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Lamp</h2><p>Move it by its base or an arm. Take the shade: sideways turns the lamp round, all the way; up and down tips the shade.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); size(); };
+  const sl = (g, k, label, min, max, step, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g = LabUI.group(panel, 'Light', { key: KEY + '.g.light' }); sl(g, 'cone', 'Cone', 15, 120, 1, '°');
+  const g2 = LabUI.group(panel, 'Lamp', { key: KEY + '.g.lamp' }); sl(g2, 'size', 'Size', .5, 1.8, .05, '×'); sl(g2, 'view', 'View from above', 0, 45, 1, '°');
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); size(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- the board's box: ?thumb=1 the still, ?demo=1 the shade sweeping slowly ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF }; }
+buildPanel(); size();
+if (DEMO) { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; L.yaw = .45 + t * .5; draw(); requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
+window.LAMP = { L, draw, size, get P() { return P; } };
+</script>
+</body>
+</html>
