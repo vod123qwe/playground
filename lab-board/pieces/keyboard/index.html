@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script src="../../shared/lab-lock.js?v=3"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Keyboard · lab</title>
 <meta name="theme-color" content="#f4f3ef">
@@ -14,14 +13,14 @@
   /* A flat Mac keyboard drawn like Line Interactions: low keys in an aluminium slab, thin lines over quiet fills, every key a rounded
      cap with its legend printed on top in the lab's type, the keys laid out as on a flat low-profile keyboard with command and option keys. Point at a key and it lights; click it, or type
      on your own keyboard, and it goes down with a soft click and comes back up (the click synthesised on the spot, Soft, Thock or Crisp).
-     Drag the ground to turn it, the wheel or − / + to zoom. */
+     The view is fixed, straight on; the wheel or − / + zooms. */
   :root { --page: #17181b; --plate: #121314; --morph: .55s cubic-bezier(.3,1.12,.4,1); --ease: cubic-bezier(.22,.61,.36,1); }
   body.light { --page: #fff; --plate: #f4f3ef; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
   body { background: var(--page); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
   .plate { position: fixed; inset: 0; overflow: hidden; touch-action: none; cursor: move; background: var(--plate); transition: inset var(--morph), border-radius var(--morph), background-color .4s; }
-  .plate.over { cursor: pointer; } .plate.dragging, .plate.dragging * { cursor: grabbing; }
+  .plate.over { cursor: pointer; }
   body.tuning .plate { inset: 16px 368px 16px 16px; border-radius: 26px; }
   .plate canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; }
@@ -63,7 +62,7 @@
 <a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
 <div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
 <button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
-<main class="plate" id="plate" aria-label="A flat keyboard: click a key or type on your own keyboard; drag the ground to turn it"></main>
+<main class="plate" id="plate" aria-label="A flat keyboard: click a key or type on your own keyboard"></main>
 <p class="hint">Click a key, or type</p>
 <div class="view" role="group" aria-label="The view">
   <button type="button" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg></button>
@@ -80,7 +79,7 @@ import * as THREE from 'three';
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.keyboard.v1';
-const DEF = { sound: true, vol: .6, click: 'soft', travel: .55 };
+const DEF = { sound: true, vol: .6, click: 'soft', travel: .55, light: true };
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const $ = id => document.getElementById(id), plate = $('plate');
@@ -148,6 +147,7 @@ const SFX = {
   tick(step, k = 'tick') { if (!rate(k, 55)) return; const c = snd(); if (!c) return; const t = c.currentTime, f = 520 * 2 ** (PENTA[Math.max(0, Math.min(PENTA.length - 1, step))] / 12);
     tone(c, t, f, 'sine', .07, .09, f * .985, .006); },
   press() { const c = snd(); if (!c) return; const t = c.currentTime; tone(c, t, 240, 'sine', .22, .12, 170, .004); burst(c, t, 900, .7, .12, .04, 'lowpass'); },
+  detent() { if (!rate('det', 25)) return; const c = snd(); if (!c) return; const t = c.currentTime; burst(c, t, 2400, 2, .1, .007, 'bandpass'); },   // (the knob's notches)
   thud() { const c = snd(); if (!c) return; const t = c.currentTime; tone(c, t, 150, 'sine', .3, .2, 85, .004); burst(c, t, 500, .7, .18, .08, 'lowpass'); } };
 for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => { if (P.sound) snd(); }, { capture: true });   // (made, or woken, inside the first gesture, so the browser lets it sound)
 
@@ -172,96 +172,189 @@ function kbLegend(k) { const pw = 96, W = Math.round(k.w * pw), Hh = Math.round(
     else if (kind === 'mod' || kind === 'modr') { x.font = f(22); x.textAlign = kind === 'mod' ? 'right' : 'left'; x.fillText(alt, kind === 'mod' ? W - pad : pad, pad + 14); x.font = f(15); x.textAlign = kind === 'mod' ? 'left' : 'right'; x.fillText(main, kind === 'mod' ? pad : W - pad, Hh - pad - 8); }
     else if (kind === 'arrow') { x.font = f(18); x.textAlign = 'center'; x.fillText(main, W / 2, Hh / 2 + 1); }
     else if (kind === 'power') { x.strokeStyle = '#fff'; x.lineWidth = 2.5; x.beginPath(); x.arc(W / 2, Hh / 2, Hh * .26, 0, Math.PI * 2); x.stroke(); } }); }
-function build() { for (const o of [...KB.children]) { KB.remove(o); o.traverse(c => { c.geometry?.dispose(); if (c.material?.map) c.material.map.dispose(); }); } sils = []; kbKeys = []; kbHover = kbHeld = null;
-  const rowsH = KB_ROWS.reduce((a, r) => a + r.h, 0), BW = 15 * KB_U + .36, BD = rowsH * KB_U + .36, base = prism(BW, BD, KB_BASE, .26, KB); base.g.position.y = -KB_BASE;
-  let z = -rowsH * KB_U / 2;
+// ---------- the control strip behind the keys: a mute slide with its LED, a small screen with two round buttons, a knob that stands up ----------
+// (and on the right side of the slab a little slide for light and dark. Each part is drawn like the keys: rounded solids, thin lines)
+const STRIP = .95, SCREEN = { w: 3.3, d: .5 }, KNOB = { r: .3, h: .3 };
+let strip = {}, capsOn = false, shiftDown = 0, typed = '', presses = [], keyCount = 0, screenMode = 0, overlay = null, ripples = [];
+const SCREENS = ['type', 'stats', 'clock'];
+const scr = (() => { const c = document.createElement('canvas'); c.width = 720; c.height = 110; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return { c, x: c.getContext('2d'), t, dirty: true }; })();
+const wpm = () => { const now = performance.now(); presses = presses.filter(t => now - t < 12000); if (presses.length < 3) return 0; const span = Math.max(3000, now - presses[0]); return Math.round(presses.length / 5 / (span / 60000)); };
+function say(text, ms = 1300) { overlay = { text, until: performance.now() + ms }; scr.dirty = true; wake(); }
+function drawScreen() { const { c, x } = scr, W = c.width, H = c.height, now = performance.now(), mono = n => `500 ${n}px "Geist Mono", ui-monospace, monospace`;
+  x.fillStyle = '#0d0e10'; x.fillRect(0, 0, W, H); x.fillStyle = '#e9e7e0'; x.textBaseline = 'middle';
+  const dim = a => x.fillStyle = `rgba(233,231,224,${a})`;
+  if (overlay && now < overlay.until) { const o = overlay.text;
+    if (o.startsWith('VOLUME')) { x.font = mono(26); dim(.55); x.textAlign = 'left'; x.fillText('VOLUME', 28, 34); dim(1); x.textAlign = 'right'; x.fillText(Math.round(P.vol * 100) + '%', W - 28, 34);
+      const n = 24; for (let i = 0; i < n; i++) { dim(i < Math.round(P.vol * n) ? 1 : .18); x.fillRect(28 + i * ((W - 56) / n), 64, (W - 56) / n - 6, 22); } }
+    else { x.font = mono(34); x.textAlign = 'center'; dim(1); x.fillText(o, W / 2, H / 2); }
+    scr.t.needsUpdate = true; return; }
+  overlay = null; const m = SCREENS[screenMode];
+  if (m === 'type') { x.font = mono(20); x.textAlign = 'left'; dim(.5); x.fillText('TYPE', 28, 26); x.textAlign = 'right'; x.fillText(`${wpm()} WPM`, W - 28, 26);
+    x.font = mono(34); x.textAlign = 'left'; dim(1); const line = typed.slice(-30), caret = Math.floor(now / 530) % 2 === 0; x.fillText(line + (caret ? '▍' : ''), 28, 72); }
+  else if (m === 'stats') { const cells = [['WPM', String(wpm())], ['KEYS', String(keyCount)], ['CLICK', P.click.toUpperCase()], ['SOUND', P.sound ? Math.round(P.vol * 100) + '%' : 'OFF']];
+    cells.forEach(([a, b], i) => { const cx = 28 + i * (W - 56) / 4; x.textAlign = 'left'; x.font = mono(18); dim(.5); x.fillText(a, cx, 30); x.font = mono(32); dim(1); x.fillText(b, cx, 72); }); }
+  else { const d = new Date(), hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0'), colon = d.getSeconds() % 2 === 0;
+    x.font = mono(54); x.textAlign = 'left'; dim(1); x.fillText(hh + (colon ? ':' : ' ') + mm, 28, H / 2 + 2); x.font = mono(20); x.textAlign = 'right'; dim(.5);
+    x.fillText(d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase(), W - 28, H / 2 + 2); }
+  scr.t.needsUpdate = true; }
+setInterval(() => { if (SCREENS[screenMode] !== 'stats' || overlay) { scr.dirty = true; wake(); } }, 500);   // (the caret blinks, the clock's colon too)
+
+function build() { for (const o of [...KB.children]) { KB.remove(o); o.traverse(c => { c.geometry?.dispose(); if (c.material?.map && c.material.map !== scr.t) c.material.map.dispose(); }); } sils = []; kbKeys = []; kbHover = kbHeld = null;
+  const rowsH = KB_ROWS.reduce((a, r) => a + r.h, 0), keysBack = -rowsH * KB_U / 2, BW = 15 * KB_U + .36, BD = rowsH * KB_U + .36 + STRIP, base = prism(BW, BD, KB_BASE, .26, KB);
+  base.g.position.set(0, -KB_BASE, -STRIP / 2); strip.base = base;
+  let z = keysBack;
   const add = (spec, x, zc, w, h) => { const g = new THREE.Group(); g.position.set(x, 0, zc); KB.add(g); const cw = w * KB_U - KB_GAP, cd = h * KB_U - KB_GAP;
-    const pr = prism(cw, cd, KB_T, Math.min(.055, cw / 2 - .001, cd / 2 - .001), g);
-    const k = { g, pr, m: pr.m, spec, code: spec[2], w, h, big: w >= 1.5 || spec[3] === 'space', d: { p: 0 }, down: false, lines: pr.lines };
+    const pr = prism(cw, cd, KB_T, Math.min(.055, cw / 2 - .001, cd / 2 - .001), g), mat = new THREE.LineBasicMaterial({ color: 0xc4c1ba }); for (const l of pr.lines) l.material = mat;
+    const k = { g, pr, m: pr.m, spec, code: spec[2], w, h, x, z: zc, big: w >= 1.5 || spec[3] === 'space', d: { p: 0 }, down: false, glow: 0, mat };
     const lm = new THREE.MeshBasicMaterial({ map: kbLegend(k), transparent: true, depthWrite: false }), lg = new THREE.Mesh(new THREE.PlaneGeometry(cw * .94, cd * .94).rotateX(-Math.PI / 2), lm); lg.position.y = KB_T + .002; pr.g.add(lg); k.legend = lg;
+    if (k.code === 'CapsLock') { const led = new THREE.Mesh(new THREE.CircleGeometry(.032, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x2a2b2f })); led.position.set(-cw / 2 + .1, KB_T + .004, -cd / 2 + .09); pr.g.add(led); strip.capsLed = led; }   // (the caps lock LED, on the key)
     kbKeys.push(k); return k; };
   for (const row of KB_ROWS) { let x = -15 * KB_U / 2; const zc = z + row.h * KB_U / 2;
     for (const spec of row.keys) { const w = spec[1];
       if (spec[0] === 'ARROWS') { const hz = KB_U / 4; add(['◀', 1, 'ArrowLeft', 'arrow'], x + KB_U / 2, zc + hz, 1, .5); add(['▲', 1, 'ArrowUp', 'arrow'], x + KB_U * 1.5, zc - hz, 1, .5); add(['▼', 1, 'ArrowDown', 'arrow'], x + KB_U * 1.5, zc + hz, 1, .5); add(['▶', 1, 'ArrowRight', 'arrow'], x + KB_U * 2.5, zc + hz, 1, .5); x += 3 * KB_U; continue; }
       add(spec, x + w * KB_U / 2, zc, w, row.h); x += w * KB_U; }
     z += row.h * KB_U; }
-  paint(); }
-// (a key goes down with a click and comes back with a softer one; the cap gives at the top, its foot stays on the slab, so the line
-// where it meets the slab is always drawn. No sound for the pointer passing over: the click is the sound)
-function kbPress(k, on) { if (!k || k.down === on) return; k.down = on; if (!BARE) SFX.key(k.big, !on); paint(); wake(); }
+  // (the strip: its parts sit on the slab, centred on a line behind the function row)
+  const sz = keysBack - STRIP / 2 + .02, X0 = -15 * KB_U / 2;
+  // the mute slide: a slot cut into the slab (drawn), a block that slides in it, the LED beside
+  const sl = new THREE.Group(); sl.position.set(X0 + .75, 0, sz); KB.add(sl); segs([...rrect(0, 0, .86, .2, .1, .003)], sl, M.line);
+  const knobS = prism(.34, .16, .07, .07, sl); strip.slide = { g: knobS.g, m: knobS.m, p: { p: P.sound ? 1 : 0 }, lines: knobS.lines };
+  const led = new THREE.Mesh(new THREE.CircleGeometry(.045, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x2a2b2f })); led.position.set(.62, .004, 0); sl.add(led); strip.led = led;
+  segs(circle(.62, 0, .065, .003, 24), sl, M.line);
+  // the screen: a dark glass set into the slab, a thin frame round it
+  const sc = new THREE.Group(); sc.position.set(-.35, 0, sz); KB.add(sc); const frame = prism(SCREEN.w + .14, SCREEN.d + .14, .03, .08, sc);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN.w, SCREEN.d).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: scr.t })); glass.position.y = .032; sc.add(glass); strip.frame = frame;
+  // two round buttons beside it
+  strip.btns = [0, 1].map(i => { const b = new THREE.Group(); b.position.set(-.35 + SCREEN.w / 2 + .38 + i * .42, 0, sz); KB.add(b); const pr = prism(.26, .26, .06, .129, b); return { g: b, pr, m: pr.m, d: { p: 0 }, down: false, lines: pr.lines, act: i ? 'click' : 'screen' }; });
+  // the knob: a short drum standing up, ribbed round its side, a notch on top that shows where it is
+  const kn = new THREE.Group(); kn.position.set(-X0 - .55, 0, sz); KB.add(kn); const turn = new THREE.Group(); kn.add(turn);
+  const kb = prism(KNOB.r * 2, KNOB.r * 2, KNOB.h, KNOB.r - .001, turn), rib = [];
+  for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; rib.push(V(Math.cos(a) * KNOB.r, .05, Math.sin(a) * KNOB.r), V(Math.cos(a) * KNOB.r, KNOB.h - .05, Math.sin(a) * KNOB.r)); }
+  kb.lines.push(segs(rib, turn)); kb.lines.push(segs([V(0, KNOB.h + .003, -KNOB.r * .35), V(0, KNOB.h + .003, -KNOB.r * .85)], turn, M.hi));
+  segs(circle(0, 0, KNOB.r + .1, .003, 48), kn); const ticks = []; for (let i = 0; i <= 10; i++) { const a = -Math.PI * .75 + i / 10 * Math.PI * 1.5 - Math.PI / 2; ticks.push(V(Math.cos(a) * (KNOB.r + .14), .003, Math.sin(a) * (KNOB.r + .14)), V(Math.cos(a) * (KNOB.r + .2), .003, Math.sin(a) * (KNOB.r + .2))); } segs(ticks, kn);
+  strip.knob = { g: kn, turn, m: kb.m, lines: kb.lines, ang: { p: volAng() } };
+  // the side slide (light / dark): on the right side of the slab, near the back
+  const ss = new THREE.Group(); ss.position.set(BW / 2 + .002, -KB_BASE / 2, keysBack - STRIP + .5); KB.add(ss); segs([V(0, -.04, -.22), V(0, -.04, .22), V(0, .04, -.22), V(0, .04, .22), V(0, -.04, -.22), V(0, .04, -.22), V(0, -.04, .22), V(0, .04, .22)], ss);
+  const nub = prism(.06, .14, .07, .03, ss); nub.g.position.y = -.035; strip.side = { g: nub.g, m: nub.m, lines: nub.lines, p: { p: mode === 'dark' ? 1 : 0 } };
+  paint(); scr.dirty = true; }
+const volAng = () => -Math.PI * .75 + P.vol * Math.PI * 1.5;
+function circle(cx, cz, r, y, n) { const pts = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, b = (i + 1) / n * Math.PI * 2; pts.push(V(cx + Math.cos(a) * r, y, cz + Math.sin(a) * r), V(cx + Math.cos(b) * r, y, cz + Math.sin(b) * r)); } return pts; }
+
+// ---------- keys: down with a click and back up; what they type goes to the screen; the backlight answers ----------
+// (a pressed key lights at once and fades; a ring of light runs out from it across its neighbours. No sound for the pointer passing
+// over: the click is the sound)
+const charOf = k => { const [main, , , kind, alt] = k.spec, up = !!shiftDown !== capsOn;
+  if (kind === 'letter') return up ? main : main.toLowerCase(); if (kind === 'two') return shiftDown ? alt : main; if (k.code === 'Space') return ' '; return null; };
+function kbPress(k, on) { if (!k || k.down === on) return; k.down = on; if (!BARE) SFX.key(k.big, !on);
+  if (k.code === 'ShiftLeft' || k.code === 'ShiftRight') shiftDown = Math.max(0, shiftDown + (on ? 1 : -1));
+  if (on) { keyCount++; k.glow = 1; if (P.light) ripples.push({ x: k.x, z: k.z, t0: performance.now() });
+    if (k.code === 'CapsLock') { capsOn = !capsOn; say(capsOn ? 'CAPS LOCK ON' : 'CAPS LOCK OFF', 900); }
+    else if (k.code === 'Backspace') typed = typed.slice(0, -1); else if (k.code === 'Enter') typed = ''; else { const ch = charOf(k); if (ch) { typed = (typed + ch).slice(-200); presses.push(performance.now()); } }
+    scr.dirty = true; }
+  paint(); wake(); }
 function paint() { const c = PAL[mode]; M.fill.color.set(c.fill); M.line.color.set(c.line); M.hi.color.set(c.hi); plate.style.background = c.bg;
-  for (const k of kbKeys) { const on = k === kbHover || k.down; for (const l of k.lines) l.material = on ? M.hi : M.line; k.legend.material.color.set(c.hi); k.legend.material.opacity = on ? 1 : .55; } wake(); }
+  for (const k of kbKeys) { const on = k === kbHover || k.down ? 1 : 0, g = Math.max(on, k.glow); k.mat.color.setHex(c.line).lerp(new THREE.Color(c.hi), g); k.legend.material.color.set(c.hi); k.legend.material.opacity = .55 + .45 * g; }
+  if (strip.capsLed) strip.capsLed.material.color.set(capsOn ? 0x6fd38a : (mode === 'dark' ? 0x2a2b2f : 0xdcdad3));
+  if (strip.led) strip.led.material.color.set(P.sound ? 0x6fd38a : (mode === 'dark' ? 0x2a2b2f : 0xdcdad3));
+  const hot = (o, on) => { if (o) for (const l of o.lines) l.material = on ? M.hi : M.line; };
+  hot(strip.slide, strip.hover === 'slide'); hot(strip.side, strip.hover === 'side'); for (const b of strip.btns || []) hot(b.pr, strip.hover === b || b.down); hot(strip.frame, false);
+  if (strip.knob) { for (const l of strip.knob.lines.slice(0, -1)) l.material = strip.hover === 'knob' || knobDrag ? M.hi : M.line; }
+  wake(); }
 
 // ---------- light and dark ----------
 let mode = BARE ? (q.get('mode') === 'dark' ? 'dark' : 'light') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
-function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { }
+function setMode(m, quiet) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { }
   document.body.classList.toggle('light', m === 'light'); document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
-  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#121314' : '#f4f3ef'; paint(); }
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#121314' : '#f4f3ef';
+  if (!quiet) say(m === 'dark' ? 'DARK' : 'LIGHT', 800); paint(); }
 document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 
 // ---------- the view ----------
-const VIEW = { az: .22, el: .78, dAz: { p: 0 }, dEl: { p: 0 }, tAz: 0, tEl: 0, z: { p: 1 }, tz: 1 };
+const VIEW = { el: 1.08, z: { p: 1 }, tz: 1 };   // (straight on, from a little above the front: no turning)
 const zoomBy = f => { VIEW.tz = Math.max(.45, Math.min(3, VIEW.tz * f)); wake(); };
-$('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25); $('zreset').onclick = () => { VIEW.tAz = VIEW.tEl = 0; VIEW.tz = 1; wake(); };
+$('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25); $('zreset').onclick = () => { VIEW.tz = 1; wake(); };
 // (on the board, the live box draws into the still's own frame, cropped to the box the way the still's picture is covered into it)
 let W = 1, H = 1; const FRAME = 450 / 240;
 new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
   if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
   renderer.setSize(W, H, false); wake(); }).observe(plate);
-function placeCam() { const a = W / H, S = Math.max(4.6, 9.2 / a) / VIEW.z.p, az = VIEW.az + VIEW.dAz.p, el = Math.max(.06, Math.min(1.45, VIEW.el + VIEW.dEl.p));
+function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p, az = 0, el = VIEW.el;
   cam.left = -S * a / 2; cam.right = S * a / 2; cam.top = S / 2; cam.bottom = -S / 2; cam.updateProjectionMatrix();
-  cam.position.set(Math.sin(az) * Math.cos(el) * 80, Math.sin(el) * 80, Math.cos(az) * Math.cos(el) * 80); cam.lookAt(0, 0, 0); }
+  cam.position.set(Math.sin(az) * Math.cos(el) * 80, Math.sin(el) * 80, -STRIP / 2 + Math.cos(az) * Math.cos(el) * 80); cam.lookAt(0, 0, -STRIP / 2); }
 
-// ---------- the pointer and your own keyboard ----------
-let orbit = null;
+// ---------- the controls ----------
+function setSound(on) { P.sound = on; save(); if (ctl.sound) ctl.sound.set(on); if (on) { snd(); SFX.key(false); } say(on ? 'SOUND ON' : 'MUTED', 900); paint(); }
+function setVol(v, tick) { const nv = Math.max(0, Math.min(1, v)), step = Math.round(nv * 20); if (tick && step !== Math.round(P.vol * 20)) SFX.detent(); P.vol = nv; save(); if (ctl.vol) ctl.vol.set(nv); if (SND.out) SND.out.gain.value = nv; say('VOLUME', 1200); }
+function pressButton(b, on) { if (b.down === on) return; b.down = on; if (on) { SFX.key(false); if (b.act === 'screen') { screenMode = (screenMode + 1) % SCREENS.length; overlay = null; scr.dirty = true; } else { const L = ['soft', 'thock', 'crisp']; P.click = L[(L.indexOf(P.click) + 1) % 3]; save(); if (ctl.click) ctl.click.set(P.click); say('CLICK · ' + P.click.toUpperCase(), 1000); } } else SFX.key(false, true); paint(); }
+// (what is under the pointer: a key, or one of the strip's parts)
+function pick() { const parts = [...kbKeys.map(k => k.m)]; if (strip.knob) parts.push(strip.knob.m, strip.slide.m, strip.side.m, ...strip.btns.map(b => b.m)); const h = hitOf(parts); if (!h) return null; const o = h.object;
+  if (o === strip.knob?.m) return 'knob'; if (o === strip.slide?.m) return 'slide'; if (o === strip.side?.m) return 'side'; const b = strip.btns?.find(x => x.m === o); if (b) return b; return kbKeys.find(k => k.m === o) || null; }
+let knobDrag = null;
 const setNdc = e => { const r = plate.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); };
 if (!DEMO) {
-  plate.addEventListener('pointerdown', e => { if (e.button !== 0) return; setNdc(e); const h = hitOf(kbKeys.map(k => k.m)); try { plate.setPointerCapture(e.pointerId); } catch { }
-    if (h) { kbHeld = kbKeys.find(k => k.m === h.object); kbPress(kbHeld, true); return; }
-    orbit = { x: e.clientX, y: e.clientY, az: VIEW.tAz, el: VIEW.tEl }; plate.classList.add('dragging'); });
+  plate.addEventListener('pointerdown', e => { if (e.button !== 0) return; setNdc(e); const p = pick(); try { plate.setPointerCapture(e.pointerId); } catch { }
+    if (p === 'knob') { knobDrag = { y: e.clientY, x: e.clientX, v: P.vol }; paint(); return; }
+    if (p === 'slide') { setSound(!P.sound); return; } if (p === 'side') { setMode(mode === 'dark' ? 'light' : 'dark'); SFX.key(false); return; }
+    if (p && p.act) { kbHeld = p; pressButton(p, true); return; }
+    if (p) { kbHeld = p; kbPress(p, true); return; } });
   plate.addEventListener('pointermove', e => { setNdc(e);
-    if (orbit) { VIEW.tAz = orbit.az - (e.clientX - orbit.x) * .006; VIEW.tEl = Math.max(-.6, Math.min(.7, orbit.el + (e.clientY - orbit.y) * .004)); VIEW.dAz.p = VIEW.tAz; VIEW.dEl.p = VIEW.tEl; wake(); return; }
-    const h = hitOf(kbKeys.map(k => k.m)), k = h ? kbKeys.find(q => q.m === h.object) : null; if (k !== kbHover) { kbHover = k; paint(); } plate.classList.toggle('over', !!k); });
-  const up = () => { if (kbHeld) { kbPress(kbHeld, false); kbHeld = null; } orbit = null; plate.classList.remove('dragging'); }; plate.addEventListener('pointerup', up); plate.addEventListener('pointercancel', up);
-  plate.addEventListener('pointerleave', () => { if (!orbit && kbHover) { kbHover = null; plate.classList.remove('over'); paint(); } });
-  plate.addEventListener('wheel', e => { e.preventDefault(); zoomBy(Math.exp(-e.deltaY * .0015)); }, { passive: false });
+    if (knobDrag) { setVol(knobDrag.v + ((knobDrag.y - e.clientY) + (e.clientX - knobDrag.x)) * .004, true); return; }
+    const p = pick(), key = p && p.code ? p : null, part = p && !p.code ? p : null; if (key !== kbHover || part !== strip.hover) { kbHover = key; strip.hover = part; paint(); } plate.classList.toggle('over', !!p); });
+  const up = () => { if (knobDrag) { knobDrag = null; paint(); } if (kbHeld) { if (kbHeld.act) pressButton(kbHeld, false); else kbPress(kbHeld, false); kbHeld = null; } };
+  plate.addEventListener('pointerup', up); plate.addEventListener('pointercancel', up);
+  plate.addEventListener('pointerleave', () => { if (kbHover || strip.hover) { kbHover = null; strip.hover = null; plate.classList.remove('over'); paint(); } });
+  plate.addEventListener('wheel', e => { e.preventDefault(); setNdc(e); if (pick() === 'knob') setVol(P.vol - Math.sign(e.deltaY) * .05, true); else zoomBy(Math.exp(-e.deltaY * .0015)); }, { passive: false });
   addEventListener('keydown', e => { if (e.target.closest?.('input, .panel')) return; if (e.key === 'Escape' && document.body.classList.contains('tuning')) { openPanel(false); return; }
-    const k = kbKeys.find(q => q.code === e.code); if (!k) return; if (!['F5', 'F11', 'F12'].includes(e.code) && !(e.metaKey && e.code !== 'MetaLeft' && e.code !== 'MetaRight')) e.preventDefault(); if (!e.repeat) kbPress(k, true); }, true);
+    const k = kbKeys.find(q => q.code === e.code); if (!k) return; if (!['F5', 'F11', 'F12'].includes(e.code) && !(e.metaKey && e.code !== 'MetaLeft' && e.code !== 'MetaRight')) e.preventDefault();
+    if (e.code === 'CapsLock' && typeof e.getModifierState === 'function') { const st = e.getModifierState('CapsLock'); if (!e.repeat && st === capsOn) capsOn = !st; }
+    if (!e.repeat) kbPress(k, true); }, true);
   addEventListener('keyup', e => { const k = kbKeys.find(q => q.code === e.code); if (k) kbPress(k, false); }, true);
-  addEventListener('blur', () => { for (const k of kbKeys) if (k.down) kbPress(k, false); });
+  addEventListener('blur', () => { for (const k of kbKeys) if (k.down) kbPress(k, false); shiftDown = 0; });
 }
 
 // ---------- the frame ----------
 let raf = 0; const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
-function frame() { raf = 0; let busy = false;
-  for (const k of kbKeys) { if (ease(k.d, k.down ? 1 : 0, k.down ? .55 : .3)) busy = true; k.pr.g.scale.y = 1 - k.d.p * P.travel; }
-  if (ease(VIEW.z, VIEW.tz, .14)) busy = true; if (!orbit) { if (ease(VIEW.dAz, VIEW.tAz, .1)) busy = true; if (ease(VIEW.dEl, VIEW.tEl, .1)) busy = true; }
-  placeCam(); updateSils(); renderer.render(scene, cam); if (busy || orbit) wake(); }
+function frame() { raf = 0; let busy = false; const now = performance.now(), c = PAL[mode], hiC = new THREE.Color(c.hi);
+  ripples = ripples.filter(r => now - r.t0 < 900);
+  for (const k of kbKeys) { if (ease(k.d, k.down ? 1 : 0, k.down ? .55 : .3)) busy = true; k.pr.g.scale.y = 1 - k.d.p * P.travel;
+    let rg = 0; for (const r of ripples) { const t = (now - r.t0) / 1000, dist = Math.hypot(k.x - r.x, k.z - r.z), front = t * 6; rg = Math.max(rg, Math.exp(-((dist - front) ** 2) / .08) * (1 - t / .9) * .6); }
+    const target = Math.max(k.down || k === kbHover ? 1 : 0, rg); if (k.glow > target + .002) { k.glow = Math.max(target, k.glow - .035); busy = true; } else k.glow = target;
+    const g = Math.max(k.glow, k.down || k === kbHover ? 1 : 0); k.mat.color.setHex(c.line).lerp(hiC, g); k.legend.material.opacity = .55 + .45 * g; }
+  if (ripples.length) busy = true;
+  if (strip.slide) { if (ease(strip.slide.p, P.sound ? 1 : 0, .25)) busy = true; strip.slide.g.position.x = -.25 + strip.slide.p.p * .5; }
+  if (strip.side) { if (ease(strip.side.p, mode === 'dark' ? 1 : 0, .25)) busy = true; strip.side.g.position.z = -.1 + strip.side.p.p * .2; }
+  for (const b of strip.btns || []) { if (ease(b.d, b.down ? 1 : 0, b.down ? .55 : .3)) busy = true; b.pr.g.scale.y = 1 - b.d.p * .6; }
+  if (strip.knob) { if (ease(strip.knob.ang, volAng(), .3)) busy = true; strip.knob.turn.rotation.y = -strip.knob.ang.p; }
+  if (overlay && now >= overlay.until) { overlay = null; scr.dirty = true; } if (overlay) busy = true;
+  if (scr.dirty) { scr.dirty = false; drawScreen(); }
+  if (ease(VIEW.z, VIEW.tz, .14)) busy = true;
+  placeCam(); updateSils(); renderer.render(scene, cam); if (busy || knobDrag) wake(); }
 
 // ---------- the panel ----------
 const panel = $('panel'); let ctl = {};
 function buildPanel() { panel.innerHTML = ''; ctl = {};
-  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Keyboard</h2><p>A flat low-profile keyboard: click a key, or type on your own; each key goes down with a soft click.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Keyboard</h2><p>A flat low-profile keyboard with a control strip: the slide mutes it, the knob turns the volume, the small screen shows what you type, the round buttons change the screen and the click; a slide on the right side switches light and dark.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
-  const set = (k, v) => { P[k] = v; save(); wake(); };
-  const sl = (g, k, label, min, max, st, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step: st, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
-  const g0 = LabUI.group(panel, 'Keys', { key: KEY + '.g.keys' }); sl(g0, 'travel', 'Travel', .2, .8, .05);
-  const gs = LabUI.group(panel, 'Sound', { key: KEY + '.g.sound' }); ctl.sound = LabUI.check(gs, { label: 'Sound', value: P.sound, onChange: v => set('sound', v) }); sl(gs, 'vol', 'Volume', 0, 1, .05);
+  const set = (k, v) => { P[k] = v; save(); paint(); wake(); };
+  const sl = (g, k, label, min, max, st, unit, on) => ctl[k] = LabUI.slider(g, { label, min, max, step: st, unit, value: P[k], def: DEF[k], onInput: on || (v => set(k, v)) });
+  const g0 = LabUI.group(panel, 'Keys', { key: KEY + '.g.keys' }); sl(g0, 'travel', 'Travel', .2, .8, .05); ctl.light = LabUI.check(g0, { label: 'Light that answers the keys', value: P.light, onChange: v => set('light', v) });
+  const gs = LabUI.group(panel, 'Sound', { key: KEY + '.g.sound' }); ctl.sound = LabUI.check(gs, { label: 'Sound', value: P.sound, onChange: v => setSound(v) }); sl(gs, 'vol', 'Volume', 0, 1, .05, '', v => setVol(v));
   ctl.click = LabUI.seg(gs, { label: 'Click', options: [['soft', 'Soft'], ['thock', 'Thock'], ['crisp', 'Crisp']], value: P.click, onChange: v => { set('click', v); SFX.key(false); setTimeout(() => SFX.key(false, true), 90); } });
   { const r = document.createElement('div'); r.className = 'ui-row'; r.innerHTML = '<span class="ui-label">Hear it</span><button type="button" class="play-intro">Test</button>'; gs.appendChild(r); r.querySelector('button').onclick = () => { SFX.key(false); setTimeout(() => SFX.key(false, true), 90); }; }
   const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button>'; panel.appendChild(acts);
-  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); buildPanel(); wake(); }; }
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); buildPanel(); paint(); }; }
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
 $('tune').onclick = () => openPanel(true);
 
 // ---------- start; the board's box: ?thumb=1 the still, ?demo=1 the keys typing a few words on their own ----------
 if (BARE) document.body.classList.add('bare');
-setMode(mode); build(); buildPanel(); LabUI.segThumb($('mode'));
-document.fonts.ready.then(() => { for (const k of kbKeys) { k.legend.material.map.dispose(); k.legend.material.map = kbLegend(k); } wake(); });   // (the legends again once the type is in)
-if (DEMO) { const words = ['hello lab', 'line style', 'soft keys'], codeOf = ch => ch === ' ' ? 'Space' : 'Key' + ch.toUpperCase(); let w = 0;
-  const type = async () => { await new Promise(r => setTimeout(r, 900)); for (;;) { for (const ch of words[w++ % words.length]) { const k = kbKeys.find(q => q.code === codeOf(ch)); kbPress(k, true); await new Promise(r => setTimeout(r, 110)); kbPress(k, false); await new Promise(r => setTimeout(r, 70 + Math.random() * 90)); }
-    const r = kbKeys.find(q => q.code === 'Enter'); kbPress(r, true); await new Promise(res => setTimeout(res, 140)); kbPress(r, false); await new Promise(res => setTimeout(res, 1300)); } }; type(); }
-window.KEYS = { P: () => P, keys: () => kbKeys, press: kbPress, sfx: SFX };
+setMode(mode, true); build(); buildPanel(); LabUI.segThumb($('mode'));
+if (BARE) { typed = 'hello lab'; scr.dirty = true; }
+document.fonts.ready.then(() => { for (const k of kbKeys) { k.legend.material.map.dispose(); k.legend.material.map = kbLegend(k); } scr.dirty = true; wake(); });   // (the legends again once the type is in)
+if (DEMO) { const words = ['line style', 'soft keys', 'hello lab'], codeOf = ch => ch === ' ' ? 'Space' : 'Key' + ch.toUpperCase(); let w = 0;
+  const type = async () => { await new Promise(r => setTimeout(r, 1200)); typed = ''; for (;;) { for (const ch of words[w++ % words.length]) { const k = kbKeys.find(q => q.code === codeOf(ch)); kbPress(k, true); await new Promise(r => setTimeout(r, 110)); kbPress(k, false); await new Promise(r => setTimeout(r, 70 + Math.random() * 90)); }
+    await new Promise(res => setTimeout(res, 900)); const r = kbKeys.find(q => q.code === 'Enter'); kbPress(r, true); await new Promise(res => setTimeout(res, 140)); kbPress(r, false); await new Promise(res => setTimeout(res, 600)); } }; type(); }
+window.KEYS = { P: () => P, keys: () => kbKeys, press: kbPress, sfx: SFX, strip: () => strip, setVol, setSound };
 </script>
 </body>
 </html>
