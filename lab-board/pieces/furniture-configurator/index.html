@@ -77,6 +77,8 @@
   .mpop small{align-self:center; padding:0 6px 0 8px; color:var(--muted); font-size:11.5px; font-weight:600}
   body.hdrag .hd:not(.on){opacity:.25 !important}
   body.nodims .lbl{display:none}
+  /* the board's box (?thumb, ?demo): the sideboard alone, no controls */
+  body.bare .bar, body.bare .dock, body.bare .back, body.bare .tr, body.bare .overlay, body.bare .status, body.bare .panel, body.bare .xmenu, body.bare .modal{display:none !important}
   body.busy .hd{pointer-events:none; opacity:.5}
   .hd{transition:background .2s, scale .25s var(--ease)}
   .overlay{transition:opacity .6s ease} body.calm .overlay{opacity:0} body.calm .hd{pointer-events:none}
@@ -877,6 +879,24 @@ buildPanel(); resize(); styleChanged(); changed(true);
 document.body.classList.add('ready');
 if (STILL) { S.dims = false; document.body.classList.add('nodims'); }
 requestAnimationFrame(frame);
+// ---------- the board's box: ?thumb=1 the still, ?demo=1 the sideboard being built: each segment opens (doors swing, drawers
+// slide), the base goes from steel frame to wall hung to plinth and back, it grows taller and settles, the legs lengthen. The camera
+// holds still (the box keeps the still's framing, no jump); live preview, no path tracing, so it moves smoothly ----------
+const BARE = Q.has('thumb') || Q.has('demo'), DEMO = Q.has('demo');
+if (BARE) { document.body.classList.add('bare'); S.dims = false; S.pt = false; S.peek = true; styleChanged(); }
+if (DEMO) (async () => {
+  const wait = ms => new Promise(r => setTimeout(r, ms)), hold = () => { fitTo = 0; };
+  const step = async (key, to, by, ms) => { while (C[key] !== to) { C[key] += Math.sign(to - C[key]) * Math.min(by, Math.abs(to - C[key])); changed(); hold(); await wait(ms); } };
+  const base = v => { S.legs = v; changed(); hold(); };
+  await wait(900);
+  for (;;) {
+    for (const i of [0, 1, 2]) { sel = i; await wait(1250); }   // (each segment in turn: it peeks open)
+    sel = -1; await wait(800);
+    base('none'); await wait(1500); base('plinth'); await wait(1300); base('frame'); await wait(1000);   // (the base: wall hung, plinth, the frame again)
+    await step('H', 70, 5, 110); await wait(900); await step('H', 50, 5, 110); await wait(800);   // (taller, and back)
+    await step('leg', 28, 2, 80); await wait(800); await step('leg', 18, 2, 80); await wait(1200);   // (longer legs, and back)
+  }
+})();
 window.FC = { renderer, scene, animateFronts, bayQuad, C: () => C, S: () => S, pt, camera, controls,   // (renderer, scene, fronts, quads: the lab board's hover clip is recorded from these)
    items: () => items, fit: () => fitTo, exportRender, cutList, planSvg, select: i => { sel = i; renderBar(); }, changed };
 </script>
