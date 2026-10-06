@@ -291,7 +291,7 @@ function tick(now) { const dt = Math.min(.05, (now - last) / 1000); last = now; 
 // covered into it, so the swap from the picture to the live one does not move a thing)
 const FRAME = 330 / 470;
 function size(force) { const oW = W, oH = H; dpr = Math.min(devicePixelRatio || 1, 2); W = stage.clientWidth || 1; H = stage.clientHeight || 1;
-  if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(cv.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); } cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  if (BARE && !location.search.includes('feed')) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(cv.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); } cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   const nk = Math.min(W / 760, H / 900) * P.size;
   if (force === true || !built || Math.abs(nk / k - 1) > .15) build(); else { const dx = (W - oW) / 2, dy = (H - oH) / 2; for (const p of pts) { p.x += dx; p.px += dx; if (p.w) { p.y += dy; p.py += dy; } } }
   draw(); }

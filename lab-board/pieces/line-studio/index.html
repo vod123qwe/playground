@@ -628,7 +628,7 @@ $('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25
 // (on the board, the live box draws into the still's own 4 : 3 frame, cropped to the box the way the still's picture is covered into it,
 // so the swap from the picture to the live one does not move a thing)
 let W = 1, H = 1; new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
-  if (BARE) { const sw = W, sh = H, A = 4 / 3; if (W / H > A) H = W / A; else W = H * A; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
+  if (BARE && !location.search.includes('feed')) { const sw = W, sh = H, A = 4 / 3; if (W / H > A) H = W / A; else W = H * A; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
   renderer.setSize(W, H, false); wake(); }).observe(plate);
 function placeCam() { const a = W / H, S = F.span(a) / VIEW.z.p, az = F.az + VIEW.dAz.p + VIEW.lAz.p, el = Math.max(.06, Math.min(1.4, F.el + VIEW.dEl.p + VIEW.lEl.p)), r = 80, cy = F.cy();
   cam.left = -S * a / 2; cam.right = S * a / 2; cam.top = S / 2; cam.bottom = -S / 2; cam.updateProjectionMatrix();

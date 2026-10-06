@@ -277,7 +277,7 @@ $('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25
 // (on the board, the live box draws into the still's own frame, cropped to the box the way the still's picture is covered into it)
 let W = 1, H = 1; const FRAME = 450 / 240;
 new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
-  if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
+  if (BARE && !location.search.includes('feed')) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
   renderer.setSize(W, H, false); wake(); }).observe(plate);
 function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p / (a < 1 ? .95 : .7), az = VIEW.dAz.p, el = VIEW.el + VIEW.dEl.p;   // (S: the height of the view at the keyboard; 30% smaller than filling it, nearly full width on an upright phone)
   const dist = S / 2 / Math.tan(FOV / 2 * Math.PI / 180); cam.aspect = a; cam.updateProjectionMatrix();

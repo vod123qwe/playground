@@ -219,8 +219,10 @@ const els = CARDS.map((c, i) => { const b = document.createElement('button'); b.
 //   Fan     a hand of cards round a corner, the one you stop on straight and drawn up out of the fan
 const MODES = { deck: { name: 'Deck', tilt: 52, space: 1.6, lift: 47, dof: 2.85 }, roll: { name: 'Roll', tilt: 40, space: 1.9, lift: 34, dof: .6 }, barrel: { name: 'Barrel', tilt: 8, space: .5, lift: 100, dof: 1 }, wallet: { name: 'Wallet', tilt: 16, space: 1, lift: 34, dof: 1 }, fan: { name: 'Fan', tilt: 20, space: 1, lift: 34, dof: 1 } }, ORDER = Object.keys(MODES);
 const W = 340, H = 214, PERSP = 1100, Q = (devicePixelRatio || 1) >= 2 ? 1 : 2;   // (Q: the cards are laid out at Q times their size, see --q; a 2-3x screen is sharp at 1)
-document.documentElement.style.setProperty('--q', Q);
-for (const el of document.querySelectorAll('#lensF, #glassF, #lensMap, #glassMap')) { el.setAttribute('width', W * Q); el.setAttribute('height', H * Q); }
+let Ks = 1, U = Q;   // (Ks: the deck's size on screen; U = Q x Ks: the cards' layout unit, see --q)
+const STEP = matchMedia('(pointer: coarse)').matches ? 1 : 4;   // (the depth blur moves in steps of 1/STEP px: whole pixels on a phone, so it is drawn again less often)
+function setUnit() { document.documentElement.style.setProperty('--q', U.toFixed(4)); for (const el of document.querySelectorAll('#lensF, #glassF, #lensMap, #glassMap')) { el.setAttribute('width', (W * U).toFixed(1)); el.setAttribute('height', (H * U).toFixed(1)); } }
+setUnit();
 let pos = 2, target = 2, lastTurn = -1e9, drag = null, openI = -1, shownI = -1, K = 1, vel = 0;
 const lift = { p: 0 }, pull = { p: 0 }, look = { x: 0, y: 0, tx: 0, ty: 0 };
 const smooth = t => t * t * (3 - 2 * t);
@@ -271,15 +273,15 @@ function frame(now) { raf = 0; let busy = false;
     // (the view from above tilts the place; drawn out: square to you, toward you, a touch bigger, following the pointer)
     const X = c.x, Y = c.y * Math.cos(T) - c.z * Math.sin(T), Z = c.y * Math.sin(T) + c.z * Math.cos(T);
     const ang = rx * n + m * look.y * -7, yaw = m * look.x * 9;
-    put(el, 'transform', `perspective(${PERSP}px) translate3d(${(X * n).toFixed(2)}px, ${(Y * n).toFixed(2)}px, ${(Z * n + m * 170).toFixed(2)}px) rotateX(${ang.toFixed(3)}deg) rotateY(${yaw.toFixed(3)}deg) rotateZ(${(c.rz * n).toFixed(3)}deg) scale(${((1 + (P.pull - 1) * m) / Q).toFixed(4)})`);
+    put(el, 'transform', `perspective(${(PERSP * Ks).toFixed(1)}px) translate3d(${(X * n * Ks).toFixed(2)}px, ${(Y * n * Ks).toFixed(2)}px, ${((Z * n + m * 170) * Ks).toFixed(2)}px) rotateX(${ang.toFixed(3)}deg) rotateY(${yaw.toFixed(3)}deg) rotateZ(${(c.rz * n).toFixed(3)}deg) scale(${((1 + (P.pull - 1) * m) / Q).toFixed(4)})`);
     put(el, 'zIndex', i === shownI ? '400' : String(200 + Math.round(c.layer * 10)));
     const al = c.alpha ?? 1; put(el, 'opacity', i === shownI ? '' : (al * (1 - .3 * t)).toFixed(2)); put(el, 'visibility', al < .01 ? 'hidden' : '');
-    const bl = Math.round(4 * Math.max(i !== shownI ? P.blur * t : 0, clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof, 0, 18) * n)) / 4;   // (in quarter pixels: a change too small to see is not drawn again)   // (the further back, the softer, and faster with depth: a progressive blur)
+    const bl = Math.round(STEP * Math.max(i !== shownI ? P.blur * t : 0, clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof, 0, 18) * n)) / STEP;   // (in quarter pixels: a change too small to see is not drawn again)   // (the further back, the softer, and faster with depth: a progressive blur)
     // (on glass the blur goes on the face and its lens, never the card: a filter on the card would cut the glass off from what lies
     // behind it, and it would flicker as cards move in and out of the blur. The face keeps a filter always, so nothing is rebuilt)
     cls(el, 'hero', i === top && P.glass); cls(el, 'deep', P.glass && bl > 4);
-    if (P.glass) { put(el, 'filter', ''); put(el._f, 'filter', `blur(${(bl * Q).toFixed(2)}px)`); put(el._l, 'filter', `blur(${((bl + P.fr * .12) * Q).toFixed(2)}px)`); }
-    else { put(el, 'filter', bl > .05 ? `blur(${bl.toFixed(2)}px)` : ''); put(el._f, 'filter', ''); put(el._l, 'filter', ''); }
+    if (P.glass) { put(el, 'filter', ''); put(el._f, 'filter', `blur(${(bl * U).toFixed(2)}px)`); put(el._l, 'filter', `blur(${((bl + P.fr * .12) * U).toFixed(2)}px)`); }
+    else { put(el, 'filter', bl > .05 ? `blur(${(bl * Ks).toFixed(2)}px)` : ''); put(el._f, 'filter', ''); put(el._l, 'filter', ''); }
     // (the light from above: a card turned up toward it a touch brighter, one turned down or further back a touch darker; the sheen slides with the turn)
     const eff = ang, la = eff * RAD, f = el._f;
     const own = ((c.rx + lean) * n) * RAD;   // (the shade follows only the card's own turn, not the view: a card looked down on is not darker for it)
@@ -312,13 +314,13 @@ if (!DEMO) {
 }
 
 // ---------- the size: the roll fits the stage ----------
-function fit() { const r = stage.getBoundingClientRect(); K = BARE ? Math.min(r.width / 560, r.height / 470) : clamp(Math.min(r.width / 760, r.height / 640), .55, 1.35);
-  rig.style.zoom = (K * P.size).toFixed(4);   // (zoom, not scale: the cards are laid out at their size, so they stay sharp)
+function fit() { const r = stage.getBoundingClientRect(); K = BARE ? Math.min(r.width / 560, r.height / 470) : clamp(Math.min(r.width / (r.width < 600 ? 430 : 760), r.height / 640), .55, 1.35);
+  const ks = K * P.size; if (Math.abs(ks - Ks) > 1e-4) { Ks = ks; U = Q * Ks; setUnit(); if (typeof lensMap === 'function') lensMap(); }
   floor.style.transform = `translateY(${((H * .55 + 60) * K * P.size).toFixed(1)}px) scale(${(K * P.size).toFixed(4)})`; wake(); }
 addEventListener('resize', fit); new ResizeObserver(fit).observe(stage);
 
 // ---------- light and dark ----------
-let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+let mode = BARE ? (q.get('mode') === 'light' ? 'light' : 'dark') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();   // (the board's box starts dark at once: no flash of light)
 function setMode(m) { mode = m; try { if (!BARE) localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark'); $('vars').classList.toggle('dark', m === 'dark');
   document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0e0e10' : '#f3f2ee'; }
 document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
@@ -358,9 +360,9 @@ const setHref = (id, url) => { const m = document.getElementById(id); m.setAttri
 let lensKey = '', glassKey = '';
 function lensMap() { const w = Math.max(2, P.fr) * Q, key = w + '';
   if (key !== lensKey) { lensKey = key; setHref('lensMap', edgeMap(w, 1)); }
-  document.getElementById('lensDisp').setAttribute('scale', (P.fl * 90).toFixed(1)); document.getElementById('lensBlur').setAttribute('stdDeviation', (P.fb * .06 * Q).toFixed(2));
+  document.getElementById('lensDisp').setAttribute('scale', (P.fl * 90).toFixed(1)); document.getElementById('lensBlur').setAttribute('stdDeviation', (P.fb * .06 * U).toFixed(2));
   const gk = Math.max(2, P.bez) * Q + ''; if (gk !== glassKey) { glassKey = gk; setHref('glassMap', edgeMap(Math.max(2, P.bez) * Q, -1)); }   // (the pane: it draws from further in, so what is behind seems pulled round the edge)
-  document.getElementById('glassDisp').setAttribute('scale', (P.refr * Q).toFixed(1)); document.getElementById('glassBlur').setAttribute('stdDeviation', (P.fb * Q).toFixed(2)); }
+  document.getElementById('glassDisp').setAttribute('scale', (P.refr * U).toFixed(1)); document.getElementById('glassBlur').setAttribute('stdDeviation', (P.fb * U).toFixed(2)); }
 function applyGlass() { lensMap(); const r = document.body.style; for (const k of ['fb', 'fs', 'fm', 'ft', 'fg', 'fl', 'fr']) r.setProperty('--' + k, P[k]); document.body.classList.toggle('glass', !!P.glass); document.body.classList.add('grad'); }
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
 $('tune').onclick = () => openPanel(true);
