@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Badge · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&family=Instrument+Serif&family=Google+Sans+Flex:wght@400..800&family=JetBrains+Mono:wght@500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* A badge on a lanyard, hanging in the middle of the page: the two straps come down from above, wide apart, and meet at a metal
+     clip; the card hangs from it by a ring through its slot. Grab the card (or a strap) and throw it: it swings, turns about the ring,
+     the straps go slack and taut (a small verlet world: the card is a rigid set of points, the straps are chains). A tap on the card
+     deals it a new graphic. The graphic takes one of several forms: the stripes generator below, or rays, threads, orbits, blobs,
+     facets, an eye that follows the hand, a wall of tiles (a tap on one tile deals just that tile); and the type one of three setups (editorial serif, grotesk in the lab's own face (Google Sans Flex), classic serif, each with a mono). The pattern is a generator: stripes in two colours, and lines across them where the stripes swap colour,
+     so arrows, Vs, zigzags, diamonds and bowties come out of plain stripes; it drifts slowly. Light or dark on top; Customize tunes
+     the pattern, the colours and the lanyard. One canvas. */
+  :root { --bg: #f3f2ee; --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --boxbg: #f3f2ee; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
+  body.dark { --bg: #0e0e10; --page: #17181b; --boxbg: #151517; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); touch-action: none; transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { background: var(--boxbg); border-radius: 26px; }
+  .stage.grab { cursor: grab; } .stage.dragging { cursor: grabbing; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); transition: left .45s var(--ease); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  .hint { position: fixed; left: 50%; bottom: 28px; translate: -50% 0; font-size: 13px; color: #1b1c20; opacity: .45; white-space: nowrap; pointer-events: none; transition: left .45s var(--ease); }
+  body.dark .hint { color: #f2f2f0; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .hint, body.bare .panel { display: none; }
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .play-intro { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-field); font: 500 12.5px var(--lab-font); color: var(--ui-ink); cursor: pointer; transition: background .2s; } .play-intro:hover { background: var(--ui-field-hi); }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode, body.tuning .hint { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint { display: none; }
+    body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="A badge on a lanyard: drag it and let go to swing it, tap it for a new pattern"><canvas id="cv"></canvas></main>
+<p class="hint">Drag the badge and let go · tap it for a new graphic (on Tiles, tap a tile)</p>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the badge"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.badge.v1';
+const DEF = { form: 'blobs', detail: .5, fonts: 'grotesk', tiles: 'playground', bump: {}, motif: 'arrows', stripes: 16, repeat: 2, drift: .35, dir: 'v', palette: 'coral', invert: false, spread: 260, weight: 1, swing: .992, size: 1, seed: 7 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+
+// ---------- the colours: ink, paper, and the card's own colour; the pattern's light stripes are the paper, or the colour ----------
+const PALETTES = {   // (ink and paper; tone: the card's block; field: the graphic's ground; dot: the pastel; deep: the shapes and the eye's ground)
+  coral: { name: 'Coral', ink: '#1c1b1a', paper: '#efe9dc', tone: '#f07a5f', field: '#e2643f', dot: '#ead68f', deep: '#6e2a22' },
+  sky:   { name: 'Sky',   ink: '#1c1b1a', paper: '#efe9dc', tone: '#a9c8dd', field: '#8cc5d3', dot: '#d8a2cd', deep: '#284a63' },
+  mint:  { name: 'Mint',  ink: '#1c1b1a', paper: '#efe9dc', tone: '#bfe9c8', field: '#86d6bb', dot: '#eef3ef', deep: '#1f5a49' },
+  lilac: { name: 'Lilac', ink: '#1c1b1a', paper: '#efe9dc', tone: '#c3b0dd', field: '#b49fcf', dot: '#efe7b0', deep: '#6b2735' },
+  stone: { name: 'Stone', ink: '#1c1b1a', paper: '#efe9dc', tone: '#b9b4a6', field: '#d9c99e', dot: '#e9907f', deep: '#4a4436' },
+  night: { name: 'Night', dark: true, ink: '#efe9dc', paper: '#1f1e1d', tone: '#f07a5f', field: '#2a2927', dot: '#f07a5f', deep: '#3a3835' } };
+
+// ---------- the pattern: stripes, and lines across them where the stripes swap colour ----------
+// (every motif is a few boundary lines y = f(x) over the band, x and y from 0 to 1; a point below an odd number of them has its
+// stripe's colours swapped. Drawn as one shape: each stripe cut into narrow slices, each slice split at the lines into pieces that
+// alternate between the two colours; every dark piece goes into a single path filled once over the light ground, so no seams show
+// where two dark pieces meet. Phase slides the lines along, so the shapes drift)
+const frac = x => x - Math.floor(x), tri = x => 1 - Math.abs(2 * frac(x) - 1);      // (tri: 0 → 1 → 0 over each unit)
+// (ramp: up from 0 to 1, then straight back down over r, a steep back in place of a jump: a jump would leave hairline slivers as
+// the shapes drift across the stripes; the back is one stripe wide)
+const ramp = (x, r) => { const f = frac(x); return f < 1 - r ? f / (1 - r) : (1 - f) / r; };
+const MOTIFS = {
+  arrows:   { name: 'Arrows',   lines: (k, ph, r) => [u => .5 - .5 * (1 - ramp(u * k + ph, r)), u => .5 + .5 * (1 - ramp(u * k + ph, r))] },
+  v:        { name: 'V',        lines: (k, ph) => [u => .12 + .76 * (1 - tri(u * k * .5 + ph + .5))] },
+  zigzag:   { name: 'Zigzag',   lines: (k, ph) => [u => .2 + .6 * tri(u * k + ph), u => .2 + .6 * tri(u * k + ph + .5)] },
+  diamonds: { name: 'Diamonds', lines: (k, ph) => [u => .5 - .44 * tri(u * k + ph), u => .5 + .44 * tri(u * k + ph)] },
+  bowtie:   { name: 'Bowtie',   lines: (k, ph) => [u => .5 - .48 * (1 - tri(u * k + ph)), u => .5 + .48 * (1 - tri(u * k + ph))] },
+  lens:     { name: 'Lens',     lines: (k, ph) => [u => .08 + .34 * (2 * frac(u * k * .5 + ph) - 1) ** 2, u => .92 - .34 * (2 * frac(u * k * .5 + ph) - 1) ** 2] },
+  slant:    { name: 'Slant',    lines: (k, ph, r) => [u => ramp(u * k * .5 + ph, r / 2) * 1.3 - .15, u => ramp(u * k * .5 + ph + .5, r / 2) * 1.3 - .15] } };
+function pattern(c, w, h, o) {   // (o: motif, stripes, repeat, phase, dir, a (dark), b (light))
+  c.save(); if (o.dir === 'h') { c.translate(w, 0); c.rotate(Math.PI / 2); [w, h] = [h, w]; }
+  const n = Math.max(2, Math.round(o.stripes)), sw = w / n, sub = Math.max(2, Math.ceil(240 / n)), lines = MOTIFS[o.motif].lines(o.repeat, o.phase, Math.min(.5, o.repeat / n)), dark = new Path2D(), cl = y => Math.max(0, Math.min(h, y));
+  const slice = (i, xa, xb, depth = 0) => { const ua = xa / w + 1e-7, ub = xb / w - 1e-7;
+    // (a line that jumps inside the slice (the back of an arrow, the step of a slant): split the slice right at the jump)
+    if (depth < 2) for (const f of lines) if (Math.abs(f(ua) - f(ub)) > .3) { let lo = ua, hi = ub; for (let t = 0; t < 22; t++) { const m = (lo + hi) / 2; if (Math.abs(f(lo) - f(m)) > Math.abs(f(m) - f(hi))) hi = m; else lo = m; }
+      const xs = (lo + hi) / 2 * w; slice(i, xa, xs, depth + 1); slice(i, xs, xb, depth + 1); return; }
+    const um = (ua + ub) / 2, cuts = lines.map(f => [cl(f(ua) * h), cl(f(ub) * h), f(um)]).sort((p, q) => p[2] - q[2]), edges = [[0, 0], ...cuts, [h, h]];
+    for (let e = 0; e < edges.length - 1; e++) if (((i % 2 === 0) ? 1 : 0) ^ (e % 2)) {
+      const [ta, tb] = edges[e], [ba, bb] = edges[e + 1]; if (ba - ta < .01 && bb - tb < .01) continue;
+      dark.moveTo(xa, ta); dark.lineTo(xb, tb); dark.lineTo(xb, Math.max(bb, tb)); dark.lineTo(xa, Math.max(ba, ta)); dark.closePath(); } };
+  for (let i = 0; i < n; i++) for (let j = 0; j < sub; j++) slice(i, (i + j / sub) * sw, (i + (j + 1) / sub) * sw);
+  c.fillStyle = o.b; c.fillRect(0, 0, w, h); c.fillStyle = o.a; c.fill(dark); c.restore(); }
+
+// ---------- the world: a lanyard of two chains, a clip, a ring, a rigid card (verlet) ----------
+const CW = 280, CH = 420;                       // (the card in its own units)
+let W = 1, H = 1, dpr = 1, k = 1, pts = [], sticks = [], strapL = [], strapR = [], clip, hole, TL, TR, BR, BL, built = false;
+const pt = (x, y, w) => { const p = { x, y, px: x, py: y, w }; pts.push(p); return p; };
+const stick = (a, b, rope) => sticks.push({ a, b, len: Math.hypot(b.x - a.x, b.y - a.y), rope });
+function build() { pts = []; sticks = []; k = Math.min(W / 760, H / 900) * P.size;
+  const cx = W / 2, cw = CW * k, ch = CH * k, ring = 20 * k, cy = Math.max(H * .5 - ch / 2 - ring - 10 * k, 90 * k);   // (the clip, so the card hangs in the middle)
+  clip = pt(cx, cy, 1); hole = pt(cx, cy + ring, .12); stick(clip, hole);
+  TL = pt(cx - cw / 2, hole.y - 22 * k, .12); TR = pt(cx + cw / 2, hole.y - 22 * k, .12); BR = pt(cx + cw / 2, TL.y + ch, .12); BL = pt(cx - cw / 2, TL.y + ch, .12);
+  const card = [TL, TR, BR, BL, hole]; for (let i = 0; i < card.length; i++) for (let j = i + 1; j < card.length; j++) stick(card[i], card[j]);
+  const chain = side => { const ax = cx + side * P.spread * k / 2, ay = -12 * k, n = 16, out = [];
+    for (let i = 0; i <= n; i++) { const t = i / n; out.push(i === n ? clip : pt(ax + (cx - ax) * t, ay + (cy - ay) * t, i === 0 ? 0 : 1)); }
+    for (let i = 0; i < n; i++) stick(out[i], out[i + 1], true); return out; };
+  strapL = chain(-1); strapR = chain(1); built = true; }
+let grab = null;   // ({ kind: 'card', u, v, x, y } or { kind: 'strap', p, x, y })
+function step(dt) { const g = 2600 * k * P.weight;
+  for (const p of pts) { if (!p.w) continue; const damp = p.w < 1 ? P.swing : .975, vx = (p.x - p.px) * damp, vy = (p.y - p.py) * damp; p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + g * dt * dt; }
+  for (let it = 0; it < 18; it++) {
+    for (const s of sticks) { const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y, d = Math.hypot(dx, dy) || 1e-6; if (s.rope && d <= s.len) continue;   // (a strap can go slack, never stretch)
+      const wsum = s.a.w + s.b.w; if (!wsum) continue; const diff = (d - s.len) / d / wsum; s.a.x += dx * diff * s.a.w; s.a.y += dy * diff * s.a.w; s.b.x -= dx * diff * s.b.w; s.b.y -= dy * diff * s.b.w; }
+    if (grab && grab.kind === 'card') { const { u, v } = grab, wt = [(1 - u) * (1 - v), u * (1 - v), u * v, (1 - u) * v], C = [TL, TR, BR, BL];   // (the held point of the card pulled to the hand, shared out to its corners)
+      let x = 0, y = 0, n2 = 0; C.forEach((p, i) => { x += p.x * wt[i]; y += p.y * wt[i]; n2 += wt[i] * wt[i]; }); const dx = (grab.x - x) * .5 / n2, dy = (grab.y - y) * .5 / n2;
+      C.forEach((p, i) => { p.x += dx * wt[i]; p.y += dy * wt[i]; }); }
+    if (grab && grab.kind === 'strap') { grab.p.x = grab.x; grab.p.y = grab.y; } } }
+
+// ---------- the other forms of the graphic: line art, orbits, blobs, facets, an eye ----------
+// (each one a small composition laid out from the seed, so a shuffle deals a new one and a reload keeps it; each one moves a little
+// with the drift. Thin ink lines on a coloured field, pastel dots under them, as on printed matter)
+const seeded = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const TAU = Math.PI * 2;
+function dots(c, R, w, h, col, n, ph) { c.fillStyle = col;
+  for (let i = 0; i < n; i++) { const x = R() * w, y = R() * h, r = 10 + R() * 8, a = R() * TAU; c.beginPath(); c.arc(x + Math.cos(ph * TAU + a) * 5, y + Math.sin(ph * TAU + a) * 4, r, 0, TAU); c.fill(); } }
+const LOOK = { x: CW / 2, y: 75, tx: CW / 2, ty: 75 };   // (where the eye looks, in the card's units; eased)
+const FORMS = {
+  stripes: { name: 'Stripes' },
+  rays: { name: 'Rays', draw(c, w, h, o) { const R = seeded(o.seed), n = 10 + Math.round(o.detail * 22), edge = R() < .5;
+    c.fillStyle = o.pal.field; c.fillRect(0, 0, w, h); dots(c, R, w, h, o.pal.dot, 2 + (R() * 2 | 0), o.phase);
+    const cx = edge ? w * 1.04 : w * (.3 + .4 * R()), cy = h * (.25 + .5 * R()), a0 = R() * TAU, sway = Math.sin(o.phase * TAU) * .06;
+    c.strokeStyle = o.pal.ink; c.lineWidth = 1.1; c.beginPath();
+    for (let i = 0; i < n; i++) { const a = edge ? Math.PI + (i / (n - 1) - .5) * 2.4 + (R() - .5) * .12 + sway : a0 + i / n * TAU + (R() - .5) * .3 + sway; c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a) * w * 2, cy + Math.sin(a) * w * 2); }
+    if (!edge) { c.moveTo(cx, 0); c.lineTo(cx, h); } c.stroke(); } },
+  threads: { name: 'Threads', draw(c, w, h, o) { const R = seeded(o.seed), n = 3 + Math.round(o.detail * 4);
+    c.fillStyle = o.pal.field; c.fillRect(0, 0, w, h); dots(c, R, w, h, o.pal.dot, 2 + (R() * 2 | 0), o.phase);
+    c.strokeStyle = o.pal.ink; c.lineWidth = 1.1;
+    for (let i = 0; i < n; i++) { const x = w * R(), y = h * R(), rx = w * (.3 + .55 * R()), ry = h * (.45 + .9 * R()), rot = R() * Math.PI + o.phase * (i % 2 ? .6 : -.6);
+      c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, TAU); c.stroke(); } } },
+  orbits: { name: 'Orbits', draw(c, w, h, o) { const R = seeded(o.seed), n = 3 + Math.round(o.detail * 3), side = R() < .5;
+    c.fillStyle = o.pal.field; c.fillRect(0, 0, w, h); c.strokeStyle = c.fillStyle = o.pal.ink; c.lineWidth = 1;
+    for (let i = 0; i < n; i++) { const t = n > 1 ? i / (n - 1) : 0, dashed = i % 2 === 1;
+      // (either rings touching at one point on the left, or tall ellipses side by side)
+      const cx = side ? w * (.18 + .64 * t) : w * .08 + h * (.32 + .75 * t), cy = h / 2, rx = side ? w * .17 : h * (.32 + .75 * t), ry = side ? h * .46 : h * (.32 + .75 * t);
+      c.setLineDash(dashed ? [3, 3] : []); c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, TAU); c.stroke();
+      if (dashed || i === n - 1) { const a = o.phase * TAU * (1 + i * .35) + R() * TAU; c.beginPath(); c.arc(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, 3.6, 0, TAU); c.fill(); } }
+    c.setLineDash([]); } },
+  blobs: { name: 'Blobs', draw(c, w, h, o) { const R = seeded(o.seed), n = 3 + Math.round(o.detail * 3);
+    c.fillStyle = o.pal.field; c.fillRect(0, 0, w, h); c.fillStyle = o.pal.dot;
+    for (let i = 0; i < n; i++) { const x = w * ((i + .15 + .7 * R()) / n), y = h * (.12 + .76 * R()), rx = 18 + R() * 22, ry = 34 + R() * 30,   // (spread along the field, one to each share of its width)
+      rot = (R() - .5) * 1.6 + Math.sin(o.phase * TAU + i) * .12;
+      c.beginPath(); c.ellipse(x + Math.sin(o.phase * TAU + i * 1.7) * 6, y + Math.cos(o.phase * TAU + i) * 5, rx, ry, rot, 0, TAU); c.fill(); } } },
+  facets: { name: 'Facets', draw(c, w, h, o) { const R = seeded(o.seed), m = 2 + Math.round(o.detail * 3), cw = w / m, skew = (R() - .5) * cw * .6;
+    c.fillStyle = o.pal.field; c.fillRect(0, 0, w, h); c.fillStyle = o.pal.deep;
+    for (let i = 0; i < m; i++) { const x0 = i * cw, py = h * (.5 + .28 * Math.sin(o.phase * TAU + i * 1.1)), pw = cw * .04, mid = x0 + cw / 2 + skew * (i % 2 ? 1 : -1) * .5;
+      // (an hourglass per column: full width at the top and the bottom, pinched to a point that rides up and down)
+      c.beginPath(); c.moveTo(x0, 0); c.lineTo(x0 + cw, 0); c.lineTo(mid + pw, py); c.lineTo(x0 + cw, h); c.lineTo(x0, h); c.lineTo(mid - pw, py); c.closePath(); c.fill(); }
+    const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(255,255,255,.16)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); } },
+  eye: { name: 'Eye', draw(c, w, h, o) { const cx = w / 2, cy = h / 2, ew = w * .36, eh = h * .36;
+    c.fillStyle = o.pal.deep; c.fillRect(0, 0, w, h);
+    // (it blinks now and then: the lids close to a line and open)
+    const b = (o.time % 4.6) / 4.6, lid = b > .96 ? 1 - Math.sin((b - .96) / .04 * Math.PI) : 1, eyeH = eh * Math.max(.04, lid);
+    const almond = new Path2D(); almond.moveTo(cx - ew, cy); almond.quadraticCurveTo(cx, cy - eyeH * 2, cx + ew, cy); almond.quadraticCurveTo(cx, cy + eyeH * 2, cx - ew, cy); almond.closePath();
+    c.fillStyle = o.pal.dark ? o.pal.ink : o.pal.paper; c.fill(almond); c.save(); c.clip(almond);   // (the white of the eye stays light on the night palette too)
+    const lx = Math.max(-ew * .42, Math.min(ew * .42, (LOOK.x - cx) * .25)), ly = Math.max(-eh * .4, Math.min(eh * .4, (LOOK.y - cy) * .25)), ix = cx + lx, iy = cy + ly, ir = eh * .95;
+    c.fillStyle = o.pal.field; c.beginPath(); c.arc(ix, iy, ir, 0, TAU); c.fill();
+    c.lineWidth = 2.4; c.lineCap = 'round'; for (let i = 0; i < 26; i++) { const a = i / 26 * TAU; c.strokeStyle = i === 3 ? o.pal.tone : o.pal.deep; c.globalAlpha = i === 3 ? 1 : .55;
+      c.beginPath(); c.moveTo(ix + Math.cos(a) * ir * .72, iy + Math.sin(a) * ir * .72); c.lineTo(ix + Math.cos(a) * ir * .9, iy + Math.sin(a) * ir * .9); c.stroke(); }
+    c.globalAlpha = 1; c.fillStyle = o.pal.dark ? '#111' : o.pal.ink; c.beginPath(); c.arc(ix, iy, ir * .58, 0, TAU); c.fill(); c.restore(); } } };
+
+// ---------- the type: three setups, each a display face for the name and a mono for the small rows ----------
+const FONTS = {
+  editorial: { name: 'Editorial', big: '44px "Instrument Serif", Georgia, serif', lh: 42, role: '30px "Instrument Serif", Georgia, serif', mono: '500 9.5px "Geist Mono", monospace', track: 0 },
+  grotesk:   { name: 'Grotesk', big: '600 34px "Google Sans Flex", system-ui, sans-serif', lh: 36, role: '500 21px "Google Sans Flex", system-ui, sans-serif', mono: '500 9px "JetBrains Mono", monospace', track: -1.2 },
+  classic:   { name: 'Classic', big: '400 38px "Newsreader", Georgia, serif', lh: 40, role: 'italic 400 27px "Newsreader", Georgia, serif', mono: '400 9.5px "IBM Plex Mono", monospace', track: -.4 } };
+const fontsReady = () => Promise.all(Object.values(FONTS).flatMap(f => [f.big, f.role, f.mono]).map(f => document.fonts.load(f).catch(() => { })));
+
+// ---------- tiles: a wall of square tiles, each a small geometric figure in flat colours with a thin outline ----------
+// (each tile's figure and colours come from the seed and its own count of re-rolls, so a tap on one tile deals that tile anew and
+// the rest stay; New layout or Shuffle deals the whole wall. The colours come from a set of their own)
+const TILESETS = {
+  playground: { name: 'Playground', c: ['#6cc3ea', '#e3cd7a', '#2f9aa0', '#e6e0cf', '#f47c6a', '#12a85a', '#eea2d4', '#2735c4', '#8f3530'] },
+  pastel:     { name: 'Pastel', c: ['#f4c7c0', '#bfe0d8', '#f6e7b8', '#d5cbe9', '#b8d3ee', '#fbd9b8', '#ead2da', '#e9e4d6'] },
+  earth:      { name: 'Earth', c: ['#c4693d', '#e2b866', '#6b8f71', '#e8dcc4', '#3d5a6c', '#a3472f', '#d9a48f', '#2f3d33'] },
+  card:       { name: 'Card', c: null } };   // (the card's own palette: ink, paper, tone, field, dot, deep)
+const TILE_FIGS = ['pill', 'diamond', 'frame', 'dots', 'petals', 'hourglass', 'checker', 'quarter', 'bands', 'arch'];
+const tileFlip = {};   // (when each tile was last dealt, for its small pop)
+function tileLayout(w, h, detail) { const cols = 3 + Math.round(detail * 3), s = w / cols, rows = Math.ceil(h / s); return { cols, rows, s }; }
+function tileFigure(c, x, y, s, fig, A, B, C, line) {
+  const box = () => { c.beginPath(); c.rect(x, y, s, s); }, circ = (cx, cy, r) => { c.beginPath(); c.arc(cx, cy, r, 0, TAU); }, paint = col => { c.fillStyle = col; c.fill(); c.stroke(); };
+  c.strokeStyle = line; c.lineWidth = .8; box(); paint(A);
+  const m = x + s / 2, n = y + s / 2;
+  if (fig === 'pill') { c.beginPath(); c.rect(m - s * .2, y, s * .4, s); paint(B); circ(m, y + s * .27, s * .13); paint(C); }
+  else if (fig === 'diamond') { c.beginPath(); c.moveTo(m, y + s * .04); c.lineTo(x + s * .96, n); c.lineTo(m, y + s * .96); c.lineTo(x + s * .04, n); c.closePath(); paint(B); c.beginPath(); c.rect(m - s * .17, n - s * .17, s * .34, s * .34); paint(C); }
+  else if (fig === 'frame') { c.beginPath(); c.rect(x + s * .16, y + s * .16, s * .68, s * .68); paint(B); }
+  else if (fig === 'dots') { c.beginPath(); c.rect(m - s * .25, y, s * .5, s); paint(B); circ(m, y + s * .27, s * .17); paint(C); circ(m, y + s * .73, s * .17); paint(C); }
+  else if (fig === 'petals') { for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { circ(m + dx * s * .24, n + dy * s * .24, s * .23); paint(B); } c.beginPath(); c.rect(m - s * .14, n - s * .14, s * .28, s * .28); paint(C); }
+  else if (fig === 'hourglass') { c.save(); box(); c.clip(); c.beginPath(); c.arc(m, y, s * .5, 0, Math.PI); c.closePath(); paint(B); c.beginPath(); c.arc(m, y + s, s * .5, Math.PI, TAU); c.closePath(); paint(B); c.restore(); }
+  else if (fig === 'checker') { const q = s / 3; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if ((i + j) % 2) { c.beginPath(); c.rect(x + i * q, y + j * q, q, q); paint(B); } }
+  else if (fig === 'quarter') { c.save(); box(); c.clip(); c.beginPath(); c.moveTo(x, y + s); c.arc(x, y + s, s, -Math.PI / 2, 0); c.closePath(); paint(B); c.restore(); }
+  else if (fig === 'bands') { const k = 6, q = s / k; for (let i = 1; i < k; i += 2) { c.beginPath(); c.rect(x, y + i * q, s, q); paint(B); } }
+  else if (fig === 'arch') { const aw = s * .64, ax = m - aw / 2, top = y + s * .14 + aw / 2; c.beginPath(); c.moveTo(ax, y + s); c.lineTo(ax, top); c.arc(m, top, aw / 2, Math.PI, TAU); c.lineTo(ax + aw, y + s); c.closePath(); paint(B); circ(m, y + s * .64, s * .13); paint(C); }
+  c.beginPath(); c.rect(x, y, s, s); c.stroke(); }
+FORMS.tiles = { name: 'Tiles', draw(c, w, h, o) { const { cols, rows, s } = tileLayout(w, h, o.detail), cs = (TILESETS[P.tiles] || TILESETS.playground).c || [o.pal.ink, o.pal.paper, o.pal.tone, o.pal.field, o.pal.dot, o.pal.deep];
+  const line = o.pal.dark ? 'rgba(255,255,255,.35)' : 'rgba(25,22,20,.55)', now = performance.now(), y0 = (h - rows * s) / 2;
+  c.fillStyle = cs[0]; c.fillRect(0, 0, w, h);
+  for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) { const i = r * cols + q, R = seeded(o.seed * 31 + i * 977 + (P.bump[i] || 0) * 7919), pick = () => cs[Math.floor(R() * cs.length)];
+    const A = pick(); let B = pick(); while (B === A && cs.length > 1) B = pick(); let C = pick(); while ((C === B || C === A) && cs.length > 2) C = pick();
+    const fig = TILE_FIGS[Math.floor(R() * TILE_FIGS.length)], x = q * s, y = y0 + r * s, t = Math.min(1, (now - (tileFlip[i] || -1e9)) / 260), k = t < 1 ? .86 + .14 * (1 - (1 - t) ** 3) : 1;
+    c.save(); if (k < 1) { c.translate(x + s / 2, y + s / 2); c.scale(k, k); c.translate(-x - s / 2, -y - s / 2); } tileFigure(c, x, y, s, fig, A, B, C, line); c.restore(); } } };
+function tileAt(lx, ly) { const { cols, rows, s } = tileLayout(CW, 150, P.detail), y0 = (150 - rows * s) / 2, q = Math.floor(lx / s), r = Math.floor((ly - y0) / s); return q >= 0 && q < cols && r >= 0 && r < rows ? r * cols + q : -1; }
+
+// ---------- drawing ----------
+let t0 = performance.now(), phase = 0;
+const frame = () => { const ex = [(TR.x - TL.x + BR.x - BL.x) / 2 / CW, (TR.y - TL.y + BR.y - BL.y) / 2 / CW], ey = [(BL.x - TL.x + BR.x - TR.x) / 2 / CH, (BL.y - TL.y + BR.y - TR.y) / 2 / CH]; return { ex, ey, o: [TL.x, TL.y] }; };
+function ribbon(chain, w, fill, edge) {   // (a strap: the chain drawn as a flat band of its width)
+  const L = [], R = []; for (let i = 0; i < chain.length; i++) { const a = chain[Math.max(0, i - 1)], b = chain[Math.min(chain.length - 1, i + 1)], dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1, nx = -dy / l * w / 2, ny = dx / l * w / 2;
+    L.push([chain[i].x + nx, chain[i].y + ny]); R.push([chain[i].x - nx, chain[i].y - ny]); }
+  ctx.beginPath(); L.forEach((p, i) => i ? ctx.lineTo(...p) : ctx.moveTo(...p)); for (let i = R.length - 1; i >= 0; i--) ctx.lineTo(...R[i]); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  ctx.strokeStyle = edge; ctx.lineWidth = 1; for (const side of [L, R]) { ctx.beginPath(); side.forEach((p, i) => i ? ctx.lineTo(...p) : ctx.moveTo(...p)); ctx.stroke(); }
+  ctx.setLineDash([3 * k, 3 * k]); ctx.strokeStyle = edge; ctx.lineWidth = .8; for (const side of [L, R]) { ctx.beginPath(); side.forEach((p, i) => { const c = chain[i], x = p[0] + (c.x - p[0]) * .3, y = p[1] + (c.y - p[1]) * .3; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); } ctx.setLineDash([]); }
+function draw() {
+  const pal = PALETTES[P.palette] || PALETTES.coral, dark = document.body.classList.contains('dark');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  // (the straps, the back one first; the clip where they meet)
+  const strapFill = dark ? '#d9d4c7' : '#e9e4d7', strapEdge = dark ? 'rgba(0,0,0,.25)' : 'rgba(60,50,30,.18)';
+  ribbon(strapR, 22 * k, strapFill, strapEdge); ribbon(strapL, 22 * k, strapFill, strapEdge);
+  const a1 = strapL[strapL.length - 3], a2 = strapR[strapR.length - 3], mx = (a1.x + a2.x) / 2, my = (a1.y + a2.y) / 2, ang = Math.atan2(clip.y - my, clip.x - mx) - Math.PI / 2;
+  ctx.save(); ctx.translate(clip.x, clip.y); ctx.rotate(ang); ctx.fillStyle = '#a7a8ad'; ctx.beginPath(); ctx.roundRect(-15 * k, -16 * k, 30 * k, 18 * k, 4 * k); ctx.fill(); ctx.fillStyle = '#c9cacf'; ctx.fillRect(-13 * k, -14 * k, 26 * k, 3 * k); ctx.restore();
+  // (the card)
+  const { ex, ey, o } = frame(); ctx.save(); ctx.setTransform(ex[0] * dpr, ex[1] * dpr, ey[0] * dpr, ey[1] * dpr, o[0] * dpr, o[1] * dpr);
+  ctx.save(); ctx.shadowColor = dark ? 'rgba(0,0,0,.5)' : 'rgba(40,30,10,.16)'; ctx.shadowBlur = 28 * dpr * k; ctx.shadowOffsetY = 12 * dpr * k; ctx.fillStyle = pal.paper; ctx.beginPath(); ctx.roundRect(0, 0, CW, CH, 16); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.roundRect(0, 0, CW, CH, 16); ctx.clip();
+  const band = 150, light = P.invert ? pal.tone : pal.paper, F = FONTS[P.fonts] || FONTS.editorial;
+  LOOK.x += (LOOK.tx - LOOK.x) * .12; LOOK.y += (LOOK.ty - LOOK.y) * .12;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, CW, band); ctx.clip();
+  if (P.form === 'stripes' || !FORMS[P.form]) pattern(ctx, CW, band, { motif: P.motif, stripes: P.stripes, repeat: P.repeat, phase, dir: P.dir, a: pal.ink, b: light });
+  else FORMS[P.form].draw(ctx, CW, band, { pal, phase, seed: P.seed, detail: P.detail, time: performance.now() / 1000 });
+  ctx.restore();
+  ctx.fillStyle = pal.tone; ctx.fillRect(0, band, CW, 160);
+  ctx.fillStyle = pal.ink; ctx.textBaseline = 'alphabetic'; ctx.font = F.big; ctx.letterSpacing = F.track + 'px'; ctx.fillText('Alex', 20, band + 52); ctx.fillText('Morgan', 20, band + 52 + F.lh);
+  ctx.textAlign = 'right'; ctx.font = F.role; ctx.letterSpacing = '0px'; ctx.fillText('Guest', CW - 20, band + 144); ctx.textAlign = 'left';
+  ctx.font = F.mono; ctx.fillStyle = pal.ink; const rows = [['PASS', '0042'], ['DAY', 'ONE']], y0 = band + 160 + 28;
+  rows.forEach(([a, b], i) => { const y = y0 + i * 24; ctx.globalAlpha = .9; ctx.fillText(a, 20, y); ctx.textAlign = 'right'; ctx.fillText(b, CW - 20, y); ctx.textAlign = 'left'; ctx.globalAlpha = .18; ctx.fillRect(20, y + 9, CW - 40, 1); });
+  ctx.globalAlpha = 1;
+  // (a small mark: three bars, the middle one cut and shifted, the pattern's idea in one glyph)
+  const mx0 = 20, my0 = CH - 30; ctx.fillStyle = pal.ink; ctx.fillRect(mx0, my0, 20, 3.2); ctx.fillRect(mx0, my0 + 6, 9, 3.2); ctx.fillRect(mx0 + 11, my0 + 6, 9, 3.2); ctx.fillRect(mx0, my0 + 12, 20, 3.2);
+  ctx.font = '600 11px "Geist", sans-serif'; ctx.fillText('lab', mx0 + 26, my0 + 13);
+  ctx.restore();
+  // (the slot, the page showing through; the ring through it)
+  ctx.fillStyle = getComputedStyle(stage).backgroundColor; ctx.beginPath(); ctx.roundRect(CW / 2 - 22, 14, 44, 9, 4.5); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = '#9d9ea3'; ctx.lineWidth = 3.2 * k; ctx.beginPath(); ctx.moveTo(clip.x, clip.y - 2 * k); ctx.lineTo(hole.x, hole.y); ctx.stroke();
+  ctx.fillStyle = '#9d9ea3'; ctx.beginPath(); ctx.arc(hole.x, hole.y, 3 * k, 0, Math.PI * 2); ctx.fill(); }
+
+// ---------- the loop ----------
+let last = performance.now(), acc = 0;
+function tick(now) { const dt = Math.min(.05, (now - last) / 1000); last = now; acc += dt;
+  while (acc >= 1 / 120) { step(1 / 120); acc -= 1 / 120; }
+  phase += dt * P.drift * .08; draw(); requestAnimationFrame(tick); }
+// (a resize keeps the badge swinging: the whole world slides to the new middle; only a big change of scale, or a setting, builds it anew)
+// (on the board, the live box draws into the still's own upright frame (330 × 470), cropped to the box the way the still's picture is
+// covered into it, so the swap from the picture to the live one does not move a thing)
+const FRAME = 330 / 470;
+function size(force) { const oW = W, oH = H; dpr = Math.min(devicePixelRatio || 1, 2); W = stage.clientWidth || 1; H = stage.clientHeight || 1;
+  if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(cv.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); } cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const nk = Math.min(W / 760, H / 900) * P.size;
+  if (force === true || !built || Math.abs(nk / k - 1) > .15) build(); else { const dx = (W - oW) / 2, dy = (H - oH) / 2; for (const p of pts) { p.x += dx; p.px += dx; if (p.w) { p.y += dy; p.py += dy; } } }
+  draw(); }
+new ResizeObserver(size).observe(stage);
+
+// ---------- the hand: hold the card anywhere (or a strap) and throw it; a tap deals a new pattern ----------
+const local = e => { const r = stage.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+function cardUV(x, y) { const { ex, ey, o } = frame(), det = ex[0] * ey[1] - ex[1] * ey[0], dx = x - o[0], dy = y - o[1]; const lx = (dx * ey[1] - dy * ey[0]) / det, ly = (dy * ex[0] - dx * ex[1]) / det; return [lx / CW, ly / CH]; }
+function nearStrap(x, y) { let best = null, bd = 18 * k; for (const p of [...strapL, ...strapR]) { if (!p.w || p === clip) continue; const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p; } } return best; }
+let down = null;
+if (!DEMO) {
+  stage.addEventListener('pointerdown', e => { const [x, y] = local(e), [u, v] = cardUV(x, y);
+    if (u >= 0 && u <= 1 && v >= 0 && v <= 1) grab = { kind: 'card', u, v, x, y }; else { const p = nearStrap(x, y); if (!p) return; grab = { kind: 'strap', p, x, y }; }
+    down = { x, y, t: performance.now(), card: grab.kind === 'card' }; stage.classList.add('dragging'); try { stage.setPointerCapture(e.pointerId); } catch { } });
+  stage.addEventListener('pointermove', e => { const [x, y] = local(e); { const [lu, lv] = cardUV(x, y); LOOK.tx = lu * CW; LOOK.ty = lv * CH; } if (grab) { grab.x = x; grab.y = y; return; } const [u, v] = cardUV(x, y); stage.classList.toggle('grab', (u >= 0 && u <= 1 && v >= 0 && v <= 1) || !!nearStrap(x, y)); });
+  const up = e => { if (!grab) return; const [x, y] = local(e); if (down && down.card && Math.hypot(x - down.x, y - down.y) < 5 && performance.now() - down.t < 300) { const [tu, tv] = cardUV(x, y), ti = P.form === 'tiles' && tv * CH < 150 ? tileAt(tu * CW, tv * CH) : -1;
+      if (ti >= 0) { P.bump = { ...P.bump, [ti]: (P.bump[ti] || 0) + 1 }; tileFlip[ti] = performance.now(); save(); } else shuffle(); }
+    grab = null; down = null; stage.classList.remove('dragging'); };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+}
+// (a new pattern: another motif, count, repeat, palette and direction, never the same motif twice in a row)
+let seed = P.seed; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+function shuffle() { const forms = Object.keys(FORMS).filter(f => f !== P.form), ms = Object.keys(MOTIFS), ps = Object.keys(PALETTES).filter(p => p !== 'night' && p !== P.palette);
+  P.form = forms[Math.floor(rnd() * forms.length)]; P.palette = ps[Math.floor(rnd() * ps.length)]; P.detail = Math.round((.25 + rnd() * .6) * 20) / 20;
+  P.motif = ms[Math.floor(rnd() * ms.length)]; P.stripes = 10 + 2 * Math.floor(rnd() * 8); P.repeat = 1 + Math.floor(rnd() * 3); P.invert = rnd() < .35; P.dir = rnd() < .2 ? 'h' : 'v';
+  P.tiles = ['playground', 'pastel', 'earth'][Math.floor(rnd() * 3)]; P.bump = {}; P.seed = seed; save(); for (const key of ['form', 'detail', 'motif', 'stripes', 'repeat', 'palette', 'invert', 'dir', 'tiles']) ctl[key] && ctl[key].set(P[key]); showFor();
+  // (a small kick, as if the tap knocked it)
+  if (built) { const s = (rnd() < .5 ? -1 : 1) * 6 * k; for (const p of [TL, TR, BR, BL]) p.px -= s; } }
+
+// ---------- light and dark ----------
+let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0e0e10' : '#f3f2ee'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The pattern on the badge, its colours, and the lanyard it hangs from. A tap on the badge deals a new one.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (key, v, re) => { P[key] = v; save(); if (re) size(true); };
+  const sl = (g, key, label, min, max, st, unit, re) => ctl[key] = LabUI.slider(g, { label, min, max, step: st, unit, value: P[key], def: DEF[key], onInput: v => set(key, v, re) });
+  const g0 = LabUI.group(panel, 'Graphic', { key: KEY + '.g.pattern' });
+  ctl.form = LabUI.seg(g0, { label: 'Form', options: Object.entries(FORMS).map(([v, f]) => [v, f.name]), value: P.form, onChange: v => { set('form', v); showFor(); } });
+  ctl.tiles = LabUI.seg(g0, { label: 'Tile colours', options: Object.entries(TILESETS).map(([v, t]) => [v, t.name]), value: P.tiles, onChange: v => set('tiles', v) });
+  ctl.motif = LabUI.seg(g0, { label: 'Shape', options: Object.entries(MOTIFS).map(([v, m]) => [v, m.name]), value: P.motif, onChange: v => set('motif', v) });
+  sl(g0, 'stripes', 'Stripes', 6, 32, 2); sl(g0, 'repeat', 'Repeat', 1, 4, 1);
+  ctl.dir = LabUI.seg(g0, { label: 'Stripes run', options: [['v', 'Down'], ['h', 'Across']], value: P.dir, onChange: v => set('dir', v) });
+  sl(g0, 'detail', 'Detail', 0, 1, .05); sl(g0, 'drift', 'Drift', 0, 2, .05);
+  { const r = document.createElement('div'); r.className = 'ui-row'; r.innerHTML = '<span class="ui-label">Composition</span><button type="button" class="play-intro">New layout</button>'; g0.appendChild(r);
+    r.querySelector('button').onclick = () => { P.seed = (P.seed * 48271 + 11) % 2147483647; P.bump = {}; save(); }; ctl.relayout = { row: r, set() { } }; }
+  const gT = LabUI.group(panel, 'Type', { key: KEY + '.g.type' });
+  ctl.fonts = LabUI.seg(gT, { label: 'Fonts', options: Object.entries(FONTS).map(([v, f]) => [v, f.name]), value: P.fonts, onChange: v => set('fonts', v) });
+  const g1 = LabUI.group(panel, 'Colour', { key: KEY + '.g.colour' });
+  ctl.palette = LabUI.swatches(g1, { label: 'Palette', options: Object.entries(PALETTES).map(([v, p]) => ({ v, name: p.name, css: `linear-gradient(135deg, ${p.tone} 0 50%, ${p.ink} 50% 100%)` })), value: P.palette, onChange: v => set('palette', v) });
+  ctl.invert = LabUI.check(g1, { label: 'Stripes in the card’s colour', value: P.invert, onChange: v => set('invert', v) });
+  showFor();
+  const g2 = LabUI.group(panel, 'Lanyard', { key: KEY + '.g.lanyard' }); sl(g2, 'spread', 'Spread at the top', 0, 600, 10, 'px', true); sl(g2, 'weight', 'Weight', .3, 2.5, .05); sl(g2, 'swing', 'Keeps swinging', .95, .999, .001);
+  const g3 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' }); sl(g3, 'size', 'Size', .6, 1.6, .05, '×', true);
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="shuffle">Shuffle</button><button type="button" data-a="reset">Reset all</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=shuffle]').onclick = shuffle;
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; seed = P.seed; save(); for (const key in ctl) ctl[key].set(P[key]); showFor(); size(true); }; }
+// (the rows that only the stripes use show only for the stripes; Detail and a new layout only for the others)
+function showFor() { const st = P.form === 'stripes';
+  for (const key of ['motif', 'stripes', 'repeat', 'dir', 'invert']) if (ctl[key]) ctl[key].row.style.display = st ? '' : 'none';
+  for (const key of ['detail', 'relayout']) if (ctl[key]) ctl[key].row.style.display = st ? 'none' : '';
+  if (ctl.tiles) ctl.tiles.row.style.display = P.form === 'tiles' ? '' : 'none'; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- the board's box: ?thumb=1 the still, hanging at rest; ?demo=1 nudged now and then, a new pattern every few swings ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF }; seed = P.seed; setMode('light'); }
+buildPanel(); setMode(BARE ? 'light' : mode); LabUI.segThumb($('mode'));
+if (DEMO) document.documentElement.style.visibility = 'hidden';   // (the board's live box: shown once the first picture is drawn with its type, so it lands on the still under it)
+fontsReady().finally(() => { size(); if (DEMO) requestAnimationFrame(() => { document.documentElement.style.visibility = ''; });
+  if (q.has('thumb')) { for (let i = 0; i < 600; i++) step(1 / 120); draw(); return; }
+  requestAnimationFrame(t => { last = t; tick(t); });
+  if (DEMO) { let n = 0; setInterval(() => { const s = (n % 2 ? 1 : -1) * 14 * k; for (const p of [BL, BR]) p.px -= s; if (++n % 3 === 0) shuffle(); }, 2400); } });
+window.BADGE = { get P() { return P; }, shuffle, step, draw, size };
+</script>
+</body>
+</html>
