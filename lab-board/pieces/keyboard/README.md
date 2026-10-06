@@ -14,7 +14,21 @@
 - Najechanie tylko rozjaśnia klawisz, bez dźwięku (zasada Jarka: gdzie się klika, dźwięk tylko przy kliknięciu).
 - Klik myszą albo własna klawiatura wciska klawisz z miękkim klikiem, a puszczenie daje cichszy klik.
 - Nasadka ugina się od góry, a dół zostaje na płycie, więc linia styku jest zawsze narysowana.
-- Przeciąganie tła obraca widok, a kółko myszy albo − / + przybliża.
+- Widok jest stały, na wprost i lekko z góry; kółko myszy albo − / + przybliża.
+
+**Listwa sterowania (06.10.2026, pomysł Jarka plus dodatki z przeglądu klawiatur z ekranami i pokrętłami):** pas płyty za rzędem funkcyjnym.
+- **Suwak wyciszenia ze szczeliną i diodą:** dioda świeci na zielono, gdy dźwięk jest włączony. Klik przełącza suwak, a ekran pokazuje „MUTED” albo „SOUND ON”.
+- **Ekran:** ciemne szkło w ramce, tekst w Geist Mono. Trzy ekrany do przełączania:
+  - Type: to, co piszesz, z migającym kursorem i tempem pisania (WPM);
+  - Stats: WPM, liczba naciśniętych klawiszy, rodzaj kliku, głośność;
+  - Clock: godzina z migającym dwukropkiem i data.
+  Na chwilę wskakują też komunikaty: pasek głośności przy kręceniu pokrętłem, „CLICK · …”, „CAPS LOCK ON/OFF”, „LIGHT/DARK”.
+- **Dwa okrągłe przyciski:** lewy zmienia ekran, a prawy zmienia klik (Soft, Thock, Crisp).
+- **Pokrętło głośności:** wystający bęben z karbowaniem, kreską na górze i skalą wokół (zakres 270°). Kręci się przeciąganiem albo kółkiem myszy nad nim. Co 5% słychać ząbek (detent).
+- **Boczny suwak na prawej krawędzi płyty:** przełącza tryb jasny i ciemny.
+- **Dioda Caps Lock na klawiszu:** świeci po włączeniu i jest zsynchronizowana ze stanem prawdziwej klawiatury.
+- **Podświetlenie reagujące:** wciśnięty klawisz rozjaśnia się od razu i powoli gaśnie, a od niego po sąsiednich klawiszach rozchodzi się pierścień światła. Wyłącza je opcja „Light that answers the keys”.
+- **Pisanie:** Shift i Caps Lock zmieniają wielkość liter, Backspace kasuje znak, Return czyści linię.
 
 **Dźwięk:** syntezowany w przeglądarce, bez plików.
 - Charakter do wyboru: Soft (domyślny), Thock albo Crisp.
