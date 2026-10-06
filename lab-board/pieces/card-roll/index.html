@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Card Roll · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<style>
+  /* A wallet as a rolodex: eight payment cards on a drum, seen from a little above. The wheel, a drag or the arrows turn the drum;
+     the cards behind lean back, the ones in front lean toward you, and the one you stop on rises out of the roll. A click draws it
+     out to the middle, the rest of the roll going soft behind it; it follows the pointer a little, the light sliding over it. A click
+     outside puts it back. Soft realism: gradients, a grain, a chip, the contactless mark, each card its own stock. Light or dark on
+     top; Customize tunes the drum and the pull. */
+  :root { --bg: #f3f2ee; --ink: #1b1c20; --muted: rgba(20,20,20,.52); --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --boxbg: #f3f2ee; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; transition: background .4s; -webkit-font-smoothing: antialiased; }
+  body.dark { --bg: #0e0e10; --ink: #f2f2f0; --muted: rgba(255,255,255,.5); --page: #17181b; --boxbg: #151517; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: inset var(--morph), border-radius var(--morph), background .4s; touch-action: none; user-select: none; -webkit-user-select: none; }
+  body.tuning .stage { background: var(--boxbg); border-radius: 26px; }
+  /* the room: perspective from a little above; the drum at its middle; a soft shadow on the ground under it */
+  .room { position: absolute; inset: 0; perspective: 1500px; perspective-origin: 50% 42%; }
+  .rig { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  .floor { position: absolute; left: 50%; top: 50%; width: 560px; height: 150px; margin: -75px 0 0 -280px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(40,44,60,.22), rgba(40,44,60,.08) 55%, transparent); filter: blur(14px); transition: opacity .4s; }
+  body.dark .floor { background: radial-gradient(closest-side, rgba(0,0,0,.7), rgba(0,0,0,.25) 55%, transparent); }
+  /* a card: one face, centred on the rig; the drum places it (JS) */
+  /* a card is drawn at --q times its size and scaled down in place, so it stays sharp when it is drawn out and grows */
+  :root { --q: 2; }
+  .card { --w: calc(340px * var(--q)); --h: calc(214px * var(--q)); position: absolute; left: calc(var(--w) / -2); top: calc(var(--h) / -2); width: var(--w); height: var(--h); padding: 0; border: 0; border-radius: calc(24px * var(--q));
+    background: none; cursor: pointer; transform-style: preserve-3d; outline: none; transform-origin: 50% 50%; font: inherit; color: inherit; }
+  .card:focus-visible .face { box-shadow: 0 0 0 calc(3px * var(--q)) var(--ink); }
+  .face { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; isolation: isolate; color: #fff; text-align: left; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    box-shadow: inset 0 calc(1px * var(--q)) 0 rgba(255,255,255,calc(.15 + var(--lit, .5) * .5)), inset 0 0 0 calc(1px * var(--q)) rgba(255,255,255,.14), 0 calc(1px * var(--q)) calc(1px * var(--q)) rgba(0,0,0,.08), 0 calc(10px * var(--q)) calc(26px * var(--q)) -12px rgba(20,24,40,.35); }
+  .face > * { position: absolute; }
+  /* a gently domed face: light along the top rim where it meets the edge, a touch of shade along the bottom, softly round the sides */
+  .bevel { inset: 0; z-index: 5; border-radius: inherit; pointer-events: none;
+    box-shadow: inset 0 calc(1px * var(--q)) calc(1.5px * var(--q)) rgba(255,255,255,calc(.1 + var(--lit, .5) * .25)), inset 0 calc(2px * var(--q)) calc(3px * var(--q)) rgba(255,255,255,calc(.06 + var(--lit, .5) * .14)),
+      inset 0 calc(-2px * var(--q)) calc(5px * var(--q)) rgba(0,0,0,.16), inset calc(1.5px * var(--q)) 0 calc(4px * var(--q)) rgba(255,255,255,.06), inset calc(-1.5px * var(--q)) 0 calc(4px * var(--q)) rgba(0,0,0,.08); }
+  .art { inset: 0; z-index: 0; }
+  .grain { inset: 0; z-index: 1; background-image: var(--grain); background-size: calc(180px * var(--q)); mix-blend-mode: overlay; opacity: .28; pointer-events: none; }
+  .issuer { left: calc(22px * var(--q)); top: calc(19px * var(--q)); z-index: 2; font-weight: 650; font-size: calc(15px * var(--q)); letter-spacing: -.01em; }
+  .issuer small { display: block; margin-top: calc(2px * var(--q)); font-size: calc(10.5px * var(--q)); font-weight: 500; letter-spacing: .08em; text-transform: uppercase; opacity: .72; }
+  .chip { left: calc(24px * var(--q)); top: calc(74px * var(--q)); width: calc(44px * var(--q)); height: calc(34px * var(--q)); z-index: 2; }
+  .nfc { left: calc(78px * var(--q)); top: calc(79px * var(--q)); width: calc(22px * var(--q)); height: calc(24px * var(--q)); z-index: 2; opacity: .8; }
+  .num { left: calc(24px * var(--q)); bottom: calc(44px * var(--q)); z-index: 2; font: 500 calc(15px * var(--q))/1 'Geist Mono', ui-monospace, monospace; letter-spacing: .14em; opacity: .92; }
+  .holder { left: calc(24px * var(--q)); bottom: calc(21px * var(--q)); z-index: 2; font-size: calc(10.5px * var(--q)); font-weight: 550; letter-spacing: .12em; text-transform: uppercase; opacity: .78; }
+  .net { right: calc(20px * var(--q)); bottom: calc(16px * var(--q)); z-index: 2; height: calc(30px * var(--q)); display: flex; align-items: flex-end; }
+  .face { --vc: #fff; }
+  .visa { color: var(--vc); font: italic 850 calc(29px * var(--q))/1 var(--lab-font); letter-spacing: -.035em; transform: skewX(-4deg); padding-right: calc(2px * var(--q)); }
+  .mc { width: calc(52px * var(--q)); height: calc(32px * var(--q)); }
+  .amex { padding: calc(5px * var(--q)) calc(7px * var(--q)) calc(4px * var(--q)); border-radius: calc(3px * var(--q)); background: #2e77bc; color: #fff; font: 800 calc(10px * var(--q))/1.05 var(--lab-font); letter-spacing: .02em; text-align: center; }
+  /* the light: a sheen that slides with the card's lean, and a shade for a card that leans away from the light */
+  .sheen { inset: -120%; z-index: 3; pointer-events: none; mix-blend-mode: soft-light; opacity: var(--sh-o, .5);
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.75) 46%, rgba(255,255,255,.15) 54%, transparent 66%); transform: translate(var(--sh-x, 0%), var(--sh-y, 0%)); }
+  .shade { inset: 0; z-index: 4; pointer-events: none; background: #0b0d14; opacity: var(--sd, 0); }
+  /* the gradient set: smooth colour, one big soft shape that fades to nothing, almost no grain */
+  body.grad .grain { opacity: .05; } body.grad .issuer b { color: inherit; } body.grad .face { --vc: #fff; color: #fff; }
+  .shp { inset: 0; z-index: 1; pointer-events: none; display: none; } body.grad .shp { display: block; }
+  body.grad .f-ice, body.grad .f-lilac { color: #1c2133; --vc: #1a1f71; }
+  body.grad .f-emerald .art { background: linear-gradient(150deg, #1d7a4e 0%, #0f5a37 45%, #08321f 100%); } body.grad .f-emerald .shp { background: radial-gradient(circle at 92% 50%, transparent 0 34%, rgba(255,255,255,.22) 34.4% 47%, transparent 47.4%); -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000 85%); mask-image: linear-gradient(100deg, transparent 35%, #000 85%); }
+  body.grad .f-midnight .art { background: radial-gradient(90% 120% at 100% 100%, #3a5bff 0%, rgba(58,91,255,0) 60%), linear-gradient(160deg, #141b3d, #070a1a); } body.grad .f-midnight .shp { background: radial-gradient(circle at 78% 30%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 22%, rgba(255,255,255,0) 46%); }
+  body.grad .f-sunset .art { background: linear-gradient(125deg, #ff8a5c 0%, #ff4f7b 45%, #8b3dff 100%); } body.grad .f-sunset .shp { background: radial-gradient(150% 120% at 110% 120%, transparent 0 48%, rgba(255,255,255,.28) 48.5% 50%, transparent 50.5% 60%, rgba(255,255,255,.16) 60.5% 62%, transparent 62.5%); -webkit-mask-image: linear-gradient(200deg, #000 20%, transparent 80%); mask-image: linear-gradient(200deg, #000 20%, transparent 80%); }
+  body.grad .f-ice .art { background: linear-gradient(160deg, #f4f8ff 0%, #d6e5ff 55%, #b9cdf2 100%); } body.grad .f-ice .shp { background: radial-gradient(circle at 92% 50%, transparent 0 34%, rgba(255,255,255,.22) 34.4% 47%, transparent 47.4%); -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000 85%); mask-image: linear-gradient(100deg, transparent 35%, #000 85%); }
+  body.grad .f-graphite .art { background: radial-gradient(80% 110% at 0% 0%, #4a4a50 0%, rgba(74,74,80,0) 65%), linear-gradient(150deg, #2a2a2e, #111113); } body.grad .f-graphite .shp { background: repeating-radial-gradient(circle at 100% 100%, rgba(255,255,255,.14) 0 1.2px, transparent 1.6px calc(14px * var(--q))); -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 70%); mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 70%); }
+  body.grad .f-lilac .art { background: linear-gradient(140deg, #efe6ff 0%, #d6c4ff 50%, #f6d5ef 100%); } body.grad .f-lilac .shp { background: radial-gradient(circle at 78% 30%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 22%, rgba(255,255,255,0) 46%); }
+  body.grad .f-ocean .art { background: linear-gradient(150deg, #00b4d8 0%, #0a78c2 45%, #053a7a 100%); } body.grad .f-ocean .shp { background: radial-gradient(140% 70% at 50% 130%, rgba(255,255,255,.3) 0 40%, transparent 40.5%), radial-gradient(140% 70% at 30% 145%, rgba(255,255,255,.18) 0 45%, transparent 45.5%); -webkit-mask-image: linear-gradient(90deg, #000, transparent 90%); mask-image: linear-gradient(90deg, #000, transparent 90%); }
+  body.grad .f-volt .art { background: radial-gradient(70% 120% at 100% 0%, rgba(200,255,40,.9) 0%, rgba(200,255,40,0) 62%), linear-gradient(160deg, #1b1d20, #0b0c0d); } body.grad .f-volt .shp { background: radial-gradient(150% 120% at 110% 120%, transparent 0 48%, rgba(255,255,255,.28) 48.5% 50%, transparent 50.5% 60%, rgba(255,255,255,.16) 60.5% 62%, transparent 62.5%); -webkit-mask-image: linear-gradient(200deg, #000 20%, transparent 80%); mask-image: linear-gradient(200deg, #000 20%, transparent 80%); }
+  /* the stocks */
+  /* frosted: each card a pane of glass with only a breath of its own colour, what lies under it blurred hard through it; a bright rim for its thickness */
+  /* frosted, tunable (Frosted glass in the panel): --fb the blur, --fs the colour drawn up through it, --fm the milk of the frost, --ft the
+     card's own colour left in it, --fg its grain, --fl the lens rim (a band at the edge that bends the light: brighter, less blurred,
+     and a bright line round it), --fr how wide that band is. Lengths times --q: the card is drawn at q and scaled down */
+  body.glass .card { transform-style: flat; }
+  body.glass .face { -webkit-backdrop-filter: blur(calc(var(--fb) * var(--q) * 1px)) saturate(var(--fs)); backdrop-filter: blur(calc(var(--fb) * var(--q) * 1px)) saturate(var(--fs));
+    backdrop-filter: url(#glassF) saturate(var(--fs));
+    background: rgba(255,255,255,var(--fm)); color: var(--ink);
+    box-shadow: inset 0 0 0 calc(1px * var(--q)) rgba(255,255,255,calc(.12 + var(--fl) * .5)), inset 0 calc(1.5px * var(--q)) calc(2px * var(--q)) rgba(255,255,255,calc(var(--fl) * .55)),
+      0 calc(10px * var(--q)) calc(26px * var(--q)) calc(-12px * var(--q)) rgba(20,24,40,.25); }
+  body.glass .art { opacity: var(--ft); } body.glass .grain { opacity: var(--fg); } body.glass .bevel { display: none; } body.glass .visa { color: var(--ink) !important; } body.glass .t-onyx .issuer b, body.glass .t-volt .issuer b { color: inherit; }
+  body.glass.dark .face { background: rgba(255,255,255,calc(var(--fm) * .35)); }
+  /* the lens edge: only light, a fine rim like the edge of a pane of glass catching it, brightest along the top and the left, faint
+     on the far side; no shade. Lens width is the line, Lens edge its strength. (The bending of what is behind is the Refraction) */
+  .lens { display: none; } body.glass .lens { display: block; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: var(--fl);
+    border: calc(var(--fr) * .5px * var(--q)) solid transparent; background: linear-gradient(140deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.35) 22%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.3) 80%, rgba(255,255,255,.75) 100%) border-box;
+    -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+    filter: blur(calc(var(--fr) * .12px * var(--q))); }
+  /* the hint at the foot */
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 6; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; transition: left var(--morph), bottom var(--morph); }
+  .mat { display: flex; gap: 2px; height: 46px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); }
+  .mat button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mat button:hover { color: #1b1c20; } .mat button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .mat { background: #1c1c1f; } body.dark .mat button { color: rgba(255,255,255,.5); } body.dark .mat button:hover { color: #f2f2f0; } body.dark .mat button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  .hint { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 3; transform: translateX(-50%); margin: 0; color: var(--muted); font-size: 13px; pointer-events: none; transition: opacity .3s, left var(--morph); white-space: nowrap; }
+  body.open .hint { opacity: 0; }
+  /* the corner controls (as on every piece) */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .3s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); transition: left .45s var(--ease); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .hint, body.bare .dock { display: none; }
+  /* the panel: a card beside the stage (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-hover, rgba(20,20,20,.06)); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; z-index: 3; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode, body.tuning .hint, body.tuning .dock { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; }
+    body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; } body.tuning .dock, body.tuning .hint { display: none; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="A wallet of eight cards on a roll: scroll, drag or use the arrows to turn it; click the card on top to draw it out">
+  <div class="room" id="room"><div class="floor" id="floor"></div><div class="rig" id="rig"></div></div>
+</main>
+<p class="hint" id="hint">Scroll to turn the roll, click to draw a card out</p>
+<div class="dock"><div class="vars" id="vars" role="group" aria-label="Motions">
+  <button id="prev" type="button" aria-label="Previous motion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm">Deck</span>
+  <button id="next" type="button" aria-label="Next motion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div>
+<div class="mat lab-seg" id="mat" role="radiogroup" aria-label="Colour or frosted glass"><button type="button" role="radio" data-g="solid">Color</button><button type="button" role="radio" data-g="glass">Frost</button></div></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the card roll"></aside>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <clipPath id="mcL"><circle cx="16" cy="16" r="15"/></clipPath>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3dda0"/><stop offset=".45" stop-color="#d6b36a"/><stop offset="1" stop-color="#b8924a"/></linearGradient>
+  <filter id="glassF" x="0" y="0" width="680" height="428" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feImage id="glassMap" x="0" y="0" width="680" height="428" preserveAspectRatio="none" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" id="glassDisp" scale="80" xChannelSelector="R" yChannelSelector="G" result="bent"/>
+    <feGaussianBlur in="bent" id="glassBlur" stdDeviation="20"/>
+  </filter>
+  <filter id="lensF" x="0" y="0" width="680" height="428" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feImage id="lensMap" x="0" y="0" width="680" height="428" preserveAspectRatio="none" result="map"/>
+    <feGaussianBlur in="SourceGraphic" id="lensBlur" stdDeviation="3" result="soft"/>
+    <feDisplacementMap in="soft" in2="map" id="lensDisp" scale="60" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1f2f4"/><stop offset=".5" stop-color="#c3c6cc"/><stop offset="1" stop-color="#9a9ea6"/></linearGradient>
+</defs></svg>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.card-roll.v1';
+// (Frosted, Jarek's setup: picking it sets the glass and how a card comes out to these)
+const FROST = { fb: 11, fs: 1.9, fm: .14, ft: 0, fg: 0, fl: 0, fr: 8.5, refr: 74, bez: 31, blur: 8, pull: 1.2, follow: true, size: .65 };
+// (Frosted, Jarek's base for each motion: picking Frosted, or a motion while Frosted, starts from these. Barrel takes FROST)
+const GLASS = {
+  roll: { ...FROST, refr: 53, bez: 22, tilt: 40, space: 2.6, dof: .25, lift: 57 },
+  deck: { ...FROST, tilt: 50, space: 1.6, dof: .45, lift: 47 },
+  fan: { ...FROST, tilt: 20, space: 1, dof: 1.2, lift: 47, blur: 8.5, pull: 1.18 },
+  wallet: { ...FROST, fb: 13, fs: 1.6, fm: .12, fg: .04, fl: .01, refr: 36, tilt: 16, space: 1, dof: .4, lift: 0, blur: 6.5, pull: 1.14 } };
+const DEF = { anim: 'deck', glass: false, fb: 10, fs: 1.5, fm: 0, ft: .22, fg: .02, fl: .08, fr: 3, refr: 60, bez: 26, tilt: 52, space: 1.6, lean: .6, dof: 2.85, lift: 47, blur: 16.5, pull: 1.44, follow: false, speed: 1.5, size: 1 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), stage = $('stage'), rig = $('rig'), floor = $('floor');
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), RAD = Math.PI / 180;
+
+// ---------- the texture: a fine grain, barely there ----------
+(() => { const c = document.createElement('canvas'); c.width = c.height = 180; const x = c.getContext('2d'), im = x.createImageData(180, 180);
+  for (let i = 0; i < im.data.length; i += 4) { const v = 128 + (Math.random() - .5) * 120; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
+  x.putImageData(im, 0, 0); document.documentElement.style.setProperty('--grain', `url(${c.toDataURL()})`); })();
+
+// ---------- the cards ----------
+const CARDS = [
+  { g: 'emerald', issuer: 'Halden', tier: 'Everyday', net: 'visa', end: '4821', chip: 'silver' },
+  { g: 'midnight', issuer: 'Northwind <b>Reserve</b>', tier: 'Metal', net: 'mc', end: '0937', chip: 'gold' },
+  { g: 'sunset', issuer: 'Kite', tier: 'Credit', net: 'visa', end: '5512', chip: 'gold' },
+  { g: 'ice', issuer: 'Fern', tier: 'Saver', net: 'mc', end: '2048', chip: 'silver' },
+  { g: 'graphite', issuer: 'Lumen', tier: 'Signature', net: 'visa', end: '7730', chip: 'silver', dark: true },
+  { g: 'lilac', issuer: 'Nova', tier: 'World Elite', net: 'mc', end: '3196', chip: 'gold' },
+  { g: 'ocean', issuer: 'Atlas', tier: 'Travel', net: 'amex', end: '6604', chip: 'gold' },
+  { g: 'volt', issuer: 'Volt <b>·</b>', tier: 'Debit', net: 'mc', end: '1259', chip: 'silver' },
+];
+const N = CARDS.length, NAMES = { visa: 'Visa', mc: 'Mastercard', amex: 'American Express' };
+const CHIP = c => `<svg class="chip" viewBox="0 0 44 34" aria-hidden="true"><rect x=".5" y=".5" width="43" height="33" rx="6" fill="url(#${c})" stroke="rgba(0,0,0,.18)"/><path d="M15 .5v10.5h14V.5M15 33.5V23h14v10.5M.5 12h14.5M29 12h14.5M.5 22h14.5M29 22h14.5M15 11v12M29 11v12" fill="none" stroke="rgba(60,40,10,.35)" stroke-width="1"/></svg>`;
+const NFC = '<svg class="nfc" viewBox="0 0 22 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M3 9.5a4 4 0 0 1 0 5M7.5 6.5a9 9 0 0 1 0 11M12 3.5a14 14 0 0 1 0 17M16.5 1a19 19 0 0 1 0 22"/></svg>';
+const NET = { visa: () => '<span class="visa">VISA</span>',
+  mc: () => '<svg class="mc" viewBox="0 0 52 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#eb001b"/><circle cx="36" cy="16" r="15" fill="#f79e1b"/><circle cx="36" cy="16" r="15" fill="#ff5f00" clip-path="url(#mcL)"/></svg>',
+  amex: () => '<span class="amex">AMERICAN<br>EXPRESS</span>' };
+const els = CARDS.map((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'card'; b.dataset.i = i;
+  b.setAttribute('aria-label', `${NAMES[c.net]}, ${c.issuer.replace(/<[^>]+>/g, '').replace('·', '').trim()} ${c.tier}, ending ${c.end}`);
+  b.innerHTML = `<div class="face f-${c.g}"><div class="art"></div><div class="grain"></div><div class="issuer">${c.issuer}<small>${c.tier}</small></div>${CHIP(c.chip)}${NFC}
+    <div class="num">•••• •••• •••• ${c.end}</div><div class="holder">Alex Rivera</div><div class="net">${NET[c.net](c.dark || c.t === 'sand')}</div><div class="shp"></div><div class="sheen"></div><div class="shade"></div><div class="bevel"></div></div><div class="lens"></div>`;
+  b._f = b.querySelector('.face'); b._l = b.querySelector('.lens'); rig.appendChild(b); return b; });
+
+// ---------- the motions: four ways for the wallet to lie and turn. Each places a card by its distance from the one you stop on (d),
+// before the view from above tilts it all; the one you stop on comes out a little. The cards are layered like paper, nearest the top
+// on top, so they never cut through one another. Everything eases, no spring ----------
+//   Deck    a file of cards standing packed tight, seen from above and a little in front; the one you stop on rises, pushes its
+//           neighbours apart and tips back a touch, still in the middle of the deck
+//   Roll    round a wide cylinder seen from above, behind packing upward, in front overlapping like a wallet
+//   Barrel  the picker wheel: a drum facing you, the cards tipping back above and below, the middle one out toward you
+//   Wallet  a column of cards, the one you stop on shown whole, the others down to their top strips
+//   Fan     a hand of cards round a corner, the one you stop on straight and drawn up out of the fan
+const MODES = { deck: { name: 'Deck', tilt: 52, space: 1.6, lift: 47, dof: 2.85 }, roll: { name: 'Roll', tilt: 40, space: 1.9, lift: 34, dof: .6 }, barrel: { name: 'Barrel', tilt: 8, space: .5, lift: 100, dof: 1 }, wallet: { name: 'Wallet', tilt: 16, space: 1, lift: 34, dof: 1 }, fan: { name: 'Fan', tilt: 20, space: 1, lift: 34, dof: 1 } }, ORDER = Object.keys(MODES);
+const W = 340, H = 214, PERSP = 1100, Q = 2;   // (Q: the cards are laid out at Q times their size, see --q)
+let pos = 2, target = 2, lastTurn = -1e9, drag = null, openI = -1, shownI = -1, K = 1, vel = 0;
+const lift = { p: 0 }, pull = { p: 0 }, look = { x: 0, y: 0, tx: 0, ty: 0 };
+const smooth = t => t * t * (3 - 2 * t);
+function turnTo(v) { target = CYC() ? v : clamp(v, 0, N - 1); lastTurn = performance.now(); wake(); }
+function open(i) { if (openI === i) return; openI = i; shownI = i; document.body.classList.add('open'); look.tx = look.ty = 0; wake(); }
+function close() { if (openI < 0) return; openI = -1; document.body.classList.remove('open'); wake(); }
+// (where a card lies: x, y, z and its turn, before the view tilts; layer: which is on top)
+function place(d, ad, up, held, i) { const sp = P.space;
+  if (P.anim === 'deck') { const gap = 18 * sp, spread = 34 * sp * Math.sign(d) * Math.tanh(ad * 1.6), wave = Math.exp(-((ad - 1) ** 2) / .7);
+    // (packed front to back; around the one you stop on the deck opens, its neighbours leaning away from it; it rises and tips back)
+    return { x: 0, y: -up * 1.1, z: -d * gap - spread, rx: (d > 0 ? 9 : 0) * wave + P.tilt * .4 * held, rz: 0, layer: -i }; }   // (risen, it turns its face toward you, about two fifths of the way)
+  if (P.anim === 'barrel') { const R = 320, phi = d * (H + 12) / R / RAD * sp, rr = R + up;   // (the cards lie side by side round a barrel seen from above, like staves, never over one another; the one on top is drawn up out of it and turns square to you)
+    return { x: 0, y: -rr * Math.sin(phi * RAD), z: rr * Math.cos(phi * RAD) - R, rx: phi - P.tilt * held * .6, rz: 0, layer: -ad }; }
+  if (P.anim === 'wallet') { const S = 40 * sp, y = d <= 0 ? d * S : Math.min(d, 1) * H * .9 + Math.max(0, d - 1) * S;
+    return { x: 0, y: y - up * .7, z: up * .5, rx: 0, rz: 0, layer: i }; }
+  // (Roll and Fan go round: the card you are on lies in front, the rest behind it; turning on, the front one slips down and fades,
+  // and comes back at the back of the pile)
+  const dm = ((d % N) + N) % N, rest = q => P.anim === 'fan' ? fanAt(q, sp) : { x: 0, y: 0, z: -q * 16 * sp, rx: 0, rz: 0 };
+  const risen = q => { const r = rest(q); return { ...r, y: r.y - up * .35, z: r.z + up * .3, rx: r.rx + 6 * held }; };
+  if (dm <= N - 1) return { ...risen(dm), layer: -dm };
+  { const u = N - dm;   // (the front card slips a little down and fades, showing the next; it comes back at the back of the pile, fading in)
+    if (u < .5) { const k = smooth(u / .5), r = risen(0); return { ...r, y: r.y + k * H * .28, z: r.z + k * 8, alpha: 1 - k, layer: 60 }; }
+    return { ...rest(N - 1), alpha: smooth((u - .5) / .5), layer: -60 }; } }
+function fanAt(q, sp) { const a = -q * 7 * sp, c = Math.cos(a * RAD), s = Math.sin(a * RAD), px = -W * .9, py = H * 1.5;   // (a hand of cards round a corner below left)
+  return { x: px - px * c + py * s + W * .22, y: py - px * s - py * c + H * .28, z: -q * 3, rx: 0, rz: a }; }
+const CYC = () => P.anim === 'roll' || P.anim === 'fan', idx = v => ((Math.round(v) % N) + N) % N;
+
+let raf = 0; const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
+let lastPos = pos; const CS = Array.from({ length: N }, () => ({ p: pos, v: 0, l: { p: 0 } }));
+function frame(now) { raf = 0; let busy = false;
+  const idle = now - lastTurn > 170;
+  if (!drag && idle && target !== Math.round(target)) target = Math.round(target);   // (stopped: settle on the nearest card)
+  const k = still() ? 1 : .13; if (Math.abs(target - pos) > .0005) { pos += (target - pos) * k; busy = true; } else pos = target;
+  vel += ((pos - lastPos) - vel) * .25; lastPos = pos; if (Math.abs(vel) > .0004) busy = true; else vel = 0;
+  const settled = !drag && idle && Math.abs(target - pos) < .02 && target === Math.round(target);
+  if (ease(lift, settled ? 1 : 0, settled ? .11 : .22)) busy = true;
+  if (ease(pull, openI >= 0 ? 1 : 0, still() ? 1 : .1)) busy = true; if (pull.p === 0 && openI < 0) shownI = -1;
+  if (Math.abs(look.tx - look.x) + Math.abs(look.ty - look.y) > .001) { look.x += (look.tx - look.x) * .12; look.y += (look.ty - look.y) * .12; busy = true; }
+  const tv = P.anim === 'deck' || P.anim === 'roll' ? -P.tilt : P.tilt, t = smooth(pull.p), top = idx(pos), T = tv * RAD;
+  for (let i = 0; i < N; i++) { const el = els[i], cs = CS[i], m = i === shownI ? t : 0, n = 1 - m;
+    // (each card follows on its own: the further from where you are, the later it comes, so the deck moves as a wave, not a block)
+    const prev = cs.p, kk = still() ? 1 : .22 / (1 + .3 * Math.abs(i - pos)); cs.p += (pos - cs.p) * kk; if (Math.abs(pos - cs.p) > .0005) busy = true; else cs.p = pos;
+    cs.v += ((cs.p - prev) - cs.v) * .3; if (ease(cs.l, settled && i === top ? 1 : 0, settled ? .085 : .16)) busy = true;
+    const d = i - cs.p, ad = Math.abs(d), held = smooth(cs.l.p), lean = still() ? 0 : clamp(-cs.v * 300 * P.lean, -16, 16);
+    const c = place(d, ad, P.lift * held, held, i), rx = tv + c.rx + lean;   // (while turning, each card tips a little with its own speed)
+    // (the view from above tilts the place; drawn out: square to you, toward you, a touch bigger, following the pointer)
+    const X = c.x, Y = c.y * Math.cos(T) - c.z * Math.sin(T), Z = c.y * Math.sin(T) + c.z * Math.cos(T);
+    const ang = rx * n + m * look.y * -7, yaw = m * look.x * 9;
+    el.style.transform = `perspective(${PERSP}px) translate3d(${(X * n).toFixed(2)}px, ${(Y * n).toFixed(2)}px, ${(Z * n + m * 170).toFixed(2)}px) rotateX(${ang.toFixed(3)}deg) rotateY(${yaw.toFixed(3)}deg) rotateZ(${(c.rz * n).toFixed(3)}deg) scale(${((1 + (P.pull - 1) * m) / Q).toFixed(4)})`;
+    el.style.zIndex = i === shownI ? 400 : String(200 + Math.round(c.layer * 10));
+    const al = c.alpha ?? 1; el.style.opacity = i === shownI ? '' : (al * (1 - .3 * t)).toFixed(3); el.style.visibility = al < .01 ? 'hidden' : '';
+    const bl = Math.max(i !== shownI ? P.blur * t : 0, clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof, 0, 18) * n);   // (the further back, the softer, and faster with depth: a progressive blur)
+    // (on glass the blur goes on the face and its lens, never the card: a filter on the card would cut the glass off from what lies
+    // behind it, and it would flicker as cards move in and out of the blur. The face keeps a filter always, so nothing is rebuilt)
+    if (P.glass) { el.style.filter = ''; const fb = `blur(${(bl * Q).toFixed(2)}px)`; el._f.style.filter = fb; el._l.style.filter = `blur(${((bl + P.fr * .12) * Q).toFixed(2)}px)`; }
+    else { el.style.filter = bl > .05 ? `blur(${bl.toFixed(2)}px)` : ''; el._f.style.filter = el._l.style.filter = ''; }
+    // (the light from above: a card turned up toward it a touch brighter, one turned down or further back a touch darker; the sheen slides with the turn)
+    const eff = ang, la = eff * RAD, f = el._f;
+    const own = ((c.rx + lean) * n) * RAD;   // (the shade follows only the card's own turn, not the view: a card looked down on is not darker for it)
+    f.style.setProperty('--sd', ((Math.max(0, -Math.sin(own)) * .25 + Math.min(ad, 4) * .01 * n) * (P.glass ? .25 : 1)).toFixed(3));
+    f.style.setProperty('--sh-x', (clamp(-eff * .5 + yaw + c.rz * n * .5, -25, 25)).toFixed(1) + '%'); f.style.setProperty('--sh-y', (clamp(eff * .35, -18, 18)).toFixed(1) + '%');
+    f.style.setProperty('--sh-o', (.35 + Math.abs(Math.sin(la)) * .3 + m * .25).toFixed(3)); f.style.setProperty('--iri', (eff * 2 + yaw * 3 + c.rz * n).toFixed(1) + 'deg');
+    el.style.setProperty('--lit', clamp(.3 + Math.abs(Math.sin(la)) * .7 + (c.rx + lean) * .006, 0, 1).toFixed(3));
+    el.tabIndex = i === top ? 0 : -1; }
+  floor.style.opacity = (1 - .6 * t).toFixed(3);
+  if (busy) wake(); }
+function ease(s, to, k) { s.p += (to - s.p) * k; if (Math.abs(to - s.p) < .0008) s.p = to; return s.p !== to; }
+
+// ---------- the hand: the wheel and a drag turn the roll; a click on the card on top draws it out, on another turns to it; a click
+// outside, the wheel or Escape put it back; the arrows turn, Enter draws out ----------
+if (!DEMO) {
+  stage.addEventListener('wheel', e => { e.preventDefault(); if (openI >= 0) { close(); return; } const d = e.deltaMode ? e.deltaY * 40 : e.deltaY; turnTo(target + d / 110 * P.speed); }, { passive: false });
+  stage.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag = { y: e.clientY, x: e.clientX, t: target, moved: false, card: e.target.closest('.card') }; });
+  addEventListener('pointermove', e => { if (openI >= 0 && P.follow) { const r = stage.getBoundingClientRect(); look.tx = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1); look.ty = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1); wake(); }
+    if (!drag || openI >= 0) return; const dy = e.clientY - drag.y; if (!drag.moved && Math.abs(dy) + Math.abs(e.clientX - drag.x) > 6) { drag.moved = true; try { stage.setPointerCapture(e.pointerId); } catch { } }
+    if (drag.moved) { target = drag.t + dy / (130 * K) * P.speed; if (!CYC()) target = clamp(target, 0, N - 1); lastTurn = performance.now(); wake(); } });
+  const up = () => { if (!drag) return; const d = drag; drag = null; lastTurn = performance.now() - 120; wake(); if (d.moved) return;
+    if (openI >= 0) { if (!d.card || +d.card.dataset.i !== openI) close(); return; }
+    if (!d.card) return; const i = +d.card.dataset.i; if (i === idx(target) && Math.abs(pos - Math.round(target)) < .3) open(i); else turnTo(CYC() ? Math.round(target) + (i - idx(target) + N) % N : i); };
+  addEventListener('pointerup', up); addEventListener('pointercancel', () => { drag = null; wake(); });
+  addEventListener('keydown', e => { if (e.target.closest?.('.panel')) return;
+    if (e.key === 'Escape') { if (document.body.classList.contains('tuning')) openPanel(false); else close(); return; }
+    if (['ArrowDown', 'ArrowRight'].includes(e.key)) { e.preventDefault(); close(); turnTo(Math.round(target) + 1); els[idx(target)].focus({ preventScroll: true }); }
+    if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { e.preventDefault(); close(); turnTo(Math.round(target) - 1); els[idx(target)].focus({ preventScroll: true }); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('.card')) { e.preventDefault(); const i = +e.target.closest('.card').dataset.i; if (openI === i) close(); else if (i === idx(target)) open(i); else turnTo(i); } });
+}
+
+// ---------- the size: the roll fits the stage ----------
+function fit() { const r = stage.getBoundingClientRect(); K = BARE ? Math.min(r.width / 560, r.height / 470) : clamp(Math.min(r.width / 760, r.height / 640), .55, 1.35);
+  rig.style.zoom = (K * P.size).toFixed(4);   // (zoom, not scale: the cards are laid out at their size, so they stay sharp)
+  floor.style.transform = `translateY(${((H * .55 + 60) * K * P.size).toFixed(1)}px) scale(${(K * P.size).toFixed(4)})`; wake(); }
+addEventListener('resize', fit); new ResizeObserver(fit).observe(stage);
+
+// ---------- light and dark ----------
+let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; try { if (!BARE) localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark'); $('vars').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0e0e10' : '#f3f2ee'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The roll, the card that rises, and how one comes out.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); fit(); };
+  const sl = (g, k, label, min, max, step, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g0 = LabUI.group(panel, 'Motion', { key: KEY + '.g.motion' });
+  ctl.anim = LabUI.seg(g0, { label: 'The cards', options: ORDER.map(k => [k, MODES[k].name]), value: P.anim, onChange: v => setAnim(v, true) });
+  sl(g0, 'tilt', 'View from above', 0, 60, 1, '°'); sl(g0, 'space', 'Spacing', .5, 5, .05, '×'); sl(g0, 'lean', 'Tip while scrolling', 0, 1.5, .05, '×'); sl(g0, 'speed', 'Scroll speed', .3, 2.5, .05, '×');
+  const g1 = LabUI.group(panel, 'Card', { key: KEY + '.g.card' }); sl(g1, 'lift', 'Rise when you stop', 0, 110, 1, 'px'); sl(g1, 'pull', 'Drawn out size', 1, 1.6, .02, '×'); sl(g1, 'blur', 'Blur the rest', 0, 20, .5, 'px'); sl(g1, 'dof', 'Blur with depth', 0, 3, .05, '×');
+  ctl.follow = LabUI.check(g1, { label: 'Follow the pointer', value: P.follow, onChange: v => { set('follow', v); if (!v) { look.tx = look.ty = 0; wake(); } } });
+  const gf = LabUI.group(panel, 'Frosted glass', { key: KEY + '.g.frost' }), fsl = (k, label, min, max, step, unit) => ctl[k] = LabUI.slider(gf, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => { P[k] = v; save(); applyGlass(); } });
+  fsl('fb', 'Frost', 0, 80, 1, 'px'); fsl('fm', 'Milk', 0, .6, .01, ''); fsl('ft', 'Card colour', 0, 1, .01, ''); fsl('fs', 'Colour through', 1, 2.6, .05, '×'); fsl('fl', 'Lens edge', 0, 1, .01, ''); fsl('fr', 'Lens width', 2, 24, .5, 'px'); fsl('fg', 'Grain', 0, .3, .01, ''); fsl('refr', 'Refraction', 0, 160, 1, 'px'); fsl('bez', 'Bezel', 4, 80, 1, 'px');
+  const g2 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' });
+  ctl.glass = LabUI.seg(g2, { label: 'Cards', options: [['solid', 'Solid'], ['glass', 'Frosted']], value: P.glass ? 'glass' : 'solid', onChange: v => setGlass(v === 'glass', true) }); sl(g2, 'size', 'Size', .6, 1.6, .05, '×');
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(k === 'glass' ? (P.glass ? 'glass' : 'solid') : P[k]); applyGlass(); fit(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function setGlass(on, fromPanel) { P.glass = on; if (on) preset(GLASS[P.anim] || FROST); if (!fromPanel) ctl.glass?.set(on ? 'glass' : 'solid'); paintMat(); save(); applyGlass(); fit(); }
+function paintMat() { document.querySelectorAll('#mat button').forEach(b => b.setAttribute('aria-checked', String((b.dataset.g === 'glass') === !!P.glass))); }
+function preset(o) { for (const k in o) { P[k] = o[k]; ctl[k]?.set(P[k]); } }
+function setAnim(v, fromPanel) { if (!MODES[v]) return; P.anim = v; for (const k of ['tilt', 'space', 'lift', 'dof']) { P[k] = MODES[v][k]; ctl[k]?.set(P[k]); } if (P.glass) { preset(GLASS[v] || FROST); applyGlass(); fit(); }
+  if (!fromPanel) ctl.anim?.set(v); $('nm').textContent = MODES[v].name; pos = target = lastPos = idx(pos); CS.forEach(c => c.p = pos); save(); wake(); }
+function edgeMap(band, sign) { const MW = 340, MH = 214, sx = 680 / MW, R = 24 * Q / sx, bw = band / sx, c = document.createElement('canvas'); c.width = MW; c.height = MH;
+  const x = c.getContext('2d'), im = x.createImageData(MW, MH), hw = MW / 2, hh = MH / 2;
+  for (let py = 0; py < MH; py++) for (let px = 0; px < MW; px++) { const X = px + .5 - hw, Y = py + .5 - hh, qx = Math.abs(X) - (hw - R), qy = Math.abs(Y) - (hh - R);
+    const d = -(Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - R); let nx = 0, ny = 0, k = 0;
+    if (d < bw && d > -1) { k = (1 - Math.max(0, d) / bw) ** 2; if (qx > 0 && qy > 0) { const l = Math.hypot(qx, qy) || 1; nx = qx / l * Math.sign(X); ny = qy / l * Math.sign(Y); } else if (qx > qy) nx = Math.sign(X); else ny = Math.sign(Y); }
+    const o = (py * MW + px) * 4; im.data[o] = 128 + sign * nx * k * 127; im.data[o + 1] = 128 + sign * ny * k * 127; im.data[o + 2] = 128; im.data[o + 3] = 255; }
+  x.putImageData(im, 0, 0); return c.toDataURL(); }
+const setHref = (id, url) => { const m = document.getElementById(id); m.setAttribute('href', url); m.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url); };
+let lensKey = '', glassKey = '';
+function lensMap() { const w = Math.max(2, P.fr) * Q, key = w + '';
+  if (key !== lensKey) { lensKey = key; setHref('lensMap', edgeMap(w, 1)); }
+  document.getElementById('lensDisp').setAttribute('scale', (P.fl * 90).toFixed(1)); document.getElementById('lensBlur').setAttribute('stdDeviation', (P.fb * .06 * Q).toFixed(2));
+  const gk = Math.max(2, P.bez) * Q + ''; if (gk !== glassKey) { glassKey = gk; setHref('glassMap', edgeMap(Math.max(2, P.bez) * Q, -1)); }   // (the pane: it draws from further in, so what is behind seems pulled round the edge)
+  document.getElementById('glassDisp').setAttribute('scale', (P.refr * Q).toFixed(1)); document.getElementById('glassBlur').setAttribute('stdDeviation', (P.fb * Q).toFixed(2)); }
+function applyGlass() { lensMap(); const r = document.body.style; for (const k of ['fb', 'fs', 'fm', 'ft', 'fg', 'fl', 'fr']) r.setProperty('--' + k, P[k]); document.body.classList.toggle('glass', !!P.glass); document.body.classList.add('grad'); }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+buildPanel(); setMode(mode); applyGlass(); LabUI.segThumb($('mode'));
+const VARS = LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: d => setAnim(ORDER[(ORDER.indexOf(P.anim) + d + ORDER.length) % ORDER.length]),
+  items: () => ORDER.map(k => MODES[k].name), current: () => MODES[P.anim].name, onPick: n => setAnim(ORDER.find(k => MODES[k].name === n)) });
+$('nm').textContent = MODES[P.anim]?.name || 'Deck';
+document.querySelectorAll('#mat button').forEach(b => b.onclick = () => setGlass(b.dataset.g === 'glass')); paintMat(); LabUI.segThumb($('mat'));
+
+// ---------- the board's box: ?thumb=1 the still (the third card risen), ?demo=1 the roll turning, stopping, one drawn out ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF, ...GLASS.deck, anim: 'deck', glass: true, size: 1 }; if (q.has('anim')) P.anim = q.get('anim'); setMode(q.get('mode') === 'light' ? 'light' : 'dark'); applyGlass(); lift.p = 1; lastTurn = -1e9; CS.forEach(c => { c.p = pos; c.v = 0; }); CS[idx(pos)].l.p = 1; }
+if (DEMO) { (async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); await wait(900);
+    for (let n = 0; ; n++) { const seq = [3, 4, 5, 6, 5, 4, 3, 2, 1, 0, 1, 2]; for (const s of seq) { turnTo(s); await wait(s === 2 ? 1300 : 900); if (s === 5 && n % 2 === 0) { open(5); await wait(1900); close(); await wait(700); } } } })(); }
+fit(); frame(performance.now());
+window.ROLL = { get P() { return P; }, turnTo, open, close, get pos() { return pos; } };
+</script>
+</body>
+</html>

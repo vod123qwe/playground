@@ -14,7 +14,9 @@
 - Najechanie tylko rozjaśnia klawisz, bez dźwięku (zasada Jarka: gdzie się klika, dźwięk tylko przy kliknięciu).
 - Klik myszą albo własna klawiatura wciska klawisz z miękkim klikiem, a puszczenie daje cichszy klik.
 - Nasadka ugina się od góry, a dół zostaje na płycie, więc linia styku jest zawsze narysowana.
-- Widok jest stały, na wprost i lekko z góry; kółko myszy albo − / + przybliża.
+- Widok na wprost i lekko z góry; przeciąganie tła obraca go tylko trochę (do ok. 29° w bok, odrobinę wyżej/niżej), ↻ wraca; kółko albo − / + przybliża.
+- Jasna klawiatura ma jasny wyświetlacz (blady panel, ciemne litery), ciemna ciemny.
+- Domyślny klik: Crisp.
 
 **Listwa sterowania (06.10.2026, pomysł Jarka plus dodatki z przeglądu klawiatur z ekranami i pokrętłami):** pas płyty za rzędem funkcyjnym.
 - **Suwak wyciszenia ze szczeliną i diodą:** dioda świeci na zielono, gdy dźwięk jest włączony. Klik przełącza suwak, a ekran pokazuje „MUTED” albo „SOUND ON”.
@@ -31,7 +33,7 @@
 - **Pisanie:** Shift i Caps Lock zmieniają wielkość liter, Backspace kasuje znak, Return czyści linię.
 
 **Dźwięk:** syntezowany w przeglądarce, bez plików.
-- Charakter do wyboru: Soft (domyślny), Thock albo Crisp.
+- Charakter do wyboru: Soft, Thock albo Crisp (domyślny).
 - Na wyjściu jest filtr dolnoprzepustowy około 5,2 kHz i kompresor.
 - Panel aplikacji Claude wycisza audio, więc słychać tylko w zwykłej przeglądarce.
 

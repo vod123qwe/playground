@@ -13,14 +13,14 @@
   /* A flat Mac keyboard drawn like Line Interactions: low keys in an aluminium slab, thin lines over quiet fills, every key a rounded
      cap with its legend printed on top in the lab's type, the keys laid out as on a flat low-profile keyboard with command and option keys. Point at a key and it lights; click it, or type
      on your own keyboard, and it goes down with a soft click and comes back up (the click synthesised on the spot, Soft, Thock or Crisp).
-     The view is fixed, straight on; the wheel or − / + zooms. */
+     Straight on; a drag turns it a little (held to a small range), the wheel or − / + zooms. */
   :root { --page: #17181b; --plate: #121314; --morph: .55s cubic-bezier(.3,1.12,.4,1); --ease: cubic-bezier(.22,.61,.36,1); }
   body.light { --page: #fff; --plate: #f4f3ef; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
   body { background: var(--page); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
   .plate { position: fixed; inset: 0; overflow: hidden; touch-action: none; cursor: move; background: var(--plate); transition: inset var(--morph), border-radius var(--morph), background-color .4s; }
-  .plate.over { cursor: pointer; }
+  .plate.over { cursor: pointer; } .plate.dragging, .plate.dragging * { cursor: grabbing; }
   body.tuning .plate { inset: 16px 368px 16px 16px; border-radius: 26px; }
   .plate canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; }
@@ -79,7 +79,7 @@ import * as THREE from 'three';
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.keyboard.v1';
-const DEF = { sound: true, vol: .6, click: 'soft', travel: .55, light: true };
+const DEF = { sound: true, vol: .6, click: 'crisp', travel: .55, light: true };
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const $ = id => document.getElementById(id), plate = $('plate');
@@ -181,8 +181,9 @@ const scr = (() => { const c = document.createElement('canvas'); c.width = 720; 
 const wpm = () => { const now = performance.now(); presses = presses.filter(t => now - t < 12000); if (presses.length < 3) return 0; const span = Math.max(3000, now - presses[0]); return Math.round(presses.length / 5 / (span / 60000)); };
 function say(text, ms = 1300) { overlay = { text, until: performance.now() + ms }; scr.dirty = true; wake(); }
 function drawScreen() { const { c, x } = scr, W = c.width, H = c.height, now = performance.now(), mono = n => `500 ${n}px "Geist Mono", ui-monospace, monospace`;
-  x.fillStyle = '#0d0e10'; x.fillRect(0, 0, W, H); x.fillStyle = '#e9e7e0'; x.textBaseline = 'middle';
-  const dim = a => x.fillStyle = `rgba(233,231,224,${a})`;
+  const lt = mode === 'light', ink = lt ? '27,28,32' : '233,231,224';   // (a light keyboard has a light screen: a pale panel, dark letters)
+  x.fillStyle = lt ? '#efede7' : '#0d0e10'; x.fillRect(0, 0, W, H); x.fillStyle = `rgb(${ink})`; x.textBaseline = 'middle';
+  const dim = a => x.fillStyle = `rgba(${ink},${a})`;
   if (overlay && now < overlay.until) { const o = overlay.text;
     if (o.startsWith('VOLUME')) { x.font = mono(26); dim(.55); x.textAlign = 'left'; x.fillText('VOLUME', 28, 34); dim(1); x.textAlign = 'right'; x.fillText(Math.round(P.vol * 100) + '%', W - 28, 34);
       const n = 24; for (let i = 0; i < n; i++) { dim(i < Math.round(P.vol * n) ? 1 : .18); x.fillRect(28 + i * ((W - 56) / n), 64, (W - 56) / n - 6, 22); } }
@@ -266,19 +267,19 @@ let mode = BARE ? (q.get('mode') === 'dark' ? 'dark' : 'light') : (() => { try {
 function setMode(m, quiet) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { }
   document.body.classList.toggle('light', m === 'light'); document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
   document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#121314' : '#f4f3ef';
-  if (!quiet) say(m === 'dark' ? 'DARK' : 'LIGHT', 800); paint(); }
+  if (!quiet) say(m === 'dark' ? 'DARK' : 'LIGHT', 800); scr.dirty = true; paint(); }
 document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 
 // ---------- the view ----------
-const VIEW = { el: 1.08, z: { p: 1 }, tz: 1 };   // (straight on, from a little above the front: no turning)
+const VIEW = { el: 1.08, dAz: { p: 0 }, dEl: { p: 0 }, tAz: 0, tEl: 0, z: { p: 1 }, tz: 1 };   // (straight on, from a little above the front; a drag turns it, only a little: under 30° either way, a touch higher or lower)
 const zoomBy = f => { VIEW.tz = Math.max(.45, Math.min(3, VIEW.tz * f)); wake(); };
-$('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25); $('zreset').onclick = () => { VIEW.tz = 1; wake(); };
+$('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25); $('zreset').onclick = () => { VIEW.tAz = VIEW.tEl = 0; VIEW.tz = 1; wake(); };
 // (on the board, the live box draws into the still's own frame, cropped to the box the way the still's picture is covered into it)
 let W = 1, H = 1; const FRAME = 450 / 240;
 new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
   if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
   renderer.setSize(W, H, false); wake(); }).observe(plate);
-function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p, az = 0, el = VIEW.el;
+function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p / (BARE ? .7 : 1), az = VIEW.dAz.p, el = VIEW.el + VIEW.dEl.p;   // (on the board the keyboard sits 30% smaller in its box)
   cam.left = -S * a / 2; cam.right = S * a / 2; cam.top = S / 2; cam.bottom = -S / 2; cam.updateProjectionMatrix();
   cam.position.set(Math.sin(az) * Math.cos(el) * 80, Math.sin(el) * 80, -STRIP / 2 + Math.cos(az) * Math.cos(el) * 80); cam.lookAt(0, 0, -STRIP / 2); }
 
@@ -289,18 +290,20 @@ function pressButton(b, on) { if (b.down === on) return; b.down = on; if (on) { 
 // (what is under the pointer: a key, or one of the strip's parts)
 function pick() { const parts = [...kbKeys.map(k => k.m)]; if (strip.knob) parts.push(strip.knob.m, strip.slide.m, strip.side.m, ...strip.btns.map(b => b.m)); const h = hitOf(parts); if (!h) return null; const o = h.object;
   if (o === strip.knob?.m) return 'knob'; if (o === strip.slide?.m) return 'slide'; if (o === strip.side?.m) return 'side'; const b = strip.btns?.find(x => x.m === o); if (b) return b; return kbKeys.find(k => k.m === o) || null; }
-let knobDrag = null;
+let knobDrag = null, orbit = null;
 const setNdc = e => { const r = plate.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); };
 if (!DEMO) {
   plate.addEventListener('pointerdown', e => { if (e.button !== 0) return; setNdc(e); const p = pick(); try { plate.setPointerCapture(e.pointerId); } catch { }
     if (p === 'knob') { knobDrag = { y: e.clientY, x: e.clientX, v: P.vol }; paint(); return; }
     if (p === 'slide') { setSound(!P.sound); return; } if (p === 'side') { setMode(mode === 'dark' ? 'light' : 'dark'); SFX.key(false); return; }
     if (p && p.act) { kbHeld = p; pressButton(p, true); return; }
-    if (p) { kbHeld = p; kbPress(p, true); return; } });
+    if (p) { kbHeld = p; kbPress(p, true); return; }
+    orbit = { x: e.clientX, y: e.clientY, az: VIEW.tAz, el: VIEW.tEl }; plate.classList.add('dragging'); });
   plate.addEventListener('pointermove', e => { setNdc(e);
     if (knobDrag) { setVol(knobDrag.v + ((knobDrag.y - e.clientY) + (e.clientX - knobDrag.x)) * .004, true); return; }
+    if (orbit) { VIEW.tAz = Math.max(-.5, Math.min(.5, orbit.az - (e.clientX - orbit.x) * .005)); VIEW.tEl = Math.max(-.2, Math.min(.3, orbit.el + (e.clientY - orbit.y) * .003)); wake(); return; }
     const p = pick(), key = p && p.code ? p : null, part = p && !p.code ? p : null; if (key !== kbHover || part !== strip.hover) { kbHover = key; strip.hover = part; paint(); } plate.classList.toggle('over', !!p); });
-  const up = () => { if (knobDrag) { knobDrag = null; paint(); } if (kbHeld) { if (kbHeld.act) pressButton(kbHeld, false); else kbPress(kbHeld, false); kbHeld = null; } };
+  const up = () => { if (orbit) { orbit = null; plate.classList.remove('dragging'); } if (knobDrag) { knobDrag = null; paint(); } if (kbHeld) { if (kbHeld.act) pressButton(kbHeld, false); else kbPress(kbHeld, false); kbHeld = null; } };
   plate.addEventListener('pointerup', up); plate.addEventListener('pointercancel', up);
   plate.addEventListener('pointerleave', () => { if (kbHover || strip.hover) { kbHover = null; strip.hover = null; plate.classList.remove('over'); paint(); } });
   plate.addEventListener('wheel', e => { e.preventDefault(); setNdc(e); if (pick() === 'knob') setVol(P.vol - Math.sign(e.deltaY) * .05, true); else zoomBy(Math.exp(-e.deltaY * .0015)); }, { passive: false });
@@ -327,7 +330,7 @@ function frame() { raf = 0; let busy = false; const now = performance.now(), c =
   if (strip.knob) { if (ease(strip.knob.ang, volAng(), .3)) busy = true; strip.knob.turn.rotation.y = -strip.knob.ang.p; }
   if (overlay && now >= overlay.until) { overlay = null; scr.dirty = true; } if (overlay) busy = true;
   if (scr.dirty) { scr.dirty = false; drawScreen(); }
-  if (ease(VIEW.z, VIEW.tz, .14)) busy = true;
+  if (ease(VIEW.z, VIEW.tz, .14)) busy = true; if (ease(VIEW.dAz, VIEW.tAz, orbit ? .3 : .1)) busy = true; if (ease(VIEW.dEl, VIEW.tEl, orbit ? .3 : .1)) busy = true;
   placeCam(); updateSils(); renderer.render(scene, cam); if (busy || knobDrag) wake(); }
 
 // ---------- the panel ----------
