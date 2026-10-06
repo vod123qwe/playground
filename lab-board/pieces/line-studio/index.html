@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script src="../../shared/lab-lock.js?v=3"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Line Studio · lab</title>
+<title>Line Interactions · lab</title>
 <meta name="theme-color" content="#121314">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,12 +92,13 @@ import * as THREE from 'three';
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.line-studio.v4';
-const DEF = { fig: 'Shelf', count: 8, peek: .35, follow: .11, tilt: true, cN: 21, ai: false };
+const DEF = { fig: 'Shelf', count: 8, peek: .35, follow: .11, cN: 21, ai: false, fLayout: 'line', fN: 15, fSp: .46, fHeights: 'rising', fLift: .9, fFocus: 3.5, bCols: 6, bRows: 4, bHeights: 'random', bReach: 1, pShape: 'rounded', pField: 'square', pN: 9, pReach: .64, pHeight: 1.35, pTrail: .958 };   // (Pillars as Jarek tuned it, the cover)
 let P = (() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF }; } })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const $ = id => document.getElementById(id), plate = $('plate'), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
-const FIGS_ORDER = ['Shelf', 'Carousel', 'Cranes']; if (!FIGS_ORDER.includes(P.fig)) P.fig = 'Shelf';
+if (!['line', 'circle'].includes(P.fLayout)) P.fLayout = 'line';   // (arc and spiral are gone)
+const FIGS_ORDER = ['Shelf', 'Carousel', 'Cranes', 'Blocks', 'Fan', 'Pillars']; if (!FIGS_ORDER.includes(P.fig)) P.fig = 'Shelf';
 
 // ---------- the renderer, an orthographic camera ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -108,7 +108,7 @@ scene.add(new THREE.AmbientLight(0xffffff, 2.5)); const sun = new THREE.Directio
 
 // ---------- the drawing: materials (a fill, its lines, the bright lines of what you point at or hold) and outline helpers ----------
 const M = {
-  fill: new THREE.MeshLambertMaterial({ color: 0x19191a, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  fill: new THREE.MeshLambertMaterial({ color: 0x19191a, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
   line: new THREE.LineBasicMaterial({ color: 0x4d4d50 }),
   hi: new THREE.LineBasicMaterial({ color: 0xe6e6e6 }) };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -253,17 +253,24 @@ const CAR = { g: carG, az: .401, el: .444, flowAz: Math.PI / 4, cy: () => CH * .
   panel(g, sl) { sl(g, 'cN', 'Cassettes', 9, 31, 1, '', true); } };
 
 // =============================================== Fig 5.3 · gantries, noughts and crosses ===============================================
-// (a built-up platform: nine sockets in the middle, a rail with a scale along each side, a bay with a stack of boxes at each end.
+// (a built-up platform: nine sockets sunk into it in the middle, each a shallow funnel with sloping walls and a trapdoor of two flaps
+// for a floor; a rail with a scale along each side, a bay with a row of boxes at each end.
 // Two gantry cranes ride the same rails, the crosses' parked at the front, the noughts' at the back. The one whose turn it is takes a
 // box from its bay (a row of them); then it follows the pointer, the bridge along the rails, the carriage along the bridge, settling over the
 // square under it; a click lowers the box into the socket, lets go, and it goes home; then the other takes its turn. Three in a row:
-// they light, a line runs through them, every box sinks away into its socket, the bays fill again and it starts over)
-const PG = 2.85, BOXS = 1.3, TOP = .8, PAD = .12, RX = 6.3, PARK = 7.2, HT = 5.2, STACK = 5;
+// they light, a line runs through them; then every trapdoor drops open, the boxes fall through into a fire below (a warm light comes up
+// out of the sockets, smoke after it), the flaps swing shut, the bays fill again and it starts over. Drawn as a plate: every joint
+// overlaps a little (with a flange where parts meet) so no two edges lie on top of each other)
+const PG = 2.85, BOXS = 1.3, TOP = .8, PAD = .12, RX = 6.3, PARK = 7.2, HT = 5.2, STACK = 5, PIT = .42, PA = PG - .5, PB = BOXS + .26;   // (the sockets: depth, opening, floor)
 const ttG = new THREE.Group(); scene.add(ttG);
-const SOCK_Y = TOP + PAD;                                                        // (a box's floor in its socket)
+const SOCK_Y = TOP - PIT;                                                        // (a box's floor in its socket: the trapdoor)
+// (the cranes are drawn soft: every part a solid with round corners seen from above, outlined like the blocks and the posts)
+function rbox(w, h, d, parent, x = 0, y = 0, z = 0) { const p = prism(w, d, h, Math.min(.35, Math.min(w, d) * .24), parent, ttG); p.g.position.set(x, y - h / 2, z); return p.m; }
+// (and they move softly: each axis eases in and out (a critically damped follow), so a move starts gently and settles without a bounce)
+const glide = (s, to, w) => { if (reduce) { s.p = to; s.v = 0; return false; } s.v = s.v || 0; const x = s.p - to; s.v += (-w * w * x - 2 * w * s.v) / 60; s.p += s.v / 60;
+  if (Math.abs(s.p - to) < .002 && Math.abs(s.v) < .01) { s.p = to; s.v = 0; } return s.p !== to; };
 function makeBox(mark) { const g = new THREE.Group(), me = { g, mark, lines: [], fills: [], vy: 0 };
-  const geo = new THREE.BoxGeometry(BOXS, BOXS, BOXS), f = new THREE.Mesh(geo, M.fill); g.add(f); me.fills.push(f);
-  const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), M.line); g.add(e); me.lines.push(e);
+  const pr = prism(BOXS, BOXS, BOXS, .16, g, ttG); pr.g.position.y = -BOXS / 2; me.fills.push(pr.m); me.lines.push(...pr.lines);   // (a rounded box, drawn like the blocks)
   const h = BOXS / 2 + .004, m = BOXS * .26, p = [];
   if (mark === 'X') p.push(V(-m, h, -m), V(m, h, m), V(-m, h, m), V(m, h, -m), V(-m, -m, h), V(m, m, h), V(-m, m, h), V(m, -m, h), V(h, -m, -m), V(h, m, m), V(h, m, -m), V(h, -m, m));
   else p.push(...circle(0, 0, m * 1.05, h, 32), ...circleFront(0, 0, m * 1.05, h, 32), ...circleFront(0, 0, m * 1.05, h, 32).map(v => V(h, v.y, -v.x)));
@@ -272,46 +279,61 @@ const cellAt = i => V(((i % 3) - 1) * PG, 0, (Math.floor(i / 3) - 1) * PG);
 const cyl = (r, h, parent, x, y, z, n = 20) => { const geo = new THREE.CylinderGeometry(r, r, h, n), m = new THREE.Mesh(geo, M.fill), e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), M.line); m.position.set(x, y, z); e.position.set(x, y, z); parent.add(m, e); };
 function makeGantry(mark) { const parkZ = mark === 'X' ? PARK : -PARK, g = new THREE.Group(), me = { g, mark, parkZ, z: { p: parkZ }, x: { p: 0 }, ext: { p: 0 }, lines: [], stack: [], carry: null, phase: 'idle', tx: 0, tz: parkZ, te: 0 };
   ttG.add(g); g.position.z = parkZ;
-  for (const s of [-1, 1]) { box(1.3, .45, 1.7, g, s * RX, TOP + .5, 0); box(.9, HT, .9, g, s * RX, TOP + .72 + HT / 2, 0);   // (a truck on the rail, a tower)
-    segs([...circleFront(0, 0, .16, .86, 16).map(v => V(s * RX + v.x - .35, TOP + .45 + v.y, v.z)), ...circleFront(0, 0, .16, .86, 16).map(v => V(s * RX + v.x + .35, TOP + .45 + v.y, v.z))], g); }
-  const lad = []; for (const s of [-1, 1]) { const x = s * (RX + .452); for (let y = TOP + 1.2; y < TOP + .72 + HT - .2; y += .38) lad.push(V(x, y, -.22), V(x, y, .22)); lad.push(V(x, TOP + 1.1, -.22), V(x, TOP + .72 + HT - .1, -.22), V(x, TOP + 1.1, .22), V(x, TOP + .72 + HT - .1, .22)); } segs(lad, g);   // (a ladder up each tower)
-  const BY = TOP + .72 + HT + .3; box(RX * 2 + .9, .6, .7, g, 0, BY, 0);                                                        // (the bridge)
-  const ch = []; for (let x = -RX + .8, k = 0; x < RX - .8; x += .35, k++) ch.push(V(x, BY + .3 + (k % 2 ? .14 : .02), -.22), V(x + .35, BY + .3 + (k % 2 ? .02 : .14), -.22)); segs(ch, g);   // (the cable chain)
-  const tk = []; for (let x = -RX + .6; x <= RX - .6; x += .4) tk.push(V(x, BY - .3 + .004, .352), V(x, BY - .3 + (Math.round((x + RX) / .4) % 5 ? .14 : .26), .352)); segs(tk, g);
-  const car = new THREE.Group(); car.position.y = BY; g.add(car); me.car = car; box(1.3, 1.1, 1.3, car, 0, .1, 0); box(.5, .5, .5, car, 0, .85, 0);
+  // (pure solids, nothing applied: a truck and a tower each side, the bridge, the carriage, the sleeve and its telescoping tube, a plate,
+  // two jaws that slide in under the plate and close on a box from either side)
+  // (every part rests on the one under it, face to face, so the line where they meet is drawn: the truck on the rail, the tower on the
+  // truck, the bridge on the towers, the carriage riding on top of the bridge, the sleeve hanging from the carriage's front, clear of the
+  // bridge, right over the hook; the frame stands a little behind the hook for that)
+  const BY = TOP + .72 + HT + .3, FZ = -.74, TB = TOP + .3 + .45, BB = BY - .3;   // (the tower slimmer than the bridge is deep, so it stands under it)
+  for (const s of [-1, 1]) { rbox(1.3, .45, 1.7, g, s * RX, TOP + .3 + .225, FZ); rbox(.64, BB - TB, .64, g, s * RX, (TB + BB) / 2, FZ); }
+  rbox(RX * 2 + 1.1, .6, .86, g, 0, BY, FZ);
+  const car = new THREE.Group(); car.position.y = BY; g.add(car); me.car = car; rbox(1.3, .8, 1.66, car, 0, .7, -.43);
   const head = new THREE.Group(); car.add(head); me.head = head;
-  // (the head: a sleeve under the carriage, a tube that telescopes out of it (so nothing parts as it comes down), the gripper, four fingers
-  // that open round a box and close on its sides)
-  box(.56, 1.0, .56, car, 0, -.95, 0);
+  rbox(.56, 1.7, .56, car, 0, -.55, 0);
   const tg = new THREE.BoxGeometry(.3, 1, .3); tg.translate(0, -.5, 0); const tube = new THREE.Group(); tube.position.y = -1.2; car.add(tube); me.tube = tube;
   tube.add(new THREE.Mesh(tg, M.fill), new THREE.LineSegments(new THREE.EdgesGeometry(tg), M.line));
-  box(1.6, .32, 1.6, head, 0, -2.85, 0); cyl(.12, .45, head, -.45, -2.47, 0, 16); cyl(.12, .45, head, .45, -2.47, 0, 16);   // (the gripper, its two pistons)
-  me.fingers = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => { const f = new THREE.Group(); head.add(f); box(.14, .85, .14, f, 0, -3.43, 0); f.userData.s = [sx, sz]; return f; });
+  rbox(2.2, .3, 2.2, head, 0, -2.85, 0);
+  me.fingers = [[1, 0], [-1, 0]].map(([sx, sz]) => { const f = new THREE.Group(); head.add(f); rbox(.14, .95, 1.0, f, 0, -3.475, 0); f.userData.s = [sx, sz]; return f; });
   me.grip = { p: 0 };
   g.traverse(o => { if (o.isLineSegments) me.lines.push(o); });
-  me.gripY0 = BY - 3.01;                                                           // (the gripper's underside with the head up)
-  me.tubeLen = ext => 2.69 + ext - 1.2;                                            // (from the sleeve to the gripper)
+  me.gripY0 = BY - 3.0;                                                            // (the gripper's underside with the head up)
+  me.tubeLen = ext => 2.7 + ext - 1.2;                                             // (from the sleeve down onto the plate)
   return me; }
-let gantries = [], placed = Array(9).fill(null), boxesOn = Array(9).fill(null), turn = 'X', endState = null, cellHover = -1, fallers = [], winMesh = null, socketLines = [];
-function buildCranes() { for (const o of [...ttG.children]) { ttG.remove(o); o.traverse(c => c.geometry?.dispose()); }
+let ghost = null, ghostS = { p: 0 }, ghostCell = -1, pits = [], doors = { p: 0 }, doorTo = 0, gantries = [], placed = Array(9).fill(null), boxesOn = Array(9).fill(null), turn = 'X', endState = null, cellHover = -1, fallers = [], winMesh = null, socketLines = [];
+function buildCranes() { for (const o of [...ttG.children]) { ttG.remove(o); o.traverse(c => c.geometry?.dispose()); } sils = sils.filter(q => q.root !== ttG);
   const PW = RX * 2 + 2.4, PD = PARK * 2 + 3;
-  box(PW + 1, .35, PD + 1, ttG, 0, -.175, 0); box(PW, TOP, PD, ttG, 0, TOP / 2, 0); box(PW - .7, .06, PD - .7, ttG, 0, TOP + .03, 0);   // (a plinth, the platform, its inset top)
-  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (const k of [0, 1]) cyl(.13, .07, ttG, x * (PW / 2 - .35 - k * 1.1), TOP + .095, z * (PD / 2 - .35), 14);   // (bolts)
-  for (const z of [-PD / 2 + 2.2, PD / 2 - 2.2, 0]) for (const x of [-1, 1]) cyl(.13, .07, ttG, x * (PW / 2 - .35), TOP + .095, z, 14);
-  const vents = []; for (let k = 0; k < 9; k++) { const x = -1.6 + k * .4; vents.push(V(x, .2, PD / 2 + .004), V(x, .6, PD / 2 + .004)); } for (let k = 0; k < 14; k++) { const z = -2.6 + k * .4; vents.push(V(PW / 2 + .004, .2, z), V(PW / 2 + .004, .6, z)); } segs(vents, ttG);
-  const con = new THREE.Group(); con.position.set(PW / 2 - 1.05, TOP, -PG * 1.7); ttG.add(con); box(1.3, .55, 2.4, con, 0, .275, 0);       // (the console)
-  segs([...rrect(0, -.55, .95, .9, .08, .554), ...circle(-.2, .45, .13, .554, 16), ...circle(.2, .45, .13, .554, 16), ...circle(0, .85, .09, .554, 12)], con);
-  for (const s of [-1, 1]) { box(.4, .3, PD - .4, ttG, s * RX, TOP + .15, 0); const t = []; for (let z = -PD / 2 + .6; z <= PD / 2 - .6; z += .4) { const k = Math.round((z + PD / 2) / .4); t.push(V(s * (RX + .45), TOP + .065, z), V(s * (RX + .45 + (k % 5 ? .18 : .34)), TOP + .065, z)); } segs(t, ttG);
-    for (const z of [-PD / 2 + .5, PD / 2 - .5]) box(.7, .55, .5, ttG, s * RX, TOP + .27, z); }                                   // (rails, their scales, stops)
-  socketLines = []; for (let i = 0; i < 9; i++) { const c = cellAt(i); box(PG - .3, PAD, PG - .3, ttG, c.x, TOP + PAD / 2, c.z); socketLines.push(segs(rrect(c.x, c.z, BOXS + .3, BOXS + .3, .16, SOCK_Y + .004), ttG));
-    const q = PG / 2 - .1, L = .35, y = SOCK_Y + .004, cm = []; for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cm.push(V(c.x + sx * q, y, c.z + sz * q), V(c.x + sx * (q - L), y, c.z + sz * q), V(c.x + sx * q, y, c.z + sz * q), V(c.x + sx * q, y, c.z + sz * (q - L)));
-    cm.push(...rrect(c.x, c.z, BOXS + .6, BOXS + .6, .22, y)); segs(cm, ttG); }   // (a second outline, corner marks)
-  for (const z of [PARK, -PARK]) { box(8.2, .2, 2.0, ttG, 0, TOP + .1, z); const h = []; for (let x = -3.9; x < 3.9; x += .5) h.push(V(x, TOP + .204, z + .95), V(x + .45, TOP + .204, z + .55)); segs(h, ttG); }   // (the bays, hatched at their edge)
+  rbox(PW + 1, .35, PD + 1, ttG, 0, -.175, 0);                                                                    // (a plinth)
+  const slab = (y0, y1, hole) => { const sh = ROUND(PW, PD, .6);   // (round corners, like every other part)
+    for (let i = 0; i < 9; i++) { const c = cellAt(i), h = new THREE.Path(), r = hole / 2; h.moveTo(c.x - r, -c.z - r); h.lineTo(c.x - r, -c.z + r); h.lineTo(c.x + r, -c.z + r); h.lineTo(c.x + r, -c.z - r); h.closePath(); sh.holes.push(h); }
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: y1 - y0, bevelEnabled: false }); geo.rotateX(-Math.PI / 2); geo.translate(0, y0, 0);
+    ttG.add(new THREE.Mesh(geo, M.fill), new THREE.LineSegments(new THREE.EdgesGeometry(geo), M.line)); };
+  slab(0, SOCK_Y - .06, PB); slab(SOCK_Y - .06, TOP, PA);                                                         // (the body, a shaft under every socket; the deck, its openings)
+  const inset = rrect(0, 0, PW - .7, PD - .7, .2, TOP + .004); segs(inset, ttG);                                   // (the deck's inset edge, drawn)
+  pits = []; for (let i = 0; i < 9; i++) { const c = cellAt(i), a = PA / 2, b = PB / 2, y1 = TOP, y0 = SOCK_Y;
+    // (the funnel: four sloping walls from the opening down to the floor)
+    const v = [[-a, y1, -a], [a, y1, -a], [a, y1, a], [-a, y1, a], [-b, y0, -b], [b, y0, -b], [b, y0, b], [-b, y0, b]].map(([x, y, z]) => [c.x + x, y, c.z + z]);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v.flat(), 3)); geo.setIndex([0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7]); geo.computeVertexNormals();
+    ttG.add(new THREE.Mesh(geo, M.fill)); const e = []; for (let k = 0; k < 4; k++) e.push(V(...v[k]), V(...v[(k + 1) % 4]), V(...v[k + 4]), V(...v[(k + 1) % 4 + 4]), V(...v[k]), V(...v[k + 4])); segs(e, ttG);
+    // (the trapdoor: two flaps hinged at the floor's edges; under it, down the shaft, the fire's glow, dark until it is lit)
+    const flaps = [-1, 1].map(sd => { const hinge = new THREE.Group(); hinge.position.set(c.x + sd * b, y0, c.z); ttG.add(hinge); rbox(b, .06, PB - .02, hinge, -sd * b / 2, -.03, 0); hinge.userData.sd = sd; return hinge; });
+    const seam = segs([V(c.x, y0 + .002, c.z - b + .04), V(c.x, y0 + .002, c.z + b - .04)], ttG);
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(PB, PB).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0, depthWrite: false }));
+    glow.position.set(c.x, .03, c.z); glow.visible = false; ttG.add(glow); pits.push({ c, flaps, seam, glow }); }
+  for (const s of [-1, 1]) rbox(.4, .3, PD - .4, ttG, s * RX, TOP + .15, 0);                                       // (the rails)
+  socketLines = []; for (let i = 0; i < 9; i++) { const c = cellAt(i); socketLines.push(segs(rrect(c.x, c.z, PA + .24, PA + .24, .18, TOP + .004), ttG));   // (the outline that lights when you point at a socket)
+  }
+  for (const z of [PARK, -PARK]) rbox(9.8, .2, 2.0, ttG, 0, TOP + .1, z);                                        // (the bays)
   gantries = [makeGantry('X'), makeGantry('O')];
   for (const gt of gantries) { gt.stack = []; for (let k = 0; k < STACK; k++) { const b = makeBox(gt.mark); b.g.position.set(bayX(k), TOP + .2 + BOXS / 2, gt.parkZ); ttG.add(b.g); gt.stack.push(b); } }
-  placed = Array(9).fill(null); boxesOn = Array(9).fill(null); turn = 'X'; endState = null; fallers = []; startTurn(); }
+  // (the aim: a dashed box where the box would land in the socket under the pointer, and a dashed line down to it from the gripper)
+  { const gg = new THREE.Group(), r = .16, b = BOXS, pts = [...rrect(0, 0, b, b, r, 0), ...rrect(0, 0, b, b, r, b)];
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const c = b / 2 - r + r * Math.SQRT1_2; pts.push(V(sx * c, 0, sz * c), V(sx * c, b, sz * c)); }
+    const box = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), M.dashHi); box.computeLineDistances(); gg.add(box);
+    const aim = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([V(0, b, 0), V(0, b + 4, 0)]), M.dashHi); aim.computeLineDistances(); gg.add(aim);
+    gg.visible = false; ttG.add(gg); ghost = { g: gg, box, aim }; ghostS.p = 0; ghostCell = -1; }
+  placed = Array(9).fill(null); boxesOn = Array(9).fill(null); turn = 'X'; endState = null; fallers = []; doors.p = doorTo = 0; flames = []; startTurn(); }
 const active = () => gantries.find(g => g.mark === turn);
-const bayX = k => (k - (STACK - 1) / 2) * 1.5;                                             // (the boxes in a bay stand in a row)
+const bayX = k => (k - (STACK - 1) / 2) * 1.85;                                            // (the boxes in a bay stand in a row, room between for the fingers)
 function startTurn() { const g = active(); if (!g || !g.stack.length) return; g.phase = 'fetch'; g.tx = bayX(g.stack.length - 1); g.tz = g.parkZ; g.te = stackGrip(g); paint(); wake(); }
 const stackGrip = g => g.gripY0 - (TOP + .2 + BOXS) + .02;                                  // (how far the head comes down to a box in the bay)
 const placeExt = g => g.gripY0 - (SOCK_Y + BOXS) + .02;                                     // (how far down to set a box in a socket)
@@ -321,7 +343,7 @@ function play(i) { const g = active(); if (!g || g.phase !== 'ready' || placed[i
 function aiMove() { const b = placed, free = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(i => !b[i]); if (!free.length) return;
   const tryFor = m => free.find(i => { const t = b.slice(); t[i] = m; return winner(t); });
   play(tryFor('O') ?? tryFor('X') ?? (b[4] ? undefined : 4) ?? free.filter(i => [0, 2, 6, 8].includes(i))[0] ?? free[Math.floor(Math.random() * free.length)]); }
-const deck = new THREE.Plane(V(0, 1, 0), -(SOCK_Y + .01)), deckHit = new THREE.Vector3();
+const deck = new THREE.Plane(V(0, 1, 0), -(TOP + .01)), deckHit = new THREE.Vector3();
 function cellUnder() { ray.setFromCamera(ndc, cam); if (!ray.ray.intersectPlane(deck, deckHit)) return -1; const cx = Math.round(deckHit.x / PG), cz = Math.round(deckHit.z / PG);
   return Math.abs(deckHit.x) < PG * 1.6 && Math.abs(deckHit.z) < PG * 1.6 && Math.abs(cx) <= 1 && Math.abs(cz) <= 1 ? (cz + 1) * 3 + (cx + 1) : -1; }
 const human = () => !(P.ai && turn === 'O');
@@ -332,8 +354,15 @@ function puff(x, y, z) { if (reduce) return; const col = mode === 'dark' ? 0xf0e
   for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2 + Math.random() * .4, sp = .012 + Math.random() * .016, m = new THREE.SpriteMaterial({ map: puffTex, color: col, transparent: true, depthWrite: false, opacity: 0 }), s = new THREE.Sprite(m);
     s.position.set(x + Math.cos(a) * (BOXS * .55), y + .12 + Math.random() * .15, z + Math.sin(a) * (BOXS * .55)); s.scale.setScalar(.5); ttG.add(s);
     puffs.push({ s, vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: .004 + Math.random() * .005, t0: performance.now(), life: 900 + Math.random() * 500, sz: .5 + Math.random() * .3 }); } }
+function smoke(x, z) { if (reduce) return; const col = mode === 'dark' ? 0xd8cfc4 : 0x8c877f;   // (smoke out of an open socket, rising)
+  for (let k = 0; k < 12; k++) { const m = new THREE.SpriteMaterial({ map: puffTex, color: col, transparent: true, depthWrite: false, opacity: 0 }), s = new THREE.Sprite(m);
+    s.position.set(x + (Math.random() - .5) * PB * .6, SOCK_Y + Math.random() * .3, z + (Math.random() - .5) * PB * .6); s.scale.setScalar(.6); ttG.add(s);
+    puffs.push({ s, vx: (Math.random() - .5) * .006, vz: (Math.random() - .5) * .006, vy: .018 + Math.random() * .018, t0: performance.now() + k * 45, life: 1500 + Math.random() * 700, sz: .7 + Math.random() * .5 }); } }
+const flameTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,210,150,1)'); gr.addColorStop(.35, 'rgba(255,140,60,.55)'); gr.addColorStop(1, 'rgba(255,90,20,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+let flames = [];   // (one warm light rising out of each socket while the fire shows)
 function stepPuffs(now) { for (let i = puffs.length - 1; i >= 0; i--) { const p = puffs[i], t = (now - p.t0) / p.life;
-    if (t >= 1) { ttG.remove(p.s); p.s.material.dispose(); puffs.splice(i, 1); continue; }
+    if (t < 0) continue; if (t >= 1) { ttG.remove(p.s); p.s.material.dispose(); puffs.splice(i, 1); continue; }
     p.s.position.x += p.vx; p.s.position.z += p.vz; p.s.position.y += p.vy; p.vx *= .97; p.vz *= .97; p.s.scale.setScalar(p.sz + t * 1.6);
     p.s.material.opacity = (t < .12 ? t / .12 : 1 - (t - .12) / .88) * (mode === 'dark' ? .22 : .3); } }
 const CRANES = { g: ttG, az: Math.PI / 4 + .1, el: .58, cy: () => 2.6,
@@ -345,7 +374,7 @@ const CRANES = { g: ttG, az: Math.PI / 4 + .1, el: .58, cy: () => 2.6,
     const h = i >= 0 && !placed[i] && human() && !endState ? i : -1; if (h !== cellHover) { cellHover = h; plate.classList.toggle('over', h >= 0); paint(); } wake(); },
   up() { }, leave() { if (cellHover >= 0) { cellHover = -1; plate.classList.remove('over'); paint(); } },
   frame() { const now = performance.now(), k = reduce ? 1 : Math.min(.2, P.follow * .6); let busy = !!endState || puffs.length > 0;   // (calm: the bridge and the carriage glide, the head comes down slower still)
-    for (const g of gantries) { const mz = ease(g.z, g.tz, k), mx = ease(g.x, g.tx, k), me = ease(g.ext, g.te, Math.min(1, k * .85)), mg = ease(g.grip, g.tg || 0, reduce ? 1 : .13); if (mz || mx || me || mg) busy = true;
+    for (const g of gantries) { const sp = P.follow / .11, mz = glide(g.z, g.tz, 2.4 * sp), mx = glide(g.x, g.tx, 3.2 * sp), me = glide(g.ext, g.te, 2.8 * sp), mg = glide(g.grip, g.tg || 0, 6 * sp);   // (the bridge heaviest, the fingers quickest) if (mz || mx || me || mg) busy = true;
       const there = !mz && !mx, down = !me, held = !mg;
       if (g.phase === 'fetch' && there && down) { g.tg = 1; g.phase = 'close'; }                                   // (down round the box: the fingers close on it)
       else if (g.phase === 'close' && held) { g.carry = g.stack.pop(); g.te = 0; g.phase = 'lift'; paint(); }
@@ -359,26 +388,179 @@ const CRANES = { g: ttG, az: Math.PI / 4 + .1, el: .58, cy: () => 2.6,
         paint(); }
       if (g.phase !== 'idle' && g.phase !== 'ready') busy = true;
       g.g.position.z = g.z.p; g.car.position.x = g.x.p; g.head.position.y = -g.ext.p; g.tube.scale.y = g.tubeLen(g.ext.p);
-      const fo = BOXS / 2 + .3 - g.grip.p * .23; for (const f of g.fingers) f.position.set(f.userData.s[0] * fo, 0, f.userData.s[1] * fo);
+      const fo = .96 - g.grip.p * .235; for (const f of g.fingers) f.position.set(f.userData.s[0] * fo, 0, f.userData.s[1] * fo);   // (open: out at the slots' ends; shut: flat on the box)
       if (g.carry) g.carry.g.position.set(g.x.p, g.gripY0 - g.ext.p - BOXS / 2 - .02, g.z.p); }
+    // (the aim: it grows into the socket under the pointer when the crane is ready, a slow breath while it waits; the line runs from
+    // the gripper down to it)
+    { const a = active(), on = cellHover >= 0 && a && a.phase === 'ready' && human() && !endState; if (on && cellHover !== ghostCell) { ghostCell = cellHover; ghostS.p = 0; }
+      if (ease(ghostS, on ? 1 : 0, reduce ? 1 : .14)) busy = true; ghost.g.visible = ghostS.p > .02 && ghostCell >= 0;
+      if (ghost.g.visible) { const c = cellAt(ghostCell), k = .82 + .18 * ghostS.p, br = reduce ? 0 : Math.sin(now / 520) * .03; ghost.g.position.set(c.x, SOCK_Y + .01, c.z); ghost.box.scale.set(k + br, k + br, k + br);
+        const top = a ? a.gripY0 - a.ext.p - BOXS - .02 : SOCK_Y + 4; const ap = ghost.aim.geometry.attributes.position; ap.setXYZ(0, 0, BOXS * k, 0); ap.setXYZ(1, 0, Math.max(BOXS * k, top - SOCK_Y), 0); ap.needsUpdate = true; ghost.aim.geometry.computeBoundingSphere(); ghost.aim.computeLineDistances(); busy = true; } }
     stepPuffs(now);
     if (endState) { const t = (now - endState.t0) / 1000;
-      if (endState.line && !winMesh) { const a = cellAt(endState.line[0]), b = cellAt(endState.line[2]), y = SOCK_Y + BOXS + .06, d = b.clone().sub(a).normalize().multiplyScalar(PG * .36);
+      if (endState.line && !winMesh && !endState.opened) { const a = cellAt(endState.line[0]), b = cellAt(endState.line[2]), y = SOCK_Y + BOXS + .06, d = b.clone().sub(a).normalize().multiplyScalar(PG * .36);
         winMesh = segs([V(a.x - d.x, y, a.z - d.z), V(b.x + d.x, y, b.z + d.z)], ttG, M.hi); paint(); }
-      if (t > (endState.line ? 1.4 : .8) && !fallers.length && boxesOn.some(Boolean)) { fallers = boxesOn.filter(Boolean); boxesOn = Array(9).fill(null); if (winMesh) { ttG.remove(winMesh); winMesh.geometry.dispose(); winMesh = null; } paint(); }
-      for (const b of fallers) { b.vy -= .012; b.g.position.y += b.vy; }                                    // (they sink away into their sockets)
-      if (t > 3.4) { for (const b of fallers) { ttG.remove(b.g); b.g.traverse(o => o.geometry?.dispose()); } fallers = [];
+      const T1 = endState.line ? 1.4 : .8;
+      if (t > T1 && !endState.opened) { endState.opened = true; fallers = boxesOn.filter(Boolean); endState.fell = boxesOn.map(Boolean); boxesOn = Array(9).fill(null); doorTo = 1;
+        if (winMesh) { ttG.remove(winMesh); winMesh.geometry.dispose(); winMesh = null; } paint(); }
+      if (endState.opened && !endState.smoked && t > T1 + .55) { endState.smoked = true; pits.forEach((pt, i) => { if (endState.fell[i] || i === 4) smoke(pt.c.x, pt.c.z); }); }
+      if (t > T1 + 2.3) doorTo = 0;
+      if (doors.p > .25) for (const b of fallers) { b.vy -= .012; b.g.position.y += b.vy; b.g.visible = b.g.position.y > -BOXS / 2; }   // (gone into the glow, never seen under the platform)                                 // (the boxes drop through, into the fire)
+      // (the fire: the glow at the bottom of each shaft and a warm light coming up out of the socket, while the flaps are open)
+      const fire = reduce ? 0 : Math.max(0, Math.min(1, (t - T1 - .15) / .45)) * Math.max(0, Math.min(1, (T1 + 2.7 - t) / .6));
+      pits.forEach((pt, i) => { pt.glow.visible = fire > .01; pt.glow.material.opacity = fire * (.75 + .25 * Math.sin(now / 90 + i * 1.7)); });
+      if (fire > .01 && !flames.length) flames = pits.map(pt => { const m = new THREE.SpriteMaterial({ map: flameTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }), sp = new THREE.Sprite(m); sp.position.set(pt.c.x, SOCK_Y + .3, pt.c.z); ttG.add(sp); return sp; });
+      flames.forEach((sp, i) => { const f = fire * (.8 + .2 * Math.sin(now / 70 + i * 2.3)); sp.material.opacity = f * (mode === 'dark' ? .85 : .6); sp.scale.setScalar(PA * (1.1 + .25 * f)); sp.position.y = SOCK_Y + .25 + f * .35; });
+      if (fire <= .01 && flames.length && t > T1 + 1) { for (const sp of flames) { ttG.remove(sp); sp.material.dispose(); } flames = []; }
+      if (t > T1 + 3.2) { for (const b of fallers) { ttG.remove(b.g); b.g.traverse(o => o.geometry?.dispose()); } fallers = [];
         for (const gt of gantries) while (gt.stack.length < STACK) { const kk = gt.stack.length, b = makeBox(gt.mark); b.g.position.set(bayX(kk), TOP + .2 + BOXS / 2, gt.parkZ); ttG.add(b.g); gt.stack.push(b); }
         placed = Array(9).fill(null); turn = 'X'; endState = null; startTurn(); } }
+    // (the flaps swing on their hinges, down and back up)
+    if (ease(doors, doorTo, reduce ? 1 : .09)) busy = true; for (const pt of pits) { for (const h of pt.flaps) h.rotation.z = h.userData.sd * doors.p * 1.45; pt.seam.visible = doors.p < .02; }
     return busy || !!endState; },   // (a game that has just ended keeps the frame going)
   panel(g, sl) { ctl.ai = LabUI.check(g, { label: 'The noughts crane plays itself', value: P.ai, onChange: v => { P.ai = v; save(); const a = active(); if (v && turn === 'O' && a && a.phase === 'ready') setTimeout(aiMove, 300); } }); } };
 paints.push(c => { if (!gantries.length) return;
   for (const g of gantries) { const on = !endState && g.mark === turn; for (const l of g.lines) l.material = on ? M.hi : M.line; if (g.carry) for (const l of g.carry.lines) l.material = M.hi; for (const b of g.stack) for (const l of b.lines) l.material = M.line; }
   const wins = endState && endState.line ? endState.line : []; boxesOn.forEach((b, i) => { if (b) for (const l of b.lines) l.material = wins.includes(i) ? M.hi : M.line; });
   socketLines.forEach((l, i) => { l.material = i === cellHover ? M.hi : M.line; }); });
+M.dashHi = new THREE.LineDashedMaterial({ color: 0xf2f2f0, dashSize: .12, gapSize: .09 }); paints.push(c => M.dashHi.color.set(c.hi));
+
+// =============================================== Fig 6 · shapes that answer the pointer ===============================================
+// (three small geometric pieces, drawn like the rest: a quiet fill, thin lines, the lines bright where the pointer is. Rounded solids
+// (plates, blocks, cards) are drawn with their top and bottom outlines and the two upright outline lines where the round corners turn
+// away from the eye, worked out again every frame from the camera, so they stay right as the view turns. Nothing springs: every move
+// eases in, as the cassettes do)
+M.dash = new THREE.LineDashedMaterial({ color: 0x3d3d42, dashSize: .1, gapSize: .08 });
+M.ghost = new THREE.LineBasicMaterial({ color: 0x3d3d42, transparent: true, opacity: .45 });
+paints.push(c => { M.dash.color.set(c.line); M.ghost.color.set(c.line); });
+const ROUND = (w, d, r) => { const s = new THREE.Shape(), x = w / 2, z = d / 2; s.moveTo(-x + r, -z); s.lineTo(x - r, -z); s.absarc(x - r, -z + r, r, -Math.PI / 2, 0); s.lineTo(x, z - r);
+  s.absarc(x - r, z - r, r, 0, Math.PI / 2); s.lineTo(-x + r, z); s.absarc(-x + r, z - r, r, Math.PI / 2, Math.PI); s.lineTo(-x, -z + r); s.absarc(-x + r, -z + r, r, Math.PI, Math.PI * 1.5); return s; };
+let sils = [];
+function prism(w, d, h, r, parent, root) { const g = new THREE.Group(); parent.add(g);   // (a rounded slab or block: w across, d deep, h tall, corners of radius r)
+  const geo = new THREE.ExtrudeGeometry(ROUND(w, d, r), { depth: h, bevelEnabled: false, curveSegments: 6 }); geo.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(geo, M.fill); g.add(m); const loops = segs([...rrect(0, 0, w, d, r, 0), ...rrect(0, 0, w, d, r, h)], g);
+  const sil = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, h, 0), V(0, 0, 0), V(0, h, 0)]), M.line); g.add(sil);
+  const me = { g, m, root, w, d, h, r, sil, lines: [loops, sil] }; sils.push(me); return me; }
+const _v = new THREE.Vector3(), _q = new THREE.Quaternion();
+function updateSils() { for (const s of sils) { if (s.root !== F.g) continue;   // (the two upright outlines: where the corners' normals run square to the eye)
+  cam.getWorldDirection(_v); s.g.getWorldQuaternion(_q); _v.applyQuaternion(_q.invert()); const a = Math.atan2(_v.z, _v.x), pos = s.sil.geometry.attributes.position;
+  [a + Math.PI / 2, a - Math.PI / 2].forEach((t, k) => { const c = Math.cos(t), n = Math.sin(t), x = Math.sign(c) * (s.w / 2 - s.r) + s.r * c, z = Math.sign(n) * (s.d / 2 - s.r) + s.r * n;
+    pos.setXYZ(k * 2, x, 0, z); pos.setXYZ(k * 2 + 1, x, s.h, z); }); pos.needsUpdate = true; s.sil.geometry.computeBoundingSphere(); } }
+const clearG = g => { for (const o of [...g.children]) { g.remove(o); o.traverse(c => c.geometry?.dispose()); } sils = sils.filter(s => s.root !== g); };
+const hitOf = meshes => { ray.setFromCamera(ndc, cam); return ray.intersectObjects(meshes, false)[0] || null; };
+const mat = (on, list) => { for (const l of list) l.material = on ? M.hi : M.line; };
+const gauss = (d, s) => Math.exp(-d * d / (2 * s * s));
+function shapeFig(o) { const g = new THREE.Group(); scene.add(g); g.visible = false;
+  return { g, az: o.az ?? Math.PI / 4 + .1, el: o.el ?? .55, cy: () => o.cy, span: a => Math.max(o.span, o.wide / a), down: () => false, up() { }, panel() { }, leave() { this.over = null; plate.classList.remove('over'); wake(); }, ...o.f }; }
+const hoverClass = on => plate.classList.toggle('over', !!on);
+
+// ---- Blocks: a tray of rounded blocks, as many as you like (Customize: columns, rows, heights, reach). The pointer raises a soft hill
+// under it, the block in the middle highest; a click presses that block down like a key and sends a ring out across the tray, lifting
+// each block as it passes
+const seeded = n => () => { n |= 0; n = n + 0x6D2B79F5 | 0; let t = Math.imul(n ^ n >>> 15, 1 | n); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };   // (a repeatable random, so the heights stay put)
+const BLK_HEIGHTS = [['random', 'Random'], ['flat', 'Flat'], ['steps', 'Steps']];
+let blk = [], blkP = null, blkS = 1, blkExt = 4, blkRings = [];
+const BLOCKS = shapeFig({ cy: .9, span: 6.4, wide: 7.6, f: {
+  build() { clearG(BLOCKS.g); blk = []; blkRings = []; const C = Math.round(P.bCols), Rw = Math.round(P.bRows), S = Math.min(1.36, 6.4 / Math.max(C, Rw, 1) / 1.14), gap = S * .14, step = S + gap, R = seeded(7);
+    blkS = S; const tw = C * step + gap * 2, td = Rw * step + gap * 2, tray = prism(tw + S * .3, td + S * .3, .18, Math.min(.35, S * .3), BLOCKS.g, BLOCKS.g); tray.g.position.y = -.18;
+    for (let i = 0; i < C; i++) for (let j = 0; j < Rw; j++) { const r = R(), h = P.bHeights === 'flat' ? S : P.bHeights === 'steps' ? S * (.55 + 1.1 * (i + j) / Math.max(1, C + Rw - 2)) : S * (.8 + .7 * r);
+      const b = prism(S, S, h, S * .16, BLOCKS.g, BLOCKS.g), x = (i - (C - 1) / 2) * step, z = (j - (Rw - 1) / 2) * step; b.g.position.set(x, 0, z); b.x = x; b.z = z; b.hh = h; b.lift = { p: 0 };
+      const q = S * .09, y = h + .004, mk = [V(-q, y, 0), V(q, y, 0), V(0, y, -q), V(0, y, q)]; b.lines.push(segs(mk, b.g));   // (a small cross on top)
+      blk.push(b); }
+    blkExt = Math.hypot(tw, td) / 2 + .6; },
+  span(a) { return Math.max(5.6, blkExt * 1.35, blkExt * 2.3 / a); },
+  down() { const h = hitOf(blk.map(b => b.m)); if (!h) return false; const b = blk.find(k => k.m === h.object); blkRings.push({ x: b.x, z: b.z, t0: performance.now(), key: b }); wake(); return true; },
+  move() { ray.setFromCamera(ndc, cam); const p = new THREE.Vector3(), hit = ray.ray.intersectPlane(new THREE.Plane(V(0, 1, 0), -blkS), p);
+    blkP = hit && Math.hypot(p.x, p.z) < blkExt ? p : null; hoverClass(blkP); wake(); },
+  leave() { blkP = null; hoverClass(false); wake(); },
+  frame() { let busy = false; const now = performance.now(), S = blkS, sig = S * 1.15 * P.bReach;
+    blkRings = blkRings.filter(r => now - r.t0 < 2600); if (blkRings.length) busy = true;
+    for (const b of blk) { const d = blkP ? Math.hypot(b.x - blkP.x, b.z - blkP.z) : 99, w = gauss(d, sig); let to = w * S * .55;
+      for (const r of blkRings) { const t = (now - r.t0) / 1000, dr = Math.hypot(b.x - r.x, b.z - r.z), front = t * S * 6.5;
+        to += S * .38 * gauss(dr - front, S * .55) * Math.max(0, 1 - t / 2.4);
+        if (r.key === b && t < .28) to -= S * .2 + to; }   // (the key itself goes down first)
+      if (ease(b.lift, to, Math.min(1, P.follow * 1.7))) busy = true; b.g.position.y = b.lift.p; mat(b.lift.p > S * .2, b.lines); }
+    return busy; },
+  panel(g, sl) { ctl.bHeights = LabUI.seg(g, { label: 'Heights', options: BLK_HEIGHTS, value: P.bHeights, onChange: v => { P.bHeights = v; save(); BLOCKS.build(); paint(); wake(); } });
+    sl(g, 'bCols', 'Columns', 1, 24, 1, '', true); sl(g, 'bRows', 'Rows', 1, 24, 1, '', true); sl(g, 'bReach', 'Reach', .4, 3, .05); } } });
+
+// ---- Fan: upright cards in a line or round a circle; the pointer runs a wave through them, the card nearest it standing out (Focus),
+// the near ones leaning away. Customize: line or circle, how many, the spacing, the heights, the lift and how sharp its peak is
+const FAN_LAYOUTS = [['line', 'Line'], ['circle', 'Circle']], FAN_HEIGHTS = [['rising', 'Rising'], ['even', 'Even'], ['wave', 'Wave']];
+const FAN_D = 1.7, FAN_T = .05, FAN_HIT = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
+let fan = [], fanP = null, fanCur = null, fanExt = 4;
+function fanPath(N, sp, lay) {   // (where each card stands and which way the path runs there)
+  const L = (N - 1) * sp, out = [];
+  if (lay === 'circle') { const R = N * sp / (2 * Math.PI); for (let i = 0; i < N; i++) { const a = i * sp / R; out.push({ x: R * Math.cos(a), z: R * Math.sin(a), tx: -Math.sin(a), tz: Math.cos(a) }); } return out; }
+  for (let i = 0; i < N; i++) out.push({ x: i * sp - L / 2, z: 0, tx: 1, tz: 0 }); return out; }
+const FAN = shapeFig({ cy: 1.4, span: 6.4, wide: 8.4, f: {
+  build() { clearG(FAN.g); fan = []; fanCur = null; const N = Math.round(P.fN), sp = P.fSp, path = fanPath(N, sp, P.fLayout);
+    path.forEach((pt, i) => { const u = N > 1 ? i / (N - 1) : 0, h = P.fHeights === 'even' ? 2 : P.fHeights === 'wave' ? 1.35 + .85 * Math.sin(u * Math.PI * 3) : .55 + 2.75 * u ** 1.35;
+      const root = new THREE.Group(), wave = new THREE.Group(), body = new THREE.Group(); FAN.g.add(root); root.add(wave); wave.add(body);
+      root.position.set(pt.x, 0, pt.z); root.rotation.y = -Math.atan2(pt.tz, pt.tx);   // (the card's thin side along the path)
+      const geo = new THREE.ExtrudeGeometry(ROUND(FAN_D, h, .12), { depth: FAN_T, bevelEnabled: false, curveSegments: 6 }); geo.translate(0, h / 2, -FAN_T / 2); geo.rotateY(Math.PI / 2);
+      { const nr = geo.attributes.normal; for (let k = 0; k < nr.count; k++) nr.setXYZ(k, 0, 1, 0); }   // (lit as the tops of the other figures are, so the cards wear the same tone as the posts and the plates)
+      const m = new THREE.Mesh(geo, M.fill); body.add(m); const loop = z => rrectFront(0, h / 2, FAN_D, h, .12, z).map(p => V(p.z, p.y, -p.x)); const l = segs([...loop(-FAN_T / 2), ...loop(FAN_T / 2)], body);
+      // (an unseen card standing still at the card's place, as tall as the card and its lift: while the pointer is still in it, the
+      // card keeps the hover, so lifting out from under the pointer does not hand it to the card behind)
+      const hg = new THREE.BoxGeometry(FAN_T * 3, h + P.fLift + .1, FAN_D); hg.translate(0, (h + P.fLift + .1) / 2, 0); const hit = new THREE.Mesh(hg, FAN_HIT); root.add(hit);
+      const rg = new THREE.BoxGeometry(FAN_T, h, FAN_D); rg.translate(0, h / 2, 0); const rest = new THREE.Mesh(rg, FAN_HIT); root.add(rest);   // (and the card at rest: what the pointer picks from, so leaning neighbours cannot steal it)
+      fan.push({ i, root, wave, body, m, hit, rest, x: pt.x, z: pt.z, tx: pt.tx, tz: pt.tz, h, lift: { p: 0 }, lean: { p: 0 }, lines: [l] }); });
+    fanExt = Math.max(2.5, ...path.map(p => Math.hypot(p.x, p.z))) + 1.2; },
+  span(a) { return Math.max(6.4, fanExt * 1.25, fanExt * 2.3 / a); },
+  // (the card the pointer is on, hit directly: the wave centres on it. Between cards, the nearest card to where the ray passes over the
+  // floor of the row, so the wave does not drop out in the gaps)
+  move() { const h = hitOf(fan.map(c => c.rest)); let c = h ? fan.find(k => k.rest === h.object) : null;
+    if (fanCur && c !== fanCur) { const keep = ray.intersectObject(fanCur.hit, false)[0]; if (keep && (!h || h.distance > keep.distance - .05)) c = fanCur; }   // (nothing nearer: keep it)
+    if (!c) { ray.setFromCamera(ndc, cam); let best = null, bd = .5; for (const k of fan) { const d = ray.ray.distanceToPoint(V(k.x, k.h * .5, k.z)); if (d < bd) { bd = d; best = k; } } c = best; }
+    fanCur = c; fanP = c ? V(c.x, 0, c.z) : null; hoverClass(!!c); wake(); },
+  leave() { fanP = fanCur = null; hoverClass(false); wake(); },
+  frame() { let busy = false;
+    // (the card nearest the pointer stands out: the wave is raised to a power (Focus), so it falls off steeply from the peak)
+    let near = null, nd = 1e9; if (fanP) for (const c of fan) { const d = Math.hypot(c.x - fanP.x, c.z - fanP.z); if (d < nd) { nd = d; near = c; } }
+    for (const c of fan) {
+      const d = fanP ? Math.hypot(c.x - fanP.x, c.z - fanP.z) : 9, w = gauss(d, .6) ** P.fFocus, along = fanP ? (c.x - fanP.x) * c.tx + (c.z - fanP.z) * c.tz : 0;
+      if (ease(c.lift, w * P.fLift, P.follow * 1.1)) busy = true; if (ease(c.lean, Math.max(-1, Math.min(1, along / .55)) * w * .2, P.follow)) busy = true;
+      c.wave.position.y = c.lift.p; c.wave.rotation.z = -c.lean.p; mat(c === near && w > .2, c.lines); }
+    return busy; },
+  panel(g, sl) { const rebuild = (k, v) => { P[k] = v; save(); FAN.build(); paint(); wake(); };
+    ctl.fLayout = LabUI.seg(g, { label: 'Path', options: FAN_LAYOUTS, value: P.fLayout, onChange: v => rebuild('fLayout', v) });
+    ctl.fHeights = LabUI.seg(g, { label: 'Heights', options: FAN_HEIGHTS, value: P.fHeights, onChange: v => rebuild('fHeights', v) });
+    sl(g, 'fN', 'Cards', 5, 40, 1, '', true); sl(g, 'fSp', 'Spacing', .2, 1.2, .02, '', true); sl(g, 'fLift', 'Lift', .2, 1.8, .05, '', true); sl(g, 'fFocus', 'Focus', 1, 8, .25); } } });
+
+// ---- Pillars: a field of posts; the pointer pulls them up like a magnet, and a wave dies away behind it. Customize picks the post
+// (square, rounded, round, hex or a flat slab), the field's outline (square, circle, diamond, ring, cross), how many, the magnet's reach,
+// how high they rise and how long the wave lasts
+const PIL_SHAPES = [['square', 'Square'], ['rounded', 'Rounded'], ['round', 'Round'], ['hex', 'Hex'], ['slab', 'Slab']];
+const PIL_FIELDS = [['square', 'Square'], ['circle', 'Circle'], ['diamond', 'Diamond'], ['ring', 'Ring'], ['cross', 'Cross']];
+let pil = [], pilP = null, pilR = 2.6;
+const PILLARS = shapeFig({ cy: .7, span: 6.2, wide: 8, el: .62, f: {
+  build() { clearG(PILLARS.g); pil = []; const n = Math.round(P.pN) | 1, F0 = 4.6, s = F0 / n, w = s * .68, c = (n - 1) / 2, fld = P.pField;
+    const inField = (i, j) => { const a = i - c, b = j - c, d = Math.hypot(a, b) / c;
+      return fld === 'circle' ? d <= 1.02 : fld === 'diamond' ? Math.abs(a) + Math.abs(b) <= c + .01 : fld === 'ring' ? d <= 1.02 && d >= .55 : fld === 'cross' ? Math.abs(a) <= c / 3 + .01 || Math.abs(b) <= c / 3 + .01 : true; };
+    // (the base follows the field: a round plate under a circle or a ring, a turned square under the diamond)
+    const B = F0 + .5, base = fld === 'circle' || fld === 'ring' ? prism(B, B, .14, B / 2, PILLARS.g, PILLARS.g) : fld === 'diamond' ? prism(B * .74, B * .74, .14, .2, PILLARS.g, PILLARS.g) : prism(B, B, .14, .2, PILLARS.g, PILLARS.g);
+    base.g.position.y = -.14; if (fld === 'diamond') base.g.rotation.y = Math.PI / 4;
+    const sh = P.pShape, geo = sh === 'hex' ? new THREE.CylinderGeometry(w * .58, w * .58, 1, 6) : sh === 'slab' ? new THREE.BoxGeometry(w * 1.2, 1, w * .4) : new THREE.BoxGeometry(w, 1, w);
+    geo.translate(0, .5, 0); const eg = new THREE.EdgesGeometry(geo, 20);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { if (!inField(i, j)) continue; const x = (i - c) * s, z = (j - c) * s, gr = new THREE.Group(); gr.position.set(x, 0, z); PILLARS.g.add(gr); let lines;
+      if (sh === 'rounded' || sh === 'round') { const pr = prism(w, w, 1, sh === 'round' ? w / 2 : w * .24, gr, PILLARS.g); lines = pr.lines; }   // (round ones get their outline from the camera, like the plates)
+      else { const m = new THREE.Mesh(geo, M.fill), l = new THREE.LineSegments(eg, M.line); gr.add(m, l); lines = [l]; }
+      pil.push({ g: gr, x, z, heat: 0, h: { p: .22 }, lines }); }
+    pilR = F0 / 2 + .3; },
+  move() { ray.setFromCamera(ndc, cam); const p = new THREE.Vector3(); pilP = ray.ray.intersectPlane(new THREE.Plane(V(0, 1, 0), -.4), p) && Math.abs(p.x) < pilR && Math.abs(p.z) < pilR ? p : null; hoverClass(pilP); wake(); },
+  leave() { pilP = null; hoverClass(false); wake(); },
+  frame() { let busy = false;
+    for (const q of pil) { const f = pilP ? gauss(Math.hypot(q.x - pilP.x, q.z - pilP.z), P.pReach) : 0; q.heat = Math.max(q.heat * P.pTrail, f); if (q.heat < .002) q.heat = 0; else busy = true;
+      if (ease(q.h, .22 + P.pHeight * q.heat, Math.min(1, P.follow * 1.6))) busy = true; q.g.scale.y = q.h.p; mat(q.heat > .32, q.lines); }
+    return busy; },
+  panel(g, sl) { const rebuild = (k, v) => { P[k] = v; save(); PILLARS.build(); paint(); wake(); };
+    ctl.pShape = LabUI.seg(g, { label: 'Post', options: PIL_SHAPES, value: P.pShape, onChange: v => rebuild('pShape', v) });
+    ctl.pField = LabUI.seg(g, { label: 'Field', options: PIL_FIELDS, value: P.pField, onChange: v => rebuild('pField', v) });
+    sl(g, 'pN', 'Posts across', 7, 17, 2, '', true); sl(g, 'pReach', 'Magnet reach', .3, 1.4, .02); sl(g, 'pHeight', 'Rise', .6, 3, .05); sl(g, 'pTrail', 'Wave lasts', .9, .99, .002); } } });
 
 // ---------- which figure is on ----------
-const FIGS = { Shelf: SHELF, Carousel: CAR, Cranes: CRANES };
+const FIGS = { Shelf: SHELF, Carousel: CAR, Cranes: CRANES, Blocks: BLOCKS, Fan: FAN, Pillars: PILLARS };
 let F = FIGS[P.fig];
 function setFig(n, keep) { P.fig = n; if (!keep) save(); F = FIGS[n]; for (const f of Object.values(FIGS)) f.g.visible = f === F;
   $('nm').textContent = n; resetView(true); buildPanel(); paint(); wake(); }
@@ -403,7 +585,11 @@ const VIEW = { dAz: { p: 0 }, dEl: { p: 0 }, z: { p: 1 }, tAz: 0, tEl: 0, tz: 1,
 function resetView(now) { VIEW.tAz = VIEW.tEl = 0; VIEW.tz = 1; if (now) { VIEW.dAz.p = VIEW.dEl.p = 0; VIEW.z.p = 1; } wake(); }
 const zoomBy = f => { VIEW.tz = Math.max(.45, Math.min(3, VIEW.tz * f)); wake(); };
 $('zin').onclick = () => zoomBy(1.25); $('zout').onclick = () => zoomBy(1 / 1.25); $('zreset').onclick = () => resetView(false);
-let W = 1, H = 1; new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1; renderer.setSize(W, H, false); wake(); }).observe(plate);
+// (on the board, the live box draws into the still's own 4 : 3 frame, cropped to the box the way the still's picture is covered into it,
+// so the swap from the picture to the live one does not move a thing)
+let W = 1, H = 1; new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
+  if (BARE) { const sw = W, sh = H, A = 4 / 3; if (W / H > A) H = W / A; else W = H * A; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
+  renderer.setSize(W, H, false); wake(); }).observe(plate);
 function placeCam() { const a = W / H, S = F.span(a) / VIEW.z.p, az = F.az + VIEW.dAz.p + VIEW.lAz.p, el = Math.max(.06, Math.min(1.4, F.el + VIEW.dEl.p + VIEW.lEl.p)), r = 80, cy = F.cy();
   cam.left = -S * a / 2; cam.right = S * a / 2; cam.top = S / 2; cam.bottom = -S / 2; cam.updateProjectionMatrix();
   cam.position.set(Math.sin(az) * Math.cos(el) * r, cy + Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r); cam.lookAt(0, cy, 0); }
@@ -411,7 +597,7 @@ function placeCam() { const a = W / H, S = F.span(a) / VIEW.z.p, az = F.az + VIE
 // ---------- the pointer: the figure gets it first (a tape, a cassette); the empty ground turns the view ----------
 let orbit = null;
 function setNdc(e) { const r = plate.getBoundingClientRect(), px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-  ndc.set(px * 2 - 1, -(py * 2 - 1)); if (P.tilt && !orbit) { VIEW.tlAz = (px - .5) * .06; VIEW.tlEl = (py - .5) * -.04; } }
+  ndc.set(px * 2 - 1, -(py * 2 - 1)); }
 if (!DEMO) {
   plate.addEventListener('pointerdown', e => { if (e.button !== 0 && e.button !== 2) return; setNdc(e); placeCam();
     if (e.button === 0 && F.down(e)) { try { plate.setPointerCapture(e.pointerId); } catch { } return; }
@@ -432,21 +618,19 @@ if (!DEMO) {
 let raf = 0; const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
 function frame() { raf = 0; let busy = F.frame();
   if (ease(VIEW.z, VIEW.tz, .14)) busy = true; if (!orbit) { if (ease(VIEW.dAz, VIEW.tAz, .1)) busy = true; if (ease(VIEW.dEl, VIEW.tEl, .1)) busy = true; }
-  if (ease(VIEW.lAz, P.tilt ? VIEW.tlAz : 0, .05)) busy = true; if (ease(VIEW.lEl, P.tilt ? VIEW.tlEl : 0, .05)) busy = true;
-  placeCam(); renderer.render(scene, cam); if (busy || orbit) wake(); }
+  placeCam(); updateSils(); renderer.render(scene, cam); if (busy || orbit) wake(); }
 
 // ---------- the panel ----------
 const panel = $('panel'); let ctl = {};
 function buildPanel() { panel.innerHTML = ''; ctl = {};
   const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2></h2><p></p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
-  head.querySelector('h2').textContent = P.fig; head.querySelector('p').textContent = { Shelf: 'VHS tapes on a shelf: take one out and put it where you want it.', Carousel: 'Cassettes in a row: scroll or drag along it; the one that comes to the middle faces you, the row never ends.', Cranes: 'Noughts and crosses with two gantry cranes on the rails: move over a square and the one whose turn it is goes there; click and it lowers the box. Three in a row and they all sink away.' }[P.fig];
+  head.querySelector('h2').textContent = P.fig; head.querySelector('p').textContent = { Shelf: 'VHS tapes on a shelf: take one out and put it where you want it.', Carousel: 'Cassettes in a row: scroll or drag along it; the one that comes to the middle faces you, the row never ends.', Cranes: 'Noughts and crosses with two gantry cranes on the rails: move over a square and the one whose turn it is goes there; click and it lowers the box. Three in a row and the trapdoors drop them into the fire.', Blocks: 'A tray of blocks, as many as you like: the pointer raises a soft hill under it; a click presses a block like a key and sends a ring out across the tray.', Fan: 'Cards standing in a line or round a circle: the pointer runs a wave through them, the nearest card standing out.', Pillars: 'A field of posts: the pointer pulls them up like a magnet; a wave dies away behind it.', }[P.fig];
   head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
   const set = (k, v, rebuild) => { P[k] = v; save(); if (rebuild) { F.build(); paint(); } wake(); };
   const sl = (g, k, label, min, max, st, unit, rebuild) => ctl[k] = LabUI.slider(g, { label, min, max, step: st, unit, value: P[k], def: DEF[k], onInput: v => set(k, v, rebuild) });
   const g = LabUI.group(panel, 'Figure', { key: KEY + '.g.fig' }); F.panel(g, sl); sl(g, 'follow', 'Speed', .04, .25, .005);
-  ctl.tilt = LabUI.check(g, { label: 'Lean with the pointer', value: P.tilt, onChange: v => set('tilt', v) });
   const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
-  acts.querySelector('[data-a=reset]').onclick = () => { const fig = P.fig; P = { ...DEF, fig }; save(); SHELF.build(); CAR.build(); CRANES.build(); buildPanel(); resetView(false); paint(); };
+  acts.querySelector('[data-a=reset]').onclick = () => { const fig = P.fig; P = { ...DEF, fig }; save(); SHELF.build(); CAR.build(); CRANES.build(); for (const f of [BLOCKS, FAN, PILLARS]) f.build(); buildPanel(); resetView(false); paint(); };
   acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
 function openPanel(on) { VARS.close(true); document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
 $('tune').onclick = () => openPanel(true);
@@ -454,15 +638,26 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.class
 
 // ---------- start; the board's box: ?thumb=1 the still (&mode=light, &fig=Carousel), ?demo=1 the figure moving on its own ----------
 if (BARE) { document.body.classList.add('bare'); const fig = FIGS_ORDER.includes(q.get('fig')) ? q.get('fig') : 'Shelf'; P = { ...DEF, fig }; mode = q.get('mode') === 'light' ? 'light' : 'dark'; }
-SHELF.build(); CAR.build(); CRANES.build(); setMode(mode); setFig(P.fig, true);
+SHELF.build(); CAR.build(); CRANES.build(); for (const f of [BLOCKS, FAN, PILLARS]) f.build(); setMode(mode); setFig(P.fig, true);
 document.fonts.ready.then(() => { for (const t of tapes) for (const l of t.labels) { l.material.map.dispose(); l.material.map = vhsLabel(t.name); }
   for (const c of cass) c.labels.forEach((l, j) => { l.material.map.dispose(); l.material.map = cassLabel(c.name, j ? 'B' : 'A'); }); wake(); });   // (the labels again once the type is in)
-if (DEMO) setInterval(() => { if (F === CAR) CAR.nudge(1); else if (!drag && order.length > 2) { const t = order[Math.floor(Math.random() * order.length)], from = t.x.p; let to = order.indexOf(t);
+if (DEMO && F === PILLARS) { const t0 = performance.now();   // (the board's live box for Pillars: the pointer drifts over the field and the wave follows it)
+  const run = () => { const t = (performance.now() - t0) / 1000, e = Math.min(1, t / 1.4), R = pilR * .62;
+    pilP = t < .25 ? null : V(Math.sin(t * .55) * R * e, .4, Math.sin(t * .37 + 1.1) * R * .8 * e); wake(); requestAnimationFrame(run); }; requestAnimationFrame(run); }
+if (DEMO && F === BLOCKS) { const t0 = performance.now(); let lastKey = 0;
+  const run = () => { const t = (performance.now() - t0) / 1000, e = Math.min(1, t / 1.6), R = blkExt * .55;   // (the hill comes in softly from the still)
+    blkP = V(Math.sin(t * .45) * R * e, 0, Math.sin(t * .31 + 1.2) * R * .7 * e); if (t < .25) blkP = null;
+    if (t - lastKey > 3.2 && t > 1.6) { lastKey = t; let best = null, bd = 1e9; for (const b of blk) { const d = Math.hypot(b.x - blkP.x, b.z - blkP.z); if (d < bd) { bd = d; best = b; } } if (best) blkRings.push({ x: best.x, z: best.z, t0: performance.now(), key: best }); }
+    wake(); requestAnimationFrame(run); }; requestAnimationFrame(run); }
+if (DEMO) setInterval(() => { if (F === CAR) CAR.nudge(1); else if (F === SHELF && !drag && order.length > 2) { const t = order[Math.floor(Math.random() * order.length)], from = t.x.p; let to = order.indexOf(t);
     while (to === order.indexOf(t)) to = Math.floor(Math.random() * order.length); const toX = slotX(to), t0 = performance.now(); take(t);
     const stepFn = () => { const u = Math.min(1, (performance.now() - t0) / 1400), e = u < .5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2; carry(from + (toX - from) * e); if (u < 1) requestAnimationFrame(stepFn); else setTimeout(drop, 250); };
     requestAnimationFrame(stepFn); } }, 3200);
 LabUI.segThumb($('mode'));
-window.FIG = { THREE, shelfG, tapes: () => tapes, setFig, take, carry, drop, slotX, order: () => order, CAR, VIEW, s: () => cs.p, zoomBy, scene, cam, F: () => F, gantries: () => gantries, play, placed: () => placed };
+window.FIG = { THREE, shelfG, tapes: () => tapes, setFig, take, carry, drop, slotX, order: () => order, CAR, VIEW, s: () => cs.p, zoomBy, scene, cam, F: () => F, gantries: () => gantries, play, placed: () => placed,
+  P: () => P, build: () => F.build(), fan: () => fan, sils: () => sils,
+  tick: () => { if (raf) { cancelAnimationFrame(raf); raf = 0; } frame(); },   // (tests: one frame now, the figure stepped and drawn)
+  win: () => { const g = gantries[0]; for (const i of [0, 4, 8]) { const b = g.stack.pop(), c = cellAt(i); b.g.position.set(c.x, SOCK_Y + BOXS / 2, c.z); boxesOn[i] = b; placed[i] = 'X'; } endState = { t0: performance.now(), line: [0, 4, 8] }; paint(); wake(); } };   // (tests: a won game, to watch the ending)
 </script>
 </body>
 </html>
