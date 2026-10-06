@@ -59,6 +59,7 @@
   .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
   .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
   .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .play-intro { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-field); font: 500 12.5px var(--lab-font); color: var(--ui-ink); cursor: pointer; } .play-intro:hover { background: var(--ui-field-hi); }
   .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
   @media (min-width: 761px) { body.tuning .mode { left: calc(50% - 176px); } body.tuning .dock { left: calc(50% - 176px); bottom: calc(34px + env(safe-area-inset-bottom)); }
     body.tuning .view { right: 382px; bottom: calc(34px + env(safe-area-inset-bottom)); } }
@@ -92,7 +93,7 @@ import * as THREE from 'three';
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.line-studio.v4';
-const DEF = { fig: 'Shelf', count: 8, peek: .35, follow: .11, cN: 21, ai: false, fLayout: 'line', fN: 15, fSp: .46, fHeights: 'rising', fLift: .9, fFocus: 3.5, bCols: 6, bRows: 4, bHeights: 'random', bReach: 1, pShape: 'rounded', pField: 'square', pN: 9, pReach: .64, pHeight: 1.35, pTrail: .958 };   // (Pillars as Jarek tuned it, the cover)
+const DEF = { fig: 'Shelf', count: 8, peek: .35, follow: .11, cN: 21, ai: false, fLayout: 'line', fN: 15, fSp: .46, fHeights: 'rising', fLift: .9, fFocus: 3.5, bCols: 6, bRows: 4, bHeights: 'random', bReach: 1, sound: true, vol: .5, click: 'soft', pShape: 'rounded', pField: 'square', pN: 9, pReach: .64, pHeight: 1.35, pTrail: .958 };   // (Pillars as Jarek tuned it, the cover)
 let P = (() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF }; } })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const $ = id => document.getElementById(id), plate = $('plate'), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -376,11 +377,11 @@ const CRANES = { g: ttG, az: Math.PI / 4 + .1, el: .58, cy: () => 2.6,
   frame() { const now = performance.now(), k = reduce ? 1 : Math.min(.2, P.follow * .6); let busy = !!endState || puffs.length > 0;   // (calm: the bridge and the carriage glide, the head comes down slower still)
     for (const g of gantries) { const sp = P.follow / .11, mz = glide(g.z, g.tz, 2.4 * sp), mx = glide(g.x, g.tx, 3.2 * sp), me = glide(g.ext, g.te, 2.8 * sp), mg = glide(g.grip, g.tg || 0, 6 * sp);   // (the bridge heaviest, the fingers quickest) if (mz || mx || me || mg) busy = true;
       const there = !mz && !mx, down = !me, held = !mg;
-      if (g.phase === 'fetch' && there && down) { g.tg = 1; g.phase = 'close'; }                                   // (down round the box: the fingers close on it)
+      if (g.phase === 'fetch' && there && down) { g.tg = 1; g.phase = 'close'; if (!BARE) SFX.tick(3, 'grip'); }                                   // (down round the box: the fingers close on it)
       else if (g.phase === 'close' && held) { g.carry = g.stack.pop(); g.te = 0; g.phase = 'lift'; paint(); }
       else if (g.phase === 'lift' && down) { g.phase = 'ready'; paint(); if (!human()) setTimeout(aiMove, 350); else if (cellHover >= 0) { const c = cellAt(cellHover); g.tx = c.x; g.tz = c.z; } }
       else if (g.phase === 'go' && there) { g.te = placeExt(g); g.phase = 'lower'; }
-      else if (g.phase === 'lower' && down) { const b = g.carry, c = cellAt(g.cell); g.carry = null; b.g.position.set(c.x, SOCK_Y + BOXS / 2, c.z); boxesOn[g.cell] = b; puff(c.x, SOCK_Y, c.z); g.tg = 0; g.phase = 'open'; paint(); }   // (set down: a little dust)
+      else if (g.phase === 'lower' && down) { const b = g.carry, c = cellAt(g.cell); g.carry = null; b.g.position.set(c.x, SOCK_Y + BOXS / 2, c.z); boxesOn[g.cell] = b; puff(c.x, SOCK_Y, c.z); if (!BARE) SFX.thud(); g.tg = 0; g.phase = 'open'; paint(); }   // (set down: a little dust)
       else if (g.phase === 'open' && held) { g.te = 0; g.phase = 'raise'; }
       else if (g.phase === 'raise' && down) { g.tx = 0; g.tz = g.parkZ; g.phase = 'home'; }
       else if (g.phase === 'home' && there) { g.phase = 'idle'; const w = winner(placed);
@@ -469,9 +470,10 @@ const BLOCKS = shapeFig({ cy: .9, span: 6.4, wide: 7.6, f: {
       blk.push(b); }
     blkExt = Math.hypot(tw, td) / 2 + .6; },
   span(a) { return Math.max(5.6, blkExt * 1.35, blkExt * 2.3 / a); },
-  down() { const h = hitOf(blk.map(b => b.m)); if (!h) return false; const b = blk.find(k => k.m === h.object); blkRings.push({ x: b.x, z: b.z, t0: performance.now(), key: b }); wake(); return true; },
+  down() { const h = hitOf(blk.map(b => b.m)); if (!h) return false; const b = blk.find(k => k.m === h.object); blkRings.push({ x: b.x, z: b.z, t0: performance.now(), key: b }); SFX.press(); wake(); return true; },
   move() { ray.setFromCamera(ndc, cam); const p = new THREE.Vector3(), hit = ray.ray.intersectPlane(new THREE.Plane(V(0, 1, 0), -blkS), p);
-    blkP = hit && Math.hypot(p.x, p.z) < blkExt ? p : null; hoverClass(blkP); wake(); },
+    blkP = hit && Math.hypot(p.x, p.z) < blkExt ? p : null; hoverClass(blkP);
+    wake(); },
   leave() { blkP = null; hoverClass(false); wake(); },
   frame() { let busy = false; const now = performance.now(), S = blkS, sig = S * 1.15 * P.bReach;
     blkRings = blkRings.filter(r => now - r.t0 < 2600); if (blkRings.length) busy = true;
@@ -518,6 +520,7 @@ const FAN = shapeFig({ cy: 1.4, span: 6.4, wide: 8.4, f: {
   frame() { let busy = false;
     // (the card nearest the pointer stands out: the wave is raised to a power (Focus), so it falls off steeply from the peak)
     let near = null, nd = 1e9; if (fanP) for (const c of fan) { const d = Math.hypot(c.x - fanP.x, c.z - fanP.z); if (d < nd) { nd = d; near = c; } }
+    if (near !== FAN.lastNear) { FAN.lastNear = near; if (near) SFX.tick(2 + Math.round((1 - near.i / Math.max(1, fan.length - 1)) * 10), 'fan'); }
     for (const c of fan) {
       const d = fanP ? Math.hypot(c.x - fanP.x, c.z - fanP.z) : 9, w = gauss(d, .6) ** P.fFocus, along = fanP ? (c.x - fanP.x) * c.tx + (c.z - fanP.z) * c.tz : 0;
       if (ease(c.lift, w * P.fLift, P.follow * 1.1)) busy = true; if (ease(c.lean, Math.max(-1, Math.min(1, along / .55)) * w * .2, P.follow)) busy = true;
@@ -548,7 +551,9 @@ const PILLARS = shapeFig({ cy: .7, span: 6.2, wide: 8, el: .62, f: {
       else { const m = new THREE.Mesh(geo, M.fill), l = new THREE.LineSegments(eg, M.line); gr.add(m, l); lines = [l]; }
       pil.push({ g: gr, x, z, heat: 0, h: { p: .22 }, lines }); }
     pilR = F0 / 2 + .3; },
-  move() { ray.setFromCamera(ndc, cam); const p = new THREE.Vector3(); pilP = ray.ray.intersectPlane(new THREE.Plane(V(0, 1, 0), -.4), p) && Math.abs(p.x) < pilR && Math.abs(p.z) < pilR ? p : null; hoverClass(pilP); wake(); },
+  move() { ray.setFromCamera(ndc, cam); const p = new THREE.Vector3(); pilP = ray.ray.intersectPlane(new THREE.Plane(V(0, 1, 0), -.4), p) && Math.abs(p.x) < pilR && Math.abs(p.z) < pilR ? p : null; hoverClass(pilP);
+    let nq = null, nd = 1e9; if (pilP) for (const q of pil) { const d = Math.hypot(q.x - pilP.x, q.z - pilP.z); if (d < nd) { nd = d; nq = q; } }
+    if (nq !== PILLARS.lastNear) { PILLARS.lastNear = nq; if (nq) SFX.tick(2 + (((Math.round(nq.x * 3) + Math.round(nq.z * 2)) % 9) + 9) % 9, 'pil'); } wake(); },
   leave() { pilP = null; hoverClass(false); wake(); },
   frame() { let busy = false;
     for (const q of pil) { const f = pilP ? gauss(Math.hypot(q.x - pilP.x, q.z - pilP.z), P.pReach) : 0; q.heat = Math.max(q.heat * P.pTrail, f); if (q.heat < .002) q.heat = 0; else busy = true;
@@ -558,6 +563,41 @@ const PILLARS = shapeFig({ cy: .7, span: 6.2, wide: 8, el: .62, f: {
     ctl.pShape = LabUI.seg(g, { label: 'Post', options: PIL_SHAPES, value: P.pShape, onChange: v => rebuild('pShape', v) });
     ctl.pField = LabUI.seg(g, { label: 'Field', options: PIL_FIELDS, value: P.pField, onChange: v => rebuild('pField', v) });
     sl(g, 'pN', 'Posts across', 7, 17, 2, '', true); sl(g, 'pReach', 'Magnet reach', .3, 1.4, .02); sl(g, 'pHeight', 'Rise', .6, 3, .05); sl(g, 'pTrail', 'Wave lasts', .9, .99, .002); } } });
+
+// =============================================== sound: small, quiet, made on the spot ===============================================
+// (no files: every sound is synthesised when it plays. A key's click is a short burst of noise through a band filter over a soft low
+// knock; a tick (moving from one thing to the next under the pointer) a tiny sine blip, its pitch from a pentatonic scale; a thud a low
+// sine with a breath of noise. All of it quiet, and the browser only lets it start after the first click or key)
+const SND = { ctx: null, out: null, noise: null, last: {} };
+function snd() { if (!P.sound) return null; if (!SND.ctx) { try { SND.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+    SND.out = SND.ctx.createGain(); const comp = SND.ctx.createDynamicsCompressor(), lp = SND.ctx.createBiquadFilter(); comp.threshold.value = -14; comp.ratio.value = 4; lp.type = 'lowpass'; lp.frequency.value = 5200; lp.Q.value = .5;
+    // (a soft top: a low-pass takes the hiss off every sound)
+    SND.out.connect(lp).connect(comp).connect(SND.ctx.destination);
+    const n = SND.ctx.createBuffer(1, SND.ctx.sampleRate * .3, SND.ctx.sampleRate), d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; SND.noise = n; }
+  if (SND.ctx.state === 'suspended') SND.ctx.resume(); SND.out.gain.value = P.vol; return SND.ctx; }
+const rate = (k, ms) => { const t = performance.now(); if (t - (SND.last[k] || 0) < ms) return false; SND.last[k] = t; return true; };
+function env(c, g, t, a, d, peak) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); }
+function burst(c, t, f, q, peak, d, type = 'bandpass') { const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = SND.noise; bp.type = type; bp.frequency.value = f; bp.Q.value = q; s.connect(bp).connect(g).connect(SND.out); env(c, g, t, .001, d, peak); s.start(t, Math.random() * .2); s.stop(t + d + .05); }
+function tone(c, t, f, type, peak, d, f2, a = .002) { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); o.connect(g).connect(SND.out); env(c, g, t, a, d, peak); o.start(t); o.stop(t + d + .05); }
+const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28, 31, 33];
+// (three characters of key, picked in the panel: Soft (the default: a muffled tap, low-passed noise and a round low knock), Thock (deeper
+// and rounder, like a bigger cap), Crisp (brighter, still gentle). The ticks are low, soft-edged sine blips with no click at the start)
+const CLICKS = {
+  soft:  { down: [[1500, .7, .32, .022, 'lowpass']], knock: [210, 'sine', .2, .04, 150], up: [[1900, .7, .12, .014, 'lowpass']] },
+  thock: { down: [[900, .7, .3, .03, 'lowpass']], knock: [140, 'sine', .32, .07, 95], up: [[1300, .7, .1, .018, 'lowpass']] },
+  crisp: { down: [[2600, .9, .38, .02, 'bandpass'], [900, .6, .12, .015, 'bandpass']], knock: [260, 'triangle', .14, .035, 180], up: [[3200, 1, .14, .012, 'bandpass']] } };
+const SFX = {
+  key(big, up) { const c = snd(); if (!c) return; const t = c.currentTime, v = .92 + Math.random() * .16, K = CLICKS[P.click] || CLICKS.soft;
+    if (up) { for (const [f, q, pk, d, ty] of K.up) burst(c, t, f * v, q, pk, d, ty); return; }
+    for (const [f, q, pk, d, ty] of K.down) burst(c, t, f * v * (big ? .8 : 1), q, pk * (big ? 1.1 : 1), d * (big ? 1.25 : 1), ty);
+    const [kf, kt, kp, kd, kf2] = K.knock; tone(c, t, kf * (big ? .8 : 1) * v, kt, kp, kd * (big ? 1.3 : 1), kf2 * (big ? .8 : 1), .003); },
+  // (wood: a short, round knock, a mallet on a small block. A low fundamental that drops a touch, a second partial at an uneven ratio
+  // that dies first (what makes it sound like wood, not a bell), a breath of filtered noise for the strike; no ring)
+  tick(step, k = 'tick') { if (!rate(k, 60)) return; const c = snd(); if (!c) return; const t = c.currentTime, f = 196 * 2 ** (PENTA[Math.max(0, Math.min(PENTA.length - 1, step))] / 12) * (.99 + Math.random() * .02);
+    tone(c, t, f, 'sine', .13, .09, f * .94, .003); tone(c, t, f * 2.76, 'sine', .045, .035, f * 2.6, .002); burst(c, t, f * 4, 1.4, .035, .012, 'bandpass'); },
+  press() { const c = snd(); if (!c) return; const t = c.currentTime; tone(c, t, 150, 'sine', .32, .16, 128, .003); tone(c, t, 150 * 2.76, 'sine', .1, .05, 390, .002); burst(c, t, 700, 1.1, .1, .02, 'bandpass'); },
+  thud() { const c = snd(); if (!c) return; const t = c.currentTime; tone(c, t, 105, 'sine', .4, .22, 88, .004); tone(c, t, 105 * 2.76, 'sine', .12, .07, 270, .002); burst(c, t, 420, .9, .16, .04, 'lowpass'); } };
+for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => { if (P.sound) snd(); }, { capture: true });   // (made, or woken, inside the first gesture, so the browser lets it sound)
 
 // ---------- which figure is on ----------
 const FIGS = { Shelf: SHELF, Carousel: CAR, Cranes: CRANES, Blocks: BLOCKS, Fan: FAN, Pillars: PILLARS };
@@ -629,6 +669,8 @@ function buildPanel() { panel.innerHTML = ''; ctl = {};
   const set = (k, v, rebuild) => { P[k] = v; save(); if (rebuild) { F.build(); paint(); } wake(); };
   const sl = (g, k, label, min, max, st, unit, rebuild) => ctl[k] = LabUI.slider(g, { label, min, max, step: st, unit, value: P[k], def: DEF[k], onInput: v => set(k, v, rebuild) });
   const g = LabUI.group(panel, 'Figure', { key: KEY + '.g.fig' }); F.panel(g, sl); sl(g, 'follow', 'Speed', .04, .25, .005);
+  const gs = LabUI.group(panel, 'Sound', { key: KEY + '.g.sound' }); ctl.sound = LabUI.check(gs, { label: 'Sound', value: P.sound, onChange: v => set('sound', v) }); sl(gs, 'vol', 'Volume', 0, 1, .05);
+  { const r = document.createElement('div'); r.className = 'ui-row'; r.innerHTML = '<span class="ui-label">Hear it</span><button type="button" class="play-intro">Test</button>'; gs.appendChild(r); r.querySelector('button').onclick = () => { SFX.tick(3, 'ta'); setTimeout(() => SFX.tick(5, 'tb'), 150); setTimeout(() => SFX.tick(8, 'tc'), 300); setTimeout(() => SFX.press(), 520); }; }
   const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
   acts.querySelector('[data-a=reset]').onclick = () => { const fig = P.fig; P = { ...DEF, fig }; save(); SHELF.build(); CAR.build(); CRANES.build(); for (const f of [BLOCKS, FAN, PILLARS]) f.build(); buildPanel(); resetView(false); paint(); };
   acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
@@ -655,7 +697,7 @@ if (DEMO) setInterval(() => { if (F === CAR) CAR.nudge(1); else if (F === SHELF 
     requestAnimationFrame(stepFn); } }, 3200);
 LabUI.segThumb($('mode'));
 window.FIG = { THREE, shelfG, tapes: () => tapes, setFig, take, carry, drop, slotX, order: () => order, CAR, VIEW, s: () => cs.p, zoomBy, scene, cam, F: () => F, gantries: () => gantries, play, placed: () => placed,
-  P: () => P, build: () => F.build(), fan: () => fan, sils: () => sils,
+  P: () => P, build: () => F.build(), fan: () => fan, sils: () => sils, snd: () => ({ state: SND.ctx && SND.ctx.state, time: SND.ctx && SND.ctx.currentTime, vol: P.vol, on: P.sound, ctx: SND.ctx, out: SND.out }), sfx: SFX,
   tick: () => { if (raf) { cancelAnimationFrame(raf); raf = 0; } frame(); },   // (tests: one frame now, the figure stepped and drawn)
   win: () => { const g = gantries[0]; for (const i of [0, 4, 8]) { const b = g.stack.pop(), c = cellAt(i); b.g.position.set(c.x, SOCK_Y + BOXS / 2, c.z); boxesOn[i] = b; placed[i] = 'X'; } endState = { t0: performance.now(), line: [0, 4, 8] }; paint(); wake(); } };   // (tests: a won game, to watch the ending)
 </script>

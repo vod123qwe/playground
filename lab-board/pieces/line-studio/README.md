@@ -42,3 +42,33 @@ Historia: studio z obrotowym stołem → stos VHS → półka VHS + karuzela kas
   - Płyta pod spodem dopasowuje się do pola: okrągła pod kołem i pierścieniem, obrócona pod rombem.
 
 Zaokrąglone bryły mają obrys góry i dołu oraz dwie pionowe linie konturu, przeliczane co klatkę z kierunku kamery (`updateSils`).
+
+**Keyboard:** przeniesiona do osobnego projektu `pieces/keyboard` (06.10.2026, prośba Jarka).
+
+**Dźwięki (wszystkie figury liniowe):** syntetyzowane w przeglądarce, bez plików, bardzo ciche. Przeglądarka pozwala im zagrać dopiero po pierwszym kliknięciu albo naciśnięciu klawisza.
+- **Klawisz:** krótki szum przez filtr pasmowy i miękkie niskie stuknięcie, a przy dużych klawiszach niżej.
+- **Przejazd kursorem:** malutki dźwięk sinusa ze skali pentatonicznej, tylko tam, gdzie jest samo najechanie bez klikania (zasada Jarka: gdzie się klika, dźwięk tylko przy kliknięciu).
+  - Fan: mała karta wysoko, duża nisko.
+  - Pillars: od słupka do słupka.
+- **Blocks przy kliknięciu:** miękkie stuknięcie.
+- **Cranes:** tyknięcie, gdy szczęki chwytają pudło, i niski odgłos, gdy pudło ląduje w gnieździe.
+
+W panelu jest grupa Sound: włącz/wyłącz, głośność i przycisk Test, który odgrywa klik i dwa tyknięcia. Ustawienia zapisują się w `sound`, `vol`.
+
+Pierwsza wersja była za cicha (Jarek: „nie słyszę dźwięków”), więc poziomy podniesiono. Na wyjściu przy głośności 0,85 jest teraz: klik około −6 dBFS, duży klawisz −4, tyknięcie −16,5, stuknięcie −11, lądowanie pudła −10. Na końcu jest kompresor, żeby kilka dźwięków naraz nie przesterowało. Kontekst audio powstaje przy pierwszym kliknięciu albo klawiszu, wewnątrz gestu.
+
+**Charakter kliku (06.10.2026, druga runda):** Jarek słyszy dźwięk w zwykłej przeglądarce (panel w aplikacji Claude wycisza audio) i chciał kliki delikatniejsze, stłumione i przyjemne dla ucha.
+- **Soft (domyślny):** stłumione stuknięcie, szum przez filtr dolnoprzepustowy i okrągłe, niskie puknięcie.
+- **Thock:** głębszy i okrąglejszy.
+- **Crisp:** jaśniejszy, ale wciąż łagodny.
+
+Na całości jest filtr dolnoprzepustowy około 5,2 kHz, który zdejmuje syk. Tyknięcia są niższe (od 520 Hz), mają miękki start (6 ms) i delikatnie opadają. Poziomy przy głośności 0,6: klik około −17 dBFS, puszczenie około −32, tyknięcie około −27. W panelu w grupie Sound jest wybór Click; zmiana od razu odgrywa próbkę.
+
+**Drewniane dźwięki (06.10.2026, trzecia runda, wybór Jarka „drewniane, ciepłe”):** w Line Interactions dźwięki są tylko przy najechaniu (Fan, Pillars) i przy kliknięciu w Blocks oraz w dźwigach.
+- Każdy dźwięk to krótkie, okrągłe stuknięcie jak pałeczką w drewniany klocek:
+  - niska podstawa ze skali pentatonicznej od 196 Hz, lekko opadająca;
+  - drugi składnik w niecałkowitym stosunku 2,76, który gaśnie pierwszy (to brzmi jak drewno, a nie dzwon);
+  - odrobina filtrowanego szumu jako uderzenie.
+- Blocks przy kliknięciu i lądowanie pudła w dźwigach mają głębsze puknięcie.
+- Poziomy przy głośności 0,6: najechanie około −20 dBFS, kliknięcie −14, lądowanie −12.
+- Wybór Click zniknął z panelu Line Interactions (był dla klawiatury, która ma teraz swój projekt). Test odgrywa trzy tyknięcia i puknięcie.

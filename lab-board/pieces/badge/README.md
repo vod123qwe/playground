@@ -7,6 +7,7 @@
 - Plakietka wisi na kółku przełożonym przez szczelinę.
 - Możesz złapać plakietkę w dowolnym miejscu albo złapać taśmę, pociągnąć i puścić. Plakietka buja się i obraca wokół kółka, a taśmy luzują się i napinają.
 - Tap w plakietkę (bez przeciągania) losuje nowy pattern i lekko ją trąca.
+- Na dole strony jest przycisk **Shuffle** (pastylka jak przyciski w rogach, ikonka obraca się po najechaniu). Robi to samo co tap.
 
 **Fizyka:** prosty świat verlet.
 - Plakietka to sztywny zestaw pięciu punktów: cztery rogi i otwór, każdy połączony z każdym.
