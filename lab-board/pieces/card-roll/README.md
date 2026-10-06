@@ -59,3 +59,5 @@ Preset: ustaw i kliknij Copy settings, wynik (tylko zmiany względem domyślnych
 
 **Przełącznik Color / Frost:** obok pastylki wariantów na dole; to samo co Look → Cards w panelu (Frost wczytuje preset ruchu).
 **Cover na planszy:** `?thumb=1` / `?demo=1` pokazują szklaną talię Deck (preset Frosted) na ciemnym tle; `?mode=light` dla jasnego.
+
+**Wydajność (telefon):** na ekranach 2-3× karty idą w 1× (Q), bo ekran i tak jest ostry; załamanie światła (#glassF) tylko na karcie na wierzchu; karta głęboko w rozmyciu nie liczy szronu tła; style pisane tylko przy zmianie (put/cls), rozmycie w krokach 0,25 px.

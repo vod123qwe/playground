@@ -354,6 +354,33 @@
   .gv-in{animation:gvIn .7s cubic-bezier(.2,.8,.2,1) both}
   @keyframes gvIn{from{opacity:0; transform:translateY(18px) scale(.98)}}
   @media (max-width:760px){ .gv-head{grid-template-columns:1fr auto; gap:12px} .gv-chips{grid-column:1 / -1; grid-row:2} .gv-card{border-radius:22px} }
+  /* the feed (phones): a switch at the height of the chips, held to the right, turns the wall into a full-screen feed, one piece to a
+     screen, swiped up and down; the piece on screen plays its demo, a button takes you in. The same switch takes you back */
+  .gv-feedbtn{display:none}
+  @media (max-width:760px){
+    .gv-head{position:relative; padding-right:66px}
+    .gv-feedbtn{display:grid; place-items:center; position:absolute; right:var(--gutter, 16px); top:18px; z-index:21; width:40px; height:36px; padding:0; border:0; border-radius:999px; background:var(--gv-chip); color:var(--ink); cursor:pointer}
+    .gv-feedbtn svg{width:19px; height:19px} .gv-feedbtn .g{display:none} body.feed .gv-feedbtn{position:fixed; top:calc(18px + env(safe-area-inset-top)); background:rgba(255,255,255,.92); color:#141414}
+    body.feed .gv-feedbtn .g{display:block} body.feed .gv-feedbtn .f{display:none}
+  }
+  .gv-feed{position:fixed; inset:0; z-index:20; display:none; height:100dvh; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; background:#0e0e10; scrollbar-width:none}
+  .gv-feed::-webkit-scrollbar{display:none} body.feed .gv-feed{display:block}
+  .gf-item{position:relative; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; overflow:hidden; background:#0e0e10}
+  /* the piece sits in a box of its own tile's shape (its demo is framed for that), on a blurred wash of its own picture */
+  .gf-bg{position:absolute; inset:-8%; width:116%; height:116%; object-fit:cover; filter:blur(28px) saturate(1.2) brightness(.85); opacity:.9}
+  .gf-stage{position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); width:min(100vw, calc(68dvh * var(--ar))); aspect-ratio:var(--ar); overflow:hidden; box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+  .gf-stage img, .gf-stage video, .gf-stage iframe{position:absolute; inset:0; width:100%; height:100%; border:0; object-fit:cover}
+  .gf-stage iframe, .gf-stage video{opacity:0; pointer-events:none; transition:opacity .35s} .gf-item.live .gf-stage iframe, .gf-item.live .gf-stage video{opacity:1}
+  .gf-shade{position:absolute; left:0; right:0; bottom:0; height:44%; background:linear-gradient(180deg, transparent, rgba(0,0,0,.55)); pointer-events:none}
+  .gf-info{position:absolute; left:20px; right:20px; bottom:calc(26px + env(safe-area-inset-bottom)); display:flex; align-items:flex-end; justify-content:space-between; gap:14px; color:#fff}
+  .gf-info small{display:inline-flex; gap:6px; margin-bottom:8px; font:500 12px/1 -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif}
+  .gf-info small span{padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.18); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px)}
+  .gf-info small .new{background:#fff; color:#141414} .gf-info small .wip{background:#141414; color:#fff}
+  .gf-info h3{margin:0; font:600 22px/1.15 -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif; letter-spacing:-.01em}
+  .gf-info p{margin:6px 0 0; max-width:30ch; font:400 13px/1.4 -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif; color:rgba(255,255,255,.78); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .gf-open{flex:none; display:inline-flex; align-items:center; gap:8px; height:46px; padding:0 18px; border-radius:999px; background:#fff; color:#141414; font:600 14px/1 -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif; text-decoration:none}
+  .gf-open svg{width:16px; height:16px}
+  .gf-hint{position:absolute; left:50%; bottom:calc(8px + env(safe-area-inset-bottom)); transform:translateX(-50%); color:rgba(255,255,255,.5); font:500 11px/1 -apple-system, BlinkMacSystemFont, "Geist", system-ui, sans-serif}
   @media (prefers-reduced-motion:reduce){ .gv-in{animation:none} .gv-card, .gv-card img, .gv-card video{transition:none} }
 </style>
 </head>
@@ -361,8 +388,10 @@
 <div class="stage" id="stage">
   <section class="grid-view" id="grid-view" aria-label="Experiments">
     <header class="gv-head"><div class="gv-brand">Lab<span id="gv-count"></span></div><nav class="gv-chips" id="gv-chips" aria-label="Filter"></nav>
+      <button class="gv-feedbtn" id="gv-feedbtn" type="button" aria-pressed="false" aria-label="Full-screen feed"><svg class="f" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="3"/><path d="M10 9l4 3-4 3z" fill="currentColor"/></svg><svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></button>
       <div class="gv-theme" role="group" aria-label="Theme"><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></div></header>
     <div class="gv-scroll" id="gv-scroll"><div class="gv-track" id="gv-track"></div></div>
+    <div class="gv-feed" id="gv-feed" aria-label="Pieces, one to a screen"></div>
     <div class="gv-cur" id="gv-cur" aria-hidden="true"><div class="gv-cur-in" id="gv-cur-in"><i></i><b class="l"><svg viewBox="0 0 7 12" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1L1 6l5 5"/></svg></b><b class="r"><svg viewBox="0 0 7 12" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l5 5-5 5"/></svg></b></div></div>
     <div class="gv-goo" id="gv-goo" aria-hidden="true"></div><svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="gv-goo-f" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceGraphic" stdDeviation="8" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10"/></filter></svg>
   </section>
@@ -1919,6 +1948,35 @@ const GV = (() => {
     track.appendChild(a); cards.push({ el: a, ar: p.rect ? p.rect.w / p.rect.h : 1.4, kind: p.kind });
   });
   empties.forEach(p => { const d = document.createElement('div'); d.className = 'gv-card gv-empty'; d.innerHTML = '<span>Next experiment</span>'; d.setAttribute('aria-hidden', 'true'); track.appendChild(d); cards.push({ el: d, ar: p.rect.w / p.rect.h, empty: true }); });
+  // the feed (phones): one piece to a screen, swiped. The one on screen loads its demo (only that one: the rest are pictures, so it
+  // stays light), the others let theirs go; Open goes into the piece. It follows the filter. The switch brings the wall back
+  const feed = document.getElementById('gv-feed'), feedBtn = document.getElementById('gv-feedbtn'); let feedItems = [], feedOn = -1, feedTimer = 0;
+  const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  function buildFeed() { feed.innerHTML = ''; feedItems = []; feedOn = -1;
+    real.filter(({ p }) => filter === 'all' || p.kind === filter).forEach(({ p, i }, n) => {
+      const it = document.createElement('section'); it.className = 'gf-item'; it.setAttribute('aria-label', p.title);
+      const src = p.image || coverUrl(i), bg = document.createElement('img'); bg.className = 'gf-bg'; bg.alt = ''; bg.loading = n < 2 ? 'eager' : 'lazy'; bg.src = src; it.appendChild(bg);
+      const st = document.createElement('div'); st.className = 'gf-stage'; st.style.setProperty('--ar', p.rect ? (p.rect.w / p.rect.h).toFixed(4) : 1.4);
+      const img = document.createElement('img'); img.alt = ''; img.loading = n < 2 ? 'eager' : 'lazy'; img.src = src; st.appendChild(img); it.appendChild(st);
+      const sh = document.createElement('div'); sh.className = 'gf-shade'; it.appendChild(sh);
+      const info = document.createElement('div'); info.className = 'gf-info';
+      info.innerHTML = `<div><small>${p.locked ? '<span class="wip">WIP</span>' : p.fresh ? '<span class="new">New</span>' : ''}<span></span></small><h3></h3><p></p></div><a class="gf-open">Open ${ARROW}</a>`;
+      info.querySelector('small span:last-child').textContent = label(p.kind); info.querySelector('h3').textContent = p.title; info.querySelector('p').textContent = p.what || '';
+      const go = info.querySelector('.gf-open'); go.href = p.live || `#/${p.slug}`; it.appendChild(info);
+      if (n === 0) { const h = document.createElement('div'); h.className = 'gf-hint'; h.textContent = 'Swipe up for the next one'; it.appendChild(h); }
+      feed.appendChild(it); feedItems.push({ el: it, p, fr: null }); });
+    if (feedIO) feedItems.forEach(f => feedIO.observe(f.el)); }
+  function feedPlay(k) { if (k === feedOn) return; feedOn = k; clearTimeout(feedTimer);
+    feedItems.forEach((f, j) => { if (j !== k && f.fr) { f.el.classList.remove('live'); const fr = f.fr; f.fr = null; setTimeout(() => fr.remove(), 360); } });
+    const f = feedItems[k]; if (!f || f.p.locked || !(f.p.preview || f.p.video)) return;
+    feedTimer = setTimeout(() => { if (feedOn !== k || f.fr) return; const st = f.el.querySelector('.gf-stage');
+      if (f.p.preview) { const fr = document.createElement('iframe'); fr.title = ''; fr.setAttribute('aria-hidden', 'true'); fr.tabIndex = -1; fr.addEventListener('load', () => f.el.classList.add('live')); fr.src = f.p.preview; st.appendChild(fr); f.fr = fr; }
+      else { const v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.src = f.p.video; v.addEventListener('playing', () => f.el.classList.add('live')); st.appendChild(v); v.play().catch(() => { }); f.fr = v; } }, 220); }
+  const feedIO = 'IntersectionObserver' in window ? new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting && e.intersectionRatio > .6) feedPlay(feedItems.findIndex(f => f.el === e.target)); }, { root: feed, threshold: [.6] }) : null;
+  function setFeed(on) { document.body.classList.toggle('feed', on); feedBtn.setAttribute('aria-pressed', String(on));
+    if (on) { buildFeed(); feed.scrollTop = 0; requestAnimationFrame(() => feedPlay(0)); } else { feedPlay(-1); feed.innerHTML = ''; feedItems = []; } }
+  feedBtn.addEventListener('click', () => setFeed(!document.body.classList.contains('feed')));
+  addEventListener('resize', () => { if (innerWidth > 760 && document.body.classList.contains('feed')) setFeed(false); });
   // the wall: rows that fill the height; each box as wide as its picture wants (clamped), laid into the shortest row (bricks)
   let first = true;
   function layout(animate) {
