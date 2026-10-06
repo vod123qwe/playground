@@ -88,7 +88,7 @@ if (BARE) P = { ...DEF };
 
 // ---------- the renderer, an orthographic camera, the drawing (as in Line Interactions) ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); plate.prepend(renderer.domElement);
-const scene = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 300);
+const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(16, 1, .5, 400), FOV = 16;
 scene.add(new THREE.AmbientLight(0xffffff, 2.5)); const sun = new THREE.DirectionalLight(0xffffff, 1.3); sun.position.set(-6, 10, 8); scene.add(sun);
 const M = { fill: new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
   line: new THREE.LineBasicMaterial({ color: 0xc4c1ba }), hi: new THREE.LineBasicMaterial({ color: 0x1b1c20 }) };
@@ -279,9 +279,9 @@ let W = 1, H = 1; const FRAME = 450 / 240;
 new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
   if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
   renderer.setSize(W, H, false); wake(); }).observe(plate);
-function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p / (BARE ? .7 : 1), az = VIEW.dAz.p, el = VIEW.el + VIEW.dEl.p;   // (on the board the keyboard sits 30% smaller in its box)
-  cam.left = -S * a / 2; cam.right = S * a / 2; cam.top = S / 2; cam.bottom = -S / 2; cam.updateProjectionMatrix();
-  cam.position.set(Math.sin(az) * Math.cos(el) * 80, Math.sin(el) * 80, -STRIP / 2 + Math.cos(az) * Math.cos(el) * 80); cam.lookAt(0, 0, -STRIP / 2); }
+function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p / .7, az = VIEW.dAz.p, el = VIEW.el + VIEW.dEl.p;   // (S: the height of the view at the keyboard; 30% smaller than filling it)
+  const dist = S / 2 / Math.tan(FOV / 2 * Math.PI / 180); cam.aspect = a; cam.updateProjectionMatrix();
+  cam.position.set(Math.sin(az) * Math.cos(el) * dist, Math.sin(el) * dist, -STRIP / 2 + Math.cos(az) * Math.cos(el) * dist); cam.lookAt(0, 0, -STRIP / 2); }
 
 // ---------- the controls ----------
 function setSound(on) { P.sound = on; save(); if (ctl.sound) ctl.sound.set(on); if (on) { snd(); SFX.key(false); } say(on ? 'SOUND ON' : 'MUTED', 900); paint(); }
