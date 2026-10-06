@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
 <style>
   /* A wallet as a rolodex: eight payment cards on a drum, seen from a little above. The wheel, a drag or the arrows turn the drum;
      the cards behind lean back, the ones in front lean toward you, and the one you stop on rises out of the roll. A click draws it
@@ -78,10 +78,13 @@
      and a bright line round it), --fr how wide that band is. Lengths times --q: the card is drawn at q and scaled down */
   body.glass .card { transform-style: flat; }
   body.glass .face { -webkit-backdrop-filter: blur(calc(var(--fb) * var(--q) * 1px)) saturate(var(--fs)); backdrop-filter: blur(calc(var(--fb) * var(--q) * 1px)) saturate(var(--fs));
-    backdrop-filter: url(#glassF) saturate(var(--fs));
+
     background: rgba(255,255,255,var(--fm)); color: var(--ink);
     box-shadow: inset 0 0 0 calc(1px * var(--q)) rgba(255,255,255,calc(.12 + var(--fl) * .5)), inset 0 calc(1.5px * var(--q)) calc(2px * var(--q)) rgba(255,255,255,calc(var(--fl) * .55)),
       0 calc(10px * var(--q)) calc(26px * var(--q)) calc(-12px * var(--q)) rgba(20,24,40,.25); }
+  body.glass .card.hero .face { backdrop-filter: url(#glassF) saturate(var(--fs)); }
+  body.glass .card.deep .face { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,calc(var(--fm) + .1)); }
+  body.glass.dark .card.deep .face { background: rgba(255,255,255,calc(var(--fm) * .35 + .05)); }
   body.glass .art { opacity: var(--ft); } body.glass .grain { opacity: var(--fg); } body.glass .bevel { display: none; } body.glass .visa { color: var(--ink) !important; } body.glass .t-onyx .issuer b, body.glass .t-volt .issuer b { color: inherit; }
   body.glass.dark .face { background: rgba(255,255,255,calc(var(--fm) * .35)); }
   /* the lens edge: only light, a fine rim like the edge of a pane of glass catching it, brightest along the top and the left, faint
@@ -215,7 +218,9 @@ const els = CARDS.map((c, i) => { const b = document.createElement('button'); b.
 //   Wallet  a column of cards, the one you stop on shown whole, the others down to their top strips
 //   Fan     a hand of cards round a corner, the one you stop on straight and drawn up out of the fan
 const MODES = { deck: { name: 'Deck', tilt: 52, space: 1.6, lift: 47, dof: 2.85 }, roll: { name: 'Roll', tilt: 40, space: 1.9, lift: 34, dof: .6 }, barrel: { name: 'Barrel', tilt: 8, space: .5, lift: 100, dof: 1 }, wallet: { name: 'Wallet', tilt: 16, space: 1, lift: 34, dof: 1 }, fan: { name: 'Fan', tilt: 20, space: 1, lift: 34, dof: 1 } }, ORDER = Object.keys(MODES);
-const W = 340, H = 214, PERSP = 1100, Q = 2;   // (Q: the cards are laid out at Q times their size, see --q)
+const W = 340, H = 214, PERSP = 1100, Q = (devicePixelRatio || 1) >= 2 ? 1 : 2;   // (Q: the cards are laid out at Q times their size, see --q; a 2-3x screen is sharp at 1)
+document.documentElement.style.setProperty('--q', Q);
+for (const el of document.querySelectorAll('#lensF, #glassF, #lensMap, #glassMap')) { el.setAttribute('width', W * Q); el.setAttribute('height', H * Q); }
 let pos = 2, target = 2, lastTurn = -1e9, drag = null, openI = -1, shownI = -1, K = 1, vel = 0;
 const lift = { p: 0 }, pull = { p: 0 }, look = { x: 0, y: 0, tx: 0, ty: 0 };
 const smooth = t => t * t * (3 - 2 * t);
@@ -243,6 +248,8 @@ function fanAt(q, sp) { const a = -q * 7 * sp, c = Math.cos(a * RAD), s = Math.s
   return { x: px - px * c + py * s + W * .22, y: py - px * s - py * c + H * .28, z: -q * 3, rx: 0, rz: a }; }
 const CYC = () => P.anim === 'roll' || P.anim === 'fan', idx = v => ((Math.round(v) % N) + N) % N;
 
+const put = (el, k, v) => { const c = el._c || (el._c = {}); if (c[k] === v) return; c[k] = v; if (k[0] === '-') el.style.setProperty(k, v); else el.style[k] = v; };
+const cls = (el, k, on) => { const c = el._c || (el._c = {}); if (c['.' + k] === on) return; c['.' + k] = on; el.classList.toggle(k, on); };
 let raf = 0; const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
 let lastPos = pos; const CS = Array.from({ length: N }, () => ({ p: pos, v: 0, l: { p: 0 } }));
 function frame(now) { raf = 0; let busy = false;
@@ -264,22 +271,23 @@ function frame(now) { raf = 0; let busy = false;
     // (the view from above tilts the place; drawn out: square to you, toward you, a touch bigger, following the pointer)
     const X = c.x, Y = c.y * Math.cos(T) - c.z * Math.sin(T), Z = c.y * Math.sin(T) + c.z * Math.cos(T);
     const ang = rx * n + m * look.y * -7, yaw = m * look.x * 9;
-    el.style.transform = `perspective(${PERSP}px) translate3d(${(X * n).toFixed(2)}px, ${(Y * n).toFixed(2)}px, ${(Z * n + m * 170).toFixed(2)}px) rotateX(${ang.toFixed(3)}deg) rotateY(${yaw.toFixed(3)}deg) rotateZ(${(c.rz * n).toFixed(3)}deg) scale(${((1 + (P.pull - 1) * m) / Q).toFixed(4)})`;
-    el.style.zIndex = i === shownI ? 400 : String(200 + Math.round(c.layer * 10));
-    const al = c.alpha ?? 1; el.style.opacity = i === shownI ? '' : (al * (1 - .3 * t)).toFixed(3); el.style.visibility = al < .01 ? 'hidden' : '';
-    const bl = Math.max(i !== shownI ? P.blur * t : 0, clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof, 0, 18) * n);   // (the further back, the softer, and faster with depth: a progressive blur)
+    put(el, 'transform', `perspective(${PERSP}px) translate3d(${(X * n).toFixed(2)}px, ${(Y * n).toFixed(2)}px, ${(Z * n + m * 170).toFixed(2)}px) rotateX(${ang.toFixed(3)}deg) rotateY(${yaw.toFixed(3)}deg) rotateZ(${(c.rz * n).toFixed(3)}deg) scale(${((1 + (P.pull - 1) * m) / Q).toFixed(4)})`);
+    put(el, 'zIndex', i === shownI ? '400' : String(200 + Math.round(c.layer * 10)));
+    const al = c.alpha ?? 1; put(el, 'opacity', i === shownI ? '' : (al * (1 - .3 * t)).toFixed(2)); put(el, 'visibility', al < .01 ? 'hidden' : '');
+    const bl = Math.round(4 * Math.max(i !== shownI ? P.blur * t : 0, clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof, 0, 18) * n)) / 4;   // (in quarter pixels: a change too small to see is not drawn again)   // (the further back, the softer, and faster with depth: a progressive blur)
     // (on glass the blur goes on the face and its lens, never the card: a filter on the card would cut the glass off from what lies
     // behind it, and it would flicker as cards move in and out of the blur. The face keeps a filter always, so nothing is rebuilt)
-    if (P.glass) { el.style.filter = ''; const fb = `blur(${(bl * Q).toFixed(2)}px)`; el._f.style.filter = fb; el._l.style.filter = `blur(${((bl + P.fr * .12) * Q).toFixed(2)}px)`; }
-    else { el.style.filter = bl > .05 ? `blur(${bl.toFixed(2)}px)` : ''; el._f.style.filter = el._l.style.filter = ''; }
+    cls(el, 'hero', i === top && P.glass); cls(el, 'deep', P.glass && bl > 4);
+    if (P.glass) { put(el, 'filter', ''); put(el._f, 'filter', `blur(${(bl * Q).toFixed(2)}px)`); put(el._l, 'filter', `blur(${((bl + P.fr * .12) * Q).toFixed(2)}px)`); }
+    else { put(el, 'filter', bl > .05 ? `blur(${bl.toFixed(2)}px)` : ''); put(el._f, 'filter', ''); put(el._l, 'filter', ''); }
     // (the light from above: a card turned up toward it a touch brighter, one turned down or further back a touch darker; the sheen slides with the turn)
     const eff = ang, la = eff * RAD, f = el._f;
     const own = ((c.rx + lean) * n) * RAD;   // (the shade follows only the card's own turn, not the view: a card looked down on is not darker for it)
-    f.style.setProperty('--sd', ((Math.max(0, -Math.sin(own)) * .25 + Math.min(ad, 4) * .01 * n) * (P.glass ? .25 : 1)).toFixed(3));
-    f.style.setProperty('--sh-x', (clamp(-eff * .5 + yaw + c.rz * n * .5, -25, 25)).toFixed(1) + '%'); f.style.setProperty('--sh-y', (clamp(eff * .35, -18, 18)).toFixed(1) + '%');
-    f.style.setProperty('--sh-o', (.35 + Math.abs(Math.sin(la)) * .3 + m * .25).toFixed(3)); f.style.setProperty('--iri', (eff * 2 + yaw * 3 + c.rz * n).toFixed(1) + 'deg');
-    el.style.setProperty('--lit', clamp(.3 + Math.abs(Math.sin(la)) * .7 + (c.rx + lean) * .006, 0, 1).toFixed(3));
-    el.tabIndex = i === top ? 0 : -1; }
+    put(f, '--sd', ((Math.max(0, -Math.sin(own)) * .25 + Math.min(ad, 4) * .01 * n) * (P.glass ? .25 : 1)).toFixed(3));
+    put(f, '--sh-x', (clamp(-eff * .5 + yaw + c.rz * n * .5, -25, 25)).toFixed(1) + '%'); put(f, '--sh-y', (clamp(eff * .35, -18, 18)).toFixed(1) + '%');
+    put(f, '--sh-o', (.35 + Math.abs(Math.sin(la)) * .3 + m * .25).toFixed(3)); put(f, '--iri', (eff * 2 + yaw * 3 + c.rz * n).toFixed(1) + 'deg');
+    put(el, '--lit', clamp(.3 + Math.abs(Math.sin(la)) * .7 + (c.rx + lean) * .006, 0, 1).toFixed(3));
+    if (el._ti !== (i === top)) { el._ti = i === top; el.tabIndex = el._ti ? 0 : -1; } }
   floor.style.opacity = (1 - .6 * t).toFixed(3);
   if (busy) wake(); }
 function ease(s, to, k) { s.p += (to - s.p) * k; if (Math.abs(to - s.p) < .0008) s.p = to; return s.p !== to; }
@@ -339,7 +347,7 @@ function paintMat() { document.querySelectorAll('#mat button').forEach(b => b.se
 function preset(o) { for (const k in o) { P[k] = o[k]; ctl[k]?.set(P[k]); } }
 function setAnim(v, fromPanel) { if (!MODES[v]) return; P.anim = v; for (const k of ['tilt', 'space', 'lift', 'dof']) { P[k] = MODES[v][k]; ctl[k]?.set(P[k]); } if (P.glass) { preset(GLASS[v] || FROST); applyGlass(); fit(); }
   if (!fromPanel) ctl.anim?.set(v); $('nm').textContent = MODES[v].name; pos = target = lastPos = idx(pos); CS.forEach(c => c.p = pos); save(); wake(); }
-function edgeMap(band, sign) { const MW = 340, MH = 214, sx = 680 / MW, R = 24 * Q / sx, bw = band / sx, c = document.createElement('canvas'); c.width = MW; c.height = MH;
+function edgeMap(band, sign) { const MW = 340, MH = 214, sx = W * Q / MW, R = 24 * Q / sx, bw = band / sx, c = document.createElement('canvas'); c.width = MW; c.height = MH;
   const x = c.getContext('2d'), im = x.createImageData(MW, MH), hw = MW / 2, hh = MH / 2;
   for (let py = 0; py < MH; py++) for (let px = 0; px < MW; px++) { const X = px + .5 - hw, Y = py + .5 - hh, qx = Math.abs(X) - (hw - R), qy = Math.abs(Y) - (hh - R);
     const d = -(Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - R); let nx = 0, ny = 0, k = 0;

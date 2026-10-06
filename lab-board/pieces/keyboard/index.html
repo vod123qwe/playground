@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../shared/lab-ui.css?v=19">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
 <style>
   /* A flat Mac keyboard drawn like Line Interactions: low keys in an aluminium slab, thin lines over quiet fills, every key a rounded
      cap with its legend printed on top in the lab's type, the keys laid out as on a flat low-profile keyboard with command and option keys. Point at a key and it lights; click it, or type
@@ -279,7 +279,7 @@ let W = 1, H = 1; const FRAME = 450 / 240;
 new ResizeObserver(() => { W = plate.clientWidth || 1; H = plate.clientHeight || 1;
   if (BARE) { const sw = W, sh = H; if (W / H > FRAME) H = W / FRAME; else W = H * FRAME; Object.assign(renderer.domElement.style, { inset: 'auto', width: W + 'px', height: H + 'px', left: (sw - W) / 2 + 'px', top: (sh - H) / 2 + 'px' }); }
   renderer.setSize(W, H, false); wake(); }).observe(plate);
-function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p / .7, az = VIEW.dAz.p, el = VIEW.el + VIEW.dEl.p;   // (S: the height of the view at the keyboard; 30% smaller than filling it)
+function placeCam() { const a = W / H, S = Math.max(5, 9.4 / a) / VIEW.z.p / (a < 1 ? .95 : .7), az = VIEW.dAz.p, el = VIEW.el + VIEW.dEl.p;   // (S: the height of the view at the keyboard; 30% smaller than filling it, nearly full width on an upright phone)
   const dist = S / 2 / Math.tan(FOV / 2 * Math.PI / 180); cam.aspect = a; cam.updateProjectionMatrix();
   cam.position.set(Math.sin(az) * Math.cos(el) * dist, Math.sin(el) * dist, -STRIP / 2 + Math.cos(az) * Math.cos(el) * dist); cam.lookAt(0, 0, -STRIP / 2); }
 

@@ -250,3 +250,13 @@
 body.dark .lab-frame, .lab-frame.dark{--lab-page:#17181b}
 body.tuning .lab-frame{inset:16px 368px 16px 16px; border-radius:26px}
 @media (max-width:760px){ body.tuning .lab-frame{inset:8px 8px calc(56vh + 16px) 8px; border-radius:22px} }
+
+/* phones: the corner controls make room for one another. Customize goes down to its icon (the Light / Dark switch sits between it and
+   the back button), and the zoom buttons stand up the right edge above the pill at the foot. Body-qualified so it outweighs a piece's own rules */
+@media (max-width:520px){
+  body .tune{width:46px; padding:0; gap:0; justify-content:center; font-size:0}
+  body .tune svg{flex:none}
+  body .view{flex-direction:column; bottom:calc(84px + env(safe-area-inset-bottom)); right:12px}
+  body .hint{white-space:normal; max-width:calc(100vw - 40px); text-align:center}   /* (a long hint wraps instead of running off) */
+  body .hints{display:none}   /* (mouse and keyboard hints mean nothing to a finger) */
+}
