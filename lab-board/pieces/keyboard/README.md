@@ -49,3 +49,5 @@ Ustawienia zapisują się w `lab.keyboard.v1`, a tryb jasny lub ciemny w `.mode`
 - W trybie planszy rysunek idzie w ramce 450:240, przyciętej jak obrazek.
 
 Do testów jest `window.KEYS`.
+- Kamera z łagodną prawdziwą perspektywą (wąski obiektyw 16°): dalsza krawędź jest odrobinę mniejsza, jak oczekuje oko (widok bez perspektywy sprawiał, że tył wyglądał na szerszy).
+- Domyślnie klawiatura zajmuje ok. 70% kadru (o 30% mniejsza niż wypełnienie), na stronie i na planszy.
