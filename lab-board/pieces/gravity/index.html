@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="../../shared/lab-lock.js?v=3"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gravity · lab</title>
+<meta name="theme-color" content="#eeede9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* A thing floats in the middle of the screen and things fall on it: balls, blocks, a sheet of cloth. Real physics (Rapier): they hit it,
+     bounce, roll off and fall on past. The thing in the middle can be a sphere, a blob, a torus, a cube, a plate or a bowl; it can
+     be hard, bouncy, absorbing, or a real jelly that dents and wobbles where it is hit (a soft body of linked points, the falling
+     things bouncing off its moving surface). Its surface can be glass, rubber, ceramic, chrome or an X-ray, a glowing mesh you see
+     the falling things through. The light is yours too: where it comes from, how strong, how warm. Click to drop a handful where
+     you click; drag to look round a little; the wheel to come closer. Light or dark on top; Customize holds the rest. */
+  :root { --bg: #eeede9; --ink: #141414; --muted: rgba(20,20,20,.5); --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --boxbg: #eeede9; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; transition: background .4s; -webkit-font-smoothing: antialiased; }
+  body.dark { --bg: #0d0e10; --ink: #f2f2f0; --muted: rgba(255,255,255,.5); --page: #17181b; --boxbg: #131316; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: inset var(--morph), border-radius var(--morph), background .4s; touch-action: none; cursor: crosshair; }
+  body.tuning .stage { background: var(--boxbg); border-radius: 26px; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .stage { cursor: grab; } .stage.dragging { cursor: grabbing; }
+  .hint { position: fixed; left: 50%; bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 3; transform: translateX(-50%); margin: 0; color: var(--muted); font-size: 13px; pointer-events: none; white-space: nowrap; transition: left var(--morph); }
+  .cbtns { display: flex; gap: 8px; margin: 4px 0 14px; } .cbtns button { flex: 1; height: 40px; border: 0; border-radius: 999px; background: var(--ui-field, rgba(20,20,20,.06)); color: var(--ui-ink, inherit); font: 600 13px var(--lab-font); cursor: pointer; }
+  .cbtns button:first-child { background: var(--ui-on, #1b1c20); color: var(--ui-on-text, #fff); }
+  .loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; pointer-events: none; transition: opacity .4s; } body.ready .loading { opacity: 0; }
+  /* the corner controls (as on every piece) */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .3s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); transition: left .45s var(--ease); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .hint, body.bare .loading { display: none; }
+  /* the panel: a card beside the stage (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; z-index: 3; display: flex; gap: 8px; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode, body.tuning .hint { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint { display: none; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="Things falling on a floating shape; drag the shape to move it, click to drop more, double click to bring it back"></main>
+<p class="loading" id="loading">Loading the physics…</p>
+<p class="hint" id="hint">Drag to move or throw, right drag to turn, click to drop more</p>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the scene"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs';
+
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.gravity.v1';
+const DEF = { shape: 'sphere', feel: 'hard', bounce: .45, friction: .5, soft: .55, size: 1, drop: 'balls', dropMat: 'mixed', rate: 5, dropSize: 1, gravity: 9.8,
+  surface: 'glass', tint: '#9fc3ff', cloth: 'silk', clothSize: 4.2, clothTint: '#e8604c', lightAz: 35, lightEl: 55, lightPow: 2.6, warmth: .55, env: .9, shadows: true };
+const FEEL = { hard: { bounce: .45, friction: .5 }, bouncy: { bounce: .92, friction: .2 }, absorb: { bounce: .03, friction: .95 }, jelly: { bounce: .3, friction: .6 } };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+// (an old X-ray or confetti setting falls back)
+if (P.surface === 'xray') P.surface = 'glass'; if (P.drop === 'confetti') P.drop = 'balls';
+const $ = id => document.getElementById(id), stage = $('stage');
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo'), STILL = q.has('thumb');
+if (BARE) { P = { ...DEF }; document.body.classList.add('bare'); for (const k of ['shape', 'feel', 'surface', 'drop', 'dropMat', 'cloth']) if (q.has(k)) P[k] = q.get(k); if (q.has('feel')) Object.assign(P, FEEL[P.feel] || {}); }   // (the board's box can be set from its address)
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+await RAPIER.init();
+
+// ---------- renderer, camera, light ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));   // (a dense screen drawn at 1.5x, not 2x: most of the cost, little of the look) renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture;
+const camera = new THREE.PerspectiveCamera(42, 1, .1, 200);
+const view = { az: 0, el: .12, dist: 11, taz: 0, tel: .12, tdist: 11 };
+const key = new THREE.DirectionalLight('#fff', 2.6); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 6; key.shadow.bias = -.0004; key.shadow.normalBias = .02;
+Object.assign(key.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 40 }); scene.add(key, key.target);
+const rim = new THREE.DirectionalLight('#cfe0ff', .8); scene.add(rim);
+const fill = new THREE.HemisphereLight('#ffffff', '#b8b4ad', .35); scene.add(fill);
+function applyLight() { const az = P.lightAz * Math.PI / 180, el = P.lightEl * Math.PI / 180, r = 14;
+  key.position.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r); key.intensity = P.lightPow;
+  key.color.set('#cfe0ff').lerp(new THREE.Color('#ffd09a'), P.warmth); rim.position.set(-key.position.x, key.position.y * .4 + 3, -key.position.z);
+  rim.color.set('#ffd09a').lerp(new THREE.Color('#cfe0ff'), P.warmth); scene.environmentIntensity = P.env; key.castShadow = !!P.shadows; }
+
+// ---------- materials: the surface of the thing in the middle, and of the falling things ----------
+function surfaceMat() { const t = new THREE.Color(P.tint);
+  if (P.surface === 'glass') return new THREE.MeshPhysicalMaterial({ color: '#ffffff', transmission: 1, roughness: .06, thickness: 1.6, ior: 1.45, attenuationColor: t, attenuationDistance: 2.2, specularIntensity: 1, envMapIntensity: 1.2 });
+  if (P.surface === 'rubber') return new THREE.MeshPhysicalMaterial({ color: t, roughness: .78, sheen: .6, sheenRoughness: .8, sheenColor: '#ffffff' });
+  if (P.surface === 'ceramic') return new THREE.MeshPhysicalMaterial({ color: t.clone().lerp(new THREE.Color('#ffffff'), .55), roughness: .32, clearcoat: .7, clearcoatRoughness: .2 });
+  return new THREE.MeshPhysicalMaterial({ color: t.clone().lerp(new THREE.Color('#ffffff'), .7), metalness: 1, roughness: .07 }); }   // (chrome)
+const DROP_MATS = {
+  glass: new THREE.MeshPhysicalMaterial({ color: '#eef4ff', transparent: true, opacity: .38, roughness: .03, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 1.6, depthWrite: false }),
+  rubber: ['#ff5a4e', '#ffb02e', '#2fb67c', '#3d7bff', '#9b5cff', '#ff6fb1'].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: .45 })),
+  metal: new THREE.MeshStandardMaterial({ color: '#e8e8ea', metalness: 1, roughness: .12 }) };
+const pick = a => a[Math.floor(rnd() * a.length) % a.length];
+function dropMaterial() {
+  const m = P.dropMat === 'mixed' ? pick(['glass', 'rubber', 'rubber', 'metal']) : P.dropMat; return m === 'rubber' ? pick(DROP_MATS.rubber) : DROP_MATS[m]; }
+const DROP_E = { glass: .5, rubber: .82, metal: .3 };
+
+// ---------- the thing in the middle: its shape, at two levels of detail (a coarse one for the jelly's points, a fine one to draw) ----------
+// (detail: 0 the jelly's points; 1 the jelly drawn, and the blob's collider; 2 a solid shape drawn: dense enough that its outline is a
+// true curve, cheap for the graphics card as one object; the physics never sees that one)
+function shapeGeo(shape, detail) { const S = P.size, ico = [2, 4, 6][detail]; let g; const fine = detail > 0;
+  if (shape === 'sphere') g = new THREE.IcosahedronGeometry(1.55 * S, ico);
+  else if (shape === 'blob') { g = new THREE.IcosahedronGeometry(1.5 * S, ico); const p = g.attributes.position, v = new THREE.Vector3();   // (a pebble: a few long, low swells, a little flattened; no small lumps)
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); const k = 1 + .13 * Math.sin(v.x * 1.7 + .6) * Math.cos(v.y * 1.3 - .2) + .09 * Math.sin(v.z * 2.1 + v.x * 1.1 + 1.2) + .05 * Math.cos(v.y * 2.4 + v.z * .8);
+      p.setXYZ(i, v.x * 1.5 * S * k * 1.12, v.y * 1.5 * S * k * .9, v.z * 1.5 * S * k); } }
+  else if (shape === 'torus') g = new THREE.TorusGeometry(1.2 * S, .52 * S, fine ? 40 : 10, fine ? 96 : 22);
+  else if (shape === 'cube') g = new RoundedBoxGeometry(2.3 * S, 2.3 * S, 2.3 * S, fine ? 6 : 2, .32 * S);
+  else if (shape === 'plate') g = new RoundedBoxGeometry(3.8 * S, .36 * S, 2.8 * S, fine ? 5 : 2, .16 * S);
+  else { const pts = [], R = 1.9 * S, T = .16 * S;   // (the bowl: a lathed half shell with a rounded rim)
+    for (let i = 0; i <= (fine ? 24 : 7); i++) { const a = i / (fine ? 24 : 7) * Math.PI / 2; pts.push(new THREE.Vector2(Math.sin(a) * R + .001, -Math.cos(a) * R * .62)); }
+    for (let i = fine ? 24 : 7; i >= 0; i--) { const a = i / (fine ? 24 : 7) * Math.PI / 2; pts.push(new THREE.Vector2(Math.max(.001, Math.sin(a) * (R - T)), -Math.cos(a) * (R - T) * .62 + T * .4)); }
+    g = new THREE.LatheGeometry(pts, fine ? 72 : 14); g.translate(0, .45 * S, 0); }
+  if (shape === 'torus') g.rotateX(Math.PI / 2.6);
+  g.deleteAttribute('uv'); g.deleteAttribute('normal'); g = mergeVertices(g, 1e-4); g.computeVertexNormals(); return g; }
+
+// ---------- the physics world ----------
+const world = new RAPIER.World({ x: 0, y: -P.gravity, z: 0 }); world.timestep = 1 / 60;
+const FLOOR = -3.4, WALL_X = 7.2, WALL_BACK = -4.5, WALL_FRONT = 4.2;
+const floorMat = new THREE.MeshStandardMaterial({ color: '#e4e2dc', roughness: .9 }), floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), floorMat);
+floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR - .015; floor.receiveShadow = true; scene.add(floor);
+{ const room = world.createRigidBody(RAPIER.RigidBodyDesc.fixed()), wall = (x, y, z, hx, hy, hz) => world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setTranslation(x, y, z).setRestitution(.4).setFriction(.6), room);
+  wall(0, FLOOR - .5, 0, 40, .5, 20); wall(-WALL_X - .5, 4, 0, .5, 12, 20); wall(WALL_X + .5, 4, 0, .5, 12, 20); wall(0, 4, WALL_BACK - .5, 40, 12, .5); wall(0, 4, WALL_FRONT + .5, 40, 12, .5); }
+const center = new THREE.Group(); scene.add(center);
+let core = null, mesh = null, jelly = null, coreBodies = [];
+function clearCore() { for (const b of coreBodies) world.removeRigidBody(b); coreBodies = []; jelly = null;
+  if (mesh) { center.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); } mesh = null; }
+const rule = () => P.feel === 'absorb' ? RAPIER.CoefficientCombineRule.Min : P.feel === 'bouncy' ? RAPIER.CoefficientCombineRule.Max : RAPIER.CoefficientCombineRule.Average;
+function coreCollider(desc) { return desc.setRestitution(P.bounce).setFriction(P.friction).setRestitutionCombineRule(rule()); }
+function buildCore() { clearCore(); const fine = shapeGeo(P.shape, P.feel === 'jelly' ? 1 : 2); fine.computeBoundingBox(); hold.low = -fine.boundingBox.min.y; hold.side = Math.max(-fine.boundingBox.min.x, fine.boundingBox.max.x);
+  mesh = new THREE.Mesh(fine, surfaceMat()); mesh.castShadow = P.surface !== 'glass'; mesh.receiveShadow = true; center.add(mesh);
+  if (P.feel !== 'jelly') {   // (a solid thing: one body, moved gently up and down, its shape as the collider)
+    const body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased()); coreBodies.push(body);
+    let cd; const S = P.size;
+    if (P.shape === 'sphere') cd = RAPIER.ColliderDesc.ball(1.55 * S);
+    else if (P.shape === 'cube') cd = RAPIER.ColliderDesc.roundCuboid(.83 * S, .83 * S, .83 * S, .32 * S);
+    else if (P.shape === 'plate') cd = RAPIER.ColliderDesc.roundCuboid(1.74 * S, .02 * S, 1.24 * S, .16 * S);
+    else { const cg = shapeGeo(P.shape, 1), p = cg.attributes.position.array, idx = cg.index.array; cd = RAPIER.ColliderDesc.trimesh(new Float32Array(p), new Uint32Array(idx)); cg.dispose(); }   // (the collider from the lighter shape)
+    world.createCollider(coreCollider(cd), body); core = body; return; }
+  // (the jelly: the coarse shape's points, each a small ball that moves; joined to its neighbours and drawn back to its place, so a
+  // hit dents it and the dent runs off as a wobble. The fine shape is drawn from the points around each of its corners)
+  const coarse = shapeGeo(P.shape, 0), cp = coarse.attributes.position, n = cp.count, rest = [], nb = Array.from({ length: n }, () => new Set());
+  for (let i = 0; i < n; i++) rest.push(new THREE.Vector3().fromBufferAttribute(cp, i));
+  const ix = coarse.index.array; let edge = 0, ne = 0;
+  for (let t = 0; t < ix.length; t += 3) for (const [a, b] of [[ix[t], ix[t + 1]], [ix[t + 1], ix[t + 2]], [ix[t + 2], ix[t]]]) { nb[a].add(b); nb[b].add(a); edge += rest[a].distanceTo(rest[b]); ne++; }
+  edge /= ne; const pr = edge * .62;
+  const pts = rest.map(r => ({ r, p: r.clone(), v: new THREE.Vector3(), body: null }));
+  for (const pt of pts) { const b = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pt.r.x, pt.r.y, pt.r.z)); world.createCollider(coreCollider(RAPIER.ColliderDesc.ball(pr)), b); pt.body = b; coreBodies.push(b); }
+  const fp = fine.attributes.position, fineRest = new Float32Array(fp.array), wts = [], sig2 = 2 * (edge * .8) ** 2;   // (each fine corner: its 8 nearest points, weighted by a soft bell, so a dent is smooth)
+  for (let i = 0; i < fp.count; i++) { const x = fineRest[i * 3], y = fineRest[i * 3 + 1], z = fineRest[i * 3 + 2], best = [];
+    for (let j = 0; j < n; j++) { const d = (rest[j].x - x) ** 2 + (rest[j].y - y) ** 2 + (rest[j].z - z) ** 2; if (best.length < 8 || d < best[7][1]) { best.push([j, d]); best.sort((a, b) => a[1] - b[1]); if (best.length > 8) best.pop(); } }
+    let s = 0; const w = best.map(([j, d]) => { const k = Math.exp(-d / sig2); s += k; return [j, k]; }); wts.push(w.map(([j, k]) => [j, k / s])); }
+  jelly = { pts, nb: nb.map(s => [...s]), pr, fineRest, wts, edge }; }
+
+// ---------- the falling things ----------
+const drops = [], tmpQ = new THREE.Quaternion();
+
+// ---------- the cloth: a sheet of linked points (Verlet), dropped from above. Each step: it moves on by its own speed and falls;
+// its links are pulled back to their length a few times over (along, across, on the slant, and every other one for how stiff it
+// bends); then each point is kept outside whatever it meets, the shape in the middle (any shape, the jelly too), the floor, the
+// walls and the falling things, by asking the physics for the nearest surface. Silk drapes, cotton folds stiffer, rubber stretches ----------
+const CLOTH = { silk: { give: 1, bend: .04, damp: .992, iters: 7, sheen: 1, rough: .55 }, cotton: { give: 1, bend: .32, damp: .985, iters: 7, sheen: .7, rough: .9 }, rubber: { give: .55, bend: .7, damp: .98, iters: 9, sheen: .2, rough: .45 } };
+let cloth = null;
+function removeCloth() { if (!cloth) return; scene.remove(cloth.mesh); cloth.mesh.geometry.dispose(); cloth.mesh.material.dispose(); cloth = null; }
+function dropCloth() { removeCloth(); const N = 30, size = P.clothSize, geo = new THREE.PlaneGeometry(size, size, N - 1, N - 1); geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position, n = pos.count, p = new Float32Array(n * 3), o = new Float32Array(n * 3), y0 = hold.oy + bob + hold.low + 2.6;
+  for (let i = 0; i < n; i++) { const x = pos.getX(i) + hold.ox, z = pos.getZ(i), y = y0 + x * .04 + z * .03; p.set([x, y, z], i * 3); o.set([x, y, z], i * 3); }   // (a touch askew, so it does not land flat)
+  const cons = [], at = (r, c) => r * N + c, L = (a, b) => Math.hypot(p[a * 3] - p[b * 3], p[a * 3 + 1] - p[b * 3 + 1], p[a * 3 + 2] - p[b * 3 + 2]);
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { const a = at(r, c);
+    if (c + 1 < N) cons.push([a, at(r, c + 1), L(a, at(r, c + 1)), 0]); if (r + 1 < N) cons.push([a, at(r + 1, c), L(a, at(r + 1, c)), 0]);
+    if (r + 1 < N && c + 1 < N) { cons.push([a, at(r + 1, c + 1), L(a, at(r + 1, c + 1)), 1]); cons.push([at(r, c + 1), at(r + 1, c), L(at(r, c + 1), at(r + 1, c)), 1]); }
+    if (c + 2 < N) cons.push([a, at(r, c + 2), L(a, at(r, c + 2)), 2]); if (r + 2 < N) cons.push([a, at(r + 2, c), L(a, at(r + 2, c)), 2]); }
+  const M = CLOTH[P.cloth] || CLOTH.silk, mat = new THREE.MeshPhysicalMaterial({ color: P.clothTint, roughness: M.rough, sheen: M.sheen, sheenRoughness: .5, sheenColor: '#ffffff', side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = mesh.receiveShadow = true; mesh.frustumCulled = false; scene.add(mesh);
+  cloth = { mesh, p, o, n, cons, N, th: size / (N - 1) * .35 }; }
+function stepCloth(dt) { const C = cloth, M = CLOTH[P.cloth] || CLOTH.silk, p = C.p, o = C.o, g = P.gravity * dt * dt, th = C.th;
+  for (let i = 0; i < C.n * 3; i += 3) { const vx = (p[i] - o[i]) * M.damp, vy = (p[i + 1] - o[i + 1]) * M.damp, vz = (p[i + 2] - o[i + 2]) * M.damp;
+    o[i] = p[i]; o[i + 1] = p[i + 1]; o[i + 2] = p[i + 2]; p[i] += vx; p[i + 1] += vy - g; p[i + 2] += vz; }
+  const k = [M.give, M.give * .7, M.bend];
+  for (let it = 0; it < M.iters; it++) for (const [a, b, r, kind] of C.cons) { const A = a * 3, B = b * 3, dx = p[B] - p[A], dy = p[B + 1] - p[A + 1], dz = p[B + 2] - p[A + 2], d = Math.hypot(dx, dy, dz) || 1e-6;
+    let f = (d - r) / d * .5 * k[kind]; if (kind === 0 && P.cloth === 'rubber' && d < r) f *= .3;   // (rubber gives when pressed together)
+    p[A] += dx * f; p[A + 1] += dy * f; p[A + 2] += dz * f; p[B] -= dx * f; p[B + 1] -= dy * f; p[B + 2] -= dz * f; }
+  const pt = { x: 0, y: 0, z: 0 };
+  for (let i = 0; i < C.n * 3; i += 3) {   // (kept outside what it meets; a touch of friction where it rests)
+    pt.x = p[i]; pt.y = p[i + 1]; pt.z = p[i + 2]; const hit = world.projectPoint(pt, false); if (!hit) continue;
+    const hx = hit.point.x, hy = hit.point.y, hz = hit.point.z, dx = p[i] - hx, dy = p[i + 1] - hy, dz = p[i + 2] - hz, d = Math.hypot(dx, dy, dz) || 1e-6;
+    if (hit.isInside || d < th) { const s2 = hit.isInside ? -1 : 1; p[i] = hx + dx / d * th * s2; p[i + 1] = hy + dy / d * th * s2; p[i + 2] = hz + dz / d * th * s2;
+      o[i] += (p[i] - o[i]) * .45; o[i + 2] += (p[i + 2] - o[i + 2]) * .45; } }
+  const a = C.mesh.geometry.attributes.position.array; a.set(p); C.mesh.geometry.attributes.position.needsUpdate = true; C.mesh.geometry.computeVertexNormals(); }
+const GEO = { ball: new THREE.SphereGeometry(1, 32, 20), box: new RoundedBoxGeometry(1, 1, 1, 3, .16), capsule: new THREE.CapsuleGeometry(.5, 1, 6, 16), cyl: new THREE.CylinderGeometry(.5, .5, 1, 28) };
+function spawn(x, z, y, kind) { const s = P.dropSize, k = kind || (P.drop === 'mixed' ? pick(['ball', 'ball', 'block']) : P.drop === 'blocks' ? 'block' : 'ball');
+  let geo, cd, sc, damp = .05, adamp = .1, dens = 1;
+  const mat = dropMaterial(), e = (DROP_E[Object.keys(DROP_MATS).find(n => (DROP_MATS[n] === mat || (Array.isArray(DROP_MATS[n]) && DROP_MATS[n].includes(mat))))] ?? .5);
+  if (k === 'ball') { const r = .17 * s * (.75 + rnd() * .6); geo = GEO.ball; sc = [r, r, r]; cd = RAPIER.ColliderDesc.ball(r); }
+  else if (k === 'block') { const t = pick(['box', 'box', 'capsule', 'cyl']), a = .3 * s * (.75 + rnd() * .5);
+    if (t === 'box') { geo = GEO.box; sc = [a, a, a]; cd = RAPIER.ColliderDesc.roundCuboid(a * .34, a * .34, a * .34, a * .16); }
+    else if (t === 'capsule') { geo = GEO.capsule; sc = [a * .7, a * .7, a * .7]; cd = RAPIER.ColliderDesc.capsule(a * .35, a * .35); }
+    else { geo = GEO.cyl; sc = [a * .8, a, a * .8]; cd = RAPIER.ColliderDesc.cylinder(a * .5, a * .4); } }
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setLinearDamping(damp).setAngularDamping(adamp)
+    .setRotation(new THREE.Quaternion(rnd() - .5, rnd() - .5, rnd() - .5, 1).normalize()));
+  world.createCollider(cd.setRestitution(e).setFriction(.5).setDensity(dens), body);
+  const m = new THREE.Mesh(geo, mat); m.scale.set(...sc); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  drops.push({ body, mesh: m, kind: k, r: Math.max(...sc), phase: rnd() * 6.28 });
+  while (drops.length > 160) removeDrop(drops[0]); }
+function removeDrop(d) { world.removeRigidBody(d.body); scene.remove(d.mesh); drops.splice(drops.indexOf(d), 1); }
+const spread = () => (P.shape === 'plate' || P.shape === 'bowl' ? 1.9 : 1.6) * P.size;
+const topY = () => 6.2;
+
+// ---------- the step: the physics at a fixed 60 a second; the jelly's points move by their springs and are pushed by what hits them ----------
+let acc = 0, last = 0, t = 0, spawnAcc = 0, bob = 0;
+const hold = { ox: 0, oy: 0, tx: 0, ty: 0, vx: 0, vy: 0, ax: 0, ay: 0, lean: new THREE.Quaternion(), free: false, fvx: 0, fvy: 0, float: 1, rot: new THREE.Quaternion(), trot: new THREE.Quaternion(), inv: new THREE.Quaternion(), all: new THREE.Quaternion(), low: 1.55, side: 1.55, spin: 0 };   // (free: thrown, under gravity; float 1..0: how much it bobs)
+const v3 = new THREE.Vector3(), v4 = new THREE.Vector3();
+function stepJelly(dt) { const J = jelly, s = P.soft, kRest = lerp(140, 22, s), kNb = lerp(60, 26, s), damp = Math.pow(lerp(.02, .25, s), dt), cy = bob + hold.oy, cx0 = hold.ox;
+  const jx = -hold.ax * dt * (.5 + s), jy = -hold.ay * dt * (.5 + s);
+  J.pts.forEach((pt, i) => {   // (each point: drawn to its place, and towards the middle of its neighbours' dents)
+    pt.v.x += jx; pt.v.y += jy;
+    v3.copy(pt.r).sub(pt.p).multiplyScalar(kRest); let cx = 0, cyy = 0, cz = 0; const nbs = J.nb[i];
+    for (const j of nbs) { const o = J.pts[j]; cx += o.p.x - o.r.x; cyy += o.p.y - o.r.y; cz += o.p.z - o.r.z; }
+    const k = 1 / nbs.length; v4.set(cx * k - (pt.p.x - pt.r.x), cyy * k - (pt.p.y - pt.r.y), cz * k - (pt.p.z - pt.r.z)).multiplyScalar(kNb);
+    pt.v.addScaledVector(v3.add(v4), dt).multiplyScalar(damp); });
+  for (const d of drops) { const tr = d.body.translation(); v3.set(tr.x - cx0, tr.y - cy, tr.z).applyQuaternion(hold.inv); const lx = v3.x, ly = v3.y, lz = v3.z;   // (the drop, in the jelly's own turned frame) if (lx * lx + ly * ly + lz * lz > 30 * P.size * P.size) continue;
+    for (const pt of J.pts) { const dx = pt.p.x - lx, dy = pt.p.y - ly, dz = pt.p.z - lz, dd = dx * dx + dy * dy + dz * dz, rr = J.pr + d.r + .06;   // (touching, or just about: the colliders keep them a hair apart)
+      if (dd < rr * rr && dd > 1e-6) { const dl = Math.sqrt(dd), pen = rr - dl, nx = dx / dl, ny = dy / dl, nz = dz / dl, lv = d.body.linvel(), vn = Math.min(0, lv.x * nx + lv.y * ny + lv.z * nz);
+        const push = pen * (.25 + s * .6) + (-vn) * .03 * (1 + s); pt.p.x += nx * push; pt.p.y += ny * push; pt.p.z += nz * push; pt.v.x += nx * -vn * .25 * s; pt.v.y += ny * -vn * .25 * s; pt.v.z += nz * -vn * .25 * s; } } }
+  for (const pt of J.pts) { pt.p.addScaledVector(pt.v, dt); const lim = J.edge * 1.6; v3.copy(pt.p).sub(pt.r); if (v3.length() > lim) pt.p.copy(pt.r).add(v3.setLength(lim));
+    v4.copy(pt.p).applyQuaternion(hold.rot); pt.body.setNextKinematicTranslation({ x: v4.x + cx0, y: v4.y + cy, z: v4.z }); } }
+function drawJelly() { const J = jelly, pos = mesh.geometry.attributes.position, a = pos.array;
+  for (let i = 0; i < J.wts.length; i++) { let x = J.fineRest[i * 3], y = J.fineRest[i * 3 + 1], z = J.fineRest[i * 3 + 2];
+    for (const [j, w] of J.wts[i]) { const pt = J.pts[j]; x += (pt.p.x - pt.r.x) * w; y += (pt.p.y - pt.r.y) * w; z += (pt.p.z - pt.r.z) * w; }
+    a[i * 3] = x; a[i * 3 + 1] = y; a[i * 3 + 2] = z; }
+  pos.needsUpdate = true; mesh.geometry.computeVertexNormals(); }
+function physics(dt) { t += dt;
+  bob = Math.sin(t * .9) * .09 * hold.float;   // (it floats: a slow rise and fall; not once it has been thrown)
+  { const px = hold.ox, py = hold.oy;
+    if (hold.free) {   // (thrown: its own speed, gravity, the floor and the walls; it settles where it stops)
+      hold.fvy -= P.gravity * dt; hold.ox += hold.fvx * dt; hold.oy += hold.fvy * dt; const bottom = FLOOR + hold.low, e = P.feel === 'jelly' ? .25 : clamp(P.bounce, .05, .85);
+      if (hold.oy < bottom) { hold.oy = bottom; if (Math.abs(hold.fvy) > .6) hold.fvy = -hold.fvy * e; else hold.fvy = 0; hold.fvx *= .82; }
+      const wx = WALL_X - hold.side; if (Math.abs(hold.ox) > wx) { hold.ox = Math.sign(hold.ox) * wx; hold.fvx = -hold.fvx * e; }
+      hold.tx = hold.ox; hold.ty = hold.oy; hold.float += (0 - hold.float) * .1; }
+    else { hold.ox += (hold.tx - hold.ox) * .3; hold.oy += (hold.ty - hold.oy) * .3; }   // (in the hand, or floating: it follows smoothly)
+    const vx = (hold.ox - px) / dt, vy = (hold.oy - py) / dt; hold.ax = (vx - hold.vx) / dt; hold.ay = (vy - hold.vy) / dt; hold.vx = vx; hold.vy = vy;
+    hold.lean.setFromEuler(new THREE.Euler(clamp(vy * .04, -.35, .35), 0, clamp(-vx * .05, -.35, .35))); }   // (and leans with its speed)
+  hold.rot.slerp(hold.trot, .25); hold.inv.copy(hold.rot).invert(); hold.all.copy(hold.lean).multiply(hold.rot);   // (its turn eases after the hand)
+  if (core) { core.setNextKinematicTranslation({ x: hold.ox, y: bob + hold.oy, z: 0 }); core.setNextKinematicRotation(hold.all); }
+  if (jelly) stepJelly(dt);
+  if (!STILL) { spawnAcc += dt * P.rate; while (spawnAcc >= 1) { spawnAcc -= 1; const R = spread(); spawn((rnd() - .5) * 2 * R, (rnd() - .5) * 2.2 * R, topY() + rnd() * .8); } }
+  world.step();
+  if (cloth) stepCloth(dt);
+  for (let i = drops.length - 1; i >= 0; i--) { const tr = drops[i].body.translation(); if (tr.y < -9 || tr.z > camera.position.z - 1.4 || Math.abs(tr.x) > 18 || tr.z < -25) removeDrop(drops[i]); } }   // (fallen away, or come right up to the lens)
+
+// ---------- the view: a fixed look a little from above; a drag turns it a little, the wheel brings it closer ----------
+function placeCam() { const a = stage.clientWidth / stage.clientHeight, fit = a < 1 ? 1 / a * .85 : 1;
+  view.az += (view.taz - view.az) * .12; view.el += (view.tel - view.el) * .12; view.dist += (view.tdist - view.dist) * .12;
+  const d = view.dist * fit; camera.position.set(Math.sin(view.az) * Math.cos(view.el) * d, Math.sin(view.el) * d + .4, Math.cos(view.az) * Math.cos(view.el) * d); camera.lookAt(0, -.3, 0); }
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage);
+function frame(now) { requestAnimationFrame(frame); const dt = last ? Math.min(.1, (now - last) / 1000) : .016; last = now;
+  if (!STILL) { acc += dt; let n = 0; while (acc >= 1 / 60 && n < 3) { physics(1 / 60); acc -= 1 / 60; n++; } if (n === 3) acc = 0; }
+  center.position.set(hold.ox, bob + hold.oy, 0); center.quaternion.copy(jelly ? hold.rot : hold.all); if (jelly) drawJelly();
+  for (const d of drops) { const tr = d.body.translation(), r = d.body.rotation(); d.mesh.position.set(tr.x, tr.y, tr.z); d.mesh.quaternion.set(r.x, r.y, r.z, r.w); }
+  placeCam(); renderer.render(scene, camera); }
+
+// ---------- the hand: a click drops a handful where you click; a drag turns the view a little; the wheel comes closer ----------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let drag = null;
+const planeAt = e => { const r = stage.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); ray.setFromCamera(ndc, camera);
+  const hit = new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit) ? hit : null; };
+if (!BARE) {
+  let turn = null; stage.addEventListener('contextmenu', e => e.preventDefault());
+  stage.addEventListener('pointerdown', e => { if (e.button === 2) { turn = { x: e.clientX, y: e.clientY }; stage.classList.add('dragging'); try { stage.setPointerCapture(e.pointerId); } catch { } return; } });
+  addEventListener('pointermove', e => { if (!turn) return; const dx = e.clientX - turn.x, dy = e.clientY - turn.y; turn.x = e.clientX; turn.y = e.clientY;
+    const q1 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx * .008), q2 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * .008);
+    hold.trot.premultiply(q1).premultiply(q2).normalize(); });
+  addEventListener('pointerup', e => { if (turn && e.button === 2) { turn = null; stage.classList.remove('dragging'); } });
+  stage.addEventListener('pointerdown', e => { if (e.button !== 0) return; const h = planeAt(e); if (!h) return; hold.free = false; hold.tx = hold.ox; hold.ty = hold.oy; drag = { x: e.clientX, y: e.clientY, hx: h.x - hold.tx, hy: h.y - hold.ty, moved: false, trail: [] }; try { stage.setPointerCapture(e.pointerId); } catch { } });
+  stage.addEventListener('pointermove', e => { if (!drag) return; if (!drag.moved && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 5) { drag.moved = true; stage.classList.add('dragging'); }
+    if (drag.moved) { const h = planeAt(e); if (h) { hold.tx = clamp(h.x - drag.hx, -WALL_X + hold.side, WALL_X - hold.side); hold.ty = clamp(h.y - drag.hy, FLOOR + hold.low, 4); drag.trail.push([performance.now(), hold.tx, hold.ty]); if (drag.trail.length > 6) drag.trail.shift(); } } });
+  const up = e => { if (!drag) return; const d = drag; drag = null; stage.classList.remove('dragging');
+    if (d.moved) { const tr = d.trail, a = tr[0], b = tr[tr.length - 1];   // (let go while moving: thrown with the hand's last speed)
+      if (a && b && b[0] - a[0] > 8 && performance.now() - b[0] < 90) { const k = 1000 / (b[0] - a[0]); hold.fvx = clamp((b[1] - a[1]) * k, -18, 18); hold.fvy = clamp((b[2] - a[2]) * k, -18, 18); if (Math.hypot(hold.fvx, hold.fvy) > 1.5) hold.free = true; }
+      return; } const h = planeAt(e); if (!h) return;
+    for (let i = 0; i < 6; i++) spawn(clamp(h.x, -6, 6) + (rnd() - .5) * .6, (rnd() - .5) * .6, topY() + i * .35); };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', () => { drag = null; stage.classList.remove('dragging'); });
+  stage.addEventListener('dblclick', () => { hold.free = false; hold.tx = hold.ty = 0; hold.float = 1; hold.trot.identity(); });   // (a double click lifts it back to the middle, floating)
+}
+
+// ---------- light and dark ----------
+let mode = BARE ? (q.get('mode') === 'dark' ? 'dark' : 'light') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  scene.background = new THREE.Color(m === 'dark' ? '#0d0e10' : '#eeede9'); floorMat.color.set(m === 'dark' ? '#141518' : '#e4e2dc'); fill.groundColor.set(m === 'dark' ? '#222226' : '#b8b4ad'); fill.intensity = m === 'dark' ? .15 : .35;
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0d0e10' : '#eeede9'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The thing in the middle, what falls on it, gravity and the light.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v, then) => { P[k] = v; save(); then && then(); };
+  const sl = (g, k, label, min, max, step, unit, then) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v, then) });
+  const sg = (g, k, label, options, then) => ctl[k] = LabUI.seg(g, { label, options, value: P[k], onChange: v => set(k, v, then) });
+  const g0 = LabUI.group(panel, 'In the middle', { key: KEY + '.g.mid' });
+  sg(g0, 'shape', 'Shape', [['sphere', 'Sphere'], ['blob', 'Blob'], ['torus', 'Torus'], ['cube', 'Cube'], ['plate', 'Plate'], ['bowl', 'Bowl']], buildCore);
+  sg(g0, 'feel', 'It is', [['hard', 'Hard'], ['bouncy', 'Bouncy'], ['absorb', 'Absorbing'], ['jelly', 'Jelly']], () => { Object.assign(P, FEEL[P.feel]); ctl.bounce.set(P.bounce); ctl.friction.set(P.friction); save(); buildCore(); });
+  sl(g0, 'bounce', 'Bounce', 0, 1, .01, '', buildCore); sl(g0, 'friction', 'Grip', 0, 1, .01, '', buildCore); sl(g0, 'soft', 'Jelly: softness', 0, 1, .01, ''); sl(g0, 'size', 'Size', .6, 1.4, .02, '×', buildCore);
+  const g1 = LabUI.group(panel, 'Falling', { key: KEY + '.g.fall' });
+  sg(g1, 'drop', 'What falls', [['balls', 'Balls'], ['blocks', 'Blocks'], ['mixed', 'Mixed']]);
+  sg(g1, 'dropMat', 'Made of', [['glass', 'Glass'], ['rubber', 'Rubber'], ['metal', 'Metal'], ['mixed', 'Mixed']]);
+  sl(g1, 'rate', 'How many', 0, 20, .5, '/s'); sl(g1, 'dropSize', 'Size', .5, 2, .05, '×'); sl(g1, 'gravity', 'Gravity', 1, 25, .1, 'm/s²', () => { world.gravity = { x: 0, y: -P.gravity, z: 0 }; });
+  const gc = LabUI.group(panel, 'Cloth', { key: KEY + '.g.cloth' });
+  sg(gc, 'cloth', 'Made of', [['silk', 'Silk'], ['cotton', 'Cotton'], ['rubber', 'Rubber sheet']], () => { if (cloth) { const M = CLOTH[P.cloth]; cloth.mesh.material.roughness = M.rough; cloth.mesh.material.sheen = M.sheen; } });
+  sl(gc, 'clothSize', 'Size', 2, 7, .1, 'm');
+  ctl.clothTint = LabUI.color(gc, { label: 'Colour', value: P.clothTint, onInput: v => set('clothTint', v, () => { if (cloth) cloth.mesh.material.color.set(v); }) });
+  const cb = document.createElement('div'); cb.className = 'cbtns'; cb.innerHTML = '<button type="button" data-c="drop">Drop a sheet</button><button type="button" data-c="off">Take it away</button>'; gc.appendChild(cb);
+  cb.querySelector('[data-c=drop]').onclick = dropCloth; cb.querySelector('[data-c=off]').onclick = removeCloth;
+  const g2 = LabUI.group(panel, 'Surface', { key: KEY + '.g.surf' });
+  sg(g2, 'surface', 'Look', [['glass', 'Glass'], ['rubber', 'Rubber'], ['ceramic', 'Ceramic'], ['chrome', 'Chrome']], buildCore);
+  ctl.tint = LabUI.color(g2, { label: 'Colour', value: P.tint, onInput: v => set('tint', v, () => { if (mesh) { mesh.material.dispose(); mesh.material = surfaceMat(); } }) });
+  const g3 = LabUI.group(panel, 'Light', { key: KEY + '.g.light' });
+  sl(g3, 'lightAz', 'From the side', -180, 180, 1, '°', applyLight); sl(g3, 'lightEl', 'From above', 5, 90, 1, '°', applyLight); sl(g3, 'lightPow', 'Strength', 0, 6, .05, '', applyLight);
+  sl(g3, 'warmth', 'Cool to warm', 0, 1, .01, '', applyLight); sl(g3, 'env', 'Room light', 0, 2, .02, '', applyLight);
+  ctl.shadows = LabUI.check(g3, { label: 'Shadows', value: P.shadows, onChange: v => set('shadows', v, applyLight) });
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="clear">Clear</button><button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=clear]').onclick = () => { while (drops.length) removeDrop(drops[0]); };
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); world.gravity = { x: 0, y: -P.gravity, z: 0 }; applyLight(); buildCore(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- start; the board's box: ?thumb=1 a still (a few things already on it and around it), ?demo=1 the same, then falling ----------
+buildPanel(); setMode(mode); LabUI.segThumb($('mode')); applyLight(); buildCore(); resize(); view.az = view.taz; view.el = view.tel; view.dist = view.tdist; placeCam();   // (the camera in place before the first steps: they let go of what comes near the lens)
+if (BARE) { seed = 3; const R = spread();   // (a set scene: the same few things in the same places, so the live box starts on the still)
+  for (let i = 0; i < 26; i++) spawn((rnd() - .5) * 2.4 * R, (rnd() - .5) * 1.2 * R, -2.5 + rnd() * 8.5);
+  if (q.has('sheet')) { dropCloth(); for (let i = 0; i < 160; i++) physics(1 / 60); }
+  for (let i = 0; i < 40; i++) physics(1 / 60); }
+document.body.classList.add('ready');
+requestAnimationFrame(frame);
+window.GRAVITY = { get P() { return P; }, spawn, drops, world, buildCore, get jelly() { return jelly; }, hold };
+</script>
+</body>
+</html>
