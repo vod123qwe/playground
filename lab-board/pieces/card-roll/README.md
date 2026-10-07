@@ -63,3 +63,5 @@ Preset: ustaw i kliknij Copy settings, wynik (tylko zmiany względem domyślnych
 **Wydajność (telefon):** na ekranach 2-3× karty idą w 1× (Q), bo ekran i tak jest ostry; załamanie światła (#glassF) tylko na karcie na wierzchu; karta głęboko w rozmyciu nie liczy szronu tła; style pisane tylko przy zmianie (put/cls), rozmycie w krokach 0,25 px.
 
 **Telefon/tablet (pointer: coarse):** stały rzut — wyciągnięta karta nie podąża za palcem, karty nie przechylają się przy scrollu; zamiast rozmycia w głębi i rozmywania reszty jest przygaszanie (opacity), bez załamania światła. Wszystko po to, żeby szło płynnie.
+
+**Rozmiar:** na stronie talia jest ok. 15%% większa niż wypełnienie (i zawsze startuje z Deck); na planszy (miniatura i podgląd) o 20%% mniejsza.

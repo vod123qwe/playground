@@ -316,7 +316,7 @@ if (!DEMO) {
 }
 
 // ---------- the size: the roll fits the stage ----------
-function fit() { const r = stage.getBoundingClientRect(); K = BARE ? Math.min(r.width / 560, r.height / 470) : clamp(Math.min(r.width / (r.width < 600 ? 430 : 760), r.height / 640), .55, 1.35);
+function fit() { const r = stage.getBoundingClientRect(); K = BARE ? Math.min(r.width / 560, r.height / 470) * .8 : clamp(Math.min(r.width / (r.width < 600 ? 430 : 760), r.height / 640) * 1.15, .6, 1.55);
   const ks = K * P.size; if (Math.abs(ks - Ks) > 1e-4) { Ks = ks; U = Q * Ks; setUnit(); if (typeof lensMap === 'function') lensMap(); }
   floor.style.transform = `translateY(${((H * .55 + 60) * K * P.size).toFixed(1)}px) scale(${(K * P.size).toFixed(4)})`; wake(); }
 addEventListener('resize', fit); new ResizeObserver(fit).observe(stage);
@@ -372,6 +372,7 @@ buildPanel(); setMode(mode); applyGlass(); LabUI.segThumb($('mode'));
 const VARS = LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: d => setAnim(ORDER[(ORDER.indexOf(P.anim) + d + ORDER.length) % ORDER.length]),
   items: () => ORDER.map(k => MODES[k].name), current: () => MODES[P.anim].name, onPick: n => setAnim(ORDER.find(k => MODES[k].name === n)) });
 $('nm').textContent = MODES[P.anim]?.name || 'Deck';
+if (!BARE && P.anim !== 'deck') setAnim('deck');   // (it always opens on Deck; the other motions are a step away)
 document.querySelectorAll('#mat button').forEach(b => b.onclick = () => setGlass(b.dataset.g === 'glass')); paintMat(); LabUI.segThumb($('mat'));
 
 // ---------- the board's box: ?thumb=1 the still (the third card risen), ?demo=1 the roll turning, stopping, one drawn out ----------
