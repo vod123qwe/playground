@@ -10,11 +10,13 @@ Scroll to wlatywanie: płaszczyzna się przybliża, pierścienie rozchodzą się
 - Hasła to neutralny placeholder (do podmiany w `LINES`).
 - Gdy nic się nie rusza (np. miniatura), strona przestaje rysować klatki.
 
+**Domyślnie (ustawienia Jarka):** okrągłe orbity, zdjęcia squircle, każdy pierścień do środka 0,63×, rozmiar 0,44, równe odstępy (scatter 0), wewnętrzne kręcą się wyraźnie wolniej (0,22), scroll rozkręca 0,8×, nakładka 0,33, hasło litera po literze.
+
 **Customize:**
 - **Rings:** owalne albo okrągłe; zdjęć w pierścieniu; ile mniejszy każdy kolejny do środka; nakładka na wewnętrznych.
 - **Turning:** obrót własny, jak wolne są wewnętrzne, jak mocno scroll rozkręca.
 - **Pictures:** rozmiar (część miejsca na pierścieniu), Scatter (0 = równo), kształt: koło, squircle, kwadrat, pastylka, mieszane.
-- **Words → Come in:** Fly in (rośnie z przybliżeniem), Word by word (domyślnie), From a blur, Letters.
+- **Words → Come in:** Fly in (rośnie z przybliżeniem), Word by word, From a blur, Letters (domyślnie).
 
 Ustawienia: `lab.orbit-gallery.v2`, tryb jasny/ciemny w `.mode`. Poprzednia wersja (pierścienie w głębi 3D) była na `v1`.
 

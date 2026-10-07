@@ -73,7 +73,7 @@
 <script>
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.orbit-gallery.v2';
-const DEF = { per: 14, ratio: .76, size: .5, orbit: 'oval', shape: 'circle', scatter: .2, drift: .07, slow: .65, spin: 1, veil: .45, text: 'words', speed: 1 };
+const DEF = { per: 14, ratio: .63, size: .44, orbit: 'circle', shape: 'squircle', scatter: 0, drift: .07, slow: .22, spin: .8, veil: .33, text: 'letters', speed: 1 };   // (Jarek's setup)
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const $ = id => document.getElementById(id), plane = $('plane'), track = $('track'), sayEl = $('say');
