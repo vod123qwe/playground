@@ -220,7 +220,8 @@ const els = CARDS.map((c, i) => { const b = document.createElement('button'); b.
 const MODES = { deck: { name: 'Deck', tilt: 52, space: 1.6, lift: 47, dof: 2.85 }, roll: { name: 'Roll', tilt: 40, space: 1.9, lift: 34, dof: .6 }, barrel: { name: 'Barrel', tilt: 8, space: .5, lift: 100, dof: 1 }, wallet: { name: 'Wallet', tilt: 16, space: 1, lift: 34, dof: 1 }, fan: { name: 'Fan', tilt: 20, space: 1, lift: 34, dof: 1 } }, ORDER = Object.keys(MODES);
 const W = 340, H = 214, PERSP = 1100, Q = (devicePixelRatio || 1) >= 2 ? 1 : 2;   // (Q: the cards are laid out at Q times their size, see --q; a 2-3x screen is sharp at 1)
 let Ks = 1, U = Q;   // (Ks: the deck's size on screen; U = Q x Ks: the cards' layout unit, see --q)
-const STEP = matchMedia('(pointer: coarse)').matches ? 1 : 4;   // (the depth blur moves in steps of 1/STEP px: whole pixels on a phone, so it is drawn again less often)
+const TOUCH = matchMedia('(pointer: coarse)').matches, STEP = TOUCH ? 1 : 4;   // (TOUCH: a phone or tablet: a fixed view, nothing follows the finger, and the costly filters give way to a plain fade so it runs smooth)
+   // (the depth blur moves in steps of 1/STEP px: whole pixels on a phone, so it is drawn again less often)
 function setUnit() { document.documentElement.style.setProperty('--q', U.toFixed(4)); for (const el of document.querySelectorAll('#lensF, #glassF, #lensMap, #glassMap')) { el.setAttribute('width', (W * U).toFixed(1)); el.setAttribute('height', (H * U).toFixed(1)); } }
 setUnit();
 let pos = 2, target = 2, lastTurn = -1e9, drag = null, openI = -1, shownI = -1, K = 1, vel = 0;
@@ -268,18 +269,19 @@ function frame(now) { raf = 0; let busy = false;
     // (each card follows on its own: the further from where you are, the later it comes, so the deck moves as a wave, not a block)
     const prev = cs.p, kk = still() ? 1 : .22 / (1 + .3 * Math.abs(i - pos)); cs.p += (pos - cs.p) * kk; if (Math.abs(pos - cs.p) > .0005) busy = true; else cs.p = pos;
     cs.v += ((cs.p - prev) - cs.v) * .3; if (ease(cs.l, settled && i === top ? 1 : 0, settled ? .085 : .16)) busy = true;
-    const d = i - cs.p, ad = Math.abs(d), held = smooth(cs.l.p), lean = still() ? 0 : clamp(-cs.v * 300 * P.lean, -16, 16);
+    const d = i - cs.p, ad = Math.abs(d), held = smooth(cs.l.p), lean = still() || TOUCH ? 0 : clamp(-cs.v * 300 * P.lean, -16, 16);
     const c = place(d, ad, P.lift * held, held, i), rx = tv + c.rx + lean;   // (while turning, each card tips a little with its own speed)
     // (the view from above tilts the place; drawn out: square to you, toward you, a touch bigger, following the pointer)
     const X = c.x, Y = c.y * Math.cos(T) - c.z * Math.sin(T), Z = c.y * Math.sin(T) + c.z * Math.cos(T);
     const ang = rx * n + m * look.y * -7, yaw = m * look.x * 9;
     put(el, 'transform', `perspective(${(PERSP * Ks).toFixed(1)}px) translate3d(${(X * n * Ks).toFixed(2)}px, ${(Y * n * Ks).toFixed(2)}px, ${((Z * n + m * 170) * Ks).toFixed(2)}px) rotateX(${ang.toFixed(3)}deg) rotateY(${yaw.toFixed(3)}deg) rotateZ(${(c.rz * n).toFixed(3)}deg) scale(${((1 + (P.pull - 1) * m) / Q).toFixed(4)})`);
     put(el, 'zIndex', i === shownI ? '400' : String(200 + Math.round(c.layer * 10)));
-    const al = c.alpha ?? 1; put(el, 'opacity', i === shownI ? '' : (al * (1 - .3 * t)).toFixed(2)); put(el, 'visibility', al < .01 ? 'hidden' : '');
-    const bl = Math.round(STEP * Math.max(i !== shownI ? P.blur * t : 0, clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof, 0, 18) * n)) / STEP;   // (in quarter pixels: a change too small to see is not drawn again)   // (the further back, the softer, and faster with depth: a progressive blur)
+    const depth = TOUCH ? clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof / 40, 0, .5) : 0;   // (on touch, depth fades instead of blurring)
+    const al = c.alpha ?? 1; put(el, 'opacity', i === shownI ? '' : (al * (1 - (TOUCH ? .55 : .3) * t) * (1 - depth)).toFixed(2)); put(el, 'visibility', al < .01 ? 'hidden' : '');
+    const bl = TOUCH ? 0 : Math.round(STEP * Math.max(i !== shownI ? P.blur * t : 0, clamp(Math.pow(Math.max(0, -Z * n) * .06, 1.3) * P.dof, 0, 18) * n)) / STEP;   // (in quarter pixels: a change too small to see is not drawn again)   // (the further back, the softer, and faster with depth: a progressive blur)
     // (on glass the blur goes on the face and its lens, never the card: a filter on the card would cut the glass off from what lies
     // behind it, and it would flicker as cards move in and out of the blur. The face keeps a filter always, so nothing is rebuilt)
-    cls(el, 'hero', i === top && P.glass); cls(el, 'deep', P.glass && bl > 4);
+    cls(el, 'hero', i === top && P.glass && !TOUCH); cls(el, 'deep', P.glass && (bl > 4 || (TOUCH && depth > .25)));
     if (P.glass) { put(el, 'filter', ''); put(el._f, 'filter', `blur(${(bl * U).toFixed(2)}px)`); put(el._l, 'filter', `blur(${((bl + P.fr * .12) * U).toFixed(2)}px)`); }
     else { put(el, 'filter', bl > .05 ? `blur(${(bl * Ks).toFixed(2)}px)` : ''); put(el._f, 'filter', ''); put(el._l, 'filter', ''); }
     // (the light from above: a card turned up toward it a touch brighter, one turned down or further back a touch darker; the sheen slides with the turn)
@@ -299,7 +301,7 @@ function ease(s, to, k) { s.p += (to - s.p) * k; if (Math.abs(to - s.p) < .0008)
 if (!DEMO) {
   stage.addEventListener('wheel', e => { e.preventDefault(); if (openI >= 0) { close(); return; } const d = e.deltaMode ? e.deltaY * 40 : e.deltaY; turnTo(target + d / 110 * P.speed); }, { passive: false });
   stage.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag = { y: e.clientY, x: e.clientX, t: target, moved: false, card: e.target.closest('.card') }; });
-  addEventListener('pointermove', e => { if (openI >= 0 && P.follow) { const r = stage.getBoundingClientRect(); look.tx = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1); look.ty = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1); wake(); }
+  addEventListener('pointermove', e => { if (openI >= 0 && P.follow && !TOUCH && e.pointerType === 'mouse') { const r = stage.getBoundingClientRect(); look.tx = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1); look.ty = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1); wake(); }
     if (!drag || openI >= 0) return; const dy = e.clientY - drag.y; if (!drag.moved && Math.abs(dy) + Math.abs(e.clientX - drag.x) > 6) { drag.moved = true; try { stage.setPointerCapture(e.pointerId); } catch { } }
     if (drag.moved) { target = drag.t + dy / (130 * K) * P.speed; if (!CYC()) target = clamp(target, 0, N - 1); lastTurn = performance.now(); wake(); } });
   const up = () => { if (!drag) return; const d = drag; drag = null; lastTurn = performance.now() - 120; wake(); if (d.moved) return;
