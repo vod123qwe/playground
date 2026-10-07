@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="../../shared/lab-lock.js?v=3"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orbit Gallery · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* A gallery you fly into. Rings of photographs on one plane, one inside the other round a line of words in the middle; the inner
+     ones smaller, under a breath of the page's colour. They all turn the same way, the nearer the words the slower. Scroll and you
+     fly in: everything opens outward, the outer rings slip past the edges and are gone, new ones come out of the middle, the words
+     go and the next line comes; a scroll throws more turn into the rings, which then settle. Light or dark on top; Customize tunes
+     the rings, the pictures and how the words come in. Photographs: Picsum (Unsplash licence), loaded from the web. */
+  :root { --bg: #f3f2ee; --ink: #141414; --muted: rgba(20,20,20,.5); --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --boxbg: #f3f2ee; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); transition: background .4s; -webkit-font-smoothing: antialiased; }
+  body.dark { --bg: #0e0e10; --ink: #f2f2f0; --muted: rgba(255,255,255,.5); --page: #17181b; --boxbg: #151517; }
+  /* the scroll is only a length to travel; the room stays put */
+  .track { height: calc(var(--levels, 5) * 100vh + 100vh); }
+  .room { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: background .4s; }
+  .plane { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  .ph { position: absolute; left: 0; top: 0; width: 100px; height: 100px; margin: -50px 0 0 -50px; border-radius: 50%; overflow: hidden; background: var(--ph, #ddd); will-change: transform, opacity; }
+  .ph::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--bg); opacity: var(--fog, 0); pointer-events: none; transition: background .4s; }
+  .ph img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s; }
+  .ph img.in { opacity: 1; }
+  body.dark .ph { --ph: #26262a; }
+  .say { position: fixed; left: 50%; top: 50%; z-index: 2; width: min(620px, 82vw); text-align: center; font-weight: 600; letter-spacing: -.035em; line-height: 1.02; font-size: clamp(36px, 6.4vw, 80px); pointer-events: none; will-change: transform, opacity; }
+  .say .w, .say .w i { display: inline-block; font-style: normal; will-change: opacity, transform; }
+  .say small { display: block; margin-top: .45em; font-size: clamp(14px, 1.5vw, 19px); font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .cue { position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 3; transform: translateX(-50%); color: var(--muted); font-size: 13px; transition: opacity .4s; pointer-events: none; }
+  body.moved .cue { opacity: 0; }
+  /* the corner controls (as on every piece) */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .3s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .cue { display: none; }
+  /* the panel: a card at the side (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 7; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph2 { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph2 h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph2 p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; z-index: 3; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); } body.tuning .panel { translate: 0 0; } }
+  @media (prefers-reduced-motion: reduce) { .ph img { transition: none; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
+<div class="room" id="room" aria-hidden="true"><div class="plane" id="plane"></div></div>
+<div class="say" id="say" aria-live="polite"></div>
+<main class="track" id="track" aria-label="Rings of round photographs round a line of words; scroll to fly in"></main>
+<p class="cue" id="cue">Scroll to fly in</p>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the gallery"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.orbit-gallery.v2';
+const DEF = { per: 14, ratio: .76, size: .5, orbit: 'oval', shape: 'circle', scatter: .2, drift: .07, slow: .65, spin: 1, veil: .45, text: 'words', speed: 1 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), plane = $('plane'), track = $('track'), sayEl = $('say');
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), smooth = t => t * t * (3 - 2 * t);
+
+// ---------- the words in the middle, one line for each step in (placeholders) ----------
+const LINES = [['Collect what inspires you', 'Every picture you keep, in one place'], ['Keep it all close', 'Boards for every idea and every room'], ['Find your next favourite', 'Follow a colour, a shape, a feeling'],
+  ['Make space for ideas', 'Room to wander, room to save'], ['Build your own world', 'One picture at a time'], ['Start with one image', 'and see where it takes you']];
+const LEVELS = LINES.length - 1;
+document.documentElement.style.setProperty('--levels', LEVELS);
+
+// ---------- the photographs: Picsum's set (photographs from Unsplash), a soft colour while each loads ----------
+const IDS = Array.from({ length: 76 }, (_, k) => 10 + k);   // (ids 10-85: all present in the set)
+const TINTS = ['#e6dfd5', '#d9e0e6', '#e3e6d9', '#e8d9d9', '#dcdce8', '#e8e2d2'];
+const SHAPES = ['circle', 'squircle', 'square', 'pill'], RADII = { circle: '50%', squircle: '32%', square: '14%', pill: '999px' };
+
+// ---------- the rings: ring k sits at a radius of ratio^(k - zoom) of the outer one, so stepping in by one brings each ring to where
+// the one outside it was. Every ring has the same number of pictures, each as big as its share of the ring: the spacing stays in
+// proportion all the way in. There are rings enough to fly in through every line ----------
+let rings = [], seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const FIRST = -3, RINGS = () => LEVELS + 6;   // (rings -3..-1 lie outside the screen at the start, filling its corners)
+function build() { plane.innerHTML = ''; rings = []; seed = 7; let n = 0;
+  for (let k = FIRST; k < RINGS(); k++) { const ring = { k, items: [], ang: 0 };
+    for (let i = 0; i < P.per; i++) { const el = document.createElement('div'); el.className = 'ph'; el.style.setProperty('--ph', TINTS[(k + 3 + i) % TINTS.length]);
+      const shp = P.shape === 'mixed' ? SHAPES[((k + 3) * 3 + i) % 4] : P.shape, wide = shp === 'pill' ? 1.45 : 1;
+      el.style.borderRadius = RADII[shp]; el.style.width = (100 * wide) + 'px'; el.style.marginLeft = (-50 * wide) + 'px';
+      const img = new Image(); img.alt = ''; img.decoding = 'async'; img.onload = () => img.classList.add('in');
+      img.src = `https://picsum.photos/id/${IDS[n++ % IDS.length]}/${Math.round(220 * wide)}/220`; el.appendChild(img); plane.appendChild(el);
+      const sc = P.scatter * 2; ring.items.push({ el, a: (i + (((k % 2) + 2) % 2) * .5) / P.per * Math.PI * 2 + (rnd() - .5) * .45 * sc, rr: 1 + (rnd() - .5) * .16 * sc, ss: 1 + (rnd() - .5) * .5 * sc }); }
+    rings.push(ring); }
+  wake(); }
+
+// ---------- the words: split into words and letters for the ways they can come in ----------
+let lineAt = -1;
+function setLine(i) { if (i === lineAt) return; lineAt = i; const [h, sub] = LINES[clamp(i, 0, LINES.length - 1)];
+  sayEl.innerHTML = `<span class="line">${h.split(' ').map(w => `<span class="w">${[...w].map(c => `<i>${c}</i>`).join('')}</span>`).join(' ')}</span><small></small>`;
+  sayEl.lastChild.textContent = sub; sayEl._w = [...sayEl.querySelectorAll('.w')]; sayEl._l = [...sayEl.querySelectorAll('.w i')]; }
+function textParts(t, by) {   // (by: 0 all at once, 1 word by word, 2 letter by letter; t: 0..1 how far in)
+  const parts = by === 2 ? sayEl._l : sayEl._w, other = by === 2 ? sayEl._w : sayEl._l;
+  for (const e of other) { e.style.opacity = ''; e.style.transform = ''; }
+  if (!by) { for (const e of parts) { e.style.opacity = ''; e.style.transform = ''; } sayEl.lastChild.style.opacity = ''; return; }
+  const n = parts.length, spread = by === 2 ? .6 : .75;
+  parts.forEach((e, i) => { const k = smooth(clamp((t - i / n * spread) / (1 - spread), 0, 1)); e.style.opacity = k.toFixed(3); e.style.transform = `translateY(${((1 - k) * (by === 2 ? 8 : 14)).toFixed(1)}px)`; });
+  sayEl.lastChild.style.opacity = smooth(clamp((t - spread) / (1 - spread), 0, 1)).toFixed(3); }
+
+// ---------- the flight: the scroll is how far in (zoom, in steps of one ring); the view eases after it. The rings turn, all the same
+// way, each at a pace set by how far out it is (the nearer the words, the slower) and a touch its own; a scroll throws more turn in,
+// which then runs down (a drag, no spring) ----------
+let zoom = 0, target = 0, raf = 0, auto = 0, spinV = 0, lastT = 0, lastTarget = 0;
+const wake = () => { if (!raf) raf = requestAnimationFrame(frame); };
+function readScroll() { const max = track.offsetHeight - innerHeight; target = max > 0 ? clamp(scrollY / max, 0, 1) * LEVELS : 0; if (scrollY > 8) document.body.classList.add('moved'); wake(); }
+addEventListener('scroll', readScroll, { passive: true }); addEventListener('resize', () => { readScroll(); wake(); });
+function frame(now) { raf = 0; const dt = lastT ? Math.min(.05, (now - lastT) / 1000) : .016; lastT = now;
+  if (DEMO) { auto = (auto + dt * .055 * P.speed) % 1; target = smooth(auto < .88 ? auto / .88 : 1 - (auto - .88) / .12) * LEVELS; }   // (the board: in through every line, then back)
+  spinV += (target - lastTarget) * .9 * P.spin; lastTarget = target; spinV *= Math.pow(.05, dt);
+  zoom += (target - zoom) * (still() ? 1 : .09); if (Math.abs(target - zoom) < .0005) zoom = target;
+  const vw = innerWidth, vh = innerHeight, out = Math.hypot(vw, vh) * .62, oy = P.orbit === 'oval' ? .74 : 1, hole = Math.min(vw * .42, 330);   // (hole: the middle kept clear for the words)
+  for (const ring of rings) { const R = Math.min(vw, vh) * .46 * Math.pow(P.ratio, ring.k - zoom) * (vw > vh ? 1.25 : 1), rel = R / (Math.min(vw, vh) * .46 * (vw > vh ? 1.25 : 1));   // (R: the ring's radius now; rel: 1 at ring 0 of the still)
+    const pace = (P.slow + (1 - P.slow) * clamp(rel, 0, 1.6) / 1.6) * (1 + (ring.k % 3) * .06);   // (inner (small rel) slower; each ring a touch its own)
+    ring.ang += still() ? 0 : (P.drift + spinV) * pace * dt;
+    const s = 2 * Math.PI * R / P.per * P.size, a0 = ring.ang, veil = clamp((1 - rel) * P.veil * 1.4, 0, .85);   // (s: a picture's size, its share of the ring)
+    const tooSmall = R * Math.min(1, oy + .1) < hole, gone = R - s > out;   // (inside the words' room it is not drawn; past the edge it is gone)
+    for (const it of ring.items) { const el = it.el;
+      if (tooSmall || gone) { if (el._v !== 0) { el.style.visibility = 'hidden'; el._v = 0; } continue; }
+      if (el._v !== 1) { el.style.visibility = ''; el._v = 1; }
+      const a = it.a + a0, r = R * it.rr, x = Math.cos(a) * r, y = Math.sin(a) * r * oy, sz = s * it.ss / 100;
+      const al = clamp((R * Math.min(1, oy + .1) - hole) / (s * 1.4), 0, 1) * clamp((out - (R - s)) / (s * 1.2), 0, 1);   // (in from the edge of the words' room as it grows; out as it slips past the screen's edge)
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${sz.toFixed(4)})`; el.style.opacity = al.toFixed(3); el.style.setProperty('--fog', veil.toFixed(3)); } }
+  // (the words: line i belongs to zoom i; it is there when you are, and goes as you fly on)
+  const li = clamp(Math.round(zoom), 0, LEVELS), d = zoom - li; setLine(li);
+  const inn = clamp(1 - Math.max(0, -d) * 2.6, 0, 1), outv = clamp(1 - Math.max(0, d) * 2.6, 0, 1);
+  let tf = 'translate(-50%, -50%)';
+  if (P.text === 'fly') { const sc = Math.pow(1 / P.ratio, d * 1.4); tf += ` scale(${sc.toFixed(4)})`; sayEl.style.opacity = (smooth(inn) * smooth(outv)).toFixed(3); sayEl.style.filter = ''; textParts(1, 0); }
+  else if (P.text === 'blur') { const t = smooth(inn * outv); sayEl.style.opacity = t.toFixed(3); sayEl.style.filter = t < .99 ? `blur(${((1 - t) * 14).toFixed(1)}px)` : ''; textParts(1, 0); }
+  else { sayEl.style.opacity = smooth(outv).toFixed(3); sayEl.style.filter = outv < .99 ? `blur(${((1 - outv) * 6).toFixed(1)}px)` : ''; textParts(inn, P.text === 'letters' ? 2 : 1); }
+  sayEl.style.transform = tf;
+  if ((P.drift > 0 && !still()) || DEMO || Math.abs(target - zoom) > 0 || Math.abs(spinV) > .0005) wake(); }   // (at rest, with no turning of their own, it stops drawing)
+
+// ---------- light and dark ----------
+let mode = BARE ? (q.get('mode') === 'dark' ? 'dark' : 'light') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0e0e10' : '#f3f2ee'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph2'; head.innerHTML = '<div><h2>Tune</h2><p>The rings, the pictures in them, and how the words come in.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v, re) => { P[k] = v; save(); if (re) build(); else wake(); };
+  const sl = (g, k, label, min, max, step, unit, re) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v, re) });
+  const sg = (g, k, label, options, re) => ctl[k] = LabUI.seg(g, { label, options, value: P[k], onChange: v => set(k, v, re) });
+  const g0 = LabUI.group(panel, 'Rings', { key: KEY + '.g.rings' }); sg(g0, 'orbit', 'Rings', [['oval', 'Oval'], ['circle', 'Round']]);
+  sl(g0, 'per', 'Pictures in a ring', 8, 24, 1, '', true); sl(g0, 'ratio', 'Each ring inside', .55, .9, .01, '×'); sl(g0, 'veil', 'Veil on the inner ones', 0, 1, .01, '');
+  const g1 = LabUI.group(panel, 'Turning', { key: KEY + '.g.turn' }); sl(g1, 'drift', 'Turn on their own', 0, .4, .005, ''); sl(g1, 'slow', 'Inner ones, how slow', .1, 1, .01, '×'); sl(g1, 'spin', 'Scroll sets them turning', 0, 3, .05, '×');
+  const g2 = LabUI.group(panel, 'Pictures', { key: KEY + '.g.pics' }); sl(g2, 'size', 'Size (share of its place)', .25, 1, .01, ''); sl(g2, 'scatter', 'Scatter (0: even)', 0, 1, .05, '', true);
+  sg(g2, 'shape', 'Shape', [['circle', 'Circle'], ['squircle', 'Squircle'], ['square', 'Square'], ['pill', 'Pill'], ['mixed', 'Mixed']], true);
+  const g3 = LabUI.group(panel, 'Words', { key: KEY + '.g.words' }); sg(g3, 'text', 'Come in', [['fly', 'Fly in'], ['words', 'Word by word'], ['blur', 'From a blur'], ['letters', 'Letters']]);
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); build(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- start; the board's box: ?thumb=1 the first line in its rings, standing still; ?demo=1 from there, in and back ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF }; if (!DEMO) P.drift = 0; }
+buildPanel(); setMode(mode); LabUI.segThumb($('mode')); build(); readScroll(); zoom = target;
+window.ORBIT = { get P() { return P; }, build, get zoom() { return zoom; } };
+</script>
+</body>
+</html>
