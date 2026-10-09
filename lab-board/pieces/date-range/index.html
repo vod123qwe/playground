@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="../../shared/lab-lock.js?v=3"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Date Range · lab</title>
+<meta name="theme-color" content="#eceef1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..650&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* A date picker in a modal: a sheet from the bottom on a phone, a card in the middle on a wide screen. On top the dates chosen
+     (from – to, or one day), under them the month: swipe it (it follows the finger, with a stretch at the ends), or step with the
+     arrows. Tap a start and an end and the range fills in, in one of several ways (a sweep, a ripple, a rise, a fade); in single mode
+     one day. Styles on the pill at the bottom, the rest in Customize; light or dark on top. */
+  :root { --bg: #eceef1; --ink: #151619; --muted: rgba(21,22,25,.5); --faint: rgba(21,22,25,.28); --card: #ffffff; --line: rgba(21,22,25,.08); --skel: rgba(21,22,25,.06);
+    --acc: #2f6bff; --accInk: #fff; --bar: rgba(47,107,255,.13); --barInk: #1e3fa8; --c: 44px; --rc: 999px; --rm: 28px; --dur: 420ms; --st: 26ms;
+    --ease: cubic-bezier(.22,.8,.26,1); --page: #fff; --boxbg: #eceef1; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  body.dark { --bg: #0f1012; --ink: #f2f2f0; --muted: rgba(255,255,255,.55); --faint: rgba(255,255,255,.26); --card: #1b1c1f; --line: rgba(255,255,255,.08); --skel: rgba(255,255,255,.05); --page: #17181b; --boxbg: #111214; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); transition: background .4s; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; }
+  /* the page under it: a placeholder booking screen */
+  .page { position: fixed; inset: 0; display: grid; place-items: center; padding: 90px 20px; }
+  .mock { width: min(420px, 100%); display: grid; gap: 14px; }
+  .mock .ph { height: 180px; border-radius: 22px; background: var(--skel); }
+  .mock .ln { height: 14px; border-radius: 8px; background: var(--skel); } .mock .ln.s { width: 55%; } .mock .ln.t { width: 80%; }
+  .open { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 58px; padding: 0 20px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); cursor: pointer; font-size: 15px; }
+  .open span:last-child { color: var(--muted); font-size: 13px; }
+  /* the modal */
+  .scrim { position: fixed; inset: 0; z-index: 4; background: rgba(8,9,12,.36); opacity: 0; pointer-events: none; }
+  .sheet { position: fixed; z-index: 5; left: 50%; top: 50%; width: min(400px, calc(100vw - 32px)); padding: 10px 18px 18px; border-radius: var(--rm); background: var(--card);
+    box-shadow: 0 30px 80px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.05); transform-origin: 50% 60%; will-change: transform, opacity; touch-action: pan-y; }
+  body.dark .sheet { box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.05); }
+  .grab { width: 100%; height: 22px; display: grid; place-items: center; cursor: grab; touch-action: none; }
+  .grab::before { content: ''; width: 38px; height: 5px; border-radius: 3px; background: var(--faint); }
+  @media (min-width: 700px) { .grab { visibility: hidden; height: 10px; } }
+  @media (max-width: 699px) { .sheet { left: 0; right: 0; top: auto; bottom: 0; width: auto; border-radius: var(--rm) var(--rm) 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); } }
+  .hd .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .kick { font-size: 13px; color: var(--muted); }
+  .mseg { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--skel); font-size: 12.5px; font-weight: 550; }
+  .mseg button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; transition: color .3s; }
+  .mseg button[aria-checked=true] { color: var(--ink); }
+  .mseg.lab-seg { --seg-on: var(--card); } .mseg.lab-seg::before { box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  /* the dates on top: each part changes with a soft fade and a small rise */
+  .sum { position: relative; display: flex; align-items: baseline; gap: 10px; margin-top: 14px; height: 38px; font-size: 28px; font-weight: 550; letter-spacing: -.03em; }
+  .sum .d { position: relative; display: inline-grid; height: 38px; }   /* (the old and the new text in one cell: the box is as wide as the text) */
+  .sum .d span { grid-area: 1 / 1; white-space: nowrap; transition: opacity .38s var(--ease), translate .5s var(--ease), filter .4s var(--ease); }
+  .sum .d span.out { opacity: 0; translate: 0 -10px; filter: blur(3px); transition-duration: .26s, .32s, .26s; }
+  .sum .d span.pre { opacity: 0; translate: 0 12px; filter: blur(3px); transition: none; }
+  .sum .d span.ph { color: var(--faint); }
+  .sum .dash { color: var(--faint); transition: opacity .3s; } body.single .sum .dash, body.single .sum .d.to { display: none; }
+  .sub { position: relative; height: 18px; margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .sub span { position: absolute; left: 0; top: 0; transition: opacity .35s var(--ease), translate .45s var(--ease); } .sub span.out { opacity: 0; translate: 0 -6px; } .sub span.pre { opacity: 0; translate: 0 6px; transition: none; }
+  /* the month */
+  .nav { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 6px; }
+  .nav button { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; cursor: pointer; transition: background .2s, opacity .2s; }
+  .nav button:hover { background: var(--skel); } .nav button:disabled { opacity: .25; cursor: default; background: transparent; } .nav svg { width: 18px; height: 18px; }
+  .mt { position: relative; flex: 1; height: 22px; overflow: hidden; text-align: center; font-size: 15px; font-weight: 550; }
+  .mt span { position: absolute; left: 0; right: 0; top: 0; transition: opacity .35s var(--ease), translate .5s var(--ease); } .mt span.out { opacity: 0; } .mt span.pre { opacity: 0; transition: none; }
+  .wk { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 11.5px; color: var(--faint); text-align: center; padding: 6px 0 4px; }
+  .vp { position: relative; overflow: hidden; margin: 0 -18px; touch-action: pan-y; cursor: grab; } .vp.dragging { cursor: grabbing; }
+  .track { display: flex; will-change: transform; }
+  .month { flex: none; width: 100%; padding: 0 18px; display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; }
+  .day { position: relative; height: var(--c); border: 0; padding: 0; background: transparent; cursor: pointer; font-size: 14.5px; font-variant-numeric: tabular-nums; z-index: 0; }
+  .day.blank { visibility: hidden; pointer-events: none; }
+  .day.past { color: var(--faint); cursor: default; }
+  .day .n { position: relative; z-index: 2; transition: color .3s var(--ease); }
+  .day.today .n::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--acc); }
+  /* the bar of the range (::before) and the circle of a chosen day (::after) */
+  .day::before { content: ''; position: absolute; z-index: 0; top: 50%; height: calc(var(--c) * .86); margin-top: calc(var(--c) * -.43); left: 0; right: 0; background: var(--bar); opacity: 0; transform-origin: 0 50%; }
+  .day.in::before, .day.pv::before { opacity: 1; }
+  .day.pv::before { background: color-mix(in srgb, var(--bar) 55%, transparent); }
+  .day.rs::before { left: 50%; } .day.re::before { right: 50%; } .day.rs.re::before { opacity: 0; }
+  .day.cl::before { border-top-left-radius: var(--rc); border-bottom-left-radius: var(--rc); left: 4%; } .day.cr::before { border-top-right-radius: var(--rc); border-bottom-right-radius: var(--rc); right: 4%; }
+  .day.rs.cl::before { left: 50%; } .day.re.cr::before { right: 50%; }
+  .day.in .n { color: var(--barInk); }
+  .day::after { content: ''; position: absolute; z-index: 1; left: 50%; top: 50%; width: calc(var(--c) * .9); height: calc(var(--c) * .9); margin: calc(var(--c) * -.45) 0 0 calc(var(--c) * -.45); border-radius: var(--rc); background: var(--acc); opacity: 0; transform: scale(.6); transition: opacity .25s, transform .3s var(--ease); }
+  .day.sel::after { opacity: 1; transform: none; }
+  .day.sel .n { color: var(--accInk); font-weight: 550; }
+  .day:not(.sel):not(.past):hover .n { color: var(--acc); }
+  .day:focus-visible { outline: none; } .day:focus-visible::after { opacity: .25; transform: none; }
+  body.bar-line .day::before { height: 4px; margin-top: calc(var(--c) * .34); border-radius: 2px !important; }
+  body.bar-line .day.in .n { color: inherit; }
+  body.bar-block { --rc: 10px; }
+  /* how the range fills in (the bar, cell after cell) */
+  .fx .day.in::before { animation: var(--fill) var(--dur) var(--ease) both; animation-delay: calc(var(--k) * var(--st)); }
+  .fx .day.in .n { transition-delay: calc(var(--k) * var(--st)); }
+  @keyframes sweep { from { transform: scaleX(0); } to { transform: none; } }
+  @keyframes ripple { from { transform: scale(.35); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes rise { from { transform: scaleY(0); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .fx .day.sel::after { animation: pop .42s var(--ease) both; }
+  .fx .day.sel.re::after { animation-delay: calc(var(--k) * var(--st)); }
+  @keyframes pop { from { transform: scale(.55); opacity: 0; } to { transform: none; opacity: 1; } }
+  /* the footer */
+  .ft { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .clear { height: 44px; padding: 0 6px; border: 0; background: transparent; color: var(--muted); font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: color .2s, opacity .3s; }
+  .clear:disabled { opacity: .35; cursor: default; }
+  .apply { height: 48px; padding: 0 26px; border: 0; border-radius: 14px; background: var(--ink); color: var(--card); font-size: 14.5px; font-weight: 550; cursor: pointer; transition: opacity .3s, transform .2s; }
+  .apply:disabled { opacity: .3; cursor: default; } .apply:not(:disabled):active { transform: scale(.98); }
+  body.accbtn .apply { background: var(--acc); color: var(--accInk); }
+  /* the corner controls and the styles pill */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: opacity .3s; }
+  .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); cursor: pointer; } .mode button[aria-checked=true] { color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1f2023; color: #f2f2f0; } body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { color: #1b1c20; }
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 6; transform: translateX(-50%); }
+  @media (max-width: 699px) { .dock { bottom: auto; top: 74px; } .tune { padding: 0; width: 46px; justify-content: center; font-size: 0; gap: 0; } }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .dock { display: none; }
+  /* the panel: a card at the side (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 7; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph2 { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph2 h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph2 p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; z-index: 3; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); } body.tuning .panel { translate: 0 0; } }
+  @media (prefers-reduced-motion: reduce) { .fx .day.in::before, .fx .day.sel::after { animation: none; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
+<main class="page" aria-hidden="false"><div class="mock"><div class="ph"></div><div class="ln t"></div><div class="ln s"></div><button class="open" id="open" type="button"><span>Dates</span><span id="openv">Add dates</span></button></div></main>
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Choose dates">
+  <div class="grab" id="grab" aria-hidden="true"></div>
+  <header class="hd">
+    <div class="top"><span class="kick" id="kick">Select dates</span>
+      <div class="mseg lab-seg" id="mseg" role="radiogroup" aria-label="Range or a single day"><button type="button" role="radio" data-v="range">Range</button><button type="button" role="radio" data-v="single">Single</button></div></div>
+    <div class="sum" aria-live="polite"><span class="d from" id="dFrom"></span><span class="dash">–</span><span class="d to" id="dTo"></span></div>
+    <div class="sub" id="sub"></div>
+  </header>
+  <div class="nav"><button type="button" id="prev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div class="mt" id="mt"></div>
+    <button type="button" id="next" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>
+  <div class="wk" aria-hidden="true"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span></div>
+  <div class="vp" id="vp"><div class="track" id="track"></div></div>
+  <footer class="ft"><button class="clear" id="clear" type="button">Clear</button><button class="apply" id="apply" type="button">Apply</button></footer>
+</section>
+<div class="dock"><div class="lab-vars" id="vars" role="group" aria-label="Styles">
+  <button id="vprev" type="button" aria-label="Previous style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm">Soft</span>
+  <button id="vnext" type="button" aria-label="Next style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the date picker"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings and the styles; kept in the browser ----------
+const KEY = 'lab.date-range.v1';
+const STYLES = {
+  Soft:   { acc: '#2f6bff', bar: .13, shape: 'pill',  fill: 'sweep',  radius: 28, speed: 1,   accBtn: false },
+  Mono:   { acc: '#151619', bar: .07, shape: 'block', fill: 'fade',   radius: 18, speed: .9,  accBtn: false },
+  Sunset: { acc: '#ff5a4e', bar: .14, shape: 'pill',  fill: 'ripple', radius: 30, speed: 1.1, accBtn: true },
+  Mint:   { acc: '#12a37f', bar: .9,  shape: 'line',  fill: 'rise',   radius: 24, speed: 1,   accBtn: true },
+  Lilac:  { acc: '#7c5cff', bar: .15, shape: 'pill',  fill: 'sweep',  radius: 34, speed: .75, accBtn: true } };
+const DEF = { style: 'Soft', ...STYLES.Soft, cell: 44, mode: 'range', past: true, nights: true, spring: 1, stretch: .35 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const q = new URLSearchParams(location.search), BARE = q.has('thumb') || q.has('demo'), DEMO = q.has('demo');
+const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- dates ----------
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const day0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const TODAY = day0(new Date());
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const fromIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const diff = (a, b) => Math.round((b - a) / 864e5);
+const short = d => `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
+let ym = { y: TODAY.getFullYear(), m: TODAY.getMonth() };   // (the month in view)
+let A = null, B = null, hoverD = null;   // (the start and the end; in single mode only A)
+
+// ---------- the months: three side by side (before, this, after); the track slides between them ----------
+const track = $('track'), vp = $('vp');
+function monthEl(y, m) {
+  const el = document.createElement('div'); el.className = 'month';
+  const first = new Date(y, m, 1), lead = (first.getDay() + 6) % 7, len = new Date(y, m + 1, 0).getDate();
+  for (let i = 0; i < 42; i++) { const n = i - lead + 1, b = document.createElement('button'); b.type = 'button'; b.className = 'day';
+    if (n < 1 || n > len) { b.classList.add('blank'); b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); el.appendChild(b); continue; }
+    const d = new Date(y, m, n); b.dataset.d = iso(d); b.innerHTML = `<span class="n">${n}</span>`; b.setAttribute('aria-label', `${DAYS[d.getDay()]} ${MONTHS[m]} ${n}`);
+    if (+d === +TODAY) b.classList.add('today');
+    if (P.past && d < TODAY) { b.classList.add('past'); b.disabled = true; }
+    const col = i % 7; if (col === 0 || n === 1) b.classList.add('cl'); if (col === 6 || n === len) b.classList.add('cr');
+    el.appendChild(b); }
+  return el; }
+const addM = (o, k) => { const d = new Date(o.y, o.m + k, 1); return { y: d.getFullYear(), m: d.getMonth() }; };
+function renderMonths() { track.innerHTML = ''; for (const k of [-1, 0, 1]) { const o = addM(ym, k); track.appendChild(monthEl(o.y, o.m)); } setX(0); paint(false); title(0); arrows(); }
+const canPrev = () => !P.past || ym.y > TODAY.getFullYear() || (ym.y === TODAY.getFullYear() && ym.m > TODAY.getMonth());
+function arrows() { $('prev').disabled = !canPrev(); }
+
+// ---------- painting the choice: the chosen days, the bar between them, the hover preview ----------
+function paint(animate) {
+  const a = A && iso(A), b = B && iso(B), lo = A && B ? (A < B ? A : B) : null, hi = A && B ? (A < B ? B : A) : null;
+  const pvLo = P.mode === 'range' && A && !B && hoverD ? (hoverD < A ? hoverD : A) : null, pvHi = pvLo ? (hoverD < A ? A : hoverD) : null;
+  const n = lo ? diff(lo, hi) : 0;
+  for (const m of track.children) {
+    if (animate) m.classList.remove('fx');
+    for (const el of m.children) { if (!el.dataset.d) continue; const d = fromIso(el.dataset.d), s = el.dataset.d;
+      const sel = s === a || s === b, inR = lo && d >= lo && d <= hi, pv = !inR && pvLo && d >= pvLo && d <= pvHi;
+      el.classList.toggle('sel', !!sel); el.classList.toggle('in', !!inR); el.classList.toggle('pv', !!pv);
+      el.classList.toggle('rs', !!((inR && +d === +lo) || (pv && +d === +pvLo))); el.classList.toggle('re', !!((inR && +d === +hi) || (pv && +d === +pvHi)));
+      el.setAttribute('aria-pressed', String(!!(sel || inR)));
+      if (inR) { const k = diff(lo, d); el.style.setProperty('--k', P.fill === 'rise' ? Math.abs(k - n / 2) : k); }   // (the order it fills in: from the start; a rise from the middle)
+      else el.style.removeProperty('--k'); }
+    if (animate) { void m.offsetWidth; m.classList.add('fx'); } }
+  summary(); }
+
+// ---------- the words on top: from – to (or the day), nights; each part changes softly ----------
+function swap(box, text, ph) { const cur = box.lastElementChild; if (cur && cur.textContent === text && cur.classList.contains('ph') === !!ph) return;
+  if (cur) { cur.classList.add('out'); setTimeout(() => cur.remove(), 380); }
+  const s = document.createElement('span'); s.className = 'pre' + (ph ? ' ph' : ''); s.textContent = text; box.appendChild(s);
+  requestAnimationFrame(() => requestAnimationFrame(() => s.classList.remove('pre'))); }
+function summary() {
+  const single = P.mode === 'single'; document.body.classList.toggle('single', single);
+  const lo = A && B ? (A < B ? A : B) : A, hi = A && B ? (A < B ? B : A) : null;
+  if (single) { swap($('dFrom'), A ? `${DAYS[A.getDay()]}, ${short(A)}` : 'Pick a day', !A); swap($('sub'), A ? `${MONTHS[A.getMonth()]} ${A.getFullYear()}` : 'One day', false); }
+  else { swap($('dFrom'), lo ? short(lo) : 'Start', !lo); swap($('dTo'), hi ? short(hi) : 'End', !hi);
+    const n = hi ? diff(lo, hi) : 0; swap($('sub'), hi ? (P.nights ? `${n} night${n === 1 ? '' : 's'} · ${DAYS[lo.getDay()]} – ${DAYS[hi.getDay()]}` : `${DAYS[lo.getDay()]} – ${DAYS[hi.getDay()]}`) : lo ? 'Now the last day' : 'Choose the first day', false); }
+  $('kick').textContent = single ? 'Select a date' : 'Select dates';
+  $('clear').disabled = !A; $('apply').disabled = single ? !A : !(A && B); }
+function title(dir) { const box = $('mt'), t = `${MONTHS[ym.m]} ${ym.y}`, cur = box.lastElementChild; if (cur && cur.textContent === t) return;
+  if (cur) { cur.classList.add('out'); cur.style.translate = `${-dir * 18}px 0`; setTimeout(() => cur.remove(), 400); }
+  const s = document.createElement('span'); s.className = 'pre'; s.style.translate = `${dir * 18}px 0`; s.textContent = t; box.appendChild(s);
+  requestAnimationFrame(() => requestAnimationFrame(() => { s.classList.remove('pre'); s.style.translate = '0 0'; })); }
+
+// ---------- choosing: range (start, end; a third tap starts again) or a single day ----------
+function pick(d) {
+  if (P.mode === 'single') { A = d; B = null; paint(true); return; }
+  if (!A || B) { A = d; B = null; hoverD = null; paint(false); return; }
+  if (+d === +A) { return; }
+  if (d < A) { B = A; A = d; } else B = d; hoverD = null; paint(true); }
+track.addEventListener('click', e => { if (dragMoved) return; const el = e.target.closest('.day'); if (!el || !el.dataset.d || el.disabled) return; pick(fromIso(el.dataset.d)); });
+track.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('.day'); const d = el && el.dataset.d && !el.disabled ? fromIso(el.dataset.d) : null;
+  if ((d && +d) !== (hoverD && +hoverD)) { hoverD = d; if (P.mode === 'range' && A && !B) paint(false); } });
+vp.addEventListener('pointerleave', () => { if (hoverD) { hoverD = null; if (A && !B) paint(false); } });
+$('clear').onclick = () => { A = B = null; paint(false); };
+$('mseg').querySelectorAll('button').forEach(b => b.onclick = () => { P.mode = b.dataset.v; save(); segs(); if (P.mode === 'single') B = null; paint(false); });
+function segs() { $('mseg').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === P.mode))); }
+
+// ---------- the swipe: the month follows the finger; past the first allowed month it stretches; let go and it springs to the
+// nearest month (or the next one, with a flick); no overshoot ----------
+let x = 0, xv = 0, xTarget = null, drag = null, dragMoved = false, stepDir = 0;
+const W = () => vp.clientWidth;
+function setX(v) { x = v; track.style.transform = `translate3d(${(-W() + v).toFixed(2)}px,0,0)`; }
+vp.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag = { x0: e.clientX, y0: e.clientY, x: e.clientX, t: performance.now(), v: 0, axis: null, base: x }; dragMoved = false; xTarget = null; });
+addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+  if (!drag.axis && Math.hypot(dx, dy) > 6) { drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; if (drag.axis === 'x') { dragMoved = true; vp.classList.add('dragging'); try { vp.setPointerCapture(e.pointerId); } catch { } } }
+  if (drag.axis !== 'x') return;
+  const now = performance.now(), dt = Math.max(8, now - drag.t); drag.v = drag.v * .6 + (e.clientX - drag.x) / dt * .4; drag.x = e.clientX; drag.t = now;
+  let v = drag.base + dx; if (v > 0 && !canPrev()) v = rubber(v); v = clamp(v, -W() * 1.15, W() * 1.15); setX(v); });
+const rubber = v => Math.sign(v) * (1 - 1 / (Math.abs(v) * P.stretch / W() * 3 + 1)) * W() / 3;   // (the stretch: harder and harder, never past a third)
+addEventListener('pointerup', () => { if (!drag) return; const d = drag; drag = null; vp.classList.remove('dragging'); if (d.axis !== 'x') return;
+  let dir = 0; if (x < -W() * .2 || d.v < -.45) dir = 1; else if (x > W() * .2 || d.v > .45) dir = canPrev() ? -1 : 0;
+  slideTo(dir, d.v * 1000); setTimeout(() => dragMoved = false, 0); });
+function slideTo(dir, v0 = 0) { stepDir = dir; xTarget = -dir * W(); xv = v0; if (dir) { ym = addM(ym, dir); title(dir); arrows(); } wake(); }
+$('prev').onclick = () => { if (canPrev() && xTarget === null) slideTo(-1); };
+$('next').onclick = () => { if (xTarget === null) slideTo(1); };
+let raf = 0, last = 0;
+const wake = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } };
+function tick(now) { raf = 0; const dt = Math.min(.033, (now - last) / 1000); last = now;
+  if (xTarget !== null) { const k = 170 * P.spring * P.spring, c = 2 * Math.sqrt(k); xv += (k * (xTarget - x) - c * xv) * dt; let nx = x + xv * dt;
+    if (reduce || (Math.abs(xTarget - nx) < .5 && Math.abs(xv) < 20)) { nx = xTarget; }
+    setX(nx);
+    if (nx === xTarget) { xTarget = null; xv = 0; if (stepDir) { stepDir = 0; renderMonths(); } } }
+  if (xTarget !== null) raf = requestAnimationFrame(tick); }
+
+// ---------- the sheet: opens and closes softly; on a phone drag it down by its top to close (it stretches upwards) ----------
+let open = 0, openT = 1, openV = 0, sheetY = 0, sdrag = null, sraf = 0, slast = 0;
+const sheet = $('sheet'), scrim = $('scrim'), wide = () => innerWidth >= 700;
+function showSheet(on) { openT = on ? 1 : 0; if (!sraf) { slast = performance.now(); sraf = requestAnimationFrame(stick); } }
+function placeSheet() { const o = clamp(open, 0, 1.2);
+  if (wide()) { sheet.style.transform = `translate(-50%, -50%) translateY(${((1 - o) * 26).toFixed(2)}px) scale(${(.96 + .04 * Math.min(o, 1)).toFixed(4)})`; sheet.style.opacity = Math.min(o, 1).toFixed(3); }
+  else { const h = sheet.offsetHeight; sheet.style.transform = `translateY(${((1 - o) * (h + 30) + sheetY).toFixed(2)}px)`; sheet.style.opacity = ''; }
+  scrim.style.opacity = (Math.min(o, 1) * (1 - clamp(sheetY / 400, 0, 1))).toFixed(3); scrim.style.pointerEvents = openT ? 'auto' : 'none'; sheet.style.visibility = o < .002 && !openT ? 'hidden' : ''; }
+function stick(now) { sraf = 0; const dt = Math.min(.033, (now - slast) / 1000); slast = now;
+  if (!sdrag) { const k = 120, c = 2 * Math.sqrt(k); openV += (k * (openT - open) - c * openV) * dt; open += openV * dt; sheetY += (0 - sheetY) * (1 - Math.exp(-dt * 14)); if (reduce) { open = openT; sheetY = 0; }
+    if (Math.abs(openT - open) < .001 && Math.abs(openV) < .01 && Math.abs(sheetY) < .3) { open = openT; openV = 0; sheetY = 0; } }
+  placeSheet(); if (sdrag || open !== openT || sheetY) sraf = requestAnimationFrame(stick); }
+$('grab').addEventListener('pointerdown', e => { if (wide()) return; sdrag = { y0: e.clientY, t: performance.now(), v: 0, y: e.clientY }; $('grab').setPointerCapture(e.pointerId); if (!sraf) { slast = performance.now(); sraf = requestAnimationFrame(stick); } });
+$('grab').addEventListener('pointermove', e => { if (!sdrag) return; const dy = e.clientY - sdrag.y0, now = performance.now(); sdrag.v = sdrag.v * .6 + (e.clientY - sdrag.y) / Math.max(8, now - sdrag.t) * .4; sdrag.y = e.clientY; sdrag.t = now;
+  sheetY = dy > 0 ? dy : -(1 - 1 / (-dy / 200 + 1)) * 40; });   // (down: it follows; up: it stretches a little and stops)
+$('grab').addEventListener('pointerup', () => { if (!sdrag) return; const d = sdrag; sdrag = null; if (sheetY > sheet.offsetHeight * .28 || d.v > .6) { open = 1 - sheetY / (sheet.offsetHeight + 30); sheetY = 0; showSheet(false); } });
+scrim.addEventListener('click', () => showSheet(false));
+$('open').onclick = () => showSheet(true);
+$('apply').onclick = () => { const lo = A && B ? (A < B ? A : B) : A, hi = A && B ? (A < B ? B : A) : null;
+  $('openv').textContent = P.mode === 'single' ? (A ? `${DAYS[A.getDay()]}, ${short(A)}` : 'Add dates') : (lo && hi ? `${short(lo)} – ${short(hi)}` : 'Add dates'); showSheet(false); };
+addEventListener('keydown', e => { if (e.key === 'Escape') { if (document.body.classList.contains('tuning')) openPanel(false); else showSheet(false); }
+  if (e.key === 'PageDown') $('next').click(); if (e.key === 'PageUp') $('prev').click(); });
+
+// ---------- the look: the style's colours into the page ----------
+const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+function look() { const r = document.documentElement.style, dark = document.body.classList.contains('dark');
+  let acc = P.acc; if (P.style === 'Mono' && dark && P.acc === STYLES.Mono.acc) acc = '#f2f2f0';   // (mono: ink on light, paper on dark)
+  r.setProperty('--acc', acc); r.setProperty('--accInk', lum(acc) > .6 ? '#151619' : '#fff');
+  r.setProperty('--bar', hexA(acc, P.shape === 'line' ? Math.min(1, P.bar) : P.bar * (dark ? 1.6 : 1)));
+  r.setProperty('--barInk', P.shape === 'line' ? 'inherit' : (dark ? mix(acc, '#ffffff', .55) : mix(acc, '#000000', .25)));
+  r.setProperty('--rm', P.radius + 'px'); r.setProperty('--c', (innerWidth < 380 ? Math.min(P.cell, 40) : P.cell) + 'px');
+  r.setProperty('--dur', Math.round(420 / P.speed) + 'ms'); r.setProperty('--st', Math.round(26 / P.speed) + 'ms'); r.setProperty('--fill', P.fill);
+  for (const s of ['pill', 'block', 'line']) document.body.classList.toggle('bar-' + s, P.shape === s); document.body.classList.toggle('accbtn', P.accBtn);
+  $('nm').textContent = styleNow(); }
+const lum = h => { const n = parseInt(h.slice(1), 16); return (.2126 * (n >> 16 & 255) + .7152 * (n >> 8 & 255) + .0722 * (n & 255)) / 255; };
+const mix = (h, k, t) => { const a = parseInt(h.slice(1), 16), b = parseInt(k.slice(1), 16), c = s => Math.round((a >> s & 255) * (1 - t) + (b >> s & 255) * t); return `rgb(${c(16)},${c(8)},${c(0)})`; };
+const STYLE_KEYS = Object.keys(STYLES.Soft);
+const styleNow = () => Object.keys(STYLES).find(n => STYLE_KEYS.every(k => P[k] === STYLES[n][k])) || 'Custom';
+function applyStyle(n) { Object.assign(P, STYLES[n]); P.style = n; save(); for (const k of STYLE_KEYS) ctl[k]?.set(P[k]); look(); if (A && B) paint(true); }
+
+// ---------- light and dark ----------
+let mode = BARE ? (q.get('mode') === 'dark' ? 'dark' : 'light') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark'); $('vars').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0f1012' : '#eceef1'; look(); }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph2'; head.innerHTML = '<div><h2>Tune</h2><p>The look of the picker, how the range fills in, and how it moves.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v, re) => { P[k] = v; save(); look(); if (re) renderMonths(); };
+  const sl = (g, k, label, min, max, step, unit, re) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v, re) });
+  const sg = (g, k, label, options, re) => ctl[k] = LabUI.seg(g, { label, options, value: P[k], onChange: v => { set(k, v, re); if (k === 'fill' && A && B) paint(true); } });
+  const g0 = LabUI.group(panel, 'Style', { key: KEY + '.g.style' });
+  ctl.acc = LabUI.color(g0, { label: 'Accent', value: P.acc, onInput: v => set('acc', v) });
+  sg(g0, 'shape', 'Range bar', [['pill', 'Pill'], ['block', 'Block'], ['line', 'Line']]); sl(g0, 'bar', 'Bar strength', .04, 1, .01, '');
+  sl(g0, 'radius', 'Corners of the sheet', 8, 40, 1, 'px'); sl(g0, 'cell', 'Day size', 34, 54, 1, 'px');
+  ctl.accBtn = LabUI.check(g0, { label: 'Apply button in the accent', value: P.accBtn, onChange: v => set('accBtn', v) });
+  const g1 = LabUI.group(panel, 'Fill', { key: KEY + '.g.fill' });
+  sg(g1, 'fill', 'How the range fills in', [['sweep', 'Sweep'], ['ripple', 'Ripple'], ['rise', 'Rise'], ['fade', 'Fade']]); sl(g1, 'speed', 'Speed', .4, 2, .01, '×');
+  const g2 = LabUI.group(panel, 'Motion', { key: KEY + '.g.motion' });
+  sl(g2, 'spring', 'Month slide (more: quicker)', .5, 1.8, .01, '×'); sl(g2, 'stretch', 'Stretch at the ends', .1, 1, .01, '');
+  const g3 = LabUI.group(panel, 'Choice', { key: KEY + '.g.choice' });
+  ctl.mode = LabUI.seg(g3, { label: 'Mode', options: [['range', 'Range'], ['single', 'Single']], value: P.mode, onChange: v => { P.mode = v; save(); segs(); if (v === 'single') B = null; paint(false); } });
+  ctl.past = LabUI.check(g3, { label: 'Days before today are off', value: P.past, onChange: v => set('past', v, true) });
+  ctl.nights = LabUI.check(g3, { label: 'Count the nights', value: P.nights, onChange: v => { P.nights = v; save(); summary(); } });
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); segs(); look(); renderMonths(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+
+// ---------- start; the board's box: ?thumb=1 the sheet open with a week chosen; ?demo=1 choosing, filling, sliding on ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF }; }
+buildPanel(); setMode(mode); LabUI.segThumb($('mode')); LabUI.segThumb($('mseg')); segs();
+{ const names = Object.keys(STYLES); LabUI.variants($('vars'), { prev: $('vprev'), next: $('vnext'), name: $('nm'), onStep: d => { const i = names.indexOf(styleNow()); applyStyle(names[((i < 0 ? 0 : i + d) + names.length) % names.length]); },
+    items: () => names, current: () => styleNow(), onPick: n => applyStyle(n) }); }
+renderMonths();
+if (BARE) { const s = new Date(TODAY); s.setDate(s.getDate() + 5); const e = new Date(s); e.setDate(e.getDate() + 6); A = s; B = e; paint(false); }
+open = 0; placeSheet(); setTimeout(() => showSheet(true), BARE ? 0 : 260);
+if (BARE && !DEMO) { open = openT = 1; placeSheet(); }
+if (DEMO) { let k = 0; const run = () => { const s = new Date(TODAY); s.setDate(s.getDate() + 3 + (k % 3) * 4); const e = new Date(s); e.setDate(e.getDate() + 3 + (k % 4) * 2);
+    if (k % 4 === 3) { slideTo(1); setTimeout(() => slideTo(-1), 1600); } else { A = null; B = null; paint(false); setTimeout(() => pick(s), 500); setTimeout(() => pick(e), 1100); }
+    k++; }; setTimeout(run, 900); setInterval(run, 3800); }
+addEventListener('resize', () => { setX(x); look(); placeSheet(); });
+window.CAL = { get P() { return P; }, pick, slideTo, applyStyle, showSheet, get A() { return A; }, get B() { return B; } };
+</script>
+</body>
+</html>
