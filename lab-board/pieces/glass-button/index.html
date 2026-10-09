@@ -510,6 +510,8 @@ const DEF = {
   sound: 'glass', release: true, volume: .5, haptic: true, jelly: 1, smooth: true, bloom: true, bloomK: .6, dither: true,
   menuGap: .35, liquid: 0, menuLift: 0,
   glowOn: false, glow: 'aurora', glowBlend: 'screen', glowK: 1, glowSize: 1, glowSpeed: 1,
+  frameOn: false, frameA: '#5227ff', frameB: '#ff9ffc', frameK: 1, frameW: 1, frameInset: .08, frameGlow: .5, frameGlowW: .8,
+  frameNoise: .6, frameNoiseS: 3, frameFlow: 1, framePulse: 1, frameIdle: .5, frameGrain: .15,
 };
 // Signature: Jarek's own look (everything but the content); the rest are shapes, laid over whatever you have
 const SIGNATURE = {                                   // the Midnight glass over the light grid
@@ -531,7 +533,7 @@ const MIDNIGHT = {
   embSize: 1.8, embDepth: .69, embFrost: 0, ink: '#f2f3f5', inkA: .98, scale: 1.42, h: 4.27, pl: 1, pr: 2, gap: 1.2, weight: 540,
   bg: 'color', bgColor: '#000000', gridDensity: 1.31, bgScale: 3, grid: .02, sound: 'pop', volume: .16,
   menuGap: 1.32, liquid: .69, menuLift: .8, glowK: .47, glowSize: .38, glowSpeed: 0,
-  jelly: .1,
+  jelly: .1, frameOn: false,   // (no frame: with it, it is Aurora)
 };
 // Frost: Jarek's third look, soft frosted glass that hardly bends the light, floating high, a pulse with a strong reflection
 const FROST = {
@@ -591,10 +593,12 @@ const SEG_LOOKS = {
   Tube: Object.assign({}, SEG_BASE, { segStyle: 'inner', dome: 1, wall: .25, under: 1, profile: 2, edge: .4, lift: .55, ior: 1.52, disp: .1, frost: .2, rim: 1.8, env: 1.4, key: 1.6, segInset: .16 }),
   Glow: Object.assign({}, SEG_J, { bg: 'grid', bgColor: '#bdbecc', grid: .12, glowOn: true, glow: 'iris', glowBlend: 'auto', glowK: 1.1, glowSize: 1.3, glowSpeed: .8 }),
 };
-const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Frost: FROST, Ember: EMBER, Lilac: LILAC, Dish: DISH };   // full looks; the rest of the presets are shapes
+const AURORA = Object.assign({}, MIDNIGHT, { frameOn: true });   // the dark glass with a frame of light travelling around it
+const LOOKS = { Signature: SIGNATURE, Midnight: MIDNIGHT, Aurora: AURORA, Frost: FROST, Ember: EMBER, Lilac: LILAC, Dish: DISH };   // full looks; the rest of the presets are shapes
 const PRESETS = {
   'Signature': SIGNATURE,
   'Midnight': MIDNIGHT,
+  'Aurora': AURORA,
   'Frost': FROST,
   'Ember': EMBER,
   'Lilac': LILAC,
@@ -659,6 +663,21 @@ const CTRL = [
   { k: 'glowK', l: 'Glow strength', min: 0, max: 2.5, s: .01, show: () => P.glowOn },
   { k: 'glowSize', l: 'Glow size', min: .3, max: 3, s: .01, show: () => P.glowOn },
   { k: 'glowSpeed', l: 'Glow motion', min: 0, max: 3, s: .01, show: () => P.glowOn },
+  { g: 'Frame border' },
+  { k: 'frameOn', l: 'Frame (a line of light inside the rim)', t: 'check' },
+  { k: 'frameA', l: 'Colour A', t: 'color', show: () => P.frameOn },
+  { k: 'frameB', l: 'Colour B', t: 'color', show: () => P.frameOn },
+  { k: 'frameK', l: 'Intensity', min: 0, max: 3, s: .01, show: () => P.frameOn },
+  { k: 'frameW', l: 'Line width', min: .5, max: 4, s: .05, u: 'px', show: () => P.frameOn },
+  { k: 'frameInset', l: 'Inset', min: 0, max: .5, s: .01, show: () => P.frameOn },
+  { k: 'frameGlow', l: 'Inner glow', min: 0, max: 1.5, s: .01, show: () => P.frameOn },
+  { k: 'frameGlowW', l: 'Glow width', min: .1, max: 2, s: .01, show: () => P.frameOn },
+  { k: 'frameNoise', l: 'Noise', min: 0, max: 1, s: .01, show: () => P.frameOn },
+  { k: 'frameNoiseS', l: 'Noise scale', min: .5, max: 8, s: .05, show: () => P.frameOn },
+  { k: 'frameFlow', l: 'Flow speed (faster on hover)', min: 0, max: 3, s: .01, show: () => P.frameOn },
+  { k: 'framePulse', l: 'Click pulse speed', min: 0, max: 3, s: .01, show: () => P.frameOn },
+  { k: 'frameIdle', l: 'Idle swells', min: 0, max: 1.5, s: .01, show: () => P.frameOn },
+  { k: 'frameGrain', l: 'Grain', min: 0, max: 1, s: .01, show: () => P.frameOn },
   { g: 'Icon', show: DROP },
   { k: 'icon', l: 'Style', t: 'seg', o: ['glyph', 'mercury', 'orb', 'pulse', 'emboss'] },
   { k: 'fitIcon', l: 'Fit the icon inside the glass', t: 'action', show: isBead },
@@ -748,7 +767,7 @@ if (P.bg === 'upload') P.bg = 'grid';
 // ---------- interaction state ----------
 const POST = { ok: false, n: 0, sig: null, w: 0, h: 0 };   // the after-scene pipeline (set up once the glass compiles)
 const HOME = { yaw: .38, pitch: -.22, zoom: .88 };                 // the resting view: a little from below and from the right
-const s = { lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, segX: 0, segV: 0, segT: 0, segLift: 0, segDrag: null, segF: 0, segFV: 0, seen: false, open: false,
+const s = { frIntro: 0, frPh: 0, frP: 1, frS0: 0, frWas: false, lx: -.35, ly: -.45, tlx: -.35, tly: -.45, hov: 0, thov: 0, press: 0, tpress: 0, pressV: 0, jiggle: 0, wob: 0, wobV: 0, split: -1, segX: 0, segV: 0, segT: 0, segLift: 0, segDrag: null, segF: 0, segFV: 0, seen: false, open: false,
             menuT: 0, menuV: 0, gFrom: 0, gTo: 0, gT: 1, orbPh: 0, hi: null, hiA: 0, hiX: 0,
             yaw: HOME.yaw, pitch: HOME.pitch, tyaw: HOME.yaw, tpitch: HOME.pitch, zoom: HOME.zoom, tzoom: HOME.zoom, panx: 0, pany: 0, tpanx: 0, tpany: 0 };
 function onMove(x, y) {
@@ -1183,9 +1202,23 @@ function haptic(ms) {
   }
   hapEl.click();
 }
-btn.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && touches.size < 2) { click(false); haptic(14); } });
+// the frame border: where a point lies along the outline (0..1 clockwise from the top centre), as in the shader
+function frS(dx, dy, hw, hh, r) {
+  const sx = Math.max(hw - r, 0), sy = Math.max(hh - r, 0), H = Math.PI / 2, Lp = 4 * (sx + sy) + 2 * Math.PI * r, ex = Math.abs(dx) - sx, ey = Math.abs(dy) - sy;
+  let v;
+  if (ex > 0 && ey > 0) { const a = Math.atan2(dy - Math.sign(dy) * sy, dx - Math.sign(dx) * sx);
+    v = dx > 0 && dy < 0 ? sx + r * (a + H) : dx > 0 ? sx + r * H + 2 * sy + r * a : dy > 0 ? 3 * sx + r * Math.PI + 2 * sy + r * (a - H) : 3 * sx + r * 3 * H + 4 * sy + r * (a + Math.PI); }
+  else if (ex > ey) v = dx > 0 ? sx + r * H + sy + dy : 3 * sx + r * 3 * H + 3 * sy - dy;
+  else v = dy < 0 ? dx : 2 * sx + r * Math.PI + 2 * sy - dx;
+  return ((v / Math.max(Lp, 1)) % 1 + 1) % 1;
+}
+function framePulse(x, y) {                               // a click sends two pulses round from the nearest edge (a key: from the bottom)
+  if (!P.frameOn || !geo || P.framePulse <= 0) return;
+  s.frS0 = x == null ? 0.5 : frS(x - geo.cx, y - geo.cy, geo.hw, geo.hh, Math.min(P.corner * geo.hh, geo.hw, geo.hh)); s.frP = 0;
+}
+btn.addEventListener('pointerdown', e => { if (e.button === 0 && !e.altKey && touches.size < 2) { click(false); haptic(14); framePulse(e.clientX, e.clientY); } });
 window.addEventListener('pointerup', () => { if (s.tpress > 0) { if (P.release) click(true); haptic(8); } }, true);
-btn.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) click(false); });
+btn.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { click(false); framePulse(null); } });
 btn.addEventListener('keyup', e => { if ((e.key === 'Enter' || e.key === ' ') && P.release) click(true); });
 
 // ---------- fit the icon inside the glass ----------
@@ -1511,7 +1544,7 @@ function set(k, v) {
   if (k === 'bg' || k === 'bgColor' || k === 'grad') useBg(P.bg);
   if (k === 'bgColor' || k === 'gridDensity' || k === 'grad') paintSwatches(panel.querySelector('.bgs'));
   if (k === 'glowOn' && v && P.glowK < 0.05) P.glowK = DEF.glowK;      // switching the glow on should show something
-  apply(); save(); if (['bg', 'bgColor', 'grad', 'glowOn', 'glow', 'icon', 'sound', 'orbPal', 'comp'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
+  apply(); save(); if (['bg', 'bgColor', 'grad', 'glowOn', 'glow', 'frameOn', 'icon', 'sound', 'orbPal', 'comp'].includes(k) || (k === 'tintK' && (v > 0) !== !inputs.tint._row.hidden)) syncInputs(); if (k === 'follow' || SHAPE_KEYS.includes(k) || k === 'text') syncInputs(); }
 // the DOM button is the layout: CSS variables, label, what is shown
 function apply() {
   POST.dirty = true;                                    // a new look: the smoothing starts over, nothing of the old one lingers
@@ -1664,6 +1697,11 @@ uniform float uSegPrint;       // 1: the active label is seen through the lens (
 uniform float uShadowMode;     // 0 a shadow with a caustic, 1 a coloured glow like a TV backlight
 uniform vec3 uGlowA, uGlowB, uGlowC;
 uniform vec4 uGlowK;           // strength, size (px), phase, -
+uniform vec4 uFr;              // frame border: intensity (0 off), line width (px), inset (px), glow width (px)
+uniform vec4 uFr2;             // its glow, noise, noise scale, flow phase
+uniform vec4 uFr3;             // intro 0..1, idle swells, light page 0..1, grain
+uniform vec4 uFrP;             // a click's twin pulses: start (0..1 along the outline), progress (>= 1 none), width (0..1), -
+uniform vec3 uFrA, uFrB;
 uniform vec3 uCamR, uCamD, uCamF;
 uniform int uSamples;
 uniform vec2 uJit;             // sub-pixel offset (device px), a new one each still frame
@@ -1956,6 +1994,61 @@ vec3 pageThrough(vec3 q, vec3 d, float blur){
   if (d.z < -1e-3) { float t = -q.z / d.z; return pageAt(q.xy + d.xy * t, blur + t * 0.015); }
   return sky(d);
 }
+// ---------- the frame border: a fine line of light inside the rim, a soft glow inward, two colours travelling round ----------
+float frHash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float frNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(frHash(i), frHash(i + vec2(1, 0)), f.x), mix(frHash(i + vec2(0, 1)), frHash(i + vec2(1, 1)), f.x), f.y); }
+// where a point lies along the rounded outline: 0..1 clockwise from the top centre (points inside take the nearest side)
+float frS(vec2 d, vec2 hs, float r, out float Lp){
+  vec2 st = max(hs - r, 0.0); const float H = 1.5707963, PI = 3.1415927;
+  Lp = 4.0 * (st.x + st.y) + 2.0 * PI * r;
+  float ex = abs(d.x) - st.x, ey = abs(d.y) - st.y, s;
+  if (ex > 0.0 && ey > 0.0) {
+    float a = atan(d.y - sign(d.y) * st.y, d.x - sign(d.x) * st.x);
+    if (d.x > 0.0 && d.y < 0.0) s = st.x + r * (a + H);
+    else if (d.x > 0.0) s = st.x + r * H + 2.0 * st.y + r * a;
+    else if (d.y > 0.0) s = 3.0 * st.x + r * PI + 2.0 * st.y + r * (a - H);
+    else s = 3.0 * st.x + r * 3.0 * H + 4.0 * st.y + r * (a + PI);
+  } else if (ex > ey) s = d.x > 0.0 ? st.x + r * H + st.y + d.y : 3.0 * st.x + r * 3.0 * H + 3.0 * st.y - d.y;
+  else s = d.y < 0.0 ? d.x : 2.0 * st.x + r * PI + 2.0 * st.y - d.x;
+  return fract(s / max(Lp, 1.0));
+}
+float frD(float a, float b){ return abs(fract(a - b + 0.5) - 0.5); }      // distance round the loop
+// the two colours meet in OKLab, their chroma kept up, so the middle is a hue of its own and not grey
+vec3 okOf(vec3 c){ c = pow(max(c, 0.0), vec3(2.2));
+  vec3 l = vec3(0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b, 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b, 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b);
+  l = pow(l, vec3(1.0 / 3.0));
+  return vec3(0.2104542553 * l.x + 0.7936177850 * l.y - 0.0040720468 * l.z, 1.9779984951 * l.x - 2.4285922050 * l.y + 0.4505937099 * l.z, 0.0259040371 * l.x + 0.7827717662 * l.y - 0.8086757660 * l.z); }
+vec3 rgbOf(vec3 o){ vec3 l = vec3(o.x + 0.3963377774 * o.y + 0.2158037573 * o.z, o.x - 0.1055613458 * o.y - 0.0638541728 * o.z, o.x - 0.0894841775 * o.y - 1.2914855480 * o.z); l = l * l * l;
+  vec3 c = vec3(4.0767416621 * l.x - 3.3077115913 * l.y + 0.2309699292 * l.z, -1.2684380046 * l.x + 2.6097574011 * l.y - 0.3413193965 * l.z, -0.0041960863 * l.x - 0.7034186147 * l.y + 1.7076147010 * l.z);
+  return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
+vec3 okMix(vec3 a, vec3 b, float t){ vec3 A = okOf(a), B = okOf(b), M = mix(A, B, t);
+  float ch = mix(length(A.yz), length(B.yz), t), cm = length(M.yz); if (cm > 1e-4) M.yz *= ch / cm; return rgbOf(M); }
+vec3 frameFx(vec3 col, vec3 P){
+  float e = foot(P.xy) + uFr.z;                            // < 0 inside the inset outline
+  if (e > uFr.y + 2.0 || e < -uFr.w - 2.0) return col;
+  float Lp, s = frS(P.xy - uBox.xy, uBox.zw, uShape.x, Lp), ph = uFr2.w;
+  float drawn = smoothstep(0.0, 0.02, uFr3.x * 0.52 - frD(s, 0.0));   // the intro: the line draws from the top, both ways round
+  float gIn = smoothstep(0.55, 1.0, uFr3.x);                        // then the glow fades in
+  float n = frNoise(P.xy / max(uBox.w, 1.0) * uFr2.z * 0.5 + vec2(ph * 2.3, -ph * 1.7));   // the flow through the line and the glow
+  float m = clamp(0.5 + 0.5 * cos(6.2831853 * (s - ph)) + (n - 0.5) * uFr2.y * 0.9, 0.0, 1.0);
+  vec3 fc = okMix(uFrA, uFrB, smoothstep(0.0, 1.0, m));
+  float idle = 0.0;                                                  // three soft swells drifting round
+  for (int i = 0; i < 3 * uOne; i++) { float c = fract(ph * 0.37 + float(i) / 3.0); idle += exp(-pow(frD(s, c) / 0.09, 2.0)) * (0.6 + 0.4 * sin(ph * 5.0 + float(i) * 2.1)); }
+  idle *= uFr3.y * gIn;
+  float pu = 0.0;                                                    // a click: two pulses from the nearest edge, meeting on the far side
+  if (uFrP.y < 1.0) { float k = uFrP.y * 0.5, w = uFrP.z; pu = (exp(-pow(frD(s, uFrP.x + k) / w, 2.0)) + exp(-pow(frD(s, uFrP.x - k) / w, 2.0))) * (1.0 - smoothstep(0.82, 1.0, uFrP.y)); }
+  float boost = 1.0 + idle * 1.4 + pu * 3.0;
+  float line = (1.0 - smoothstep(uFr.y * 0.5, uFr.y * 0.5 + 0.9, abs(e))) * drawn * (0.75 + 0.5 * n) * boost;
+  float g = clamp(1.0 + e / max(uFr.w, 1.0), 0.0, 1.0) * step(e, uFr.y * 0.5);   // inward, always down to nothing
+  float glow = g * g * uFr2.x * gIn * drawn * mix(1.0, 0.35 + 1.3 * n, uFr2.y) * (1.0 + idle * 0.8 + pu * 1.6);
+  glow *= 1.0 + (frHash(P.xy * 3.1 + fract(uTime * 7.0) * 97.0) - 0.5) * uFr3.w * 1.6;
+  float I = uFr.x;
+  vec3 dark = col + fc * (line * 1.7 + glow) * I;                    // on a dark page: light
+  vec3 lite = mix(col, fc * 0.62, clamp(line * I, 0.0, 1.0));        // on a light page: a fine inked line, a tinted glow
+  lite = mix(lite, fc, clamp(glow * I * 0.4, 0.0, 1.0));
+  return mix(dark, lite, uFr3.z);
+}
 vec3 glassShade(vec3 P, vec3 rd){
   vec3 n = nrm(P);
   bool th = uSeg2.w > 0.5 && thumbD(P) < 0.8;          // on the green thumb
@@ -2083,6 +2176,7 @@ vec3 glassShade(vec3 P, vec3 rd){
   col += vec3(1.0) * key * uLightK.x * (1.0 - ink * 0.5);
   col = mix(col, col * 0.85 + 0.16, emb * uEmb.z);       // a soft frost in the carving, so it reads
   if (BR > 0.5) col += uIconLight * exp(-length(P - BC) / (BR * 1.5)) * 0.22;   // a glowing icon lights the glass around it
+  if (uFr.x > 0.0) col = frameFx(col, P);   // the frame border, on the top of the glass
   return col;
 }
 
@@ -2358,6 +2452,14 @@ function frame(t) {
     if (bg.video && t - (bg.avgT || 0) > 500) { bg.avgT = t; const a = avgOf(bg.video, bg.w, bg.h); bg.avg = bg.avg.map((v, i) => v + (a[i] - v) * 0.5); }
   }
   const T = reduce || STILL ? 2 : t / 1000;
+  {                                                     // the frame border: it draws itself in when switched on, flows (faster on hover), pulses on a click
+    const anim = !reduce && !STILL;
+    if (P.frameOn && !s.frWas) s.frIntro = anim ? 0 : 1; s.frWas = P.frameOn;
+    s.frIntro = anim ? Math.min(1, s.frIntro + dt / 1.6) : 1;
+    s.frPh = anim ? s.frPh + dt * 0.06 * P.frameFlow * (1 + 1.6 * s.hov) : 0.15;
+    if (s.frP < 1) s.frP = anim ? Math.min(1, s.frP + dt * 0.85 * P.framePulse) : 1;
+    if (P.frameOn && anim && (P.frameFlow > 0 || P.frameIdle > 0 || s.frP < 1 || s.frIntro < 1)) POST.dirty = true;   // it moves: no still-frame smoothing smearing it
+  }
   // light: from the cursor, or from the panel
   let Lx, Ly, Lz;
   if (P.follow) { Lx = -0.45 + s.lx * 0.9; Ly = -0.62 + s.ly * 0.9; Lz = 0.75; }
@@ -2490,6 +2592,12 @@ function frame(t) {
   { const gp = GLOWS[P.glow] || GLOWS.aurora; gl.uniform3fv(uni('uGlowA'), gp[0]); gl.uniform3fv(uni('uGlowB'), gp[1]); gl.uniform3fv(uni('uGlowC'), gp[2]);
     gl.uniform4f(uni('uGlowK'), P.glowK * (dk || lum(bg.mode ? bg.avg : pg[1]) < 0.42 ? 0.55 : 0.8), hh * 1.1 * P.glowSize, (reduce || STILL ? 0.1 : T * 0.045 * P.glowSpeed),
       P.glowBlend === 'soft' ? 0 : P.glowBlend === 'auto' ? 1 - Math.min(1, Math.max(0, (lum(bg.mode ? bg.avg : pg[1]) - 0.3) / 0.35)) : 1); }
+  { const lf = Math.min(1, Math.max(0, (lum(bg.mode ? bg.avg : pg[1]) - 0.45) / 0.25)), Lp = 4 * (Math.max(hw - corner, 0) + Math.max(hh - corner, 0)) + 2 * Math.PI * corner;
+    gl.uniform4f(uni('uFr'), P.frameOn ? P.frameK : 0, P.frameW, P.frameInset * hh, Math.max(1, P.frameGlowW * hh));
+    gl.uniform4f(uni('uFr2'), P.frameGlow, P.frameNoise, P.frameNoiseS, s.frPh);
+    gl.uniform4f(uni('uFr3'), s.frIntro, P.frameIdle, lf, P.frameGrain);
+    gl.uniform4f(uni('uFrP'), s.frS0, s.frP, Math.max(0.02, 26 / Math.max(Lp, 1)), 0);
+    gl.uniform3fv(uni('uFrA'), hex(P.frameA)); gl.uniform3fv(uni('uFrB'), hex(P.frameB)); }
   gl.uniform1f(uni('uGrid'), Math.max(10, Math.max(72, Math.round(Math.min(W, H) / 7)) / P.gridDensity)); gl.uniform1f(uni('uGridA'), P.grid);
   gl.uniform1f(uni('uCamDist'), Math.max(W, H) * 1.3);
   CAM = { r: cr, d: cd, f: cf, D: Math.max(W, H) * 1.3, T: [geo.cx, geo.cy, (P.lift + P.under) * hh], zoom: s.zoom, pan: [s.panx, s.pany], menuTop: menuTopZ };
