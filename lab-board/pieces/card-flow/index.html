@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="../../shared/lab-lock.js?v=3"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Card Flow · lab</title>
+<meta name="theme-color" content="#1c1c1e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* A row of square cards in depth: the one in the middle faces you, the rest turn away to either side and stand close, edge on,
+     like a shelf of records. Scroll or drag and the row slides: each card turns to face you as it comes to the middle; let go and
+     the nearest one settles there. A line of words under the row changes with it, fading and moving a touch. On the way in the
+     cards come from both sides and the middle one turns to face you last. Pictures: abstract photographs from Unsplash (see
+     img/CREDITS.md). Light or dark on top; Customize tunes the row, the motion and the words. */
+  :root { --bg: #1c1c1e; --ink: #f2f1ee; --muted: rgba(255,255,255,.5); --faint: rgba(255,255,255,.36); --ease: cubic-bezier(.22,.61,.36,1); --page: #17181b; --boxbg: #151517; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); transition: background .4s; -webkit-font-smoothing: antialiased; }
+  body.light { --bg: #efede8; --ink: #161616; --muted: rgba(20,20,20,.55); --faint: rgba(20,20,20,.4); --page: #fff; --boxbg: #efede8; }
+  .stage { position: fixed; inset: 0; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .stage.dragging { cursor: grabbing; }
+  .row { position: absolute; left: 50%; top: var(--cy, 45%); width: 0; height: 0; transform-style: preserve-3d; }
+  .card { position: absolute; left: 0; top: 0; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); border-radius: var(--r); overflow: hidden;
+    background: #2a2a2e center / cover no-repeat; will-change: transform, opacity; backface-visibility: hidden; box-shadow: 0 calc(var(--s) * .08) calc(var(--s) * .16) rgba(0,0,0,var(--sh, .35)); cursor: pointer; }
+  .card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, rgba(0,0,0,.55), rgba(0,0,0,0) 70%); opacity: var(--dark, 0); pointer-events: none; }
+  .card::before { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; background: radial-gradient(circle at var(--lx, 50%) var(--ly, 30%), rgba(255,255,255,.32), rgba(255,255,255,0) 55%); opacity: var(--glow, 0); pointer-events: none; mix-blend-mode: soft-light; }
+  .card.r::after { background: linear-gradient(270deg, rgba(0,0,0,.55), rgba(0,0,0,0) 70%); }
+  body.reflect .card { -webkit-box-reflect: below 2px linear-gradient(transparent 62%, rgba(255,255,255,.16)); }
+  /* the words under the row: a small label, a light heading, a short line; they change with a fade and a touch of movement */
+  .cap { position: fixed; left: 50%; bottom: calc(var(--capb, 9vh) + env(safe-area-inset-bottom)); z-index: 3; width: min(420px, 86vw); height: 92px; transform: translateX(-50%); text-align: center; pointer-events: none; transition: opacity .8s var(--ease); }
+  .cap .it { position: absolute; inset: 0; transition: opacity .42s var(--ease), translate .5s var(--ease); }
+  .cap .it.out { opacity: 0; translate: 0 -5px; transition-duration: .3s, .36s; }
+  .cap .it.pre { opacity: 0; translate: 0 6px; transition: none; }
+  .cap .n { display: block; font: 400 10.5px/1 "Geist Mono", ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .cap h2 { margin: 12px 0 0; font: 400 17px/1.25 var(--lab-font); letter-spacing: -.01em; }
+  .cap p { margin: 6px 0 0; font: 300 13px/1.5 var(--lab-font); color: var(--muted); }
+  body.nowords .cap { display: none; }
+  /* the corner controls (as on every piece) */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; transition: opacity .7s var(--ease), translate .2s; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #2a2a2d; color: #f2f2f0; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #2a2a2d; color: #f2f2f0; font: 600 14px var(--lab-font); cursor: pointer; }
+  .tune:hover { translate: 0 -1px; } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #2a2a2d; font: 600 13px var(--lab-font); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(255,255,255,.5); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #f2f2f0; } .mode button[aria-checked=true] { color: #1b1c20; }
+  body.light .back, body.light .tune, body.light .mode { background: #fff; color: #1b1c20; }
+  body.light .mode button { color: rgba(20,20,20,.55); } body.light .mode button:hover { color: #1b1c20; } body.light .mode button[aria-checked=true] { color: #fff; }
+  body.intro .back, body.intro .tune, body.intro .mode, body.intro .cap { opacity: 0; pointer-events: none; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .cap { display: none; }
+  /* the panel: a card at the side (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 7; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph2 { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph2 h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph2 p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; z-index: 3; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  .introbtn { width: 100%; height: 38px; border: 1px solid var(--ui-line, rgba(20,20,20,.12)); border-radius: 12px; background: transparent; color: var(--ui-ink); font: 600 13px var(--lab-font); cursor: pointer; }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); } body.tuning .panel { translate: 0 0; } }
+</style>
+</head>
+<body class="intro">
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="A row of cards in depth: scroll, drag or use the arrow keys to move along it; click a card to bring it to the middle"><div class="row" id="row"></div></main>
+<div class="cap" id="cap" aria-live="polite"></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the row"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script>
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.card-flow.v1';
+// (Jarek's setup, 09.10)
+const DEF = { size: .29, gap: .89, angle: 80, step: .22, squeeze: .15, depth: .68, persp: 3.5, center: 1.09, radius: .2, shade: .07, shadow: .06, reflect: false,
+  scroll: 1, friction: 3.2, snap: true, auto: 0, words: true, intro: true, rowY: .44,
+  curve: 0, shrink: 0, reach: 9, edgeBlur: 0, parallax: 0, hover: .6, tilt: .6 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const q = new URLSearchParams(location.search), REC = q.has('rec'), BARE = q.has('thumb') || q.has('demo') || REC, DEMO = q.has('demo') || REC, STEP = 1.5;   // (the board's box: one card on every STEP s, so 18 of them make a seamless loop)
+const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), stage = $('stage'), row = $('row'), cap = $('cap');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sm = t => t * t * (3 - 2 * t), eout = t => 1 - Math.pow(1 - t, 3);
+
+// ---------- the cards and their words (placeholders) ----------
+const ITEMS = [
+  ['Midnight bloom', 'Violet light pooling out of the dark.'], ['Deep current', 'Blue folds turning over in slow water.'], ['Ultraviolet', 'Ribbons of violet and cobalt, still moving.'],
+  ['Silk shift', 'Cyan and lilac drawn out like fabric.'], ['Cloud glass', 'Soft blue light through frosted air.'], ['Lagoon', 'Teal edges catching a cold light.'],
+  ['Pearl', 'Milky white with a thin line of colour.'], ['Prism haze', 'Every colour, faded to a whisper.'], ['Petal fold', 'Lilac curves lifted into the light.'],
+  ['Morning lilac', 'Pale blue warming slowly at the centre.'], ['Mauve drift', 'Pink and violet blurring at the edges.'], ['Tide line', 'Cyan meets magenta where the wave breaks.'],
+  ['Coral heat', 'Pink running into orange.'], ['Peach light', 'Warm rose fading out to cream.'], ['Ember', 'A soft orange glow on cool blue.'],
+  ['Sunrise', 'Orange edging into a pale lilac sky.'], ['Spectrum', 'The whole band of colour, softly mixed.'], ['Afterglow', 'Warm and cool, folding into one.'] ];
+const N = ITEMS.length, cards = [];
+ITEMS.forEach((it, i) => { const el = document.createElement('div'); el.className = 'card'; el.style.backgroundImage = `url(img/${String(i + 1).padStart(2, '0')}.jpg)`;
+  el.setAttribute('role', 'img'); el.setAttribute('aria-label', it[0]); el.dataset.i = i; row.appendChild(el); cards.push({ el, w: '' }); });
+
+// ---------- where a card stands for its distance d from the middle (in cards; d < 0 to the left) ----------
+// (the middle one faces you; from one card out they turn away towards ±angle and stand closer and closer, a little further back;
+// past the edge of the view they fade)
+let S = 300;
+function pose(d) {
+  const a = Math.abs(d), g = Math.sign(d) || 0, near = Math.min(a, 1), far = Math.max(a - 1, 0), e = sm(near);
+  const x = g * (S * P.gap * e + S * P.step * far / (1 + far * P.squeeze));
+  let ry = -g * P.angle * e, z = -S * P.depth * e - S * .03 * far, s = 1 + (P.center - 1) * (1 - e);
+  if (P.curve > 0) { const u = sm(clamp(far / 5, 0, 1)); ry *= 1 - .85 * P.curve * u; z += P.curve * S * .13 * far * far / (1 + far * .3); }   // (a half circle: further out, nearer you and more face on)
+  if (P.shrink > 0) s *= 1 - P.shrink * sm(clamp(far / 6, 0, 1));
+  const out = sm(clamp((a - P.reach + 1.4) / 1.4, 0, 1));   // (past the reach: fade, shrink a touch, drift out)
+  return { x: x + g * S * .18 * out, ry, z, s: s * (1 - .12 * out), a, g, e, far, fade: 1 - out }; }
+
+// ---------- the motion: pos is the card in the middle (a float, wrapping round); it glides after a target T with a critically damped
+// spring (no overshoot). Scroll and drag move T; a moment after the hand stops, T settles on a card, rounded the way it was going,
+// so even a small scroll moves on by one ----------
+let pos = 0, vel = 0, T = 0, dir = 0, lastIn = 0, drag = null, autoT = DEMO ? STEP : 0;
+const wrapD = d => ((d % N) + N * 1.5) % N - N / 2;   // (the shortest way round, -N/2..N/2)
+function goTo(t) { T = t; lastIn = 0; }
+stage.addEventListener('pointerdown', e => { if (e.button !== 0 || introOn) return; drag = { x: e.clientX, x0: e.clientX, y0: e.clientY, t: performance.now(), v: 0, moved: false }; T = pos; try { stage.setPointerCapture(e.pointerId); } catch { } });
+let hoverI = -1, mx = 0, my = 0;
+stage.addEventListener('pointermove', e => { const hc = e.target.closest && e.target.closest('.card'); hoverI = hc && !drag ? +hc.dataset.i : -1;
+  if (hc) { const b = hc.getBoundingClientRect(); mx = clamp((e.clientX - b.left) / b.width - .5, -.5, .5); my = clamp((e.clientY - b.top) / b.height - .5, -.5, .5); }
+  if (!drag) return; const dx = e.clientX - drag.x; drag.x = e.clientX;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 5) { drag.moved = true; stage.classList.add('dragging'); }
+  if (!drag.moved) return; const dp = -dx / (S * P.gap * 1.05), now = performance.now(), dt = Math.max(8, now - drag.t) / 1000; drag.t = now; T += dp; pos = T; vel = 0; drag.v = drag.v * .5 + dp / dt * .5; if (dp) dir = Math.sign(dp); lastIn = now; });
+const up = e => { if (!drag) return; const d = drag; drag = null; stage.classList.remove('dragging');
+  if (d.moved) { T += clamp(d.v, -14, 14) * .22; lastIn = performance.now(); return; }   // (a fling runs on a little)
+  const el = e.target.closest && e.target.closest('.card'); if (el) { const i = +el.dataset.i; goTo(pos + wrapD(i - pos)); } };   // (a click on a card brings it to the middle)
+stage.addEventListener('pointerup', up); stage.addEventListener('pointerleave', () => { hoverI = -1; });
+stage.addEventListener('pointercancel', () => { drag = null; stage.classList.remove('dragging'); });
+addEventListener('wheel', e => { if (e.target.closest && e.target.closest('.panel')) return; e.preventDefault(); if (introOn) return;
+  const d = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * (e.deltaMode === 1 ? 30 : 1);
+  T += d / 140 * P.scroll; if (d) dir = Math.sign(d); lastIn = performance.now(); }, { passive: false });
+addEventListener('keydown', e => { if (e.target.closest && e.target.closest('input')) return;
+  if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false);
+  const k = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (k && !introOn) { goTo(Math.round(T) + k); e.preventDefault(); } });
+
+// ---------- the words: the item in the middle; the old line fades up and out, the new one comes up into place ----------
+let capI = -1;
+function caption(i) { if (i === capI) return; capI = i;
+  for (const o of cap.querySelectorAll('.it')) { o.classList.add('out'); setTimeout(() => o.remove(), 420); }
+  const el = document.createElement('div'); el.className = 'it pre';
+  el.innerHTML = `<span class="n">${String(i + 1).padStart(2, '0')} / ${N}</span><h2></h2><p></p>`; el.querySelector('h2').textContent = ITEMS[i][0]; el.querySelector('p').textContent = ITEMS[i][1];
+  cap.appendChild(el); requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => el.classList.remove('pre'), 90))); }
+
+// ---------- the intro: the cards come in from both sides, the outer ones first, and the middle one turns to face you last ----------
+let introOn = false, introT = 0;
+function playIntro() { if (BARE || reduce) return; introOn = true; introT = 0; vel = 0; pos = T = Math.round(T); document.body.classList.add('intro'); }
+
+// ---------- each frame ----------
+let last = performance.now();
+function frame(now) { if (!REC) requestAnimationFrame(frame);
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (DEMO || (P.auto > 0 && !BARE && !drag && now - lastIn > 2500 && !introOn)) { autoT += dt; const every = DEMO ? STEP : P.auto; if (autoT >= every - 1e-6) { autoT = DEMO ? autoT - every : 0; goTo(Math.round(T) + 1); } }
+  if (!drag && !introOn) {
+    if (P.snap && now - lastIn > 150 && T !== Math.round(T)) T = dir > 0 ? Math.ceil(T - .15) : Math.floor(T + .15);   // (settle on a card, the way it was going)
+    const k = 14 * P.friction, c = 2 * Math.sqrt(k); vel += (k * (T - pos) - c * vel) * dt; pos += vel * dt;
+    if (Math.abs(T - pos) < 1e-4 && Math.abs(vel) < 1e-3) { pos = T; vel = 0; } }
+  if (introOn) { introT += dt; if (introT > 2.2) { introOn = false; document.body.classList.remove('intro'); } }
+  const W = innerWidth;
+  for (let i = 0; i < N; i++) { const c = cards[i]; let d = wrapD(i - pos), op = 1, extra = 0;
+    let p = pose(d); op = p.fade;
+    c.h = (c.h || 0) + ((i === hoverI && !introOn ? 1 : 0) - (c.h || 0)) * (1 - Math.exp(-dt * 10));   // (the hover, eased)
+    const mid = 1 - clamp(Math.abs(d) * 2, 0, 1), hv = c.h * P.hover;
+    if (hv > .001) { p.s *= 1 + .05 * hv; p.z += S * .06 * hv; }
+    let tx = 0, ty = 0; if (hv > .001 && mid > 0) { tx = -my * 14 * P.tilt * hv * mid; ty = mx * 16 * P.tilt * hv * mid; }
+    if (introOn) {   // (each card slides in from its side; the nearer the middle, the later)
+      const r = Math.min(Math.abs(Math.round(d)), 6), t = eout(clamp((introT - (6 - r) * .07) / .95, 0, 1));
+      if (r === 0) { const tc = eout(clamp((introT - .62) / 1.05, 0, 1)); p.ry = 80 * (1 - tc); p.s *= .9 + .1 * tc; p.z -= S * .5 * (1 - tc); op = clamp(tc * 1.6, 0, 1); }
+      else { p.x += Math.sign(d) * (1 - t) * W * .7; op = t; } }
+    if (introOn) op = Math.min(op, p.fade);
+    op *= clamp((W / 2 + S * .7 - Math.abs(p.x)) / (S * .5), 0, 1);
+    const tf = `translate3d(${p.x.toFixed(1)}px,0,${p.z.toFixed(1)}px) rotateY(${(p.ry + ty).toFixed(2)}deg) rotateX(${tx.toFixed(2)}deg) scale(${p.s.toFixed(4)})`;
+    if (tf !== c.tf) { c.el.style.transform = tf; c.tf = tf; }
+    const o = op.toFixed(3); if (o !== c.op) { c.el.style.opacity = o; c.op = o; c.el.style.visibility = op < .005 ? 'hidden' : ''; }
+    const zi = String(1000 - Math.round(p.a * 20)); if (zi !== c.zi) { c.el.style.zIndex = zi; c.zi = zi; }
+    const dk = (P.shade * p.e).toFixed(3); if (dk !== c.dk) { c.el.style.setProperty('--dark', dk); c.dk = dk; }
+    // (blur towards the ends; the picture moving inside the card as it turns; the light under the pointer)
+    const bl = P.edgeBlur * sm(clamp((p.far - .5) / 5, 0, 1)), fl = bl > .15 ? `blur(${bl.toFixed(1)}px)` : ''; if (fl !== c.fl) { c.el.style.filter = fl; c.fl = fl; }
+    const bp = P.parallax > 0 ? `${(50 + clamp(d, -3, 3) * 9 * P.parallax).toFixed(1)}% 50%` : ''; if (bp !== c.bp) { c.el.style.backgroundPosition = bp; c.el.style.backgroundSize = P.parallax > 0 ? `${100 + 30 * P.parallax}%` : ''; c.bp = bp; }
+    const gl = (hv * mid * .9).toFixed(3); if (gl !== c.gl) { c.el.style.setProperty('--glow', gl); c.gl = gl; }
+    if (hv * mid > .01) { c.el.style.setProperty('--lx', ((mx + .5) * 100).toFixed(1) + '%'); c.el.style.setProperty('--ly', ((my + .5) * 100).toFixed(1) + '%'); }
+    const side = d > 0; if (side !== c.side) { c.el.classList.toggle('r', side); c.side = side; } }
+  caption(((Math.round(pos) % N) + N) % N); }
+
+// ---------- the view ----------
+function layout() { const w = innerWidth, h = innerHeight; S = Math.round(Math.min(w * (w < 700 ? .62 : P.size), h * (BARE ? .5 : .46))) ;
+  stage.style.perspective = (S * P.persp) + 'px'; row.style.setProperty('--s', S + 'px'); row.style.setProperty('--r', (S * P.radius) + 'px'); row.style.setProperty('--cy', (BARE ? 50 : P.rowY * 100) + '%');
+  row.style.setProperty('--sh', P.shadow); document.body.classList.toggle('reflect', P.reflect); document.body.classList.toggle('nowords', !P.words);
+  for (const c of cards) c.tf = null; }
+addEventListener('resize', layout);
+
+// ---------- light and dark ----------
+let mode = BARE ? (q.get('mode') === 'light' ? 'light' : 'dark') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'dark'; } catch { return 'dark'; } })();
+function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('light', m === 'light'); document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'light' ? '#efede8' : '#1c1c1e'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph2'; head.innerHTML = '<div><h2>Tune</h2><p>The row of cards, how it moves, and the words under it.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); layout(); };
+  const sl = (g, k, label, min, max, step, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const ck = (g, k, label) => ctl[k] = LabUI.check(g, { label, value: P[k], onChange: v => set(k, v) });
+  const g0 = LabUI.group(panel, 'Row', { key: KEY + '.g.row' });
+  sl(g0, 'size', 'Card size', .22, .6, .01, ''); sl(g0, 'gap', 'Space round the middle', .45, 1.2, .01, '×'); sl(g0, 'angle', 'Side cards turn', 30, 88, 1, '°');
+  sl(g0, 'step', 'Side cards spacing', .08, .5, .01, '×'); sl(g0, 'squeeze', 'Closer towards the ends', 0, .15, .005, ''); sl(g0, 'depth', 'Side cards back', 0, 1, .01, '×');
+  sl(g0, 'persp', 'Perspective (more: flatter)', 1.5, 8, .1, '×'); sl(g0, 'center', 'Middle card bigger', 1, 1.2, .01, '×'); sl(g0, 'radius', 'Corners', 0, .25, .005, ''); sl(g0, 'rowY', 'Height on the page', .3, .6, .01, '');
+  const g1 = LabUI.group(panel, 'Motion', { key: KEY + '.g.motion' });
+  sl(g1, 'scroll', 'Scroll strength', .2, 3, .05, '×'); sl(g1, 'friction', 'Glide (more: quicker)', 1, 8, .1, ''); ck(g1, 'snap', 'Settle on a card');
+  sl(g1, 'auto', 'Move on by itself (s, 0: off)', 0, 8, .1, 's');
+  ctl.intro = LabUI.check(g1, { label: 'Intro when the page opens', value: P.intro, onChange: v => { P.intro = v; save(); } });
+  { const r = document.createElement('div'); r.className = 'ui-row'; const b = document.createElement('button'); b.type = 'button'; b.className = 'introbtn'; b.textContent = 'Play the intro'; b.onclick = () => { openPanel(false); playIntro(); }; r.appendChild(b); g1.appendChild(r); }
+  const g2 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' });
+  const g3 = LabUI.group(panel, 'Shape', { key: KEY + '.g.shape' });
+  sl(g3, 'curve', 'Curve (a half circle round you)', 0, 1, .01, ''); sl(g3, 'shrink', 'Smaller towards the ends', 0, .6, .01, ''); sl(g3, 'reach', 'Cards each side (fade past it)', 2, 9, .1, '');
+  sl(g3, 'edgeBlur', 'Blur towards the ends', 0, 12, .1, 'px'); sl(g3, 'parallax', 'Picture moves inside', 0, 1, .01, '');
+  const g4 = LabUI.group(panel, 'Hover', { key: KEY + '.g.hover' });
+  sl(g4, 'hover', 'Lift under the pointer', 0, 1.5, .01, ''); sl(g4, 'tilt', 'Middle card follows the pointer', 0, 1.5, .01, '');
+  sl(g2, 'shade', 'Side cards in shade', 0, 1, .01, ''); sl(g2, 'shadow', 'Shadow', 0, .8, .01, ''); ck(g2, 'reflect', 'Reflection under the row'); ck(g2, 'words', 'Words under the row');
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); layout(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+
+// ---------- start; the board's box: ?thumb=1 still, ?demo=1 moving on by itself ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF }; }
+buildPanel(); setMode(mode); LabUI.segThumb($('mode')); layout();
+if (!BARE && P.intro && !reduce) playIntro(); else document.body.classList.remove('intro');
+if (!REC) requestAnimationFrame(frame); else last = 0;
+window.FLOW = { frame, get P() { return P; }, playIntro, goTo, get pos() { return pos; } };
+</script>
+</body>
+</html>
