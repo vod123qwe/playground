@@ -14,13 +14,13 @@
   let uid = 0;
   const decimals = step => { const s = String(step); return s.includes('.') ? s.split('.')[1].length : 0; };
 
-  function group(parent, title, { open = true, key } = {}) {
+  function group(parent, title, { open = false, key } = {}) {   // (closed unless opened during this visit: the state lives for the tab's session)
     const sec = el('section', 'ui-grp'), hd = el('button', 'ui-gh'), gb = el('div', 'ui-gb'), gi = el('div', 'ui-gi');
     hd.type = 'button'; hd.innerHTML = `<span></span><svg ${ICON}><path d="M6 9l6 6 6-6"/></svg>`; hd.firstChild.textContent = title;
     const id = `ui-g${++uid}`; gb.id = id; hd.setAttribute('aria-controls', id);
     let isOpen = open;
-    if (key) try { const v = localStorage.getItem(key); if (v != null) isOpen = v === '1'; } catch (e) {}
-    const setOpen = v => { sec.classList.toggle('closed', !v); hd.setAttribute('aria-expanded', String(v)); gi.inert = !v; if (key) try { localStorage.setItem(key, v ? '1' : '0'); } catch (e) {} };
+    if (key) try { const v = sessionStorage.getItem(key); if (v != null) isOpen = v === '1'; } catch (e) {}
+    const setOpen = v => { sec.classList.toggle('closed', !v); hd.setAttribute('aria-expanded', String(v)); gi.inert = !v; if (key) try { sessionStorage.setItem(key, v ? '1' : '0'); } catch (e) {} };
     hd.addEventListener('click', () => setOpen(sec.classList.contains('closed')));
     setOpen(isOpen);
     gb.appendChild(gi); sec.append(hd, gb); parent.appendChild(sec);

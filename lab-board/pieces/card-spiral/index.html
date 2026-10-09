@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script src="../../shared/lab-lock.js?v=3"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Card Spiral · lab</title>
+<meta name="theme-color" content="#0b0b0c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* Cards on a spiral. Two-sided cards hang round an upright axis, one turn of the spiral above the other, and the whole of it turns
+     slowly: the near ones show their faces, the far ones their backs, and each card drifts a little on its own. The back is a printed
+     pattern (the badge's tiles and stripes); the face is a simpler cut of the same pattern, a small label, a heading and a few tags.
+     A scroll or a drag turns the spiral, and a little of the turn climbs it, like a screw; it runs down and settles back to its slow
+     turn. A click draws a card out to the front (a second click turns it over); a click beside it or Esc puts it back. Light or dark
+     on top; Customize tunes the spiral, the cards and the words. One canvas (three.js). */
+  :root { --bg: #0b0b0c; --ink: #f2f1ee; --muted: rgba(255,255,255,.55); --ease: cubic-bezier(.22,.61,.36,1); --page: #17181b; --boxbg: #111113; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); transition: background .4s; -webkit-font-smoothing: antialiased; }
+  body.light { --bg: #efede8; --ink: #161616; --muted: rgba(20,20,20,.5); --page: #fff; --boxbg: #efede8; }
+  .stage { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+  .stage.dragging { cursor: grabbing; } .stage.over { cursor: pointer; }
+  .stage canvas { display: block; width: 100%; height: 100%; }
+  /* the words: a small label, then the heading; in the middle unless moved (Customize, or drag them while it is open) */
+  .say { position: fixed; left: calc(50% + var(--tx, 0) * 100vw); top: calc(var(--ty, .5) * 100vh); z-index: 2; width: min(1100px, 92vw); transform: translate(-50%, -50%) translateY(var(--ey, 0px)); text-align: center; pointer-events: none; transition: opacity .5s var(--ease); }
+  body.tuning .say { pointer-events: auto; cursor: move; } body.tuning .say:hover { outline: 1px dashed var(--muted); outline-offset: 10px; border-radius: 12px; }
+  .say .lbl { display: inline-flex; align-items: center; gap: 8px; height: 30px; margin-bottom: 18px; padding: 0 14px 0 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font: 500 13px var(--lab-font); letter-spacing: -.005em; color: var(--ink); }
+  .say .lbl::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #f47c6a; box-shadow: 0 0 0 3px rgba(244,124,106,.22); }
+  body.light .say .lbl { border-color: rgba(20,20,20,.1); background: rgba(255,255,255,.6); }
+  body.nolabel .say .lbl { display: none; }
+  .say h1 { margin: 0; font: 600 calc(clamp(32px, 5.6vw, 84px) * var(--ts, 1))/.98 var(--lab-font); letter-spacing: -.045em; text-wrap: balance; }
+  body:not(.light) .say h1 { text-shadow: 0 2px 28px rgba(0,0,0,.55), 0 0 2px rgba(0,0,0,.25); }   /* (over a light card it still reads) */
+  body.light .say h1 { text-shadow: 0 2px 28px rgba(239,237,232,.75); }
+  body.nowords .say { display: none; }
+  body.inside .say > * { opacity: 0; }   /* (inside the spiral the words are painted in the scene; this box stays to drag them by) */
+  .cue { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 3; transform: translateX(-50%); color: var(--muted); font-size: 13px; white-space: nowrap; transition: opacity .4s; pointer-events: none; }
+  body.moved .cue { opacity: 0; }
+  /* the dark that comes up from below (a page's end, or a fade at the bottom) */
+  .shade { position: fixed; inset: 0; z-index: 4; pointer-events: none; --c: 0; background: linear-gradient(to top, var(--bg) calc(var(--c) * 115% - 15%), transparent calc(var(--c) * 115% + 20%)); opacity: min(1, calc(var(--c) * 6)); }
+  .end { position: fixed; left: 50%; bottom: 40vh; z-index: 5; transform: translateX(-50%); color: var(--muted); font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .5s; }
+  body.atend .end { opacity: 1; }
+  /* the looks: the variants pill at the bottom */
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 6; transform: translateX(-50%); }
+  /* the corner controls (as on every piece) */
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #1c1c1f; color: #f2f2f0; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .3s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #1c1c1f; font: 600 13px var(--lab-font); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(255,255,255,.5); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #f2f2f0; } .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+  body.light .back, body.light .tune, body.light .mode { background: #fff; color: #1b1c20; }
+  body.light .mode button { color: rgba(20,20,20,.55); } body.light .mode button:hover { color: #1b1c20; } body.light .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .cue, body.bare .say, body.bare .dock, body.bare .end { display: none; }
+  /* with the controls on top, the words sit lower */
+  /* the panel: a card at the side (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 7; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph2 { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph2 h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph2 p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; z-index: 3; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  .txt { width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--ui-line, rgba(20,20,20,.12)); border-radius: 12px; background: transparent; color: var(--ui-ink); font: 500 14px var(--lab-font); }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); } body.tuning .panel { translate: 0 0; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="Two-sided cards on a turning spiral: scroll or drag to turn it, click a card to draw it out"></main>
+<div class="say" id="say"><span class="lbl" id="lbl"></span><h1 id="title"></h1></div>
+<p class="cue" id="cue">Scroll or drag to turn · click a card</p>
+<div class="shade" id="shade"></div><p class="end" id="end">Scroll up to come back</p>
+<div class="dock"><div class="lab-vars" id="vars" role="group" aria-label="Looks">
+  <button id="prev" type="button" aria-label="Previous look"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm">Calm</span>
+  <button id="next" type="button" aria-label="Next look"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the spiral"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.card-spiral.v1';
+const DEF = { perTurn: 8, pitch: 2.5, radius: 3.2, spiral: .4, drift: .12, scroll: 1, scatter: .5, size: .85, float: .5, fronts: .55, depth: .65, sheen: .5, colours: 'playground', title: 'Go out and play', label: 'One card a day', words: true,
+  posX: 0, posY: 0, zoom: 1, tilt: 0, lean: 0, tx: 0, ty: .5, ts: 1,
+  scrollMode: 'turn', aberr: 0, dof: 0, turnBlur: 0, shade: 0, textLayer: 'front', textShadow: .35 };
+// the looks: each sets the effects, the scroll and the place of the spiral (the rest stays yours)
+const LOOK_KEYS = ['scrollMode', 'aberr', 'dof', 'turnBlur', 'shade', 'posX', 'posY', 'zoom', 'tilt', 'lean', 'spiral', 'float'];
+const LOOKS = {
+  Calm: {},
+  Depth: { dof: 7, aberr: .25, turnBlur: .35 },
+  Dream: { dof: 11, aberr: .8, turnBlur: 1, shade: .5, float: .9, spiral: .55 },
+  Exit: { scrollMode: 'exit', shade: .3, turnBlur: .6, aberr: .35, dof: 4 },
+  Tilted: { posX: .14, tilt: 9, lean: 7, zoom: 1.1, dof: 6, aberr: .2 } };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), stage = $('stage');
+const q = new URLSearchParams(location.search), REC = q.has('rec'), BARE = q.has('thumb') || q.has('demo') || REC, DEMO = q.has('demo') || REC, T0 = 1.2, LOOP = 24;   // (the board's box: one full turn in LOOP seconds, the drift of every card a whole number of times in it, so the clip loops without a seam)
+const qf = f => BARE ? TAU * Math.max(1, Math.round(f * LOOP / TAU)) / LOOP : f;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), TAU = Math.PI * 2;
+const seeded = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+
+// ---------- the copy on the faces (placeholders) ----------
+const CARDS = [
+  ['Outside · 20 min', 'Walk a street you have never taken.', ['Outdoors', 'Solo']],
+  ['Slow · 10 min', 'Sit somewhere with no phone and no music.', ['Calm', 'Anywhere']],
+  ['People · 5 min', 'Ask someone nearby for a recommendation.', ['Talk', 'Today']],
+  ['Hands · 30 min', 'Make something you can hold.', ['Craft', 'Home']],
+  ['Notice · 15 min', 'Find five colours on your way home.', ['Look', 'Walk']],
+  ['Kind · 5 min', 'Write a note to someone you miss.', ['Letter', 'Warm']],
+  ['Taste · 40 min', 'Cook a dish you have never cooked.', ['Kitchen', 'New']],
+  ['Body · 15 min', 'Stretch outside before breakfast.', ['Morning', 'Move']],
+  ['Quiet · 1 h', 'Read in a park until the chapter ends.', ['Book', 'Park']],
+  ['Curious · 20 min', 'Learn the name of a tree near you.', ['Nature', 'Learn']],
+  ['Play · 30 min', 'Play a game with no screen at all.', ['Friends', 'Fun']],
+  ['Listen · 40 min', 'Hear an album from start to finish.', ['Music', 'Still']] ];
+
+// ---------- the patterns: the badge's tiles and stripes ----------
+const SETS = {
+  playground: ['#6cc3ea', '#e3cd7a', '#2f9aa0', '#e6e0cf', '#f47c6a', '#12a85a', '#eea2d4', '#2735c4', '#8f3530'],
+  earth: ['#c4693d', '#e2b866', '#6b8f71', '#e8dcc4', '#3d5a6c', '#a3472f', '#d9a48f', '#2f3d33'],
+  pastel: ['#f4c7c0', '#bfe0d8', '#f6e7b8', '#d5cbe9', '#b8d3ee', '#fbd9b8', '#ead2da', '#e9e4d6'] };
+const FIGS = ['pill', 'diamond', 'frame', 'dots', 'petals', 'hourglass', 'checker', 'quarter', 'bands', 'arch'];
+function tileFigure(c, x, y, s, fig, A, B, C, line) {
+  const box = () => { c.beginPath(); c.rect(x, y, s, s); }, circ = (cx, cy, r) => { c.beginPath(); c.arc(cx, cy, r, 0, TAU); }, paint = col => { c.fillStyle = col; c.fill(); c.stroke(); };
+  c.strokeStyle = line; c.lineWidth = s / 160; box(); paint(A);
+  const m = x + s / 2, n = y + s / 2;
+  if (fig === 'pill') { c.beginPath(); c.rect(m - s * .2, y, s * .4, s); paint(B); circ(m, y + s * .27, s * .13); paint(C); }
+  else if (fig === 'diamond') { c.beginPath(); c.moveTo(m, y + s * .04); c.lineTo(x + s * .96, n); c.lineTo(m, y + s * .96); c.lineTo(x + s * .04, n); c.closePath(); paint(B); c.beginPath(); c.rect(m - s * .17, n - s * .17, s * .34, s * .34); paint(C); }
+  else if (fig === 'frame') { c.beginPath(); c.rect(x + s * .16, y + s * .16, s * .68, s * .68); paint(B); }
+  else if (fig === 'dots') { c.beginPath(); c.rect(m - s * .25, y, s * .5, s); paint(B); circ(m, y + s * .27, s * .17); paint(C); circ(m, y + s * .73, s * .17); paint(C); }
+  else if (fig === 'petals') { for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { circ(m + dx * s * .24, n + dy * s * .24, s * .23); paint(B); } c.beginPath(); c.rect(m - s * .14, n - s * .14, s * .28, s * .28); paint(C); }
+  else if (fig === 'hourglass') { c.save(); box(); c.clip(); c.beginPath(); c.arc(m, y, s * .5, 0, Math.PI); c.closePath(); paint(B); c.beginPath(); c.arc(m, y + s, s * .5, Math.PI, TAU); c.closePath(); paint(B); c.restore(); }
+  else if (fig === 'checker') { const k = s / 3; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if ((i + j) % 2) { c.beginPath(); c.rect(x + i * k, y + j * k, k, k); paint(B); } }
+  else if (fig === 'quarter') { c.save(); box(); c.clip(); c.beginPath(); c.moveTo(x, y + s); c.arc(x, y + s, s, -Math.PI / 2, 0); c.closePath(); paint(B); c.restore(); }
+  else if (fig === 'bands') { const k = 6, h = s / k; for (let i = 1; i < k; i += 2) { c.beginPath(); c.rect(x, y + i * h, s, h); paint(B); } }
+  else if (fig === 'arch') { const aw = s * .64, ax = m - aw / 2, top = y + s * .14 + aw / 2; c.beginPath(); c.moveTo(ax, y + s); c.lineTo(ax, top); c.arc(m, top, aw / 2, Math.PI, TAU); c.lineTo(ax + aw, y + s); c.closePath(); paint(B); circ(m, y + s * .64, s * .13); paint(C); }
+  c.beginPath(); c.rect(x, y, s, s); c.stroke(); }
+// (stripes in two colours, and lines across them where the stripes swap colour: arrows, zigzags, diamonds come out of plain stripes)
+const frac = x => x - Math.floor(x), tri = x => 1 - Math.abs(2 * frac(x) - 1);
+const ramp = (x, r) => { const f = frac(x); return f < 1 - r ? f / (1 - r) : (1 - f) / r; };
+const MOTIFS = {
+  arrows: (k, ph, r) => [u => .5 - .5 * (1 - ramp(u * k + ph, r)), u => .5 + .5 * (1 - ramp(u * k + ph, r))],
+  zigzag: (k, ph) => [u => .2 + .6 * tri(u * k + ph), u => .2 + .6 * tri(u * k + ph + .5)],
+  diamonds: (k, ph) => [u => .5 - .44 * tri(u * k + ph), u => .5 + .44 * tri(u * k + ph)],
+  bowtie: (k, ph) => [u => .5 - .48 * (1 - tri(u * k + ph)), u => .5 + .48 * (1 - tri(u * k + ph))] };
+function stripes(c, w, h, o) {
+  c.save(); if (o.dir === 'h') { c.translate(w, 0); c.rotate(Math.PI / 2); [w, h] = [h, w]; }
+  const n = Math.max(2, Math.round(o.stripes)), sw = w / n, sub = Math.max(2, Math.ceil(240 / n)), lines = MOTIFS[o.motif](o.repeat, o.phase, Math.min(.5, o.repeat / n)), dark = new Path2D(), cl = y => Math.max(0, Math.min(h, y));
+  const slice = (i, xa, xb, depth = 0) => { const ua = xa / w + 1e-7, ub = xb / w - 1e-7;
+    if (depth < 2) for (const f of lines) if (Math.abs(f(ua) - f(ub)) > .3) { let lo = ua, hi = ub; for (let t = 0; t < 22; t++) { const m = (lo + hi) / 2; if (Math.abs(f(lo) - f(m)) > Math.abs(f(m) - f(hi))) hi = m; else lo = m; }
+      const xs = (lo + hi) / 2 * w; slice(i, xa, xs, depth + 1); slice(i, xs, xb, depth + 1); return; }
+    const um = (ua + ub) / 2, cuts = lines.map(f => [cl(f(ua) * h), cl(f(ub) * h), f(um)]).sort((p, q) => p[2] - q[2]), edges = [[0, 0], ...cuts, [h, h]];
+    for (let e = 0; e < edges.length - 1; e++) if (((i % 2 === 0) ? 1 : 0) ^ (e % 2)) {
+      const [ta, tb] = edges[e], [ba, bb] = edges[e + 1]; if (ba - ta < .01 && bb - tb < .01) continue;
+      dark.moveTo(xa, ta); dark.lineTo(xb, tb); dark.lineTo(xb, Math.max(bb, tb)); dark.lineTo(xa, Math.max(ba, ta)); dark.closePath(); } };
+  for (let i = 0; i < n; i++) for (let j = 0; j < sub; j++) slice(i, (i + j / sub) * sw, (i + (j + 1) / sub) * sw);
+  c.fillStyle = o.b; c.fillRect(0, 0, w, h); c.fillStyle = o.a; c.fill(dark); c.restore(); }
+
+// one design per card: three colours from the set, and either a wall of one figure or a run of stripes; simple: the face's cut of it
+const LINE = 'rgba(25,22,20,.5)';
+function designs(set) {
+  const cs = SETS[set] || SETS.playground, R = seeded(set.length * 977 + 11), out = [];
+  for (let k = 0; k < CARDS.length; k++) {
+    const pick = [], pool = cs.slice(); for (let i = 0; i < 3; i++) pick.push(pool.splice(Math.floor(R() * pool.length), 1)[0]);
+    const kind = k % 3 === 2 ? 'stripes' : 'tiles';
+    out.push({ kind, cs: pick, fig: FIGS[Math.floor(R() * FIGS.length)], fig2: R() < .4 ? FIGS[Math.floor(R() * FIGS.length)] : null, cols: 1 + Math.floor(R() * 3),
+      motif: Object.keys(MOTIFS)[Math.floor(R() * 4)], stripes: 6 + Math.floor(R() * 6), repeat: 1 + Math.floor(R() * 3), dir: R() < .5 ? 'v' : 'h', phase: R() }); }
+  return out; }
+function drawDesign(c, w, h, d, simple) {
+  const [A, B, C] = d.cs;
+  if (d.kind === 'stripes') { stripes(c, w, h, { motif: d.motif, stripes: simple ? Math.max(3, Math.round(d.stripes / 2)) : d.stripes, repeat: simple ? 1 : d.repeat, phase: d.phase, dir: d.dir, a: B, b: A }); return; }
+  const cols = simple ? 1 : d.cols, s = w / cols, rows = Math.ceil(h / s) + (simple ? 0 : 1), y0 = (h - rows * s) / 2;
+  c.fillStyle = A; c.fillRect(0, 0, w, h);
+  for (let r = 0; r < rows; r++) for (let i = 0; i < cols; i++) { const alt = (r + i) % 2 === 1, fig = alt && d.fig2 ? d.fig2 : d.fig;
+    tileFigure(c, i * s, y0 + r * s, s, fig, alt ? B : A, alt ? A : B, C, LINE); } }
+
+// ---------- the card faces, drawn once on canvases ----------
+const TW = 600, TH = 820, CARD_H = TH / TW;   // (a card is one unit wide)
+const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect(x, y, w, h, r); };
+function wrap(c, text, w) { const out = []; let line = ''; for (const word of text.split(' ')) { const t = line ? line + ' ' + word : word; if (c.measureText(t).width > w && line) { out.push(line); line = word; } else line = t; } if (line) out.push(line); return out; }
+function faceCanvas(d, copy) {
+  const cv = document.createElement('canvas'); cv.width = TW; cv.height = TH; const c = cv.getContext('2d'), pad = 40;
+  const g = c.createLinearGradient(0, 0, 0, TH); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#e9e8e4'); c.fillStyle = g; c.fillRect(0, 0, TW, TH);
+  // (from the bottom up: the tags, the heading, the label; the cut of the pattern takes what is left above)
+  c.font = '500 24px Geist, system-ui, sans-serif'; let x = pad; const py = TH - pad - 48;
+  copy[2].forEach((t, i) => { const w = c.measureText(t).width + 40; rr(c, x, py, w, 48, 24); c.fillStyle = i === 0 ? d.cs[1] : '#e6e5e1'; c.fill(); if (i === 0) { c.strokeStyle = 'rgba(25,22,20,.18)'; c.lineWidth = 1.5; c.stroke(); }
+    c.fillStyle = '#26262a'; c.textBaseline = 'middle'; c.fillText(t, x + 20, py + 25); x += w + 10; });
+  c.font = '600 52px Geist, system-ui, sans-serif'; c.letterSpacing = '-1.5px'; const lines = wrap(c, copy[1], TW - pad * 2).slice(0, 3);
+  c.fillStyle = '#141416'; c.textBaseline = 'alphabetic'; let y = py - 34;
+  for (let i = lines.length - 1; i >= 0; i--) { c.fillText(lines[i], pad, y); y -= 56; }
+  c.letterSpacing = '1.5px'; c.font = '500 21px "Geist Mono", ui-monospace, monospace'; c.fillStyle = '#8a8984'; c.fillText(copy[0].toUpperCase(), pad, y - 4); c.letterSpacing = '0px';
+  const top = pad, ph = y - 4 - 21 - 30 - top;
+  if (ph > 60) { const off = document.createElement('canvas'); off.width = TW - pad * 2; off.height = Math.round(ph); drawDesign(off.getContext('2d'), off.width, off.height, d, true);
+    c.save(); rr(c, pad, top, off.width, off.height, 26); c.clip(); c.drawImage(off, pad, top); c.restore();
+    rr(c, pad + .75, top + .75, off.width - 1.5, off.height - 1.5, 26); c.strokeStyle = 'rgba(25,22,20,.12)'; c.lineWidth = 1.5; c.stroke(); }
+  return cv; }
+function backCanvas(d) {
+  const cv = document.createElement('canvas'); cv.width = TW; cv.height = TH; const c = cv.getContext('2d');
+  drawDesign(c, TW, TH, d, false);
+  const g = c.createLinearGradient(0, 0, TW, TH); g.addColorStop(0, 'rgba(255,255,255,.10)'); g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.06)'); c.fillStyle = g; c.fillRect(0, 0, TW, TH);
+  return cv; }
+
+// ---------- the scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene(), FOV = 32, camera = new THREE.PerspectiveCamera(FOV, 1, .1, 200);
+scene.fog = new THREE.Fog(0x0b0b0c, 6, 16);
+{ const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), .04).texture; scene.environmentIntensity = .55; }
+const key = new THREE.DirectionalLight(0xffffff, 1.6), LDIR = new THREE.Vector3(-3, 5, 6).normalize().multiplyScalar(16); key.position.copy(LDIR); key.layers.enableAll(); scene.add(key, key.target, new THREE.AmbientLight(0xffffff, .55));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap; key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 9; key.shadow.blurSamples = 16; key.shadow.bias = -.0005;
+// (the card: a rounded rectangle, its texture over the whole of it)
+const geo = (() => { const w = 1, h = CARD_H, r = .06, s = new THREE.Shape(); s.roundRect ? s.roundRect(-w / 2, -h / 2, w, h, r) : null;
+  if (!s.curves.length) { const x = -w / 2, y = -h / 2; s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h); s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); }
+  const g = new THREE.ShapeGeometry(s, 8), p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / w + .5, p.getY(i) / h + .5); return g; })();
+let faces = [], backs = [];
+function textures() {
+  for (const m of [...faces, ...backs]) { m.map.dispose(); m.dispose(); }
+  const ds = designs(P.colours), an = renderer.capabilities.getMaxAnisotropy();
+  const tex = cv => { const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = an; return t; };
+  faces = ds.map((d, k) => new THREE.MeshPhysicalMaterial({ map: tex(faceCanvas(d, CARDS[k])), roughness: .5, clearcoat: P.sheen, clearcoatRoughness: .32 }));
+  backs = ds.map(d => new THREE.MeshPhysicalMaterial({ map: tex(backCanvas(d)), roughness: .78, clearcoat: P.sheen * .3, clearcoatRoughness: .55 })); }
+
+// ---------- the effects (all off unless a look or the panel turns them on): the scene drawn into a buffer with its depth, then one
+// pass: a blur by distance from the focus (the near side of the spiral, or a drawn card), a blur while it turns fast, colour fringes
+// towards the edges (stronger in motion) ----------
+const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+rt.depthTexture = new THREE.DepthTexture(1, 1); rt.depthTexture.type = THREE.UnsignedIntType;
+const post = new THREE.ShaderMaterial({ depthTest: false, depthWrite: false,
+  uniforms: { tCol: { value: rt.texture }, tDepth: { value: rt.depthTexture }, uRes: { value: new THREE.Vector2(1, 1) }, uNear: { value: .1 }, uFar: { value: 200 },
+    uFocus: { value: 6 }, uRange: { value: 3 }, uDof: { value: 0 }, uBlur: { value: 0 }, uAb: { value: 0 }, tText: { value: null }, uTextZ: { value: 9 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D tCol, tDepth, tText; uniform vec2 uRes; uniform float uNear, uFar, uFocus, uRange, uDof, uBlur, uAb, uTextZ; varying vec2 vUv;
+    float viewZ(float d){ float z = d * 2.0 - 1.0; return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear)); }
+    float cocAt(vec2 uv){ float d = texture2D(tDepth, uv).x; return (d >= 1.0 ? 1.0 : smoothstep(0.0, 1.0, (viewZ(d) - uFocus) / uRange)) * uDof + uBlur; }
+    vec3 fringe(vec2 uv){ vec2 o = (uv - 0.5) * uAb; return vec3(texture2D(tCol, uv + o).r, texture2D(tCol, uv).g, texture2D(tCol, uv - o).b); }
+    void main(){
+      float coc = cocAt(vUv);
+      vec3 c = vec3(0.0);
+      if (coc < 0.35) c = fringe(vUv);
+      else { float ws = 0.0;
+        for (int i = 0; i < 24; i++) { float f = float(i), r = sqrt((f + 0.5) / 24.0) * coc, a = f * 2.39996; vec2 uv = vUv + vec2(cos(a), sin(a)) * r / uRes;
+          float w = i == 0 ? 1.0 : clamp(cocAt(uv) - r + 1.0, 0.0, 1.0); c += fringe(uv) * w; ws += w; }
+        c /= ws; }
+      vec4 tx = texture2D(tText, vUv);                     // the words inside the spiral: hidden where a card lies nearer than they do
+      if (tx.a > 0.0) { float d = texture2D(tDepth, vUv).x, vis = d >= 1.0 ? 1.0 : smoothstep(-0.08, 0.08, viewZ(d) - uTextZ); c = c * (1.0 - tx.a * vis) + tx.rgb * vis; }
+      gl_FragColor = vec4(c, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }` });
+const postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post));
+const fxOn = () => P.aberr > 0 || P.dof > 0 || P.turnBlur > 0;
+const rtText = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType }); post.uniforms.tText.value = rtText.texture;
+const textCv = document.createElement('canvas'), textTex = new THREE.CanvasTexture(textCv); textTex.colorSpace = THREE.SRGBColorSpace;
+const textMat = new THREE.MeshBasicMaterial({ map: textTex, transparent: true, depthWrite: false, fog: false, toneMapped: false });
+const textMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), textMat); textMesh.renderOrder = 5;
+const shadeMat = new THREE.ShadowMaterial({ opacity: .3, transparent: true, depthWrite: false, fog: false });
+shadeMat.onBeforeCompile = sh => { sh.uniforms.tMask = { value: textTex };
+  sh.vertexShader = 'varying vec2 vMaskUv;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvMaskUv = uv;');
+  sh.fragmentShader = 'uniform sampler2D tMask; varying vec2 vMaskUv;\n' + sh.fragmentShader.replace('gl_FragColor = vec4( color, opacity * ( 1.0 - getShadowMask() ) );', 'gl_FragColor = vec4( color, opacity * texture2D( tMask, vMaskUv ).a * ( 1.0 - getShadowMask() ) );'); };
+const shadeMesh = new THREE.Mesh(textMesh.geometry, shadeMat); shadeMesh.renderOrder = 6; shadeMesh.receiveShadow = true; shadeMesh.position.z = .002; textMesh.add(shadeMesh);
+textMesh.layers.set(1); shadeMesh.layers.set(1); scene.add(textMesh); camera.layers.enable(1);
+let textBox = { w: 1, h: 1 };
+function balance(c, text, max) {   // (lines of even length, like text-wrap: balance)
+  let lines = wrap(c, text, max); if (lines.length < 2) return lines;
+  let lo = max * .4, hi = max; for (let k = 0; k < 14; k++) { const m = (lo + hi) / 2; if (wrap(c, text, m).length > lines.length) lo = m; else hi = m; }
+  return wrap(c, text, hi); }
+function drawWords() {   // (the same words as on top, painted for the plane: the label in its pill, the heading, a soft shade under them)
+  const vw = innerWidth, dpr = Math.min(devicePixelRatio || 1, 2), font = getComputedStyle(document.body).getPropertyValue('--lab-font').trim() || 'Geist, system-ui, sans-serif';
+  const fs = clamp(vw * .056, 32, 84) * P.ts, lh = fs * .98, max = Math.min(1100, vw * .92), c = textCv.getContext('2d'), dark = mode !== 'light';
+  c.font = `600 ${fs}px ${font}`; c.letterSpacing = (-.045 * fs) + 'px'; const lines = balance(c, P.title, max), lw = Math.max(1, ...lines.map(l => c.measureText(l).width));
+  const hasL = !!P.label.trim(); c.font = `500 13px ${font}`; c.letterSpacing = '0px'; const lbw = hasL ? c.measureText(P.label).width + 25 + 18 : 0;
+  const pad = 60, w = Math.max(lw, lbw) + pad * 2, h = (hasL ? 48 : 0) + lines.length * lh + pad * 2;
+  // (a new size needs a new texture, or the old one stretches)
+  const cw = Math.ceil(w * dpr), ch = Math.ceil(h * dpr); if (cw !== textCv.width || ch !== textCv.height) { textCv.width = cw; textCv.height = ch; textTex.dispose(); }
+  c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h); textBox = { w, h };
+  let y = pad;
+  if (hasL) { const x = (w - lbw) / 2; c.beginPath(); c.roundRect(x + .5, y + .5, lbw - 1, 29, 15); c.fillStyle = dark ? 'rgba(28,28,31,.72)' : 'rgba(255,255,255,.78)'; c.fill(); c.strokeStyle = dark ? 'rgba(255,255,255,.16)' : 'rgba(20,20,20,.1)'; c.stroke();
+    c.beginPath(); c.arc(x + 14.5, y + 15, 6.5, 0, TAU); c.fillStyle = 'rgba(244,124,106,.22)'; c.fill(); c.beginPath(); c.arc(x + 14.5, y + 15, 3.5, 0, TAU); c.fillStyle = '#f47c6a'; c.fill();
+    c.font = `500 13px ${font}`; c.fillStyle = dark ? '#f2f1ee' : '#161616'; c.textBaseline = 'middle'; c.fillText(P.label, x + 25, y + 15.5); y += 48; }
+  c.font = `600 ${fs}px ${font}`; c.letterSpacing = (-.045 * fs) + 'px'; c.textBaseline = 'alphabetic'; c.textAlign = 'center';
+  c.shadowColor = dark ? 'rgba(0,0,0,.55)' : 'rgba(239,237,232,.75)'; c.shadowBlur = 28; c.shadowOffsetY = 2; c.fillStyle = dark ? '#f2f1ee' : '#161616';
+  lines.forEach((l, i) => c.fillText(l, w / 2, y + lh * (i + .8)));
+  c.shadowColor = 'transparent'; c.textAlign = 'left'; textTex.needsUpdate = true; placeWords(); }
+function placeWords() {   // (where the words stand on top, on the plane through the axis: the same size on screen; with the spiral when it moves)
+  const ppu = innerHeight / (2 * D * Math.tan(FOV / 2 * Math.PI / 180));
+  textMesh.scale.set(textBox.w / ppu, textBox.h / ppu, 1);
+  textMesh.position.set((P.tx - P.posX) * innerWidth / ppu, -((P.ty - P.posY) - .5) * innerHeight / ppu, 0);
+  textMesh.visible = P.words && P.textLayer === 'inside' && !BARE; document.body.classList.toggle('inside', P.textLayer === 'inside');
+  // (the cards' shadow on the words: the key light's shadow camera framed on them)
+  const on = textMesh.visible && P.textShadow > 0; key.castShadow = on; shadeMesh.visible = on; shadeMat.opacity = P.textShadow * .55;
+  if (on) { const sx = textMesh.scale.x / 2 + 1, sy = textMesh.scale.y / 2 + 1, sc = key.shadow.camera; sc.left = -sx; sc.right = sx; sc.top = sy; sc.bottom = -sy; sc.near = .5; sc.far = 40; sc.updateProjectionMatrix();
+    key.target.position.copy(textMesh.position); key.position.copy(textMesh.position).add(LDIR); key.target.updateMatrixWorld(); } }
+
+// ---------- the spiral: every card has a place u (0..1) along it; u climbs the height H and goes round `turns` times. Moving all of
+// them along u is the climb (with its turn); spin turns the whole without climbing. The spiral is long enough to run past the top and
+// the bottom of the view, so a card that wraps round from one end to the other does it out of sight ----------
+let cards = [], turns = 4, H = 8.4, D = 9, spin = 0, phase = 0, vel = 0;
+const group = new THREE.Group(); scene.add(group);
+function fit() {
+  const w = innerWidth, h = innerHeight, a = w / h, t = Math.tan(FOV / 2 * Math.PI / 180), R = P.radius;
+  D = Math.max(R + 5.2, R * (BARE ? .6 : a < 1 ? .5 : .95) / (t * a) + R * .55) / P.zoom;   // (a tall view cuts the sides of the spiral, so the cards stay big)
+  const need = 2 * (D + R) * t * (1 + Math.abs(P.posY) * 2 + (P.scrollMode === 'exit' ? 2.4 : 0) + (Math.abs(P.tilt) + Math.abs(P.lean)) / 40) + CARD_H * P.size * 1.4;   // (moved, tilted or leaning: a longer spiral, so its ends stay out of sight)   // (from the bottom to the top of the view, at the far side, and a card more)
+  return Math.max(2, Math.ceil(need / P.pitch)); }
+function build() {
+  for (const c of cards) group.remove(c.g); cards = []; turns = fit(); H = turns * P.pitch;
+  const n = turns * P.perTurn, R = seeded(1234);
+  for (let i = 0; i < n; i++) { const g = new THREE.Group(), di = (i * 5) % CARDS.length, f = new THREE.Mesh(geo, faces[di]), b = new THREE.Mesh(geo, backs[di]);
+    b.rotation.y = Math.PI; f.userData.i = b.userData.i = i; f.castShadow = b.castShadow = true; g.add(f, b); group.add(g);
+    cards.push({ g, f, b, di, u0: i / n, jy: R() - .5, ja: R() - .5, jr: R() - .5, tilt: R() - .5, flip: R(), fq: .7 + R() * .6, p1: R() * TAU, p2: R() * TAU, p3: R() * TAU }); }
+  pulled = -1; pa = 0; }
+const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qg = new THREE.Quaternion(), eu = new THREE.Euler(), va = new THREE.Vector3(), vb = new THREE.Vector3();
+function place(c, t) {   // (the card's live place on the spiral, and its own drift)
+  const u = frac(c.u0 + phase), sc = P.scatter, fl = reduce ? 0 : P.float, R = P.radius * (1 + c.jr * .16 * sc);
+  const th = TAU * turns * u + spin + c.ja * .5 * sc / P.perTurn * TAU * .5, y = (u - .5) * H + c.jy * .5 * P.pitch * sc + Math.sin(t * qf(.55 * c.fq) + c.p3) * .07 * fl;
+  va.set(R * Math.sin(th), y, R * Math.cos(th));
+  const yaw = th + (c.flip > P.fronts ? Math.PI : 0) + Math.sin(t * qf(.42 * c.fq) + c.p1) * .16 * fl, pitch = Math.sin(t * qf(.33 * c.fq) + c.p2) * .09 * fl, roll = c.tilt * .26 * sc + Math.sin(t * qf(.29 * c.fq) + c.p1 * 1.3) * .05 * fl;
+  eu.set(pitch, yaw, roll, 'YXZ'); qa.setFromEuler(eu); }
+function climb(d) { spin += d * (1 - P.spiral); phase += d * P.spiral / (TAU * turns); }   // (d radians of turn; spiral: the share of it that climbs)
+
+// ---------- a card drawn out: it comes to the front and faces you (a second click turns it over); the rest goes under a veil ----------
+let pulled = -1, pa = 0, pTarget = 0, showBack = false, flipA = 0;
+const veil = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x0b0b0c, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+veil.renderOrder = 1; scene.add(veil);
+function pull(i) { if (i < 0) { pTarget = 0; return; } if (pulled !== i) { if (pulled >= 0 && pa > .02) { pTarget = 0; pending = i; return; } pulled = i; pa = 0; showBack = false; flipA = 0; } pTarget = 1; document.body.classList.add('moved'); }
+let pending = -1, fontsIn = false;
+let exitT = 0, exitS = 0, exitV = 0;   // (the exit scroll: where the page is going, where it is, how fast)
+
+// ---------- the hand: scroll and drag turn the spiral (a little of it climbs); let go and it runs on and settles; a click draws out ----------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function cardAt(x, y) { ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects(cards.flatMap(c => [c.f, c.b]), false); return hits.length ? hits[0].object.userData.i : -1; }
+const pxPerRad = () => innerHeight / (2 * (D - P.radius) * Math.tan(FOV / 2 * Math.PI / 180)) * P.radius;
+let drag = null, hoverXY = null, mouse = { x: 0, y: 0 };
+stage.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag = { shift: e.shiftKey, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, t: performance.now(), v: 0 }; try { stage.setPointerCapture(e.pointerId); } catch { } });
+stage.addEventListener('pointermove', e => { mouse.x = e.clientX / innerWidth - .5; mouse.y = e.clientY / innerHeight - .5; hoverXY = [e.clientX, e.clientY];
+  if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 5) { drag.moved = true; stage.classList.add('dragging'); document.body.classList.add('moved'); if (pulled >= 0) pull(-1); }
+  if (!drag.moved) return;
+  if (drag.shift) { P.posX = clamp(P.posX + dx / innerWidth, -.5, .5); P.posY = clamp(P.posY + dy / innerHeight, -.5, .5); view(); ctl.posX?.set(P.posX); ctl.posY?.set(P.posY); return; }   // (shift: move it about the screen)
+  if (P.scrollMode === 'exit') exitT = clamp(exitT - dy / innerHeight * 1.1, 0, 1);   // (exit: up and down is the page; across still turns it)
+  const d = (dx - (P.scrollMode === 'exit' ? 0 : dy * .8)) / pxPerRad(), now = performance.now(), dt = Math.max(8, now - drag.t) / 1000; drag.t = now;
+  climb(d); drag.v = drag.v * .5 + d / dt * .5; });
+const up = e => { if (!drag) return; const d = drag; drag = null; stage.classList.remove('dragging');
+  if (d.moved) { if (d.shift) { save(); resize(); } else vel = clamp(d.v, -6, 6); return; }
+  const i = cardAt(e.clientX, e.clientY);
+  if (pulled >= 0 && pTarget > 0) { if (i === pulled) { showBack = !showBack; return; } pull(-1); return; }
+  if (i >= 0) pull(i); };
+stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', () => { drag = null; stage.classList.remove('dragging'); });
+addEventListener('wheel', e => { if (e.target.closest && e.target.closest('.panel')) return; e.preventDefault(); if (pulled >= 0 && pTarget > 0) pull(-1);
+  const dy = e.deltaY * (e.deltaMode === 1 ? 30 : 1);
+  if (P.scrollMode === 'exit') exitT = clamp(exitT + dy * .00055 * P.scroll, 0, 1);
+  else vel = clamp(vel + dy * .0042 * P.scroll, -6, 6);
+  document.body.classList.add('moved'); }, { passive: false });
+addEventListener('keydown', e => { if (e.target.closest && e.target.closest('input')) return;
+  if (e.key === 'Escape') { if (document.body.classList.contains('tuning')) openPanel(false); else pull(-1); }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') vel = clamp(vel + .9, -6, 6);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') vel = clamp(vel - .9, -6, 6);
+  if (e.key === 'Enter') { if (pulled >= 0 && pTarget > 0) showBack = !showBack; else pull(front()); } });
+function front() { let best = -1, bz = -1e9; for (let i = 0; i < cards.length; i++) { const p = cards[i].g.position; if (Math.abs(p.y) < 1 && p.z > bz) { bz = p.z; best = i; } } return best; }
+
+// ---------- each frame ----------
+let last = performance.now(), demoT = 0;
+const ease = t => 1 - Math.pow(1 - t, 3);
+let vt = T0;   // (the board's box keeps its own clock, so the still, the demo and the clip agree)
+function frame(now) { if (!REC) requestAnimationFrame(frame);
+  const dt = Math.min(.05, (now - last) / 1000); last = now; if (DEMO) vt += dt; const t = BARE ? vt : now / 1000;
+  const base = reduce || (BARE && !DEMO) ? 0 : BARE ? TAU / LOOP : P.drift;
+  vel += (base - vel) * (1 - Math.exp(-dt * 1.4));   // (a throw runs down to the slow turn of its own)
+  if (BARE) spin += vel * dt; else if (!drag || !drag.moved) climb(vel * dt);   // (the board's box only turns, it does not climb: so a full turn comes back to the start)
+  if (P.scrollMode !== 'exit') exitT = 0;
+  { const prev = exitS; exitS += (exitT - exitS) * (1 - Math.exp(-dt * 4.5)); if (Math.abs(exitT - exitS) < 1e-4) exitS = exitT; const ds = exitS - prev;
+    exitV = ds / Math.max(dt, 1e-3); climb(ds * 9); phase += ds * .28;   // (it whirls and climbs as the page goes down)
+    const out = exitS < .45 ? 0 : ((exitS - .45) / .55) ** 1.6, shift = out * 1.15 * innerHeight;   // (then it goes up with the page)
+    if (Math.abs(shift - (view.shift || 0)) > .1) { view.shift = shift; view(); }
+    $('say').style.setProperty('--ey', (-shift - exitS * 60).toFixed(1) + 'px');
+    const cover = Math.max(P.shade * .3, exitS < .2 ? 0 : (exitS - .2) / .8);
+    $('shade').style.setProperty('--c', cover.toFixed(4)); document.body.classList.toggle('atend', exitS > .97); }
+  // the drawn card: in and out at an even pace (no overshoot), turned over on a click
+  pa = clamp(pa + (pTarget ? 1 : -1) * dt / .55, 0, 1); flipA = clamp(flipA + (showBack ? 1 : -1) * dt / .5, 0, 1);
+  if (pa === 0 && pTarget === 0 && pending >= 0) { const i = pending; pending = -1; pulled = -1; pull(i); }
+  else if (pa === 0 && pTarget === 0) pulled = -1;
+  const e = ease(pa), tn = Math.tan(FOV / 2 * Math.PI / 180), dd = CARD_H * P.size / (innerHeight > innerWidth ? .42 : .58) / (2 * tn);   // (how far from the eye it fills a good part of the view)
+  for (let i = 0; i < cards.length; i++) { const c = cards[i]; place(c, t); c.g.scale.setScalar(P.size);
+    if (i === pulled && e > 0) { const ty = innerHeight > innerWidth ? 0 : -.08 * dd * tn * 2, wob = reduce ? 0 : 1;
+      const vh2 = 2 * dd * tn; vb.set(-P.posX * vh2 * camera.aspect, ty + P.posY * vh2 + Math.sin(t * .9) * .03 * wob, D - dd); group.updateMatrixWorld(); group.worldToLocal(vb); c.g.position.lerpVectors(va, vb, e);
+      eu.set(mouse.y * .18 * wob + Math.sin(t * .7) * .03 * wob, ease(flipA) * Math.PI + mouse.x * .3 * wob, Math.sin(t * .6) * .02 * wob, 'YXZ'); qb.setFromEuler(eu); qb.premultiply(qg.copy(group.quaternion).invert()); c.g.quaternion.slerpQuaternions(qa, qb, e); }
+    else { c.g.position.copy(va); c.g.quaternion.copy(qa); } }
+  veil.position.set(-P.posX * 2 * (dd + .7) * tn * camera.aspect, P.posY * 2 * (dd + .7) * tn, D - dd - .7); veil.scale.set(40, 40, 1); veil.material.opacity = e * .66; veil.visible = e > 0;
+  $('say').style.opacity = String(1 - e * .9);
+  if (hoverXY && !drag && pulled < 0) { stage.classList.toggle('over', cardAt(hoverXY[0], hoverXY[1]) >= 0); hoverXY = null; }
+  textMat.opacity = 1 - e * .9; shadeMat.opacity = P.textShadow * .55 * (1 - e * .9);
+  if (fxOn()) {   // (the effects: the scene into the buffer, then the pass to the screen)
+    const sp = Math.min(4, Math.abs(vel - base) + Math.abs(exitV) * 6), pr = renderer.getPixelRatio(), u = post.uniforms;
+    u.uNear.value = camera.near; u.uFar.value = camera.far; u.uFocus.value = (D - P.radius * 1.05) * (1 - e) + (D - dd - .05) * e; u.uRange.value = P.radius * 1.8;
+    u.uDof.value = P.dof * pr * (1 - e * .5); u.uBlur.value = P.turnBlur * sp * 2.2 * pr; u.uAb.value = P.aberr * (.006 + sp * .004);
+    camera.layers.set(0); renderer.setRenderTarget(rt); renderer.render(scene, camera);
+    renderer.setRenderTarget(rtText); renderer.setClearColor(0x000000, 0); renderer.clear();
+    if (textMesh.visible) { const bg = scene.background; scene.background = null; camera.layers.set(1); renderer.shadowMap.autoUpdate = false; renderer.render(scene, camera); renderer.shadowMap.autoUpdate = true; scene.background = bg; }   // (the cards' shadow map from the pass before: this one sees only the words)
+    renderer.setClearColor(0x000000, 1); camera.layers.enable(0); camera.layers.enable(1);
+    u.uTextZ.value = D; renderer.setRenderTarget(null); renderer.render(postScene, postCam); }
+  else renderer.render(scene, camera); }
+
+// ---------- the view ----------
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
+  { const v = renderer.getDrawingBufferSize(new THREE.Vector2()); rt.setSize(v.x, v.y); rtText.setSize(v.x, v.y); post.uniforms.uRes.value.copy(v); }
+  const t = fit(); if (t !== turns) build();
+  camera.position.set(0, 0, D); camera.lookAt(0, 0, 0); view(); depth(); if (fontsIn) drawWords(); }
+function view() { const w = innerWidth, h = innerHeight; camera.setViewOffset(w, h, -P.posX * w, -P.posY * h + (view.shift || 0), w, h); group.rotation.set(P.lean * Math.PI / 180, 0, -P.tilt * Math.PI / 180); if (fontsIn) placeWords(); }
+function depth() { const bg = mode === 'light' ? 0xefede8 : 0x0b0b0c; scene.fog.color.setHex(bg); veil.material.color.setHex(bg);
+  scene.fog.near = D - P.radius * .25; scene.fog.far = D + P.radius * (.7 + 3.4 * (1 - P.depth)); }
+addEventListener('resize', resize);
+
+// ---------- light and dark ----------
+let mode = BARE ? (q.get('mode') === 'light' ? 'light' : 'dark') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'dark'; } catch { return 'dark'; } })();
+function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('light', m === 'light'); document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); $('vars').classList.toggle('dark', m === 'dark'); document.querySelector('meta[name=theme-color]').content = m === 'light' ? '#efede8' : '#0b0b0c';
+  scene.background = new THREE.Color(m === 'light' ? 0xefede8 : 0x0b0b0c); depth(); if (fontsIn) drawWords(); }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the words ----------
+function words() { if (typeof drawWords === 'function' && fontsIn) drawWords(); const sy = $('say').style; sy.setProperty('--tx', P.tx); sy.setProperty('--ty', P.ty); sy.setProperty('--ts', P.ts); $('title').textContent = P.title; $('lbl').textContent = P.label; document.body.classList.toggle('nowords', !P.words); document.body.classList.toggle('nolabel', !P.label.trim()); }
+
+// (while Customize is open the words can be dragged about)
+{ let wd = null; const say = $('say');
+  say.addEventListener('pointerdown', e => { if (!document.body.classList.contains('tuning')) return; wd = { x: e.clientX, y: e.clientY }; say.setPointerCapture(e.pointerId); e.preventDefault(); });
+  say.addEventListener('pointermove', e => { if (!wd) return; P.tx = clamp(P.tx + (e.clientX - wd.x) / innerWidth, -.45, .45); P.ty = clamp(P.ty + (e.clientY - wd.y) / innerHeight, .05, .95); wd = { x: e.clientX, y: e.clientY }; words(); ctl.tx?.set(P.tx); ctl.ty?.set(P.ty); });
+  say.addEventListener('pointerup', () => { if (wd) { wd = null; save(); } }); }
+
+// ---------- the looks ----------
+const lookNow = () => Object.keys(LOOKS).find(n => LOOK_KEYS.every(k => P[k] === (k in LOOKS[n] ? LOOKS[n][k] : DEF[k]))) || 'Custom';
+function applyLook(n) { for (const k of LOOK_KEYS) P[k] = k in LOOKS[n] ? LOOKS[n][k] : DEF[k]; for (const k of LOOK_KEYS) ctl[k]?.set(P[k]); exitT = 0; save(); resize(); $('nm').textContent = n; }
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph2'; head.innerHTML = '<div><h2>Tune</h2><p>The spiral, the cards on it, and the words over it.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v, re) => { P[k] = v; save(); $('nm').textContent = lookNow(); if (re === 'build') { build(); resize(); } else if (re === 'tex') { textures(); build(); } else if (re === 'mat') { faces.forEach(m => m.clearcoat = P.sheen); backs.forEach(m => m.clearcoat = P.sheen * .3); } else if (re === 'fit') resize(); else if (re === 'view') view(); else if (re === 'fx') $('shade').style.setProperty('--c', (P.shade * .3).toFixed(4)); };
+  const sl = (g, k, label, min, max, step, unit, re) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v, re) });
+  const sg = (g, k, label, options, re) => ctl[k] = LabUI.seg(g, { label, options, value: P[k], onChange: v => set(k, v, re) });
+  const gp = LabUI.group(panel, 'Position', { key: KEY + '.g.pos' });
+  sl(gp, 'posX', 'Left · right', -.5, .5, .01, '', 'view'); sl(gp, 'posY', 'Up · down', -.5, .5, .01, '', 'fit'); sl(gp, 'zoom', 'Zoom', .6, 1.8, .01, '×', 'fit');
+  sl(gp, 'tilt', 'Tilt', -30, 30, 1, '°', 'fit'); sl(gp, 'lean', 'Lean (from above · below)', -25, 25, 1, '°', 'fit');
+  { const h = document.createElement('p'); h.className = 'ui-hint'; h.textContent = 'Or hold Shift and drag the spiral.'; gp.appendChild(h); }
+  const gx = LabUI.group(panel, 'Effects', { key: KEY + '.g.fx' });
+  sg(gx, 'scrollMode', 'Scroll', [['turn', 'Turns it'], ['exit', 'Whirls up and away']], 'fit');
+  sl(gx, 'dof', 'Depth blur', 0, 16, .1, 'px'); sl(gx, 'turnBlur', 'Blur while turning', 0, 2, .01, ''); sl(gx, 'aberr', 'Aberration', 0, 2, .01, ''); sl(gx, 'shade', 'Dark from below', 0, 1, .01, '', 'fx');
+  const g0 = LabUI.group(panel, 'Spiral', { key: KEY + '.g.spiral' });
+  sl(g0, 'spiral', 'Climb (how much a turn climbs)', 0, 1, .01, ''); sl(g0, 'scroll', 'Scroll strength', .2, 3, .05, '×'); sl(g0, 'drift', 'Turn on its own', 0, .6, .01, '');
+  sl(g0, 'perTurn', 'Cards in a turn', 6, 18, 1, '', 'build'); sl(g0, 'pitch', 'Gap between turns', 1.5, 3.5, .05, '', 'build'); sl(g0, 'radius', 'Radius', 2.2, 4.6, .05, '', 'build'); sl(g0, 'scatter', 'Scatter', 0, 1, .01, '');
+  const g1 = LabUI.group(panel, 'Cards', { key: KEY + '.g.cards' });
+  sg(g1, 'colours', 'Colours', [['playground', 'Playground'], ['earth', 'Earth'], ['pastel', 'Pastel']], 'tex');
+  sl(g1, 'size', 'Size', .6, 1.4, .01, '×', 'fit'); sl(g1, 'fronts', 'Faces out (the rest show their backs)', 0, 1, .01, ''); sl(g1, 'float', 'Float', 0, 1.5, .01, '');
+  sl(g1, 'sheen', 'Sheen', 0, 1, .01, '', 'mat'); sl(g1, 'depth', 'Fade into the dark', 0, 1, .01, '', 'fit');
+  const g2 = LabUI.group(panel, 'Words', { key: KEY + '.g.words' });
+  ctl.words = LabUI.check(g2, { label: 'Show the heading', value: P.words, onChange: v => { P.words = v; save(); words(); } });
+  ctl.textLayer = LabUI.seg(g2, { label: 'Where', options: [['front', 'In front of the cards'], ['inside', 'Inside the spiral']], value: P.textLayer, onChange: v => { P.textLayer = v; save(); words(); } });
+  { const row = document.createElement('div'); row.className = 'ui-row'; const inp = document.createElement('input'); inp.className = 'txt'; inp.value = P.title; inp.setAttribute('aria-label', 'Heading');
+    inp.oninput = () => { P.title = inp.value; save(); words(); }; row.appendChild(inp); g2.appendChild(row); ctl.title = { set: v => inp.value = v }; }
+  { const row = document.createElement('div'); row.className = 'ui-row'; const inp = document.createElement('input'); inp.className = 'txt'; inp.value = P.label; inp.placeholder = 'Label (empty: none)'; inp.setAttribute('aria-label', 'Label');
+    inp.oninput = () => { P.label = inp.value; save(); words(); }; row.appendChild(inp); g2.appendChild(row); ctl.label = { set: v => inp.value = v }; }
+  const sw = (k, label, min, max, step, unit) => ctl[k] = LabUI.slider(g2, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => { P[k] = v; save(); words(); } });
+  sw('textShadow', 'Shadow of the cards on it (inside)', 0, 1, .01, '');
+  sw('ts', 'Size', .5, 1.8, .01, '×'); sw('tx', 'Left · right', -.45, .45, .01, ''); sw('ty', 'Up · down', .05, .95, .01, '');
+  { const h = document.createElement('p'); h.className = 'ui-hint'; h.textContent = 'Or drag the heading while this panel is open.'; g2.appendChild(h); }
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy settings</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); words(); textures(); build(); resize(); $('nm').textContent = lookNow(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+
+// ---------- start; the board's box: ?thumb=1 still, ?demo=1 turning, a card drawn out now and then ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF, words: false }; }
+buildPanel(); words(); LabUI.segThumb($('mode'));
+await Promise.all(['600 52px Geist', '500 24px Geist', '500 13px Geist', '500 21px "Geist Mono"'].map(f => document.fonts.load(f).catch(() => { })));
+fontsIn = true; textures(); setMode(mode); build(); resize();
+if (BARE) {   // (the board's box: its state at time T0, turning at its own pace; the card in front then shows its face; the clip starts T0 earlier)
+  vel = DEMO && !reduce ? TAU / LOOP : 0; spin = TAU / LOOP * T0; for (const c of cards) { place(c, T0); c.g.position.copy(va); } const f = front(); if (f >= 0) cards[f].flip = 0; }
+else vel = 2.2;   // (it comes in with a turn that settles)
+{ const names = Object.keys(LOOKS); $('nm').textContent = lookNow();
+  LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: d => { const i = names.indexOf(lookNow()); applyLook(names[((i < 0 ? 0 : i + d) + names.length) % names.length]); },
+    items: () => names, current: () => lookNow(), onPick: n => applyLook(n) }); }
+$('shade').style.setProperty('--c', (P.shade * .3).toFixed(4));
+if (!REC) requestAnimationFrame(frame); else last = 0;
+window.SPIRAL = { frame, renderer, T0, textMesh, camera, scene, get P() { return P; }, applyLook, set exitT(v) { exitT = v; }, get exitS() { return exitS; }, get cards() { return cards; }, get pa() { return pa; }, pull, front, climb, get vel() { return vel; }, set vel(v) { vel = v; } };
+</script>
+</body>
+</html>
