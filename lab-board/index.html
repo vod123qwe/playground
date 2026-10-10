@@ -423,6 +423,9 @@
     <section class="opt-sec"><h3>space <span class="opt-hint">układ kafli w przestrzeni</span></h3>
       <div class="switch" id="space-switch"><button data-v="grid">grid</button><button data-v="plane">plane</button><button data-v="field">field</button><button data-v="tunnel">tunnel</button><button data-v="ring">ring</button><button data-v="sphere">sphere</button><button data-v="stack">stack</button></div>
       <p class="opt-desc" id="desc-space"></p></section>
+    <section class="opt-sec"><h3>scroll <span class="opt-hint">grid: jak ściana rusza się przy przewijaniu</span></h3>
+      <div class="switch" id="scroll-switch"><button data-v="flat">flat</button><button data-v="depth">depth</button><button data-v="sheet">sheet</button><button data-v="drum">drum</button><button data-v="bowl">bowl</button></div>
+      <p class="opt-desc" id="desc-scroll"></p></section>
     <section class="opt-sec"><h3>hover <span class="opt-hint">myszą: najedź · telefon: przytrzymaj kafel</span></h3>
       <div class="switch" id="hover-switch"><button data-v="none">none</button><button data-v="lift">lift</button><button data-v="lens">lens</button><button data-v="focus">focus</button><button data-v="depth">depth</button><button data-v="topo">topo</button><button data-v="scan">scan</button><button data-v="dof">dof</button><button data-v="light">light</button><button data-v="relief">relief</button></div>
       <p class="opt-desc" id="desc-hover"></p></section>
@@ -514,6 +517,8 @@ const CFG = {
   // 'lens' (liquid lens + ripple + bulge under the cursor) · 'focus' (field desaturates, tile resolves from pixels)
   hover: (new URLSearchParams(location.search).get('hover')) || 'lift',
   // full-screen overlay profile: 'static' (the v1 SVG grain) · 'off' · 'film' · 'crt' · 'tv' · 'dither' · 'live' (wakes up with motion)
+  // the grid wall while it scrolls: 'flat' (no effect) · 'depth' · 'sheet' · 'drum' · 'bowl'; one shape for the whole wall, motion and bend together
+  scroll: (new URLSearchParams(location.search).get('scroll')) || 'flat',
   overlay: (new URLSearchParams(location.search).get('overlay')) || 'static',   // a clean view by default (no grain or scanlines while moving; 'live' was the default)
   fx: { ease: 0.12, lift: 46, tilt: 0.12, innerZoom: 0.06, parallax: 0.016, frontParallax: 6, bulge: 34, bulgeR: 150, pixelStart: 26, pixelEase: 0.075, depth: 0.034, depthLift: 26, relief: 70, reliefTilt: 0.2, flatTilt: 0.04 },               // the symbol squares on hover are parked; the cursor alone carries the hover
   bend: 0.85,                      // × viewport height → z amplitude in px (the field bends while it moves; the colour split stays off)
@@ -1330,6 +1335,13 @@ var DESC = {                                  // var: the covers switch initiali
     sphere: 'Kula oklejona kaflami. Drag obraca jak globus, scroll przybliża.',
     stack: 'Stos w głąb: kafle jeden za drugim, najbliższy wylatuje poza ekran. Scroll albo drag w pionie = następny.',
   },
+  scroll: {
+    flat: 'Bez efektu: ściana jedzie płasko, karty stoją w miejscu względem siebie.',
+    depth: 'Cała ściana lekko odsuwa się w głąb, im szybciej, tym dalej; bez wyginania, wraca na sprężynie.',
+    sheet: 'Ściana jak jedna kartka ciągnięta w bok: lekko się pochyla w kierunku ruchu i odbija po zatrzymaniu.',
+    drum: 'Ściana wygina się jak bęben od zewnątrz: brzegi uciekają w głąb i obracają się zgodnie z krzywizną. Mocniej przy szybszym ruchu.',
+    bowl: 'Odwrotność bębna: ściana jak wnętrze misy, brzegi podchodzą do ciebie i zwracają się do środka.',
+  },
   motion: { off: 'Efekty głębi tylko pod kursorem albo palcem.', on: 'Przechylanie telefonu steruje efektami głębi na wszystkich kaflach. iOS zapyta o zgodę.' },
   overlay: { static: 'Stałe ziarno z pierwszej wersji.', off: 'Czysto, bez ziarna.', film: 'Żywe ziarno 24 kl/s i delikatna winieta.', crt: 'Linie kineskopu, maska RGB i winieta.', tv: 'Linie i jasny pas przetaczający się w dół.', dither: 'Raster Bayera, jeden punkt na piksel.', live: 'Ziarno i linie budzą się przy ruchu i gasną w spoczynku.' },
   covers: { plain: 'Ciemnoszare tło tam, gdzie nie ma miniatury.', circle: 'Kolorowe pole z kołem.', mixed: 'Kolorowe pole z różnymi figurami.', motif: 'Szkice proceduralne z pierwszej wersji.' },
@@ -1346,6 +1358,7 @@ const GROUPS = {
   space:   { order: () => LAYOUT_ORDER,          get: () => CFG.layout,  set: v => setLayout(v) },
   hover:   { order: () => HOVER_ORDER,           get: () => CFG.hover,   set: v => setHover(v) },
   overlay: { order: () => Object.keys(OVERLAYS), get: () => CFG.overlay, set: v => setOverlay(v) },
+  scroll:  { order: () => SCROLLS,               get: () => CFG.scroll,  set: v => setScroll(v) },
 };
 let rvGroup = 'space';
 function updateReview() {
@@ -1415,6 +1428,15 @@ function setOverlay(v) {
 }
 overlaySwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setOverlay(b.dataset.v); });
 setOverlay(CFG.overlay);
+const SCROLLS = ['flat', 'depth', 'sheet', 'drum', 'bowl'], scrollSwitch = document.getElementById('scroll-switch');
+function setScroll(v) {
+  CFG.scroll = SCROLLS.includes(v) ? v : 'flat'; window.GV?.kick?.();
+  scrollSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.scroll)); setDesc('scroll', CFG.scroll);
+  if (typeof GROUPS !== 'undefined') updateReview();
+  const u = new URL(location.href); if (CFG.scroll === 'flat') u.searchParams.delete('scroll'); else u.searchParams.set('scroll', CFG.scroll); history.replaceState(null, '', u);
+}
+scrollSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setScroll(b.dataset.v); });
+setScroll(CFG.scroll);
 const hoverSwitch = document.getElementById('hover-switch');
 function setHover(v) {
   CFG.hover = HOVER_MODES[v] !== undefined ? v : 'lift';
@@ -2009,25 +2031,33 @@ const GV = (() => {
   let coast = 0, cv = 0; const stopCoast = () => { cancelAnimationFrame(coast); coast = 0; };
   const throwIt = v => { stopCoast(); cv = v; const go = () => { cv *= .95; const nl = sc.scrollLeft + cv; sc.scrollLeft = cl(nl, 0, maxL()); if ((nl < 0 || nl > maxL()) ) { F.ob += -cv * .5; cv = 0; } if (Math.abs(cv) > .25) coast = requestAnimationFrame(go); else coast = 0; }; coast = requestAnimationFrame(go); };
 
-  // ---------- the feel: depth, not a lean. Moving, the wall falls back into the screen and curves like the inside of a drum; each box
-  // turns against the travel (panels in a draught), more the faster; the pictures slide a little inside their boxes (parallax). A press
-  // pushes the wall in under the finger. All on springs, back flat and still when it stops ----------
-  const F = { last: 0, vel: 0, rot: 0, rv: 0, z: 0, zv: 0, ob: 0, obv: 0, raf: 0, flat: true };
+  // ---------- the feel (Review › scroll): the whole wall moves as one. How fast it goes becomes one amount on a spring (a touch of
+  // overshoot when it stops); that amount shapes the wall: 'depth' sends it back, 'sheet' leans it like a sheet pulled sideways, 'drum'
+  // and 'bowl' curve it, and every box takes its depth and its turn from that same curve, so motion and bend are one thing.
+  // The band past the ends stays in every mode. Back flat and still when it stops ----------
+  const F = { last: 0, vel: 0, a: 0, av: 0, s: 0, sv: 0, ob: 0, obv: 0, raf: 0, flat: true };
+  const DEG = 180 / Math.PI;
   const feel = () => {
     const l = sc.scrollLeft, v = l - F.last; F.last = l; F.vel += (v - F.vel) * .28;
-    const sp = Math.abs(F.vel), W = sc.clientWidth, cx = l + W / 2;
-    F.rv += (cl(-F.vel * .5, -18, 18) - F.rot) * .14; F.rv *= .72; F.rot += F.rv;
-    F.zv += ((-Math.min(sp * 6, 120) - (down ? 46 : 0)) - F.z) * .12; F.zv *= .74; F.z += F.zv;
+    const mode = CFG.scroll, sp = Math.abs(F.vel), W = sc.clientWidth, cx = l + W / 2, on = mode !== 'flat';
+    F.av += ((on ? Math.min(1, sp / 28) : 0) - F.a) * .12; F.av *= .74; F.a += F.av;            // (0..1, how much)
+    F.sv += ((on ? cl(F.vel / 28, -1, 1) : 0) - F.s) * .12; F.sv *= .74; F.s += F.sv;            // (-1..1, which way)
     F.obv += -F.ob * .14; F.obv *= .7; if (!down || down.touch) F.ob += F.obv;
-    const still = Math.abs(F.rot) < .02 && Math.abs(F.rv) < .02 && Math.abs(F.z) < .1 && Math.abs(F.zv) < .1 && Math.abs(F.ob) < .2 && Math.abs(F.vel) < .05 && !down;
-    if (still) { F.raf = 0; if (!F.flat) { F.flat = true; track.classList.remove('moving'); track.style.transform = ''; for (const c of cards) { c.el.style.transform = ''; c.el.style.removeProperty('--px'); c.el.style.removeProperty('--pz'); } } return; }
+    const still = Math.abs(F.a) < .002 && Math.abs(F.av) < .002 && Math.abs(F.s) < .002 && Math.abs(F.sv) < .002 && Math.abs(F.ob) < .2 && Math.abs(F.vel) < .05 && !down;
+    if (still) { F.raf = 0; if (!F.flat) { F.flat = true; track.classList.remove('moving'); track.style.transform = ''; for (const c of cards) c.el.style.transform = ''; } return; }
     F.flat = false; track.classList.add('moving'); track.style.perspectiveOrigin = `${cx}px 50%`;
-    track.style.transform = Math.abs(F.ob) > .2 ? `translateX(${F.ob.toFixed(2)}px)` : '';
-    const bend = Math.min(sp * 1.5, 20), px = cl(F.vel * 1.6, -34, 34), pz = Math.min(sp * .004, .06) + .02 * (1 - Math.exp(-sp));
+    const t = [];
+    if (Math.abs(F.ob) > .2) t.push(`translateX(${F.ob.toFixed(2)}px)`);
+    if (mode === 'depth') t.push(`translateZ(${(-F.a * 110).toFixed(1)}px)`);
+    if (mode === 'sheet') t.push(`skewX(${(-F.s * 5).toFixed(2)}deg)`);
+    track.style.transform = t.join(' ');
+    // (drum and bowl: the wall on one curve z = k·x², x from the middle of the view; each box sits on it and turns with its slope)
+    const curve = mode === 'drum' ? -1 : mode === 'bowl' ? 1 : 0, k = curve * F.a * 190 / (W * W / 4);
     for (const c of cards) { if (c.el.classList.contains('hide') || c.w == null) continue;
-      const dx = (c.x + c.w / 2 - cx) / W; if (Math.abs(dx) > 1.2) { if (c.el.style.transform) c.el.style.transform = ''; continue; }
-      c.el.style.transform = `translateZ(${(F.z - Math.abs(dx) * bend * 3.5).toFixed(1)}px) rotateY(${(F.rot - dx * bend).toFixed(2)}deg)`;
-      c.el.style.setProperty('--px', px.toFixed(1) + 'px'); c.el.style.setProperty('--pz', pz.toFixed(3)); }
+      if (!curve) { if (c.el.style.transform) c.el.style.transform = ''; continue; }
+      const x = c.x + c.w / 2 - cx; if (Math.abs(x) > W * 1.2) { if (c.el.style.transform) c.el.style.transform = ''; continue; }
+      const z = k * x * x, turn = Math.atan(2 * k * x) * DEG;
+      c.el.style.transform = `translateZ(${z.toFixed(1)}px) rotateY(${(-turn).toFixed(2)}deg)`; }
     F.raf = requestAnimationFrame(feel); };
   const kickFeel = () => { if (reduceMotion) return; if (!F.raf) { F.last = sc.scrollLeft; F.raf = requestAnimationFrame(feel); } };
   sc.addEventListener('scroll', kickFeel, { passive: true });
@@ -2078,7 +2108,7 @@ const GV = (() => {
     addEventListener('pointerdown', kick); addEventListener('pointerup', kick);
     document.addEventListener('pointerleave', () => { cur.classList.remove('on'); gooEl.classList.remove('on'); }); addEventListener('blur', () => { cur.classList.remove('on'); gooEl.classList.remove('on'); });
   }
-  return { layout };
+  return { layout, kick: kickFeel };
 })();
 window.GV = GV;
 document.body.classList.toggle('gridmode', CFG.layout === 'grid'); if (CFG.layout === 'grid') GV.layout();
