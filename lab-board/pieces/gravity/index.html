@@ -16,7 +16,7 @@
      be hard, bouncy, absorbing, or a real jelly that dents and wobbles where it is hit (a soft body of linked points, the falling
      things bouncing off its moving surface). Its surface can be glass, rubber, ceramic, chrome or an X-ray, a glowing mesh you see
      the falling things through. The light is yours too: where it comes from, how strong, how warm. Click to drop a handful where
-     you click; drag to look round a little; the wheel to come closer. Light or dark on top; Customize holds the rest. */
+     you click; drag to look round a little; the wheel to come closer. Customize holds the rest (light only). */
   :root { --bg: #eeede9; --ink: #141414; --muted: rgba(20,20,20,.5); --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --boxbg: #eeede9; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
@@ -27,7 +27,8 @@
   body.tuning .stage { background: var(--boxbg); border-radius: 26px; }
   .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .stage { cursor: grab; } .stage.dragging { cursor: grabbing; }
-  .hint { position: fixed; left: 50%; bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 3; transform: translateX(-50%); margin: 0; color: var(--muted); font-size: 13px; pointer-events: none; white-space: nowrap; transition: left var(--morph); }
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); transition: left var(--morph), bottom var(--morph); }   /* (the pill itself: shared/lab-ui.css) */
+  .hint { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); z-index: 3; transform: translateX(-50%); margin: 0; color: var(--muted); font-size: 13px; pointer-events: none; white-space: nowrap; transition: left var(--morph); }
   .cbtns { display: flex; gap: 8px; margin: 4px 0 14px; } .cbtns button { flex: 1; height: 40px; border: 0; border-radius: 999px; background: var(--ui-field, rgba(20,20,20,.06)); color: var(--ui-ink, inherit); font: 600 13px var(--lab-font); cursor: pointer; }
   .cbtns button:first-child { background: var(--ui-on, #1b1c20); color: var(--ui-on-text, #fff); }
   .loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; pointer-events: none; transition: opacity .4s; } body.ready .loading { opacity: 0; }
@@ -38,12 +39,7 @@
   .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
   .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .3s; }
   .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
-  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); transition: left .45s var(--ease); }
-  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
-  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
-  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
-  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
-  body.bare .back, body.bare .tune, body.bare .mode, body.bare .panel, body.bare .hint, body.bare .loading { display: none; }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .dock, body.bare .panel, body.bare .hint, body.bare .loading { display: none; }
   /* the panel: a card beside the stage (lab-ui soft) */
   .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
     font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
@@ -53,18 +49,22 @@
   .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
   .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
   .acts { position: sticky; bottom: 0; z-index: 3; display: flex; gap: 8px; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
-  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode, body.tuning .hint { left: calc(50% - 176px); } }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode, body.tuning .hint, body.tuning .dock { left: calc(50% - 176px); } body.tuning .dock { bottom: calc(34px + env(safe-area-inset-bottom)); } }
   @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
-    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint { display: none; } }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint, body.tuning .dock { display: none; } }
 </style>
 </head>
 <body>
 <a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
-<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
 <button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
 <main class="stage" id="stage" aria-label="Things falling on a floating shape; drag the shape to move it, click to drop more, double click to bring it back"></main>
 <p class="loading" id="loading">Loading the physics…</p>
 <p class="hint" id="hint">Drag to move or throw, right drag to turn, click to drop more</p>
+<div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Looks">
+  <button id="prev" type="button" aria-label="Previous look"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm" aria-live="polite">Silk on glass</span>
+  <button id="next" type="button" aria-label="Next look"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
 <aside class="panel lab-ui soft" id="panel" aria-label="Customize the scene"></aside>
 <script src="../../shared/lab-ui.js?v=19"></script>
 <script type="importmap">
@@ -80,9 +80,15 @@ import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.gravity.v1';
 const DEF = { shape: 'sphere', feel: 'hard', bounce: .45, friction: .5, soft: .55, size: 1, drop: 'balls', dropMat: 'mixed', rate: 5, dropSize: 1, gravity: 9.8,
-  surface: 'glass', tint: '#9fc3ff', cloth: 'silk', clothSize: 4.2, clothTint: '#e8604c', lightAz: 35, lightEl: 55, lightPow: 2.6, warmth: .55, env: .9, shadows: true };
+  surface: 'glass', tint: '#9fc3ff', cloth: 'silk', clothSize: 4.2, clothTint: '#e8604c', lightAz: 35, lightEl: 55, lightPow: 2.6, warmth: .55, env: .9, shadows: true, clothLoop: false, look: 'Silk on glass' };
+// (the two looks in the pill: a sheet of silk falling over and over onto a glass ball; all sorts of things raining onto a chrome donut.
+//  A look sets these; the panel still tunes everything after)
+const LOOKS = {
+  'Silk on glass': { shape: 'sphere', feel: 'hard', size: 1, surface: 'glass', tint: '#9fc3ff', rate: 0, cloth: 'silk', clothSize: 4.6, clothTint: '#e8604c', clothLoop: true, gravity: 9.8 },
+  'Rain on chrome': { shape: 'torus', feel: 'hard', size: 1, surface: 'chrome', tint: '#d9dce2', drop: 'mixed', dropMat: 'mixed', rate: 7, dropSize: 1, clothLoop: false, gravity: 9.8, tilt: .4 } };   // (tilt: the donut leans towards you a little, so its hole shows)
 const FEEL = { hard: { bounce: .45, friction: .5 }, bouncy: { bounce: .92, friction: .2 }, absorb: { bounce: .03, friction: .95 }, jelly: { bounce: .3, friction: .6 } };
-let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!o) { Object.assign(p, LOOKS['Silk on glass']); return p; }   // (a first visit opens on the first look; saved settings are kept as changes from DEF)
+  for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 // (an old X-ray or confetti setting falls back)
 if (P.surface === 'xray') P.surface = 'glass'; if (P.drop === 'confetti') P.drop = 'balls';
@@ -194,7 +200,7 @@ const drops = [], tmpQ = new THREE.Quaternion();
 const CLOTH = { silk: { give: 1, bend: .04, damp: .992, iters: 7, sheen: 1, rough: .55 }, cotton: { give: 1, bend: .32, damp: .985, iters: 7, sheen: .7, rough: .9 }, rubber: { give: .55, bend: .7, damp: .98, iters: 9, sheen: .2, rough: .45 } };
 let cloth = null;
 function removeCloth() { if (!cloth) return; scene.remove(cloth.mesh); cloth.mesh.geometry.dispose(); cloth.mesh.material.dispose(); cloth = null; }
-function dropCloth() { removeCloth(); const N = 30, size = P.clothSize, geo = new THREE.PlaneGeometry(size, size, N - 1, N - 1); geo.rotateX(-Math.PI / 2);
+function dropCloth(tint) { removeCloth(); const N = 30, size = P.clothSize, geo = new THREE.PlaneGeometry(size, size, N - 1, N - 1); geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, n = pos.count, p = new Float32Array(n * 3), o = new Float32Array(n * 3), y0 = hold.oy + bob + hold.low + 2.6;
   for (let i = 0; i < n; i++) { const x = pos.getX(i) + hold.ox, z = pos.getZ(i), y = y0 + x * .04 + z * .03; p.set([x, y, z], i * 3); o.set([x, y, z], i * 3); }   // (a touch askew, so it does not land flat)
   const cons = [], at = (r, c) => r * N + c, L = (a, b) => Math.hypot(p[a * 3] - p[b * 3], p[a * 3 + 1] - p[b * 3 + 1], p[a * 3 + 2] - p[b * 3 + 2]);
@@ -202,9 +208,15 @@ function dropCloth() { removeCloth(); const N = 30, size = P.clothSize, geo = ne
     if (c + 1 < N) cons.push([a, at(r, c + 1), L(a, at(r, c + 1)), 0]); if (r + 1 < N) cons.push([a, at(r + 1, c), L(a, at(r + 1, c)), 0]);
     if (r + 1 < N && c + 1 < N) { cons.push([a, at(r + 1, c + 1), L(a, at(r + 1, c + 1)), 1]); cons.push([at(r, c + 1), at(r + 1, c), L(at(r, c + 1), at(r + 1, c)), 1]); }
     if (c + 2 < N) cons.push([a, at(r, c + 2), L(a, at(r, c + 2)), 2]); if (r + 2 < N) cons.push([a, at(r + 2, c), L(a, at(r + 2, c)), 2]); }
-  const M = CLOTH[P.cloth] || CLOTH.silk, mat = new THREE.MeshPhysicalMaterial({ color: P.clothTint, roughness: M.rough, sheen: M.sheen, sheenRoughness: .5, sheenColor: '#ffffff', side: THREE.DoubleSide });
+  const M = CLOTH[P.cloth] || CLOTH.silk, mat = new THREE.MeshPhysicalMaterial({ color: typeof tint === 'string' ? tint : P.clothTint, roughness: M.rough, sheen: M.sheen, sheenRoughness: .5, sheenColor: '#ffffff', side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = mesh.receiveShadow = true; mesh.frustumCulled = false; scene.add(mesh);
   cloth = { mesh, p, o, n, cons, N, th: size / (N - 1) * .35 }; }
+const CLOTH_TINTS = ['#e8604c', '#f2c14e', '#3f7cf0', '#2bb39a', '#f1efe9', '#c94f8a'];
+let clothAge = 0, clothN = 0;
+function loopCloth(dt) { clothAge += dt;
+  const life = 7.5, fade = .8, m = cloth && cloth.mesh.material;
+  if (m) { const a = clamp((life - clothAge) / fade, 0, 1); if (a < 1 && !m.transparent) { m.transparent = true; m.depthWrite = false; } m.opacity = a; }
+  if (!cloth || clothAge > life) { clothN++; const tint = clothN === 1 ? P.clothTint : CLOTH_TINTS[clothN % CLOTH_TINTS.length]; dropCloth(tint); clothAge = 0; } }
 function stepCloth(dt) { const C = cloth, M = CLOTH[P.cloth] || CLOTH.silk, p = C.p, o = C.o, g = P.gravity * dt * dt, th = C.th;
   for (let i = 0; i < C.n * 3; i += 3) { const vx = (p[i] - o[i]) * M.damp, vy = (p[i + 1] - o[i + 1]) * M.damp, vz = (p[i + 2] - o[i + 2]) * M.damp;
     o[i] = p[i]; o[i + 1] = p[i + 1]; o[i + 2] = p[i + 2]; p[i] += vx; p[i + 1] += vy - g; p[i + 2] += vz; }
@@ -277,6 +289,7 @@ function physics(dt) { t += dt;
   if (jelly) stepJelly(dt);
   if (!STILL) { spawnAcc += dt * P.rate; while (spawnAcc >= 1) { spawnAcc -= 1; const R = spread(); spawn((rnd() - .5) * 2 * R, (rnd() - .5) * 2.2 * R, topY() + rnd() * .8); } }
   world.step();
+  if (P.clothLoop && !STILL) loopCloth(dt);
   if (cloth) stepCloth(dt);
   for (let i = drops.length - 1; i >= 0; i--) { const tr = drops[i].body.translation(); if (tr.y < -9 || tr.z > camera.position.z - 1.4 || Math.abs(tr.x) > 18 || tr.z < -25) removeDrop(drops[i]); } }   // (fallen away, or come right up to the lens)
 
@@ -313,15 +326,14 @@ if (!BARE) {
       return; } const h = planeAt(e); if (!h) return;
     for (let i = 0; i < 6; i++) spawn(clamp(h.x, -6, 6) + (rnd() - .5) * .6, (rnd() - .5) * .6, topY() + i * .35); };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', () => { drag = null; stage.classList.remove('dragging'); });
-  stage.addEventListener('dblclick', () => { hold.free = false; hold.tx = hold.ty = 0; hold.float = 1; hold.trot.identity(); });   // (a double click lifts it back to the middle, floating)
+  stage.addEventListener('dblclick', () => { hold.free = false; hold.tx = hold.ty = 0; hold.float = 1; lookTurn(); });   // (a double click lifts it back to the middle, floating)
 }
 
 // ---------- light and dark ----------
-let mode = BARE ? (q.get('mode') === 'dark' ? 'dark' : 'light') : (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
-function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+const mode = 'light';   // (light only: the dark room was dropped)
+function setMode(m) { document.body.classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark'); $('vars').classList.toggle('dark', m === 'dark');
   scene.background = new THREE.Color(m === 'dark' ? '#0d0e10' : '#eeede9'); floorMat.color.set(m === 'dark' ? '#141518' : '#e4e2dc'); fill.groundColor.set(m === 'dark' ? '#222226' : '#b8b4ad'); fill.intensity = m === 'dark' ? .15 : .35;
   document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0d0e10' : '#eeede9'; }
-document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 
 // ---------- the panel ----------
 const panel = $('panel'), ctl = {};
@@ -342,9 +354,10 @@ function buildPanel() { panel.innerHTML = '';
   const gc = LabUI.group(panel, 'Cloth', { key: KEY + '.g.cloth' });
   sg(gc, 'cloth', 'Made of', [['silk', 'Silk'], ['cotton', 'Cotton'], ['rubber', 'Rubber sheet']], () => { if (cloth) { const M = CLOTH[P.cloth]; cloth.mesh.material.roughness = M.rough; cloth.mesh.material.sheen = M.sheen; } });
   sl(gc, 'clothSize', 'Size', 2, 7, .1, 'm');
+  ctl.clothLoop = LabUI.check(gc, { label: 'Keep dropping (a new colour each time)', value: P.clothLoop, onChange: v => set('clothLoop', v, () => { clothAge = 0; if (!v) removeCloth(); }) });
   ctl.clothTint = LabUI.color(gc, { label: 'Colour', value: P.clothTint, onInput: v => set('clothTint', v, () => { if (cloth) cloth.mesh.material.color.set(v); }) });
   const cb = document.createElement('div'); cb.className = 'cbtns'; cb.innerHTML = '<button type="button" data-c="drop">Drop a sheet</button><button type="button" data-c="off">Take it away</button>'; gc.appendChild(cb);
-  cb.querySelector('[data-c=drop]').onclick = dropCloth; cb.querySelector('[data-c=off]').onclick = removeCloth;
+  cb.querySelector('[data-c=drop]').onclick = () => { clothAge = 0; dropCloth(); }; cb.querySelector('[data-c=off]').onclick = () => { removeCloth(); clothAge = 0; };
   const g2 = LabUI.group(panel, 'Surface', { key: KEY + '.g.surf' });
   sg(g2, 'surface', 'Look', [['glass', 'Glass'], ['rubber', 'Rubber'], ['ceramic', 'Ceramic'], ['chrome', 'Chrome']], buildCore);
   ctl.tint = LabUI.color(g2, { label: 'Colour', value: P.tint, onInput: v => set('tint', v, () => { if (mesh) { mesh.material.dispose(); mesh.material = surfaceMat(); } }) });
@@ -356,19 +369,31 @@ function buildPanel() { panel.innerHTML = '';
   acts.querySelector('[data-a=clear]').onclick = () => { while (drops.length) removeDrop(drops[0]); };
   acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set(P[k]); world.gravity = { x: 0, y: -P.gravity, z: 0 }; applyLight(); buildCore(); };
   acts.querySelector('[data-a=copy]').onclick = e => { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; navigator.clipboard?.writeText(JSON.stringify(d, null, 2)); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200); }; }
+// (the turn a look starts with; a double click goes back to it)
+const lookTurn = () => { hold.trot.identity(); const L = LOOKS[P.look]; if (L && L.tilt && P.shape === L.shape) hold.trot.setFromAxisAngle(new THREE.Vector3(1, 0, 0), L.tilt); };
+function applyLook(name) { if (!LOOKS[name]) return; const { tilt, ...L } = LOOKS[name];
+  P = { ...P, ...L, ...FEEL[L.feel], look: name }; save(); $('nm').textContent = name;
+  while (drops.length) removeDrop(drops[0]); removeCloth(); clothAge = 0; clothN = 0; spawnAcc = 0;
+  world.gravity = { x: 0, y: -P.gravity, z: 0 }; hold.free = false; hold.tx = hold.ty = 0; hold.float = 1; lookTurn();
+  for (const k in ctl) if (k in P) ctl[k].set(P[k]); buildCore();
+  if (!P.clothLoop) for (let i = 0; i < 8; i++) { const R = spread(); spawn((rnd() - .5) * 2 * R, (rnd() - .5) * 2 * R, topY() + i * .5); } }   // (a first handful, so the donut look starts at once)
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
 $('tune').onclick = () => openPanel(true);
 addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
 
 // ---------- start; the board's box: ?thumb=1 a still (a few things already on it and around it), ?demo=1 the same, then falling ----------
-buildPanel(); setMode(mode); LabUI.segThumb($('mode')); applyLight(); buildCore(); resize(); view.az = view.taz; view.el = view.tel; view.dist = view.tdist; placeCam();   // (the camera in place before the first steps: they let go of what comes near the lens)
+buildPanel(); setMode(mode); applyLight(); buildCore(); resize(); view.az = view.taz; view.el = view.tel; view.dist = view.tdist; placeCam();   // (the camera in place before the first steps: they let go of what comes near the lens)
 if (BARE) { seed = 3; const R = spread();   // (a set scene: the same few things in the same places, so the live box starts on the still)
   for (let i = 0; i < 26; i++) spawn((rnd() - .5) * 2.4 * R, (rnd() - .5) * 1.2 * R, -2.5 + rnd() * 8.5);
   if (q.has('sheet')) { dropCloth(); for (let i = 0; i < 160; i++) physics(1 / 60); }
   for (let i = 0; i < 40; i++) physics(1 / 60); }
 document.body.classList.add('ready');
 requestAnimationFrame(frame);
-window.GRAVITY = { get P() { return P; }, spawn, drops, world, buildCore, get jelly() { return jelly; }, hold };
+if (!BARE) { lookTurn(); hold.rot.copy(hold.trot); const names = Object.keys(LOOKS), step = d => { const i = names.indexOf(P.look); applyLook(names[((i < 0 ? 0 : i) + d + names.length) % names.length]); };
+  LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: step, items: () => names, current: () => P.look, onPick: n => applyLook(n) });
+  $('nm').textContent = LOOKS[P.look] ? P.look : 'Custom';
+  addEventListener('keydown', e => { if (e.target.closest?.('input, .panel')) return; if (e.key === 'ArrowRight') step(1); if (e.key === 'ArrowLeft') step(-1); }); }
+window.GRAVITY = { applyLook, get cloth() { return cloth; }, get P() { return P; }, spawn, drops, world, buildCore, get jelly() { return jelly; }, hold };
 </script>
 </body>
 </html>
