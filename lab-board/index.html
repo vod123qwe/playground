@@ -517,8 +517,8 @@ const CFG = {
   // 'lens' (liquid lens + ripple + bulge under the cursor) · 'focus' (field desaturates, tile resolves from pixels)
   hover: (new URLSearchParams(location.search).get('hover')) || 'lift',
   // full-screen overlay profile: 'static' (the v1 SVG grain) · 'off' · 'film' · 'crt' · 'tv' · 'dither' · 'live' (wakes up with motion)
-  // the grid wall while it scrolls: 'flat' (no effect) · 'depth' · 'sheet' · 'drum' · 'bowl'; one shape for the whole wall, motion and bend together
-  scroll: (new URLSearchParams(location.search).get('scroll')) || 'flat',
+  // the grid wall while it scrolls: 'bowl' (the default, Jarek's pick 11.10) · 'flat' (no effect) · 'depth' · 'sheet' · 'drum' · 'bowl'; one shape for the whole wall, motion and bend together
+  scroll: (new URLSearchParams(location.search).get('scroll')) || 'bowl',
   overlay: (new URLSearchParams(location.search).get('overlay')) || 'static',   // a clean view by default (no grain or scanlines while moving; 'live' was the default)
   fx: { ease: 0.12, lift: 46, tilt: 0.12, innerZoom: 0.06, parallax: 0.016, frontParallax: 6, bulge: 34, bulgeR: 150, pixelStart: 26, pixelEase: 0.075, depth: 0.034, depthLift: 26, relief: 70, reliefTilt: 0.2, flatTilt: 0.04 },               // the symbol squares on hover are parked; the cursor alone carries the hover
   bend: 0.85,                      // × viewport height → z amplitude in px (the field bends while it moves; the colour split stays off)
@@ -1429,10 +1429,10 @@ overlaySwitch.addEventListener('click', e => { const b = e.target.closest('butto
 setOverlay(CFG.overlay);
 const SCROLLS = ['flat', 'depth', 'sheet', 'drum', 'bowl'], scrollSwitch = document.getElementById('scroll-switch');
 function setScroll(v) {
-  CFG.scroll = SCROLLS.includes(v) ? v : 'flat'; window.GV?.kick?.();
+  CFG.scroll = SCROLLS.includes(v) ? v : 'bowl'; window.GV?.kick?.();
   scrollSwitch.querySelectorAll('button').forEach(b => b.classList.toggle('is-on', b.dataset.v === CFG.scroll)); setDesc('scroll', CFG.scroll);
   if (typeof GROUPS !== 'undefined') updateReview();
-  const u = new URL(location.href); if (CFG.scroll === 'flat') u.searchParams.delete('scroll'); else u.searchParams.set('scroll', CFG.scroll); history.replaceState(null, '', u);
+  const u = new URL(location.href); if (CFG.scroll === 'bowl') u.searchParams.delete('scroll'); else u.searchParams.set('scroll', CFG.scroll); history.replaceState(null, '', u);
 }
 scrollSwitch.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setScroll(b.dataset.v); });
 setScroll(CFG.scroll);
