@@ -22,11 +22,11 @@ Mechanika przeniesiona z sekcji Lab na juanmoraromero.com (analiza w pamięci Cl
   - `none`: bez efektu, sam kursor.
   Warstwa przednia kafla wychodzi do DOM tylko wtedy, gdy musi (szkło, wideo albo chipy), inaczej zostaje w GL i dostaje efekty shadera. Pokrętła w `CFG.fx`. Kursor-pierścień z tytułem działa we wszystkich trybach, kwadraty z symbolami dalej wyłączone (`CFG.hoverChips`).
 - **Ruch ściany w gridzie** (`CFG.scroll`, grupa `scroll` w pasku i w panelu, `?scroll=`). Cała ściana rusza się jako jedno: prędkość przewijania to jedna wartość na sprężynie, a ona kształtuje ścianę; każde pudełko bierze głębię i obrót z tej samej krzywej (bez osobnego kręcenia kart i bez paralaksy obrazków w środku). Pas za końcami listy działa zawsze.
-  - `flat` (domyślny): bez efektu.
+  - `flat`: bez efektu.
   - `depth`: ściana odsuwa się w głąb, płasko.
   - `sheet`: ściana pochyla się (skos) jak kartka ciągnięta w bok.
   - `drum`: wypukły walec, brzegi uciekają w głąb.
-  - `bowl`: wklęsły walec, brzegi podchodzą do widza.
+  - `bowl` (domyślny, wybór Jarka 11.10.2026): wklęsły walec, brzegi podchodzą do widza.
 - **Układy przestrzenne** (`CFG.layout`, grupa `space` w pasku i w panelu, `?space=`). Kafle przestają leżeć na płaszczyźnie i dostają pozycję i obrót w 3D (vertex shader: pitch, yaw, roll), a pula linków DOM dostaje rzut prostokąta kafla na ekran, więc klik i hover działają dalej. Kafle rysują się od najdalszego do najbliższego, dalekie i bardzo bliskie gasną we mgle:
   - `plane`: dotychczasowa płaska plansza.
   - `field`: pole głębi, 34 kafle rozsiane w bryle 5200 px głębokości; scroll = lot, powolny dryf w przód, drag = rozglądanie z paralaksą; bliskie przelatują obok kamery poza ekran.
