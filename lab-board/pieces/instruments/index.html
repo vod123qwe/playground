@@ -83,6 +83,9 @@
   .room .rb { margin-top: 10px; } .room .rb button, .room .rb button:first-child { background: #f0efeb; color: #1b1c20; } .room .rb button.on { background: #1b1c20; color: #fff; }
   .result .rp { margin: -6px 0 14px; font-size: 13px; color: #1b1c20; } .result .rp:empty { display: none; }
   .hud em { font-style: normal; font-size: 12px; color: #c94f8a; font-variant-numeric: tabular-nums; }
+  .tb .bx { font-style: normal; margin-left: 6px; padding: 0 5px; border-radius: 6px; color: rgba(20,20,20,.4); }
+  .tb .bx:hover { background: rgba(20,20,20,.08); color: #1b1c20; }
+  .tb .madd { color: rgba(20,20,20,.6); }
   .tb .bd { font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 6px; background: rgba(20,20,20,.07); color: rgba(20,20,20,.55); }
   .tb .st { font-style: normal; color: #e0a82e; letter-spacing: 1px; }
   .tb.songs { flex-wrap: wrap; justify-content: center; height: auto; border-radius: 23px; max-width: calc(100vw - 24px); }
@@ -137,7 +140,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.instruments.v1';
-const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', sax: 'gold', saxMode: 'keys', phrase: 'saints', level: 'full', guitar: 'electric', drumKit: 'studio', light: 2.6, warmth: .55 };
+const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', sax: 'gold', saxMode: 'keys', phrase: 'saints', level: 'full', backing: true, guitar: 'electric', drumKit: 'studio', light: 2.6, warmth: .55 };
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
@@ -244,7 +247,9 @@ const DK = (() => { const inp = ctx.createGain(), low = ctx.createBiquadFilter()
 const KITS = { studio: { name: 'Studio', low: 0, high: 0, thr: -14, ratio: 2, att: .006, rel: .2, room: .14, ir: 'room', out: 1 },
   rock: { name: 'Rock', low: 3, high: 2, thr: -18, ratio: 3.5, att: .004, rel: .18, room: .32, ir: 'room', out: 1.05 },
   metal: { name: 'Metal', low: 6, high: 7, thr: -24, ratio: 7, att: .002, rel: .07, room: .06, ir: 'small', out: 1.2 },
-  gated: { name: 'Gated', low: 2, high: 3, thr: -18, ratio: 4, att: .004, rel: .12, room: .55, ir: 'gated', out: 1 } };
+  gated: { name: 'Gated', low: 2, high: 3, thr: -18, ratio: 4, att: .004, rel: .12, room: .55, ir: 'gated', out: 1 },
+  funk: { name: 'Funk', low: 1, high: 4, thr: -16, ratio: 3, att: .003, rel: .1, room: .05, ir: 'small', out: 1.05 },
+  grunge: { name: 'Grunge', low: 4, high: 3, thr: -20, ratio: 4.5, att: .005, rel: .22, room: .42, ir: 'room', out: 1.1 } };
 function setKit(name) { const k = KITS[name] || KITS.studio, t = ctx.currentTime; DK.low.gain.setTargetAtTime(k.low, t, .02); DK.high.gain.setTargetAtTime(k.high, t, .02); DK.cmp.threshold.value = k.thr; DK.cmp.ratio.value = k.ratio; DK.cmp.attack.value = k.att; DK.cmp.release.value = k.rel;
   DK.snd.gain.setTargetAtTime(k.room, t, .02); DK.out.gain.setTargetAtTime(k.out, t, .02); DK.rv.buffer = IRS[k.ir]; DK.kit = KITS[name] ? name : 'studio'; }
 // (the metal kick's click: the beater on a hard head, a short falling ping)
@@ -603,14 +608,15 @@ function groupLanes(notes) { if (G.level === 'easy') return [{ id: 'all', name: 
   lanes.forEach((l, i) => l.key = HOME[from + i]); return lanes; }
 function songLanes(song) { let lanes;
   if (P.look === 'Drums') lanes = PIECES.filter(p => song.notes.some(n => n.lane === p.id)).map(p => ({ id: p.id, name: p.name, color: LANE_COLOR[p.id], piece: p }));
-  else if (P.look === 'Guitar' && typeof song.notes[0].lane !== 'number') lanes = [...new Set(song.notes.map(n => n.lane))].map(c => ({ id: c, name: P.guitar === 'electric' ? c.replace(/m$/, '') + '5' : c, color: PITCH_COLORS[chordRoot(c) % 12] }));
+  else if (P.look === 'Guitar' && typeof song.notes[0].lane !== 'number') lanes = [...new Set(song.notes.map(n => n.lane))].map(c => ({ id: c, name: G.exact ? c.replace('#', '♯') : P.guitar === 'electric' ? c.replace(/m$/, '') + '5' : c, color: PITCH_COLORS[chordRoot(c) % 12] }));
   else lanes = [...new Set(song.notes.map(n => n.lane))].sort((a, b) => a - b).map(m => ({ id: m, name: NOTE(m), color: PITCH_COLORS[m % 12], black: isBlack(m) }));
   const row = lanes.length > HOME.length ? NUMS : HOME, from = Math.floor((row.length - lanes.length) / 2);
   lanes.forEach((l, i) => l.key = row[from + i]); return lanes; }
 function gameStart(song, opt = {}) { unlock(); result.hidden = true; saxOff(); G.song = song; G.speed = pickSpeed;
   if (P.look === 'Drums') { const need = Math.max(...song.notes.map(n => PIECES.findIndex(p => p.id === n.lane))) + 1;
     if (need > Object.keys(STATE).length) { P.kit = need; save(); buildKit(need); frameView('Drums'); load(SOUNDS.Drums()); } }
-  G.level = P.level; G.group = G.level !== 'full'; if (P.look === 'Drums') setKit(song.kit || P.drumKit);
+  G.level = P.level; G.group = G.level !== 'full'; G.exact = !!song.exact; if (P.look === 'Drums' || song.exact) setKit(song.kit || P.drumKit);
+  if (song.exact) { setAmp(song.amp); load(PIECES.flatMap(p => p.sounds).concat(['hhopen'], GTR_SOUNDS)); }
   const beat = 60 / song.bpm / G.speed, lead = 4 * beat + .7;
   let notes = song.notes.map(n => ({ ...n, t: (n.sec != null ? n.sec : n.beat * 60 / song.bpm) / G.speed + lead, len: (n.dur || 0) * (n.beatSec || 60 / song.bpm) / G.speed, j: null, play: [n.lane] })).sort((a, b) => a.t - b.t);
   if (G.group) { if (P.look !== 'Drums') { const ps = notes.map(n => P.look === 'Guitar' ? chordRoot(n.lane) : n.lane), lo = Math.min(...ps), hi = Math.max(...ps); G.bands = { lo, third: Math.max(1, (hi - lo + 1) / 3) }; }
@@ -619,10 +625,10 @@ function gameStart(song, opt = {}) { unlock(); result.hidden = true; saxOff(); G
     const grid = G.level === 'easy' ? 1 : .5, gap = G.level === 'easy' ? 1.9 : .9; let last = -9; const mine = [];
     G.auto = []; G.autoAt = 0;
     for (const n of notes) { const b = n.beat ?? 0, onGrid = Math.abs(b / grid - Math.round(b / grid)) < .02, sameAsKept = Math.abs(b - last) < .002 && mine.length && Math.abs(mine[mine.length - 1].t - n.t) < .002;
-      if (sameAsKept || (onGrid && b - last >= gap - 1e-6) || (n.sec != null && onGrid && n.t - (mine[mine.length - 1]?.t ?? -9) > .3)) { mine.push(n); last = b; } else G.auto.push({ t: n.t, len: n.len, play: [n.lane], lane: groupOf(n.lane) }); }
+      if (sameAsKept || (onGrid && b - last >= gap - 1e-6) || (n.sec != null && onGrid && n.t - (mine[mine.length - 1]?.t ?? -9) > .3)) { mine.push(n); last = b; } else G.auto.push({ t: n.t, len: n.len, play: [n.lane], lane: groupOf(n.lane), pitches: n.pitches, vel: n.vel, open: n.open, dir: n.dir, ring: n.ring }); }
     notes = mine;
     // (notes that land together in one lane become one note that plays them all)
-    const merged = []; for (const n of notes) { const g = groupOf(n.lane), prev = merged.find(m => m.lane === g && Math.abs(m.t - n.t) < .002); if (prev) { prev.play.push(n.lane); prev.len = Math.max(prev.len, n.len); } else merged.push({ ...n, lane: g }); }
+    const merged = []; for (const n of notes) { const g = groupOf(n.lane), prev = merged.find(m => m.lane === g && Math.abs(m.t - n.t) < .002); if (prev) { prev.play.push(n.lane); prev.len = Math.max(prev.len, n.len); if (n.pitches) prev.pitches = [...(prev.pitches || []), ...n.pitches]; } else merged.push({ ...n, lane: g }); }
     notes = merged; G.lanes = groupLanes(notes); }
   else { G.lanes = songLanes(song); G.auto = []; }
   G.notes = notes; G.keys = {}; for (const l of G.lanes) G.keys[l.key] = l;
@@ -630,8 +636,9 @@ function gameStart(song, opt = {}) { unlock(); result.hidden = true; saxOff(); G
   else if (P.look === 'Drums') { const kl = G.lanes.find(l => l.id === (G.group ? 'feet' : 'kick')); if (kl) G.keys[' '] = kl; }
   G.score = 0; G.combo = 0; G.maxCombo = 0; G.n = { perfect: 0, good: 0, miss: 0 }; G.fx = []; G.marks = []; G.meter = []; G.end = G.notes[G.notes.length - 1].t + G.notes[G.notes.length - 1].len + 1.2; if (G.auto?.length) { const la = G.auto[G.auto.length - 1]; G.end = Math.max(G.end, la.t + la.len + 1.2); }
   G.together = !!opt.at; G.start = (opt.at ?? performance.now()) / 1000; const t0 = ctx.currentTime + Math.max(0, G.start - performance.now() / 1000) + .7; for (let i = 0; i < 4; i++) metro(t0 + i * beat, i === 0);   // (four clicks in: a metronome, not music)
+  G.lead = lead; G.backing = song.exact && P.backing ? backingFor(song) : null; G.bAt = 0;
   G.state = 'play'; buildCaps(); renderTools(); updateHint(); }
-function gameStop() { setKit(P.drumKit); if (NET.host && NET.conn?.open && G.state === 'play') tx({ t: 'stop' }); G.state = 'off'; result.hidden = true; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff(); renderTools(); updateHint(); }
+function gameStop() { setKit(P.drumKit); setAmp('crunch'); G.backing = null; if (NET.host && NET.conn?.open && G.state === 'play') tx({ t: 'stop' }); G.state = 'off'; result.hidden = true; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff(); renderTools(); updateHint(); }
 const gameNow = () => performance.now() / 1000 - G.start;
 // (a press: the nearest note in that lane is judged; every press, on time or not, leaves its mark)
 function gameInput(lane, sound = false) { if (G.state !== 'play') return; const now = gameNow(); if (G.group && !G.lanes.some(l => l.id === lane)) lane = groupOf(lane);
@@ -644,18 +651,19 @@ function gameInput(lane, sound = false) { if (G.state !== 'play') return; const 
   if (best && bd <= HIT.good) { const dt = now - best.t; judge(best, bd <= HIT.perfect ? 'perfect' : 'good'); if (sound) { playNote(best); best.sounded = true; } G.marks.push({ lane, dt, kind: best.j, t: performance.now() }); G.meter.push({ dt, kind: best.j, t: performance.now() }); }
   else G.marks.push({ lane, dt: null, kind: 'stray', t: performance.now() }); }
 // (the right sound for a note found by a grouped press: the pieces, the bar, or the saxophone held while the key is down)
-function playNote(n) { if (P.look === 'Drums') for (const id of n.play) { const p = PIECES.find(q => q.id === id); if (p) hitPiece(p, .9, false, true); }
-  else if (P.look === 'Xylophone') for (const m of n.play) { const bar = BARS.find(b => b.userData.midi === m); if (bar) hitBar(bar, .9, true); }
-  else if (P.look === 'Guitar') { if (typeof n.play[0] === 'number') n.play.forEach(m => pickNote(m, .9, true)); else strum(n.play[0], .9, true); }
-  else { saxOn(n.play[0], .85, true); G.held = n.play[0]; } }
+function playNote(n) { const ps = n.pitches;
+  if (P.look === 'Drums') for (const id of n.play) { const p = PIECES.find(q => q.id === id); if (p) hitPiece(p, n.vel ?? .9, !!n.open, true); }
+  else if (P.look === 'Xylophone') for (const m of ps || n.play) { const bar = BARS.find(b => b.userData.midi === m); if (bar) hitBar(bar, n.vel != null ? .5 + n.vel * .5 : .9, true); }
+  else if (P.look === 'Guitar') { if (ps) playPitches(ps, n.vel != null ? .55 + n.vel * .4 : .9, n.dir, n.ring); else if (typeof n.play[0] === 'number') n.play.forEach(m => pickNote(m, .9, true)); else strum(n.play[0], .9, true); }
+  else { const m = ps ? ps[0] : n.play[0]; saxOn(m, .85, true); G.held = m; } }
 function judge(n, kind) { n.j = kind; G.n[kind]++;
   if (kind === 'miss') G.combo = 0; else { G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); G.score += (kind === 'perfect' ? 100 : 60) * Math.min(4, 1 + Math.floor(G.combo / 10)); }
   G.fx.push({ lane: n.lane, kind, t: performance.now() }); }
 // (the caps under the hit line: the key and the name; held, a cap sinks and darkens; the press plays the instrument)
 function laneDown(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.add('on'); l.flash = performance.now();
-  if (G.group) { gameInput(l.id, true); return; }
+  if (G.group || (G.exact && P.look !== 'Drums')) { gameInput(l.id, true); return; }
   if (P.look === 'Drums') hitPiece(l.piece, .9, false); else if (P.look === 'Guitar') { if (typeof l.id === 'number') pickNote(l.id, .9); else strum(l.id, .9); } else if (P.look === 'Xylophone') { const bar = BARS.find(b => b.userData.midi === l.id); if (bar) hitBar(bar, .9); } else saxOn(l.id, .85); }
-function laneUp(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.remove('on'); if (P.look === 'Saxophone') { if (G.group) { if (G.held != null) saxOff(G.held); G.held = null; } else saxOff(l.id); } }
+function laneUp(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.remove('on'); if (P.look === 'Saxophone') { if (G.group || G.exact) { if (G.held != null) saxOff(G.held); G.held = null; } else saxOff(l.id); } }
 function buildCaps() { caps.innerHTML = ''; caps.style.setProperty('--n', G.lanes.length);
   for (const l of G.lanes) { const b = document.createElement('button'); b.type = 'button'; b.dataset.lane = l.id; b.style.setProperty('--c', l.color); b.innerHTML = `<b>${l.key === ' ' ? 'Space' : l.key === ';' ? ';' : l.key.toUpperCase()}</b><span>${l.name}</span>`;
     b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch { } laneDown(l); });
@@ -667,7 +675,8 @@ function gameKey(e, down) { const k = e.key === ' ' ? ' ' : e.key.toLowerCase(),
   if (down) { if (e.repeat || heldLanes.has(k)) return true; heldLanes.add(k); laneDown(l); } else { heldLanes.delete(k); laneUp(l); } return true; }
 const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect(x, y, w, h, r); };
 function gameFrame() { if (G.state !== 'play') return; const now = gameNow(), tn = performance.now();
-  while (G.auto && G.autoAt < G.auto.length && G.auto[G.autoAt].t <= now + .004) { const a = G.auto[G.autoAt++]; if (P.look === 'Saxophone') { const m = a.play[0]; if (G.held == null) { saxOn(m, .8, true); setTimeout(() => { if (voice && voice.m === m && G.held == null) saxOff(m); }, Math.max(90, a.len * 1000 * .9)); } } else playNote(a); }
+  while (G.auto && G.autoAt < G.auto.length && G.auto[G.autoAt].t <= now + .004) { const a = G.auto[G.autoAt++]; if (P.look === 'Saxophone') { const m = a.pitches ? a.pitches[0] : a.play[0]; if (G.held == null) { saxOn(m, .8, true); setTimeout(() => { if (voice && voice.m === m && G.held == null) saxOff(m); }, Math.max(90, a.len * 1000 * .9)); } } else playNote(a); }
+  backingFrame(now);
   for (const n of G.notes) { if (n.t - now > 0) break; if (!n.j && now - n.t > HIT.good) judge(n, 'miss'); }
   const dpr = Math.min(devicePixelRatio, 2), W = innerWidth, H = innerHeight; if (hwy.width !== Math.round(W * dpr) || hwy.height !== Math.round(H * dpr)) { hwy.width = Math.round(W * dpr); hwy.height = Math.round(H * dpr); }
   const c = hctx; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
@@ -690,7 +699,7 @@ function gameFrame() { if (G.state !== 'play') return; const now = gameNow(), tn
     if (hit || y > hitY + 20) { c.globalAlpha = 1; continue; }
     const near = clamp(1 - Math.abs(n.t - now) / .25, 0, 1), sw = (l.w - 14) * (1 + near * .08), h = 16 + near * 2, x = l.x + (l.w - sw) / 2;
     c.globalAlpha = n.j === 'miss' ? .25 : 1; c.fillStyle = l.color; rr(c, x, y - h / 2, sw, h, h / 2); c.fill();
-    c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, x + 3, y - h / 2 + 2, sw - 6, h * .38, h * .2); c.fill(); c.globalAlpha = 1; }
+    c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, x + 3, y - h / 2 + 2, sw - 6, h * .38, h * .2); c.fill(); if (n.dir) { c.fillStyle = 'rgba(255,255,255,.95)'; c.font = '700 12px Geist, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(n.dir === 'up' ? '↑' : '↓', l.x + l.w / 2, y + 1); c.textBaseline = 'alphabetic'; } c.globalAlpha = 1; }
   c.restore();
   if (G.auto) { c.save(); c.beginPath(); c.rect(0, 0, W, hitY); c.clip(); for (let i = G.autoAt; i < G.auto.length; i++) { const a = G.auto[i]; if (a.t - now > AHEAD) break; const l = byId.get(a.lane); if (!l) continue; c.globalAlpha = .28; c.fillStyle = l.color; c.beginPath(); c.arc(l.x + l.w / 2, yOf(a.t), 4, 0, 7); c.fill(); } c.restore(); c.globalAlpha = 1; }
   // your marks: a tick where you pressed, against the note (early above the line, late below), with the milliseconds; a stray press a small cross
@@ -711,7 +720,7 @@ function gameFrame() { if (G.state !== 'play') return; const now = gameNow(), tn
   const done = G.notes.filter(n => n.j).length;
   hud.hidden = false; hud.innerHTML = `<b>${G.score.toLocaleString('en')}</b>${G.together && NET.live ? `<em>partner ${NET.live.score.toLocaleString('en')}${NET.live.combo > 1 ? ' · ' + NET.live.combo + ' combo' : ''}</em>` : ''}<span>${G.combo > 1 ? `${G.combo} combo · ×${Math.min(4, 1 + Math.floor(G.combo / 10))}` : `${done} / ${G.notes.length}`}</span>`;
   if (now > G.end) finish(); }
-function finish() { setKit(P.drumKit); G.state = 'done'; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff();
+function finish() { setKit(P.drumKit); setAmp('crunch'); G.backing = null; G.state = 'done'; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff();
   const tot = G.notes.length, acc = (G.n.perfect + G.n.good * .6) / tot, stars = acc >= .95 ? 3 : acc >= .8 ? 2 : acc >= .5 ? 1 : 0, id = P.look + ':' + G.song.id + ':' + G.speed + ':' + G.level;
   const ts = G.meter.length ? G.meter : [], avg = ts.length ? ts.reduce((a, m) => a + m.dt, 0) / ts.length : 0, lean = Math.abs(avg) < .015 ? 'right on the beat' : avg < 0 ? `a touch early (${Math.round(-avg * 1000)} ms)` : `a touch late (${Math.round(avg * 1000)} ms)`;
   let best = bestOf(id), isNew = false; if (!best || G.score > best.score) { isNew = true; best = { score: G.score, stars }; try { const all = JSON.parse(localStorage.getItem(BEST_KEY) || '{}'); all[id] = best; localStorage.setItem(BEST_KEY, JSON.stringify(all)); } catch { } }
@@ -721,11 +730,13 @@ function finish() { setKit(P.drumKit); G.state = 'done'; caps.hidden = true; hud
   if (G.together) { tx({ t: 'final', score: G.score, acc: Math.round(acc * 100), stars, look: P.look }); showPartnerResult(); }
   result.hidden = false; result.querySelector('[data-r=again]').onclick = () => { if (G.together) { result.hidden = true; room.hidden = false; renderRoom(); } else gameStart(G.song); }; result.querySelector('[data-r=songs]').onclick = () => { result.hidden = true; openSongs(); }; result.querySelector('[data-r=close]').onclick = gameStop;
   renderTools(); }
-function renderGameTools() { const list = SONGS[P.look];
-  if (G.state === 'pick') { tools.innerHTML = `<div class="tb songs" role="radiogroup" aria-label="Song">${list.map(s => { const b = bestOf(P.look + ':' + s.id + ':' + pickSpeed + ':' + P.level); return `<button type="button" data-song="${s.id}">${s.name}${s.band ? ' <i class="bd">band</i>' : ''}${b ? ` <i class="st">${'★'.repeat(b.stars) || '·'}</i>` : ''}</button>`; }).join('')}</div>`
+function renderGameTools() { const list = SONGS[P.look].concat(IMPORTED.map(e => songFor(e, P.look)).filter(Boolean));
+  if (G.state === 'pick') { tools.innerHTML = `<div class="tb songs" role="radiogroup" aria-label="Song">${list.map(s => { const b = bestOf(P.look + ':' + s.id + ':' + pickSpeed + ':' + P.level); return `<button type="button" data-song="${s.id}">${s.name}${s.band ? ' <i class="bd">band</i>' : ''}${s.midi ? ' <i class="bd">midi</i>' : ''}${b ? ` <i class="st">${'★'.repeat(b.stars) || '·'}</i>` : ''}${s.midi ? '<i class="bx" data-del="' + s.id + '" title="Remove this file" aria-label="Remove">×</i>' : ''}</button>`; }).join('')}<button type="button" id="midiAdd" class="madd">+ MIDI file</button></div>`
+      + (list.some(s => s.midi) ? `<div class="tb lab-seg" role="radiogroup" aria-label="Backing">${[[true, 'Backing on'], [false, 'Off']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.backing === v}" data-bk="${v}">${l}</button>`).join('')}</div>` : '')
       + `<div class="tb lab-seg" role="radiogroup" aria-label="Keys">${LEVELS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.level === v}" data-lv="${v}">${l}</button>`).join('')}</div>`
       + `<div class="tb lab-seg" role="radiogroup" aria-label="Tempo">${[.5, .75, 1].map(v => `<button type="button" role="radio" aria-checked="${pickSpeed === v}" data-sp="${v}">${v * 100}%</button>`).join('')}</div><div class="tb"><button type="button" id="songX" aria-label="Close the songs">×</button></div>`;
-    tools.querySelectorAll('[data-song]').forEach(b => b.onclick = () => gameStart(list.find(s => s.id === b.dataset.song)));
+    tools.querySelectorAll('[data-song]').forEach(b => b.onclick = e => { const del = e.target.closest('[data-del]'); if (del) { removeMidi(del.dataset.del); return; } gameStart(list.find(s => s.id === b.dataset.song)); });
+    $('midiAdd').onclick = pickMidi; tools.querySelectorAll('[data-bk]').forEach(b => b.onclick = () => { P.backing = b.dataset.bk === 'true'; save(); renderTools(); });
     tools.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { pickSpeed = +b.dataset.sp; renderTools(); });
     tools.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { P.level = b.dataset.lv; save(); renderTools(); });
     $('songX').onclick = () => { G.state = 'off'; renderTools(); updateHint(); }; return true; }
@@ -832,14 +843,14 @@ const GCH = (() => { const curve = new Float32Array(1024); for (let i = 0; i < 1
   const mid = ctx.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 900; mid.gain.value = 3; const eout = ctx.createGain(); eout.gain.value = .32; ein.gain.value = 1.6;
   ein.connect(drive); drive.connect(cab); cab.connect(mid); mid.connect(eout); eout.connect(bus);
   const ain = ctx.createGain(), bodyR = ctx.createBiquadFilter(); bodyR.type = 'peaking'; bodyR.frequency.value = 180; bodyR.gain.value = 1.5; bodyR.Q.value = 1.2; const air = ctx.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 4000; air.gain.value = 1; const aout = ctx.createGain(); aout.gain.value = .8;
-  ain.connect(bodyR); bodyR.connect(air); air.connect(aout); aout.connect(bus); return { electric: ein, acoustic: ain }; })();
+  ain.connect(bodyR); bodyR.connect(air); air.connect(aout); aout.connect(bus); return { electric: ein, acoustic: ain, amp: { ein, drive, cab, mid, eout } }; })();
 const ringing = [];   // (one voice per string: a new pluck on a string stops what it was ringing)
 // (real strings: Open String Guitar by tildesounds, CC0; six open strings E2 A2 D3 F3 G3 C4, each at three strengths; a note plays from the nearest string, retuned, and the string's synthesis stands in until the recordings are loaded)
 const GSTRINGS = [['E', 40], ['A', 45], ['D', 50], ['F', 53], ['G', 55], ['C', 60]], GTIER = v => v < .6 ? 's' : v < .88 ? 'm' : 'h', GTIER_GAIN = { s: .6, m: .8, h: 1 };
 const GTR_SOUNDS = GSTRINGS.flatMap(([L]) => ['s', 'm', 'h'].map(t => 'gtr_' + L + '_' + t));
-function pluck(m, at = 0, vel = .9, strIdx = 0) { const kind = P.guitar, near = GSTRINGS.reduce((a, b) => Math.abs(b[1] - m) < Math.abs(a[1] - m) ? b : a), tier = GTIER(vel), rec = BUF['gtr_' + near[0] + '_' + tier];
+function pluck(m, at = 0, vel = .9, strIdx = 0, len = 0) { const kind = P.guitar, near = GSTRINGS.reduce((a, b) => Math.abs(b[1] - m) < Math.abs(a[1] - m) ? b : a), tier = GTIER(vel), rec = BUF['gtr_' + near[0] + '_' + tier];
   const s = ctx.createBufferSource(), g = ctx.createGain(); if (rec) { s.buffer = rec; s.playbackRate.value = Math.pow(2, (m - near[1]) / 12); g.gain.value = GTIER_GAIN[tier] * (.75 + vel * .25); } else { const k = ksBuffer(m, kind); s.buffer = k.b; s.playbackRate.value = k.rate; g.gain.value = vel; load(GTR_SOUNDS); }
-  s.connect(g); g.connect(GCH[kind]); const t = ctx.currentTime + at; s.start(t); const old = ringing[strIdx]; if (old) { try { old.g.gain.setTargetAtTime(0, t, .015); old.s.stop(t + .1); } catch { } } ringing[strIdx] = { s, g };
+  s.connect(g); g.connect(GCH[kind]); const t = ctx.currentTime + at; s.start(t); if (len > 0) { g.gain.setTargetAtTime(0, t + len, .025); s.stop(t + len + .4); } const old = ringing[strIdx]; if (old) { try { old.g.gain.setTargetAtTime(0, t, .015); old.s.stop(t + .1); } catch { } } ringing[strIdx] = { s, g };
   const st = GSTR[strIdx]; if (st) { st.t = -at; st.amp = vel; } }
 // (chords: a root and a quality; the electric plays the root, fifth and octave; the acoustic an open-position six-string voicing)
 const ROOTS = { C: 48, 'C#': 49, Db: 49, D: 50, 'D#': 51, Eb: 51, E: 40, F: 41, 'F#': 42, Gb: 42, G: 43, 'G#': 44, Ab: 44, A: 45, 'A#': 46, Bb: 46, B: 47 };
@@ -852,6 +863,10 @@ let lastChord = 'E';
 function strum(name, vel = .9, quiet = false) { if (!quiet) gameInput(name); unlock(); shareHit({ look: 'Guitar', chord: name, kind: P.guitar }); figureHit('me', 'Guitar', { chord: name }); const ns = chordNotes(name), off = 6 - ns.length; lastChord = name;
   ns.forEach((m, i) => pluck(m, i * (P.guitar === 'electric' ? .008 : .016), vel * (1 - i * .04), off + i)); }
 function pickNote(m, vel = .9, quiet = false) { unlock(); shareHit({ look: 'Guitar', note: m, kind: P.guitar }); figureHit('me', 'Guitar', { note: m }); const str = clamp(Math.floor((m - 40) / 5), 0, 5); pluck(m, 0, vel, str); if (!quiet) gameInput(m); }
+function playPitches(ps, vel = .9, dir = 'down', ring = 0, share = true) { unlock(); if (share) { shareHit({ look: 'Guitar', notes: ps, kind: P.guitar, dir, ring }); figureHit('me', 'Guitar', { note: ps[0] }); }
+  let list = ps.slice(0, 6).map((m, i, a) => ({ m, str: Math.max(0, 6 - a.length) + i })); if (dir === 'up') { list = list.reverse(); if (list.length > 4) list = list.slice(0, 4); }
+  const gap = list.length > 1 ? (dir === 'up' ? .006 : .009) * (1.25 - vel * .45) : 0, v = dir === 'up' ? vel * .82 : vel;
+  list.forEach(({ m, str }, i) => pluck(m, i * gap, v * (1 - i * .025), str, ring > 0 ? ring / G.speed + .03 : 0)); }
 function animGuitar(dt) { for (const s of GSTR) { s.t += dt; const k = s.t < 0 ? 0 : s.amp * Math.exp(-s.t * 3.5) * Math.sin(s.t * 160); s.mesh.position.x = s.base.x + k * .0025; } }
 // (free play: number keys 1–8 strum the chords of the palette; Z… and Q… pick single notes from the low E; the pads below for touch)
 const PALETTES = { electric: ['E', 'A', 'D', 'G', 'C', 'B', 'F#', 'F'], acoustic: ['E', 'A', 'D', 'G', 'C', 'Em', 'Am', 'Dm'] }, GTR_BASE = 40;
@@ -915,6 +930,139 @@ for (const b of BAND_SONGS) { const base = { id: b.id, name: `${b.name} · ${b.b
   SONGS.Saxophone.push({ ...base, ...melody(b.bpm, b.melody, fitShift(b.melody, 48, 72)) });
   SONGS.Xylophone.push({ ...base, ...melody(b.bpm, b.melody, fitShift(b.melody, 72, 96)) }); }
 
+// ---------- your own songs from MIDI files (to test on tunes you know by ear): drop a .mid on the page or add one in the song list.
+// The file stays on this device (IndexedDB); when you play together it goes straight to your partner, nowhere else. The parts are
+// found by the General MIDI conventions: channel 10 = drums, programs 24–31 = guitars, 32–39 = bass, a track named vocal / melody /
+// lead = the tune. Your instrument plays its part note for note (the file's pitches and strengths); what nobody plays (the bass, the
+// keys, the tune, the drums or the guitar when no one has them) sounds quietly underneath, in time, so the song is whole ----------
+function parseMidi(buf) { const d = new DataView(buf), u8 = new Uint8Array(buf); let p = 0;
+  const str = n => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(u8[p + i]); return s; };
+  const vlq = () => { let v = 0, b; do { b = u8[p++]; v = v * 128 + (b & 127); } while (b & 128 && p < u8.length); return v; };
+  if (str(4) !== 'MThd') throw new Error('This is not a MIDI file.'); p += 4; const hl = d.getUint32(p); p += 4; const ntr = d.getUint16(p + 2), ppq = d.getUint16(p + 4); p += hl;
+  if (ppq & 0x8000) throw new Error('This MIDI file counts time in SMPTE frames, which is not supported.');
+  const tempos = [], tracks = [], progs = {}; let title = '';
+  for (let ti = 0; ti < ntr && p + 8 <= u8.length; ti++) { const id = str(4); p += 4; const len = d.getUint32(p); p += 4; const end = Math.min(u8.length, p + len); if (id !== 'MTrk') { p = end; continue; }
+    const tr = { name: '', notes: [], prog: {} }, on = new Map(); let tick = 0, run = 0;
+    const close = k => { const n = on.get(k); on.delete(k); n.dur = Math.max(1, tick - n.tick); tr.notes.push(n); };
+    while (p < end) { tick += vlq(); let st = u8[p]; if (st & 128) { p++; if (st < 0xF0) run = st; } else st = run;
+      if (st === 0xFF) { const ty = u8[p++], l = vlq(); if (ty === 0x51 && l >= 3) tempos.push({ tick, us: (u8[p] << 16) | (u8[p + 1] << 8) | u8[p + 2] });
+        else if (ty === 0x03) { const s = new TextDecoder('latin1').decode(u8.subarray(p, p + l)).trim(); if (!tr.name) tr.name = s; if (ti === 0 && !title) title = s; }
+        p += l; if (ty === 0x2F) break; continue; }
+      if (st === 0xF0 || st === 0xF7) { p += vlq(); continue; }
+      const ty = st & 0xF0, ch = st & 15, a = u8[p++], b = ty === 0xC0 || ty === 0xD0 ? 0 : u8[p++];
+      if (ty === 0x90 && b > 0) { const k = ch * 128 + a; if (on.has(k)) close(k); on.set(k, { tick, m: a, vel: b / 127, ch }); }
+      else if (ty === 0x80 || ty === 0x90) { const k = ch * 128 + a; if (on.has(k)) close(k); }
+      else if (ty === 0xC0) { if (tr.prog[ch] == null) tr.prog[ch] = a; if (progs[ch] == null) progs[ch] = a; } }
+    for (const k of [...on.keys()]) close(k); p = end; tracks.push(tr); }
+  // (the tempo map: seconds and seconds-per-beat at any tick)
+  tempos.sort((a, b) => a.tick - b.tick); if (!tempos.length || tempos[0].tick > 0) tempos.unshift({ tick: 0, us: tempos[0]?.us ?? 500000 });
+  let acc = 0; tempos.forEach((t, i) => { if (i) acc += (t.tick - tempos[i - 1].tick) / ppq * tempos[i - 1].us / 1e6; t.sec = acc; });
+  const seg = tick => { let lo = 0, hi = tempos.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (tempos[mid].tick <= tick) lo = mid; else hi = mid - 1; } return tempos[lo]; };
+  const secOf = tick => { const t = seg(tick); return t.sec + (tick - t.tick) / ppq * t.us / 1e6; }, spb = tick => seg(tick).us / 1e6;
+  const bpms = [...new Set(tempos.map(t => Math.round(6e7 / t.us * 2) / 2))];
+  // (a part = one track's notes on one channel; format 0 files keep everything in one track)
+  const parts = []; for (const tr of tracks) { const by = {}; for (const n of tr.notes) (by[n.ch] = by[n.ch] || []).push(n);
+    for (const ch in by) parts.push({ name: tr.name, ch: +ch, prog: tr.prog[ch] ?? progs[ch] ?? 0, notes: by[ch].sort((a, b) => a.tick - b.tick) }); }
+  return { ppq, parts, secOf, spb, title, single: bpms.length === 1, bpm0: 6e7 / tempos[0].us, names: tracks.map(t => t.name) }; }
+
+const GM_DRUM = { 35: 'kick', 36: 'kick', 37: 'snare', 38: 'snare', 39: 'snare', 40: 'snare', 42: 'hihat', 44: 'hihat', 46: 'hihat', 41: 'floor', 43: 'floor', 45: 'floor', 47: 'tom', 48: 'tom', 50: 'tom',
+  49: 'crash', 52: 'crash', 55: 'crash', 57: 'crash', 51: 'ride', 53: 'ride', 59: 'ride', 60: 'bongo', 61: 'bongo', 62: 'conga', 63: 'conga', 64: 'conga' };
+const PCN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const mergeParts = list => list.length ? { name: list.map(p => p.name).join(', '), prog: list[0].prog, notes: list.flatMap(p => p.notes).sort((a, b) => a.tick - b.tick) } : null;
+// (which part is which)
+function analyseMidi(buf) { const M = parseMidi(buf), parts = M.parts.filter(p => p.notes.length);
+  if (M.names.some(n => /^PART (DRUMS|GUITAR|BASS|VOCALS)/i.test(n))) throw new Error('This is a game chart (Rock Band / Clone Hero), not a song: its notes are buttons, not pitches. Use a General MIDI file of the song.');
+  const nm = p => (p.name || '').toLowerCase(), isDr = p => p.ch === 9;
+  const rest = parts.filter(p => !isDr(p)), bassP = rest.filter(p => (p.prog >= 32 && p.prog <= 39) || /bass/.test(nm(p)));
+  const gtrP = rest.filter(p => !bassP.includes(p) && ((p.prog >= 24 && p.prog <= 31) || /guit|gtr/.test(nm(p)))).sort((a, b) => b.notes.length - a.notes.length);
+  const mono = p => { const on = new Map(); for (const n of p.notes) on.set(n.tick, (on.get(n.tick) || 0) + 1); let s = 0; for (const v of on.values()) if (v === 1) s++; return s / Math.max(1, on.size); };
+  const avg = p => p.notes.reduce((a, n) => a + n.m, 0) / p.notes.length;
+  let melody = rest.filter(p => !bassP.includes(p) && /voc|vox|voice|melod|lead|sing|tune/.test(nm(p)) && !/back|bgv|harm|choir/.test(nm(p))).sort((a, b) => b.notes.length - a.notes.length)[0];
+  if (!melody) melody = rest.filter(p => !bassP.includes(p) && !gtrP.includes(p) && mono(p) > .8 && avg(p) > 55 && p.notes.length > 16).sort((a, b) => b.notes.length - a.notes.length)[0];
+  const guitar = gtrP[0] || null, used = new Set([guitar, melody, ...bassP].filter(Boolean));
+  return { ...M, drums: mergeParts(parts.filter(isDr)), guitar, melody: melody || null, bass: mergeParts(bassP), others: mergeParts(rest.filter(p => !used.has(p))) }; }
+// (notes that start together, as one strum; the top note of each onset, as a tune)
+function onsets(part, A) { const out = [], tol = A.ppq / 32; for (const n of part.notes) { const last = out[out.length - 1];
+    if (last && n.tick - last.tick <= tol) { if (!last.ms.includes(n.m)) { last.ms.push(n.m); last.seq.push(n.m); } last.vel = Math.max(last.vel, n.vel); last.dur = Math.max(last.dur, n.dur); last.lastTick = n.tick; } else out.push({ tick: n.tick, lastTick: n.tick, dur: n.dur, vel: n.vel, ms: [n.m], seq: [n.m] }); }
+  out.forEach(o => o.ms.sort((a, b) => a - b)); return out; }
+const fold = (m, lo, hi) => { while (m < lo) m += 12; while (m > hi) m -= 12; return m; };
+function octaveFit(ms, lo, hi) { let best = 0, bs = -1; for (let sh = -48; sh <= 48; sh += 12) { const s = ms.filter(m => m + sh >= lo && m + sh <= hi).length; if (s > bs) { bs = s; best = sh; } } return best; }
+// (the part for one instrument, built once per file)
+function songFor(e, look) { if (e.songs[look] !== undefined) return e.songs[look]; const A = e.A; let notes = null, src = null;
+  const T = n => { const o = { beat: n.tick / A.ppq, dur: n.dur / A.ppq }; if (!A.single) { o.sec = A.secOf(n.tick); o.beatSec = A.spb(n.tick); } return o; };
+  if (look === 'Drums' && A.drums) { const seen = new Set(); notes = []; src = 'drums';
+    for (const n of A.drums.notes) { const id = GM_DRUM[n.m]; if (!id) continue; const k = id + '@' + Math.round(n.tick / (A.ppq / 24)); if (seen.has(k)) continue; seen.add(k); notes.push({ ...T(n), dur: 0, lane: id, vel: clamp(.35 + n.vel * .7, .3, 1), open: n.m === 46 }); } }
+  else if (look === 'Guitar' && (A.guitar || A.melody)) { src = A.guitar ? 'guitar' : 'melody'; const on = onsets(A.guitar || A.melody, A), lo = Math.min(...on.map(o => o.ms[0])), sh = lo < 40 ? Math.ceil((40 - lo) / 12) * 12 : 0;
+    const sixteenths = on.filter(o => { const f = (o.tick / A.ppq) % .5; return Math.abs(f - .25) < .06; }).length > on.length * .12;
+    notes = on.map(o => { const b = o.tick / A.ppq, f = sixteenths ? b % .5 : b % 1, onBeat = f < .06 || f > (sixteenths ? .44 : .94), spread = o.lastTick > o.tick && o.seq.length > 1;
+      const dir = spread ? (o.seq[0] < o.seq[o.seq.length - 1] ? 'down' : 'up') : onBeat ? 'down' : 'up';
+      return { ...T(o), dur: 0, lane: PCN[o.ms[0] % 12], pitches: o.ms.slice(0, 6).map(m => fold(m + sh, 40, 88)), vel: o.vel, dir, ring: A.secOf(o.tick + o.dur) - A.secOf(o.tick) }; }); }
+  else if ((look === 'Saxophone' || look === 'Xylophone') && (A.melody || A.guitar)) { src = A.melody ? 'melody' : 'guitar'; const [lo, hi] = look === 'Saxophone' ? [48, 72] : [72, 96];
+    const line = onsets(A.melody || A.guitar, A).map(o => ({ ...o, m: o.ms[o.ms.length - 1] })), sh = octaveFit(line.map(n => n.m), lo, hi), ps = line.map(n => fold(n.m + sh, lo, hi)), few = new Set(ps).size <= 12;
+    notes = line.map((n, i) => ({ ...T(n), dur: look === 'Saxophone' ? n.dur / A.ppq : 0, lane: few ? ps[i] : lo + ((ps[i] - lo) % 12), pitches: [ps[i]], vel: n.vel })); }
+  e.songs[look] = notes && notes.length >= 8 ? { id: e.id, name: e.name, bpm: A.bpm0, notes, exact: true, midi: true, kit: e.kit, amp: e.amp, src } : null; return e.songs[look]; }
+// (the sound of the song: guessed from its name, so a few known ones get the right kit and amp)
+function guessSound(text) { const s = text.toLowerCase();
+  if (/air tonight|collins|genesis/.test(s)) return { kit: 'gated', amp: 'clean' };
+  if (/can.?t stop|chili|rhcp|californication|otherside|scar tissue|dani california|snow|by the way|give it away|under the bridge/.test(s)) return { kit: 'funk', amp: 'clean' };
+  if (/nirvana|teen spirit|lithium|come as you are|in bloom|breed|heart.?shaped|polly|about a girl|all apologies|drain you/.test(s)) return { kit: 'grunge', amp: 'heavy' };
+  if (/\btool\b|schism|sober|lateralus|parabola|vicarious|forty.?six|aenema|pneuma|stinkfist|jambi|fear inoculum/.test(s)) return { kit: 'metal', amp: 'heavy' };
+  return { kit: 'rock', amp: 'crunch' }; }
+// (the guitar amp per song: clean, crunch, heavy)
+const AMPS = { clean: { gain: .9, drive: 1.4, cab: 5200, mid: 1, out: .55 }, crunch: { gain: 1.6, drive: 6, cab: 3400, mid: 3, out: .32 }, heavy: { gain: 2.6, drive: 16, cab: 2900, mid: -2, out: .24 } };
+function setAmp(name) { const a = AMPS[name] || AMPS.crunch, n = GCH.amp, c = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; c[i] = Math.tanh(x * a.drive) / Math.tanh(a.drive) * .9; }
+  n.drive.curve = c; n.ein.gain.value = a.gain; n.cab.frequency.value = a.cab; n.mid.gain.value = a.mid; n.eout.gain.value = a.out; }
+// (the files: kept on this device)
+const IMPORTED = [];
+const midiDB = () => new Promise((res, rej) => { const r = indexedDB.open('lab-instruments', 1); r.onupgradeneeded = () => r.result.createObjectStore('midi', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function midiStore(op, val) { try { const db = await midiDB(); return await new Promise(res => { const st = db.transaction('midi', op === 'all' ? 'readonly' : 'readwrite').objectStore('midi'), r = op === 'all' ? st.getAll() : op === 'put' ? st.put(val) : st.delete(val); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch { return null; } }
+function hashBytes(buf) { const u = new Uint8Array(buf); let h = 2166136261; for (let i = 0; i < u.length; i++) { h ^= u[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+function addMidi(buf, fileName, keep = true) { const id = 'midi-' + hashBytes(buf), had = IMPORTED.find(e => e.id === id); if (had) return had;
+  const A = analyseMidi(buf), name = (fileName || '').replace(/\.(mid|midi|kar)$/i, '').replace(/[_]+/g, ' ').trim() || A.title || 'Your song', snd = guessSound(name + ' ' + A.title + ' ' + A.names.join(' '));
+  const e = { id, name, buf, A, songs: {}, ...snd }; IMPORTED.push(e); if (keep) midiStore('put', { id, name, buf, added: Date.now() }); return e; }
+function removeMidi(id) { const i = IMPORTED.findIndex(e => e.id === id); if (i >= 0) IMPORTED.splice(i, 1); midiStore('delete', id); renderTools(); }
+const findSong = (look, id) => SONGS[look]?.find(s => s.id === id) || (IMPORTED.find(e => e.id === id) ? songFor(IMPORTED.find(e => e.id === id), look) : null);
+midiStore('all').then(list => { for (const r of list || []) { try { addMidi(r.buf, r.name, false); } catch { } } if (G.state === 'pick') renderTools(); });
+// (adding a file: the button in the song list, or a drop anywhere on the page)
+async function importFiles(files) { let last = null, err = null;
+  for (const f of files) { if (!/\.(mid|midi|kar)$/i.test(f.name)) continue; try { last = addMidi(await f.arrayBuffer(), f.name); } catch (x) { err = x.message; } }
+  if (err) say(err); else if (last && !songFor(last, P.look)) say(`“${last.name}” has no part for the ${P.look.toLowerCase()}. It is in the list of the other instruments.`); else if (last) say(`Added “${last.name}”. Sound: ${KITS[last.kit].name} kit, ${last.amp} guitar.`);
+  if (last) openSongs(); }
+function pickMidi() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.mid,.midi,.kar,audio/midi'; inp.multiple = true; inp.onchange = () => importFiles([...inp.files]); inp.click(); }
+addEventListener('dragover', e => { if ([...(e.dataTransfer?.items || [])].some(i => i.kind === 'file')) e.preventDefault(); });
+addEventListener('drop', e => { const fs = [...(e.dataTransfer?.files || [])]; if (!fs.length) return; e.preventDefault(); importFiles(fs); });
+// (the backing: every part nobody plays, scheduled just ahead on the audio clock)
+const BK = ctx.createGain(); BK.gain.value = .8; BK.connect(bus);
+const srcOf = (e, look) => look === 'Drums' ? 'drums' : look === 'Guitar' ? (e.A.guitar ? 'guitar' : 'melody') : (e.A.melody ? 'melody' : 'guitar');
+function backingFor(song) { const e = IMPORTED.find(x => x.id === song.id); if (!e) return null; const A = e.A, mine = new Set([srcOf(e, P.look)]);
+  if (G.together && NET.partner) mine.add(srcOf(e, NET.partner.look));
+  const out = [], tt = tick => A.single ? tick / A.ppq * 60 / A.bpm0 : A.secOf(tick);
+  const add = (part, kind) => { if (!part) return; for (const n of part.notes) { const s = tt(n.tick); out.push({ s, d: tt(n.tick + n.dur) - s, m: n.m, v: n.vel, kind }); } };
+  if (!mine.has('drums')) add(A.drums, 'drum'); if (!mine.has('guitar')) add(A.guitar, 'gtr'); if (!mine.has('melody')) add(A.melody, 'lead'); add(A.bass, 'bass'); add(A.others, 'pad');
+  return out.sort((a, b) => a.s - b.s); }
+let synthLive = 0;
+function synthNote(kind, m, at, d, v) { if (kind === 'pad' && synthLive > 36) return; const t = ctx.currentTime + at, f = 440 * Math.pow(2, (m - 69) / 12), o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; let end = t + d + .5;
+  if (kind === 'bass') { o.type = 'sawtooth'; const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = f; sub.connect(lp); sub.start(t); sub.stop(end);
+    lp.frequency.setValueAtTime(1200, t); lp.frequency.exponentialRampToValueAtTime(300, t + .2); lp.Q.value = 2; const pk = .3 * (.5 + v * .5); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .006); g.gain.setTargetAtTime(pk * .55, t + .02, .25); g.gain.setTargetAtTime(0, t + d, .05); }
+  else if (kind === 'lead') { o.type = 'triangle'; const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.2; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * .007, t + .4); lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(end);
+    lp.frequency.value = 2800; const pk = .15 * (.5 + v * .5); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .04); g.gain.setTargetAtTime(0, t + d, .07); }
+  else { o.type = 'triangle'; lp.frequency.value = 1600; const pk = .045 * (.5 + v * .5); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .02); g.gain.setTargetAtTime(pk * .6, t + .06, .3); g.gain.setTargetAtTime(0, t + d, .12); }
+  o.frequency.value = f; o.connect(lp); lp.connect(g); g.connect(BK); o.start(t); o.stop(end); synthLive++; o.onended = () => synthLive--; }
+function backNote(b, at) { const d = Math.max(.06, b.d / G.speed), v = b.v;
+  if (b.kind === 'drum') { const id = GM_DRUM[b.m], p = id && PIECES.find(q => q.id === id); if (!p) return; const vv = clamp(.35 + v * .7, .3, 1);
+    const name = id === 'hihat' ? (b.m === 46 ? 'hhopen' : 'hhclosed') : p.tiers ? p.tiers[vv < .6 ? 0 : vv < .88 ? 1 : 2][0] : p.sounds[0];
+    play(name, { rate: p.rate || 1, gain: (p.gain || 1) * (p.tiers ? .7 + vv * .3 : vv) * .85, at, out: DK.inp }); return; }
+  if (b.kind === 'gtr') { pluck(fold(b.m, 40, 88), at, .5 + v * .4, 6 + b.m % 6, d + .03); return; }
+  synthNote(b.kind, b.m, at, d, v); }
+function backingFrame(now) { if (!G.backing) return; const nowP = performance.now() / 1000;
+  while (G.bAt < G.backing.length) { const b = G.backing[G.bAt], t = b.s / G.speed + G.lead; if (t > now + .3) break; G.bAt++; const at = G.start + t - nowP; if (at < -.03) continue; backNote(b, Math.max(0, at)); } }
+// (playing together: the host's file goes to the partner in pieces, before the start)
+const midiInbox = {};
+function sendMidi(e) { const u = new Uint8Array(e.buf); let s = ''; for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); const b64 = btoa(s), N = 48000, n = Math.ceil(b64.length / N);
+  for (let i = 0; i < n; i++) tx({ t: 'midi', id: e.id, name: e.name, i, n, data: b64.slice(i * N, (i + 1) * N) }); }
+function gotMidi(m) { const box = midiInbox[m.id] = midiInbox[m.id] || []; box[m.i] = m.data; if (box.filter(x => x != null).length < m.n) return;
+  const s = atob(box.join('')), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); delete midiInbox[m.id]; try { addMidi(u.buffer, m.name, false); } catch { } renderRoom(); }
+
 // ---------- playing together: one opens a room and sends the link, the other opens it on their own device. Browser to browser
 // (WebRTC through PeerJS; its free public server only introduces the two, the notes go straight between you). Each plays their own
 // instrument (drums or guitar for the band songs) at their own level; the host picks the song and the tempo; the start is agreed on a
@@ -943,7 +1091,8 @@ function onData(m) {
   else if (m.t === 'ping') tx({ t: 'pong', a: m.a, h: performance.now() });
   else if (m.t === 'pong') { const now = performance.now(), rtt = now - m.a; pings.push({ rtt, off: m.h + rtt / 2 - now }); if (pings.length === 5) { const b = pings.sort((x, y) => x.rtt - y.rtt)[0]; NET.offset = b.off; NET.rtt = b.rtt; NET.ready = true; tx({ t: 'synced', rtt: b.rtt }); renderRoom(); } }
   else if (m.t === 'synced') { NET.ready = true; NET.rtt = m.rtt; renderRoom(); }
-  else if (m.t === 'start') { const song = SONGS[P.look]?.find(s => s.id === m.song); if (!song) { renderRoom('This song has no part for your instrument.'); return; } pickSpeed = m.speed; room.hidden = true; NET.live = null; NET.final = null; gameStart(song, { at: m.at - NET.offset }); }
+  else if (m.t === 'midi') gotMidi(m);
+  else if (m.t === 'start') { const song = findSong(P.look, m.song); if (!song) { renderRoom('This song has no part for your instrument.'); return; } pickSpeed = m.speed; room.hidden = true; NET.live = null; NET.final = null; gameStart(song, { at: m.at - NET.offset }); }
   else if (m.t === 'stop') { if (G.state === 'play') gameStop(); }
   else if (m.t === 'hit') remoteHit(m);
   else if (m.t === 'live') NET.live = m;
@@ -956,18 +1105,18 @@ function remoteHit(m) { unlock(); figureHit('them', m.look, m);
   else if (m.look === 'Saxophone') { if (rsax) { fadeOut(rsax, .06); rsax = null; } if (m.on != null) { const s2 = nearest(SAX, m.on), b = BUF[s2.name]; if (!b) { load([s2.name]); return; }
       const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime; src.buffer = b; src.playbackRate.value = Math.pow(2, (m.on - s2.midi) / 12); src.loop = true; src.loopStart = .7; src.loopEnd = Math.max(1, b.duration - .5);
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.75, t + .035); src.connect(g); g.connect(bus); src.start(); rsax = { s: src, g }; } }
-  else if (m.look === 'Guitar') { const kind = m.kind || 'electric', was = P.guitar; P.guitar = kind; if (m.chord) chordNotes(m.chord, kind).forEach((n, i, a) => pluck(n, i * .01, .8, 6 - a.length + i)); else if (m.note) pluck(m.note, 0, .8, clamp(Math.floor((m.note - 40) / 5), 0, 5)); P.guitar = was; } }
+  else if (m.look === 'Guitar') { const kind = m.kind || 'electric', was = P.guitar; P.guitar = kind; if (m.chord) chordNotes(m.chord, kind).forEach((n, i, a) => pluck(n, i * .01, .8, 6 - a.length + i)); else if (m.notes) playPitches(m.notes, .8, m.dir, m.ring, false); else if (m.note) pluck(m.note, 0, .8, clamp(Math.floor((m.note - 40) / 5), 0, 5)); P.guitar = was; } }
 let rsax = null;   // (the partner's saxophone voice)
 // (our own hits go out as they happen)
 function shareHit(m) { if (NET.conn?.open) tx({ t: 'hit', ...m }); }
-function startTogether(id) { if (!NET.host || !NET.ready) return; const at = performance.now() + 2600; tx({ t: 'start', song: id, speed: pickSpeed, at }); room.hidden = true; NET.live = null; NET.final = null; gameStart(SONGS[P.look].find(s => s.id === id), { at }); }
+function startTogether(id) { if (!NET.host || !NET.ready) return; const mf = IMPORTED.find(e => e.id === id); if (mf) sendMidi(mf); const at = performance.now() + (mf ? 3400 : 2600); tx({ t: 'start', song: id, speed: pickSpeed, at }); room.hidden = true; NET.live = null; NET.final = null; gameStart(findSong(P.look, id), { at }); }
 function renderRoom(note) { if (room.hidden) return; const linked = !!NET.conn?.open, mine = true;
   const who = NET.partner ? `Your partner plays the <b>${NET.partner.look === 'Guitar' ? (NET.partner.guitar || 'electric') + ' guitar' : NET.partner.look.toLowerCase()}</b>` : NET.host ? 'Waiting for someone to open the link…' : 'Joining…';
   room.innerHTML = `<h3>Play together</h3>
     ${NET.host && NET.code && NET.peer?.open ? `<p class="rm">Send this link; it works while this page stays open.</p><div class="rl"><input readonly value="${roomLink()}" aria-label="Room link"><button type="button" data-r="copy">Copy</button></div>` : ''}
     <p class="rw">${note ? note : who}${linked && NET.ready ? ` · ${Math.round(NET.rtt || 0)} ms between you` : ''}</p>
     ${!mine ? `<p class="rm">The band songs are for the drums and the guitar.</p><div class="rb"><button type="button" data-r="drums">Drums</button><button type="button" data-r="guitar">Guitar</button></div>` : ''}
-    ${NET.host && linked && NET.ready && mine ? `<p class="rm">You play the ${P.look === 'Guitar' ? P.guitar + ' guitar' : P.look.toLowerCase()} · ${(LEVELS.find(l => l[0] === P.level) || [])[1]}. Pick the song:</p><div class="rsongs">${BAND().map(s => `<button type="button" data-song="${s.id}">${s.name}</button>`).join('')}</div>
+    ${NET.host && linked && NET.ready && mine ? `<p class="rm">You play the ${P.look === 'Guitar' ? P.guitar + ' guitar' : P.look.toLowerCase()} · ${(LEVELS.find(l => l[0] === P.level) || [])[1]}. Pick the song:</p><div class="rsongs">${BAND().concat(IMPORTED.map(e => ({ id: e.id, name: e.name + ' · midi' }))).map(s => `<button type="button" data-song="${s.id}">${s.name}</button>`).join('')}</div>
       <div class="rb">${[.5, .75, 1].map(v => `<button type="button" data-sp="${v}" class="${pickSpeed === v ? 'on' : ''}">${v * 100}%</button>`).join('')}</div>` : ''}
     ${!NET.host && linked && mine ? `<p class="rm">You play the ${P.look === 'Guitar' ? P.guitar + ' guitar' : P.look.toLowerCase()}; the host starts the song.</p>` : ''}
     <div class="rb"><button type="button" data-r="leave">${linked ? 'Leave' : 'Close'}</button></div>`;
@@ -1135,7 +1284,7 @@ if (THUMB) { buildKit(6); KIT.visible = XY.visible = SX.visible = GT.visible = t
 else { buildKit(BARE ? 5 : P.kit); if (!BARE) { buildPanel(); LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepLook, items: () => LOOKS, current: () => P.look, onPick: n => applyLook(n) }); }
   applyLook(BARE ? 'Drums' : P.look, true); resize(); placeCam(); document.body.classList.add('ready'); requestAnimationFrame(frame);
   if (!BARE && q.has('join')) openRoom(q.get('join')); }
-window.INSTR = { get P() { return P; }, STAGE, stageSync, figureHit, NET, openRoom, onData, remoteHit, strum, pickNote, GT, chordNotes, G, SONGS, gameStart, gameStop, gameInput, camera, KIT, applyLook, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx, saxOn, saxOff };
+window.INSTR = { get P() { return P; }, STAGE, stageSync, figureHit, NET, openRoom, onData, remoteHit, strum, pickNote, GT, chordNotes, G, SONGS, gameStart, gameStop, gameInput, camera, KIT, applyLook, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx, saxOn, saxOff, addMidi, IMPORTED, songFor, findSong, backingFor, KITS, GCH, openSongs, startTogether };
 </script>
 </body>
 </html>
