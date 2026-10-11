@@ -305,7 +305,7 @@ function buildKit(n) { const want = PIECES.slice(0, clamp(n, 3, PIECES.length));
     if (on && !STATE[p.id]) { const o = shadow(p.build()); o.userData.piece = p; KIT.add(o); STATE[p.id] = { obj: o, t: 9, amp: 0, rr: 0, born: BARE ? 9 : 0 }; }
     if (!on && STATE[p.id]) { KIT.remove(STATE[p.id].obj); delete STATE[p.id]; } }
   refreshLabels(); }
-function hitPiece(p, vel = 1, open = false, quiet = false) { const st = STATE[p.id]; if (!st) return; if (!quiet) gameInput(p.id); shareHit({ look: 'Drums', id: p.id, open });
+function hitPiece(p, vel = 1, open = false, quiet = false) { const st = STATE[p.id]; if (!st) return; if (!quiet) gameInput(p.id); shareHit({ look: 'Drums', id: p.id, open }); figureHit('me', 'Drums', { id: p.id });
   st.t = 0; st.amp = vel; const label = labelFor(p.id); if (label) { label.classList.add('hit'); setTimeout(() => label.classList.remove('hit'), 110); }
   const pan = clamp(st.obj.position.x * .35, -.6, .6), metal = DK.kit === 'metal';
   if (p.id === 'hihat') { fadeOut(openHat, .05); openHat = null; const v = play(open ? 'hhopen' : 'hhclosed', { gain: .9 * vel, pan: .2, out: DK.inp }); if (open) openHat = v; st.open = open; return; }
@@ -342,7 +342,7 @@ const BARS = [], LOW = 72, HIGH = 96;
 const MALLETS = [-1, 1].map(s => { const g = new THREE.Group(), head = new THREE.Mesh(new THREE.SphereGeometry(.018, 20, 14), M.malletHead), stick = rod(new THREE.Vector3(0, 0, 0), new THREE.Vector3(s * .05, .1, .33), .0045, M.birch); g.add(head, stick);
   const rest = new THREE.Vector3(s * .16, 1.02, .34); g.position.copy(rest); XY.add(g); return { g, rest, from: rest.clone(), to: rest.clone(), t: 9 }; });
 shadow(XY);
-function hitBar(bar, vel = 1, quiet = false) { const m = bar.userData.midi, s = nearest(XYLO, m); if (!quiet) gameInput(m); shareHit({ look: 'Xylophone', m }); play(s.name, { rate: Math.pow(2, (m - s.midi) / 12), gain: .9 * vel, pan: clamp(bar.position.x * 1.2, -.7, .7) });
+function hitBar(bar, vel = 1, quiet = false) { const m = bar.userData.midi, s = nearest(XYLO, m); if (!quiet) gameInput(m); shareHit({ look: 'Xylophone', m }); figureHit('me', 'Xylophone', { m }); play(s.name, { rate: Math.pow(2, (m - s.midi) / 12), gain: .9 * vel, pan: clamp(bar.position.x * 1.2, -.7, .7) });
   bar.userData.t = 0; const mal = bar.position.x < 0 ? MALLETS[0] : MALLETS[1]; mal.from.copy(mal.g.position); mal.to.set(bar.position.x, bar.userData.y + .03, bar.position.z + .03); mal.t = 0;
   const lab = labelFor('x' + m); if (lab) { lab.classList.add('hit'); setTimeout(() => lab.classList.remove('hit'), 110); } }
 function animXylo(dt) { for (const b of BARS) { b.userData.t = (b.userData.t ?? 9) + dt; const t = b.userData.t; b.position.y = b.userData.y - .004 * Math.exp(-t * 30) * Math.cos(t * 50); }
@@ -385,7 +385,7 @@ const SAXKEYS = [];
   SX.rotation.y = -.35; shadow(SX); })();
 let voice = null, held = [];
 function fingering(m) { const closed = clamp(Math.round((79 - m) / 2.6), 0, SAXKEYS.length); SAXKEYS.forEach((k, i) => { k.closed = i < closed; }); }
-function saxOn(m, gain = 1, quiet = false) { if (!quiet) gameInput(m); shareHit({ look: 'Saxophone', on: m }); const s = nearest(SAX, m), b = BUF[s.name]; if (!b) { load([s.name]); return; } unlock();
+function saxOn(m, gain = 1, quiet = false) { if (!quiet) gameInput(m); shareHit({ look: 'Saxophone', on: m }); figureHit('me', 'Saxophone', { on: m }); const s = nearest(SAX, m), b = BUF[s.name]; if (!b) { load([s.name]); return; } unlock();
   const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime; src.buffer = b; src.playbackRate.value = Math.pow(2, (m - s.midi) / 12); src.loop = true; src.loopStart = .7; src.loopEnd = Math.max(1, b.duration - .5);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .035); src.connect(g); g.connect(bus); src.start(); const old = voice; voice = { s: src, g, m }; if (old) fadeOut(old, .05);
   fingering(m); pianoMark(m, true); lastNote = m; }
@@ -528,7 +528,7 @@ function updateHint() { const H = { Drums: coarse ? 'Tap a drum or a cymbal' : '
   $('hint').textContent = G.state === 'play' ? '' : G.state === 'pick' ? 'Pick a song and a tempo · notes fall to the line: play each one as it lands' : H[P.look] || ''; }
 function applyLook(name, now) { if (!LOOKS.includes(name)) name = 'Drums'; if (G.state !== 'off') { G.state = 'off'; result.hidden = true; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); } P.look = name; if (!BARE) save(); saxOff(); stopMic();
   KIT.visible = name === 'Drums'; XY.visible = name === 'Xylophone'; SX.visible = name === 'Saxophone'; GT.visible = name === 'Guitar'; frameView(name, now); $('nm').textContent = name;
-  load(SOUNDS[name]()); renderTools(); refreshLabels(); updateHint(); }
+  load(SOUNDS[name]()); renderTools(); refreshLabels(); updateHint(); if (typeof STAGE !== 'undefined') stageSync(); }
 const stepLook = d => applyLook(LOOKS[(LOOKS.indexOf(P.look) + d + LOOKS.length) % LOOKS.length]);
 let msgT = 0; function say(t) { const m = $('msg'); m.textContent = t; m.classList.add('show'); clearTimeout(msgT); msgT = setTimeout(() => m.classList.remove('show'), 2600); }
 
@@ -849,9 +849,9 @@ function chordNotes(name, kind = P.guitar) { const r = chordRoot(name), minor = 
   if (kind === 'electric') return [r, r + 7, r + 12];
   return OPEN[name] || [r, r + 7, r + 12, r + (minor ? 15 : 16), r + 19]; }
 let lastChord = 'E';
-function strum(name, vel = .9, quiet = false) { if (!quiet) gameInput(name); unlock(); shareHit({ look: 'Guitar', chord: name, kind: P.guitar }); const ns = chordNotes(name), off = 6 - ns.length; lastChord = name;
+function strum(name, vel = .9, quiet = false) { if (!quiet) gameInput(name); unlock(); shareHit({ look: 'Guitar', chord: name, kind: P.guitar }); figureHit('me', 'Guitar', { chord: name }); const ns = chordNotes(name), off = 6 - ns.length; lastChord = name;
   ns.forEach((m, i) => pluck(m, i * (P.guitar === 'electric' ? .008 : .016), vel * (1 - i * .04), off + i)); }
-function pickNote(m, vel = .9, quiet = false) { unlock(); shareHit({ look: 'Guitar', note: m, kind: P.guitar }); const str = clamp(Math.floor((m - 40) / 5), 0, 5); pluck(m, 0, vel, str); if (!quiet) gameInput(m); }
+function pickNote(m, vel = .9, quiet = false) { unlock(); shareHit({ look: 'Guitar', note: m, kind: P.guitar }); figureHit('me', 'Guitar', { note: m }); const str = clamp(Math.floor((m - 40) / 5), 0, 5); pluck(m, 0, vel, str); if (!quiet) gameInput(m); }
 function animGuitar(dt) { for (const s of GSTR) { s.t += dt; const k = s.t < 0 ? 0 : s.amp * Math.exp(-s.t * 3.5) * Math.sin(s.t * 160); s.mesh.position.x = s.base.x + k * .0025; } }
 // (free play: number keys 1–8 strum the chords of the palette; Z… and Q… pick single notes from the low E; the pads below for touch)
 const PALETTES = { electric: ['E', 'A', 'D', 'G', 'C', 'B', 'F#', 'F'], acoustic: ['E', 'A', 'D', 'G', 'C', 'Em', 'Am', 'Dm'] }, GTR_BASE = 40;
@@ -934,12 +934,12 @@ async function openRoom(joinCode) { room.hidden = false; renderRoom('Connecting�
   NET.peer.on('error', e => renderRoom(e.type === 'peer-unavailable' ? 'That room is closed (the host left or the link is old).' : 'The connection failed: ' + (e.type || 'unknown') + '.')); }
 function wire(c) { NET.conn = c;
   c.on('open', () => { tx({ t: 'hello', look: P.look, guitar: P.guitar }); if (!NET.host) syncClock(); load(PIECES.flatMap(p => p.sounds).concat(['hhopen']).concat(XYLO.map(x => x.name), SAX.map(x => x.name))); renderRoom(); });
-  c.on('data', onData); c.on('close', () => { NET.partner = null; NET.conn = null; NET.ready = false; renderRoom('Your partner left.'); }); }
+  c.on('data', onData); c.on('close', () => { NET.partner = null; NET.conn = null; NET.ready = false; renderRoom('Your partner left.'); stageSync(); }); }
 // (the clock: five pings; the one with the shortest round trip says how far the host's clock is from ours)
 let pings = [];
 function syncClock() { pings = []; for (let i = 0; i < 5; i++) setTimeout(() => tx({ t: 'ping', a: performance.now() }), i * 150); }
 function onData(m) {
-  if (m.t === 'hello') { NET.partner = { look: m.look, guitar: m.guitar }; renderRoom(); }
+  if (m.t === 'hello') { NET.partner = { look: m.look, guitar: m.guitar }; renderRoom(); stageSync(); }
   else if (m.t === 'ping') tx({ t: 'pong', a: m.a, h: performance.now() });
   else if (m.t === 'pong') { const now = performance.now(), rtt = now - m.a; pings.push({ rtt, off: m.h + rtt / 2 - now }); if (pings.length === 5) { const b = pings.sort((x, y) => x.rtt - y.rtt)[0]; NET.offset = b.off; NET.rtt = b.rtt; NET.ready = true; tx({ t: 'synced', rtt: b.rtt }); renderRoom(); } }
   else if (m.t === 'synced') { NET.ready = true; NET.rtt = m.rtt; renderRoom(); }
@@ -949,7 +949,7 @@ function onData(m) {
   else if (m.t === 'live') NET.live = m;
   else if (m.t === 'final') { NET.final = m; showPartnerResult(); } }
 // (the partner's sound, played here: a drum's recording, or a strum on their kind of guitar)
-function remoteHit(m) { unlock();
+function remoteHit(m) { unlock(); figureHit('them', m.look, m);
   if (m.look === 'Drums') { const p = PIECES.find(q => q.id === m.id); if (!p) return; if (P.look === 'Drums' && STATE[p.id]) { const st = STATE[p.id]; st.t = 0; st.amp = .8; }
     const name = p.id === 'hihat' && m.open ? 'hhopen' : (p.tiers ? p.tiers[1][0] : p.sounds[0]); play(name, { rate: p.rate || 1, gain: (p.gain || 1) * .85, pan: -.25, out: DK.inp }); }
   else if (m.look === 'Xylophone') { const s2 = nearest(XYLO, m.m); play(s2.name, { rate: Math.pow(2, (m.m - s2.midi) / 12), gain: .75, pan: .25 }); }
@@ -977,10 +977,128 @@ function renderRoom(note) { if (room.hidden) return; const linked = !!NET.conn?.
   room.querySelectorAll('[data-song]').forEach(b => b.onclick = () => startTogether(b.dataset.song));
   room.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { pickSpeed = +b.dataset.sp; renderRoom(); });
   room.querySelector('[data-r=leave]').onclick = leaveRoom; }
-function leaveRoom() { try { NET.conn?.close(); NET.peer?.destroy(); } catch { } Object.assign(NET, { peer: null, conn: null, partner: null, ready: false, live: null, final: null }); room.hidden = true; renderTools(); }
+function leaveRoom() { try { NET.conn?.close(); NET.peer?.destroy(); } catch { } Object.assign(NET, { peer: null, conn: null, partner: null, ready: false, live: null, final: null }); room.hidden = true; renderTools(); stageSync(); }
 function showPartnerResult() { const el = result.querySelector('.rp'); if (!el || !NET.final) return; const f = NET.final;
   el.innerHTML = `<b>Your partner</b> (${f.look.toLowerCase()}): ${f.score.toLocaleString('en')} · ${f.acc}% · ${'★'.repeat(f.stars)}${'☆'.repeat(3 - f.stars)}${G.score > f.score ? ' · you win this one' : G.score < f.score ? ' · they win this one' : ' · a draw'}`; }
 setInterval(() => { if (NET.conn?.open && G.state === 'play') tx({ t: 'live', score: G.score, combo: G.combo }); }, 500);
+
+// ---------- the stage: when someone joins, both instruments stand side by side (yours on the left, theirs on the right) and a player
+// is at each: a faceless figure of soft mist with a glowing outline, breathing, swaying to the beat, its hands going where the music is
+// played (sticks to the drum that is hit, a hand along the guitar's neck with the chord and one strumming, the saxophone at the lips,
+// the mallets in the hands). Your figure moves with your notes, theirs with the notes that come over the network ----------
+// (the mist: almost clear in the middle, a soft cool outline where the surface turns away, slowly drifting cloud in it.
+//  An invisible depth pass first, so only the front surface of the figure is drawn: one silhouette, not a pile of see-through parts)
+const MIST_T = { value: 0 };
+const mistMat = (tint, rim) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, depthFunc: THREE.LessEqualDepth,
+  uniforms: { tint: { value: new THREE.Color(tint) }, rim: { value: new THREE.Color(rim) }, time: MIST_T },
+  vertexShader: 'varying vec3 vN; varying vec3 vV; varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; vec4 mv = viewMatrix * w; vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+  fragmentShader: `uniform vec3 tint; uniform vec3 rim; uniform float time; varying vec3 vN; varying vec3 vV; varying vec3 vW;
+    float h(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+    float n(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(mix(h(i), h(i + vec3(1,0,0)), f.x), mix(h(i + vec3(0,1,0)), h(i + vec3(1,1,0)), f.x), f.y),
+                 mix(mix(h(i + vec3(0,0,1)), h(i + vec3(1,0,1)), f.x), mix(h(i + vec3(0,1,1)), h(i + vec3(1,1,1)), f.x), f.y), f.z); }
+    void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.8);
+      vec3 q = vW * 6.0 + vec3(0.0, time * 0.35, time * 0.12); float cloud = n(q) * 0.6 + n(q * 2.3) * 0.4;
+      vec3 c = mix(tint, rim, smoothstep(0.15, 0.95, f));
+      float a = 0.16 + cloud * 0.16 + smoothstep(0.25, 1.0, f) * 0.62;
+      gl_FragColor = vec4(c, a); }` });
+const MIST = mistMat('#fbfaf7', '#8d97a8'), MIST_B = mistMat('#f6f9ff', '#7f93b4');
+const MIST_DEPTH = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true, transparent: true });
+const STICK = new THREE.MeshStandardMaterial({ color: '#d9bc8c', roughness: .6 });
+const up3 = new THREE.Vector3(0, 1, 0), tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
+function limb(r, mat) { const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, 1, 6, 14), mat); m.castShadow = true; return m; }
+function placeLimb(m, a, b, r) { const d = tmpA.subVectors(b, a), L = Math.max(.001, d.length()); m.position.copy(a).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(up3, d.normalize()); m.scale.set(1, L / (1 + 2 * r), 1); }
+// (two-bone reach: from the shoulder to the hand, the elbow bent away from the body)
+function reach(S, T, a, b, pole, outElbow) { const d = tmpA.subVectors(T, S), L = clamp(d.length(), .05, a + b - .001), dir = d.clone().normalize(), x = (a * a - b * b + L * L) / (2 * L), h = Math.sqrt(Math.max(0, a * a - x * x));
+  const side = pole.clone().sub(dir.clone().multiplyScalar(pole.dot(dir))).normalize(); outElbow.copy(S).addScaledVector(dir, x).addScaledVector(side, h); return S.clone().addScaledVector(dir, L); }
+class Figure {
+  constructor(mat) { this.g = new THREE.Group(); this.mat = mat; const L = (r) => { const m = limb(r, mat); this.g.add(m); return m; };
+    const blob = (r, sx, sy, sz) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 28, 20), mat); m.scale.set(sx, sy, sz); this.g.add(m); return m; };
+    this.torso = L(.095); this.chest = blob(.2, 1, .82, .62); this.hips = blob(.16, 1, .72, .7); this.neck = L(.045); this.head = blob(.105, .92, 1.12, .98);
+    this.uArm = [L(.048), L(.048)]; this.fArm = [L(.042), L(.042)]; this.hand = [0, 1].map(() => { const h = new THREE.Mesh(new THREE.SphereGeometry(.046, 16, 12), mat); this.g.add(h); return h; });
+    this.thigh = [L(.07), L(.07)]; this.shin = [L(.055), L(.055)]; this.foot = [0, 1].map(() => { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.04, .1, 4, 10), mat); f.rotation.x = Math.PI / 2; this.g.add(f); return f; });
+    this.sticks = [0, 1].map(() => { const s = new THREE.Mesh(new THREE.CylinderGeometry(.006, .008, .4, 8), STICK); s.visible = false; this.g.add(s); return s; });
+    this.hT = [new THREE.Vector3(), new THREE.Vector3()]; this.hGoal = [new THREE.Vector3(), new THREE.Vector3()]; this.hRest = [new THREE.Vector3(), new THREE.Vector3()]; this.hitT = [9, 9]; this.footT = 9; this.lean = 0; this.leanV = 0; this.t = Math.random() * 6;
+    this.g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    // (each mist part gets an invisible twin that only writes depth, drawn just before the mist)
+    [...this.g.children].forEach(o => { if (!o.isMesh || o.material !== mat) return; o.renderOrder = 11; const d = new THREE.Mesh(o.geometry, MIST_DEPTH); d.renderOrder = 10; d.castShadow = false; o.add(d); });
+    this.stool = null; scene.add(this.g); }
+  // (the pose: seated or standing; where the hands rest)
+  setup(kind, at, rest) { this.kind = kind; this.at = at.clone(); this.seated = kind === 'Drums'; this.hRest[0].copy(rest[0]); this.hRest[1].copy(rest[1]); this.hT[0].copy(rest[0]); this.hT[1].copy(rest[1]); this.sticks.forEach(s => s.visible = kind === 'Drums');
+    // (the drummer sits on a throne: a round padded seat on three chrome legs)
+    if (this.seated && !this.stool) { const st = new THREE.Group(), seat = new THREE.Mesh(new THREE.CylinderGeometry(.17, .16, .07, 32), new THREE.MeshStandardMaterial({ color: '#26262a', roughness: .75 }));
+      seat.position.y = .44; st.add(seat); const post = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .38, 12), M.chrome || M.steel); post.position.y = .23; st.add(post);
+      for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI * 2 + .5, leg = new THREE.Mesh(new THREE.CylinderGeometry(.011, .011, .32, 8), M.chrome || M.steel); leg.position.set(Math.cos(a) * .11, .12, Math.sin(a) * .11); leg.rotation.set(Math.sin(a) * .75, 0, -Math.cos(a) * .75); st.add(leg); }
+      st.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); st.position.set(at.x, 0, at.z - .02); this.g.add(st); this.stool = st; } }
+  // (a hand goes to a point and back: hard and quick down, a softer way back)
+  strike(i, p) { this.hGoal[i].copy(p); this.hitT[i] = 0; this.leanV += .03; }
+  hold(i, p) { this.hRest[i].copy(p); }
+  stomp() { this.footT = 0; }
+  update(dt, beat) { const t = (this.t += dt), A = this.at, seated = this.seated;
+    this.leanV += (-this.lean * 30 - this.leanV * 6) * dt; this.lean += this.leanV * dt;
+    const breath = Math.sin(t * 1.6) * .006, bob = beat == null ? 0 : Math.max(0, Math.cos(beat * Math.PI * 2)) * .012, sway = Math.sin(t * .7) * .015;
+    const pelvis = new THREE.Vector3(A.x + sway * .4, (seated ? .56 : .96) - bob * .5, A.z), chest = new THREE.Vector3(A.x + sway, pelvis.y + .46 + breath, A.z + .03 + this.lean), neckT = chest.clone().add(new THREE.Vector3(0, .1, .01));
+    const headC = neckT.clone().add(new THREE.Vector3(sway * .3, .14 - bob, .02 + this.lean * .6));
+    placeLimb(this.torso, pelvis, chest, .095); placeLimb(this.neck, chest, neckT, .045); this.head.position.copy(headC);
+    this.chest.position.copy(chest).add(new THREE.Vector3(0, -.08, -.005)); this.chest.rotation.set(this.lean * 2, 0, sway * 1.5); this.hips.position.copy(pelvis).add(new THREE.Vector3(0, .03, 0));
+    for (let i = 0; i < 2; i++) { const s = i === 0 ? 1 : -1;   // (0 = right hand, on the player's right: the viewer's left)
+      const sh = chest.clone().add(new THREE.Vector3(-s * .2, -.03, 0)); this.hitT[i] += dt; const k = this.hitT[i];
+      const goal = k < .05 ? this.hRest[i].clone().lerp(this.hGoal[i], k / .05) : k < .32 ? this.hGoal[i].clone().lerp(this.hRest[i], 1 - Math.pow(1 - (k - .05) / .27, 3)) : this.hRest[i];
+      this.hT[i].lerp(goal, Math.min(1, dt * (k < .05 ? 60 : 18)));
+      const elbow = new THREE.Vector3(), hand = reach(sh, this.hT[i], .3, .28, (this.kind === 'Guitar' && i === 0 ? new THREE.Vector3(-.7, .15, 1) : this.kind === 'Saxophone' ? new THREE.Vector3(-s * .9, -.6, .5) : new THREE.Vector3(-s * .8, -1, -.4)), elbow);
+      placeLimb(this.uArm[i], sh, elbow, .048); placeLimb(this.fArm[i], elbow, hand, .042); this.hand[i].position.copy(hand);
+      if (this.kind === 'Drums') { const st = this.sticks[i], tipDir = hand.clone().sub(elbow).normalize(); st.position.copy(hand).addScaledVector(tipDir, .17); st.quaternion.setFromUnitVectors(up3, tipDir); }
+      const hip = pelvis.clone().add(new THREE.Vector3(-s * .1, -.04, 0)), fk = i === 0 ? this.footT : 9; this.footT += i === 0 ? dt : 0;
+      const press = fk < .12 ? Math.sin(fk / .12 * Math.PI) * .035 : 0;
+      const knee = seated ? hip.clone().add(new THREE.Vector3(-s * .04, -.02, .42)) : hip.clone().add(new THREE.Vector3(-s * .02, -.45, .05));
+      const ankle = seated ? knee.clone().add(new THREE.Vector3(0, -.44 + press, .06)) : new THREE.Vector3(hip.x - s * .02, .07, A.z + .06);
+      placeLimb(this.thigh[i], hip, knee, .07); placeLimb(this.shin[i], knee, ankle, .055); this.foot[i].position.copy(ankle).add(new THREE.Vector3(0, -.03, .07)); } }
+  remove() { scene.remove(this.g); } }
+// (the stage itself: what stands where, the figures, the partner's instrument as a copy of ours)
+const STAGE = { on: false, mine: null, theirs: null, theirsObj: null, theirsLook: null, keep: null };
+const GROUP = l => ({ Drums: KIT, Xylophone: XY, Saxophone: SX, Guitar: GT })[l];
+function holdInstrument(look, obj, x, fig, partnerKind) {
+  // (puts the instrument where it is played and sets the figure's pose; returns hand rests)
+  obj.position.set(x, 0, 0); obj.rotation.set(0, 0, 0); obj.visible = true;
+  if (look === 'Drums') { fig.setup('Drums', new THREE.Vector3(x, 0, -.62), [new THREE.Vector3(x + .5, .95, -.32), new THREE.Vector3(x + .25, .78, -.3)]); return; }
+  if (look === 'Xylophone') { fig.setup('Xylophone', new THREE.Vector3(x, 0, -.62), [new THREE.Vector3(x + .18, 1.0, -.05), new THREE.Vector3(x - .18, 1.0, -.05)]); return; }
+  if (look === 'Saxophone') { obj.traverse(o => { if (o.isMesh && (o.material === M.steel || o.material === M.rubber)) o.visible = false; });
+    obj.rotation.set(-.1, -.2, 0); obj.position.set(x + .22, .38, .26); fig.setup('Saxophone', new THREE.Vector3(x + .02, 0, 0), [new THREE.Vector3(x + .22, 1.12, .2), new THREE.Vector3(x + .2, 1.36, .18)]); return; }
+  if (look === 'Guitar') { const axe = obj.children[0], stand = obj.children[1]; stand.visible = false; if (partnerKind) obj.traverse(o => { if (o.name === 'electric' || o.name === 'acoustic') o.visible = o.name === partnerKind; });
+    // (held as a right-handed player holds it: the body at the belly, a little to the player's right, the neck out to the player's
+    //  left and ~20° up; the guitar tipped back a touch so the player can see the frets)
+    const bodyC = GT.userData.bodyC, nutY = GT.userData.nutY, th = -1.22; axe.rotation.set(-.12, .18, th); const want = new THREE.Vector3(x - .06, .98, .17);
+    axe.position.set(want.x - x, want.y, want.z).sub(new THREE.Vector3(0, bodyC, 0).applyEuler(axe.rotation)); obj.updateMatrixWorld(true);
+    fig.setup('Guitar', new THREE.Vector3(x, 0, -.02), [worldOf(axe, new THREE.Vector3(.02, bodyC + .1, .08)), worldOf(axe, new THREE.Vector3(0, nutY - .1, .05))]); } }
+// (the partner's copy: a clone of our model of their instrument)
+function partnerCopy(look) { const src = GROUP(look); const c = src.clone(true); c.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); scene.add(c); return c; }
+function stageSync() { const want = !!(NET.conn?.open && NET.partner && !BARE);
+  if (!want) { if (STAGE.on) stageOff(); return; }
+  const pl = NET.partner.look, key = P.look + '|' + pl + '|' + (NET.partner.guitar || '') + '|' + P.guitar + '|' + Object.keys(STATE).length;
+  if (STAGE.on && STAGE.key === key) return; if (STAGE.on) stageOff(true);
+  STAGE.on = true; STAGE.key = key; KIT.visible = XY.visible = SX.visible = GT.visible = false;
+  STAGE.keep = { look: P.look, pos: GROUP(P.look).position.clone(), rot: GROUP(P.look).rotation.clone() };
+  STAGE.mine = new Figure(MIST); STAGE.theirs = new Figure(MIST_B);
+  holdInstrument(P.look, GROUP(P.look), -.95, STAGE.mine);
+  STAGE.theirsObj = partnerCopy(pl); STAGE.theirsLook = pl; holdInstrument(pl, STAGE.theirsObj, .95, STAGE.theirs, pl === 'Guitar' ? (NET.partner.guitar || 'electric') : null);
+  view.taz = 0; view.tel = .18; view.td = 4.3; view.tt.set(0, .85, -.1); labelsEl.style.display = 'none'; }
+function stageOff(quick) { STAGE.on = false; STAGE.mine?.remove(); STAGE.theirs?.remove(); if (STAGE.theirsObj) scene.remove(STAGE.theirsObj); STAGE.mine = STAGE.theirs = STAGE.theirsObj = null; labelsEl.style.display = '';
+  const g = GROUP(STAGE.keep?.look || P.look); if (STAGE.keep) { g.position.copy(STAGE.keep.pos); g.rotation.copy(STAGE.keep.rot); }
+  GT.children[0].position.set(0, 0, 0); GT.children[0].rotation.set(0, 0, 0); GT.children[1].visible = true; SX.traverse(o => { if (o.isMesh) o.visible = true; }); SX.rotation.set(0, -.35, 0); SX.position.set(0, 0, 0); GT.rotation.set(0, -.25, 0); GT.position.set(0, 0, 0);
+  if (!quick) applyLook(P.look, false); }
+// (a note, ours or theirs, moves the right figure)
+const worldOf = (obj, local) => local.clone().applyMatrix4(obj.matrixWorld);
+function figureHit(who, look, what) { if (!STAGE.on) return; const fig = who === 'me' ? STAGE.mine : STAGE.theirs, obj = who === 'me' ? GROUP(P.look) : STAGE.theirsObj; if (!fig || !obj) return; obj.updateMatrixWorld();
+  if (look === 'Drums') { if (what.id === 'kick') { fig.stomp(); return; } const p = PIECES.find(q => q.id === what.id), st = STATE[what.id]; const loc = st ? st.obj.userData.label : p ? new THREE.Vector3(.3, .7, -.2) : null; if (!loc) return;
+    const target = worldOf(obj, new THREE.Vector3(loc.x, loc.y - .04, loc.z)); const right = target.x > obj.position.x + .2 || CYMBALS.includes(what.id); fig.strike(right ? 0 : 1, target); return; }
+  if (look === 'Xylophone') { const bar = BARS.find(b => b.userData.midi === what.m); if (!bar) return; const target = worldOf(obj, bar.position.clone().add(new THREE.Vector3(0, .03, .05))); fig.strike(target.x > obj.position.x ? 0 : 1, target); return; }
+  if (look === 'Saxophone') { fig.leanV += .12; const fing = worldOf(obj, new THREE.Vector3(0, .62 + clamp((what.on - 46) / 30, 0, 1) * .3, .06)); fig.hold(0, fing); fig.hold(1, fing.clone().add(new THREE.Vector3(-.02, .2, 0))); return; }
+  if (look === 'Guitar') { const axe = obj.children[0]; axe.updateMatrixWorld(); const root = typeof what.chord === 'string' ? chordRoot(what.chord) : what.note ?? 40, fret = (root - 40) % 12, nutY = GT.userData.nutY, scale = .64;
+    fig.hold(1, worldOf(axe, new THREE.Vector3(0, nutY - scale * (1 - Math.pow(2, -Math.max(.5, fret) / 12)), .05))); fig.strike(0, worldOf(axe, new THREE.Vector3(.05, GT.userData.bodyC + .06, .07))); } }
+function animStage(dt) { if (!STAGE.on) return; const beat = G.state === 'play' && G.song ? ((performance.now() / 1000 - G.start) / (60 / G.song.bpm / G.speed)) : null;
+  // (the xylophone player's hands go with the mallets)
+  if (STAGE.mine?.kind === 'Xylophone') MALLETS.forEach((m, i) => { m.g.updateMatrixWorld(); STAGE.mine.hT[i === 1 ? 0 : 1].copy(m.g.getWorldPosition(new THREE.Vector3())); STAGE.mine.hitT[i === 1 ? 0 : 1] = 9; STAGE.mine.hRest[i === 1 ? 0 : 1].copy(STAGE.mine.hT[i === 1 ? 0 : 1]); });
+  MIST_T.value += dt; STAGE.mine?.update(dt, beat); STAGE.theirs?.update(dt, beat); }
 
 // ---------- the panel ----------
 const panel = $('panel'), ctl = {};
@@ -1007,7 +1125,7 @@ let last = 0, demoT = 0, demoStep = 0;
 const GROOVE = { kick: [0, 7, 8, 10], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], tom: [13], floor: [14, 15] };
 function frame(now) { requestAnimationFrame(frame); const dt = last ? Math.min(.05, (now - last) / 1000) : .016; last = now; if (THUMB) return;
   if (DEMO) { demoT += dt; const s = Math.floor(demoT / .15); while (demoStep <= s) { const k = demoStep % 16; for (const id in GROOVE) if (GROOVE[id].includes(k) && STATE[id]) { const st = STATE[id]; st.t = 0; st.amp = .9; } demoStep++; } }
-  animKit(dt); animXylo(dt); animSax(dt); animGuitar(dt); animBreath(dt); placeCam(); renderer.render(scene, camera); placeLabels(); gameFrame(); }
+  animKit(dt); animXylo(dt); animSax(dt); animGuitar(dt); animBreath(dt); animStage(dt); placeCam(); renderer.render(scene, camera); placeLabels(); gameFrame(); }
 
 // ---------- start; the board's box: ?thumb=1 all three in one still, ?demo=1 the drums playing a groove (silent) ----------
 setShell(P.shell); setSax(P.sax); setGuitar(P.guitar); setKit(P.drumKit); applyLight(); document.body.classList.toggle('nokeys', !P.keys);
@@ -1017,7 +1135,7 @@ if (THUMB) { buildKit(6); KIT.visible = XY.visible = SX.visible = GT.visible = t
 else { buildKit(BARE ? 5 : P.kit); if (!BARE) { buildPanel(); LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepLook, items: () => LOOKS, current: () => P.look, onPick: n => applyLook(n) }); }
   applyLook(BARE ? 'Drums' : P.look, true); resize(); placeCam(); document.body.classList.add('ready'); requestAnimationFrame(frame);
   if (!BARE && q.has('join')) openRoom(q.get('join')); }
-window.INSTR = { get P() { return P; }, NET, openRoom, onData, remoteHit, strum, pickNote, GT, chordNotes, G, SONGS, gameStart, gameStop, gameInput, camera, KIT, applyLook, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx, saxOn, saxOff };
+window.INSTR = { get P() { return P; }, STAGE, stageSync, figureHit, NET, openRoom, onData, remoteHit, strum, pickNote, GT, chordNotes, G, SONGS, gameStart, gameStop, gameInput, camera, KIT, applyLook, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx, saxOn, saxOff };
 </script>
 </body>
 </html>
