@@ -10,10 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
 <style>
-  /* Three instruments in a light studio, one at a time (the pill at the bottom): a drum kit you build up piece by piece, a wooden
-     xylophone, a tenor saxophone. Tap or click what you want to hear, or play from the keyboard (the letters sit on the instrument).
-     The saxophone has three ways in: keys like a piano, a tune played note by note (any key or tap), or your breath into the
-     microphone. Real recordings (VCSL, CC0), a touch of room on them; the models are built in code, their surfaces drawn in canvas. */
+  /* Two instruments in a light studio, one at a time (the pill at the bottom): a drum kit you build up piece by piece, from three
+     pieces to Danny Carey's Tool kit (two kicks, six toms, octobans, a china, a splash, two crashes, a ride and a gong), and a wooden
+     xylophone. Tap or click what you want to hear, or play from the keyboard (the letters sit on the instrument).
+     Real recordings (VCSL and Freesound, CC0), a touch of room on them; the models are built in code, their surfaces drawn in canvas. */
   :root { --bg: #eeede9; --ink: #141414; --muted: rgba(20,20,20,.5); --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --boxbg: #eeede9; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
@@ -43,12 +43,6 @@
   .tb button:disabled { opacity: .35; cursor: default; background: transparent; }
   .tb .tl { padding: 0 10px; color: rgba(20,20,20,.55); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .tb .dots { display: flex; gap: 4px; padding: 0 12px; } .tb .dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(20,20,20,.15); transition: background .2s; } .tb .dots i.on { background: #1b1c20; }
-  .piano { position: fixed; left: 50%; bottom: calc(142px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); width: min(620px, calc(100vw - 24px)); height: 92px; transition: left var(--morph); touch-action: none; }
-  .piano[hidden] { display: none; }
-  .piano .k { position: absolute; top: 0; bottom: 0; border-radius: 0 0 9px 9px; background: #fff; box-shadow: inset 0 0 0 1px rgba(20,20,20,.1); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font: 600 10px var(--lab-font); color: rgba(20,20,20,.35); transition: background .08s; }
-  .piano .k.b { bottom: 40%; background: #1b1c20; z-index: 1; border-radius: 0 0 7px 7px; color: rgba(255,255,255,.4); }
-  .piano .k.on { background: #ffd58a; } .piano .k.b.on { background: #c98a1b; }
-  .piano .k:first-child { border-top-left-radius: 9px; }
   /* the letters on the instrument (a keyboard plays it too) */
   .labels { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
   .labels span { position: absolute; left: 0; top: 0; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 6px; background: rgba(255,255,255,.88); color: #1b1c20; font: 650 11px var(--lab-font); box-shadow: 0 1px 3px rgba(0,0,0,.12); transition: background .1s, color .1s; will-change: transform; }
@@ -56,42 +50,8 @@
   body.nokeys .labels { display: none; }
   .msg { position: fixed; left: 50%; top: 64px; z-index: 5; transform: translateX(-50%); max-width: calc(100vw - 32px); padding: 9px 14px; border-radius: 12px; background: #1b1c20; color: #fff; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .3s; text-align: center; }
   .msg.show { opacity: 1; }
-  /* songs: the highway over the stage, the drum caps on the hit line, the score on top, the result card in the middle */
-  .hwy { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
-  .caps { position: fixed; left: 50%; bottom: calc(142px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); display: flex; gap: 0; width: min(calc(var(--n, 4) * 92px), 760px, calc(100vw - 24px)); height: 68px; transition: left var(--morph); }
-  .caps[hidden] { display: none; }
-  .pads { width: min(640px, calc(100vw - 24px)); }
-  .caps button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; margin: 0 3px; border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 -4px 0 color-mix(in srgb, var(--c) 30%, #fff), 0 2px 0 rgba(0,0,0,.06), inset 0 0 0 1.5px color-mix(in srgb, var(--c) 45%, transparent); font: 600 11px var(--lab-font); color: rgba(20,20,20,.5); cursor: pointer; touch-action: none; transition: transform .06s, background .08s, box-shadow .08s, color .08s; white-space: nowrap; overflow: hidden; }
-  .caps button b { display: grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 8px; background: var(--c); color: #fff; font-size: 14px; }
-  .caps button.on, .caps button.tap { transform: translateY(3px) scale(.97); background: var(--c); color: rgba(255,255,255,.9); box-shadow: inset 0 -2px 0 rgba(0,0,0,.18), 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent); }
-  .caps button.on b, .caps button.tap b { background: rgba(255,255,255,.25); }
-  @media (max-width: 760px) { .caps button span { font-size: 10px; } .caps button { margin: 0 2px; } }
-  .hud { position: fixed; left: 50%; top: 18px; z-index: 6; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: left var(--morph); }
-  .hud[hidden] { display: none; } .hud { padding: 6px 16px 8px; border-radius: 18px; background: rgba(238,237,233,.82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); } .hud b { font: 700 30px var(--lab-font); letter-spacing: -.02em; font-variant-numeric: tabular-nums; } .hud span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .result { position: fixed; left: 50%; top: 50%; z-index: 7; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px)); padding: 26px 24px 20px; border-radius: 24px; background: #fff; box-shadow: 0 24px 60px -20px rgba(0,0,0,.35); text-align: center; }
-  .result[hidden] { display: none; }
-  .result .rs { margin: 0; font-size: 30px; letter-spacing: 4px; color: #e0a82e; } .result .rs i { font-style: normal; color: rgba(20,20,20,.12); }
-  .result h3 { margin: 6px 0 2px; font-size: 19px; font-weight: 650; } .result .rm { margin: 0 0 16px; font-size: 12px; color: var(--muted); }
-  .result .rg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .result .rg div { display: flex; flex-direction: column; gap: 2px; padding: 10px 4px; border-radius: 14px; background: #f3f2ee; }
-  .result .rg b { font-size: 18px; font-variant-numeric: tabular-nums; } .result .rg span { font-size: 11px; color: var(--muted); }
-  .result .rc { margin: 12px 0 16px; font-size: 12px; color: var(--muted); }
-  .result .rb { display: flex; gap: 8px; } .result .rb button { flex: 1; height: 42px; border: 0; border-radius: 999px; background: #f0efeb; font: 600 13px var(--lab-font); color: #1b1c20; cursor: pointer; } .result .rb button:first-child { background: #1b1c20; color: #fff; }
-  .room { text-align: left; } .room h3 { margin: 0 0 6px; } .room .rm { margin: 8px 0; } .room .rw { margin: 10px 0; font-size: 14px; line-height: 1.45; }
-  .room .rl { display: flex; gap: 6px; } .room .rl input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 0; border-radius: 12px; background: #f3f2ee; font: 500 12px var(--lab-font); color: #1b1c20; }
-  .room .rl button, .room .rsongs button { height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: #1b1c20; color: #fff; font: 600 13px var(--lab-font); cursor: pointer; }
-  .room .rsongs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; } .room .rsongs button { background: #f0efeb; color: #1b1c20; height: 36px; } .room .rsongs button:hover { background: #1b1c20; color: #fff; }
-  .room .rb { margin-top: 10px; } .room .rb button, .room .rb button:first-child { background: #f0efeb; color: #1b1c20; } .room .rb button.on { background: #1b1c20; color: #fff; }
-  .result .rp { margin: -6px 0 14px; font-size: 13px; color: #1b1c20; } .result .rp:empty { display: none; }
-  .hud em { font-style: normal; font-size: 12px; color: #c94f8a; font-variant-numeric: tabular-nums; }
-  .tb .bx { font-style: normal; margin-left: 6px; padding: 0 5px; border-radius: 6px; color: rgba(20,20,20,.4); }
-  .tb .bx:hover { background: rgba(20,20,20,.08); color: #1b1c20; }
-  .tb .madd { color: rgba(20,20,20,.6); }
-  .tb .bd { font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 6px; background: rgba(20,20,20,.07); color: rgba(20,20,20,.55); }
-  .tb .st { font-style: normal; color: #e0a82e; letter-spacing: 1px; }
-  .tb.songs { flex-wrap: wrap; justify-content: center; height: auto; border-radius: 23px; max-width: calc(100vw - 24px); }
   .tools { flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 24px); }
-  body.bare .hwy, body.bare .caps, body.bare .hud, body.bare .result,
-  body.bare .back, body.bare .tune, body.bare .dock, body.bare .tools, body.bare .piano, body.bare .panel, body.bare .hint, body.bare .loading, body.bare .labels, body.bare .msg { display: none !important; }
+  body.bare .back, body.bare .tune, body.bare .dock, body.bare .tools, body.bare .panel, body.bare .hint, body.bare .loading, body.bare .labels, body.bare .msg { display: none !important; }
   /* the panel: a card beside the stage (lab-ui soft) */
   .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
     font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
@@ -101,10 +61,10 @@
   .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
   .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
   .credit { margin: 6px 0 22px; font-size: 12px; line-height: 1.5; color: var(--ui-muted); } .credit a { color: inherit; }
-  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .hint, body.tuning .dock, body.tuning .tools, body.tuning .piano { left: calc(50% - 176px); } body.tuning .piano { width: min(560px, calc(100vw - 420px)); } }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .hint, body.tuning .dock, body.tuning .tools { left: calc(50% - 176px); } }
   @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
-    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint, body.tuning .dock, body.tuning .tools, body.tuning .piano { display: none; }
-    .hint { top: 76px; font-size: 12px; } .piano { height: 84px; } }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint, body.tuning .dock, body.tuning .tools { display: none; }
+    .hint { top: 76px; font-size: 12px; } }
 </style>
 </head>
 <body>
@@ -113,15 +73,8 @@
 <main class="stage" id="stage" aria-label="A musical instrument in a studio: tap or click a part to play it, drag to look around"></main>
 <p class="loading" id="loading">Tuning up…</p>
 <p class="hint" id="hint"></p>
-<canvas class="hwy" id="hwy" aria-hidden="true"></canvas>
 <div class="labels" id="labels" aria-hidden="true"></div>
-<div class="hud" id="hud" hidden aria-live="polite"></div>
-<div class="caps" id="caps" hidden aria-label="Drum lanes"></div>
-<div class="caps pads" id="pads" hidden aria-label="Guitar chords" style="--n:8"></div>
-<div class="result" id="result" hidden role="dialog" aria-label="Song result"></div>
-<div class="result room" id="room" hidden role="dialog" aria-label="Play together"></div>
 <p class="msg" id="msg" role="status"></p>
-<div class="piano" id="piano" hidden aria-label="Saxophone keyboard"></div>
 <div class="tools" id="tools"></div>
 <div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Instruments">
   <button id="prev" type="button" aria-label="Previous instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -140,13 +93,13 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.instruments.v1';
-const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', sax: 'gold', saxMode: 'keys', phrase: 'saints', level: 'full', backing: true, guitar: 'electric', drumKit: 'studio', light: 2.6, warmth: .55 };
+const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', light: 2.6, warmth: .55 };
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
 const coarse = matchMedia('(pointer: coarse)').matches;
 if (BARE) { P = { ...DEF }; document.body.classList.add('bare'); }
-if (!BARE) { if (q.has('look')) P.look = q.get('look'); if (q.has('kit')) P.kit = Math.max(3, Math.min(9, +q.get('kit') || 3)); if (q.has('mode')) P.saxMode = q.get('mode'); }   // (an address can open a given instrument)
+if (!BARE) { if (q.has('look')) P.look = q.get('look'); if (q.has('kit')) P.kit = Math.max(3, Math.min(17, +q.get('kit') || 3)); }   // (an address can open a given instrument)
 if (!localStorage.getItem(KEY) && coarse) P.keys = false;   // (letters help on a keyboard; on a phone they start hidden)
 const $ = id => document.getElementById(id), stage = $('stage');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
@@ -194,7 +147,6 @@ function bronzeTex() { return tex(128, 1024, (g, w, h) => { const grd = g.create
 function bronzeRough() { return tex(128, 1024, (g, w, h) => { g.fillStyle = '#4a4a4a'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 1.6) { const v = 50 + rnd() * 70 | 0; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, y, w, 1); } g.fillStyle = '#2a2a2a'; g.fillRect(0, 0, w, 120); }, { srgb: false }); }
 
 const SHELLS = { wine: '#6e1420', black: '#141416', ocean: '#16466e', pearl: '#e9e3d6', green: '#1f4a35' };
-const SAXES = { gold: { c: '#d8a64a', r: .2, m: 1 }, silver: { c: '#d9dadd', r: .16, m: 1 }, black: { c: '#1b1a1d', r: .28, m: .55 } };
 const M = {
   chrome: new THREE.MeshStandardMaterial({ color: '#ececee', metalness: 1, roughness: .13 }),
   steel: new THREE.MeshStandardMaterial({ color: '#2b2b2f', metalness: .7, roughness: .4 }),
@@ -209,13 +161,9 @@ const M = {
   felt: new THREE.MeshStandardMaterial({ color: '#7a1f22', roughness: 1 }),
   resonator: new THREE.MeshStandardMaterial({ color: '#c09752', metalness: 1, roughness: .32 }),
   malletHead: new THREE.MeshPhysicalMaterial({ color: '#2f4f8f', roughness: .55, sheen: .6, sheenColor: '#9fb6ff' }),
-  sax: new THREE.MeshPhysicalMaterial({ color: '#d8a64a', metalness: 1, roughness: .2, clearcoat: .7, clearcoatRoughness: .08, side: THREE.DoubleSide }),
-  saxKey: new THREE.MeshPhysicalMaterial({ color: '#e0b25a', metalness: 1, roughness: .48, clearcoat: .5, side: THREE.DoubleSide }),
-  pearl: new THREE.MeshPhysicalMaterial({ color: '#f6f0e6', roughness: .22, clearcoat: 1, iridescence: .7, iridescenceIOR: 1.6 }),
-  ebony: new THREE.MeshPhysicalMaterial({ color: '#111113', roughness: .25, clearcoat: 1 }),
+  gong: new THREE.MeshStandardMaterial({ map: bronzeTex(), roughnessMap: bronzeRough(), color: '#d2a878', metalness: 1, roughness: .85, side: THREE.DoubleSide }),
 };
 function setShell(name) { M.shell.map.dispose(); M.shell.map = sparkleTex(SHELLS[name] || SHELLS.wine); M.shell.needsUpdate = true; }
-function setSax(name) { const s = SAXES[name] || SAXES.gold; M.sax.color.set(s.c); M.sax.roughness = s.r; M.sax.metalness = s.m; M.saxKey.color.set(name === 'black' ? '#d8a64a' : s.c); }
 const shadow = o => { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; };
 const cyl = (r1, r2, h, mat, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), mat);
 // (a rod from a to b)
@@ -244,25 +192,21 @@ function makeIR(dur, gated) { const n = Math.floor(ctx.sampleRate * dur), b = ct
 const IRS = { small: makeIR(.45), room: makeIR(1.3), hall: makeIR(2.3), gated: makeIR(.34, true) };
 const DK = (() => { const inp = ctx.createGain(), low = ctx.createBiquadFilter(), high = ctx.createBiquadFilter(), cmp = ctx.createDynamicsCompressor(), out = ctx.createGain(), snd = ctx.createGain(), rv = ctx.createConvolver();
   low.type = 'lowshelf'; low.frequency.value = 75; high.type = 'highshelf'; high.frequency.value = 4200; inp.connect(low); low.connect(high); high.connect(cmp); cmp.connect(out); out.connect(master); out.connect(snd); snd.connect(rv); rv.connect(master); return { inp, low, high, cmp, out, snd, rv, kit: 'studio' }; })();
-const KITS = { studio: { name: 'Studio', low: 0, high: 0, thr: -14, ratio: 2, att: .006, rel: .2, room: .14, ir: 'room', out: 1 },
-  rock: { name: 'Rock', low: 3, high: 2, thr: -18, ratio: 3.5, att: .004, rel: .18, room: .32, ir: 'room', out: 1.05 },
-  metal: { name: 'Metal', low: 6, high: 7, thr: -24, ratio: 7, att: .002, rel: .07, room: .06, ir: 'small', out: 1.2 },
-  gated: { name: 'Gated', low: 2, high: 3, thr: -18, ratio: 4, att: .004, rel: .12, room: .55, ir: 'gated', out: 1 },
-  funk: { name: 'Funk', low: 1, high: 4, thr: -16, ratio: 3, att: .003, rel: .1, room: .05, ir: 'small', out: 1.05 },
-  grunge: { name: 'Grunge', low: 4, high: 3, thr: -20, ratio: 4.5, att: .005, rel: .22, room: .42, ir: 'room', out: 1.1 } };
-function setKit(name) { const k = KITS[name] || KITS.studio, t = ctx.currentTime; DK.low.gain.setTargetAtTime(k.low, t, .02); DK.high.gain.setTargetAtTime(k.high, t, .02); DK.cmp.threshold.value = k.thr; DK.cmp.ratio.value = k.ratio; DK.cmp.attack.value = k.att; DK.cmp.release.value = k.rel;
-  DK.snd.gain.setTargetAtTime(k.room, t, .02); DK.out.gain.setTargetAtTime(k.out, t, .02); DK.rv.buffer = IRS[k.ir]; DK.kit = KITS[name] ? name : 'studio'; }
+// (one sound for the kit, after Tool's: full warm toms, a kick with punch, a crisp snare, a medium room, glued by a gentle compressor)
+const KITS = { tool: { name: 'Tool', low: 3, high: 2.5, thr: -18, ratio: 3.2, att: .004, rel: .16, room: .24, ir: 'room', out: 1.1 } };
+function setKit() { const k = KITS.tool, t = ctx.currentTime; DK.low.gain.setTargetAtTime(k.low, t, .02); DK.high.gain.setTargetAtTime(k.high, t, .02); DK.cmp.threshold.value = k.thr; DK.cmp.ratio.value = k.ratio; DK.cmp.attack.value = k.att; DK.cmp.release.value = k.rel;
+  DK.snd.gain.setTargetAtTime(k.room, t, .02); DK.out.gain.setTargetAtTime(k.out, t, .02); DK.rv.buffer = IRS[k.ir]; }
 // (the metal kick's click: the beater on a hard head, a short falling ping)
 function kickClick(vel) { const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime; o.frequency.setValueAtTime(3200, t); o.frequency.exponentialRampToValueAtTime(700, t + .012); g.gain.setValueAtTime(.5 * vel, t); g.gain.exponentialRampToValueAtTime(.001, t + .02); o.connect(g); g.connect(DK.inp); o.start(t); o.stop(t + .03); }
 function fadeOut(v, dt = .08) { if (!v) return; const t = ctx.currentTime; try { v.g.gain.cancelScheduledValues(t); v.g.gain.setValueAtTime(v.g.gain.value, t); v.g.gain.linearRampToValueAtTime(0, t + dt); v.s.stop(t + dt + .02); } catch { } }
 // (pitched sets: which recording is nearest, and how much to speed it up or slow it down)
 const XYLO = [['G3', 67], ['C4', 72], ['G4', 79], ['C5', 84], ['G5', 91], ['C6', 96], ['G6', 103], ['C7', 108]].map(([n, m]) => ({ name: 'xylo_' + n, midi: m }));
-const SAX = [['As1', 46], ['C2', 48], ['D2', 50], ['E2', 52], ['Fs2', 54], ['As2', 58], ['C3', 60], ['D3', 62], ['E3', 64], ['Fs3', 66], ['C4', 72], ['E4', 76]].map(([n, m]) => ({ name: 'sax_' + n, midi: m }));
 const nearest = (set, midi) => set.reduce((a, b) => Math.abs(b.midi - midi) < Math.abs(a.midi - midi) ? b : a);
 const NOTE = m => ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][m % 12] + (Math.floor(m / 12) - 1);
 const isBlack = m => [1, 3, 6, 8, 10].includes(m % 12);
 
-// ---------- the drum kit: it starts with a kick, a snare and a hi-hat; more pieces join one at a time ----------
+// ---------- the drum kit: it starts with a kick, a snare and a hi-hat; more pieces join one at a time, up to Danny Carey's kit
+// (Tool): two kicks, four rack toms, two floor toms, octobans, two crashes, a ride, a china, a splash and a gong behind it all ----------
 function drum(r, d, { lugs = 8, kick = false, rTop } = {}) { const g = new THREE.Group();
   const shell = new THREE.Mesh(new THREE.CylinderGeometry(rTop || r, r, d, 72, 1, true), M.shell); g.add(shell);
   const top = new THREE.Mesh(new THREE.CircleGeometry((rTop || r) * .99, 72), M.head); top.rotation.x = -Math.PI / 2; top.position.y = d / 2 + .003; g.add(top);
@@ -273,57 +217,82 @@ function drum(r, d, { lugs = 8, kick = false, rTop } = {}) { const g = new THREE
     const lug = new THREE.Mesh(new RoundedBoxGeometry(.016, lh, .022, 2, .006), M.chrome); lug.position.set(Math.cos(a) * (rr + .012), 0, Math.sin(a) * (rr + .012)); lug.rotation.y = -a; g.add(lug);
     for (const s of [1, -1]) { const tr = rod(new THREE.Vector3(Math.cos(a) * (rr + .012), s * lh / 2, Math.sin(a) * (rr + .012)), new THREE.Vector3(Math.cos(a) * (rr + .01), s * (d / 2 + .004), Math.sin(a) * (rr + .01)), .0035, M.chrome); g.add(tr); } }
   g.userData.head = top; return g; }
-function cymbal(r) { const pts = [[.0001, .024], [.022, .024], [.034, .02], [.046, .01], [.06, .004], [r * .55, -.004], [r, -.014]].map(([x, y]) => new THREE.Vector2(x, y));
-  const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 96), M.bronze); const nut = cyl(.012, .014, .02, M.felt, 12); nut.position.y = .03; const g = new THREE.Group(); g.add(m, nut); return g; }
-// (each piece: where it stands, what it sounds like, which keys play it; 'hit' tells how it moves when struck)
+// (a cymbal turned on a lathe: a bell, a bow, the edge; a china's edge turns up)
+function cymbal(r, china = false) { const raw = china ? [[.0001, .03], [.022, .03], [.034, .026], [.046, .012], [.06, .006], [r * .55, -.002], [r * .82, -.012], [r * .92, -.008], [r, .008]] : [[.0001, .024], [.022, .024], [.034, .02], [.046, .01], [.06, .004], [r * .55, -.004], [r, -.014]];
+  const m = new THREE.Mesh(new THREE.LatheGeometry(raw.map(([x, y]) => new THREE.Vector2(x, y)), 96), M.bronze); if (china) m.rotation.x = Math.PI;   // (a china hangs upside down)
+  const nut = cyl(.012, .014, .02, M.felt, 12); nut.position.y = .03; const g = new THREE.Group(); g.add(m, nut); return g; }
+// (the parts that repeat: a kick on its side, a tom on a post, a floor tom on legs, a cymbal on a boom stand)
+function kickAt(x) { const d = drum(.28, .42, { lugs: 10, kick: true }); d.rotation.x = -Math.PI / 2; d.position.set(0, .3, 0); const g = new THREE.Group(); g.add(d);
+  for (const s of [-1, 1]) { const sp = rod(new THREE.Vector3(s * .22, .22, .08), new THREE.Vector3(s * .36, .01, .2), .008, M.chrome); g.add(sp); }
+  const ped = new THREE.Mesh(new RoundedBoxGeometry(.09, .02, .26, 2, .008), M.steel); ped.position.set(0, .02, -.36); ped.rotation.x = .18; g.add(ped);
+  const beater = rod(new THREE.Vector3(0, .1, -.3), new THREE.Vector3(0, .32, -.22), .005, M.chrome); g.add(beater); const bh = new THREE.Mesh(new THREE.SphereGeometry(.026, 16, 12), M.felt); bh.position.set(0, .32, -.22); g.add(bh);
+  g.position.set(x, 0, 0); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(x, .085, .24); return g; }
+function tomAt(r, depth, x, y, z, tilt = .24) { const g = new THREE.Group(), d = drum(r, depth, { lugs: r > .13 ? 8 : 6 }); d.position.set(0, y, 0); d.rotation.x = tilt; g.add(d, rod(new THREE.Vector3(0, .56, -.03), new THREE.Vector3(0, y - depth * .3, 0), .009, M.chrome));
+  g.position.set(x, 0, z); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(x, y + depth / 2 + .04, z + .05); return g; }
+function floorAt(r, depth, x, z) { const g = new THREE.Group(), d = drum(r, depth, { lugs: 8 }); d.position.set(0, .46 + (depth - .34) / 2, 0); g.add(d);
+  for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .3; g.add(rod(new THREE.Vector3(Math.cos(a) * (r + .03), .4, Math.sin(a) * (r + .03)), new THREE.Vector3(Math.cos(a) * (r + .09), .01, Math.sin(a) * (r + .09)), .008, M.chrome)); }
+  g.position.set(x, 0, z); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(x, .48 + depth, z + .06); return g; }
+function cymAt(r, x, y, z, { tx = .28, tz = 0, china = false } = {}) { const g = new THREE.Group(), c = cymbal(r, china); c.position.y = y; c.rotation.x = tx; c.rotation.z = tz; g.add(c, rod(new THREE.Vector3(0, .1, 0), new THREE.Vector3(0, y - .01, 0), .007, M.chrome), tripod(new THREE.Vector3(0, .45, 0), .24));
+  g.position.set(x, 0, z); g.userData.anim = 'cym'; g.userData.body = c; g.userData.label = new THREE.Vector3(x, y + .07, z + .05); return g; }
 const KIT = new THREE.Group(); scene.add(KIT);
 const PIECES = [
-  // (the kick lies on its side: the printed head towards you, the batter head towards the pedal)
-  { id: 'kick', name: 'Bass drum', keys: ['Space', 'B'], key: '␣', sounds: ['kick1', 'kick2', 'kick3'], tiers: [['kick1'], ['kick2'], ['kick3']], build() { const d = drum(.28, .42, { lugs: 10, kick: true }); d.rotation.x = -Math.PI / 2; d.position.set(0, .3, 0); const g = new THREE.Group(); g.add(d);
-      for (const s of [-1, 1]) { const sp = rod(new THREE.Vector3(s * .22, .22, .08), new THREE.Vector3(s * .36, .01, .2), .008, M.chrome); g.add(sp); }
-      const ped = new THREE.Mesh(new RoundedBoxGeometry(.09, .02, .26, 2, .008), M.steel); ped.position.set(0, .02, -.36); ped.rotation.x = .18; g.add(ped);
-      const beater = rod(new THREE.Vector3(0, .1, -.3), new THREE.Vector3(0, .32, -.22), .005, M.chrome); g.add(beater); const bh = new THREE.Mesh(new THREE.SphereGeometry(.026, 16, 12), M.felt); bh.position.set(0, .32, -.22); g.add(bh);
-      g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(0, .085, .24); return g; } },
+  // (the kick lies on its side: the black head towards you, the batter head towards the pedal)
+  { id: 'kick', name: 'Bass drum', keys: ['Space', 'B'], key: '␣', sounds: ['kick1', 'kick2', 'kick3'], tiers: [['kick1'], ['kick2'], ['kick3']], build: () => kickAt(.2) },
   { id: 'snare', name: 'Snare', keys: ['F', 'J'], key: 'F', sounds: ['snareS1', 'snareS2', 'snareS3', 'snareS4', 'rimshot'], tiers: [['snareS1'], ['snareS2'], ['snareS3', 'snareS4']], build() { const g = new THREE.Group(), d = drum(.18, .14, { lugs: 10 }); d.position.set(0, .62, 0); d.rotation.x = .12; g.add(d, tripod(new THREE.Vector3(0, .55, 0), .2));
-      g.position.set(.38, 0, -.24); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(.38, .72, -.2); return g; } },
+      g.position.set(.66, 0, -.28); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(.66, .72, -.24); return g; } },
   { id: 'hihat', name: 'Hi-hat', keys: ['H', 'G'], key: 'H', sounds: ['hhclosed'], build() { const g = new THREE.Group(), top = cymbal(.18), bot = cymbal(.18); bot.rotation.x = Math.PI; bot.position.y = .9; top.position.y = .935; g.add(bot, top);
       g.add(rod(new THREE.Vector3(0, .1, 0), new THREE.Vector3(0, 1.02, 0), .006, M.chrome), tripod(new THREE.Vector3(0, .4, 0), .2));
-      g.position.set(.7, 0, -.3); g.userData.anim = 'hat'; g.userData.body = top; g.userData.label = new THREE.Vector3(.7, .99, -.3); return g; } },
-  { id: 'tom', name: 'Tom', keys: ['T'], key: 'T', sounds: ['tomhiS1', 'tomhiS2'], tiers: [['tomhiS1'], ['tomhiS2'], ['tomhiS2']], build() { const g = new THREE.Group(), d = drum(.15, .17, { lugs: 6 }); d.position.set(0, .86, 0); d.rotation.x = .22; g.add(d, rod(new THREE.Vector3(0, .6, -.02), new THREE.Vector3(0, .8, 0), .009, M.chrome));
-      g.position.set(-.1, 0, -.06); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(-.1, .98, 0); return g; } },
-  { id: 'floor', name: 'Floor tom', keys: ['Y'], key: 'Y', sounds: ['tomloS1', 'tomloS2'], tiers: [['tomloS1'], ['tomloS2'], ['tomloS2']], rate: .9, build() { const g = new THREE.Group(), d = drum(.21, .34, { lugs: 8 }); d.position.set(0, .45, 0); g.add(d);
-      for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .3; g.add(rod(new THREE.Vector3(Math.cos(a) * .24, .4, Math.sin(a) * .24), new THREE.Vector3(Math.cos(a) * .3, .01, Math.sin(a) * .3), .008, M.chrome)); }
-      g.position.set(-.52, 0, -.16); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(-.52, .64, -.1); return g; } },
-  { id: 'crash', name: 'Crash', keys: ['C'], key: 'C', sounds: ['crash'], gain: .8, build() { const g = new THREE.Group(), c = cymbal(.27); c.position.y = 1.3; c.rotation.x = .3; c.rotation.z = -.15; g.add(c, rod(new THREE.Vector3(0, .1, 0), new THREE.Vector3(0, 1.29, 0), .007, M.chrome), tripod(new THREE.Vector3(0, .45, 0), .24));
-      g.position.set(.5, 0, -.55); g.userData.anim = 'cym'; g.userData.body = c; g.userData.label = new THREE.Vector3(.5, 1.36, -.5); return g; } },
-  { id: 'ride', name: 'Ride', keys: ['R'], key: 'R', sounds: ['ride'], gain: .7, build() { const g = new THREE.Group(), c = cymbal(.31); c.position.y = 1.14; c.rotation.x = .26; c.rotation.z = .12; g.add(c, rod(new THREE.Vector3(0, .1, 0), new THREE.Vector3(0, 1.13, 0), .007, M.chrome), tripod(new THREE.Vector3(0, .45, 0), .24));
-      g.position.set(-.7, 0, -.5); g.userData.anim = 'cym'; g.userData.body = c; g.userData.label = new THREE.Vector3(-.7, 1.2, -.45); return g; } },
-  { id: 'bongo', name: 'Bongos', keys: ['O'], key: 'O', sounds: ['bongo'], build() { const g = new THREE.Group(), a = drum(.085, .15, { lugs: 4, rTop: .085 }), b = drum(.105, .15, { lugs: 4 }); a.position.set(-.1, .78, 0); b.position.set(.1, .78, 0); a.rotation.x = b.rotation.x = .25;
-      g.add(a, b, rod(new THREE.Vector3(-.02, .74, 0), new THREE.Vector3(.02, .74, 0), .02, M.chrome), tripod(new THREE.Vector3(0, .72, 0), .2)); g.position.set(-1.0, 0, .12); g.userData.anim = 'drum'; g.userData.body = a; g.userData.label = new THREE.Vector3(-1.0, .9, .18); return g; } },
-  { id: 'conga', name: 'Conga', keys: ['P'], key: 'P', sounds: ['conga'], build() { const g = new THREE.Group(), d = drum(.12, .72, { lugs: 6, rTop: .14 }); d.position.set(0, .37, 0); g.add(d); const base = new THREE.Mesh(new THREE.TorusGeometry(.12, .012, 8, 40), M.chrome); base.rotation.x = Math.PI / 2; base.position.y = .03; g.add(base);
-      g.position.set(1.02, 0, -.02); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(1.02, .76, .02); return g; } },
+      g.position.set(1.0, 0, -.34); g.userData.anim = 'hat'; g.userData.body = top; g.userData.label = new THREE.Vector3(1.0, .99, -.34); return g; } },
+  { id: 'tom1', name: 'Tom', keys: ['T'], key: 'T', sounds: ['tomhiS1', 'tomhiS2'], tiers: [['tomhiS1'], ['tomhiS2'], ['tomhiS2']], rate: 1.16, build: () => tomAt(.11, .15, .4, .86, -.1) },
+  { id: 'floor1', name: 'Floor tom', keys: ['K'], key: 'K', sounds: ['tomloS1', 'tomloS2'], tiers: [['tomloS1'], ['tomloS2'], ['tomloS2']], rate: .88, build: () => floorAt(.2, .34, -.92, -.22) },
+  { id: 'crash', name: 'Crash', keys: ['C'], key: 'C', sounds: ['crash'], gain: .8, build: () => cymAt(.27, .7, 1.34, -.62, { tx: .3, tz: -.15 }) },
+  { id: 'ride', name: 'Ride', keys: ['R'], key: 'R', sounds: ['ride'], gain: .7, build: () => cymAt(.31, -1.0, 1.16, -.66, { tx: .26, tz: .12 }) },
+  { id: 'tom2', name: 'Second tom', keys: ['Y'], key: 'Y', sounds: ['tomhiS1', 'tomhiS2'], tiers: [['tomhiS1'], ['tomhiS2'], ['tomhiS2']], rate: 1.0, build: () => tomAt(.125, .16, .12, .9, -.07) },
+  { id: 'kick2', name: 'Second kick', keys: ['N'], key: 'N', sounds: ['kick1', 'kick2', 'kick3'], tiers: [['kick1'], ['kick2'], ['kick3']], rate: .97, build: () => kickAt(-.4) },
+  { id: 'china', name: 'China', keys: ['E'], key: 'E', sounds: ['china'], gain: .75, build: () => cymAt(.26, -1.44, 1.42, -.2, { tx: .34, tz: .3, china: true }) },
+  { id: 'splash', name: 'Splash', keys: ['W'], key: 'W', sounds: ['splash'], gain: .7, build: () => cymAt(.13, .32, 1.3, -.52, { tx: .36, tz: -.05 }) },
+  { id: 'tom3', name: 'Third tom', keys: ['U'], key: 'U', sounds: ['tomloS1', 'tomloS2'], tiers: [['tomloS1'], ['tomloS2'], ['tomloS2']], rate: 1.12, build: () => tomAt(.135, .17, -.18, .9, -.07) },
+  { id: 'tom4', name: 'Fourth tom', keys: ['I'], key: 'I', sounds: ['tomloS1', 'tomloS2'], tiers: [['tomloS1'], ['tomloS2'], ['tomloS2']], rate: 1.0, build: () => tomAt(.15, .18, -.52, .87, -.1) },
+  { id: 'floor2', name: 'Second floor tom', keys: ['L'], key: 'L', sounds: ['tomloS1', 'tomloS2'], tiers: [['tomloS1'], ['tomloS2'], ['tomloS2']], rate: .76, build: () => floorAt(.23, .4, -1.3, -.58) },
+  { id: 'crash2', name: 'Second crash', keys: ['X'], key: 'X', sounds: ['crash2'], gain: .8, build: () => cymAt(.25, -.6, 1.42, -.74, { tx: .3, tz: .1 }) },
+  // (octobans: four narrow tube toms in a row on one stand, tuned high; 1–4 on the keyboard)
+  { id: 'octo', name: 'Octobans', keys: ['1', '2', '3', '4'], key: '1', zones: 4, sounds: ['tomhiS1', 'tomhiS2'], tiers: [['tomhiS1'], ['tomhiS2'], ['tomhiS2']], rates: [2.05, 1.82, 1.6, 1.42], gain: .85, build() { const g = new THREE.Group(), tubes = [], labels = [];
+      for (let i = 0; i < 4; i++) { const len = .38 + i * .05, x = (i - 1.5) * .13, top = 1.3 - i * .025, d = drum(.052, len, { lugs: 4 }); d.position.set(x, top - len / 2, 0); d.rotation.x = .3; d.userData.zone = i; g.add(d); tubes.push(d); labels.push(new THREE.Vector3(1.1 + x, top + .05, -.86)); }
+      g.add(rod(new THREE.Vector3(-.26, 1.0, -.08), new THREE.Vector3(.26, 1.0, -.08), .01, M.chrome), rod(new THREE.Vector3(0, .1, -.08), new THREE.Vector3(0, 1.0, -.08), .01, M.chrome), tripod(new THREE.Vector3(0, .4, -.08), .22));
+      g.position.set(1.1, 0, -.9); g.userData.anim = 'octo'; g.userData.tubes = tubes; g.userData.labels = labels; return g; } },
+  // (the gong: a big bronze disc hung in a frame behind the kit)
+  { id: 'gong', name: 'Gong', keys: ['O'], key: 'O', sounds: ['gongsoft', 'gong'], tiers: [['gongsoft'], ['gong'], ['gong']], gain: .9, build() { const g = new THREE.Group(), R = .5, cy = 1.12;
+      const pts = [[.0001, .03], [.08, .03], [.1, .012], [R * .9, .0], [R, -.04], [R + .006, -.05]].map(([x, y]) => new THREE.Vector2(x, y)), disc = new THREE.Mesh(new THREE.LatheGeometry(pts, 96), M.gong);
+      disc.rotation.x = Math.PI / 2; const hang = new THREE.Group(); hang.position.set(0, cy + R + .1, 0); disc.position.set(0, -R - .1, 0); hang.add(disc); g.add(hang);
+      for (const s of [-1, 1]) { g.add(rod(new THREE.Vector3(s * .2, cy + R + .17, 0), new THREE.Vector3(s * .3, cy + .25, 0), .004, M.rubber)); g.add(rod(new THREE.Vector3(s * .72, .02, 0), new THREE.Vector3(s * .72, cy + R + .22, 0), .022, M.walnut)); const ft = new THREE.Mesh(new RoundedBoxGeometry(.08, .04, .5, 2, .01), M.walnut); ft.position.set(s * .72, .02, 0); g.add(ft); }
+      g.add(rod(new THREE.Vector3(-.76, cy + R + .2, 0), new THREE.Vector3(.76, cy + R + .2, 0), .026, M.walnut));
+      g.position.set(.05, 0, -1.5); g.userData.anim = 'gong'; g.userData.body = hang; g.userData.label = new THREE.Vector3(.05, cy + .02, -1.42); return g; } },
 ];
 const STATE = {};   // id → { obj, t, amp, rr }
 let openHat = null;
 function buildKit(n) { const want = PIECES.slice(0, clamp(n, 3, PIECES.length));
   for (const p of PIECES) { const on = want.includes(p);
-    if (on && !STATE[p.id]) { const o = shadow(p.build()); o.userData.piece = p; KIT.add(o); STATE[p.id] = { obj: o, t: 9, amp: 0, rr: 0, born: BARE ? 9 : 0 }; }
+    if (on && !STATE[p.id]) { const o = shadow(p.build()); o.userData.piece = p; KIT.add(o); STATE[p.id] = { obj: o, t: 9, amp: 0, rr: 0, born: BARE ? 9 : 0, zt: [9, 9, 9, 9], za: [0, 0, 0, 0] }; }
     if (!on && STATE[p.id]) { KIT.remove(STATE[p.id].obj); delete STATE[p.id]; } }
   refreshLabels(); }
-function hitPiece(p, vel = 1, open = false, quiet = false) { const st = STATE[p.id]; if (!st) return; if (!quiet) gameInput(p.id); shareHit({ look: 'Drums', id: p.id, open }); figureHit('me', 'Drums', { id: p.id });
-  st.t = 0; st.amp = vel; const label = labelFor(p.id); if (label) { label.classList.add('hit'); setTimeout(() => label.classList.remove('hit'), 110); }
-  const pan = clamp(st.obj.position.x * .35, -.6, .6), metal = DK.kit === 'metal';
-  if (p.id === 'hihat') { fadeOut(openHat, .05); openHat = null; const v = play(open ? 'hhopen' : 'hhclosed', { gain: .9 * vel, pan: .2, out: DK.inp }); if (open) openHat = v; st.open = open; return; }
+// (a hit: the piece moves, its letter lights, its recording plays through the kit's chain; harder = the louder recording)
+function hitPiece(p, vel = 1, open = false, zone = 0) { const st = STATE[p.id]; if (!st) return; unlock();
+  st.t = 0; st.amp = vel; if (p.zones) { st.zt[zone] = 0; st.za[zone] = vel; }
+  const label = labelFor(p.zones ? p.id + ':' + zone : p.id); if (label) { label.classList.add('hit'); setTimeout(() => label.classList.remove('hit'), 110); }
+  const x = p.zones ? st.obj.position.x + st.obj.userData.tubes[zone].position.x : st.obj.position.x, pan = clamp(x * .32, -.65, .65);
+  if (p.id === 'hihat') { fadeOut(openHat, .05); openHat = null; const v = play(open ? 'hhopen' : 'hhclosed', { gain: .9 * vel, pan, out: DK.inp }); if (open) openHat = v; st.open = open; return; }
   const tier = p.tiers ? p.tiers[vel < .6 ? 0 : vel < .88 ? 1 : 2] : p.sounds, name = tier[st.rr++ % tier.length], g = (p.gain || 1) * (p.tiers ? .7 + vel * .3 : vel);
-  play(name, { rate: (p.rate || 1) * (1 + (Math.random() - .5) * .02), gain: g, pan, out: DK.inp });
-  if (metal && p.id === 'kick') kickClick(vel); if (metal && p.id === 'snare') play('rimshot', { gain: .55 * vel, pan, out: DK.inp }); }
+  play(name, { rate: (p.zones ? p.rates[zone] : p.rate || 1) * (1 + (Math.random() - .5) * .02), gain: g, pan, out: DK.inp });
+  if ((p.id === 'kick' || p.id === 'kick2') && vel > .85) kickClick(vel * .6); if (p.id === 'snare' && vel > .9) play('rimshot', { gain: .35 * vel, pan, out: DK.inp }); }
 function animKit(dt) { for (const id in STATE) { const st = STATE[id], o = st.obj, b = o.userData.body; st.t += dt; st.born = Math.min(9, st.born + dt);
     // (a new piece drops in from above and settles)
     const k = clamp(st.born / .7, 0, 1), e = 1 - Math.pow(1 - k, 3); o.position.y = (1 - e) * .8 + Math.sin(k * Math.PI) * -.02; o.scale.setScalar(lerp(.6, 1, e));
-    const t = st.t, a = st.amp;
-    if (o.userData.anim === 'drum') { const s = a * Math.exp(-t * 16) * Math.sin(t * 70); b.scale.set(1 + s * .012, 1 - s * .03, 1 + s * .012); }
-    else if (o.userData.anim === 'cym') { b.rotation.x = (b.userData.rx ??= b.rotation.x) + a * .32 * Math.exp(-t * 2.6) * Math.sin(t * 13); b.rotation.z = (b.userData.rz ??= b.rotation.z) + a * .1 * Math.exp(-t * 2.6) * Math.cos(t * 9); }
-    else if (o.userData.anim === 'hat') { b.position.y = .935 - (st.open ? 0 : .012 * a * Math.exp(-t * 20)) + (st.open ? .02 : 0); b.rotation.x = a * .08 * Math.exp(-t * 6) * Math.sin(t * 18); } } }
+    const t = st.t, a = st.amp, kind = o.userData.anim;
+    if (kind === 'drum') { const s = a * Math.exp(-t * 16) * Math.sin(t * 70); b.scale.set(1 + s * .012, 1 - s * .03, 1 + s * .012); }
+    else if (kind === 'cym') { b.rotation.x = (b.userData.rx ??= b.rotation.x) + a * .32 * Math.exp(-t * 2.6) * Math.sin(t * 13); b.rotation.z = (b.userData.rz ??= b.rotation.z) + a * .1 * Math.exp(-t * 2.6) * Math.cos(t * 9); }
+    else if (kind === 'hat') { b.position.y = .935 - (st.open ? 0 : .012 * a * Math.exp(-t * 20)) + (st.open ? .02 : 0); b.rotation.x = a * .08 * Math.exp(-t * 6) * Math.sin(t * 18); }
+    else if (kind === 'gong') { b.rotation.x = a * .09 * Math.exp(-t * .9) * Math.sin(t * 3.4); b.rotation.z = a * .025 * Math.exp(-t * .9) * Math.sin(t * 2.3); }
+    else if (kind === 'octo') o.userData.tubes.forEach((tb, i) => { st.zt[i] += dt; const s = st.za[i] * Math.exp(-st.zt[i] * 18) * Math.sin(st.zt[i] * 85); tb.scale.set(1 + s * .02, 1 - s * .02, 1 + s * .02); }); } }
 
 // ---------- the xylophone: two octaves of rosewood bars over brass resonators, played with two mallets ----------
 const XY = new THREE.Group(); scene.add(XY);
@@ -347,70 +316,21 @@ const BARS = [], LOW = 72, HIGH = 96;
 const MALLETS = [-1, 1].map(s => { const g = new THREE.Group(), head = new THREE.Mesh(new THREE.SphereGeometry(.018, 20, 14), M.malletHead), stick = rod(new THREE.Vector3(0, 0, 0), new THREE.Vector3(s * .05, .1, .33), .0045, M.birch); g.add(head, stick);
   const rest = new THREE.Vector3(s * .16, 1.02, .34); g.position.copy(rest); XY.add(g); return { g, rest, from: rest.clone(), to: rest.clone(), t: 9 }; });
 shadow(XY);
-function hitBar(bar, vel = 1, quiet = false) { const m = bar.userData.midi, s = nearest(XYLO, m); if (!quiet) gameInput(m); shareHit({ look: 'Xylophone', m }); figureHit('me', 'Xylophone', { m }); play(s.name, { rate: Math.pow(2, (m - s.midi) / 12), gain: .9 * vel, pan: clamp(bar.position.x * 1.2, -.7, .7) });
+function hitBar(bar, vel = 1) { const m = bar.userData.midi, s = nearest(XYLO, m); unlock(); play(s.name, { rate: Math.pow(2, (m - s.midi) / 12), gain: .9 * vel, pan: clamp(bar.position.x * 1.2, -.7, .7) });
   bar.userData.t = 0; const mal = bar.position.x < 0 ? MALLETS[0] : MALLETS[1]; mal.from.copy(mal.g.position); mal.to.set(bar.position.x, bar.userData.y + .03, bar.position.z + .03); mal.t = 0;
   const lab = labelFor('x' + m); if (lab) { lab.classList.add('hit'); setTimeout(() => lab.classList.remove('hit'), 110); } }
 function animXylo(dt) { for (const b of BARS) { b.userData.t = (b.userData.t ?? 9) + dt; const t = b.userData.t; b.position.y = b.userData.y - .004 * Math.exp(-t * 30) * Math.cos(t * 50); }
   for (const m of MALLETS) { m.t += dt; const t = m.t; if (t < .045) m.g.position.lerpVectors(m.from, m.to, t / .045); else if (t < .5) { const k = (t - .045) / .455, e = 1 - Math.pow(1 - k, 3); m.g.position.lerpVectors(m.to, m.rest, e); } else m.g.position.copy(m.rest); } }
 
-// ---------- the tenor saxophone: a conical brass body swept along a curve, the bell flared on a lathe, keys with pearl touches ----------
-const SX = new THREE.Group(); scene.add(SX);
-function sweep(curve, rFn, seg = 180, rad = 32) { const fr = curve.computeFrenetFrames(seg, false), pos = [], nor = [], uv = [], idx = [], P0 = new THREE.Vector3(), N = new THREE.Vector3();
-  for (let i = 0; i <= seg; i++) { const t = i / seg; curve.getPointAt(t, P0); const r = rFn(t), n = fr.normals[i], b = fr.binormals[i];
-    for (let j = 0; j <= rad; j++) { const a = j / rad * Math.PI * 2, c = Math.cos(a), s = Math.sin(a); N.set(c * n.x + s * b.x, c * n.y + s * b.y, c * n.z + s * b.z); pos.push(P0.x + N.x * r, P0.y + N.y * r, P0.z + N.z * r); nor.push(N.x, N.y, N.z); uv.push(j / rad, t); } }
-  for (let i = 0; i < seg; i++) for (let j = 0; j < rad; j++) { const a = i * (rad + 1) + j, b = a + rad + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g; }
-const SAXKEYS = [];
-(function buildSax() { const lift = .05;
-  const body = new THREE.CatmullRomCurve3([[0, 1.04], [0, .86], [0, .62], [0, .42], [.012, .32], [.05, .262], [.1, .25], [.15, .28], [.175, .35], [.182, .44]].map(([x, y]) => new THREE.Vector3(x, y + lift, 0)), false, 'centripetal');
-  const r = t => t < .72 ? lerp(.016, .05, Math.pow(t / .72, .85)) : lerp(.05, .058, (t - .72) / .28);
-  SX.add(new THREE.Mesh(sweep(body, r), M.sax));
-  const top = body.getPointAt(1), bellPts = []; for (let i = 0; i <= 24; i++) { const k = i / 24, y = k * .15; bellPts.push(new THREE.Vector2(.058 + .062 * Math.pow(k, 2.4) + .004 * k, y)); }
-  bellPts.push(new THREE.Vector2(.127, .152), new THREE.Vector2(.12, .156));
-  const bell = new THREE.Mesh(new THREE.LatheGeometry(bellPts, 64), M.sax); bell.position.copy(top); bell.rotation.z = -.1; SX.add(bell);
-  const brim = new THREE.Mesh(new THREE.TorusGeometry(.125, .0045, 10, 64), M.sax); brim.rotation.x = Math.PI / 2; brim.position.copy(top).add(new THREE.Vector3(.015, .152, 0)); brim.rotation.y = 0; SX.add(brim);
-  const bow = new THREE.Mesh(new THREE.TorusGeometry(.055, .006, 10, 40), M.sax); bow.position.copy(body.getPointAt(.86)); bow.rotation.set(Math.PI / 2, 0, .9); SX.add(bow);   // (the ring where the bow joins)
-  const neck = new THREE.CatmullRomCurve3([[0, 1.03], [-.004, 1.09], [-.03, 1.13], [-.08, 1.15], [-.13, 1.14]].map(([x, y]) => new THREE.Vector3(x, y + lift, 0)));
-  SX.add(new THREE.Mesh(sweep(neck, t => lerp(.0135, .0085, t), 60, 20), M.sax));
-  const mpEnd = neck.getPointAt(1), mp = cyl(.0085, .011, .075, M.ebony, 24); mp.position.copy(mpEnd).add(new THREE.Vector3(-.035, -.004, 0)); mp.rotation.z = Math.PI / 2 + .12; SX.add(mp);
-  const lig = new THREE.Mesh(new THREE.TorusGeometry(.0115, .0025, 8, 24), M.chrome); lig.position.copy(mpEnd).add(new THREE.Vector3(-.02, -.002, 0)); lig.rotation.y = Math.PI / 2; SX.add(lig);
-  // (the keys on the front, top to bottom: cups on short posts; the main six get pearl touches)
-  const P0 = new THREE.Vector3(), T = new THREE.Vector3();
-  for (let i = 0; i < 13; i++) { const t = .06 + i * .045; body.getPointAt(t, P0); const rr = r(t), cup = new THREE.Group();
-    const c = cyl(.013 + rr * .15, .013 + rr * .15, .007, M.saxKey, 24); c.rotation.x = Math.PI / 2; cup.add(c);
-    if ([1, 2, 3, 5, 6, 7].includes(i)) { const pt = cyl(.0065, .0065, .004, M.pearl, 20); pt.rotation.x = Math.PI / 2; pt.position.z = .006; cup.add(pt); }
-    cup.position.set(P0.x, P0.y, rr + .006); SX.add(cup); SAXKEYS.push({ g: cup, z0: rr + .006, t: 9 });
-    const post = cyl(.0025, .0025, .01, M.saxKey, 8); post.rotation.x = Math.PI / 2; post.position.set(P0.x - rr * .7, P0.y, rr * .7); SX.add(post); }
-  body.getPointAt(.06, P0); const a = new THREE.Vector3(-.016, P0.y, .028); body.getPointAt(.62, T); SX.add(rod(a, new THREE.Vector3(-.03, T.y, .036), .0028, M.saxKey));   // (the long key rod)
-  for (let i = 0; i < 3; i++) { body.getPointAt(.02 + i * .03, P0); const pk = new THREE.Mesh(new RoundedBoxGeometry(.012, .028, .008, 2, .004), M.saxKey); pk.position.set(P0.x - r(.04) - .006, P0.y, .004); SX.add(pk); }   // (palm keys)
-  const strapRing = new THREE.Mesh(new THREE.TorusGeometry(.007, .002, 6, 16), M.saxKey); strapRing.position.set(-.016, .8 + lift, -.005); SX.add(strapRing);
-  // (a stand: three legs and a cradle under the bow)
-  body.getPointAt(.66, P0); for (let i = 0; i < 3; i++) { const an = i / 3 * Math.PI * 2 + .7; SX.add(rod(new THREE.Vector3(P0.x, P0.y - .06, 0), new THREE.Vector3(P0.x + Math.cos(an) * .2, .01, Math.sin(an) * .2), .006, M.steel)); }
-  const cradle = new THREE.Mesh(new THREE.TorusGeometry(.05, .006, 8, 30, Math.PI), M.rubber); cradle.position.set(P0.x, P0.y - .05, 0); cradle.rotation.z = Math.PI; SX.add(cradle);
-  SX.rotation.y = -.35; shadow(SX); })();
-let voice = null, held = [];
-function fingering(m) { const closed = clamp(Math.round((79 - m) / 2.6), 0, SAXKEYS.length); SAXKEYS.forEach((k, i) => { k.closed = i < closed; }); }
-function saxOn(m, gain = 1, quiet = false) { if (!quiet) gameInput(m); shareHit({ look: 'Saxophone', on: m }); figureHit('me', 'Saxophone', { on: m }); const s = nearest(SAX, m), b = BUF[s.name]; if (!b) { load([s.name]); return; } unlock();
-  const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime; src.buffer = b; src.playbackRate.value = Math.pow(2, (m - s.midi) / 12); src.loop = true; src.loopStart = .7; src.loopEnd = Math.max(1, b.duration - .5);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .035); src.connect(g); g.connect(bus); src.start(); const old = voice; voice = { s: src, g, m }; if (old) fadeOut(old, .05);
-  fingering(m); pianoMark(m, true); lastNote = m; }
-function saxOff(m) { if (voice && (m == null || voice.m === m)) { shareHit({ look: 'Saxophone', off: 1 }); fadeOut(voice, .18); pianoMark(voice.m, false); voice = null; fingering(84); } }
-let lastNote = 55;
-function animSax(dt) { for (const k of SAXKEYS) { const want = k.closed ? -.004 : 0; k.cur = lerp(k.cur || 0, want, Math.min(1, dt * 30)); k.g.position.z = k.z0 + k.cur; } }
-// (tunes for the Melody mode, all old enough to be anyone's; each key or tap plays the next note for as long as you hold)
-const PHRASES = { saints: { name: 'The Saints', n: [60, 64, 65, 67, 60, 64, 65, 67, 60, 64, 65, 67, 64, 60, 64, 62, 64, 64, 62, 60, 60, 64, 67, 67, 65, 64, 65, 67, 64, 60, 62, 60] },
-  joy: { name: 'Ode to Joy', n: [64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 64, 62, 62, 64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 62, 60, 60] },
-  blues: { name: 'Blues lick', n: [53, 56, 57, 58, 60, 63, 60, 58, 56, 53, 51, 53] } };
-let step = 0;
-
 // ---------- the view: each instrument its own frame; a drag looks round a little, the wheel comes closer ----------
-const VIEWS = { Guitar: { t: [0, .56, 0], d: 3.3, el: .12, az: .05, pf: .8 }, Drums: { t: [0, .5, -.15], d: 2.75, el: .26, az: 0, pf: 1.3 }, Xylophone: { t: [0, .74, .02], d: 2.35, el: .6, az: 0 }, Saxophone: { t: [.05, .56, 0], d: 3.05, el: .12, az: .1, pf: .72 } };   // (pf: how much it steps back on a tall screen)
+const VIEWS = { Drums: { t: [0, .42, -.15], d: 2.95, el: .26, az: 0, pf: 1.3 }, Xylophone: { t: [0, .74, .02], d: 2.35, el: .6, az: 0 } };   // (pf: how much it steps back on a tall screen)
 const view = { az: 0, el: .3, d: 3.5, t: new THREE.Vector3(0, .62, 0), taz: 0, tel: .3, td: 3.5, tt: new THREE.Vector3(0, .62, 0) };
-// (the kit grows: the frame steps back and up to keep every piece in it)
-const kitFit = () => clamp((Object.keys(STATE).length - 3) / 6, 0, 1);
-function frameView(name, now) { const v = VIEWS[name], k = name === 'Drums' ? kitFit() : 0; view.taz = v.az; view.tel = v.el; view.td = v.d * (1 + k * .55); view.tt.set(v.t[0], v.t[1] + k * .06, v.t[2]);
+// (the kit grows: the frame steps back and up to keep every piece in it; the gong behind lifts it a little more)
+const kitFit = () => clamp((Object.keys(STATE).length - 3) / (PIECES.length - 3), 0, 1);
+function frameView(name, now) { const v = VIEWS[name] || VIEWS.Drums, k = name === 'Drums' ? kitFit() : 0, gong = name === 'Drums' && STATE.gong ? 1 : 0;
+  view.taz = v.az; view.tel = v.el + k * .04; view.td = v.d * (1 + k * 1.05 + gong * .08); view.tt.set(v.t[0], v.t[1] + k * .2 + gong * .08, v.t[2] - k * .25);
   if (name === 'Drums') { const xs = Object.values(STATE).map(st => st.obj.position.x); if (xs.length) view.tt.x = (Math.min(...xs) + Math.max(...xs)) / 2; }   // (the kit's middle, as it grows)
-  if (now) { view.az = v.az; view.el = v.el; view.d = v.d; view.t.copy(view.tt); } }
+  if (now) { view.az = view.taz; view.el = view.tel; view.d = view.td; view.t.copy(view.tt); } }
 function placeCam() { const a = stage.clientWidth / stage.clientHeight, pf = (VIEWS[P.look] || {}).pf ?? 1, fit = a < 1 ? 1 + (Math.min(1.9, .95 / a) - 1) * (THUMB ? 1 : pf) : 1;
   view.az += (view.taz - view.az) * .1; view.el += (view.tel - view.el) * .1; view.d += (view.td - view.d) * .1; view.t.lerp(view.tt, .1);
   const d = view.d * fit; camera.position.set(view.t.x + Math.sin(view.az) * Math.cos(view.el) * d, view.t.y + Math.sin(view.el) * d, view.t.z + Math.cos(view.az) * Math.cos(view.el) * d); camera.lookAt(view.t); camera.updateMatrixWorld(); }
@@ -420,834 +340,61 @@ new ResizeObserver(resize).observe(stage);
 // ---------- the letters on the instrument ----------
 const labelsEl = $('labels'), LABELS = new Map();   // id → { el, pos (world), obj }
 function refreshLabels() { labelsEl.innerHTML = ''; LABELS.clear(); if (BARE) return;
-  if (P.look === 'Drums') for (const p of PIECES) { const st = STATE[p.id]; if (!st) continue; const el = document.createElement('span'); el.textContent = p.key; labelsEl.appendChild(el); LABELS.set(p.id, { el, pos: st.obj.userData.label, obj: null }); }
-  if (P.look === 'Xylophone') for (const b of BARS) { const k = KEYMAP_INV[b.userData.midi - LOW]; if (!k) continue; const el = document.createElement('span'); el.textContent = k.toUpperCase(); labelsEl.appendChild(el); LABELS.set('x' + b.userData.midi, { el, pos: null, obj: b }); } }
+  const add = (id, text, pos, obj) => { const el = document.createElement('span'); el.textContent = text; labelsEl.appendChild(el); LABELS.set(id, { el, pos, obj }); };
+  if (P.look === 'Drums') for (const p of PIECES) { const st = STATE[p.id]; if (!st) continue; if (p.zones) st.obj.userData.labels.forEach((pos, i) => add(p.id + ':' + i, p.keys[i], pos, null)); else add(p.id, p.key, st.obj.userData.label, null); }
+  if (P.look === 'Xylophone') for (const b of BARS) { const k = KEYMAP_INV[b.userData.midi - LOW]; if (k) add('x' + b.userData.midi, k.toUpperCase(), null, b); } }
 const labelFor = id => LABELS.get(id)?.el;
 const V3 = new THREE.Vector3();
 function placeLabels() { if (!LABELS.size || document.body.classList.contains('nokeys')) return; const w = stage.clientWidth, h = stage.clientHeight, r = stage.getBoundingClientRect();
   for (const [, L] of LABELS) { if (L.obj) V3.copy(L.obj.position).add(new THREE.Vector3(0, .03, L.obj.userData.len / 2 - .03)).applyMatrix4(XY.matrixWorld); else V3.copy(L.pos).applyMatrix4(KIT.matrixWorld);
     V3.project(camera); L.el.style.transform = `translate(${(r.left + (V3.x + 1) / 2 * w - L.el.offsetWidth / 2).toFixed(1)}px, ${(r.top + (1 - V3.y) / 2 * h - 10).toFixed(1)}px)`; } }
 
-// ---------- the keyboard: drums by letter; the xylophone and the saxophone on two piano rows (Z… and Q…) ----------
+// ---------- the keyboard: the drums by letter (1–4 the octobans); the xylophone on two piano rows (Z… and Q…) ----------
 const KEYMAP = { z: 0, s: 1, x: 2, d: 3, c: 4, v: 5, g: 6, b: 7, h: 8, n: 9, j: 10, m: 11, ',': 12, l: 13, '.': 14, q: 12, 2: 13, w: 14, 3: 15, e: 16, r: 17, 5: 18, t: 19, 6: 20, y: 21, 7: 22, u: 23, i: 24 };
 const KEYMAP_INV = {}; for (const k of ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', 'q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i']) if (!(KEYMAP[k] in KEYMAP_INV)) KEYMAP_INV[KEYMAP[k]] = k;
-const SAX_BASE = 48;   // (C3 on Z; the saxophone sounds a ninth below its written note, as a tenor does)
-const down = new Set();
-addEventListener('keydown', e => { if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, .panel')) return; if (G.state === 'play' && gameKey(e, true)) return; if (e.repeat) return; const k = e.key.toLowerCase();
+addEventListener('keydown', e => { if (e.metaKey || e.ctrlKey || e.altKey || e.repeat || e.target.closest?.('input, .panel')) return; const k = /^Digit\d$/.test(e.code) ? e.code.slice(5) : e.key.toLowerCase();
   if (k === 'arrowright') return stepLook(1); if (k === 'arrowleft') return stepLook(-1);
-  if (P.look === 'Drums') { const p = PIECES.find(p => STATE[p.id] && p.keys.some(x => x.toLowerCase() === k || (x === 'Space' && e.code === 'Space'))); if (p) { e.preventDefault(); hitPiece(p, e.shiftKey ? 1 : .8, p.id === 'hihat' && k === 'g'); } return; }
-  if (P.look === 'Xylophone') { if (k in KEYMAP) { const bar = BARS.find(b => b.userData.midi === LOW + KEYMAP[k]); if (bar) hitBar(bar, .95); } return; }
-  if (P.look === 'Guitar') { const ci = '12345678'.indexOf(k); if (ci >= 0) { const b = pads.querySelector(`[data-c="${PALETTE[ci]}"]`); if (b) { b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 140); } strum(PALETTE[ci], .9); } else if (k in KEYMAP) pickNote(GTR_BASE + KEYMAP[k], .9); return; }
-  if (P.look === 'Saxophone') { if (SM() === 'melody') { if (e.code === 'Space' || k in KEYMAP) { e.preventDefault(); melodyDown(k); } return; }
-    if (k in KEYMAP) { const m = SAX_BASE + KEYMAP[k]; down.add(k); held.push(m); if (SM() === 'keys') saxOn(m, .9); else breathNote(m); } } });
-addEventListener('keyup', e => { if (G.state === 'play' && gameKey(e, false)) return; const k = e.key.toLowerCase(); if (P.look !== 'Saxophone') return;
-  if (SM() === 'melody') { melodyUp(k); return; }
-  if (k in KEYMAP && down.has(k)) { down.delete(k); const m = SAX_BASE + KEYMAP[k]; held = held.filter(x => x !== m);
-    if (SM() === 'keys') { if (held.length) saxOn(held[held.length - 1], .9); else saxOff(m); } else breathNote(held[held.length - 1] ?? null); } });
-let melodyKey = null;
-function melodyDown(k) { if (melodyKey) return; melodyKey = k; const ph = PHRASES[P.phrase] || PHRASES.saints; saxOn(ph.n[step % ph.n.length], .9); step = (step + 1) % ph.n.length; renderDots(); }
-function melodyUp(k) { if (melodyKey !== k) return; melodyKey = null; saxOff(); }
+  if (P.look === 'Drums') { for (const p of PIECES) { if (!STATE[p.id]) continue; const i = p.keys.findIndex(x => x.toLowerCase() === k || (x === 'Space' && e.code === 'Space')); if (i < 0) continue;
+      e.preventDefault(); hitPiece(p, e.shiftKey ? 1 : .8, p.id === 'hihat' && k === 'g', p.zones ? i : 0); return; } return; }
+  if (P.look === 'Xylophone' && k in KEYMAP) { const bar = BARS.find(b => b.userData.midi === LOW + KEYMAP[k]); if (bar) hitBar(bar, .95); } });
 
-// ---------- the breath: the microphone's loudness blows the saxophone; keys (or the keyboard) choose the note ----------
-let mic = null, breath = 0, breathM = null;
-async function startMic() { try { const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); unlock();
-    const src = ctx.createMediaStreamSource(s), an = ctx.createAnalyser(); an.fftSize = 1024; src.connect(an); mic = { s, an, d: new Float32Array(1024) }; renderTools(); say('Blow into the microphone; the keys pick the note'); }
-  catch { say('No microphone: the browser said no. Keys and Melody still play.'); P.saxMode = 'keys'; save(); renderTools(); } }
-function stopMic() { if (!mic) return; mic.s.getTracks().forEach(t => t.stop()); mic = null; }
-function breathNote(m) { breathM = m; }
-function animBreath(dt) { if (!mic || P.look !== 'Saxophone' || SM() !== 'breath') return; mic.an.getFloatTimeDomainData(mic.d); let s = 0; for (const v of mic.d) s += v * v; const rms = Math.sqrt(s / mic.d.length);
-  breath += (clamp((rms - .015) * 9, 0, 1) - breath) * Math.min(1, dt * 14);
-  const m = breathM ?? lastNote;
-  if (breath > .04) { if (!voice || voice.m !== m) saxOn(m, breath); else voice.g.gain.setTargetAtTime(breath, ctx.currentTime, .03); }
-  else if (voice) saxOff(); }
-
-// ---------- the bottom bar: what this instrument offers ----------
-const tools = $('tools'), piano = $('piano');
-function renderTools() { tools.innerHTML = ''; piano.hidden = true; pads.hidden = true; if (BARE) return; if (renderGameTools()) { tools.querySelectorAll('.lab-seg').forEach(x => LabUI.segThumb?.(x)); return; }
-  if (P.look === 'Drums') { const n = Object.keys(STATE).length, next = PIECES[n];
-    tools.innerHTML = `<div class="tb lab-seg" role="radiogroup" aria-label="Kit sound">${Object.entries(KITS).map(([v, k]) => `<button type="button" role="radio" aria-checked="${P.drumKit === v}" data-kit="${v}">${k.name}</button>`).join('')}</div><div class="tb"><button type="button" id="kMinus" aria-label="Take the last piece away"${n <= 3 ? ' disabled' : ''}>−</button><span class="tl">${n} of ${PIECES.length} pieces</span><button type="button" id="kPlus"${!next ? ' disabled' : ''}>${next ? '+ ' + next.name : 'Full kit'}</button></div>`;
-    tools.querySelectorAll('[data-kit]').forEach(b => b.onclick = () => { P.drumKit = b.dataset.kit; save(); setKit(P.drumKit); renderTools(); for (const id of ['kick', 'snare']) { const pc = PIECES.find(q => q.id === id); if (STATE[id]) setTimeout(() => hitPiece(pc, id === 'kick' ? 1 : .95), id === 'kick' ? 0 : 260); } });
-    $('kMinus').onclick = () => { P.kit = Math.max(3, n - 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); };
-    $('kPlus').onclick = () => { P.kit = Math.min(PIECES.length, n + 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); const p = PIECES[n]; if (p) { load(p.sounds); say(`${p.name}: ${p.key === '␣' ? 'Space' : p.key} on the keyboard`); } }; }
-  if (P.look === 'Saxophone') { const modes = [['keys', 'Keys'], ['melody', 'Melody'], ['breath', 'Breath']];
-    tools.innerHTML = `<div class="tb lab-seg" role="radiogroup" aria-label="How to play">${modes.map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.saxMode === v}" data-m="${v}">${l}</button>`).join('')}</div>`
-      + (P.saxMode === 'melody' ? `<div class="tb" role="radiogroup" aria-label="Tune">${Object.entries(PHRASES).map(([k, p]) => `<button type="button" role="radio" aria-checked="${P.phrase === k}" data-p="${k}">${p.name}</button>`).join('')}</div>` : '')
-      + (P.saxMode === 'breath' && !mic ? `<div class="tb"><button type="button" class="on" id="micOn">Use the microphone</button></div>` : '');
-    tools.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { saxOff(); P.saxMode = b.dataset.m; save(); if (P.saxMode !== 'breath') stopMic(); step = 0; renderTools(); updateHint(); });
-    tools.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { P.phrase = b.dataset.p; step = 0; save(); renderTools(); });
-    const mo = $('micOn'); if (mo) mo.onclick = startMic;
-    buildPiano(); }
-  if (P.look === 'Guitar') { tools.innerHTML = `<div class="tb lab-seg" role="radiogroup" aria-label="Guitar">${[['electric', 'Electric'], ['acoustic', 'Acoustic']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.guitar === v}" data-g="${v}">${l}</button>`).join('')}</div>`;
-    tools.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { P.guitar = b.dataset.g; save(); setGuitar(P.guitar); renderTools(); }); buildPads(); }
-  tools.insertAdjacentHTML('beforeend', `<div class="tb"><button type="button" class="on" id="songsBtn">♪ Play a song</button><button type="button" id="togetherBtn">${NET.conn?.open ? 'Together · on' : 'Play together'}</button></div>`); $('togetherBtn').onclick = () => openRoom(); $('songsBtn').onclick = openSongs; if (NET.conn?.open) tx({ t: 'hello', look: P.look, guitar: P.guitar }); renderRoom();
-  tools.querySelectorAll('.lab-seg').forEach(x => LabUI.segThumb?.(x)); }
-function renderDots() { /* (the Melody mode shows where you are in the tune on the piano: the next key glows) */ pianoNext(); }
-// (the touch keyboard: two octaves from C3; in Melody it shows the next note, in Breath it picks the note)
-function buildPiano() { const PB = P.look === 'Xylophone' ? LOW : SAX_BASE; piano.hidden = false; piano.innerHTML = ''; const span = 25, whites = []; for (let i = 0; i < span; i++) if (!isBlack(PB + i)) whites.push(i);
-  const W = 100 / whites.length; let wi = 0;
-  for (let i = 0; i < span; i++) { const m = PB + i, b = isBlack(m), el = document.createElement('div'); el.className = 'k' + (b ? ' b' : ''); el.dataset.m = m;
-    if (b) { el.style.left = `calc(${wi * W}% - ${W * .3}%)`; el.style.width = W * .6 + '%'; } else { el.style.left = wi * W + '%'; el.style.width = `calc(${W}% - 2px)`; wi++; if (m % 12 === 0) el.textContent = NOTE(m); }
-    piano.appendChild(el); }
-  pianoNext(); }
-const pianoMark = (m, on) => piano.querySelector(`[data-m="${m}"]`)?.classList.toggle('on', on);
-function pianoNext() { piano.querySelectorAll('.k').forEach(k => k.style.outline = ''); if (SM() !== 'melody' || P.look !== 'Saxophone') return; const ph = PHRASES[P.phrase] || PHRASES.saints, k = piano.querySelector(`[data-m="${ph.n[step % ph.n.length]}"]`); if (k) { k.style.outline = '2px solid #c98a1b'; k.style.outlineOffset = '-4px'; } }
-let pianoDown = null;
-piano.addEventListener('pointerdown', e => { const k = e.target.closest('.k'); if (!k) return; e.preventDefault(); unlock(); try { piano.setPointerCapture(e.pointerId); } catch { }
-  pianoDown = +k.dataset.m; if (P.look === 'Xylophone') { const bar = BARS.find(b => b.userData.midi === pianoDown); if (bar) hitBar(bar, .9); pianoMark(pianoDown, true); return; } if (SM() === 'melody') melodyDown('touch'); else if (SM() === 'breath') { breathM = pianoDown; pianoMark(pianoDown, true); } else saxOn(pianoDown, .9); });
-piano.addEventListener('pointermove', e => { if (pianoDown == null || SM() === 'melody' || P.look === 'Xylophone') return; const el = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('.k'); if (!el) return; const m = +el.dataset.m; if (m === pianoDown) return;
-  if (SM() === 'breath') { pianoMark(pianoDown, false); breathM = m; pianoMark(m, true); } else saxOn(m, .9); pianoDown = m; });
-const pianoUp = () => { if (pianoDown == null) return; if (P.look === 'Xylophone') { pianoMark(pianoDown, false); pianoDown = null; return; } if (SM() === 'melody') melodyUp('touch'); else if (SM() === 'breath') { pianoMark(pianoDown, false); breathM = null; } else saxOff(pianoDown); pianoDown = null; };
-piano.addEventListener('pointerup', pianoUp); piano.addEventListener('pointercancel', pianoUp);
+// ---------- the bottom bar: for the drums, a piece more or a piece less ----------
+const tools = $('tools');
+function renderTools() { tools.innerHTML = ''; if (BARE || P.look !== 'Drums') return; const n = Object.keys(STATE).length, next = PIECES[n], lastP = PIECES[n - 1];
+  tools.innerHTML = `<div class="tb"><button type="button" id="kMinus" aria-label="Take away the ${lastP.name.toLowerCase()}"${n <= 3 ? ' disabled' : ''}>−</button><span class="tl">${n} of ${PIECES.length} pieces</span><button type="button" id="kPlus"${!next ? ' disabled' : ''}>${next ? '+ ' + next.name : 'Full kit'}</button></div>`;
+  $('kMinus').onclick = () => { P.kit = Math.max(3, n - 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); };
+  $('kPlus').onclick = () => { P.kit = Math.min(PIECES.length, n + 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); const p = PIECES[n]; if (p) { load(p.sounds); say(`${p.name}: ${p.zones ? p.keys.join(' ') : p.key === '␣' ? 'Space' : p.key} on the keyboard`); } }; }
 
 // ---------- the hand on the stage: a tap on a part plays it; a drag on the room looks round; the wheel comes closer ----------
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function pick(e) { const r = stage.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); ray.setFromCamera(ndc, camera);
-  const group = P.look === 'Drums' ? KIT : P.look === 'Xylophone' ? XY : P.look === 'Guitar' ? GT : SX, hits = ray.intersectObject(group, true); if (!hits.length) return null;
-  if (P.look === 'Guitar') return { guitar: true };
+  const hits = ray.intersectObject(P.look === 'Drums' ? KIT : XY, true); if (!hits.length) return null;
   if (P.look === 'Xylophone') { const h = hits.find(h => BARS.includes(h.object)); return h ? { bar: h.object } : null; }
-  if (P.look === 'Drums') { let o = hits[0].object; while (o && !o.userData.piece) o = o.parent; return o ? { piece: o.userData.piece, point: hits[0].point } : null; }
-  return { sax: true }; }
+  let o = hits[0].object, zone = 0; while (o && !o.userData.piece) { if (o.userData.zone != null) zone = o.userData.zone; o = o.parent; } return o ? { piece: o.userData.piece, zone } : null; }
 let drag = null;
 if (!BARE) {
   stage.addEventListener('pointerdown', e => { unlock(); const h = pick(e);
-    if (h?.piece) { const p = h.piece, open = p.id === 'hihat' && e.shiftKey; hitPiece(p, .8 + Math.random() * .2, open); return; }
+    if (h?.piece) { const p = h.piece; hitPiece(p, .8 + Math.random() * .2, p.id === 'hihat' && e.shiftKey, h.zone); return; }
     if (h?.bar) { hitBar(h.bar, .85 + Math.random() * .15); return; }
-    if (h?.guitar) { strum(lastChord, .9); return; }
-    if (h?.sax && SM() === 'melody') { melodyDown('stage'); drag = { melody: true }; return; }
-    if (h?.sax && SM() === 'keys') { saxOn(lastNote, .9); drag = { sax: true }; return; }
     drag = { x: e.clientX, y: e.clientY, az: view.taz, el: view.tel }; stage.classList.add('dragging'); try { stage.setPointerCapture(e.pointerId); } catch { } });
-  stage.addEventListener('pointermove', e => { if (drag?.x != null) { view.taz = clamp(drag.az - (e.clientX - drag.x) * .005, VIEWS[P.look].az - .9, VIEWS[P.look].az + .9); view.tel = clamp(drag.el + (e.clientY - drag.y) * .004, .02, 1.25); return; }
-    if (!drag && !coarse) stage.classList.toggle('over', !!pick(e)); });
-  const up = () => { if (drag?.melody) melodyUp('stage'); if (drag?.sax) saxOff(); drag = null; stage.classList.remove('dragging'); };
+  stage.addEventListener('pointermove', e => { if (drag) { view.taz = clamp(drag.az - (e.clientX - drag.x) * .005, VIEWS[P.look].az - .9, VIEWS[P.look].az + .9); view.tel = clamp(drag.el + (e.clientY - drag.y) * .004, .02, 1.25); return; }
+    if (!coarse) stage.classList.toggle('over', !!pick(e)); });
+  const up = () => { drag = null; stage.classList.remove('dragging'); };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
-  stage.addEventListener('wheel', e => { e.preventDefault(); view.td = clamp(view.td * (1 + e.deltaY * .001), VIEWS[P.look].d * .6, VIEWS[P.look].d * 1.6); }, { passive: false });
+  stage.addEventListener('wheel', e => { e.preventDefault(); view.td = clamp(view.td * (1 + e.deltaY * .001), VIEWS[P.look].d * .6, VIEWS[P.look].d * 2.6); }, { passive: false });
   stage.addEventListener('dblclick', () => frameView(P.look));
 }
 
 // ---------- the looks: one instrument at a time ----------
-const LOOKS = ['Drums', 'Xylophone', 'Saxophone', 'Guitar'];
-const SOUNDS = { Drums: () => PIECES.slice(0, P.kit).flatMap(p => p.sounds).concat(['hhopen', 'clap1', 'clap2', 'clap3']), Xylophone: () => XYLO.map(s => s.name), Saxophone: () => SAX.map(s => s.name), Guitar: () => GTR_SOUNDS };
-function updateHint() { const H = { Drums: coarse ? 'Tap a drum or a cymbal' : 'Click a drum, or play the letters · Shift = a harder hit · G opens the hi-hat', Xylophone: coarse ? 'Tap the bars' : 'Click the bars, or play Z…M and Q…I like a piano',
-    Guitar: coarse ? 'Tap a chord below, or the strings' : 'Strum with 1–8 or the pads · Z…M and Q…I pick single notes · click the strings',
-    Saxophone: P.saxMode === 'melody' ? 'Any key, tap or click plays the next note of the tune' : P.saxMode === 'breath' ? 'Blow into the microphone; hold a key to pick the note' : coarse ? 'Hold a key below' : 'Hold Z…M and Q…I, or the keys below' };
-  $('hint').textContent = G.state === 'play' ? '' : G.state === 'pick' ? 'Pick a song and a tempo · notes fall to the line: play each one as it lands' : H[P.look] || ''; }
-function applyLook(name, now) { if (!LOOKS.includes(name)) name = 'Drums'; if (G.state !== 'off') { G.state = 'off'; result.hidden = true; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); } P.look = name; if (!BARE) save(); saxOff(); stopMic();
-  KIT.visible = name === 'Drums'; XY.visible = name === 'Xylophone'; SX.visible = name === 'Saxophone'; GT.visible = name === 'Guitar'; frameView(name, now); $('nm').textContent = name;
-  load(SOUNDS[name]()); renderTools(); refreshLabels(); updateHint(); if (typeof STAGE !== 'undefined') stageSync(); }
+const LOOKS = ['Drums', 'Xylophone'];
+const SOUNDS = { Drums: () => PIECES.slice(0, P.kit).flatMap(p => p.sounds).concat(['hhopen']), Xylophone: () => XYLO.map(s => s.name) };
+function updateHint() { const H = { Drums: coarse ? 'Tap a drum or a cymbal' : 'Click a drum, or play the letters · Shift = a harder hit · G opens the hi-hat', Xylophone: coarse ? 'Tap the bars' : 'Click the bars, or play Z…M and Q…I like a piano' };
+  $('hint').textContent = H[P.look] || ''; }
+function applyLook(name, now) { if (!LOOKS.includes(name)) name = 'Drums'; P.look = name; if (!BARE) save();
+  KIT.visible = name === 'Drums'; XY.visible = name === 'Xylophone'; frameView(name, now); $('nm').textContent = name;
+  load(SOUNDS[name]()); renderTools(); refreshLabels(); updateHint(); }
 const stepLook = d => applyLook(LOOKS[(LOOKS.indexOf(P.look) + d + LOOKS.length) % LOOKS.length]);
 let msgT = 0; function say(t) { const m = $('msg'); m.textContent = t; m.classList.add('show'); clearTimeout(msgT); msgT = setTimeout(() => m.classList.remove('show'), 2600); }
-
-// ---------- songs: a line of notes falls to the hit line, as in Guitar Hero. Nothing plays by itself: every note is yours to play.
-// Every instrument gets the same simple board: only the lanes the song needs, left to right, each on a home-row key (F G H for three,
-// D F G H J for five, A to ; for ten), the same keys on the caps under the line. Perfect within 60 ms, Good within 140 ms, a note
-// let past is a Miss; the combo multiplies the score (up to ×4). Every press leaves its mark: a tick in its lane (early above the line,
-// late below it, with the milliseconds) and a dot on the timing bar under the score that fades slowly, so you see if you rush or drag ----------
-const HIT = { perfect: .06, good: .14 }, AHEAD = 2.2;
-// (drums: a bar per entry; each lane a string of eighths (8) or sixteenths (16), x = a hit)
-function drumChart(bpm, bars) { const notes = []; bars.forEach((bar, bi) => { for (const lane in bar) { const s = bar[lane], n = s.length; for (let i = 0; i < n; i++) if (s[i] === 'x') notes.push({ beat: bi * 4 + i * 4 / n, lane }); } }); return { bpm, notes: notes.sort((a, b) => a.beat - b.beat) }; }
-const bars = (n, bar) => Array.from({ length: n }, () => bar);
-// (melodies: [midi, length in beats], 0 a rest; shift moves the tune into the instrument's two octaves)
-function melody(bpm, seq, shift = 0, from = 0) { let b = from; const notes = []; for (const [m, d] of seq) { if (m) notes.push({ beat: b, lane: m + shift, dur: d }); b += d; } return { bpm, notes, beats: b }; }
-const s16 = .25, e8 = .5, HH = 'xxxxxxxx', ROCK = { kick: 'x...x...', snare: '..x...x.', hihat: HH };
-const FUR_ELISE = [[76, s16], [75, s16], [76, s16], [75, s16], [76, s16], [71, s16], [74, s16], [72, s16], [69, e8], [0, s16], [60, s16], [64, s16], [69, s16], [71, e8], [0, s16], [64, s16], [68, s16], [71, s16], [72, e8], [0, s16], [64, s16], [76, s16], [75, s16],
-  [76, s16], [75, s16], [76, s16], [71, s16], [74, s16], [72, s16], [69, e8], [0, s16], [60, s16], [64, s16], [69, s16], [71, e8], [0, s16], [64, s16], [72, s16], [71, s16], [69, 1]];
-const MOUNTAIN = [[59, e8], [61, e8], [62, e8], [64, e8], [66, e8], [62, e8], [66, 1], [65, e8], [61, e8], [65, 1], [64, e8], [60, e8], [64, 1], [59, e8], [61, e8], [62, e8], [64, e8], [66, e8], [62, e8], [66, e8], [71, e8], [69, e8], [66, e8], [62, e8], [66, e8], [69, 2]];
-// (the Bumblebee kept to twelve semitones, F5 to E6, so it fits one row of keys)
-const BEE = [88, 87, 86, 85, 86, 85, 84, 83, 84, 85, 84, 83, 82, 81, 80, 79, 78, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 87, 86, 85, 88, 87, 86, 85, 86, 85, 84, 83, 84, 85, 84, 83, 82, 81, 80, 79, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 87, 88, 87, 86, 85].map(m => [m, s16]).concat([[84, 1]]);
-const ENTERTAINER = [[62, s16], [63, s16], [64, s16], [72, e8], [64, s16], [72, e8], [64, s16], [72, 1.5], [72, s16], [74, s16], [75, s16], [76, s16], [72, s16], [74, s16], [76, e8], [71, s16], [74, e8], [72, 1.5],
-  [62, s16], [63, s16], [64, s16], [72, e8], [64, s16], [72, e8], [64, s16], [72, 1.5], [69, s16], [67, s16], [66, s16], [69, s16], [72, s16], [76, e8], [74, s16], [72, s16], [69, s16], [74, 1.5]];
-const SAINTS = [[60, 1], [64, 1], [65, 1], [67, 4], [0, 1], [60, 1], [64, 1], [65, 1], [67, 4], [0, 1], [60, 1], [64, 1], [65, 1], [67, 2], [64, 2], [60, 2], [64, 2], [62, 4], [0, 2],
-  [64, 1], [64, 1], [62, 1], [60, 3], [60, 1], [64, 2], [67, 2], [67, 1], [65, 4], [0, 1], [64, 1], [65, 1], [67, 2], [64, 2], [60, 2], [62, 2], [60, 4]];
-const ST_LOUIS = [[59, e8], [62, e8], [62, 1], [62, e8], [60, e8], [59, e8], [57, e8], [55, 2], [0, 1], [59, e8], [62, e8], [62, 1], [65, e8], [64, e8], [62, e8], [60, e8], [59, 2], [0, 1], [55, e8], [59, e8], [62, 1], [62, e8], [59, e8], [57, e8], [55, e8], [57, 1], [55, 2]];
-// (In the Hall of the Mountain King runs three times, faster each time: its notes carry their own seconds)
-function accel(seq, shift, tempos) { const notes = []; let t = 0; for (const bpm of tempos) { const m = melody(bpm, seq, shift); for (const n of m.notes) notes.push({ ...n, sec: t + n.beat * 60 / bpm, beatSec: 60 / bpm }); t += m.beats * 60 / bpm; } return { bpm: tempos[0], notes }; }
-// (drum parts only, simplified: the grooves and fills of well-known songs, no melody)
-const AIR_BREAK = { tom: 'x.xx.x..........', floor: '........x.xx.x..', kick: '..............x.' }, AIR_GROOVE = { kick: 'x.....x.', snare: '....x...', hihat: 'x.x.x.x.' };
-const SONGS = {
-  Drums: [
-    { id: 'rockyou', name: 'We Will Rock You', ...drumChart(81, bars(8, { kick: 'xx..xx..', snare: '..x...x.' })) },
-    { id: 'billie', name: 'Billie Jean', ...drumChart(117, bars(8, ROCK)) },
-    { id: 'bitesdust', name: 'Another One Bites the Dust', ...drumChart(110, bars(8, { kick: 'x.x.x.x.', snare: '..x...x.', hihat: HH })) },
-    { id: 'sevennation', name: 'Seven Nation Army', ...drumChart(124, [...bars(4, { kick: 'x.x.x.x.' }), { kick: 'x.x.x.x.', snare: '..x...x.', crash: 'x.......' }, ...bars(2, { kick: 'x.x.x.x.', snare: '..x...x.', hihat: HH }), { kick: 'x.x.x.x.', snare: '..x...x.', crash: 'x.......' }, { kick: 'x.......', crash: 'x.......' }]) },
-    { id: 'airtonight', name: 'In the Air Tonight', ...drumChart(94, [...bars(2, { hihat: 'x.x.x.x.' }), AIR_BREAK, { kick: 'x.......', crash: 'x.......', snare: '....x...' }, ...bars(3, AIR_GROOVE), AIR_BREAK, { kick: 'x.......', crash: 'x.......' }]) },
-    { id: 'cantstop', name: "Can't Stop", ...drumChart(92, [{ kick: 'x..x..x.', snare: '..x...x.', hihat: HH, crash: 'x.......' }, ...bars(6, { kick: 'x..x..x.', snare: '..x...x.', hihat: HH }), { kick: 'x..x....', snare: '..x.xxxx', crash: '........' }, { kick: 'x.......', crash: 'x.......' }]) },
-    { id: 'backinblack', name: 'Back in Black', ...drumChart(94, [{ ...ROCK, hihat: '.xxxxxxx', crash: 'x.......' }, ...bars(3, ROCK), { ...ROCK, hihat: '.xxxxxxx', crash: 'x.......' }, ...bars(2, ROCK), { kick: 'x.......', snare: '..x.....', hihat: 'xxxx....', tom: '....xx..', floor: '......xx' }, { kick: 'x.......', crash: 'x.......' }]) },
-  ],
-  Xylophone: [
-    { id: 'elise', name: 'Für Elise', ...melody(66, FUR_ELISE, 12) },
-    { id: 'mountain', name: 'Hall of the Mountain King', ...accel(MOUNTAIN, 24, [100, 130, 165]) },
-    { id: 'bee', name: 'Flight of the Bumblebee', ...melody(112, BEE, 0) },
-  ],
-  Saxophone: [
-    { id: 'saints', name: 'When the Saints', ...melody(120, SAINTS, 0) },
-    { id: 'entertainer', name: 'The Entertainer', ...melody(80, ENTERTAINER, -12) },
-    { id: 'stlouis', name: 'St. Louis Blues', ...melody(96, ST_LOUIS, 0) },
-  ] };
-const LANE_COLOR = { kick: '#2a2b30', snare: '#e8604c', hihat: '#e0a82e', tom: '#3f7cf0', floor: '#2bb39a', crash: '#c94f8a', ride: '#8a6ad8', bongo: '#b0703a', conga: '#6d8a2a' };
-const PITCH_COLORS = ['#e8604c', '#ef8a3c', '#e0a82e', '#9bbf3a', '#2bb39a', '#2a9bc4', '#3f7cf0', '#6a6fe0', '#8a6ad8', '#c94f8a', '#d9566e', '#b0703a'];
-const HOME = 'asdfghjkl;', NUMS = '1234567890-=';
-const G = { state: 'off', song: null, notes: [], start: 0, speed: 1, score: 0, combo: 0, maxCombo: 0, n: { perfect: 0, good: 0, miss: 0 }, fx: [], marks: [], meter: [], end: 0, lanes: [], keys: {} };
-let pickSpeed = 1;
-const hwy = $('hwy'), hctx = hwy.getContext('2d'), caps = $('caps'), hud = $('hud'), result = $('result');
-const BEST_KEY = KEY + '.best', bestOf = id => { try { return JSON.parse(localStorage.getItem(BEST_KEY) || '{}')[id] || null; } catch { return null; } };
-const starsHtml = n => '★'.repeat(n) + '<i>' + '★'.repeat(3 - n) + '</i>';
-const SM = () => (G.state === 'play' ? 'keys' : P.saxMode);   // (a song is always played with the keys)
-function openSongs() { saxOff(); G.state = 'pick'; renderTools(); updateHint(); }
-function metro(at, accent) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = accent ? 1760 : 1180; g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(.22, at + .002); g.gain.exponentialRampToValueAtTime(.001, at + .07); o.connect(g); g.connect(master); o.start(at); o.stop(at + .09); }
-// (the lanes a song needs, in order, and their keys: a run in the middle of the home row; more than ten use the number row)
-const LEVELS = [['easy', '1 key'], ['medium', '3 keys'], ['full', 'Hero']];
-const CYMBALS = ['hihat', 'crash', 'ride'];
-// (in 1 key and 3 keys a press only has to land in time: the right sound plays by itself)
-function groupOf(lane) { if (G.level === 'easy') return 'all';
-  if (P.look === 'Drums') return lane === 'kick' ? 'feet' : CYMBALS.includes(lane) ? 'cym' : 'skins';
-  if (P.look === 'Guitar') lane = chordRoot(lane);
-  const { lo, third } = G.bands; return lane < lo + third ? 'low' : lane < lo + third * 2 ? 'mid' : 'high'; }
-function groupLanes(notes) { if (G.level === 'easy') return [{ id: 'all', name: P.look === 'Drums' ? 'Every hit' : P.look === 'Guitar' ? 'Every strum' : 'Every note', color: '#1b1c20', key: ' ' }];
-  const defs = P.look === 'Drums' ? [['feet', 'Kick', LANE_COLOR.kick], ['skins', 'Drums', LANE_COLOR.snare], ['cym', 'Cymbals', LANE_COLOR.hihat]] : [['low', 'Low', '#3f7cf0'], ['mid', 'Middle', '#2bb39a'], ['high', 'High', '#e8604c']];
-  const lanes = defs.filter(([id]) => notes.some(n => n.lane === id)).map(([id, name, color]) => ({ id, name, color })), from = Math.floor((HOME.length - lanes.length) / 2);
-  lanes.forEach((l, i) => l.key = HOME[from + i]); return lanes; }
-function songLanes(song) { let lanes;
-  if (P.look === 'Drums') lanes = PIECES.filter(p => song.notes.some(n => n.lane === p.id)).map(p => ({ id: p.id, name: p.name, color: LANE_COLOR[p.id], piece: p }));
-  else if (P.look === 'Guitar' && typeof song.notes[0].lane !== 'number') lanes = [...new Set(song.notes.map(n => n.lane))].map(c => ({ id: c, name: G.exact ? c.replace('#', '♯') : P.guitar === 'electric' ? c.replace(/m$/, '') + '5' : c, color: PITCH_COLORS[chordRoot(c) % 12] }));
-  else lanes = [...new Set(song.notes.map(n => n.lane))].sort((a, b) => a - b).map(m => ({ id: m, name: NOTE(m), color: PITCH_COLORS[m % 12], black: isBlack(m) }));
-  const row = lanes.length > HOME.length ? NUMS : HOME, from = Math.floor((row.length - lanes.length) / 2);
-  lanes.forEach((l, i) => l.key = row[from + i]); return lanes; }
-function gameStart(song, opt = {}) { unlock(); result.hidden = true; saxOff(); G.song = song; G.speed = pickSpeed;
-  if (P.look === 'Drums') { const need = Math.max(...song.notes.map(n => PIECES.findIndex(p => p.id === n.lane))) + 1;
-    if (need > Object.keys(STATE).length) { P.kit = need; save(); buildKit(need); frameView('Drums'); load(SOUNDS.Drums()); } }
-  G.level = P.level; G.group = G.level !== 'full'; G.exact = !!song.exact; if (P.look === 'Drums' || song.exact) setKit(song.kit || P.drumKit);
-  if (song.exact) { setAmp(song.amp); load(PIECES.flatMap(p => p.sounds).concat(['hhopen'], GTR_SOUNDS)); }
-  const beat = 60 / song.bpm / G.speed, lead = 4 * beat + .7;
-  let notes = song.notes.map(n => ({ ...n, t: (n.sec != null ? n.sec : n.beat * 60 / song.bpm) / G.speed + lead, len: (n.dur || 0) * (n.beatSec || 60 / song.bpm) / G.speed, j: null, play: [n.lane] })).sort((a, b) => a.t - b.t);
-  if (G.group) { if (P.look !== 'Drums') { const ps = notes.map(n => P.look === 'Guitar' ? chordRoot(n.lane) : n.lane), lo = Math.min(...ps), hi = Math.max(...ps); G.bands = { lo, third: Math.max(1, (hi - lo + 1) / 3) }; }
-    // (you play the main notes: in 1 key one at most every two beats, on a beat; in 3 keys about one a beat, on the eighths.
-    //  The others the app plays itself, in time, so the song stays whole)
-    const grid = G.level === 'easy' ? 1 : .5, gap = G.level === 'easy' ? 1.9 : .9; let last = -9; const mine = [];
-    G.auto = []; G.autoAt = 0;
-    for (const n of notes) { const b = n.beat ?? 0, onGrid = Math.abs(b / grid - Math.round(b / grid)) < .02, sameAsKept = Math.abs(b - last) < .002 && mine.length && Math.abs(mine[mine.length - 1].t - n.t) < .002;
-      if (sameAsKept || (onGrid && b - last >= gap - 1e-6) || (n.sec != null && onGrid && n.t - (mine[mine.length - 1]?.t ?? -9) > .3)) { mine.push(n); last = b; } else G.auto.push({ t: n.t, len: n.len, play: [n.lane], lane: groupOf(n.lane), pitches: n.pitches, vel: n.vel, open: n.open, dir: n.dir, ring: n.ring }); }
-    notes = mine;
-    // (notes that land together in one lane become one note that plays them all)
-    const merged = []; for (const n of notes) { const g = groupOf(n.lane), prev = merged.find(m => m.lane === g && Math.abs(m.t - n.t) < .002); if (prev) { prev.play.push(n.lane); prev.len = Math.max(prev.len, n.len); if (n.pitches) prev.pitches = [...(prev.pitches || []), ...n.pitches]; } else merged.push({ ...n, lane: g }); }
-    notes = merged; G.lanes = groupLanes(notes); }
-  else { G.lanes = songLanes(song); G.auto = []; }
-  G.notes = notes; G.keys = {}; for (const l of G.lanes) G.keys[l.key] = l;
-  if (G.level === 'easy') for (const k of [' ', 'f', 'g', 'h', 'j']) G.keys[k] = G.lanes[0];
-  else if (P.look === 'Drums') { const kl = G.lanes.find(l => l.id === (G.group ? 'feet' : 'kick')); if (kl) G.keys[' '] = kl; }
-  G.score = 0; G.combo = 0; G.maxCombo = 0; G.n = { perfect: 0, good: 0, miss: 0 }; G.fx = []; G.marks = []; G.meter = []; G.end = G.notes[G.notes.length - 1].t + G.notes[G.notes.length - 1].len + 1.2; if (G.auto?.length) { const la = G.auto[G.auto.length - 1]; G.end = Math.max(G.end, la.t + la.len + 1.2); }
-  G.together = !!opt.at; G.start = (opt.at ?? performance.now()) / 1000; const t0 = ctx.currentTime + Math.max(0, G.start - performance.now() / 1000) + .7; for (let i = 0; i < 4; i++) metro(t0 + i * beat, i === 0);   // (four clicks in: a metronome, not music)
-  G.lead = lead; G.backing = song.exact && P.backing ? backingFor(song) : null; G.bAt = 0;
-  G.state = 'play'; buildCaps(); renderTools(); updateHint(); }
-function gameStop() { setKit(P.drumKit); setAmp('crunch'); G.backing = null; if (NET.host && NET.conn?.open && G.state === 'play') tx({ t: 'stop' }); G.state = 'off'; result.hidden = true; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff(); renderTools(); updateHint(); }
-const gameNow = () => performance.now() / 1000 - G.start;
-// (a press: the nearest note in that lane is judged; every press, on time or not, leaves its mark)
-function gameInput(lane, sound = false) { if (G.state !== 'play') return; const now = gameNow(); if (G.group && !G.lanes.some(l => l.id === lane)) lane = groupOf(lane);
-  // (a hit by any way, a click on the drum too, presses its cap)
-  const cap = caps.querySelector(`[data-lane="${lane}"]`), gl = G.lanes.find(l => l.id === lane); if (gl) gl.flash = performance.now(); if (cap && !cap.classList.contains('on')) { cap.classList.add('tap'); setTimeout(() => cap.classList.remove('tap'), 130); }
-  let best = null, bd = 9;
-  for (const n of G.notes) { if (n.t - now > HIT.good) break; if (n.j || n.lane !== lane) continue; const d = Math.abs(n.t - now); if (d < bd) { bd = d; best = n; } }
-  if (sound && !(best && bd <= HIT.good)) { let near = null, nd = .28; for (const n of G.notes) { if (n.t - now > .28) break; if (n.lane !== lane || n.sounded) continue; const d = Math.abs(n.t - now); if (d < nd) { nd = d; near = n; } }
-    if (near) { if (!near.j) judge(near, 'miss'); near.sounded = true; playNote(near); G.marks.push({ lane, dt: now - near.t, kind: 'off', t: performance.now() }); return; } }
-  if (best && bd <= HIT.good) { const dt = now - best.t; judge(best, bd <= HIT.perfect ? 'perfect' : 'good'); if (sound) { playNote(best); best.sounded = true; } G.marks.push({ lane, dt, kind: best.j, t: performance.now() }); G.meter.push({ dt, kind: best.j, t: performance.now() }); }
-  else G.marks.push({ lane, dt: null, kind: 'stray', t: performance.now() }); }
-// (the right sound for a note found by a grouped press: the pieces, the bar, or the saxophone held while the key is down)
-function playNote(n) { const ps = n.pitches;
-  if (P.look === 'Drums') for (const id of n.play) { const p = PIECES.find(q => q.id === id); if (p) hitPiece(p, n.vel ?? .9, !!n.open, true); }
-  else if (P.look === 'Xylophone') for (const m of ps || n.play) { const bar = BARS.find(b => b.userData.midi === m); if (bar) hitBar(bar, n.vel != null ? .5 + n.vel * .5 : .9, true); }
-  else if (P.look === 'Guitar') { if (ps) playPitches(ps, n.vel != null ? .55 + n.vel * .4 : .9, n.dir, n.ring); else if (typeof n.play[0] === 'number') n.play.forEach(m => pickNote(m, .9, true)); else strum(n.play[0], .9, true); }
-  else { const m = ps ? ps[0] : n.play[0]; saxOn(m, .85, true); G.held = m; } }
-function judge(n, kind) { n.j = kind; G.n[kind]++;
-  if (kind === 'miss') G.combo = 0; else { G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); G.score += (kind === 'perfect' ? 100 : 60) * Math.min(4, 1 + Math.floor(G.combo / 10)); }
-  G.fx.push({ lane: n.lane, kind, t: performance.now() }); }
-// (the caps under the hit line: the key and the name; held, a cap sinks and darkens; the press plays the instrument)
-function laneDown(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.add('on'); l.flash = performance.now();
-  if (G.group || (G.exact && P.look !== 'Drums')) { gameInput(l.id, true); return; }
-  if (P.look === 'Drums') hitPiece(l.piece, .9, false); else if (P.look === 'Guitar') { if (typeof l.id === 'number') pickNote(l.id, .9); else strum(l.id, .9); } else if (P.look === 'Xylophone') { const bar = BARS.find(b => b.userData.midi === l.id); if (bar) hitBar(bar, .9); } else saxOn(l.id, .85); }
-function laneUp(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.remove('on'); if (P.look === 'Saxophone') { if (G.group || G.exact) { if (G.held != null) saxOff(G.held); G.held = null; } else saxOff(l.id); } }
-function buildCaps() { caps.innerHTML = ''; caps.style.setProperty('--n', G.lanes.length);
-  for (const l of G.lanes) { const b = document.createElement('button'); b.type = 'button'; b.dataset.lane = l.id; b.style.setProperty('--c', l.color); b.innerHTML = `<b>${l.key === ' ' ? 'Space' : l.key === ';' ? ';' : l.key.toUpperCase()}</b><span>${l.name}</span>`;
-    b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch { } laneDown(l); });
-    const up = () => laneUp(l); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); caps.appendChild(b); }
-  caps.hidden = false; }
-// (the keyboard in a song: the lane keys only; held keys stay held)
-const heldLanes = new Set();
-function gameKey(e, down) { const k = e.key === ' ' ? ' ' : e.key.toLowerCase(), l = G.keys[k]; if (!l) return false; e.preventDefault();
-  if (down) { if (e.repeat || heldLanes.has(k)) return true; heldLanes.add(k); laneDown(l); } else { heldLanes.delete(k); laneUp(l); } return true; }
-const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect(x, y, w, h, r); };
-function gameFrame() { if (G.state !== 'play') return; const now = gameNow(), tn = performance.now();
-  while (G.auto && G.autoAt < G.auto.length && G.auto[G.autoAt].t <= now + .004) { const a = G.auto[G.autoAt++]; if (P.look === 'Saxophone') { const m = a.pitches ? a.pitches[0] : a.play[0]; if (G.held == null) { saxOn(m, .8, true); setTimeout(() => { if (voice && voice.m === m && G.held == null) saxOff(m); }, Math.max(90, a.len * 1000 * .9)); } } else playNote(a); }
-  backingFrame(now);
-  for (const n of G.notes) { if (n.t - now > 0) break; if (!n.j && now - n.t > HIT.good) judge(n, 'miss'); }
-  const dpr = Math.min(devicePixelRatio, 2), W = innerWidth, H = innerHeight; if (hwy.width !== Math.round(W * dpr) || hwy.height !== Math.round(H * dpr)) { hwy.width = Math.round(W * dpr); hwy.height = Math.round(H * dpr); }
-  const c = hctx; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
-  const cr = caps.getBoundingClientRect(), hitY = cr.top - 6, lw = cr.width / G.lanes.length, lanes = G.lanes.map((l, i) => ({ ...l, x: cr.left + i * lw, w: lw })), byId = new Map(lanes.map(l => [l.id, l]));
-  const topY = Math.max(128, hitY - Math.min(500, H * .6)), span = hitY - topY, x0 = cr.left, x1 = cr.right, yOf = t => hitY - (t - now) / AHEAD * span;
-  // the board: one card, the lanes tinted faintly in their colours, fading out towards the top
-  c.save(); c.shadowColor = 'rgba(0,0,0,.08)'; c.shadowBlur = 30; c.shadowOffsetY = 8; c.fillStyle = 'rgba(252,251,248,.94)'; rr(c, x0 - 8, topY, x1 - x0 + 16, span + 8, [20, 20, 6, 6]); c.fill(); c.restore();
-  for (const l of lanes) { const g = c.createLinearGradient(0, topY, 0, hitY); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, l.color + '1f'); c.fillStyle = g; c.fillRect(l.x + 2, topY + 10, l.w - 4, span - 10);
-    const fl = l.flash ? Math.max(0, 1 - (tn - G.lanes.find(q => q.id === l.id).flash) / 260) : 0; if (fl > 0) { const g2 = c.createLinearGradient(0, hitY - 140, 0, hitY); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, l.color + Math.round(fl * 90).toString(16).padStart(2, '0')); c.fillStyle = g2; c.fillRect(l.x + 2, hitY - 140, l.w - 4, 140); } }
-  c.strokeStyle = 'rgba(20,20,20,.07)'; c.lineWidth = 1; for (let i = 1; i < lanes.length; i++) { const x = Math.round(lanes[i].x) + .5; c.beginPath(); c.moveTo(x, topY + 18); c.lineTo(x, hitY); c.stroke(); }
-  // the beat lines: a faint rule on every beat, stronger on the bar, so the tempo is visible
-  const beatS = 60 / G.song.bpm / G.speed, lead = G.notes.length ? G.notes[0].t - (G.notes[0].sec != null ? G.notes[0].sec / G.speed : G.notes[0].beat * beatS) : 0;
-  if (G.song.notes[0].sec == null) for (let b = Math.ceil((now - lead) / beatS - 1); ; b++) { const t = lead + b * beatS; if (t - now > AHEAD) break; const y = yOf(t); if (y > hitY || y < topY + 14) continue; c.fillStyle = b % 4 === 0 ? 'rgba(20,20,20,.12)' : 'rgba(20,20,20,.05)'; c.fillRect(x0, Math.round(y), x1 - x0, 1); }
-  // the targets on the line: a slot per lane in its colour
-  for (const l of lanes) { c.lineWidth = 2; c.strokeStyle = l.color + 'aa'; rr(c, l.x + 6, hitY - 9, l.w - 12, 16, 8); c.stroke(); }
-  // the notes: pills with a sheen, a held note trails a ribbon; they swell a little as they reach the line
-  c.save(); c.beginPath(); c.rect(0, 0, W, hitY + 8); c.clip();
-  for (const n of G.notes) { if (n.t - now > AHEAD) break; const l = byId.get(n.lane); if (!l) continue; const y = yOf(n.t), hit = n.j === 'perfect' || n.j === 'good';
-    if (n.len > .12) { const ye = yOf(n.t + n.len); if (ye < hitY) { c.globalAlpha = n.j === 'miss' ? .2 : .45; c.fillStyle = l.color; rr(c, l.x + l.w / 2 - 5, Math.max(topY, ye), 10, Math.min(y, hitY) - Math.max(topY, ye), 5); c.fill(); } }
-    if (hit || y > hitY + 20) { c.globalAlpha = 1; continue; }
-    const near = clamp(1 - Math.abs(n.t - now) / .25, 0, 1), sw = (l.w - 14) * (1 + near * .08), h = 16 + near * 2, x = l.x + (l.w - sw) / 2;
-    c.globalAlpha = n.j === 'miss' ? .25 : 1; c.fillStyle = l.color; rr(c, x, y - h / 2, sw, h, h / 2); c.fill();
-    c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, x + 3, y - h / 2 + 2, sw - 6, h * .38, h * .2); c.fill(); if (n.dir) { c.fillStyle = 'rgba(255,255,255,.95)'; c.font = '700 12px Geist, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(n.dir === 'up' ? '↑' : '↓', l.x + l.w / 2, y + 1); c.textBaseline = 'alphabetic'; } c.globalAlpha = 1; }
-  c.restore();
-  if (G.auto) { c.save(); c.beginPath(); c.rect(0, 0, W, hitY); c.clip(); for (let i = G.autoAt; i < G.auto.length; i++) { const a = G.auto[i]; if (a.t - now > AHEAD) break; const l = byId.get(a.lane); if (!l) continue; c.globalAlpha = .28; c.fillStyle = l.color; c.beginPath(); c.arc(l.x + l.w / 2, yOf(a.t), 4, 0, 7); c.fill(); } c.restore(); c.globalAlpha = 1; }
-  // your marks: a tick where you pressed, against the note (early above the line, late below), with the milliseconds; a stray press a small cross
-  G.marks = G.marks.filter(m => tn - m.t < 900);
-  for (const m of G.marks) { const l = byId.get(m.lane); if (!l) continue; const a = 1 - (tn - m.t) / 900, cx = l.x + l.w / 2; c.globalAlpha = a;
-    if (m.kind === 'stray') { c.strokeStyle = 'rgba(20,20,20,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - 6, hitY - 6); c.lineTo(cx + 6, hitY + 6); c.moveTo(cx + 6, hitY - 6); c.lineTo(cx - 6, hitY + 6); c.stroke(); c.globalAlpha = 1; continue; }
-    const y = hitY + clamp(m.dt / HIT.good, -1, 1) * 26, col = m.kind === 'perfect' ? '#1f9d55' : m.kind === 'good' ? '#c98a1b' : '#8b8b8b'; c.fillStyle = col; rr(c, l.x + 8, y - 2, l.w - 16, 4, 2); c.fill();
-    c.font = '600 10px Geist, system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(Math.abs(m.dt) < .012 ? 'on time' : `${m.dt < 0 ? 'early' : 'late'} ${Math.round(Math.abs(m.dt) * 1000)} ms`, cx, hitY - 16); c.globalAlpha = 1; }
-  G.fx = G.fx.filter(f => tn - f.t < 600);
-  for (const f of G.fx) { const l = byId.get(f.lane); if (!l) continue; const k = (tn - f.t) / 600; c.globalAlpha = 1 - k; c.fillStyle = f.kind === 'perfect' ? '#1f9d55' : f.kind === 'good' ? '#c98a1b' : '#b23b3b';
-    c.font = `700 ${f.kind === 'perfect' ? 14 : 13}px Geist, system-ui, sans-serif`; c.textAlign = 'center'; c.fillText(f.kind === 'perfect' ? 'Perfect' : f.kind === 'good' ? 'Good' : 'Miss', l.x + l.w / 2, hitY - 38 - k * 26); c.globalAlpha = 1; }
-  // the timing bar under the score: the Perfect zone in the middle; each hit a dot, early to the left, late to the right, fading over 4 s
-  const mw = Math.min(240, x1 - x0 - 20), mx = W / 2 - mw / 2, my = Math.max(92, topY - 20); G.meter = G.meter.filter(m => tn - m.t < 4000);
-  c.fillStyle = 'rgba(20,20,20,.08)'; rr(c, mx, my - 2, mw, 4, 2); c.fill(); c.fillStyle = 'rgba(31,157,85,.25)'; const pz = mw * HIT.perfect / HIT.good / 2; rr(c, W / 2 - pz, my - 3, pz * 2, 6, 3); c.fill();
-  c.fillStyle = '#1b1c20'; c.fillRect(W / 2 - .5, my - 7, 1, 14);
-  for (const m of G.meter) { c.globalAlpha = 1 - (tn - m.t) / 4000; c.fillStyle = m.kind === 'perfect' ? '#1f9d55' : '#c98a1b'; c.beginPath(); c.arc(W / 2 + clamp(m.dt / HIT.good, -1, 1) * mw / 2, my, 3.5, 0, 7); c.fill(); }
-  c.globalAlpha = 1; c.font = '600 10px Geist, system-ui, sans-serif'; c.fillStyle = 'rgba(20,20,20,.4)'; c.textAlign = 'left'; c.fillText('early', mx, my + 16); c.textAlign = 'right'; c.fillText('late', mx + mw, my + 16);
-  const done = G.notes.filter(n => n.j).length;
-  hud.hidden = false; hud.innerHTML = `<b>${G.score.toLocaleString('en')}</b>${G.together && NET.live ? `<em>partner ${NET.live.score.toLocaleString('en')}${NET.live.combo > 1 ? ' · ' + NET.live.combo + ' combo' : ''}</em>` : ''}<span>${G.combo > 1 ? `${G.combo} combo · ×${Math.min(4, 1 + Math.floor(G.combo / 10))}` : `${done} / ${G.notes.length}`}</span>`;
-  if (now > G.end) finish(); }
-function finish() { setKit(P.drumKit); setAmp('crunch'); G.backing = null; G.state = 'done'; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff();
-  const tot = G.notes.length, acc = (G.n.perfect + G.n.good * .6) / tot, stars = acc >= .95 ? 3 : acc >= .8 ? 2 : acc >= .5 ? 1 : 0, id = P.look + ':' + G.song.id + ':' + G.speed + ':' + G.level;
-  const ts = G.meter.length ? G.meter : [], avg = ts.length ? ts.reduce((a, m) => a + m.dt, 0) / ts.length : 0, lean = Math.abs(avg) < .015 ? 'right on the beat' : avg < 0 ? `a touch early (${Math.round(-avg * 1000)} ms)` : `a touch late (${Math.round(avg * 1000)} ms)`;
-  let best = bestOf(id), isNew = false; if (!best || G.score > best.score) { isNew = true; best = { score: G.score, stars }; try { const all = JSON.parse(localStorage.getItem(BEST_KEY) || '{}'); all[id] = best; localStorage.setItem(BEST_KEY, JSON.stringify(all)); } catch { } }
-  result.innerHTML = `<p class="rs">${starsHtml(stars)}</p><h3>${G.song.name}</h3><p class="rm">${(LEVELS.find(l => l[0] === G.level) || [])[1]} · ${Math.round(G.speed * 100)}% tempo</p>
-    <div class="rg"><div><b>${G.score.toLocaleString('en')}</b><span>${isNew ? 'new best' : 'best ' + best.score.toLocaleString('en')}</span></div><div><b>${Math.round(acc * 100)}%</b><span>accuracy</span></div><div><b>${G.maxCombo}</b><span>best combo</span></div></div>
-    ${G.together ? '<p class="rp">Waiting for your partner’s score…</p>' : ''}<p class="rc">${G.n.perfect} perfect · ${G.n.good} good · ${G.n.miss} missed<br>On average ${lean}</p><div class="rb"><button type="button" data-r="again">Again</button><button type="button" data-r="songs">Other songs</button><button type="button" data-r="close">Done</button></div>`;
-  if (G.together) { tx({ t: 'final', score: G.score, acc: Math.round(acc * 100), stars, look: P.look }); showPartnerResult(); }
-  result.hidden = false; result.querySelector('[data-r=again]').onclick = () => { if (G.together) { result.hidden = true; room.hidden = false; renderRoom(); } else gameStart(G.song); }; result.querySelector('[data-r=songs]').onclick = () => { result.hidden = true; openSongs(); }; result.querySelector('[data-r=close]').onclick = gameStop;
-  renderTools(); }
-function renderGameTools() { const list = SONGS[P.look].concat(IMPORTED.map(e => songFor(e, P.look)).filter(Boolean));
-  if (G.state === 'pick') { tools.innerHTML = `<div class="tb songs" role="radiogroup" aria-label="Song">${list.map(s => { const b = bestOf(P.look + ':' + s.id + ':' + pickSpeed + ':' + P.level); return `<button type="button" data-song="${s.id}">${s.name}${s.band ? ' <i class="bd">band</i>' : ''}${s.midi ? ' <i class="bd">midi</i>' : ''}${b ? ` <i class="st">${'★'.repeat(b.stars) || '·'}</i>` : ''}${s.midi ? '<i class="bx" data-del="' + s.id + '" title="Remove this file" aria-label="Remove">×</i>' : ''}</button>`; }).join('')}<button type="button" id="midiAdd" class="madd">+ MIDI file</button></div>`
-      + (list.some(s => s.midi) ? `<div class="tb lab-seg" role="radiogroup" aria-label="Backing">${[[true, 'Backing on'], [false, 'Off']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.backing === v}" data-bk="${v}">${l}</button>`).join('')}</div>` : '')
-      + `<div class="tb lab-seg" role="radiogroup" aria-label="Keys">${LEVELS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.level === v}" data-lv="${v}">${l}</button>`).join('')}</div>`
-      + `<div class="tb lab-seg" role="radiogroup" aria-label="Tempo">${[.5, .75, 1].map(v => `<button type="button" role="radio" aria-checked="${pickSpeed === v}" data-sp="${v}">${v * 100}%</button>`).join('')}</div><div class="tb"><button type="button" id="songX" aria-label="Close the songs">×</button></div>`;
-    tools.querySelectorAll('[data-song]').forEach(b => b.onclick = e => { const del = e.target.closest('[data-del]'); if (del) { removeMidi(del.dataset.del); return; } gameStart(list.find(s => s.id === b.dataset.song)); });
-    $('midiAdd').onclick = pickMidi; tools.querySelectorAll('[data-bk]').forEach(b => b.onclick = () => { P.backing = b.dataset.bk === 'true'; save(); renderTools(); });
-    tools.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { pickSpeed = +b.dataset.sp; renderTools(); });
-    tools.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { P.level = b.dataset.lv; save(); renderTools(); });
-    $('songX').onclick = () => { G.state = 'off'; renderTools(); updateHint(); }; return true; }
-  if (G.state === 'play' || G.state === 'done') { tools.innerHTML = `<div class="tb"><span class="tl">${G.song.name} · ${(LEVELS.find(l => l[0] === G.level) || [])[1]} · ${Math.round(G.speed * 100)}%</span><button type="button" id="songStop">${G.state === 'play' ? 'Stop' : 'Close'}</button></div>`;
-    $('songStop').onclick = gameStop; return true; }
-  return false; }
-
-// ---------- the guitar: electric or acoustic (the switch in the bar). Its strings are plucked in code (Karplus–Strong: a burst of noise
-// running round a delay line one period long, a little lost on each pass, the way a string rings and dies away); the electric goes
-// through an overdrive and a speaker cabinet, the acoustic through the ring of a wooden body. A chord strums from the low string up;
-// the electric plays power chords (root, fifth, octave), the acoustic full open voicings ----------
-const GT = new THREE.Group(); scene.add(GT);
-const GSTR = [];
-const GUITAR_FINISH = { electric: '#b3202a', acoustic: '#c98b4e' };
-(function buildGuitar() {
-  // (the guitar lives in its own group, GT.userData.axe, so a player on the stage can hold it; the stand is apart, GT.userData.stand)
-  const axe = new THREE.Group(), stand = new THREE.Group(); GT.add(axe, stand); GT.userData.axe = axe; GT.userData.stand = stand;
-  const smooth = (pts, mirror) => { const all = mirror ? pts.concat(pts.slice(1, -1).reverse().map(([x, y]) => [-x, y])) : pts; const sh = new THREE.Shape(); sh.moveTo(...all[0]); sh.splineThru(all.slice(1).map(([x, y]) => new THREE.Vector2(x, y))); sh.closePath(); return sh; };
-  const lift = .3, bodyC = lift + .23, neckLen = .47, nutY = bodyC + .17 + neckLen, scale = .64, bridgeY = nutY - scale;
-  const capUV = (tex, w, h) => { tex.repeat.set(1 / w, 1 / h); tex.offset.set(.5, .5); tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; return tex; };
-  // ---- the electric: an S-type body (two horns, the lower one shorter), sunburst lacquer, a white guard, three single coils, a vibrato bridge ----
-  const elec = new THREE.Group(); elec.name = 'electric';
-  const sOut = smooth([[0, -.235], [.1, -.225], [.158, -.16], [.163, -.08], [.13, .0], [.124, .05], [.136, .1], [.128, .145], [.108, .172], [.088, .17], [.068, .14], [.048, .112], [.03, .15], [-.03, .155], [-.05, .125], [-.072, .142], [-.096, .156], [-.12, .148], [-.14, .11], [-.142, .06], [-.13, .01], [-.158, -.07], [-.163, -.15], [-.11, -.222]]);
-  const burst = tex(512, 512, (g, w, h) => { const r = g.createRadialGradient(w / 2, h * .55, 20, w / 2, h / 2, w * .55); r.addColorStop(0, '#f2b33d'); r.addColorStop(.42, '#d8761e'); r.addColorStop(.72, '#7a2410'); r.addColorStop(1, '#170806'); g.fillStyle = r; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 160; i++) { g.strokeStyle = `rgba(80,30,10,${.03 + rnd() * .06})`; g.lineWidth = 1 + rnd() * 2; g.beginPath(); const y = rnd() * h; g.moveTo(0, y); g.bezierCurveTo(w * .3, y + rnd() * 20 - 10, w * .7, y + rnd() * 20 - 10, w, y + rnd() * 16 - 8); g.stroke(); } });
-  const bodyMat = new THREE.MeshPhysicalMaterial({ map: capUV(burst, .36, .5), color: '#ffffff', roughness: .32, clearcoat: 1, clearcoatRoughness: .03 });
-  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(sOut, { depth: .03, bevelEnabled: true, bevelThickness: .009, bevelSize: .009, bevelSegments: 5, curveSegments: 64 }), [bodyMat, new THREE.MeshPhysicalMaterial({ color: '#1e0b07', roughness: .35, clearcoat: 1 })]);
-  body.position.set(0, bodyC, -.015); elec.add(body);
-  const guardOut = smooth([[.03, .158], [.05, .12], [.075, .1], [.1, .07], [.11, .0], [.1, -.06], [.07, -.105], [.03, -.1], [-.02, -.06], [-.05, -.02], [-.055, .05], [-.05, .12], [-.03, .162]]);
-  const guard = new THREE.Mesh(new THREE.ExtrudeGeometry(guardOut, { depth: .0025, bevelEnabled: true, bevelThickness: .0008, bevelSize: .0015, bevelSegments: 2, curveSegments: 48 }), new THREE.MeshPhysicalMaterial({ color: '#f4f1e8', roughness: .3, clearcoat: .7 })); guard.position.set(0, bodyC, .0245); elec.add(guard);
-  const coverMat = new THREE.MeshStandardMaterial({ color: '#f6f3ea', roughness: .45 });
-  for (const [y, tilt] of [[.115, 0], [.06, 0], [-.005, -.17]]) { const pu = new THREE.Group(), c = new THREE.Mesh(new RoundedBoxGeometry(.083, .019, .009, 3, .0045), coverMat); pu.add(c);
-    for (let i = 0; i < 6; i++) { const pole = cyl(.0018, .0018, .002, M.chrome, 8); pole.rotation.x = Math.PI / 2; pole.position.set((i - 2.5) * .0105, 0, .0048); pu.add(pole); }
-    pu.position.set(0, bodyC + y - .05, .03); pu.rotation.z = tilt; elec.add(pu); }
-  const plate = new THREE.Mesh(new RoundedBoxGeometry(.074, .042, .004, 2, .002), M.chrome); plate.position.set(0, bridgeY - .012, .027); elec.add(plate);
-  for (let i = 0; i < 6; i++) { const sd = new THREE.Mesh(new RoundedBoxGeometry(.0095, .016, .006, 1, .002), M.chrome); sd.position.set((i - 2.5) * .0105, bridgeY + .002 + (i % 2) * .003, .031); elec.add(sd); }
-  const arm = new THREE.Group(); arm.add(rod(new THREE.Vector3(.036, bridgeY - .02, .031), new THREE.Vector3(.05, bridgeY - .02, .05), .0022, M.chrome), rod(new THREE.Vector3(.05, bridgeY - .02, .05), new THREE.Vector3(.11, bridgeY - .09, .058), .0022, M.chrome)); const tip = cyl(.0035, .0035, .016, coverMat, 10); tip.position.set(.113, bridgeY - .093, .058); tip.rotation.z = .8; arm.add(tip); elec.add(arm);
-  for (const [x, y] of [[.062, -.07], [.083, -.105], [.098, -.142]]) { const k = cyl(.0095, .011, .015, coverMat, 24); k.rotation.x = Math.PI / 2; k.position.set(x, bodyC + y, .034); elec.add(k); }
-  const sw = new THREE.Mesh(new RoundedBoxGeometry(.006, .012, .01, 1, .002), coverMat); sw.position.set(.07, bodyC - .025, .035); sw.rotation.z = -.5; elec.add(sw);
-  const jack = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .003, 20), M.chrome); jack.rotation.x = Math.PI / 2; jack.scale.set(1.5, 1, .8); jack.position.set(.14, bodyC - .13, .016); jack.rotation.y = .4; elec.add(jack);
-  // ---- the acoustic: a dreadnought, spruce top with a white binding, a rosette, a tortoise guard, a rosewood bridge with pins ----
-  const acou = new THREE.Group(); acou.name = 'acoustic';
-  const dOut = smooth([[0, -.255], [.12, -.24], [.188, -.17], [.195, -.08], [.16, .0], [.14, .045], [.148, .11], [.142, .18], [.11, .235], [.05, .255], [0, .258]], true);
-  const spruce = new THREE.MeshPhysicalMaterial({ map: capUV(woodTex('#dcbb83', '#b8925a', '#f1d9a6', 512, 512), .42, .52), roughness: .38, clearcoat: .9, clearcoatRoughness: .08 });
-  const sides = new THREE.Mesh(new THREE.ExtrudeGeometry(dOut, { depth: .095, bevelEnabled: true, bevelThickness: .004, bevelSize: .004, bevelSegments: 3, curveSegments: 64 }), M.rosewood); sides.position.set(0, bodyC, -.075); acou.add(sides);
-  const binding = new THREE.Mesh(new THREE.ShapeGeometry(dOut, 64), new THREE.MeshStandardMaterial({ color: '#efe8d8', roughness: .4 })); binding.position.set(0, bodyC, .0235); binding.scale.set(1.012, 1.01, 1); acou.add(binding);
-  const top = new THREE.Mesh(new THREE.ShapeGeometry(dOut, 64), spruce); top.position.set(0, bodyC, .0245); acou.add(top);
-  const holeY = bodyC + .09; const hole = new THREE.Mesh(new THREE.CircleGeometry(.044, 48), new THREE.MeshStandardMaterial({ color: '#0c0705', roughness: 1 })); hole.position.set(0, holeY, .0255); acou.add(hole);
-  for (const [r0, r1, c] of [[.05, .056, '#1b1410'], [.056, .059, '#efe8d8'], [.059, .064, '#2a1a10'], [.064, .066, '#efe8d8']]) { const rg = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 64), new THREE.MeshStandardMaterial({ color: c, roughness: .5 })); rg.position.set(0, holeY, .0256); acou.add(rg); }
-  const tort = tex(256, 256, (g, w, h) => { g.fillStyle = '#3a1608'; g.fillRect(0, 0, w, h); for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(${150 + rnd() * 60 | 0},${70 + rnd() * 40 | 0},20,${.25 + rnd() * .35})`; g.beginPath(); g.ellipse(rnd() * w, rnd() * h, 6 + rnd() * 22, 4 + rnd() * 12, rnd() * 3, 0, 7); g.fill(); } });
-  const pgS = smooth([[.045, .06], [.085, .03], [.11, -.02], [.1, -.065], [.065, -.075], [.05, -.03], [.06, .02]]);
-  const pg = new THREE.Mesh(new THREE.ShapeGeometry(pgS, 32), new THREE.MeshPhysicalMaterial({ map: capUV(tort, .2, .2), roughness: .3, clearcoat: 1 })); pg.position.set(0, holeY - .02, .0257); acou.add(pg);
-  const brS = smooth([[-.075, .0], [-.06, .012], [-.03, .014], [.03, .014], [.06, .012], [.075, .0], [.06, -.012], [.03, -.014], [-.03, -.014], [-.06, -.012]]);
-  const br = new THREE.Mesh(new THREE.ExtrudeGeometry(brS, { depth: .006, bevelEnabled: true, bevelThickness: .0015, bevelSize: .0015, bevelSegments: 2 }), M.ebony); br.position.set(0, bridgeY - .006, .025); acou.add(br);
-  const saddle = new THREE.Mesh(new RoundedBoxGeometry(.075, .003, .005, 1, .001), new THREE.MeshStandardMaterial({ color: '#f3ecdc', roughness: .4 })); saddle.position.set(0, bridgeY + .002, .034); acou.add(saddle);
-  for (let i = 0; i < 6; i++) { const pin = cyl(.0024, .0024, .004, new THREE.MeshStandardMaterial({ color: '#f1ead9', roughness: .4 }), 10); pin.rotation.x = Math.PI / 2; pin.position.set((i - 2.5) * .0105, bridgeY - .01, .033); acou.add(pin); }
-  axe.add(elec, acou);
-  // ---- the neck, shared: a tapering maple neck, a rosewood board with 21 frets (the twelfth-root rule) and pearl dots, a bone nut ----
-  const neckS = new THREE.Shape(); neckS.moveTo(-.028, 0); neckS.lineTo(.028, 0); neckS.lineTo(.0215, neckLen); neckS.lineTo(-.0215, neckLen); neckS.closePath();
-  const neck = new THREE.Mesh(new THREE.ExtrudeGeometry(neckS, { depth: .016, bevelEnabled: true, bevelThickness: .006, bevelSize: .004, bevelSegments: 3 }), M.birch); neck.position.set(0, nutY - neckLen, -.006); axe.add(neck);
-  const boardS = new THREE.Shape(); boardS.moveTo(-.0285, 0); boardS.lineTo(.0285, 0); boardS.lineTo(.0215, neckLen); boardS.lineTo(-.0215, neckLen); boardS.closePath();
-  const board = new THREE.Mesh(new THREE.ExtrudeGeometry(boardS, { depth: .005, bevelEnabled: false }), M.rosewood); board.position.set(0, nutY - neckLen, .016); axe.add(board);
-  const wAt = y => lerp(.0285, .0215, clamp((y - (nutY - neckLen)) / neckLen, 0, 1)) * 2;
-  for (let f = 1; f <= 21; f++) { const y = nutY - scale * (1 - Math.pow(2, -f / 12)); if (y < nutY - neckLen + .004) break; const fr = cyl(.0011, .0011, wAt(y), M.chrome, 6); fr.rotation.z = Math.PI / 2; fr.position.set(0, y, .0215); axe.add(fr);
-    if ([3, 5, 7, 9, 15, 17, 19, 21].includes(f) || f === 12) { const yy = y + scale * (Math.pow(2, -(f - 1) / 12) - Math.pow(2, -f / 12)) / 2; for (const dx of f === 12 ? [-.011, .011] : [0]) { const dot = cyl(.0028, .0028, .001, M.pearl, 14); dot.rotation.x = Math.PI / 2; dot.position.set(dx, yy, .0212); axe.add(dot); } } }
-  const nut = new THREE.Mesh(new RoundedBoxGeometry(.044, .005, .007, 1, .0015), new THREE.MeshStandardMaterial({ color: '#efe9da', roughness: .4 })); nut.position.set(0, nutY, .022); axe.add(nut);
-  // ---- the headstocks: six in a row for the electric, three a side for the acoustic ----
-  const hsE = smooth([[-.022, 0], [.022, 0], [.027, .035], [.031, .085], [.038, .13], [.048, .168], [.044, .192], [.026, .2], [.004, .19], [-.014, .16], [-.024, .1], [-.026, .04]]);
-  const headE = new THREE.Group(); headE.name = 'electric';
-  { const hm = new THREE.Mesh(new THREE.ExtrudeGeometry(hsE, { depth: .012, bevelEnabled: true, bevelThickness: .003, bevelSize: .003, bevelSegments: 2, curveSegments: 32 }), M.birch); hm.position.set(0, nutY, .004); headE.add(hm); }
-  const ePosts = []; for (let i = 0; i < 6; i++) { const y = nutY + .035 + i * .028, x = -.016 + i * .0035; const post = cyl(.003, .003, .012, M.chrome, 10); post.rotation.x = Math.PI / 2; post.position.set(x, y, .024); headE.add(post); ePosts.push(new THREE.Vector3(x, y, .026));
-    const key = new THREE.Mesh(new RoundedBoxGeometry(.016, .011, .004, 2, .002), M.chrome); key.position.set(x - .03, y, .01); headE.add(key); headE.add(rod(new THREE.Vector3(x - .004, y, .01), new THREE.Vector3(x - .022, y, .01), .002, M.chrome)); }
-  const tree = new THREE.Mesh(new RoundedBoxGeometry(.008, .004, .004, 1, .001), M.chrome); tree.position.set(.002, nutY + .07, .026); headE.add(tree);
-  const hsA = smooth([[-.025, 0], [.025, 0], [.036, .06], [.042, .15], [.03, .175], [0, .17], [-.03, .175], [-.042, .15], [-.036, .06]]);
-  const headA = new THREE.Group(); headA.name = 'acoustic';
-  { const hm = new THREE.Mesh(new THREE.ExtrudeGeometry(hsA, { depth: .013, bevelEnabled: true, bevelThickness: .003, bevelSize: .003, bevelSegments: 2, curveSegments: 32 }), new THREE.MeshPhysicalMaterial({ color: '#1a1412', roughness: .3, clearcoat: 1 })); hm.position.set(0, nutY, .004); headA.add(hm); }
-  const aPosts = []; for (let i = 0; i < 6; i++) { const side = i < 3 ? -1 : 1, y = nutY + .045 + (i % 3) * .04, x = side * .022; const post = cyl(.003, .003, .012, M.chrome, 10); post.rotation.x = Math.PI / 2; post.position.set(x, y, .024); headA.add(post); aPosts.push(new THREE.Vector3(x, y, .026));
-    const key = new THREE.Mesh(new RoundedBoxGeometry(.018, .013, .005, 2, .002), M.chrome); key.position.set(side * .062, y, .01); headA.add(key); headA.add(rod(new THREE.Vector3(side * .04, y, .01), new THREE.Vector3(side * .054, y, .01), .002, M.chrome)); }
-  axe.add(headE, headA);
-  // ---- six strings: from the saddles over the nut (the part that rings) and on to the posts ----
-  const strMat = new THREE.MeshStandardMaterial({ color: '#d9d2c2', metalness: 1, roughness: .22 }), woundMat = new THREE.MeshStandardMaterial({ color: '#b9a27a', metalness: 1, roughness: .35 });
-  for (let i = 0; i < 6; i++) { const r = .0006 + (5 - i) * .00017, mat = i < 3 ? woundMat : strMat, a = new THREE.Vector3((i - 2.5) * .0105, bridgeY + .004, .0345), b = new THREE.Vector3((i - 2.5) * .0071, nutY, .0255);
-    const m = rod(a, b, r, mat); axe.add(m); GSTR.push({ mesh: m, base: m.position.clone(), t: 9, amp: 0 });
-    const tE = rod(b, ePosts[5 - i] || ePosts[0], r, mat); tE.name = 'electric'; headE.add(tE); const tA = rod(b, aPosts[i < 3 ? 2 - i : i] || aPosts[0], r, mat); tA.name = 'acoustic'; headA.add(tA); }
-  // ---- the stand: an A-frame with a neck yoke ----
-  for (const s of [-1, 1]) stand.add(rod(new THREE.Vector3(s * .06, lift - .03, .07), new THREE.Vector3(s * .2, .01, .22), .007, M.steel), rod(new THREE.Vector3(s * .06, lift - .03, .07), new THREE.Vector3(s * .16, .01, -.22), .007, M.steel));
-  const cradle = new THREE.Mesh(new THREE.TorusGeometry(.13, .012, 8, 30, Math.PI), M.rubber); cradle.rotation.set(Math.PI / 2, 0, Math.PI); cradle.position.set(0, lift - .03, .03); stand.add(cradle);
-  stand.add(rod(new THREE.Vector3(0, .01, -.22), new THREE.Vector3(0, nutY - .05, -.035), .008, M.steel)); const yoke = new THREE.Mesh(new THREE.TorusGeometry(.03, .006, 8, 20, Math.PI), M.rubber); yoke.position.set(0, nutY - .05, -.03); yoke.rotation.z = Math.PI; stand.add(yoke);
-  axe.position.y = 0; shadow(GT); GT.rotation.y = -.25; GT.userData.body = bodyMat; GT.userData.nutY = nutY; GT.userData.bridgeY = bridgeY; GT.userData.bodyC = bodyC;
-})();
-function setGuitar(kind) { GT.traverse(g => { if (g.name === 'electric' || g.name === 'acoustic') g.visible = g.name === kind; }); }
-// (the sound: one buffer per string pitch and kind, made once and kept)
-const KS = new Map();
-function ksBuffer(m, kind) { const key = m + kind; if (KS.has(key)) return KS.get(key);
-  const sr = ctx.sampleRate, f = 440 * Math.pow(2, (m - 69) / 12), dur = kind === 'electric' ? 3.2 : 2.6, n = Math.floor(sr * dur), b = ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
-  const N = Math.max(2, Math.floor(sr / f)), ring = new Float32Array(N), keep = kind === 'electric' ? .9985 : .9965 - (m > 60 ? .002 : 0);
-  let prev = 0; const soft = kind === 'electric' ? .55 : .3; for (let i = 0; i < N; i++) { const x = Math.random() * 2 - 1; prev = prev * soft + x * (1 - soft); ring[i] = prev; }   // (the pluck: noise, softened by where it is plucked)
-  let p = 0; for (let i = 0; i < n; i++) { const q = (p + 1) % N, v = ring[p]; d[i] = v; ring[p] = keep * .5 * (v + ring[q]); p = q; }
-  let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(d[i])); for (let i = 0; i < n; i++) d[i] /= pk || 1;
-  const out = { b, rate: f / (sr / (N + .5)) }; KS.set(key, out); return out; }
-// (the two signal chains: the electric overdriven into a cabinet; the acoustic with its body's warmth)
-const GCH = (() => { const curve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(x * 6) * .9; }
-  const ein = ctx.createGain(), drive = ctx.createWaveShaper(); drive.curve = curve; drive.oversample = '2x'; const cab = ctx.createBiquadFilter(); cab.type = 'lowpass'; cab.frequency.value = 3400; cab.Q.value = .8;
-  const mid = ctx.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 900; mid.gain.value = 3; const eout = ctx.createGain(); eout.gain.value = .32; ein.gain.value = 1.6;
-  ein.connect(drive); drive.connect(cab); cab.connect(mid); mid.connect(eout); eout.connect(bus);
-  const ain = ctx.createGain(), bodyR = ctx.createBiquadFilter(); bodyR.type = 'peaking'; bodyR.frequency.value = 180; bodyR.gain.value = 1.5; bodyR.Q.value = 1.2; const air = ctx.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 4000; air.gain.value = 1; const aout = ctx.createGain(); aout.gain.value = .8;
-  ain.connect(bodyR); bodyR.connect(air); air.connect(aout); aout.connect(bus); return { electric: ein, acoustic: ain, amp: { ein, drive, cab, mid, eout } }; })();
-const ringing = [];   // (one voice per string: a new pluck on a string stops what it was ringing)
-// (real strings: Open String Guitar by tildesounds, CC0; six open strings E2 A2 D3 F3 G3 C4, each at three strengths; a note plays from the nearest string, retuned, and the string's synthesis stands in until the recordings are loaded)
-const GSTRINGS = [['E', 40], ['A', 45], ['D', 50], ['F', 53], ['G', 55], ['C', 60]], GTIER = v => v < .6 ? 's' : v < .88 ? 'm' : 'h', GTIER_GAIN = { s: .6, m: .8, h: 1 };
-const GTR_SOUNDS = GSTRINGS.flatMap(([L]) => ['s', 'm', 'h'].map(t => 'gtr_' + L + '_' + t));
-function pluck(m, at = 0, vel = .9, strIdx = 0, len = 0) { const kind = P.guitar, near = GSTRINGS.reduce((a, b) => Math.abs(b[1] - m) < Math.abs(a[1] - m) ? b : a), tier = GTIER(vel), rec = BUF['gtr_' + near[0] + '_' + tier];
-  const s = ctx.createBufferSource(), g = ctx.createGain(); if (rec) { s.buffer = rec; s.playbackRate.value = Math.pow(2, (m - near[1]) / 12); g.gain.value = GTIER_GAIN[tier] * (.75 + vel * .25); } else { const k = ksBuffer(m, kind); s.buffer = k.b; s.playbackRate.value = k.rate; g.gain.value = vel; load(GTR_SOUNDS); }
-  s.connect(g); g.connect(GCH[kind]); const t = ctx.currentTime + at; s.start(t); if (len > 0) { g.gain.setTargetAtTime(0, t + len, .025); s.stop(t + len + .4); } const old = ringing[strIdx]; if (old) { try { old.g.gain.setTargetAtTime(0, t, .015); old.s.stop(t + .1); } catch { } } ringing[strIdx] = { s, g };
-  const st = GSTR[strIdx]; if (st) { st.t = -at; st.amp = vel; } }
-// (chords: a root and a quality; the electric plays the root, fifth and octave; the acoustic an open-position six-string voicing)
-const ROOTS = { C: 48, 'C#': 49, Db: 49, D: 50, 'D#': 51, Eb: 51, E: 40, F: 41, 'F#': 42, Gb: 42, G: 43, 'G#': 44, Ab: 44, A: 45, 'A#': 46, Bb: 46, B: 47 };
-const OPEN = { G: [43, 47, 50, 55, 59, 67], C: [48, 52, 55, 60, 64], D: [50, 57, 62, 66], Em: [40, 47, 52, 55, 59, 64], Am: [45, 52, 57, 60, 64], E: [40, 47, 52, 56, 59, 64], A: [45, 52, 57, 61, 64], Dm: [50, 57, 62, 65], F: [41, 48, 53, 57, 60, 65], Bm: [47, 54, 59, 62, 66], B: [47, 54, 59, 63, 66], Bb: [46, 53, 58, 62, 65], 'F#m': [42, 49, 54, 57, 61, 66], 'G#m': [44, 51, 56, 59, 63, 68], 'C#m': [49, 56, 61, 64, 68] };
-const chordRoot = name => typeof name === 'number' ? name : ROOTS[name.replace(/m$|5$/, '')] ?? 40;
-function chordNotes(name, kind = P.guitar) { const r = chordRoot(name), minor = /m$/.test(name);
-  if (kind === 'electric') return [r, r + 7, r + 12];
-  return OPEN[name] || [r, r + 7, r + 12, r + (minor ? 15 : 16), r + 19]; }
-let lastChord = 'E';
-function strum(name, vel = .9, quiet = false) { if (!quiet) gameInput(name); unlock(); shareHit({ look: 'Guitar', chord: name, kind: P.guitar }); figureHit('me', 'Guitar', { chord: name }); const ns = chordNotes(name), off = 6 - ns.length; lastChord = name;
-  ns.forEach((m, i) => pluck(m, i * (P.guitar === 'electric' ? .008 : .016), vel * (1 - i * .04), off + i)); }
-function pickNote(m, vel = .9, quiet = false) { unlock(); shareHit({ look: 'Guitar', note: m, kind: P.guitar }); figureHit('me', 'Guitar', { note: m }); const str = clamp(Math.floor((m - 40) / 5), 0, 5); pluck(m, 0, vel, str); if (!quiet) gameInput(m); }
-function playPitches(ps, vel = .9, dir = 'down', ring = 0, share = true) { unlock(); if (share) { shareHit({ look: 'Guitar', notes: ps, kind: P.guitar, dir, ring }); figureHit('me', 'Guitar', { note: ps[0] }); }
-  let list = ps.slice(0, 6).map((m, i, a) => ({ m, str: Math.max(0, 6 - a.length) + i })); if (dir === 'up') { list = list.reverse(); if (list.length > 4) list = list.slice(0, 4); }
-  const gap = list.length > 1 ? (dir === 'up' ? .006 : .009) * (1.25 - vel * .45) : 0, v = dir === 'up' ? vel * .82 : vel;
-  list.forEach(({ m, str }, i) => pluck(m, i * gap, v * (1 - i * .025), str, ring > 0 ? ring / G.speed + .03 : 0)); }
-function animGuitar(dt) { for (const s of GSTR) { s.t += dt; const k = s.t < 0 ? 0 : s.amp * Math.exp(-s.t * 3.5) * Math.sin(s.t * 160); s.mesh.position.x = s.base.x + k * .0025; } }
-// (free play: number keys 1–8 strum the chords of the palette; Z… and Q… pick single notes from the low E; the pads below for touch)
-const PALETTES = { electric: ['E', 'A', 'D', 'G', 'C', 'B', 'F#', 'F'], acoustic: ['E', 'A', 'D', 'G', 'C', 'Em', 'Am', 'Dm'] }, GTR_BASE = 40;
-let PALETTE = PALETTES.electric;
-const pads = $('pads');
-function buildPads() { PALETTE = PALETTES[P.guitar] || PALETTES.electric; pads.hidden = false; pads.innerHTML = PALETTE.map((c, i) => `<button type="button" data-c="${c}" style="--c:${PITCH_COLORS[chordRoot(c) % 12]}"><b>${i + 1}</b><span>${P.guitar === 'electric' ? c.replace(/m$/, '') + '5' : c}</span></button>`).join('');
-  pads.querySelectorAll('[data-c]').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('on'); strum(b.dataset.c, .9); setTimeout(() => b.classList.remove('on'), 140); })); }
-// (the guitar's part in the rock songs: the song's chords, in the groove of its drums; power chords on the electric, a strum on the acoustic; no riffs, no melody)
-function guitarChart(bpm, barsIn) { const notes = []; barsIn.forEach((bar, bi) => { for (const [c, pat, hold] of bar) { const n = pat.length; for (let i = 0; i < n; i++) if (pat[i] === 'x') notes.push({ beat: bi * 4 + i * 4 / n, lane: c, dur: hold || 0 }); } }); return { bpm, notes: notes.sort((a, b) => a.beat - b.beat) }; }
-const gbars = (n, bar) => Array.from({ length: n }, () => bar);
-SONGS.Guitar = [
-  { id: 'rockyou', name: 'We Will Rock You', ...guitarChart(81, [...gbars(7, [['E', '..x...x.']]), [['E', 'x.......', 4]]]) },
-  { id: 'billie', name: 'Billie Jean', ...guitarChart(117, gbars(2, null).flatMap(() => [[['F#m', '..x...x.']], [['G#m', '..x...x.']], [['A', '..x...x.']], [['G#m', '..x...x.']]])) },
-  { id: 'bitesdust', name: 'Another One Bites the Dust', ...guitarChart(110, [...gbars(4, [['E', 'x..x..x.']]), ...gbars(2, [['A', 'x..x..x.']]), [['E', 'x..x..x.']], [['E', 'x.......', 4]]]) },
-  { id: 'sevennation', name: 'Seven Nation Army', ...guitarChart(124, [[['E', 'x.......', 4]], [['G', 'x...', 2], ['D', '..x.', 2]], [['C', 'x.......', 4]], [['B', 'x.......', 4]], [['E', 'x.x.x.x.']], [['G', 'x.x.', 1], ['D', '..x.', 1]], [['C', 'x.x.x.x.']], [['B', 'x.x.x.x.']], [['E', 'x.......', 4]]]) },
-  { id: 'airtonight', name: 'In the Air Tonight', ...guitarChart(94, [[['Dm', 'x.......', 4]], [['C', 'x.......', 4]], [], [['Dm', 'x...x...']], [['C', 'x...x...']], [['Bb', 'x...x...']], [['C', 'x...x...']], [], [['Dm', 'x.......', 4]]]) },
-  { id: 'cantstop', name: "Can't Stop", ...guitarChart(92, [[['E', 'x..x..x.']], [['B', 'x..x..x.']], [['C#m', 'x..x..x.']], [['A', 'x..x..x.']], [['E', 'x..x..x.']], [['B', 'x..x..x.']], [['C#m', 'x..x..x.']], [['A', 'x..x....']], [['E', 'x.......', 4]]]) },
-  { id: 'backinblack', name: 'Back in Black', ...guitarChart(94, [...gbars(8, [['E', 'x.......', 1.5], ['D', '......x.'], ['A', '.......x']]), [['E', 'x.......', 4]]]) },
-];
-
-// ---------- the band songs: famous tunes old enough to be anyone's, arranged for a rock band. Every instrument has its part: the drums
-// their groove (and the kit's sound the song asks for), the saxophone and the xylophone the tune, the guitar the riff (the tune itself)
-// or the chords. Together, each player picks an instrument and you play the same song ----------
-const fitShift = (seq, lo, hi) => { const ps = seq.filter(x => x[0]).map(x => x[0]), mn = Math.min(...ps), mx = Math.max(...ps); for (const k of [0, 12, -12, 24, -24, 36]) if (mn + k >= lo && mx + k <= hi) return k; return 0; };
-function chordPart(bpm, chords, every = 1) { const notes = []; let b = 0; for (const [c, d] of chords) { for (let x = 0; x < d - 1e-6; x += every) notes.push({ beat: b + x, lane: c, dur: 0 }); b += d; } return { bpm, notes }; }
-const q4 = 1, h8 = .5, x16 = .25, rpt = (n, a) => Array.from({ length: n }, () => a).flat();
-// (Grieg: In the Hall of the Mountain King, the theme three times)
-const B_MOUNTAIN = rpt(3, MOUNTAIN).concat([[59, 4]]);
-// (Beethoven: the Fifth, the four-note motif and its answer)
-const FIFTH = [[0, h8], [67, h8], [67, h8], [67, h8], [63, 2], [0, h8], [65, h8], [65, h8], [65, h8], [62, 2]];
-const B_FIFTH = rpt(4, FIFTH).concat([[60, 4]]);
-// (Bach: the Toccata in D minor, its opening flourish, high then low, and the low D)
-const B_TOCCATA = [[69, x16], [67, x16], [69, 2.5], [0, 1], [67, x16], [65, x16], [64, x16], [62, x16], [61, h8], [62, 2.5], [57, x16], [55, x16], [57, 2.5], [0, 1], [52, h8], [53, h8], [49, h8], [50, 2.5], [50, 4]];
-// (Rossini: William Tell, the galop: ta-ta-TUM on one note, then up)
-const TELL_A = [[71, x16], [71, x16], [71, h8], [71, x16], [71, x16], [71, h8], [71, x16], [71, x16], [76, h8], [78, h8], [80, h8]];
-const TELL_B = [[71, x16], [71, x16], [71, h8], [71, x16], [71, x16], [71, h8], [71, x16], [71, x16], [80, h8], [76, h8], [80, h8]];
-const TELL_END = [[71, x16], [71, x16], [71, h8], [78, x16], [78, x16], [78, h8], [76, 2]];
-const B_TELL = [...TELL_A, ...TELL_B, ...TELL_A, ...TELL_END, ...TELL_A, ...TELL_B, ...TELL_A, ...TELL_END];
-// (Beethoven: Ode to Joy)
-const ODE_1 = [[64, q4], [64, q4], [65, q4], [67, q4], [67, q4], [65, q4], [64, q4], [62, q4], [60, q4], [60, q4], [62, q4], [64, q4]];
-const B_ODE = [...ODE_1, [64, 1.5], [62, h8], [62, 2], ...ODE_1, [62, 1.5], [60, h8], [60, 2]];
-const GALLOP = 'x.xxx.xxx.xxx.xx';
-const BAND_SONGS = [
-  { id: 'b-mountain', name: 'Mountain King', by: 'Grieg', bpm: 132, kit: 'rock', melody: B_MOUNTAIN, guitar: 'riff',
-    drums: [...bars(4, ROCK), { ...ROCK, crash: 'x.......' }, ...bars(3, ROCK), { kick: 'x.x.x.x.', snare: '..x...x.', crash: 'x.......', hihat: '.xxxxxxx' }, ...bars(3, { kick: 'x.x.x.x.', snare: '..x...x.', hihat: HH }), { kick: 'x.......', crash: 'x.......' }] },
-  { id: 'b-fifth', name: 'The Fifth', by: 'Beethoven', bpm: 108, kit: 'metal', melody: B_FIFTH, guitar: 'riff',
-    drums: [...bars(4, { snare: '.xxx....', kick: '....x...', crash: '....x...' }), ...bars(4, { kick: 'x.xxx.xx', snare: '.xxx....', crash: '....x...', hihat: 'x...x...' }), { kick: 'x.......', crash: 'x.......' }] },
-  { id: 'b-toccata', name: 'Toccata in D minor', by: 'Bach', bpm: 80, kit: 'gated', melody: B_TOCCATA, guitar: 'riff',
-    drums: [{ kick: '..x.............', crash: '..x.............' }, { tom: 'xxxx............', floor: '....xx..........', kick: '......x.........', crash: '......x.........' }, { kick: '..x.............', crash: '..x.............', floor: '..x.............' }, { tom: 'x.x.............', floor: '....x...........', kick: '......x.........', snare: '......x.........' }, { kick: 'x.......x.......', crash: 'x...............', floor: 'x...x...x...x...' }] },
-  { id: 'b-tell', name: 'William Tell Galop', by: 'Rossini', bpm: 144, kit: 'metal', melody: B_TELL, guitar: 'riff',
-    drums: [{ kick: GALLOP, snare: '....x.......x...', crash: 'x...............' }, ...bars(2, { kick: GALLOP, snare: '....x.......x...', hihat: 'x.x.x.x.x.x.x.x.' }), { kick: GALLOP, snare: '....x...xxxx....' }, { kick: GALLOP, snare: '....x.......x...', crash: 'x...............' }, ...bars(2, { kick: GALLOP, snare: '....x.......x...', hihat: 'x.x.x.x.x.x.x.x.' }), { kick: 'x...............', snare: '....x...x.......', crash: 'x...............' }] },
-  { id: 'b-ode', name: 'Ode to Joy', by: 'Beethoven', bpm: 120, kit: 'rock', melody: B_ODE, guitar: 'chords',
-    chords: [['C', 4], ['G', 4], ['C', 4], ['G', 4], ['C', 4], ['G', 4], ['C', 4], ['G', 2], ['C', 2]],
-    drums: [{ ...ROCK, crash: 'x.......' }, ...bars(3, ROCK), { ...ROCK, crash: 'x.......' }, ...bars(2, ROCK), { kick: 'x...x...', snare: '..x.....', crash: '....x...' }] },
-];
-// (each song shared out to the four instruments; on the drums it replaces the old grooves, so every song can be played together)
-SONGS.Drums = []; SONGS.Guitar = []; SONGS.Xylophone = SONGS.Xylophone.filter(s => s.id !== 'mountain');
-for (const b of BAND_SONGS) { const base = { id: b.id, name: `${b.name} · ${b.by}`, band: true, kit: b.kit };
-  SONGS.Drums.push({ ...base, ...drumChart(b.bpm, b.drums) });
-  SONGS.Guitar.push({ ...base, ...(b.guitar === 'riff' ? melody(b.bpm, b.melody, fitShift(b.melody, 45, 76)) : chordPart(b.bpm, b.chords, 1)) });
-  SONGS.Saxophone.push({ ...base, ...melody(b.bpm, b.melody, fitShift(b.melody, 48, 72)) });
-  SONGS.Xylophone.push({ ...base, ...melody(b.bpm, b.melody, fitShift(b.melody, 72, 96)) }); }
-
-// ---------- your own songs from MIDI files (to test on tunes you know by ear): drop a .mid on the page or add one in the song list.
-// The file stays on this device (IndexedDB); when you play together it goes straight to your partner, nowhere else. The parts are
-// found by the General MIDI conventions: channel 10 = drums, programs 24–31 = guitars, 32–39 = bass, a track named vocal / melody /
-// lead = the tune. Your instrument plays its part note for note (the file's pitches and strengths); what nobody plays (the bass, the
-// keys, the tune, the drums or the guitar when no one has them) sounds quietly underneath, in time, so the song is whole ----------
-function parseMidi(buf) { const d = new DataView(buf), u8 = new Uint8Array(buf); let p = 0;
-  const str = n => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(u8[p + i]); return s; };
-  const vlq = () => { let v = 0, b; do { b = u8[p++]; v = v * 128 + (b & 127); } while (b & 128 && p < u8.length); return v; };
-  if (str(4) !== 'MThd') throw new Error('This is not a MIDI file.'); p += 4; const hl = d.getUint32(p); p += 4; const ntr = d.getUint16(p + 2), ppq = d.getUint16(p + 4); p += hl;
-  if (ppq & 0x8000) throw new Error('This MIDI file counts time in SMPTE frames, which is not supported.');
-  const tempos = [], tracks = [], progs = {}; let title = '';
-  for (let ti = 0; ti < ntr && p + 8 <= u8.length; ti++) { const id = str(4); p += 4; const len = d.getUint32(p); p += 4; const end = Math.min(u8.length, p + len); if (id !== 'MTrk') { p = end; continue; }
-    const tr = { name: '', notes: [], prog: {} }, on = new Map(); let tick = 0, run = 0;
-    const close = k => { const n = on.get(k); on.delete(k); n.dur = Math.max(1, tick - n.tick); tr.notes.push(n); };
-    while (p < end) { tick += vlq(); let st = u8[p]; if (st & 128) { p++; if (st < 0xF0) run = st; } else st = run;
-      if (st === 0xFF) { const ty = u8[p++], l = vlq(); if (ty === 0x51 && l >= 3) tempos.push({ tick, us: (u8[p] << 16) | (u8[p + 1] << 8) | u8[p + 2] });
-        else if (ty === 0x03) { const s = new TextDecoder('latin1').decode(u8.subarray(p, p + l)).trim(); if (!tr.name) tr.name = s; if (ti === 0 && !title) title = s; }
-        p += l; if (ty === 0x2F) break; continue; }
-      if (st === 0xF0 || st === 0xF7) { p += vlq(); continue; }
-      const ty = st & 0xF0, ch = st & 15, a = u8[p++], b = ty === 0xC0 || ty === 0xD0 ? 0 : u8[p++];
-      if (ty === 0x90 && b > 0) { const k = ch * 128 + a; if (on.has(k)) close(k); on.set(k, { tick, m: a, vel: b / 127, ch }); }
-      else if (ty === 0x80 || ty === 0x90) { const k = ch * 128 + a; if (on.has(k)) close(k); }
-      else if (ty === 0xC0) { if (tr.prog[ch] == null) tr.prog[ch] = a; if (progs[ch] == null) progs[ch] = a; } }
-    for (const k of [...on.keys()]) close(k); p = end; tracks.push(tr); }
-  // (the tempo map: seconds and seconds-per-beat at any tick)
-  tempos.sort((a, b) => a.tick - b.tick); if (!tempos.length || tempos[0].tick > 0) tempos.unshift({ tick: 0, us: tempos[0]?.us ?? 500000 });
-  let acc = 0; tempos.forEach((t, i) => { if (i) acc += (t.tick - tempos[i - 1].tick) / ppq * tempos[i - 1].us / 1e6; t.sec = acc; });
-  const seg = tick => { let lo = 0, hi = tempos.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (tempos[mid].tick <= tick) lo = mid; else hi = mid - 1; } return tempos[lo]; };
-  const secOf = tick => { const t = seg(tick); return t.sec + (tick - t.tick) / ppq * t.us / 1e6; }, spb = tick => seg(tick).us / 1e6;
-  const bpms = [...new Set(tempos.map(t => Math.round(6e7 / t.us * 2) / 2))];
-  // (a part = one track's notes on one channel; format 0 files keep everything in one track)
-  const parts = []; for (const tr of tracks) { const by = {}; for (const n of tr.notes) (by[n.ch] = by[n.ch] || []).push(n);
-    for (const ch in by) parts.push({ name: tr.name, ch: +ch, prog: tr.prog[ch] ?? progs[ch] ?? 0, notes: by[ch].sort((a, b) => a.tick - b.tick) }); }
-  return { ppq, parts, secOf, spb, title, single: bpms.length === 1, bpm0: 6e7 / tempos[0].us, names: tracks.map(t => t.name) }; }
-
-const GM_DRUM = { 35: 'kick', 36: 'kick', 37: 'snare', 38: 'snare', 39: 'snare', 40: 'snare', 42: 'hihat', 44: 'hihat', 46: 'hihat', 41: 'floor', 43: 'floor', 45: 'floor', 47: 'tom', 48: 'tom', 50: 'tom',
-  49: 'crash', 52: 'crash', 55: 'crash', 57: 'crash', 51: 'ride', 53: 'ride', 59: 'ride', 60: 'bongo', 61: 'bongo', 62: 'conga', 63: 'conga', 64: 'conga' };
-const PCN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const mergeParts = list => list.length ? { name: list.map(p => p.name).join(', '), prog: list[0].prog, notes: list.flatMap(p => p.notes).sort((a, b) => a.tick - b.tick) } : null;
-// (which part is which)
-function analyseMidi(buf) { const M = parseMidi(buf), parts = M.parts.filter(p => p.notes.length);
-  if (M.names.some(n => /^PART (DRUMS|GUITAR|BASS|VOCALS)/i.test(n))) throw new Error('This is a game chart (Rock Band / Clone Hero), not a song: its notes are buttons, not pitches. Use a General MIDI file of the song.');
-  const nm = p => (p.name || '').toLowerCase(), isDr = p => p.ch === 9;
-  const rest = parts.filter(p => !isDr(p)), bassP = rest.filter(p => (p.prog >= 32 && p.prog <= 39) || /bass/.test(nm(p)));
-  const gtrP = rest.filter(p => !bassP.includes(p) && ((p.prog >= 24 && p.prog <= 31) || /guit|gtr/.test(nm(p)))).sort((a, b) => b.notes.length - a.notes.length);
-  const mono = p => { const on = new Map(); for (const n of p.notes) on.set(n.tick, (on.get(n.tick) || 0) + 1); let s = 0; for (const v of on.values()) if (v === 1) s++; return s / Math.max(1, on.size); };
-  const avg = p => p.notes.reduce((a, n) => a + n.m, 0) / p.notes.length;
-  let melody = rest.filter(p => !bassP.includes(p) && /voc|vox|voice|melod|lead|sing|tune/.test(nm(p)) && !/back|bgv|harm|choir/.test(nm(p))).sort((a, b) => b.notes.length - a.notes.length)[0];
-  if (!melody) melody = rest.filter(p => !bassP.includes(p) && !gtrP.includes(p) && mono(p) > .8 && avg(p) > 55 && p.notes.length > 16).sort((a, b) => b.notes.length - a.notes.length)[0];
-  const guitar = gtrP[0] || null, used = new Set([guitar, melody, ...bassP].filter(Boolean));
-  return { ...M, drums: mergeParts(parts.filter(isDr)), guitar, melody: melody || null, bass: mergeParts(bassP), others: mergeParts(rest.filter(p => !used.has(p))) }; }
-// (notes that start together, as one strum; the top note of each onset, as a tune)
-function onsets(part, A) { const out = [], tol = A.ppq / 32; for (const n of part.notes) { const last = out[out.length - 1];
-    if (last && n.tick - last.tick <= tol) { if (!last.ms.includes(n.m)) { last.ms.push(n.m); last.seq.push(n.m); } last.vel = Math.max(last.vel, n.vel); last.dur = Math.max(last.dur, n.dur); last.lastTick = n.tick; } else out.push({ tick: n.tick, lastTick: n.tick, dur: n.dur, vel: n.vel, ms: [n.m], seq: [n.m] }); }
-  out.forEach(o => o.ms.sort((a, b) => a - b)); return out; }
-const fold = (m, lo, hi) => { while (m < lo) m += 12; while (m > hi) m -= 12; return m; };
-function octaveFit(ms, lo, hi) { let best = 0, bs = -1; for (let sh = -48; sh <= 48; sh += 12) { const s = ms.filter(m => m + sh >= lo && m + sh <= hi).length; if (s > bs) { bs = s; best = sh; } } return best; }
-// (the part for one instrument, built once per file)
-function songFor(e, look) { if (e.songs[look] !== undefined) return e.songs[look]; const A = e.A; let notes = null, src = null;
-  const T = n => { const o = { beat: n.tick / A.ppq, dur: n.dur / A.ppq }; if (!A.single) { o.sec = A.secOf(n.tick); o.beatSec = A.spb(n.tick); } return o; };
-  if (look === 'Drums' && A.drums) { const seen = new Set(); notes = []; src = 'drums';
-    for (const n of A.drums.notes) { const id = GM_DRUM[n.m]; if (!id) continue; const k = id + '@' + Math.round(n.tick / (A.ppq / 24)); if (seen.has(k)) continue; seen.add(k); notes.push({ ...T(n), dur: 0, lane: id, vel: clamp(.35 + n.vel * .7, .3, 1), open: n.m === 46 }); } }
-  else if (look === 'Guitar' && (A.guitar || A.melody)) { src = A.guitar ? 'guitar' : 'melody'; const on = onsets(A.guitar || A.melody, A), lo = Math.min(...on.map(o => o.ms[0])), sh = lo < 40 ? Math.ceil((40 - lo) / 12) * 12 : 0;
-    const sixteenths = on.filter(o => { const f = (o.tick / A.ppq) % .5; return Math.abs(f - .25) < .06; }).length > on.length * .12;
-    notes = on.map(o => { const b = o.tick / A.ppq, f = sixteenths ? b % .5 : b % 1, onBeat = f < .06 || f > (sixteenths ? .44 : .94), spread = o.lastTick > o.tick && o.seq.length > 1;
-      const dir = spread ? (o.seq[0] < o.seq[o.seq.length - 1] ? 'down' : 'up') : onBeat ? 'down' : 'up';
-      return { ...T(o), dur: 0, lane: PCN[o.ms[0] % 12], pitches: o.ms.slice(0, 6).map(m => fold(m + sh, 40, 88)), vel: o.vel, dir, ring: A.secOf(o.tick + o.dur) - A.secOf(o.tick) }; }); }
-  else if ((look === 'Saxophone' || look === 'Xylophone') && (A.melody || A.guitar)) { src = A.melody ? 'melody' : 'guitar'; const [lo, hi] = look === 'Saxophone' ? [48, 72] : [72, 96];
-    const line = onsets(A.melody || A.guitar, A).map(o => ({ ...o, m: o.ms[o.ms.length - 1] })), sh = octaveFit(line.map(n => n.m), lo, hi), ps = line.map(n => fold(n.m + sh, lo, hi)), few = new Set(ps).size <= 12;
-    notes = line.map((n, i) => ({ ...T(n), dur: look === 'Saxophone' ? n.dur / A.ppq : 0, lane: few ? ps[i] : lo + ((ps[i] - lo) % 12), pitches: [ps[i]], vel: n.vel })); }
-  e.songs[look] = notes && notes.length >= 8 ? { id: e.id, name: e.name, bpm: A.bpm0, notes, exact: true, midi: true, kit: e.kit, amp: e.amp, src } : null; return e.songs[look]; }
-// (the sound of the song: guessed from its name, so a few known ones get the right kit and amp)
-function guessSound(text) { const s = text.toLowerCase();
-  if (/air tonight|collins|genesis/.test(s)) return { kit: 'gated', amp: 'clean' };
-  if (/can.?t stop|chili|rhcp|californication|otherside|scar tissue|dani california|snow|by the way|give it away|under the bridge/.test(s)) return { kit: 'funk', amp: 'clean' };
-  if (/nirvana|teen spirit|lithium|come as you are|in bloom|breed|heart.?shaped|polly|about a girl|all apologies|drain you/.test(s)) return { kit: 'grunge', amp: 'heavy' };
-  if (/\btool\b|schism|sober|lateralus|parabola|vicarious|forty.?six|aenema|pneuma|stinkfist|jambi|fear inoculum/.test(s)) return { kit: 'metal', amp: 'heavy' };
-  return { kit: 'rock', amp: 'crunch' }; }
-// (the guitar amp per song: clean, crunch, heavy)
-const AMPS = { clean: { gain: .9, drive: 1.4, cab: 5200, mid: 1, out: .55 }, crunch: { gain: 1.6, drive: 6, cab: 3400, mid: 3, out: .32 }, heavy: { gain: 2.6, drive: 16, cab: 2900, mid: -2, out: .24 } };
-function setAmp(name) { const a = AMPS[name] || AMPS.crunch, n = GCH.amp, c = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; c[i] = Math.tanh(x * a.drive) / Math.tanh(a.drive) * .9; }
-  n.drive.curve = c; n.ein.gain.value = a.gain; n.cab.frequency.value = a.cab; n.mid.gain.value = a.mid; n.eout.gain.value = a.out; }
-// (the files: kept on this device)
-const IMPORTED = [];
-const midiDB = () => new Promise((res, rej) => { const r = indexedDB.open('lab-instruments', 1); r.onupgradeneeded = () => r.result.createObjectStore('midi', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-async function midiStore(op, val) { try { const db = await midiDB(); return await new Promise(res => { const st = db.transaction('midi', op === 'all' ? 'readonly' : 'readwrite').objectStore('midi'), r = op === 'all' ? st.getAll() : op === 'put' ? st.put(val) : st.delete(val); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch { return null; } }
-function hashBytes(buf) { const u = new Uint8Array(buf); let h = 2166136261; for (let i = 0; i < u.length; i++) { h ^= u[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
-function addMidi(buf, fileName, keep = true) { const id = 'midi-' + hashBytes(buf), had = IMPORTED.find(e => e.id === id); if (had) return had;
-  const A = analyseMidi(buf), name = (fileName || '').replace(/\.(mid|midi|kar)$/i, '').replace(/[_]+/g, ' ').trim() || A.title || 'Your song', snd = guessSound(name + ' ' + A.title + ' ' + A.names.join(' '));
-  const e = { id, name, buf, A, songs: {}, ...snd }; IMPORTED.push(e); if (keep) midiStore('put', { id, name, buf, added: Date.now() }); return e; }
-function removeMidi(id) { const i = IMPORTED.findIndex(e => e.id === id); if (i >= 0) IMPORTED.splice(i, 1); midiStore('delete', id); renderTools(); }
-const findSong = (look, id) => SONGS[look]?.find(s => s.id === id) || (IMPORTED.find(e => e.id === id) ? songFor(IMPORTED.find(e => e.id === id), look) : null);
-midiStore('all').then(list => { for (const r of list || []) { try { addMidi(r.buf, r.name, false); } catch { } } if (G.state === 'pick') renderTools(); });
-// (adding a file: the button in the song list, or a drop anywhere on the page)
-async function importFiles(files) { let last = null, err = null;
-  for (const f of files) { if (!/\.(mid|midi|kar)$/i.test(f.name)) continue; try { last = addMidi(await f.arrayBuffer(), f.name); } catch (x) { err = x.message; } }
-  if (err) say(err); else if (last && !songFor(last, P.look)) say(`“${last.name}” has no part for the ${P.look.toLowerCase()}. It is in the list of the other instruments.`); else if (last) say(`Added “${last.name}”. Sound: ${KITS[last.kit].name} kit, ${last.amp} guitar.`);
-  if (last) openSongs(); }
-function pickMidi() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.mid,.midi,.kar,audio/midi'; inp.multiple = true; inp.onchange = () => importFiles([...inp.files]); inp.click(); }
-addEventListener('dragover', e => { if ([...(e.dataTransfer?.items || [])].some(i => i.kind === 'file')) e.preventDefault(); });
-addEventListener('drop', e => { const fs = [...(e.dataTransfer?.files || [])]; if (!fs.length) return; e.preventDefault(); importFiles(fs); });
-// (the backing: every part nobody plays, scheduled just ahead on the audio clock)
-const BK = ctx.createGain(); BK.gain.value = .8; BK.connect(bus);
-const srcOf = (e, look) => look === 'Drums' ? 'drums' : look === 'Guitar' ? (e.A.guitar ? 'guitar' : 'melody') : (e.A.melody ? 'melody' : 'guitar');
-function backingFor(song) { const e = IMPORTED.find(x => x.id === song.id); if (!e) return null; const A = e.A, mine = new Set([srcOf(e, P.look)]);
-  if (G.together && NET.partner) mine.add(srcOf(e, NET.partner.look));
-  const out = [], tt = tick => A.single ? tick / A.ppq * 60 / A.bpm0 : A.secOf(tick);
-  const add = (part, kind) => { if (!part) return; for (const n of part.notes) { const s = tt(n.tick); out.push({ s, d: tt(n.tick + n.dur) - s, m: n.m, v: n.vel, kind }); } };
-  if (!mine.has('drums')) add(A.drums, 'drum'); if (!mine.has('guitar')) add(A.guitar, 'gtr'); if (!mine.has('melody')) add(A.melody, 'lead'); add(A.bass, 'bass'); add(A.others, 'pad');
-  return out.sort((a, b) => a.s - b.s); }
-let synthLive = 0;
-function synthNote(kind, m, at, d, v) { if (kind === 'pad' && synthLive > 36) return; const t = ctx.currentTime + at, f = 440 * Math.pow(2, (m - 69) / 12), o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; let end = t + d + .5;
-  if (kind === 'bass') { o.type = 'sawtooth'; const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = f; sub.connect(lp); sub.start(t); sub.stop(end);
-    lp.frequency.setValueAtTime(1200, t); lp.frequency.exponentialRampToValueAtTime(300, t + .2); lp.Q.value = 2; const pk = .3 * (.5 + v * .5); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .006); g.gain.setTargetAtTime(pk * .55, t + .02, .25); g.gain.setTargetAtTime(0, t + d, .05); }
-  else if (kind === 'lead') { o.type = 'triangle'; const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.2; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * .007, t + .4); lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(end);
-    lp.frequency.value = 2800; const pk = .15 * (.5 + v * .5); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .04); g.gain.setTargetAtTime(0, t + d, .07); }
-  else { o.type = 'triangle'; lp.frequency.value = 1600; const pk = .045 * (.5 + v * .5); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .02); g.gain.setTargetAtTime(pk * .6, t + .06, .3); g.gain.setTargetAtTime(0, t + d, .12); }
-  o.frequency.value = f; o.connect(lp); lp.connect(g); g.connect(BK); o.start(t); o.stop(end); synthLive++; o.onended = () => synthLive--; }
-function backNote(b, at) { const d = Math.max(.06, b.d / G.speed), v = b.v;
-  if (b.kind === 'drum') { const id = GM_DRUM[b.m], p = id && PIECES.find(q => q.id === id); if (!p) return; const vv = clamp(.35 + v * .7, .3, 1);
-    const name = id === 'hihat' ? (b.m === 46 ? 'hhopen' : 'hhclosed') : p.tiers ? p.tiers[vv < .6 ? 0 : vv < .88 ? 1 : 2][0] : p.sounds[0];
-    play(name, { rate: p.rate || 1, gain: (p.gain || 1) * (p.tiers ? .7 + vv * .3 : vv) * .85, at, out: DK.inp }); return; }
-  if (b.kind === 'gtr') { pluck(fold(b.m, 40, 88), at, .5 + v * .4, 6 + b.m % 6, d + .03); return; }
-  synthNote(b.kind, b.m, at, d, v); }
-function backingFrame(now) { if (!G.backing) return; const nowP = performance.now() / 1000;
-  while (G.bAt < G.backing.length) { const b = G.backing[G.bAt], t = b.s / G.speed + G.lead; if (t > now + .3) break; G.bAt++; const at = G.start + t - nowP; if (at < -.03) continue; backNote(b, Math.max(0, at)); } }
-// (playing together: the host's file goes to the partner in pieces, before the start)
-const midiInbox = {};
-function sendMidi(e) { const u = new Uint8Array(e.buf); let s = ''; for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); const b64 = btoa(s), N = 48000, n = Math.ceil(b64.length / N);
-  for (let i = 0; i < n; i++) tx({ t: 'midi', id: e.id, name: e.name, i, n, data: b64.slice(i * N, (i + 1) * N) }); }
-function gotMidi(m) { const box = midiInbox[m.id] = midiInbox[m.id] || []; box[m.i] = m.data; if (box.filter(x => x != null).length < m.n) return;
-  const s = atob(box.join('')), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); delete midiInbox[m.id]; try { addMidi(u.buffer, m.name, false); } catch { } renderRoom(); }
-
-// ---------- playing together: one opens a room and sends the link, the other opens it on their own device. Browser to browser
-// (WebRTC through PeerJS; its free public server only introduces the two, the notes go straight between you). Each plays their own
-// instrument (drums or guitar for the band songs) at their own level; the host picks the song and the tempo; the start is agreed on a
-// shared clock (a few pings measure the delay and the difference between the two clocks). You hear each other's hits as they happen
-// (the network adds 50–150 ms), see the other's score while you play, and both results at the end ----------
-const NET = { peer: null, conn: null, host: false, code: '', offset: 0, partner: null, live: null, final: null, ready: false };
-const room = $('room');
-const BAND = () => SONGS.Drums.filter(s => s.band);
-const loadPeer = () => window.Peer ? Promise.resolve() : new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('peerjs')); document.head.appendChild(sc); });
-const tx = m => { try { if (NET.conn?.open) NET.conn.send(m); } catch { } };
-const roomLink = () => location.origin + location.pathname + '?join=' + NET.code;
-async function openRoom(joinCode) { room.hidden = false; renderRoom('Connecting…');
-  try { await loadPeer(); } catch { renderRoom('Could not load the connection library. Check the network and try again.'); return; }
-  if (NET.peer) { renderRoom(); return; }
-  if (joinCode) { NET.host = false; NET.code = joinCode; NET.peer = new Peer(); NET.peer.on('open', () => { const c = NET.peer.connect('lab-instr-' + joinCode, { reliable: true }); wire(c); }); }
-  else { NET.host = true; NET.code = Math.random().toString(36).slice(2, 8); NET.peer = new Peer('lab-instr-' + NET.code); NET.peer.on('open', () => renderRoom()); NET.peer.on('connection', c => { if (NET.conn?.open) { c.close(); return; } wire(c); }); }
-  NET.peer.on('error', e => renderRoom(e.type === 'peer-unavailable' ? 'That room is closed (the host left or the link is old).' : 'The connection failed: ' + (e.type || 'unknown') + '.')); }
-function wire(c) { NET.conn = c;
-  c.on('open', () => { tx({ t: 'hello', look: P.look, guitar: P.guitar }); if (!NET.host) syncClock(); load(PIECES.flatMap(p => p.sounds).concat(['hhopen']).concat(XYLO.map(x => x.name), SAX.map(x => x.name))); renderRoom(); });
-  c.on('data', onData); c.on('close', () => { NET.partner = null; NET.conn = null; NET.ready = false; renderRoom('Your partner left.'); stageSync(); }); }
-// (the clock: five pings; the one with the shortest round trip says how far the host's clock is from ours)
-let pings = [];
-function syncClock() { pings = []; for (let i = 0; i < 5; i++) setTimeout(() => tx({ t: 'ping', a: performance.now() }), i * 150); }
-function onData(m) {
-  if (m.t === 'hello') { NET.partner = { look: m.look, guitar: m.guitar }; renderRoom(); stageSync(); }
-  else if (m.t === 'ping') tx({ t: 'pong', a: m.a, h: performance.now() });
-  else if (m.t === 'pong') { const now = performance.now(), rtt = now - m.a; pings.push({ rtt, off: m.h + rtt / 2 - now }); if (pings.length === 5) { const b = pings.sort((x, y) => x.rtt - y.rtt)[0]; NET.offset = b.off; NET.rtt = b.rtt; NET.ready = true; tx({ t: 'synced', rtt: b.rtt }); renderRoom(); } }
-  else if (m.t === 'synced') { NET.ready = true; NET.rtt = m.rtt; renderRoom(); }
-  else if (m.t === 'midi') gotMidi(m);
-  else if (m.t === 'start') { const song = findSong(P.look, m.song); if (!song) { renderRoom('This song has no part for your instrument.'); return; } pickSpeed = m.speed; room.hidden = true; NET.live = null; NET.final = null; gameStart(song, { at: m.at - NET.offset }); }
-  else if (m.t === 'stop') { if (G.state === 'play') gameStop(); }
-  else if (m.t === 'hit') remoteHit(m);
-  else if (m.t === 'live') NET.live = m;
-  else if (m.t === 'final') { NET.final = m; showPartnerResult(); } }
-// (the partner's sound, played here: a drum's recording, or a strum on their kind of guitar)
-function remoteHit(m) { unlock(); figureHit('them', m.look, m);
-  if (m.look === 'Drums') { const p = PIECES.find(q => q.id === m.id); if (!p) return; if (P.look === 'Drums' && STATE[p.id]) { const st = STATE[p.id]; st.t = 0; st.amp = .8; }
-    const name = p.id === 'hihat' && m.open ? 'hhopen' : (p.tiers ? p.tiers[1][0] : p.sounds[0]); play(name, { rate: p.rate || 1, gain: (p.gain || 1) * .85, pan: -.25, out: DK.inp }); }
-  else if (m.look === 'Xylophone') { const s2 = nearest(XYLO, m.m); play(s2.name, { rate: Math.pow(2, (m.m - s2.midi) / 12), gain: .75, pan: .25 }); }
-  else if (m.look === 'Saxophone') { if (rsax) { fadeOut(rsax, .06); rsax = null; } if (m.on != null) { const s2 = nearest(SAX, m.on), b = BUF[s2.name]; if (!b) { load([s2.name]); return; }
-      const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime; src.buffer = b; src.playbackRate.value = Math.pow(2, (m.on - s2.midi) / 12); src.loop = true; src.loopStart = .7; src.loopEnd = Math.max(1, b.duration - .5);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.75, t + .035); src.connect(g); g.connect(bus); src.start(); rsax = { s: src, g }; } }
-  else if (m.look === 'Guitar') { const kind = m.kind || 'electric', was = P.guitar; P.guitar = kind; if (m.chord) chordNotes(m.chord, kind).forEach((n, i, a) => pluck(n, i * .01, .8, 6 - a.length + i)); else if (m.notes) playPitches(m.notes, .8, m.dir, m.ring, false); else if (m.note) pluck(m.note, 0, .8, clamp(Math.floor((m.note - 40) / 5), 0, 5)); P.guitar = was; } }
-let rsax = null;   // (the partner's saxophone voice)
-// (our own hits go out as they happen)
-function shareHit(m) { if (NET.conn?.open) tx({ t: 'hit', ...m }); }
-function startTogether(id) { if (!NET.host || !NET.ready) return; const mf = IMPORTED.find(e => e.id === id); if (mf) sendMidi(mf); const at = performance.now() + (mf ? 3400 : 2600); tx({ t: 'start', song: id, speed: pickSpeed, at }); room.hidden = true; NET.live = null; NET.final = null; gameStart(findSong(P.look, id), { at }); }
-function renderRoom(note) { if (room.hidden) return; const linked = !!NET.conn?.open, mine = true;
-  const who = NET.partner ? `Your partner plays the <b>${NET.partner.look === 'Guitar' ? (NET.partner.guitar || 'electric') + ' guitar' : NET.partner.look.toLowerCase()}</b>` : NET.host ? 'Waiting for someone to open the link…' : 'Joining…';
-  room.innerHTML = `<h3>Play together</h3>
-    ${NET.host && NET.code && NET.peer?.open ? `<p class="rm">Send this link; it works while this page stays open.</p><div class="rl"><input readonly value="${roomLink()}" aria-label="Room link"><button type="button" data-r="copy">Copy</button></div>` : ''}
-    <p class="rw">${note ? note : who}${linked && NET.ready ? ` · ${Math.round(NET.rtt || 0)} ms between you` : ''}</p>
-    ${!mine ? `<p class="rm">The band songs are for the drums and the guitar.</p><div class="rb"><button type="button" data-r="drums">Drums</button><button type="button" data-r="guitar">Guitar</button></div>` : ''}
-    ${NET.host && linked && NET.ready && mine ? `<p class="rm">You play the ${P.look === 'Guitar' ? P.guitar + ' guitar' : P.look.toLowerCase()} · ${(LEVELS.find(l => l[0] === P.level) || [])[1]}. Pick the song:</p><div class="rsongs">${BAND().concat(IMPORTED.map(e => ({ id: e.id, name: e.name + ' · midi' }))).map(s => `<button type="button" data-song="${s.id}">${s.name}</button>`).join('')}</div>
-      <div class="rb">${[.5, .75, 1].map(v => `<button type="button" data-sp="${v}" class="${pickSpeed === v ? 'on' : ''}">${v * 100}%</button>`).join('')}</div>` : ''}
-    ${!NET.host && linked && mine ? `<p class="rm">You play the ${P.look === 'Guitar' ? P.guitar + ' guitar' : P.look.toLowerCase()}; the host starts the song.</p>` : ''}
-    <div class="rb"><button type="button" data-r="leave">${linked ? 'Leave' : 'Close'}</button></div>`;
-  room.querySelector('[data-r=copy]')?.addEventListener('click', e => { navigator.clipboard?.writeText(roomLink()); e.target.textContent = 'Copied'; });
-  room.querySelector('[data-r=drums]')?.addEventListener('click', () => applyLook('Drums'));
-  room.querySelector('[data-r=guitar]')?.addEventListener('click', () => applyLook('Guitar'));
-  room.querySelectorAll('[data-song]').forEach(b => b.onclick = () => startTogether(b.dataset.song));
-  room.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { pickSpeed = +b.dataset.sp; renderRoom(); });
-  room.querySelector('[data-r=leave]').onclick = leaveRoom; }
-function leaveRoom() { try { NET.conn?.close(); NET.peer?.destroy(); } catch { } Object.assign(NET, { peer: null, conn: null, partner: null, ready: false, live: null, final: null }); room.hidden = true; renderTools(); stageSync(); }
-function showPartnerResult() { const el = result.querySelector('.rp'); if (!el || !NET.final) return; const f = NET.final;
-  el.innerHTML = `<b>Your partner</b> (${f.look.toLowerCase()}): ${f.score.toLocaleString('en')} · ${f.acc}% · ${'★'.repeat(f.stars)}${'☆'.repeat(3 - f.stars)}${G.score > f.score ? ' · you win this one' : G.score < f.score ? ' · they win this one' : ' · a draw'}`; }
-setInterval(() => { if (NET.conn?.open && G.state === 'play') tx({ t: 'live', score: G.score, combo: G.combo }); }, 500);
-
-// ---------- the stage: when someone joins, both instruments stand side by side (yours on the left, theirs on the right) and a player
-// is at each: a faceless figure of soft mist with a glowing outline, breathing, swaying to the beat, its hands going where the music is
-// played (sticks to the drum that is hit, a hand along the guitar's neck with the chord and one strumming, the saxophone at the lips,
-// the mallets in the hands). Your figure moves with your notes, theirs with the notes that come over the network ----------
-// (the mist: almost clear in the middle, a soft cool outline where the surface turns away, slowly drifting cloud in it.
-//  An invisible depth pass first, so only the front surface of the figure is drawn: one silhouette, not a pile of see-through parts)
-const MIST_T = { value: 0 };
-const mistMat = (tint, rim) => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, depthFunc: THREE.LessEqualDepth,
-  uniforms: { tint: { value: new THREE.Color(tint) }, rim: { value: new THREE.Color(rim) }, time: MIST_T },
-  vertexShader: 'varying vec3 vN; varying vec3 vV; varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; vec4 mv = viewMatrix * w; vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
-  fragmentShader: `uniform vec3 tint; uniform vec3 rim; uniform float time; varying vec3 vN; varying vec3 vV; varying vec3 vW;
-    float h(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
-    float n(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-      return mix(mix(mix(h(i), h(i + vec3(1,0,0)), f.x), mix(h(i + vec3(0,1,0)), h(i + vec3(1,1,0)), f.x), f.y),
-                 mix(mix(h(i + vec3(0,0,1)), h(i + vec3(1,0,1)), f.x), mix(h(i + vec3(0,1,1)), h(i + vec3(1,1,1)), f.x), f.y), f.z); }
-    void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.8);
-      vec3 q = vW * 6.0 + vec3(0.0, time * 0.35, time * 0.12); float cloud = n(q) * 0.6 + n(q * 2.3) * 0.4;
-      vec3 c = mix(tint, rim, smoothstep(0.15, 0.95, f));
-      float a = 0.16 + cloud * 0.16 + smoothstep(0.25, 1.0, f) * 0.62;
-      gl_FragColor = vec4(c, a); }` });
-const MIST = mistMat('#fbfaf7', '#8d97a8'), MIST_B = mistMat('#f6f9ff', '#7f93b4');
-const MIST_DEPTH = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true, transparent: true });
-const STICK = new THREE.MeshStandardMaterial({ color: '#d9bc8c', roughness: .6 });
-const up3 = new THREE.Vector3(0, 1, 0), tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
-function limb(r, mat) { const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, 1, 6, 14), mat); m.castShadow = true; return m; }
-function placeLimb(m, a, b, r) { const d = tmpA.subVectors(b, a), L = Math.max(.001, d.length()); m.position.copy(a).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(up3, d.normalize()); m.scale.set(1, L / (1 + 2 * r), 1); }
-// (two-bone reach: from the shoulder to the hand, the elbow bent away from the body)
-function reach(S, T, a, b, pole, outElbow) { const d = tmpA.subVectors(T, S), L = clamp(d.length(), .05, a + b - .001), dir = d.clone().normalize(), x = (a * a - b * b + L * L) / (2 * L), h = Math.sqrt(Math.max(0, a * a - x * x));
-  const side = pole.clone().sub(dir.clone().multiplyScalar(pole.dot(dir))).normalize(); outElbow.copy(S).addScaledVector(dir, x).addScaledVector(side, h); return S.clone().addScaledVector(dir, L); }
-class Figure {
-  constructor(mat) { this.g = new THREE.Group(); this.mat = mat; const L = (r) => { const m = limb(r, mat); this.g.add(m); return m; };
-    const blob = (r, sx, sy, sz) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 28, 20), mat); m.scale.set(sx, sy, sz); this.g.add(m); return m; };
-    this.torso = L(.095); this.chest = blob(.2, 1, .82, .62); this.hips = blob(.16, 1, .72, .7); this.neck = L(.045); this.head = blob(.105, .92, 1.12, .98);
-    this.uArm = [L(.048), L(.048)]; this.fArm = [L(.042), L(.042)]; this.hand = [0, 1].map(() => { const h = new THREE.Mesh(new THREE.SphereGeometry(.046, 16, 12), mat); this.g.add(h); return h; });
-    this.thigh = [L(.07), L(.07)]; this.shin = [L(.055), L(.055)]; this.foot = [0, 1].map(() => { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.04, .1, 4, 10), mat); f.rotation.x = Math.PI / 2; this.g.add(f); return f; });
-    this.sticks = [0, 1].map(() => { const s = new THREE.Mesh(new THREE.CylinderGeometry(.006, .008, .4, 8), STICK); s.visible = false; this.g.add(s); return s; });
-    this.hT = [new THREE.Vector3(), new THREE.Vector3()]; this.hGoal = [new THREE.Vector3(), new THREE.Vector3()]; this.hRest = [new THREE.Vector3(), new THREE.Vector3()]; this.hitT = [9, 9]; this.footT = 9; this.lean = 0; this.leanV = 0; this.t = Math.random() * 6;
-    this.g.traverse(o => { if (o.isMesh) o.castShadow = true; });
-    // (each mist part gets an invisible twin that only writes depth, drawn just before the mist)
-    [...this.g.children].forEach(o => { if (!o.isMesh || o.material !== mat) return; o.renderOrder = 11; const d = new THREE.Mesh(o.geometry, MIST_DEPTH); d.renderOrder = 10; d.castShadow = false; o.add(d); });
-    this.stool = null; scene.add(this.g); }
-  // (the pose: seated or standing; where the hands rest)
-  setup(kind, at, rest) { this.kind = kind; this.at = at.clone(); this.seated = kind === 'Drums'; this.hRest[0].copy(rest[0]); this.hRest[1].copy(rest[1]); this.hT[0].copy(rest[0]); this.hT[1].copy(rest[1]); this.sticks.forEach(s => s.visible = kind === 'Drums');
-    // (the drummer sits on a throne: a round padded seat on three chrome legs)
-    if (this.seated && !this.stool) { const st = new THREE.Group(), seat = new THREE.Mesh(new THREE.CylinderGeometry(.17, .16, .07, 32), new THREE.MeshStandardMaterial({ color: '#26262a', roughness: .75 }));
-      seat.position.y = .44; st.add(seat); const post = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .38, 12), M.chrome || M.steel); post.position.y = .23; st.add(post);
-      for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI * 2 + .5, leg = new THREE.Mesh(new THREE.CylinderGeometry(.011, .011, .32, 8), M.chrome || M.steel); leg.position.set(Math.cos(a) * .11, .12, Math.sin(a) * .11); leg.rotation.set(Math.sin(a) * .75, 0, -Math.cos(a) * .75); st.add(leg); }
-      st.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); st.position.set(at.x, 0, at.z - .02); this.g.add(st); this.stool = st; } }
-  // (a hand goes to a point and back: hard and quick down, a softer way back)
-  strike(i, p) { this.hGoal[i].copy(p); this.hitT[i] = 0; this.leanV += .03; }
-  hold(i, p) { this.hRest[i].copy(p); }
-  stomp() { this.footT = 0; }
-  update(dt, beat) { const t = (this.t += dt), A = this.at, seated = this.seated;
-    this.leanV += (-this.lean * 30 - this.leanV * 6) * dt; this.lean += this.leanV * dt;
-    const breath = Math.sin(t * 1.6) * .006, bob = beat == null ? 0 : Math.max(0, Math.cos(beat * Math.PI * 2)) * .012, sway = Math.sin(t * .7) * .015;
-    const pelvis = new THREE.Vector3(A.x + sway * .4, (seated ? .56 : .96) - bob * .5, A.z), chest = new THREE.Vector3(A.x + sway, pelvis.y + .46 + breath, A.z + .03 + this.lean), neckT = chest.clone().add(new THREE.Vector3(0, .1, .01));
-    const headC = neckT.clone().add(new THREE.Vector3(sway * .3, .14 - bob, .02 + this.lean * .6));
-    placeLimb(this.torso, pelvis, chest, .095); placeLimb(this.neck, chest, neckT, .045); this.head.position.copy(headC);
-    this.chest.position.copy(chest).add(new THREE.Vector3(0, -.08, -.005)); this.chest.rotation.set(this.lean * 2, 0, sway * 1.5); this.hips.position.copy(pelvis).add(new THREE.Vector3(0, .03, 0));
-    for (let i = 0; i < 2; i++) { const s = i === 0 ? 1 : -1;   // (0 = right hand, on the player's right: the viewer's left)
-      const sh = chest.clone().add(new THREE.Vector3(-s * .2, -.03, 0)); this.hitT[i] += dt; const k = this.hitT[i];
-      const goal = k < .05 ? this.hRest[i].clone().lerp(this.hGoal[i], k / .05) : k < .32 ? this.hGoal[i].clone().lerp(this.hRest[i], 1 - Math.pow(1 - (k - .05) / .27, 3)) : this.hRest[i];
-      this.hT[i].lerp(goal, Math.min(1, dt * (k < .05 ? 60 : 18)));
-      const elbow = new THREE.Vector3(), hand = reach(sh, this.hT[i], .3, .28, (this.kind === 'Guitar' && i === 0 ? new THREE.Vector3(-.7, .15, 1) : this.kind === 'Saxophone' ? new THREE.Vector3(-s * .9, -.6, .5) : new THREE.Vector3(-s * .8, -1, -.4)), elbow);
-      placeLimb(this.uArm[i], sh, elbow, .048); placeLimb(this.fArm[i], elbow, hand, .042); this.hand[i].position.copy(hand);
-      if (this.kind === 'Drums') { const st = this.sticks[i], tipDir = hand.clone().sub(elbow).normalize(); st.position.copy(hand).addScaledVector(tipDir, .17); st.quaternion.setFromUnitVectors(up3, tipDir); }
-      const hip = pelvis.clone().add(new THREE.Vector3(-s * .1, -.04, 0)), fk = i === 0 ? this.footT : 9; this.footT += i === 0 ? dt : 0;
-      const press = fk < .12 ? Math.sin(fk / .12 * Math.PI) * .035 : 0;
-      const knee = seated ? hip.clone().add(new THREE.Vector3(-s * .04, -.02, .42)) : hip.clone().add(new THREE.Vector3(-s * .02, -.45, .05));
-      const ankle = seated ? knee.clone().add(new THREE.Vector3(0, -.44 + press, .06)) : new THREE.Vector3(hip.x - s * .02, .07, A.z + .06);
-      placeLimb(this.thigh[i], hip, knee, .07); placeLimb(this.shin[i], knee, ankle, .055); this.foot[i].position.copy(ankle).add(new THREE.Vector3(0, -.03, .07)); } }
-  remove() { scene.remove(this.g); } }
-// (the stage itself: what stands where, the figures, the partner's instrument as a copy of ours)
-const STAGE = { on: false, mine: null, theirs: null, theirsObj: null, theirsLook: null, keep: null };
-const GROUP = l => ({ Drums: KIT, Xylophone: XY, Saxophone: SX, Guitar: GT })[l];
-function holdInstrument(look, obj, x, fig, partnerKind) {
-  // (puts the instrument where it is played and sets the figure's pose; returns hand rests)
-  obj.position.set(x, 0, 0); obj.rotation.set(0, 0, 0); obj.visible = true;
-  if (look === 'Drums') { fig.setup('Drums', new THREE.Vector3(x, 0, -.62), [new THREE.Vector3(x + .5, .95, -.32), new THREE.Vector3(x + .25, .78, -.3)]); return; }
-  if (look === 'Xylophone') { fig.setup('Xylophone', new THREE.Vector3(x, 0, -.62), [new THREE.Vector3(x + .18, 1.0, -.05), new THREE.Vector3(x - .18, 1.0, -.05)]); return; }
-  if (look === 'Saxophone') { obj.traverse(o => { if (o.isMesh && (o.material === M.steel || o.material === M.rubber)) o.visible = false; });
-    obj.rotation.set(-.1, -.2, 0); obj.position.set(x + .22, .38, .26); fig.setup('Saxophone', new THREE.Vector3(x + .02, 0, 0), [new THREE.Vector3(x + .22, 1.12, .2), new THREE.Vector3(x + .2, 1.36, .18)]); return; }
-  if (look === 'Guitar') { const axe = obj.children[0], stand = obj.children[1]; stand.visible = false; if (partnerKind) obj.traverse(o => { if (o.name === 'electric' || o.name === 'acoustic') o.visible = o.name === partnerKind; });
-    // (held as a right-handed player holds it: the body at the belly, a little to the player's right, the neck out to the player's
-    //  left and ~20° up; the guitar tipped back a touch so the player can see the frets)
-    const bodyC = GT.userData.bodyC, nutY = GT.userData.nutY, th = -1.22; axe.rotation.set(-.12, .18, th); const want = new THREE.Vector3(x - .06, .98, .17);
-    axe.position.set(want.x - x, want.y, want.z).sub(new THREE.Vector3(0, bodyC, 0).applyEuler(axe.rotation)); obj.updateMatrixWorld(true);
-    fig.setup('Guitar', new THREE.Vector3(x, 0, -.02), [worldOf(axe, new THREE.Vector3(.02, bodyC + .1, .08)), worldOf(axe, new THREE.Vector3(0, nutY - .1, .05))]); } }
-// (the partner's copy: a clone of our model of their instrument)
-function partnerCopy(look) { const src = GROUP(look); const c = src.clone(true); c.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); scene.add(c); return c; }
-function stageSync() { const want = !!(NET.conn?.open && NET.partner && !BARE);
-  if (!want) { if (STAGE.on) stageOff(); return; }
-  const pl = NET.partner.look, key = P.look + '|' + pl + '|' + (NET.partner.guitar || '') + '|' + P.guitar + '|' + Object.keys(STATE).length;
-  if (STAGE.on && STAGE.key === key) return; if (STAGE.on) stageOff(true);
-  STAGE.on = true; STAGE.key = key; KIT.visible = XY.visible = SX.visible = GT.visible = false;
-  STAGE.keep = { look: P.look, pos: GROUP(P.look).position.clone(), rot: GROUP(P.look).rotation.clone() };
-  STAGE.mine = new Figure(MIST); STAGE.theirs = new Figure(MIST_B);
-  holdInstrument(P.look, GROUP(P.look), -.95, STAGE.mine);
-  STAGE.theirsObj = partnerCopy(pl); STAGE.theirsLook = pl; holdInstrument(pl, STAGE.theirsObj, .95, STAGE.theirs, pl === 'Guitar' ? (NET.partner.guitar || 'electric') : null);
-  view.taz = 0; view.tel = .18; view.td = 4.3; view.tt.set(0, .85, -.1); labelsEl.style.display = 'none'; }
-function stageOff(quick) { STAGE.on = false; STAGE.mine?.remove(); STAGE.theirs?.remove(); if (STAGE.theirsObj) scene.remove(STAGE.theirsObj); STAGE.mine = STAGE.theirs = STAGE.theirsObj = null; labelsEl.style.display = '';
-  const g = GROUP(STAGE.keep?.look || P.look); if (STAGE.keep) { g.position.copy(STAGE.keep.pos); g.rotation.copy(STAGE.keep.rot); }
-  GT.children[0].position.set(0, 0, 0); GT.children[0].rotation.set(0, 0, 0); GT.children[1].visible = true; SX.traverse(o => { if (o.isMesh) o.visible = true; }); SX.rotation.set(0, -.35, 0); SX.position.set(0, 0, 0); GT.rotation.set(0, -.25, 0); GT.position.set(0, 0, 0);
-  if (!quick) applyLook(P.look, false); }
-// (a note, ours or theirs, moves the right figure)
-const worldOf = (obj, local) => local.clone().applyMatrix4(obj.matrixWorld);
-function figureHit(who, look, what) { if (!STAGE.on) return; const fig = who === 'me' ? STAGE.mine : STAGE.theirs, obj = who === 'me' ? GROUP(P.look) : STAGE.theirsObj; if (!fig || !obj) return; obj.updateMatrixWorld();
-  if (look === 'Drums') { if (what.id === 'kick') { fig.stomp(); return; } const p = PIECES.find(q => q.id === what.id), st = STATE[what.id]; const loc = st ? st.obj.userData.label : p ? new THREE.Vector3(.3, .7, -.2) : null; if (!loc) return;
-    const target = worldOf(obj, new THREE.Vector3(loc.x, loc.y - .04, loc.z)); const right = target.x > obj.position.x + .2 || CYMBALS.includes(what.id); fig.strike(right ? 0 : 1, target); return; }
-  if (look === 'Xylophone') { const bar = BARS.find(b => b.userData.midi === what.m); if (!bar) return; const target = worldOf(obj, bar.position.clone().add(new THREE.Vector3(0, .03, .05))); fig.strike(target.x > obj.position.x ? 0 : 1, target); return; }
-  if (look === 'Saxophone') { fig.leanV += .12; const fing = worldOf(obj, new THREE.Vector3(0, .62 + clamp((what.on - 46) / 30, 0, 1) * .3, .06)); fig.hold(0, fing); fig.hold(1, fing.clone().add(new THREE.Vector3(-.02, .2, 0))); return; }
-  if (look === 'Guitar') { const axe = obj.children[0]; axe.updateMatrixWorld(); const root = typeof what.chord === 'string' ? chordRoot(what.chord) : what.note ?? 40, fret = (root - 40) % 12, nutY = GT.userData.nutY, scale = .64;
-    fig.hold(1, worldOf(axe, new THREE.Vector3(0, nutY - scale * (1 - Math.pow(2, -Math.max(.5, fret) / 12)), .05))); fig.strike(0, worldOf(axe, new THREE.Vector3(.05, GT.userData.bodyC + .06, .07))); } }
-function animStage(dt) { if (!STAGE.on) return; const beat = G.state === 'play' && G.song ? ((performance.now() / 1000 - G.start) / (60 / G.song.bpm / G.speed)) : null;
-  // (the xylophone player's hands go with the mallets)
-  if (STAGE.mine?.kind === 'Xylophone') MALLETS.forEach((m, i) => { m.g.updateMatrixWorld(); STAGE.mine.hT[i === 1 ? 0 : 1].copy(m.g.getWorldPosition(new THREE.Vector3())); STAGE.mine.hitT[i === 1 ? 0 : 1] = 9; STAGE.mine.hRest[i === 1 ? 0 : 1].copy(STAGE.mine.hT[i === 1 ? 0 : 1]); });
-  MIST_T.value += dt; STAGE.mine?.update(dt, beat); STAGE.theirs?.update(dt, beat); }
 
 // ---------- the panel ----------
 const panel = $('panel'), ctl = {};
@@ -1261,30 +408,28 @@ function buildPanel() { panel.innerHTML = '';
   ctl.keys = LabUI.check(g0, { label: 'Show the keyboard letters', value: P.keys, onChange: v => set('keys', v, () => document.body.classList.toggle('nokeys', !v)) });
   const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' });
   ctl.shell = LabUI.seg(g1, { label: 'Drums', options: [['wine', 'Wine'], ['black', 'Black'], ['ocean', 'Ocean'], ['green', 'Green'], ['pearl', 'Pearl']], value: P.shell, onChange: v => set('shell', v, () => setShell(v)) });
-  ctl.sax = LabUI.seg(g1, { label: 'Saxophone', options: [['gold', 'Gold'], ['silver', 'Silver'], ['black', 'Black']], value: P.sax, onChange: v => set('sax', v, () => setSax(v)) });
   ctl.light = LabUI.slider(g1, { label: 'Light', min: .5, max: 5, step: .05, unit: '', value: P.light, def: DEF.light, onInput: v => set('light', v, applyLight) });
   ctl.warmth = LabUI.slider(g1, { label: 'Cool to warm', min: 0, max: 1, step: .01, unit: '', value: P.warmth, def: DEF.warmth, onInput: v => set('warmth', v, applyLight) });
-  const cr = document.createElement('p'); cr.className = 'credit'; cr.innerHTML = 'Recordings: <a href="https://github.com/sgossner/VCSL" target="_blank" rel="noopener">Versilian Community Sample Library</a> (CC0) and <a href="https://tildesounds.gumroad.com/l/openstringguitar" target="_blank" rel="noopener">Open String Guitar</a> by tildesounds (CC0). Models and surfaces made in code.'; panel.appendChild(cr); }
+  const cr = document.createElement('p'); cr.className = 'credit'; cr.innerHTML = 'Recordings: <a href="https://github.com/sgossner/VCSL" target="_blank" rel="noopener">Versilian Community Sample Library</a> (CC0); the china by <a href="https://freesound.org/people/RytmenPinnen/sounds/102031/" target="_blank" rel="noopener">RytmenPinnen</a> and the splash by <a href="https://freesound.org/people/pjcohen/sounds/46647/" target="_blank" rel="noopener">pjcohen</a> on Freesound (CC0). Models and surfaces made in code.'; panel.appendChild(cr); }
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
 $('tune').onclick = () => openPanel(true);
 addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
 
 // ---------- the loop ----------
 let last = 0, demoT = 0, demoStep = 0;
-const GROOVE = { kick: [0, 7, 8, 10], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], tom: [13], floor: [14, 15] };
+const GROOVE = { kick: [0, 7, 8, 10], kick2: [3, 11], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], tom1: [13], tom2: [14], floor1: [15] };
 function frame(now) { requestAnimationFrame(frame); const dt = last ? Math.min(.05, (now - last) / 1000) : .016; last = now; if (THUMB) return;
   if (DEMO) { demoT += dt; const s = Math.floor(demoT / .15); while (demoStep <= s) { const k = demoStep % 16; for (const id in GROOVE) if (GROOVE[id].includes(k) && STATE[id]) { const st = STATE[id]; st.t = 0; st.amp = .9; } demoStep++; } }
-  animKit(dt); animXylo(dt); animSax(dt); animGuitar(dt); animBreath(dt); animStage(dt); placeCam(); renderer.render(scene, camera); placeLabels(); gameFrame(); }
+  animKit(dt); animXylo(dt); placeCam(); renderer.render(scene, camera); placeLabels(); }
 
-// ---------- start; the board's box: ?thumb=1 all three in one still, ?demo=1 the drums playing a groove (silent) ----------
-setShell(P.shell); setSax(P.sax); setGuitar(P.guitar); setKit(P.drumKit); applyLight(); document.body.classList.toggle('nokeys', !P.keys);
-if (THUMB) { buildKit(6); KIT.visible = XY.visible = SX.visible = GT.visible = true; KIT.position.set(-1.0, 0, -.45); KIT.rotation.y = .32; XY.position.set(1.08, 0, -.15); XY.rotation.y = -.42; SX.position.set(-.08, 0, .55); SX.rotation.y = -.15; GT.position.set(.36, 0, .5); GT.rotation.y = -.35;
-  for (const id in STATE) STATE[id].born = 9; animKit(0); animXylo(9); animSax(0);
-  view.t.set(.05, .6, 0); view.tt.copy(view.t); view.az = view.taz = 0; view.el = view.tel = .3; view.d = view.td = 4.45; resize(); placeCam(); renderer.render(scene, camera); document.body.classList.add('ready'); }
-else { buildKit(BARE ? 5 : P.kit); if (!BARE) { buildPanel(); LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepLook, items: () => LOOKS, current: () => P.look, onPick: n => applyLook(n) }); }
-  applyLook(BARE ? 'Drums' : P.look, true); resize(); placeCam(); document.body.classList.add('ready'); requestAnimationFrame(frame);
-  if (!BARE && q.has('join')) openRoom(q.get('join')); }
-window.INSTR = { get P() { return P; }, STAGE, stageSync, figureHit, NET, openRoom, onData, remoteHit, strum, pickNote, GT, chordNotes, G, SONGS, gameStart, gameStop, gameInput, camera, KIT, applyLook, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx, saxOn, saxOff, addMidi, IMPORTED, songFor, findSong, backingFor, KITS, GCH, openSongs, startTogether };
+// ---------- start; the board's box: ?thumb=1 the full kit and the xylophone in one still, ?demo=1 the drums playing a groove (silent) ----------
+setShell(P.shell); setKit(); applyLight(); document.body.classList.toggle('nokeys', !P.keys);
+if (THUMB) { buildKit(PIECES.length); KIT.visible = XY.visible = true; KIT.position.set(-.5, 0, -.35); KIT.rotation.y = .2; XY.position.set(1.3, 0, .5); XY.rotation.y = -.6;
+  for (const id in STATE) STATE[id].born = 9; animKit(0); animXylo(9);
+  view.t.set(.12, .74, -.25); view.tt.copy(view.t); view.az = view.taz = 0; view.el = view.tel = .3; view.d = view.td = 6.5; resize(); placeCam(); renderer.render(scene, camera); document.body.classList.add('ready'); }
+else { buildKit(BARE ? PIECES.length : P.kit); if (!BARE) { buildPanel(); LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepLook, items: () => LOOKS, current: () => P.look, onPick: n => applyLook(n) }); }
+  applyLook(BARE ? 'Drums' : P.look, true); resize(); placeCam(); document.body.classList.add('ready'); requestAnimationFrame(frame); }
+window.INSTR = { get P() { return P; }, camera, KIT, XY, view, applyLook, frameView, buildKit, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx };
 </script>
 </body>
 </html>
