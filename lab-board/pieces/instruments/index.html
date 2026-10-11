@@ -590,7 +590,7 @@ const SM = () => (G.state === 'play' ? 'keys' : P.saxMode);   // (a song is alwa
 function openSongs() { saxOff(); G.state = 'pick'; renderTools(); updateHint(); }
 function metro(at, accent) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = accent ? 1760 : 1180; g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(.22, at + .002); g.gain.exponentialRampToValueAtTime(.001, at + .07); o.connect(g); g.connect(master); o.start(at); o.stop(at + .09); }
 // (the lanes a song needs, in order, and their keys: a run in the middle of the home row; more than ten use the number row)
-const LEVELS = [['easy', '1 key'], ['medium', '3 keys'], ['full', 'All keys']];
+const LEVELS = [['easy', '1 key'], ['medium', '3 keys'], ['full', 'Hero']];
 const CYMBALS = ['hihat', 'crash', 'ride'];
 // (in 1 key and 3 keys a press only has to land in time: the right sound plays by itself)
 function groupOf(lane) { if (G.level === 'easy') return 'all';
@@ -614,14 +614,21 @@ function gameStart(song, opt = {}) { unlock(); result.hidden = true; saxOff(); G
   const beat = 60 / song.bpm / G.speed, lead = 4 * beat + .7;
   let notes = song.notes.map(n => ({ ...n, t: (n.sec != null ? n.sec : n.beat * 60 / song.bpm) / G.speed + lead, len: (n.dur || 0) * (n.beatSec || 60 / song.bpm) / G.speed, j: null, play: [n.lane] })).sort((a, b) => a.t - b.t);
   if (G.group) { if (P.look !== 'Drums') { const ps = notes.map(n => P.look === 'Guitar' ? chordRoot(n.lane) : n.lane), lo = Math.min(...ps), hi = Math.max(...ps); G.bands = { lo, third: Math.max(1, (hi - lo + 1) / 3) }; }
+    // (you play the main notes: in 1 key one at most every two beats, on a beat; in 3 keys about one a beat, on the eighths.
+    //  The others the app plays itself, in time, so the song stays whole)
+    const grid = G.level === 'easy' ? 1 : .5, gap = G.level === 'easy' ? 1.9 : .9; let last = -9; const mine = [];
+    G.auto = []; G.autoAt = 0;
+    for (const n of notes) { const b = n.beat ?? 0, onGrid = Math.abs(b / grid - Math.round(b / grid)) < .02, sameAsKept = Math.abs(b - last) < .002 && mine.length && Math.abs(mine[mine.length - 1].t - n.t) < .002;
+      if (sameAsKept || (onGrid && b - last >= gap - 1e-6) || (n.sec != null && onGrid && n.t - (mine[mine.length - 1]?.t ?? -9) > .3)) { mine.push(n); last = b; } else G.auto.push({ t: n.t, len: n.len, play: [n.lane], lane: groupOf(n.lane) }); }
+    notes = mine;
     // (notes that land together in one lane become one note that plays them all)
     const merged = []; for (const n of notes) { const g = groupOf(n.lane), prev = merged.find(m => m.lane === g && Math.abs(m.t - n.t) < .002); if (prev) { prev.play.push(n.lane); prev.len = Math.max(prev.len, n.len); } else merged.push({ ...n, lane: g }); }
     notes = merged; G.lanes = groupLanes(notes); }
-  else G.lanes = songLanes(song);
+  else { G.lanes = songLanes(song); G.auto = []; }
   G.notes = notes; G.keys = {}; for (const l of G.lanes) G.keys[l.key] = l;
   if (G.level === 'easy') for (const k of [' ', 'f', 'g', 'h', 'j']) G.keys[k] = G.lanes[0];
   else if (P.look === 'Drums') { const kl = G.lanes.find(l => l.id === (G.group ? 'feet' : 'kick')); if (kl) G.keys[' '] = kl; }
-  G.score = 0; G.combo = 0; G.maxCombo = 0; G.n = { perfect: 0, good: 0, miss: 0 }; G.fx = []; G.marks = []; G.meter = []; G.end = G.notes[G.notes.length - 1].t + G.notes[G.notes.length - 1].len + 1.2;
+  G.score = 0; G.combo = 0; G.maxCombo = 0; G.n = { perfect: 0, good: 0, miss: 0 }; G.fx = []; G.marks = []; G.meter = []; G.end = G.notes[G.notes.length - 1].t + G.notes[G.notes.length - 1].len + 1.2; if (G.auto?.length) { const la = G.auto[G.auto.length - 1]; G.end = Math.max(G.end, la.t + la.len + 1.2); }
   G.together = !!opt.at; G.start = (opt.at ?? performance.now()) / 1000; const t0 = ctx.currentTime + Math.max(0, G.start - performance.now() / 1000) + .7; for (let i = 0; i < 4; i++) metro(t0 + i * beat, i === 0);   // (four clicks in: a metronome, not music)
   G.state = 'play'; buildCaps(); renderTools(); updateHint(); }
 function gameStop() { setKit(P.drumKit); if (NET.host && NET.conn?.open && G.state === 'play') tx({ t: 'stop' }); G.state = 'off'; result.hidden = true; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff(); renderTools(); updateHint(); }
@@ -632,7 +639,9 @@ function gameInput(lane, sound = false) { if (G.state !== 'play') return; const 
   const cap = caps.querySelector(`[data-lane="${lane}"]`), gl = G.lanes.find(l => l.id === lane); if (gl) gl.flash = performance.now(); if (cap && !cap.classList.contains('on')) { cap.classList.add('tap'); setTimeout(() => cap.classList.remove('tap'), 130); }
   let best = null, bd = 9;
   for (const n of G.notes) { if (n.t - now > HIT.good) break; if (n.j || n.lane !== lane) continue; const d = Math.abs(n.t - now); if (d < bd) { bd = d; best = n; } }
-  if (best && bd <= HIT.good) { const dt = now - best.t; judge(best, bd <= HIT.perfect ? 'perfect' : 'good'); if (sound) playNote(best); G.marks.push({ lane, dt, kind: best.j, t: performance.now() }); G.meter.push({ dt, kind: best.j, t: performance.now() }); }
+  if (sound && !(best && bd <= HIT.good)) { let near = null, nd = .28; for (const n of G.notes) { if (n.t - now > .28) break; if (n.lane !== lane || n.sounded) continue; const d = Math.abs(n.t - now); if (d < nd) { nd = d; near = n; } }
+    if (near) { if (!near.j) judge(near, 'miss'); near.sounded = true; playNote(near); G.marks.push({ lane, dt: now - near.t, kind: 'off', t: performance.now() }); return; } }
+  if (best && bd <= HIT.good) { const dt = now - best.t; judge(best, bd <= HIT.perfect ? 'perfect' : 'good'); if (sound) { playNote(best); best.sounded = true; } G.marks.push({ lane, dt, kind: best.j, t: performance.now() }); G.meter.push({ dt, kind: best.j, t: performance.now() }); }
   else G.marks.push({ lane, dt: null, kind: 'stray', t: performance.now() }); }
 // (the right sound for a note found by a grouped press: the pieces, the bar, or the saxophone held while the key is down)
 function playNote(n) { if (P.look === 'Drums') for (const id of n.play) { const p = PIECES.find(q => q.id === id); if (p) hitPiece(p, .9, false, true); }
@@ -658,6 +667,7 @@ function gameKey(e, down) { const k = e.key === ' ' ? ' ' : e.key.toLowerCase(),
   if (down) { if (e.repeat || heldLanes.has(k)) return true; heldLanes.add(k); laneDown(l); } else { heldLanes.delete(k); laneUp(l); } return true; }
 const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect(x, y, w, h, r); };
 function gameFrame() { if (G.state !== 'play') return; const now = gameNow(), tn = performance.now();
+  while (G.auto && G.autoAt < G.auto.length && G.auto[G.autoAt].t <= now + .004) { const a = G.auto[G.autoAt++]; if (P.look === 'Saxophone') { const m = a.play[0]; if (G.held == null) { saxOn(m, .8, true); setTimeout(() => { if (voice && voice.m === m && G.held == null) saxOff(m); }, Math.max(90, a.len * 1000 * .9)); } } else playNote(a); }
   for (const n of G.notes) { if (n.t - now > 0) break; if (!n.j && now - n.t > HIT.good) judge(n, 'miss'); }
   const dpr = Math.min(devicePixelRatio, 2), W = innerWidth, H = innerHeight; if (hwy.width !== Math.round(W * dpr) || hwy.height !== Math.round(H * dpr)) { hwy.width = Math.round(W * dpr); hwy.height = Math.round(H * dpr); }
   const c = hctx; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
@@ -682,11 +692,12 @@ function gameFrame() { if (G.state !== 'play') return; const now = gameNow(), tn
     c.globalAlpha = n.j === 'miss' ? .25 : 1; c.fillStyle = l.color; rr(c, x, y - h / 2, sw, h, h / 2); c.fill();
     c.fillStyle = 'rgba(255,255,255,.35)'; rr(c, x + 3, y - h / 2 + 2, sw - 6, h * .38, h * .2); c.fill(); c.globalAlpha = 1; }
   c.restore();
+  if (G.auto) { c.save(); c.beginPath(); c.rect(0, 0, W, hitY); c.clip(); for (let i = G.autoAt; i < G.auto.length; i++) { const a = G.auto[i]; if (a.t - now > AHEAD) break; const l = byId.get(a.lane); if (!l) continue; c.globalAlpha = .28; c.fillStyle = l.color; c.beginPath(); c.arc(l.x + l.w / 2, yOf(a.t), 4, 0, 7); c.fill(); } c.restore(); c.globalAlpha = 1; }
   // your marks: a tick where you pressed, against the note (early above the line, late below), with the milliseconds; a stray press a small cross
   G.marks = G.marks.filter(m => tn - m.t < 900);
   for (const m of G.marks) { const l = byId.get(m.lane); if (!l) continue; const a = 1 - (tn - m.t) / 900, cx = l.x + l.w / 2; c.globalAlpha = a;
     if (m.kind === 'stray') { c.strokeStyle = 'rgba(20,20,20,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - 6, hitY - 6); c.lineTo(cx + 6, hitY + 6); c.moveTo(cx + 6, hitY - 6); c.lineTo(cx - 6, hitY + 6); c.stroke(); c.globalAlpha = 1; continue; }
-    const y = hitY + clamp(m.dt / HIT.good, -1, 1) * 26, col = m.kind === 'perfect' ? '#1f9d55' : '#c98a1b'; c.fillStyle = col; rr(c, l.x + 8, y - 2, l.w - 16, 4, 2); c.fill();
+    const y = hitY + clamp(m.dt / HIT.good, -1, 1) * 26, col = m.kind === 'perfect' ? '#1f9d55' : m.kind === 'good' ? '#c98a1b' : '#8b8b8b'; c.fillStyle = col; rr(c, l.x + 8, y - 2, l.w - 16, 4, 2); c.fill();
     c.font = '600 10px Geist, system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(Math.abs(m.dt) < .012 ? 'on time' : `${m.dt < 0 ? 'early' : 'late'} ${Math.round(Math.abs(m.dt) * 1000)} ms`, cx, hitY - 16); c.globalAlpha = 1; }
   G.fx = G.fx.filter(f => tn - f.t < 600);
   for (const f of G.fx) { const l = byId.get(f.lane); if (!l) continue; const k = (tn - f.t) / 600; c.globalAlpha = 1 - k; c.fillStyle = f.kind === 'perfect' ? '#1f9d55' : f.kind === 'good' ? '#c98a1b' : '#b23b3b';
@@ -730,45 +741,82 @@ const GT = new THREE.Group(); scene.add(GT);
 const GSTR = [];
 const GUITAR_FINISH = { electric: '#b3202a', acoustic: '#c98b4e' };
 (function buildGuitar() {
-  const lift = .3, neckLen = .46, nutY = lift + .4 + neckLen, bridgeY = lift + .12;
-  // (the electric body: a double-cut outline, extruded and bevelled; a white guard, three pickups, a chrome bridge)
-  const eb = new THREE.Shape(); eb.moveTo(0, -.21); eb.bezierCurveTo(.17, -.22, .2, -.08, .15, .02); eb.bezierCurveTo(.13, .06, .17, .12, .19, .19); eb.bezierCurveTo(.2, .24, .14, .25, .1, .2);
-  eb.bezierCurveTo(.07, .16, .04, .15, .025, .16); eb.lineTo(-.025, .16); eb.bezierCurveTo(-.05, .2, -.06, .25, -.1, .24); eb.bezierCurveTo(-.15, .23, -.16, .16, -.15, .1); eb.bezierCurveTo(-.14, .05, -.2, -.02, -.19, -.09); eb.bezierCurveTo(-.18, -.2, -.1, -.22, 0, -.21);
+  // (the guitar lives in its own group, GT.userData.axe, so a player on the stage can hold it; the stand is apart, GT.userData.stand)
+  const axe = new THREE.Group(), stand = new THREE.Group(); GT.add(axe, stand); GT.userData.axe = axe; GT.userData.stand = stand;
+  const smooth = (pts, mirror) => { const all = mirror ? pts.concat(pts.slice(1, -1).reverse().map(([x, y]) => [-x, y])) : pts; const sh = new THREE.Shape(); sh.moveTo(...all[0]); sh.splineThru(all.slice(1).map(([x, y]) => new THREE.Vector2(x, y))); sh.closePath(); return sh; };
+  const lift = .3, bodyC = lift + .23, neckLen = .47, nutY = bodyC + .17 + neckLen, scale = .64, bridgeY = nutY - scale;
+  const capUV = (tex, w, h) => { tex.repeat.set(1 / w, 1 / h); tex.offset.set(.5, .5); tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; return tex; };
+  // ---- the electric: an S-type body (two horns, the lower one shorter), sunburst lacquer, a white guard, three single coils, a vibrato bridge ----
   const elec = new THREE.Group(); elec.name = 'electric';
-  const bodyMat = new THREE.MeshPhysicalMaterial({ color: GUITAR_FINISH.electric, roughness: .3, clearcoat: 1, clearcoatRoughness: .04, metalness: .1 });
-  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(eb, { depth: .04, bevelEnabled: true, bevelThickness: .008, bevelSize: .008, bevelSegments: 4, curveSegments: 40 }), bodyMat); body.position.set(0, lift + .2, -.02); elec.add(body);
-  const guard = new THREE.Mesh(new THREE.ExtrudeGeometry(eb, { depth: .002, bevelEnabled: false, curveSegments: 40 }), new THREE.MeshPhysicalMaterial({ color: '#f3efe6', roughness: .35, clearcoat: .6 })); guard.scale.set(.5, .52, 1); guard.position.set(.03, lift + .12, .029); elec.add(guard);
-  for (const y of [.03, .1, .17]) { const pu = new THREE.Mesh(new RoundedBoxGeometry(.075, .018, .01, 2, .004), new THREE.MeshStandardMaterial({ color: '#f6f3ec', roughness: .5 })); pu.position.set(0, lift + y + .02, .034); pu.rotation.z = y === .03 ? -.12 : 0; elec.add(pu); }
-  const br = new THREE.Mesh(new RoundedBoxGeometry(.075, .03, .012, 2, .004), M.chrome); br.position.set(0, bridgeY, .034); elec.add(br);
-  for (let i = 0; i < 3; i++) { const kn = cyl(.009, .009, .012, M.chrome, 20); kn.rotation.x = Math.PI / 2; kn.position.set(.07 + i * .022, lift + .02 - i * .03, .036); elec.add(kn); }
-  // (the acoustic body: a dreadnought, a spruce top with a sound hole and a rosette, rosewood sides and back, a bridge)
-  const ab = new THREE.Shape(); ab.moveTo(0, -.25); ab.bezierCurveTo(.2, -.25, .23, -.1, .17, .0); ab.bezierCurveTo(.14, .05, .19, .12, .17, .19); ab.bezierCurveTo(.15, .25, .05, .25, 0, .24); ab.bezierCurveTo(-.05, .25, -.15, .25, -.17, .19); ab.bezierCurveTo(-.19, .12, -.14, .05, -.17, 0); ab.bezierCurveTo(-.23, -.1, -.2, -.25, 0, -.25);
+  const sOut = smooth([[0, -.235], [.1, -.225], [.158, -.16], [.163, -.08], [.13, .0], [.124, .05], [.136, .1], [.128, .145], [.108, .172], [.088, .17], [.068, .14], [.048, .112], [.03, .15], [-.03, .155], [-.05, .125], [-.072, .142], [-.096, .156], [-.12, .148], [-.14, .11], [-.142, .06], [-.13, .01], [-.158, -.07], [-.163, -.15], [-.11, -.222]]);
+  const burst = tex(512, 512, (g, w, h) => { const r = g.createRadialGradient(w / 2, h * .55, 20, w / 2, h / 2, w * .55); r.addColorStop(0, '#f2b33d'); r.addColorStop(.42, '#d8761e'); r.addColorStop(.72, '#7a2410'); r.addColorStop(1, '#170806'); g.fillStyle = r; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 160; i++) { g.strokeStyle = `rgba(80,30,10,${.03 + rnd() * .06})`; g.lineWidth = 1 + rnd() * 2; g.beginPath(); const y = rnd() * h; g.moveTo(0, y); g.bezierCurveTo(w * .3, y + rnd() * 20 - 10, w * .7, y + rnd() * 20 - 10, w, y + rnd() * 16 - 8); g.stroke(); } });
+  const bodyMat = new THREE.MeshPhysicalMaterial({ map: capUV(burst, .36, .5), color: '#ffffff', roughness: .32, clearcoat: 1, clearcoatRoughness: .03 });
+  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(sOut, { depth: .03, bevelEnabled: true, bevelThickness: .009, bevelSize: .009, bevelSegments: 5, curveSegments: 64 }), [bodyMat, new THREE.MeshPhysicalMaterial({ color: '#1e0b07', roughness: .35, clearcoat: 1 })]);
+  body.position.set(0, bodyC, -.015); elec.add(body);
+  const guardOut = smooth([[.03, .158], [.05, .12], [.075, .1], [.1, .07], [.11, .0], [.1, -.06], [.07, -.105], [.03, -.1], [-.02, -.06], [-.05, -.02], [-.055, .05], [-.05, .12], [-.03, .162]]);
+  const guard = new THREE.Mesh(new THREE.ExtrudeGeometry(guardOut, { depth: .0025, bevelEnabled: true, bevelThickness: .0008, bevelSize: .0015, bevelSegments: 2, curveSegments: 48 }), new THREE.MeshPhysicalMaterial({ color: '#f4f1e8', roughness: .3, clearcoat: .7 })); guard.position.set(0, bodyC, .0245); elec.add(guard);
+  const coverMat = new THREE.MeshStandardMaterial({ color: '#f6f3ea', roughness: .45 });
+  for (const [y, tilt] of [[.115, 0], [.06, 0], [-.005, -.17]]) { const pu = new THREE.Group(), c = new THREE.Mesh(new RoundedBoxGeometry(.083, .019, .009, 3, .0045), coverMat); pu.add(c);
+    for (let i = 0; i < 6; i++) { const pole = cyl(.0018, .0018, .002, M.chrome, 8); pole.rotation.x = Math.PI / 2; pole.position.set((i - 2.5) * .0105, 0, .0048); pu.add(pole); }
+    pu.position.set(0, bodyC + y - .05, .03); pu.rotation.z = tilt; elec.add(pu); }
+  const plate = new THREE.Mesh(new RoundedBoxGeometry(.074, .042, .004, 2, .002), M.chrome); plate.position.set(0, bridgeY - .012, .027); elec.add(plate);
+  for (let i = 0; i < 6; i++) { const sd = new THREE.Mesh(new RoundedBoxGeometry(.0095, .016, .006, 1, .002), M.chrome); sd.position.set((i - 2.5) * .0105, bridgeY + .002 + (i % 2) * .003, .031); elec.add(sd); }
+  const arm = new THREE.Group(); arm.add(rod(new THREE.Vector3(.036, bridgeY - .02, .031), new THREE.Vector3(.05, bridgeY - .02, .05), .0022, M.chrome), rod(new THREE.Vector3(.05, bridgeY - .02, .05), new THREE.Vector3(.11, bridgeY - .09, .058), .0022, M.chrome)); const tip = cyl(.0035, .0035, .016, coverMat, 10); tip.position.set(.113, bridgeY - .093, .058); tip.rotation.z = .8; arm.add(tip); elec.add(arm);
+  for (const [x, y] of [[.062, -.07], [.083, -.105], [.098, -.142]]) { const k = cyl(.0095, .011, .015, coverMat, 24); k.rotation.x = Math.PI / 2; k.position.set(x, bodyC + y, .034); elec.add(k); }
+  const sw = new THREE.Mesh(new RoundedBoxGeometry(.006, .012, .01, 1, .002), coverMat); sw.position.set(.07, bodyC - .025, .035); sw.rotation.z = -.5; elec.add(sw);
+  const jack = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .003, 20), M.chrome); jack.rotation.x = Math.PI / 2; jack.scale.set(1.5, 1, .8); jack.position.set(.14, bodyC - .13, .016); jack.rotation.y = .4; elec.add(jack);
+  // ---- the acoustic: a dreadnought, spruce top with a white binding, a rosette, a tortoise guard, a rosewood bridge with pins ----
   const acou = new THREE.Group(); acou.name = 'acoustic';
-  const spruce = new THREE.MeshPhysicalMaterial({ map: woodTex('#d9b77e', '#b08a52', '#efd5a2', 256, 512), roughness: .4, clearcoat: .8, clearcoatRoughness: .1 });
-  const sides = new THREE.Mesh(new THREE.ExtrudeGeometry(ab, { depth: .09, bevelEnabled: true, bevelThickness: .004, bevelSize: .004, bevelSegments: 2, curveSegments: 48 }), M.rosewood); sides.position.set(0, lift + .2, -.07); acou.add(sides);
-  const top = new THREE.Mesh(new THREE.ShapeGeometry(ab, 48), spruce); top.position.set(0, lift + .2, .0245); acou.add(top);
-  const hole = new THREE.Mesh(new THREE.CircleGeometry(.045, 40), new THREE.MeshStandardMaterial({ color: '#120b07', roughness: 1 })); hole.position.set(0, lift + .32, .026); acou.add(hole);
-  const ros = new THREE.Mesh(new THREE.RingGeometry(.05, .058, 48), M.walnut); ros.position.set(0, lift + .32, .026); acou.add(ros);
-  const abr = new THREE.Mesh(new RoundedBoxGeometry(.1, .022, .008, 2, .004), M.ebony); abr.position.set(0, bridgeY, .029); acou.add(abr);
-  GT.add(elec, acou);
-  // (the neck: maple, a rosewood board with frets on the twelfth-root rule and pearl dots, a headstock with six tuners)
-  const scale = .63, neck = new THREE.Mesh(new RoundedBoxGeometry(.05, neckLen + .02, .022, 2, .008), M.birch); neck.position.set(0, lift + .4 + neckLen / 2, .005); GT.add(neck);
-  const board = new THREE.Mesh(new THREE.BoxGeometry(.05, neckLen + .02, .006), M.rosewood); board.position.set(0, lift + .4 + neckLen / 2, .019); GT.add(board);
-  for (let f = 1; f <= 20; f++) { const y = nutY - scale * (1 - Math.pow(2, -f / 12)); if (y < lift + .4) break; const fr = cyl(.0012, .0012, .05, M.chrome, 6); fr.rotation.z = Math.PI / 2; fr.position.set(0, y, .023); GT.add(fr);
-    if ([3, 5, 7, 9, 15, 17].includes(f) || f === 12) { const yy = y + scale * (Math.pow(2, -(f - 1) / 12) - Math.pow(2, -f / 12)) / 2; for (const dx of f === 12 ? [-.012, .012] : [0]) { const dot = cyl(.003, .003, .002, M.pearl, 12); dot.rotation.x = Math.PI / 2; dot.position.set(dx, yy, .0225); GT.add(dot); } } }
-  const hs = new THREE.Mesh(new RoundedBoxGeometry(.075, .17, .016, 2, .006), new THREE.MeshPhysicalMaterial({ color: '#1b1a1c', roughness: .3, clearcoat: 1 })); hs.position.set(0, nutY + .09, .002); GT.add(hs);
-  for (let i = 0; i < 6; i++) { const side = i < 3 ? -1 : 1, y = nutY + .04 + (i % 3) * .045; const pg = cyl(.005, .005, .025, M.chrome, 10); pg.rotation.z = Math.PI / 2; pg.position.set(side * .05, y, .002); GT.add(pg); const kn = new THREE.Mesh(new RoundedBoxGeometry(.016, .012, .006, 2, .003), M.chrome); kn.position.set(side * .067, y, .002); GT.add(kn); }
-  const nut = new THREE.Mesh(new THREE.BoxGeometry(.05, .004, .006), new THREE.MeshStandardMaterial({ color: '#efe9da', roughness: .4 })); nut.position.set(0, nutY, .024); GT.add(nut);
-  // (six strings, wound low ones thicker, from the bridge to the nut; each can ring visibly)
-  const strMat = new THREE.MeshStandardMaterial({ color: '#d8cfb8', metalness: 1, roughness: .25 });
-  for (let i = 0; i < 6; i++) { const xb = (i - 2.5) * .0105, xn = (i - 2.5) * .0074, a = new THREE.Vector3(xb, bridgeY, .037), b = new THREE.Vector3(xn, nutY, .027), m = rod(a, b, .0006 + (5 - i) * .00018, strMat); GT.add(m); GSTR.push({ mesh: m, base: m.position.clone(), t: 9, amp: 0 }); }
-  // (a stand: two feet and a neck cradle)
-  for (const s of [-1, 1]) GT.add(rod(new THREE.Vector3(s * .05, lift - .02, .06), new THREE.Vector3(s * .2, .01, .22), .007, M.steel), rod(new THREE.Vector3(s * .05, lift - .02, .06), new THREE.Vector3(s * .15, .01, -.2), .007, M.steel));
-  const cradle = new THREE.Mesh(new THREE.TorusGeometry(.12, .012, 8, 30, Math.PI), M.rubber); cradle.rotation.set(Math.PI / 2, 0, Math.PI); cradle.position.set(0, lift - .02, .03); GT.add(cradle);
-  GT.add(rod(new THREE.Vector3(0, .01, -.2), new THREE.Vector3(0, nutY - .1, -.03), .008, M.steel));
-  shadow(GT); GT.rotation.y = -.25; GT.userData.body = bodyMat;
+  const dOut = smooth([[0, -.255], [.12, -.24], [.188, -.17], [.195, -.08], [.16, .0], [.14, .045], [.148, .11], [.142, .18], [.11, .235], [.05, .255], [0, .258]], true);
+  const spruce = new THREE.MeshPhysicalMaterial({ map: capUV(woodTex('#dcbb83', '#b8925a', '#f1d9a6', 512, 512), .42, .52), roughness: .38, clearcoat: .9, clearcoatRoughness: .08 });
+  const sides = new THREE.Mesh(new THREE.ExtrudeGeometry(dOut, { depth: .095, bevelEnabled: true, bevelThickness: .004, bevelSize: .004, bevelSegments: 3, curveSegments: 64 }), M.rosewood); sides.position.set(0, bodyC, -.075); acou.add(sides);
+  const binding = new THREE.Mesh(new THREE.ShapeGeometry(dOut, 64), new THREE.MeshStandardMaterial({ color: '#efe8d8', roughness: .4 })); binding.position.set(0, bodyC, .0235); binding.scale.set(1.012, 1.01, 1); acou.add(binding);
+  const top = new THREE.Mesh(new THREE.ShapeGeometry(dOut, 64), spruce); top.position.set(0, bodyC, .0245); acou.add(top);
+  const holeY = bodyC + .09; const hole = new THREE.Mesh(new THREE.CircleGeometry(.044, 48), new THREE.MeshStandardMaterial({ color: '#0c0705', roughness: 1 })); hole.position.set(0, holeY, .0255); acou.add(hole);
+  for (const [r0, r1, c] of [[.05, .056, '#1b1410'], [.056, .059, '#efe8d8'], [.059, .064, '#2a1a10'], [.064, .066, '#efe8d8']]) { const rg = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 64), new THREE.MeshStandardMaterial({ color: c, roughness: .5 })); rg.position.set(0, holeY, .0256); acou.add(rg); }
+  const tort = tex(256, 256, (g, w, h) => { g.fillStyle = '#3a1608'; g.fillRect(0, 0, w, h); for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(${150 + rnd() * 60 | 0},${70 + rnd() * 40 | 0},20,${.25 + rnd() * .35})`; g.beginPath(); g.ellipse(rnd() * w, rnd() * h, 6 + rnd() * 22, 4 + rnd() * 12, rnd() * 3, 0, 7); g.fill(); } });
+  const pgS = smooth([[.045, .06], [.085, .03], [.11, -.02], [.1, -.065], [.065, -.075], [.05, -.03], [.06, .02]]);
+  const pg = new THREE.Mesh(new THREE.ShapeGeometry(pgS, 32), new THREE.MeshPhysicalMaterial({ map: capUV(tort, .2, .2), roughness: .3, clearcoat: 1 })); pg.position.set(0, holeY - .02, .0257); acou.add(pg);
+  const brS = smooth([[-.075, .0], [-.06, .012], [-.03, .014], [.03, .014], [.06, .012], [.075, .0], [.06, -.012], [.03, -.014], [-.03, -.014], [-.06, -.012]]);
+  const br = new THREE.Mesh(new THREE.ExtrudeGeometry(brS, { depth: .006, bevelEnabled: true, bevelThickness: .0015, bevelSize: .0015, bevelSegments: 2 }), M.ebony); br.position.set(0, bridgeY - .006, .025); acou.add(br);
+  const saddle = new THREE.Mesh(new RoundedBoxGeometry(.075, .003, .005, 1, .001), new THREE.MeshStandardMaterial({ color: '#f3ecdc', roughness: .4 })); saddle.position.set(0, bridgeY + .002, .034); acou.add(saddle);
+  for (let i = 0; i < 6; i++) { const pin = cyl(.0024, .0024, .004, new THREE.MeshStandardMaterial({ color: '#f1ead9', roughness: .4 }), 10); pin.rotation.x = Math.PI / 2; pin.position.set((i - 2.5) * .0105, bridgeY - .01, .033); acou.add(pin); }
+  axe.add(elec, acou);
+  // ---- the neck, shared: a tapering maple neck, a rosewood board with 21 frets (the twelfth-root rule) and pearl dots, a bone nut ----
+  const neckS = new THREE.Shape(); neckS.moveTo(-.028, 0); neckS.lineTo(.028, 0); neckS.lineTo(.0215, neckLen); neckS.lineTo(-.0215, neckLen); neckS.closePath();
+  const neck = new THREE.Mesh(new THREE.ExtrudeGeometry(neckS, { depth: .016, bevelEnabled: true, bevelThickness: .006, bevelSize: .004, bevelSegments: 3 }), M.birch); neck.position.set(0, nutY - neckLen, -.006); axe.add(neck);
+  const boardS = new THREE.Shape(); boardS.moveTo(-.0285, 0); boardS.lineTo(.0285, 0); boardS.lineTo(.0215, neckLen); boardS.lineTo(-.0215, neckLen); boardS.closePath();
+  const board = new THREE.Mesh(new THREE.ExtrudeGeometry(boardS, { depth: .005, bevelEnabled: false }), M.rosewood); board.position.set(0, nutY - neckLen, .016); axe.add(board);
+  const wAt = y => lerp(.0285, .0215, clamp((y - (nutY - neckLen)) / neckLen, 0, 1)) * 2;
+  for (let f = 1; f <= 21; f++) { const y = nutY - scale * (1 - Math.pow(2, -f / 12)); if (y < nutY - neckLen + .004) break; const fr = cyl(.0011, .0011, wAt(y), M.chrome, 6); fr.rotation.z = Math.PI / 2; fr.position.set(0, y, .0215); axe.add(fr);
+    if ([3, 5, 7, 9, 15, 17, 19, 21].includes(f) || f === 12) { const yy = y + scale * (Math.pow(2, -(f - 1) / 12) - Math.pow(2, -f / 12)) / 2; for (const dx of f === 12 ? [-.011, .011] : [0]) { const dot = cyl(.0028, .0028, .001, M.pearl, 14); dot.rotation.x = Math.PI / 2; dot.position.set(dx, yy, .0212); axe.add(dot); } } }
+  const nut = new THREE.Mesh(new RoundedBoxGeometry(.044, .005, .007, 1, .0015), new THREE.MeshStandardMaterial({ color: '#efe9da', roughness: .4 })); nut.position.set(0, nutY, .022); axe.add(nut);
+  // ---- the headstocks: six in a row for the electric, three a side for the acoustic ----
+  const hsE = smooth([[-.022, 0], [.022, 0], [.027, .035], [.031, .085], [.038, .13], [.048, .168], [.044, .192], [.026, .2], [.004, .19], [-.014, .16], [-.024, .1], [-.026, .04]]);
+  const headE = new THREE.Group(); headE.name = 'electric';
+  { const hm = new THREE.Mesh(new THREE.ExtrudeGeometry(hsE, { depth: .012, bevelEnabled: true, bevelThickness: .003, bevelSize: .003, bevelSegments: 2, curveSegments: 32 }), M.birch); hm.position.set(0, nutY, .004); headE.add(hm); }
+  const ePosts = []; for (let i = 0; i < 6; i++) { const y = nutY + .035 + i * .028, x = -.016 + i * .0035; const post = cyl(.003, .003, .012, M.chrome, 10); post.rotation.x = Math.PI / 2; post.position.set(x, y, .024); headE.add(post); ePosts.push(new THREE.Vector3(x, y, .026));
+    const key = new THREE.Mesh(new RoundedBoxGeometry(.016, .011, .004, 2, .002), M.chrome); key.position.set(x - .03, y, .01); headE.add(key); headE.add(rod(new THREE.Vector3(x - .004, y, .01), new THREE.Vector3(x - .022, y, .01), .002, M.chrome)); }
+  const tree = new THREE.Mesh(new RoundedBoxGeometry(.008, .004, .004, 1, .001), M.chrome); tree.position.set(.002, nutY + .07, .026); headE.add(tree);
+  const hsA = smooth([[-.025, 0], [.025, 0], [.036, .06], [.042, .15], [.03, .175], [0, .17], [-.03, .175], [-.042, .15], [-.036, .06]]);
+  const headA = new THREE.Group(); headA.name = 'acoustic';
+  { const hm = new THREE.Mesh(new THREE.ExtrudeGeometry(hsA, { depth: .013, bevelEnabled: true, bevelThickness: .003, bevelSize: .003, bevelSegments: 2, curveSegments: 32 }), new THREE.MeshPhysicalMaterial({ color: '#1a1412', roughness: .3, clearcoat: 1 })); hm.position.set(0, nutY, .004); headA.add(hm); }
+  const aPosts = []; for (let i = 0; i < 6; i++) { const side = i < 3 ? -1 : 1, y = nutY + .045 + (i % 3) * .04, x = side * .022; const post = cyl(.003, .003, .012, M.chrome, 10); post.rotation.x = Math.PI / 2; post.position.set(x, y, .024); headA.add(post); aPosts.push(new THREE.Vector3(x, y, .026));
+    const key = new THREE.Mesh(new RoundedBoxGeometry(.018, .013, .005, 2, .002), M.chrome); key.position.set(side * .062, y, .01); headA.add(key); headA.add(rod(new THREE.Vector3(side * .04, y, .01), new THREE.Vector3(side * .054, y, .01), .002, M.chrome)); }
+  axe.add(headE, headA);
+  // ---- six strings: from the saddles over the nut (the part that rings) and on to the posts ----
+  const strMat = new THREE.MeshStandardMaterial({ color: '#d9d2c2', metalness: 1, roughness: .22 }), woundMat = new THREE.MeshStandardMaterial({ color: '#b9a27a', metalness: 1, roughness: .35 });
+  for (let i = 0; i < 6; i++) { const r = .0006 + (5 - i) * .00017, mat = i < 3 ? woundMat : strMat, a = new THREE.Vector3((i - 2.5) * .0105, bridgeY + .004, .0345), b = new THREE.Vector3((i - 2.5) * .0071, nutY, .0255);
+    const m = rod(a, b, r, mat); axe.add(m); GSTR.push({ mesh: m, base: m.position.clone(), t: 9, amp: 0 });
+    const tE = rod(b, ePosts[5 - i] || ePosts[0], r, mat); tE.name = 'electric'; headE.add(tE); const tA = rod(b, aPosts[i < 3 ? 2 - i : i] || aPosts[0], r, mat); tA.name = 'acoustic'; headA.add(tA); }
+  // ---- the stand: an A-frame with a neck yoke ----
+  for (const s of [-1, 1]) stand.add(rod(new THREE.Vector3(s * .06, lift - .03, .07), new THREE.Vector3(s * .2, .01, .22), .007, M.steel), rod(new THREE.Vector3(s * .06, lift - .03, .07), new THREE.Vector3(s * .16, .01, -.22), .007, M.steel));
+  const cradle = new THREE.Mesh(new THREE.TorusGeometry(.13, .012, 8, 30, Math.PI), M.rubber); cradle.rotation.set(Math.PI / 2, 0, Math.PI); cradle.position.set(0, lift - .03, .03); stand.add(cradle);
+  stand.add(rod(new THREE.Vector3(0, .01, -.22), new THREE.Vector3(0, nutY - .05, -.035), .008, M.steel)); const yoke = new THREE.Mesh(new THREE.TorusGeometry(.03, .006, 8, 20, Math.PI), M.rubber); yoke.position.set(0, nutY - .05, -.03); yoke.rotation.z = Math.PI; stand.add(yoke);
+  axe.position.y = 0; shadow(GT); GT.rotation.y = -.25; GT.userData.body = bodyMat; GT.userData.nutY = nutY; GT.userData.bridgeY = bridgeY; GT.userData.bodyC = bodyC;
 })();
-function setGuitar(kind) { for (const g of GT.children) if (g.name === 'electric' || g.name === 'acoustic') g.visible = g.name === kind; }
+function setGuitar(kind) { GT.traverse(g => { if (g.name === 'electric' || g.name === 'acoustic') g.visible = g.name === kind; }); }
 // (the sound: one buffer per string pitch and kind, made once and kept)
 const KS = new Map();
 function ksBuffer(m, kind) { const key = m + kind; if (KS.has(key)) return KS.get(key);
