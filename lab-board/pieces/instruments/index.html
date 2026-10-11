@@ -126,7 +126,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.instruments.v1';
-const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', sax: 'gold', saxMode: 'keys', phrase: 'saints', light: 2.6, warmth: .55 };
+const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', sax: 'gold', saxMode: 'keys', phrase: 'saints', level: 'full', light: 2.6, warmth: .55 };
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
@@ -279,7 +279,7 @@ function buildKit(n) { const want = PIECES.slice(0, clamp(n, 3, PIECES.length));
     if (on && !STATE[p.id]) { const o = shadow(p.build()); o.userData.piece = p; KIT.add(o); STATE[p.id] = { obj: o, t: 9, amp: 0, rr: 0, born: BARE ? 9 : 0 }; }
     if (!on && STATE[p.id]) { KIT.remove(STATE[p.id].obj); delete STATE[p.id]; } }
   refreshLabels(); }
-function hitPiece(p, vel = 1, open = false) { const st = STATE[p.id]; if (!st) return; gameInput(p.id);
+function hitPiece(p, vel = 1, open = false, quiet = false) { const st = STATE[p.id]; if (!st) return; if (!quiet) gameInput(p.id);
   st.t = 0; st.amp = vel; const label = labelFor(p.id); if (label) { label.classList.add('hit'); setTimeout(() => label.classList.remove('hit'), 110); }
   if (p.id === 'hihat') { fadeOut(openHat, .05); openHat = null; const v = play(open ? 'hhopen' : 'hhclosed', { gain: .9 * vel, pan: .2 }); if (open) openHat = v; st.open = open; return; }
   const s = p.sounds[st.rr++ % p.sounds.length]; play(s, { rate: (p.rate || 1) * (1 + (Math.random() - .5) * .02), gain: (p.gain || 1) * vel, pan: clamp(st.obj.position.x * .35, -.6, .6) }); }
@@ -313,7 +313,7 @@ const BARS = [], LOW = 72, HIGH = 96;
 const MALLETS = [-1, 1].map(s => { const g = new THREE.Group(), head = new THREE.Mesh(new THREE.SphereGeometry(.018, 20, 14), M.malletHead), stick = rod(new THREE.Vector3(0, 0, 0), new THREE.Vector3(s * .05, .1, .33), .0045, M.birch); g.add(head, stick);
   const rest = new THREE.Vector3(s * .16, 1.02, .34); g.position.copy(rest); XY.add(g); return { g, rest, from: rest.clone(), to: rest.clone(), t: 9 }; });
 shadow(XY);
-function hitBar(bar, vel = 1) { const m = bar.userData.midi, s = nearest(XYLO, m); gameInput(m); play(s.name, { rate: Math.pow(2, (m - s.midi) / 12), gain: .9 * vel, pan: clamp(bar.position.x * 1.2, -.7, .7) });
+function hitBar(bar, vel = 1, quiet = false) { const m = bar.userData.midi, s = nearest(XYLO, m); if (!quiet) gameInput(m); play(s.name, { rate: Math.pow(2, (m - s.midi) / 12), gain: .9 * vel, pan: clamp(bar.position.x * 1.2, -.7, .7) });
   bar.userData.t = 0; const mal = bar.position.x < 0 ? MALLETS[0] : MALLETS[1]; mal.from.copy(mal.g.position); mal.to.set(bar.position.x, bar.userData.y + .03, bar.position.z + .03); mal.t = 0;
   const lab = labelFor('x' + m); if (lab) { lab.classList.add('hit'); setTimeout(() => lab.classList.remove('hit'), 110); } }
 function animXylo(dt) { for (const b of BARS) { b.userData.t = (b.userData.t ?? 9) + dt; const t = b.userData.t; b.position.y = b.userData.y - .004 * Math.exp(-t * 30) * Math.cos(t * 50); }
@@ -356,7 +356,7 @@ const SAXKEYS = [];
   SX.rotation.y = -.35; shadow(SX); })();
 let voice = null, held = [];
 function fingering(m) { const closed = clamp(Math.round((79 - m) / 2.6), 0, SAXKEYS.length); SAXKEYS.forEach((k, i) => { k.closed = i < closed; }); }
-function saxOn(m, gain = 1) { gameInput(m); const s = nearest(SAX, m), b = BUF[s.name]; if (!b) { load([s.name]); return; } unlock();
+function saxOn(m, gain = 1, quiet = false) { if (!quiet) gameInput(m); const s = nearest(SAX, m), b = BUF[s.name]; if (!b) { load([s.name]); return; } unlock();
   const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime; src.buffer = b; src.playbackRate.value = Math.pow(2, (m - s.midi) / 12); src.loop = true; src.loopStart = .7; src.loopEnd = Math.max(1, b.duration - .5);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .035); src.connect(g); g.connect(bus); src.start(); const old = voice; voice = { s: src, g, m }; if (old) fadeOut(old, .05);
   fingering(m); pianoMark(m, true); lastNote = m; }
@@ -428,7 +428,7 @@ function animBreath(dt) { if (!mic || P.look !== 'Saxophone' || SM() !== 'breath
 
 // ---------- the bottom bar: what this instrument offers ----------
 const tools = $('tools'), piano = $('piano');
-function renderTools() { tools.innerHTML = ''; piano.hidden = true; if (BARE) return; if (renderGameTools()) { LabUI.segThumb?.(tools.querySelector('.lab-seg')); return; }
+function renderTools() { tools.innerHTML = ''; piano.hidden = true; if (BARE) return; if (renderGameTools()) { tools.querySelectorAll('.lab-seg').forEach(x => LabUI.segThumb?.(x)); return; }
   if (P.look === 'Drums') { const n = Object.keys(STATE).length, next = PIECES[n];
     tools.innerHTML = `<div class="tb"><button type="button" id="kMinus" aria-label="Take the last piece away"${n <= 3 ? ' disabled' : ''}>−</button><span class="tl">${n} of ${PIECES.length} pieces</span><button type="button" id="kPlus"${!next ? ' disabled' : ''}>${next ? '+ ' + next.name : 'Full kit'}</button></div>`;
     $('kMinus').onclick = () => { P.kit = Math.max(3, n - 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); };
@@ -442,7 +442,7 @@ function renderTools() { tools.innerHTML = ''; piano.hidden = true; if (BARE) re
     const mo = $('micOn'); if (mo) mo.onclick = startMic;
     buildPiano(); }
   tools.insertAdjacentHTML('beforeend', '<div class="tb"><button type="button" class="on" id="songsBtn">♪ Play a song</button></div>'); $('songsBtn').onclick = openSongs;
-  LabUI.segThumb?.(tools.querySelector('.lab-seg')); }
+  tools.querySelectorAll('.lab-seg').forEach(x => LabUI.segThumb?.(x)); }
 function renderDots() { /* (the Melody mode shows where you are in the tune on the piano: the next key glows) */ pianoNext(); }
 // (the touch keyboard: two octaves from C3; in Melody it shows the next note, in Breath it picks the note)
 function buildPiano() { const PB = P.look === 'Xylophone' ? LOW : SAX_BASE; piano.hidden = false; piano.innerHTML = ''; const span = 25, whites = []; for (let i = 0; i < span; i++) if (!isBlack(PB + i)) whites.push(i);
@@ -554,6 +554,16 @@ const SM = () => (G.state === 'play' ? 'keys' : P.saxMode);   // (a song is alwa
 function openSongs() { saxOff(); G.state = 'pick'; renderTools(); updateHint(); }
 function metro(at, accent) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = accent ? 1760 : 1180; g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(.22, at + .002); g.gain.exponentialRampToValueAtTime(.001, at + .07); o.connect(g); g.connect(master); o.start(at); o.stop(at + .09); }
 // (the lanes a song needs, in order, and their keys: a run in the middle of the home row; more than ten use the number row)
+const LEVELS = [['easy', '1 key'], ['medium', '3 keys'], ['full', 'All keys']];
+const CYMBALS = ['hihat', 'crash', 'ride'];
+// (in 1 key and 3 keys a press only has to land in time: the right sound plays by itself)
+function groupOf(lane) { if (G.level === 'easy') return 'all';
+  if (P.look === 'Drums') return lane === 'kick' ? 'feet' : CYMBALS.includes(lane) ? 'cym' : 'skins';
+  const { lo, third } = G.bands; return lane < lo + third ? 'low' : lane < lo + third * 2 ? 'mid' : 'high'; }
+function groupLanes(notes) { if (G.level === 'easy') return [{ id: 'all', name: P.look === 'Drums' ? 'Every hit' : 'Every note', color: '#1b1c20', key: ' ' }];
+  const defs = P.look === 'Drums' ? [['feet', 'Kick', LANE_COLOR.kick], ['skins', 'Drums', LANE_COLOR.snare], ['cym', 'Cymbals', LANE_COLOR.hihat]] : [['low', 'Low', '#3f7cf0'], ['mid', 'Middle', '#2bb39a'], ['high', 'High', '#e8604c']];
+  const lanes = defs.filter(([id]) => notes.some(n => n.lane === id)).map(([id, name, color]) => ({ id, name, color })), from = Math.floor((HOME.length - lanes.length) / 2);
+  lanes.forEach((l, i) => l.key = HOME[from + i]); return lanes; }
 function songLanes(song) { let lanes;
   if (P.look === 'Drums') lanes = PIECES.filter(p => song.notes.some(n => n.lane === p.id)).map(p => ({ id: p.id, name: p.name, color: LANE_COLOR[p.id], piece: p }));
   else lanes = [...new Set(song.notes.map(n => n.lane))].sort((a, b) => a - b).map(m => ({ id: m, name: NOTE(m), color: PITCH_COLORS[m % 12], black: isBlack(m) }));
@@ -562,31 +572,44 @@ function songLanes(song) { let lanes;
 function gameStart(song) { unlock(); result.hidden = true; saxOff(); G.song = song; G.speed = pickSpeed;
   if (P.look === 'Drums') { const need = Math.max(...song.notes.map(n => PIECES.findIndex(p => p.id === n.lane))) + 1;
     if (need > Object.keys(STATE).length) { P.kit = need; save(); buildKit(need); frameView('Drums'); load(SOUNDS.Drums()); } }
-  G.lanes = songLanes(song); G.keys = {}; for (const l of G.lanes) G.keys[l.key] = l; if (P.look === 'Drums' && G.lanes.some(l => l.id === 'kick')) G.keys[' '] = G.lanes.find(l => l.id === 'kick');
+  G.level = P.level; G.group = G.level !== 'full';
   const beat = 60 / song.bpm / G.speed, lead = 4 * beat + .7;
-  G.notes = song.notes.map(n => ({ ...n, t: (n.sec != null ? n.sec : n.beat * 60 / song.bpm) / G.speed + lead, len: (n.dur || 0) * (n.beatSec || 60 / song.bpm) / G.speed, j: null })).sort((a, b) => a.t - b.t);
+  let notes = song.notes.map(n => ({ ...n, t: (n.sec != null ? n.sec : n.beat * 60 / song.bpm) / G.speed + lead, len: (n.dur || 0) * (n.beatSec || 60 / song.bpm) / G.speed, j: null, play: [n.lane] })).sort((a, b) => a.t - b.t);
+  if (G.group) { if (P.look !== 'Drums') { const ps = notes.map(n => n.lane), lo = Math.min(...ps), hi = Math.max(...ps); G.bands = { lo, third: Math.max(1, (hi - lo + 1) / 3) }; }
+    // (notes that land together in one lane become one note that plays them all)
+    const merged = []; for (const n of notes) { const g = groupOf(n.lane), prev = merged.find(m => m.lane === g && Math.abs(m.t - n.t) < .002); if (prev) { prev.play.push(n.lane); prev.len = Math.max(prev.len, n.len); } else merged.push({ ...n, lane: g }); }
+    notes = merged; G.lanes = groupLanes(notes); }
+  else G.lanes = songLanes(song);
+  G.notes = notes; G.keys = {}; for (const l of G.lanes) G.keys[l.key] = l;
+  if (G.level === 'easy') for (const k of [' ', 'f', 'g', 'h', 'j']) G.keys[k] = G.lanes[0];
+  else if (P.look === 'Drums') { const kl = G.lanes.find(l => l.id === (G.group ? 'feet' : 'kick')); if (kl) G.keys[' '] = kl; }
   G.score = 0; G.combo = 0; G.maxCombo = 0; G.n = { perfect: 0, good: 0, miss: 0 }; G.fx = []; G.marks = []; G.meter = []; G.end = G.notes[G.notes.length - 1].t + G.notes[G.notes.length - 1].len + 1.2;
   G.start = performance.now() / 1000; const t0 = ctx.currentTime + .7; for (let i = 0; i < 4; i++) metro(t0 + i * beat, i === 0);   // (four clicks in: a metronome, not music)
   G.state = 'play'; buildCaps(); renderTools(); updateHint(); }
 function gameStop() { G.state = 'off'; result.hidden = true; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff(); renderTools(); updateHint(); }
 const gameNow = () => performance.now() / 1000 - G.start;
 // (a press: the nearest note in that lane is judged; every press, on time or not, leaves its mark)
-function gameInput(lane) { if (G.state !== 'play') return; const now = gameNow();
+function gameInput(lane, sound = false) { if (G.state !== 'play') return; const now = gameNow(); if (G.group && !G.lanes.some(l => l.id === lane)) lane = groupOf(lane);
   // (a hit by any way, a click on the drum too, presses its cap)
   const cap = caps.querySelector(`[data-lane="${lane}"]`), gl = G.lanes.find(l => l.id === lane); if (gl) gl.flash = performance.now(); if (cap && !cap.classList.contains('on')) { cap.classList.add('tap'); setTimeout(() => cap.classList.remove('tap'), 130); }
   let best = null, bd = 9;
   for (const n of G.notes) { if (n.t - now > HIT.good) break; if (n.j || n.lane !== lane) continue; const d = Math.abs(n.t - now); if (d < bd) { bd = d; best = n; } }
-  if (best && bd <= HIT.good) { const dt = now - best.t; judge(best, bd <= HIT.perfect ? 'perfect' : 'good'); G.marks.push({ lane, dt, kind: best.j, t: performance.now() }); G.meter.push({ dt, kind: best.j, t: performance.now() }); }
+  if (best && bd <= HIT.good) { const dt = now - best.t; judge(best, bd <= HIT.perfect ? 'perfect' : 'good'); if (sound) playNote(best); G.marks.push({ lane, dt, kind: best.j, t: performance.now() }); G.meter.push({ dt, kind: best.j, t: performance.now() }); }
   else G.marks.push({ lane, dt: null, kind: 'stray', t: performance.now() }); }
+// (the right sound for a note found by a grouped press: the pieces, the bar, or the saxophone held while the key is down)
+function playNote(n) { if (P.look === 'Drums') for (const id of n.play) { const p = PIECES.find(q => q.id === id); if (p) hitPiece(p, .9, false, true); }
+  else if (P.look === 'Xylophone') for (const m of n.play) { const bar = BARS.find(b => b.userData.midi === m); if (bar) hitBar(bar, .9, true); }
+  else { saxOn(n.play[0], .85, true); G.held = n.play[0]; } }
 function judge(n, kind) { n.j = kind; G.n[kind]++;
   if (kind === 'miss') G.combo = 0; else { G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); G.score += (kind === 'perfect' ? 100 : 60) * Math.min(4, 1 + Math.floor(G.combo / 10)); }
   G.fx.push({ lane: n.lane, kind, t: performance.now() }); }
 // (the caps under the hit line: the key and the name; held, a cap sinks and darkens; the press plays the instrument)
 function laneDown(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.add('on'); l.flash = performance.now();
+  if (G.group) { gameInput(l.id, true); return; }
   if (P.look === 'Drums') hitPiece(l.piece, .9, false); else if (P.look === 'Xylophone') { const bar = BARS.find(b => b.userData.midi === l.id); if (bar) hitBar(bar, .9); } else saxOn(l.id, .85); }
-function laneUp(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.remove('on'); if (P.look === 'Saxophone') saxOff(l.id); }
+function laneUp(l) { const cap = caps.querySelector(`[data-lane="${l.id}"]`); if (cap) cap.classList.remove('on'); if (P.look === 'Saxophone') { if (G.group) { if (G.held != null) saxOff(G.held); G.held = null; } else saxOff(l.id); } }
 function buildCaps() { caps.innerHTML = ''; caps.style.setProperty('--n', G.lanes.length);
-  for (const l of G.lanes) { const b = document.createElement('button'); b.type = 'button'; b.dataset.lane = l.id; b.style.setProperty('--c', l.color); b.innerHTML = `<b>${l.key === ';' ? ';' : l.key.toUpperCase()}</b><span>${l.name}</span>`;
+  for (const l of G.lanes) { const b = document.createElement('button'); b.type = 'button'; b.dataset.lane = l.id; b.style.setProperty('--c', l.color); b.innerHTML = `<b>${l.key === ' ' ? 'Space' : l.key === ';' ? ';' : l.key.toUpperCase()}</b><span>${l.name}</span>`;
     b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch { } laneDown(l); });
     const up = () => laneUp(l); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); caps.appendChild(b); }
   caps.hidden = false; }
@@ -639,21 +662,23 @@ function gameFrame() { if (G.state !== 'play') return; const now = gameNow(), tn
   hud.hidden = false; hud.innerHTML = `<b>${G.score.toLocaleString('en')}</b><span>${G.combo > 1 ? `${G.combo} combo · ×${Math.min(4, 1 + Math.floor(G.combo / 10))}` : `${done} / ${G.notes.length}`}</span>`;
   if (now > G.end) finish(); }
 function finish() { G.state = 'done'; caps.hidden = true; hud.hidden = true; hctx.clearRect(0, 0, hwy.width, hwy.height); saxOff();
-  const tot = G.notes.length, acc = (G.n.perfect + G.n.good * .6) / tot, stars = acc >= .95 ? 3 : acc >= .8 ? 2 : acc >= .5 ? 1 : 0, id = P.look + ':' + G.song.id + ':' + G.speed;
+  const tot = G.notes.length, acc = (G.n.perfect + G.n.good * .6) / tot, stars = acc >= .95 ? 3 : acc >= .8 ? 2 : acc >= .5 ? 1 : 0, id = P.look + ':' + G.song.id + ':' + G.speed + ':' + G.level;
   const ts = G.meter.length ? G.meter : [], avg = ts.length ? ts.reduce((a, m) => a + m.dt, 0) / ts.length : 0, lean = Math.abs(avg) < .015 ? 'right on the beat' : avg < 0 ? `a touch early (${Math.round(-avg * 1000)} ms)` : `a touch late (${Math.round(avg * 1000)} ms)`;
   let best = bestOf(id), isNew = false; if (!best || G.score > best.score) { isNew = true; best = { score: G.score, stars }; try { const all = JSON.parse(localStorage.getItem(BEST_KEY) || '{}'); all[id] = best; localStorage.setItem(BEST_KEY, JSON.stringify(all)); } catch { } }
-  result.innerHTML = `<p class="rs">${starsHtml(stars)}</p><h3>${G.song.name}</h3><p class="rm">${Math.round(G.speed * 100)}% tempo</p>
+  result.innerHTML = `<p class="rs">${starsHtml(stars)}</p><h3>${G.song.name}</h3><p class="rm">${(LEVELS.find(l => l[0] === G.level) || [])[1]} · ${Math.round(G.speed * 100)}% tempo</p>
     <div class="rg"><div><b>${G.score.toLocaleString('en')}</b><span>${isNew ? 'new best' : 'best ' + best.score.toLocaleString('en')}</span></div><div><b>${Math.round(acc * 100)}%</b><span>accuracy</span></div><div><b>${G.maxCombo}</b><span>best combo</span></div></div>
     <p class="rc">${G.n.perfect} perfect · ${G.n.good} good · ${G.n.miss} missed<br>On average ${lean}</p><div class="rb"><button type="button" data-r="again">Again</button><button type="button" data-r="songs">Other songs</button><button type="button" data-r="close">Done</button></div>`;
   result.hidden = false; result.querySelector('[data-r=again]').onclick = () => gameStart(G.song); result.querySelector('[data-r=songs]').onclick = () => { result.hidden = true; openSongs(); }; result.querySelector('[data-r=close]').onclick = gameStop;
   renderTools(); }
 function renderGameTools() { const list = SONGS[P.look];
-  if (G.state === 'pick') { tools.innerHTML = `<div class="tb songs" role="radiogroup" aria-label="Song">${list.map(s => { const b = bestOf(P.look + ':' + s.id + ':' + pickSpeed); return `<button type="button" data-song="${s.id}">${s.name}${b ? ` <i class="st">${'★'.repeat(b.stars) || '·'}</i>` : ''}</button>`; }).join('')}</div>`
+  if (G.state === 'pick') { tools.innerHTML = `<div class="tb songs" role="radiogroup" aria-label="Song">${list.map(s => { const b = bestOf(P.look + ':' + s.id + ':' + pickSpeed + ':' + P.level); return `<button type="button" data-song="${s.id}">${s.name}${b ? ` <i class="st">${'★'.repeat(b.stars) || '·'}</i>` : ''}</button>`; }).join('')}</div>`
+      + `<div class="tb lab-seg" role="radiogroup" aria-label="Keys">${LEVELS.map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.level === v}" data-lv="${v}">${l}</button>`).join('')}</div>`
       + `<div class="tb lab-seg" role="radiogroup" aria-label="Tempo">${[.5, .75, 1].map(v => `<button type="button" role="radio" aria-checked="${pickSpeed === v}" data-sp="${v}">${v * 100}%</button>`).join('')}</div><div class="tb"><button type="button" id="songX" aria-label="Close the songs">×</button></div>`;
     tools.querySelectorAll('[data-song]').forEach(b => b.onclick = () => gameStart(list.find(s => s.id === b.dataset.song)));
     tools.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { pickSpeed = +b.dataset.sp; renderTools(); });
+    tools.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { P.level = b.dataset.lv; save(); renderTools(); });
     $('songX').onclick = () => { G.state = 'off'; renderTools(); updateHint(); }; return true; }
-  if (G.state === 'play' || G.state === 'done') { tools.innerHTML = `<div class="tb"><span class="tl">${G.song.name} · ${Math.round(G.speed * 100)}%</span><button type="button" id="songStop">${G.state === 'play' ? 'Stop' : 'Close'}</button></div>`;
+  if (G.state === 'play' || G.state === 'done') { tools.innerHTML = `<div class="tb"><span class="tl">${G.song.name} · ${(LEVELS.find(l => l[0] === G.level) || [])[1]} · ${Math.round(G.speed * 100)}%</span><button type="button" id="songStop">${G.state === 'play' ? 'Stop' : 'Close'}</button></div>`;
     $('songStop').onclick = gameStop; return true; }
   return false; }
 
