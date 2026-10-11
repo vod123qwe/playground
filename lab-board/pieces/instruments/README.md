@@ -1,0 +1,22 @@
+# Instruments
+
+Trzy instrumenty w jasnym studiu, jeden naraz (pasek ‹ nazwa › na dole, strzałki na klawiaturze): perkusja, drewniany ksylofon, saksofon tenorowy. Gra się dotykiem albo kliknięciem w instrument i z klawiatury (litery stoją na instrumencie; w panelu można je schować, na telefonie startują schowane).
+
+**Perkusja:** startuje z trzech elementów (stopa, werbel, hi-hat), przyciskiem „+ …” dochodzą kolejne, po jednym, aż do 9 (tom, floor tom, crash, ride, bongosy, konga); „−” zdejmuje ostatni. Nowy element spada z góry i osiada, kadr odsuwa się, żeby zestaw się mieścił. Klawisze: Spacja/B stopa, F/J werbel, H hi-hat (Shift+H albo G otwarty), T tom, Y floor tom, C crash, R ride, O bongosy, P konga. Uderzenie: bęben drga (sprężyna), talerze się kołyszą, hi-hat się domyka; zamknięty hi-hat ucisza otwarty.
+
+**Ksylofon:** dwie oktawy C5–C7 (25 sztabek z palisandru, krzyżyki w tylnym rzędzie wyżej), pod sztabkami mosiężne rezonatory, dwie pałki: bliższa uderza w sztabkę. Klawisze jak w trackerze: rząd Z…M (z S D G H J jako krzyżyki) i rząd Q…I (z 2 3 5 6 7).
+
+**Saksofon:** trzy tryby w pasku nad pigułką.
+- **Keys:** te same dwa rzędy klawiszy (od C3 na Z) albo klawiatura dotykowa na ekranie (dwie oktawy, przeciąganie palcem gra legato); dźwięk trwa, dopóki trzymasz (pętla w środku nagrania), klapki zamykają się zależnie od wysokości.
+- **Melody:** stare, wolne melodie (The Saints, Ode to Joy) i własny blues lick; każdy klawisz, tap w saksofon albo klawisz na ekranie gra następną nutę tak długo, jak trzymasz; następna nuta świeci na klawiaturze.
+- **Breath:** mikrofon (pyta o zgodę); głośność dmuchania = głośność saksofonu, klawisze wybierają nutę, bez klawisza gra ostatnia.
+
+**Dźwięk:** prawdziwe nagrania z [Versilian Community Sample Library](https://github.com/sgossner/VCSL) (CC0): 33 pliki w `sounds/`, przycięte do mono 32 kHz 16 bit (skrypt w Node, ~4,3 MB). Wysokości: ksylofon brzmi oktawę wyżej niż nazwy plików; saksofon ma nazwy w konwencji Yamaha (A#1 = B♭2). Brakujące wysokości = najbliższe nagranie z inną prędkością odtwarzania. Szyna: kompresor + mały pokój (pogłos z wygenerowanej odpowiedzi impulsowej).
+
+**Modele i powierzchnie:** w kodzie (three.js): bębny z rantów, śrub i membran, talerze z profilu toczonego, saksofon jako stożkowa rura po krzywej + czara na tokarce, ksylofon ze sztabek i rezonatorów. Tekstury rysowane w canvas: słoje drewna, lakier z brokatem, powlekane membrany (wytarte w środku), toczony brąz z mapą chropowatości; światło z RoomEnvironment + jedno światło kluczowe z cieniami. Plan: podmiana na modele z Blendera (MCP), gdy będzie połączony.
+
+**Panel:** głośność, pokój, litery klawiatury, kolor perkusji (Wine, Black, Ocean, Green, Pearl), wykończenie saksofonu (Gold, Silver, Black), światło i jego temperatura.
+
+Ustawienia: `lab.instruments.v1`. Adres: `?look=Drums|Xylophone|Saxophone`, `?kit=3…9`, `?mode=keys|melody|breath`.
+
+**Plansza:** `?thumb=1` wszystkie trzy w jednym kadrze (nieruchomo), `?demo=1` perkusja gra groove (bez dźwięku, same ruchy). Do testów: `window.INSTR`.
