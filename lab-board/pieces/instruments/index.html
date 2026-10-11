@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Instruments · lab</title>
+<meta name="theme-color" content="#eeede9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* Three instruments in a light studio, one at a time (the pill at the bottom): a drum kit you build up piece by piece, a wooden
+     xylophone, a tenor saxophone. Tap or click what you want to hear, or play from the keyboard (the letters sit on the instrument).
+     The saxophone has three ways in: keys like a piano, a tune played note by note (any key or tap), or your breath into the
+     microphone. Real recordings (VCSL, CC0), a touch of room on them; the models are built in code, their surfaces drawn in canvas. */
+  :root { --bg: #eeede9; --ink: #141414; --muted: rgba(20,20,20,.5); --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --boxbg: #eeede9; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: inset var(--morph), border-radius var(--morph); touch-action: none; cursor: grab; }
+  .stage.dragging { cursor: grabbing; } .stage.over { cursor: pointer; }
+  body.tuning .stage { background: var(--boxbg); border-radius: 26px; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; pointer-events: none; transition: opacity .4s; } body.ready .loading { opacity: 0; }
+  /* the corner controls (as on every piece) */
+  .back, .tune { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back { top: 30px; left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .3s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .hint { position: fixed; left: 50%; top: 30px; z-index: 3; transform: translateX(-50%); margin: 0; color: var(--muted); font-size: 13px; pointer-events: none; white-space: nowrap; transition: left var(--morph), opacity .3s; }
+  /* the bottom: the looks pill, above it what this instrument offers, and for the saxophone a keyboard to touch */
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); transition: left var(--morph), bottom var(--morph); }
+  .tools { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; transition: left var(--morph); }
+  .tools:empty { display: none; }
+  .tb { display: flex; align-items: center; gap: 2px; height: 46px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); }
+  .tb button { height: 38px; min-width: 38px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.62); font: inherit; cursor: pointer; white-space: nowrap; transition: background .2s, color .2s; }
+  .tb button:hover { color: #1b1c20; background: rgba(20,20,20,.05); }
+  .tb button[aria-checked=true], .tb button.on { background: #1b1c20; color: #fff; }
+  .tb button:disabled { opacity: .35; cursor: default; background: transparent; }
+  .tb .tl { padding: 0 10px; color: rgba(20,20,20,.55); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .tb .dots { display: flex; gap: 4px; padding: 0 12px; } .tb .dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(20,20,20,.15); transition: background .2s; } .tb .dots i.on { background: #1b1c20; }
+  .piano { position: fixed; left: 50%; bottom: calc(142px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); width: min(620px, calc(100vw - 24px)); height: 92px; transition: left var(--morph); touch-action: none; }
+  .piano[hidden] { display: none; }
+  .piano .k { position: absolute; top: 0; bottom: 0; border-radius: 0 0 9px 9px; background: #fff; box-shadow: inset 0 0 0 1px rgba(20,20,20,.1); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font: 600 10px var(--lab-font); color: rgba(20,20,20,.35); transition: background .08s; }
+  .piano .k.b { bottom: 40%; background: #1b1c20; z-index: 1; border-radius: 0 0 7px 7px; color: rgba(255,255,255,.4); }
+  .piano .k.on { background: #ffd58a; } .piano .k.b.on { background: #c98a1b; }
+  .piano .k:first-child { border-top-left-radius: 9px; }
+  /* the letters on the instrument (a keyboard plays it too) */
+  .labels { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+  .labels span { position: absolute; left: 0; top: 0; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 6px; background: rgba(255,255,255,.88); color: #1b1c20; font: 650 11px var(--lab-font); box-shadow: 0 1px 3px rgba(0,0,0,.12); transition: background .1s, color .1s; will-change: transform; }
+  .labels span.hit { background: #1b1c20; color: #fff; }
+  body.nokeys .labels { display: none; }
+  .msg { position: fixed; left: 50%; top: 64px; z-index: 5; transform: translateX(-50%); max-width: calc(100vw - 32px); padding: 9px 14px; border-radius: 12px; background: #1b1c20; color: #fff; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .3s; text-align: center; }
+  .msg.show { opacity: 1; }
+  body.bare .back, body.bare .tune, body.bare .dock, body.bare .tools, body.bare .piano, body.bare .panel, body.bare .hint, body.bare .loading, body.bare .labels, body.bare .msg { display: none !important; }
+  /* the panel: a card beside the stage (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc svg { width: 18px; height: 18px; }
+  .credit { margin: 6px 0 22px; font-size: 12px; line-height: 1.5; color: var(--ui-muted); } .credit a { color: inherit; }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .hint, body.tuning .dock, body.tuning .tools, body.tuning .piano { left: calc(50% - 176px); } body.tuning .piano { width: min(560px, calc(100vw - 420px)); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint, body.tuning .dock, body.tuning .tools, body.tuning .piano { display: none; }
+    .hint { top: 76px; font-size: 12px; } .piano { height: 84px; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="A musical instrument in a studio: tap or click a part to play it, drag to look around"></main>
+<p class="loading" id="loading">Tuning up…</p>
+<p class="hint" id="hint"></p>
+<div class="labels" id="labels" aria-hidden="true"></div>
+<p class="msg" id="msg" role="status"></p>
+<div class="piano" id="piano" hidden aria-label="Saxophone keyboard"></div>
+<div class="tools" id="tools"></div>
+<div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Instruments">
+  <button id="prev" type="button" aria-label="Previous instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm" aria-live="polite">Drums</span>
+  <button id="next" type="button" aria-label="Next instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the instruments"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.instruments.v1';
+const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', sax: 'gold', saxMode: 'keys', phrase: 'saints', light: 2.6, warmth: .55 };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
+const coarse = matchMedia('(pointer: coarse)').matches;
+if (BARE) { P = { ...DEF }; document.body.classList.add('bare'); }
+if (!BARE) { if (q.has('look')) P.look = q.get('look'); if (q.has('kit')) P.kit = Math.max(3, Math.min(9, +q.get('kit') || 3)); if (q.has('mode')) P.saxMode = q.get('mode'); }   // (an address can open a given instrument)
+if (!localStorage.getItem(KEY) && coarse) P.keys = false;   // (letters help on a keyboard; on a phone they start hidden)
+const $ = id => document.getElementById(id), stage = $('stage');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
+let seed = 7; const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+
+// ---------- the room: a light studio, soft light from the room, one key light with shadows ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: THUMB });
+renderer.setPixelRatio(Math.min(devicePixelRatio, THUMB ? 2 : 1.75)); renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.02;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#eeede9'); scene.fog = new THREE.Fog('#eeede9', 7, 15);   // (the floor fades into the backdrop)
+const pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture; scene.environmentIntensity = .9;
+const camera = new THREE.PerspectiveCamera(32, 1, .05, 60);
+const key = new THREE.DirectionalLight('#fff', P.light); key.position.set(2.6, 5.2, 3.4); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 5; key.shadow.bias = -.0003; key.shadow.normalBias = .015;
+Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: .5, far: 14 }); scene.add(key);
+const rim = new THREE.DirectionalLight('#dfe8ff', .7); rim.position.set(-3, 3, -2.5); scene.add(rim);
+const fill = new THREE.HemisphereLight('#ffffff', '#c9c4bb', .35); scene.add(fill);
+function applyLight() { key.intensity = P.light; key.color.set('#d9e6ff').lerp(new THREE.Color('#ffd7a8'), P.warmth); rim.color.set('#ffe2c0').lerp(new THREE.Color('#d6e2ff'), P.warmth); }
+const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 64), new THREE.MeshStandardMaterial({ color: '#e6e3dc', roughness: .92 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+// ---------- surfaces, drawn in canvas: wood with grain, a sparkle lacquer, coated drum heads, lathed bronze ----------
+function tex(w, h, draw, { srgb = true } = {}) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+const rgba = (hex, a) => { const c = new THREE.Color(hex); return `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${a})`; };
+// (grain runs along v, the length of a bar: wavy streaks, darker pores, a few lighter flames)
+function woodTex(base, dark, light, w = 256, h = 1024) { return tex(w, h, (g) => { g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 140; i++) { const x0 = rnd() * w, a = 2 + rnd() * 9, f = .004 + rnd() * .01, ph = rnd() * 6; g.strokeStyle = rgba(rnd() < .7 ? dark : light, .05 + rnd() * .2); g.lineWidth = .6 + rnd() * 2.6; g.beginPath();
+    for (let y = 0; y <= h; y += 8) { const x = x0 + Math.sin(y * f + ph) * a + Math.sin(y * f * 3.1 + ph) * a * .25; y ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+  for (let i = 0; i < 2600; i++) { g.fillStyle = rgba(dark, .12 + rnd() * .25); g.fillRect(rnd() * w, rnd() * h, 1, 2 + rnd() * 5); } }); }
+function sparkleTex(base) { return tex(512, 512, (g, w, h) => { g.fillStyle = base; g.fillRect(0, 0, w, h);
+  const grd = g.createLinearGradient(0, 0, w, 0); grd.addColorStop(0, 'rgba(0,0,0,.18)'); grd.addColorStop(.5, 'rgba(255,255,255,.06)'); grd.addColorStop(1, 'rgba(0,0,0,.18)'); g.fillStyle = grd; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(255,255,255,${.05 + rnd() * .35})`; const s = rnd() < .9 ? 1 : 2; g.fillRect(rnd() * w, rnd() * h, s, s); } }); }
+function headTex(kind) { return tex(512, 512, (g, w, h) => { const cx = w / 2, cy = h / 2;
+  if (kind === 'kick') { g.fillStyle = '#151517'; g.fillRect(0, 0, w, h); g.strokeStyle = '#f2efe8'; g.lineWidth = 10; g.beginPath(); g.arc(cx, cy, 168, 0, 7); g.stroke();
+    g.fillStyle = '#f2efe8'; g.font = '700 120px Geist, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('lab', cx, cy + 6);
+    g.font = '600 26px Geist, system-ui, sans-serif'; g.fillText('PLAYGROUND', cx, cy + 92); return; }
+  g.fillStyle = '#efebe1'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 16000; i++) { g.fillStyle = rnd() < .5 ? 'rgba(0,0,0,.035)' : 'rgba(255,255,255,.08)'; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  const r = g.createRadialGradient(cx, cy, 0, cx, cy, w / 2); r.addColorStop(0, 'rgba(120,110,95,.16)'); r.addColorStop(.25, 'rgba(120,110,95,0)'); r.addColorStop(.9, 'rgba(0,0,0,0)'); r.addColorStop(1, 'rgba(60,55,50,.25)'); g.fillStyle = r; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) { const a = rnd() * 6.28, d = rnd() * 60; g.fillStyle = 'rgba(90,80,70,.07)'; g.beginPath(); g.ellipse(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 6 + rnd() * 8, 3 + rnd() * 5, a, 0, 7); g.fill(); } }); }   // (worn where the sticks land)
+// (a cymbal's lathe: rings run across v, the radius; a bright unlathed bell at the top, hammer marks scattered)
+function bronzeTex() { return tex(128, 1024, (g, w, h) => { const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, '#e4bd6a'); grd.addColorStop(.12, '#d7a54e'); grd.addColorStop(1, '#b8873a'); g.fillStyle = grd; g.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 1.6) { g.fillStyle = rnd() < .5 ? `rgba(80,50,10,${.05 + rnd() * .12})` : `rgba(255,235,180,${.04 + rnd() * .1})`; g.fillRect(0, y, w, 1); }
+  for (let i = 0; i < 260; i++) { g.fillStyle = 'rgba(70,40,10,.09)'; g.beginPath(); g.ellipse(rnd() * w, 140 + rnd() * (h - 140), 3 + rnd() * 4, 6 + rnd() * 10, 0, 0, 7); g.fill(); } }); }
+function bronzeRough() { return tex(128, 1024, (g, w, h) => { g.fillStyle = '#4a4a4a'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 1.6) { const v = 50 + rnd() * 70 | 0; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, y, w, 1); } g.fillStyle = '#2a2a2a'; g.fillRect(0, 0, w, 120); }, { srgb: false }); }
+
+const SHELLS = { wine: '#6e1420', black: '#141416', ocean: '#16466e', pearl: '#e9e3d6', green: '#1f4a35' };
+const SAXES = { gold: { c: '#d8a64a', r: .2, m: 1 }, silver: { c: '#d9dadd', r: .16, m: 1 }, black: { c: '#1b1a1d', r: .28, m: .55 } };
+const M = {
+  chrome: new THREE.MeshStandardMaterial({ color: '#ececee', metalness: 1, roughness: .13 }),
+  steel: new THREE.MeshStandardMaterial({ color: '#2b2b2f', metalness: .7, roughness: .4 }),
+  rubber: new THREE.MeshStandardMaterial({ color: '#1a1a1c', roughness: .85 }),
+  shell: new THREE.MeshPhysicalMaterial({ map: sparkleTex(SHELLS[P.shell] || SHELLS.wine), metalness: .45, roughness: .4, clearcoat: 1, clearcoatRoughness: .06, side: THREE.DoubleSide }),
+  head: new THREE.MeshStandardMaterial({ map: headTex('coated'), roughness: .62 }),
+  kickHead: new THREE.MeshStandardMaterial({ map: headTex('kick'), roughness: .5 }),
+  bronze: new THREE.MeshStandardMaterial({ map: bronzeTex(), roughnessMap: bronzeRough(), metalness: 1, roughness: 1, side: THREE.DoubleSide }),
+  rosewood: new THREE.MeshPhysicalMaterial({ map: woodTex('#7b3420', '#43170c', '#b0603a'), roughness: .42, clearcoat: .45, clearcoatRoughness: .25 }),
+  walnut: new THREE.MeshPhysicalMaterial({ map: woodTex('#3b2618', '#1d120a', '#6a4a30', 256, 512), roughness: .5, clearcoat: .3 }),
+  birch: new THREE.MeshStandardMaterial({ map: woodTex('#d9bc8c', '#a9875a', '#f1dcb4', 64, 512), roughness: .5 }),
+  felt: new THREE.MeshStandardMaterial({ color: '#7a1f22', roughness: 1 }),
+  resonator: new THREE.MeshStandardMaterial({ color: '#c09752', metalness: 1, roughness: .32 }),
+  malletHead: new THREE.MeshPhysicalMaterial({ color: '#2f4f8f', roughness: .55, sheen: .6, sheenColor: '#9fb6ff' }),
+  sax: new THREE.MeshPhysicalMaterial({ color: '#d8a64a', metalness: 1, roughness: .2, clearcoat: .7, clearcoatRoughness: .08, side: THREE.DoubleSide }),
+  saxKey: new THREE.MeshPhysicalMaterial({ color: '#e0b25a', metalness: 1, roughness: .48, clearcoat: .5, side: THREE.DoubleSide }),
+  pearl: new THREE.MeshPhysicalMaterial({ color: '#f6f0e6', roughness: .22, clearcoat: 1, iridescence: .7, iridescenceIOR: 1.6 }),
+  ebony: new THREE.MeshPhysicalMaterial({ color: '#111113', roughness: .25, clearcoat: 1 }),
+};
+function setShell(name) { M.shell.map.dispose(); M.shell.map = sparkleTex(SHELLS[name] || SHELLS.wine); M.shell.needsUpdate = true; }
+function setSax(name) { const s = SAXES[name] || SAXES.gold; M.sax.color.set(s.c); M.sax.roughness = s.r; M.sax.metalness = s.m; M.saxKey.color.set(name === 'black' ? '#d8a64a' : s.c); }
+const shadow = o => { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; };
+const cyl = (r1, r2, h, mat, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), mat);
+// (a rod from a to b)
+function rod(a, b, r, mat) { const d = new THREE.Vector3().subVectors(b, a), m = cyl(r, r, d.length(), mat, 12); m.position.copy(a).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return m; }
+function tripod(top, spread = .22, mat = M.chrome) { const g = new THREE.Group(), foot = .06; g.add(rod(new THREE.Vector3(top.x, foot + .12, top.z), top, .009, mat));
+  for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .5, f = new THREE.Vector3(top.x + Math.cos(a) * spread, .012, top.z + Math.sin(a) * spread); g.add(rod(new THREE.Vector3(top.x, foot + .14, top.z), f, .007, mat)); const r = cyl(.014, .016, .02, M.rubber, 12); r.position.copy(f); g.add(r); } return g; }
+
+// ---------- the sound: real recordings (VCSL, CC0), mono and trimmed; a mix bus with a small room on it ----------
+const AC = window.AudioContext || window.webkitAudioContext, ctx = new AC();
+const master = ctx.createGain(); master.gain.value = P.vol;
+const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -10; comp.ratio.value = 4; comp.attack.value = .003; comp.release.value = .2;
+const bus = ctx.createGain(), send = ctx.createGain(), verb = ctx.createConvolver(); send.gain.value = P.room;
+verb.buffer = (() => { const n = ctx.sampleRate * 1.9 | 0, b = ctx.createBuffer(2, n, ctx.sampleRate); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) { const t = i / n; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * (i < 200 ? i / 200 : 1); } } return b; })();
+bus.connect(master); bus.connect(send); send.connect(verb); verb.connect(master); master.connect(comp); comp.connect(ctx.destination);
+const BUF = {}, LOADING = {};
+function load(names) { return Promise.all(names.map(n => BUF[n] || LOADING[n] || (LOADING[n] = fetch('sounds/' + n + '.wav').then(r => r.arrayBuffer()).then(a => ctx.decodeAudioData(a)).then(b => (BUF[n] = b)).catch(() => null)))); }
+let unlocked = false; const unlock = () => { if (unlocked) return; unlocked = true; ctx.resume(); };
+function play(name, { rate = 1, gain = 1, pan = 0, at = 0 } = {}) { const b = BUF[name]; if (!b) { load([name]); return null; } unlock();
+  const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; s.playbackRate.value = rate; g.gain.value = gain;
+  let out = g; if (pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p; }
+  s.connect(g); out.connect(bus); s.start(ctx.currentTime + at); return { s, g }; }
+function fadeOut(v, dt = .08) { if (!v) return; const t = ctx.currentTime; try { v.g.gain.cancelScheduledValues(t); v.g.gain.setValueAtTime(v.g.gain.value, t); v.g.gain.linearRampToValueAtTime(0, t + dt); v.s.stop(t + dt + .02); } catch { } }
+// (pitched sets: which recording is nearest, and how much to speed it up or slow it down)
+const XYLO = [['G3', 67], ['C4', 72], ['G4', 79], ['C5', 84], ['G5', 91], ['C6', 96], ['G6', 103], ['C7', 108]].map(([n, m]) => ({ name: 'xylo_' + n, midi: m }));
+const SAX = [['As1', 46], ['C2', 48], ['D2', 50], ['E2', 52], ['Fs2', 54], ['As2', 58], ['C3', 60], ['D3', 62], ['E3', 64], ['Fs3', 66], ['C4', 72], ['E4', 76]].map(([n, m]) => ({ name: 'sax_' + n, midi: m }));
+const nearest = (set, midi) => set.reduce((a, b) => Math.abs(b.midi - midi) < Math.abs(a.midi - midi) ? b : a);
+const NOTE = m => ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][m % 12] + (Math.floor(m / 12) - 1);
+const isBlack = m => [1, 3, 6, 8, 10].includes(m % 12);
+
+// ---------- the drum kit: it starts with a kick, a snare and a hi-hat; more pieces join one at a time ----------
+function drum(r, d, { lugs = 8, kick = false, rTop } = {}) { const g = new THREE.Group();
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(rTop || r, r, d, 72, 1, true), M.shell); g.add(shell);
+  const top = new THREE.Mesh(new THREE.CircleGeometry((rTop || r) * .99, 72), M.head); top.rotation.x = -Math.PI / 2; top.position.y = d / 2 + .003; g.add(top);
+  const bot = new THREE.Mesh(new THREE.CircleGeometry(r * .99, 72), kick ? M.kickHead : M.head); bot.rotation.x = Math.PI / 2; bot.position.y = -d / 2 - .003; g.add(bot);
+  for (const s of [1, -1]) { const rr = s > 0 ? (rTop || r) : r, rim = new THREE.Mesh(new THREE.TorusGeometry(rr + .002, kick ? .012 : .007, 10, 72), kick ? M.shell : M.chrome); rim.rotation.x = Math.PI / 2; rim.position.y = s * (d / 2 + .004); g.add(rim); }
+  const lh = Math.min(d * .42, .085);
+  for (let i = 0; i < lugs; i++) { const a = i / lugs * Math.PI * 2, rr = lerp(r, rTop || r, .5);
+    const lug = new THREE.Mesh(new RoundedBoxGeometry(.016, lh, .022, 2, .006), M.chrome); lug.position.set(Math.cos(a) * (rr + .012), 0, Math.sin(a) * (rr + .012)); lug.rotation.y = -a; g.add(lug);
+    for (const s of [1, -1]) { const tr = rod(new THREE.Vector3(Math.cos(a) * (rr + .012), s * lh / 2, Math.sin(a) * (rr + .012)), new THREE.Vector3(Math.cos(a) * (rr + .01), s * (d / 2 + .004), Math.sin(a) * (rr + .01)), .0035, M.chrome); g.add(tr); } }
+  g.userData.head = top; return g; }
+function cymbal(r) { const pts = [[.0001, .024], [.022, .024], [.034, .02], [.046, .01], [.06, .004], [r * .55, -.004], [r, -.014]].map(([x, y]) => new THREE.Vector2(x, y));
+  const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 96), M.bronze); const nut = cyl(.012, .014, .02, M.felt, 12); nut.position.y = .03; const g = new THREE.Group(); g.add(m, nut); return g; }
+// (each piece: where it stands, what it sounds like, which keys play it; 'hit' tells how it moves when struck)
+const KIT = new THREE.Group(); scene.add(KIT);
+const PIECES = [
+  // (the kick lies on its side: the printed head towards you, the batter head towards the pedal)
+  { id: 'kick', name: 'Bass drum', keys: ['Space', 'B'], key: '␣', sounds: ['kick1', 'kick2'], build() { const d = drum(.28, .42, { lugs: 10, kick: true }); d.rotation.x = -Math.PI / 2; d.position.set(0, .3, 0); const g = new THREE.Group(); g.add(d);
+      for (const s of [-1, 1]) { const sp = rod(new THREE.Vector3(s * .22, .22, .08), new THREE.Vector3(s * .36, .01, .2), .008, M.chrome); g.add(sp); }
+      const ped = new THREE.Mesh(new RoundedBoxGeometry(.09, .02, .26, 2, .008), M.steel); ped.position.set(0, .02, -.36); ped.rotation.x = .18; g.add(ped);
+      const beater = rod(new THREE.Vector3(0, .1, -.3), new THREE.Vector3(0, .32, -.22), .005, M.chrome); g.add(beater); const bh = new THREE.Mesh(new THREE.SphereGeometry(.026, 16, 12), M.felt); bh.position.set(0, .32, -.22); g.add(bh);
+      g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(0, .085, .24); return g; } },
+  { id: 'snare', name: 'Snare', keys: ['F', 'J'], key: 'F', sounds: ['snare1', 'snare2'], build() { const g = new THREE.Group(), d = drum(.18, .14, { lugs: 10 }); d.position.set(0, .62, 0); d.rotation.x = .12; g.add(d, tripod(new THREE.Vector3(0, .55, 0), .2));
+      g.position.set(.38, 0, -.24); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(.38, .72, -.2); return g; } },
+  { id: 'hihat', name: 'Hi-hat', keys: ['H', 'G'], key: 'H', sounds: ['hhclosed'], build() { const g = new THREE.Group(), top = cymbal(.18), bot = cymbal(.18); bot.rotation.x = Math.PI; bot.position.y = .9; top.position.y = .935; g.add(bot, top);
+      g.add(rod(new THREE.Vector3(0, .1, 0), new THREE.Vector3(0, 1.02, 0), .006, M.chrome), tripod(new THREE.Vector3(0, .4, 0), .2));
+      g.position.set(.7, 0, -.3); g.userData.anim = 'hat'; g.userData.body = top; g.userData.label = new THREE.Vector3(.7, .99, -.3); return g; } },
+  { id: 'tom', name: 'Tom', keys: ['T'], key: 'T', sounds: ['tomhi'], build() { const g = new THREE.Group(), d = drum(.15, .17, { lugs: 6 }); d.position.set(0, .86, 0); d.rotation.x = .22; g.add(d, rod(new THREE.Vector3(0, .6, -.02), new THREE.Vector3(0, .8, 0), .009, M.chrome));
+      g.position.set(-.1, 0, -.06); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(-.1, .98, 0); return g; } },
+  { id: 'floor', name: 'Floor tom', keys: ['Y'], key: 'Y', sounds: ['tomlo'], rate: .86, build() { const g = new THREE.Group(), d = drum(.21, .34, { lugs: 8 }); d.position.set(0, .45, 0); g.add(d);
+      for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .3; g.add(rod(new THREE.Vector3(Math.cos(a) * .24, .4, Math.sin(a) * .24), new THREE.Vector3(Math.cos(a) * .3, .01, Math.sin(a) * .3), .008, M.chrome)); }
+      g.position.set(-.52, 0, -.16); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(-.52, .64, -.1); return g; } },
+  { id: 'crash', name: 'Crash', keys: ['C'], key: 'C', sounds: ['crash'], gain: .8, build() { const g = new THREE.Group(), c = cymbal(.27); c.position.y = 1.3; c.rotation.x = .3; c.rotation.z = -.15; g.add(c, rod(new THREE.Vector3(0, .1, 0), new THREE.Vector3(0, 1.29, 0), .007, M.chrome), tripod(new THREE.Vector3(0, .45, 0), .24));
+      g.position.set(.5, 0, -.55); g.userData.anim = 'cym'; g.userData.body = c; g.userData.label = new THREE.Vector3(.5, 1.36, -.5); return g; } },
+  { id: 'ride', name: 'Ride', keys: ['R'], key: 'R', sounds: ['ride'], gain: .7, build() { const g = new THREE.Group(), c = cymbal(.31); c.position.y = 1.14; c.rotation.x = .26; c.rotation.z = .12; g.add(c, rod(new THREE.Vector3(0, .1, 0), new THREE.Vector3(0, 1.13, 0), .007, M.chrome), tripod(new THREE.Vector3(0, .45, 0), .24));
+      g.position.set(-.7, 0, -.5); g.userData.anim = 'cym'; g.userData.body = c; g.userData.label = new THREE.Vector3(-.7, 1.2, -.45); return g; } },
+  { id: 'bongo', name: 'Bongos', keys: ['O'], key: 'O', sounds: ['bongo'], build() { const g = new THREE.Group(), a = drum(.085, .15, { lugs: 4, rTop: .085 }), b = drum(.105, .15, { lugs: 4 }); a.position.set(-.1, .78, 0); b.position.set(.1, .78, 0); a.rotation.x = b.rotation.x = .25;
+      g.add(a, b, rod(new THREE.Vector3(-.02, .74, 0), new THREE.Vector3(.02, .74, 0), .02, M.chrome), tripod(new THREE.Vector3(0, .72, 0), .2)); g.position.set(-1.0, 0, .12); g.userData.anim = 'drum'; g.userData.body = a; g.userData.label = new THREE.Vector3(-1.0, .9, .18); return g; } },
+  { id: 'conga', name: 'Conga', keys: ['P'], key: 'P', sounds: ['conga'], build() { const g = new THREE.Group(), d = drum(.12, .72, { lugs: 6, rTop: .14 }); d.position.set(0, .37, 0); g.add(d); const base = new THREE.Mesh(new THREE.TorusGeometry(.12, .012, 8, 40), M.chrome); base.rotation.x = Math.PI / 2; base.position.y = .03; g.add(base);
+      g.position.set(1.02, 0, -.02); g.userData.anim = 'drum'; g.userData.body = d; g.userData.label = new THREE.Vector3(1.02, .76, .02); return g; } },
+];
+const STATE = {};   // id → { obj, t, amp, rr }
+let openHat = null;
+function buildKit(n) { const want = PIECES.slice(0, clamp(n, 3, PIECES.length));
+  for (const p of PIECES) { const on = want.includes(p);
+    if (on && !STATE[p.id]) { const o = shadow(p.build()); o.userData.piece = p; KIT.add(o); STATE[p.id] = { obj: o, t: 9, amp: 0, rr: 0, born: BARE ? 9 : 0 }; }
+    if (!on && STATE[p.id]) { KIT.remove(STATE[p.id].obj); delete STATE[p.id]; } }
+  refreshLabels(); }
+function hitPiece(p, vel = 1, open = false) { const st = STATE[p.id]; if (!st) return;
+  st.t = 0; st.amp = vel; const label = labelFor(p.id); if (label) { label.classList.add('hit'); setTimeout(() => label.classList.remove('hit'), 110); }
+  if (p.id === 'hihat') { fadeOut(openHat, .05); openHat = null; const v = play(open ? 'hhopen' : 'hhclosed', { gain: .9 * vel, pan: .2 }); if (open) openHat = v; st.open = open; return; }
+  const s = p.sounds[st.rr++ % p.sounds.length]; play(s, { rate: (p.rate || 1) * (1 + (Math.random() - .5) * .02), gain: (p.gain || 1) * vel, pan: clamp(st.obj.position.x * .35, -.6, .6) }); }
+function animKit(dt) { for (const id in STATE) { const st = STATE[id], o = st.obj, b = o.userData.body; st.t += dt; st.born = Math.min(9, st.born + dt);
+    // (a new piece drops in from above and settles)
+    const k = clamp(st.born / .7, 0, 1), e = 1 - Math.pow(1 - k, 3); o.position.y = (1 - e) * .8 + Math.sin(k * Math.PI) * -.02; o.scale.setScalar(lerp(.6, 1, e));
+    const t = st.t, a = st.amp;
+    if (o.userData.anim === 'drum') { const s = a * Math.exp(-t * 16) * Math.sin(t * 70); b.scale.set(1 + s * .012, 1 - s * .03, 1 + s * .012); }
+    else if (o.userData.anim === 'cym') { b.rotation.x = (b.userData.rx ??= b.rotation.x) + a * .32 * Math.exp(-t * 2.6) * Math.sin(t * 13); b.rotation.z = (b.userData.rz ??= b.rotation.z) + a * .1 * Math.exp(-t * 2.6) * Math.cos(t * 9); }
+    else if (o.userData.anim === 'hat') { b.position.y = .935 - (st.open ? 0 : .012 * a * Math.exp(-t * 20)) + (st.open ? .02 : 0); b.rotation.x = a * .08 * Math.exp(-t * 6) * Math.sin(t * 18); } } }
+
+// ---------- the xylophone: two octaves of rosewood bars over brass resonators, played with two mallets ----------
+const XY = new THREE.Group(); scene.add(XY);
+const BARS = [], LOW = 72, HIGH = 96;
+(function buildXylo() { const nat = [], sh = []; for (let m = LOW; m <= HIGH; m++) (isBlack(m) ? sh : nat).push(m);
+  const gap = .058, xOf = {}; nat.forEach((m, i) => xOf[m] = (i - (nat.length - 1) / 2) * gap); sh.forEach(m => xOf[m] = (xOf[m - 1] + xOf[m + 1]) / 2);
+  const L = m => .36 * Math.pow(2, -(m - LOW) / 24);
+  const rails = { n: [[], []], s: [[], []] };
+  for (let m = LOW; m <= HIGH; m++) { const b = isBlack(m), len = L(m), w = b ? .044 : .05, zc = b ? -.19 : .12, y = b ? .9 : .86;
+    const bar = new THREE.Mesh(new RoundedBoxGeometry(w, .024, len, 2, .006), M.rosewood); bar.position.set(xOf[m], y, zc); bar.userData = { midi: m, y, len }; XY.add(bar); BARS.push(bar);
+    const res = cyl(.017, .017, len * .55 + .06, M.resonator, 20); res.position.set(xOf[m], y - .06 - (len * .55 + .06) / 2, zc); XY.add(res);
+    const node = len * .276; rails[b ? 's' : 'n'][0].push(new THREE.Vector3(xOf[m], y - .02, zc + node)); rails[b ? 's' : 'n'][1].push(new THREE.Vector3(xOf[m], y - .02, zc - node)); }
+  for (const k of ['n', 's']) for (const line of rails[k]) { const a = line[0].clone().add(new THREE.Vector3(-.04, 0, 0)), b = line[line.length - 1].clone().add(new THREE.Vector3(.04, 0, 0)), r = rod(a, b, .011, M.walnut); XY.add(r);
+    for (const p of line) { const pin = cyl(.0025, .0025, .03, M.chrome, 6); pin.position.copy(p).add(new THREE.Vector3(0, .01, 0)); XY.add(pin); } }
+  const xl = xOf[LOW] - .09, xr = xOf[HIGH] + .09;
+  for (const [x, z] of [[xl, .2], [xl, -.3], [xr, .14], [xr, -.24]]) { XY.add(rod(new THREE.Vector3(x, .83, z), new THREE.Vector3(x, .02, z), .014, M.steel)); const w = cyl(.022, .022, .03, M.rubber, 14); w.position.set(x, .02, z); XY.add(w); }
+  XY.add(rod(new THREE.Vector3(xl, .2, -.05), new THREE.Vector3(xr, .2, -.05), .012, M.steel));
+  for (const x of [xl, xr]) { const end = new THREE.Mesh(new RoundedBoxGeometry(.03, .06, .58, 2, .01), M.walnut); end.position.set(x, .84, -.04); XY.add(end); }
+})();
+// (two mallets: birch sticks, wound heads; the nearer one swings down to the bar it plays)
+const MALLETS = [-1, 1].map(s => { const g = new THREE.Group(), head = new THREE.Mesh(new THREE.SphereGeometry(.018, 20, 14), M.malletHead), stick = rod(new THREE.Vector3(0, 0, 0), new THREE.Vector3(s * .05, .1, .33), .0045, M.birch); g.add(head, stick);
+  const rest = new THREE.Vector3(s * .16, 1.02, .34); g.position.copy(rest); XY.add(g); return { g, rest, from: rest.clone(), to: rest.clone(), t: 9 }; });
+shadow(XY);
+function hitBar(bar, vel = 1) { const m = bar.userData.midi, s = nearest(XYLO, m); play(s.name, { rate: Math.pow(2, (m - s.midi) / 12), gain: .9 * vel, pan: clamp(bar.position.x * 1.2, -.7, .7) });
+  bar.userData.t = 0; const mal = bar.position.x < 0 ? MALLETS[0] : MALLETS[1]; mal.from.copy(mal.g.position); mal.to.set(bar.position.x, bar.userData.y + .03, bar.position.z + .03); mal.t = 0;
+  const lab = labelFor('x' + m); if (lab) { lab.classList.add('hit'); setTimeout(() => lab.classList.remove('hit'), 110); } }
+function animXylo(dt) { for (const b of BARS) { b.userData.t = (b.userData.t ?? 9) + dt; const t = b.userData.t; b.position.y = b.userData.y - .004 * Math.exp(-t * 30) * Math.cos(t * 50); }
+  for (const m of MALLETS) { m.t += dt; const t = m.t; if (t < .045) m.g.position.lerpVectors(m.from, m.to, t / .045); else if (t < .5) { const k = (t - .045) / .455, e = 1 - Math.pow(1 - k, 3); m.g.position.lerpVectors(m.to, m.rest, e); } else m.g.position.copy(m.rest); } }
+
+// ---------- the tenor saxophone: a conical brass body swept along a curve, the bell flared on a lathe, keys with pearl touches ----------
+const SX = new THREE.Group(); scene.add(SX);
+function sweep(curve, rFn, seg = 180, rad = 32) { const fr = curve.computeFrenetFrames(seg, false), pos = [], nor = [], uv = [], idx = [], P0 = new THREE.Vector3(), N = new THREE.Vector3();
+  for (let i = 0; i <= seg; i++) { const t = i / seg; curve.getPointAt(t, P0); const r = rFn(t), n = fr.normals[i], b = fr.binormals[i];
+    for (let j = 0; j <= rad; j++) { const a = j / rad * Math.PI * 2, c = Math.cos(a), s = Math.sin(a); N.set(c * n.x + s * b.x, c * n.y + s * b.y, c * n.z + s * b.z); pos.push(P0.x + N.x * r, P0.y + N.y * r, P0.z + N.z * r); nor.push(N.x, N.y, N.z); uv.push(j / rad, t); } }
+  for (let i = 0; i < seg; i++) for (let j = 0; j < rad; j++) { const a = i * (rad + 1) + j, b = a + rad + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g; }
+const SAXKEYS = [];
+(function buildSax() { const lift = .05;
+  const body = new THREE.CatmullRomCurve3([[0, 1.04], [0, .86], [0, .62], [0, .42], [.012, .32], [.05, .262], [.1, .25], [.15, .28], [.175, .35], [.182, .44]].map(([x, y]) => new THREE.Vector3(x, y + lift, 0)), false, 'centripetal');
+  const r = t => t < .72 ? lerp(.016, .05, Math.pow(t / .72, .85)) : lerp(.05, .058, (t - .72) / .28);
+  SX.add(new THREE.Mesh(sweep(body, r), M.sax));
+  const top = body.getPointAt(1), bellPts = []; for (let i = 0; i <= 24; i++) { const k = i / 24, y = k * .15; bellPts.push(new THREE.Vector2(.058 + .062 * Math.pow(k, 2.4) + .004 * k, y)); }
+  bellPts.push(new THREE.Vector2(.127, .152), new THREE.Vector2(.12, .156));
+  const bell = new THREE.Mesh(new THREE.LatheGeometry(bellPts, 64), M.sax); bell.position.copy(top); bell.rotation.z = -.1; SX.add(bell);
+  const brim = new THREE.Mesh(new THREE.TorusGeometry(.125, .0045, 10, 64), M.sax); brim.rotation.x = Math.PI / 2; brim.position.copy(top).add(new THREE.Vector3(.015, .152, 0)); brim.rotation.y = 0; SX.add(brim);
+  const bow = new THREE.Mesh(new THREE.TorusGeometry(.055, .006, 10, 40), M.sax); bow.position.copy(body.getPointAt(.86)); bow.rotation.set(Math.PI / 2, 0, .9); SX.add(bow);   // (the ring where the bow joins)
+  const neck = new THREE.CatmullRomCurve3([[0, 1.03], [-.004, 1.09], [-.03, 1.13], [-.08, 1.15], [-.13, 1.14]].map(([x, y]) => new THREE.Vector3(x, y + lift, 0)));
+  SX.add(new THREE.Mesh(sweep(neck, t => lerp(.0135, .0085, t), 60, 20), M.sax));
+  const mpEnd = neck.getPointAt(1), mp = cyl(.0085, .011, .075, M.ebony, 24); mp.position.copy(mpEnd).add(new THREE.Vector3(-.035, -.004, 0)); mp.rotation.z = Math.PI / 2 + .12; SX.add(mp);
+  const lig = new THREE.Mesh(new THREE.TorusGeometry(.0115, .0025, 8, 24), M.chrome); lig.position.copy(mpEnd).add(new THREE.Vector3(-.02, -.002, 0)); lig.rotation.y = Math.PI / 2; SX.add(lig);
+  // (the keys on the front, top to bottom: cups on short posts; the main six get pearl touches)
+  const P0 = new THREE.Vector3(), T = new THREE.Vector3();
+  for (let i = 0; i < 13; i++) { const t = .06 + i * .045; body.getPointAt(t, P0); const rr = r(t), cup = new THREE.Group();
+    const c = cyl(.013 + rr * .15, .013 + rr * .15, .007, M.saxKey, 24); c.rotation.x = Math.PI / 2; cup.add(c);
+    if ([1, 2, 3, 5, 6, 7].includes(i)) { const pt = cyl(.0065, .0065, .004, M.pearl, 20); pt.rotation.x = Math.PI / 2; pt.position.z = .006; cup.add(pt); }
+    cup.position.set(P0.x, P0.y, rr + .006); SX.add(cup); SAXKEYS.push({ g: cup, z0: rr + .006, t: 9 });
+    const post = cyl(.0025, .0025, .01, M.saxKey, 8); post.rotation.x = Math.PI / 2; post.position.set(P0.x - rr * .7, P0.y, rr * .7); SX.add(post); }
+  body.getPointAt(.06, P0); const a = new THREE.Vector3(-.016, P0.y, .028); body.getPointAt(.62, T); SX.add(rod(a, new THREE.Vector3(-.03, T.y, .036), .0028, M.saxKey));   // (the long key rod)
+  for (let i = 0; i < 3; i++) { body.getPointAt(.02 + i * .03, P0); const pk = new THREE.Mesh(new RoundedBoxGeometry(.012, .028, .008, 2, .004), M.saxKey); pk.position.set(P0.x - r(.04) - .006, P0.y, .004); SX.add(pk); }   // (palm keys)
+  const strapRing = new THREE.Mesh(new THREE.TorusGeometry(.007, .002, 6, 16), M.saxKey); strapRing.position.set(-.016, .8 + lift, -.005); SX.add(strapRing);
+  // (a stand: three legs and a cradle under the bow)
+  body.getPointAt(.66, P0); for (let i = 0; i < 3; i++) { const an = i / 3 * Math.PI * 2 + .7; SX.add(rod(new THREE.Vector3(P0.x, P0.y - .06, 0), new THREE.Vector3(P0.x + Math.cos(an) * .2, .01, Math.sin(an) * .2), .006, M.steel)); }
+  const cradle = new THREE.Mesh(new THREE.TorusGeometry(.05, .006, 8, 30, Math.PI), M.rubber); cradle.position.set(P0.x, P0.y - .05, 0); cradle.rotation.z = Math.PI; SX.add(cradle);
+  SX.rotation.y = -.35; shadow(SX); })();
+let voice = null, held = [];
+function fingering(m) { const closed = clamp(Math.round((79 - m) / 2.6), 0, SAXKEYS.length); SAXKEYS.forEach((k, i) => { k.closed = i < closed; }); }
+function saxOn(m, gain = 1) { const s = nearest(SAX, m), b = BUF[s.name]; if (!b) { load([s.name]); return; } unlock();
+  const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime; src.buffer = b; src.playbackRate.value = Math.pow(2, (m - s.midi) / 12); src.loop = true; src.loopStart = .7; src.loopEnd = Math.max(1, b.duration - .5);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .035); src.connect(g); g.connect(bus); src.start(); const old = voice; voice = { s: src, g, m }; if (old) fadeOut(old, .05);
+  fingering(m); pianoMark(m, true); lastNote = m; }
+function saxOff(m) { if (voice && (m == null || voice.m === m)) { fadeOut(voice, .18); pianoMark(voice.m, false); voice = null; fingering(84); } }
+let lastNote = 55;
+function animSax(dt) { for (const k of SAXKEYS) { const want = k.closed ? -.004 : 0; k.cur = lerp(k.cur || 0, want, Math.min(1, dt * 30)); k.g.position.z = k.z0 + k.cur; } }
+// (tunes for the Melody mode, all old enough to be anyone's; each key or tap plays the next note for as long as you hold)
+const PHRASES = { saints: { name: 'The Saints', n: [60, 64, 65, 67, 60, 64, 65, 67, 60, 64, 65, 67, 64, 60, 64, 62, 64, 64, 62, 60, 60, 64, 67, 67, 65, 64, 65, 67, 64, 60, 62, 60] },
+  joy: { name: 'Ode to Joy', n: [64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 64, 62, 62, 64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 62, 60, 60] },
+  blues: { name: 'Blues lick', n: [53, 56, 57, 58, 60, 63, 60, 58, 56, 53, 51, 53] } };
+let step = 0;
+
+// ---------- the view: each instrument its own frame; a drag looks round a little, the wheel comes closer ----------
+const VIEWS = { Drums: { t: [0, .5, -.15], d: 2.75, el: .26, az: 0 }, Xylophone: { t: [0, .74, .02], d: 2.35, el: .6, az: 0 }, Saxophone: { t: [.05, .56, 0], d: 3.05, el: .12, az: .1, pf: .72 } };   // (pf: how much it steps back on a tall screen)
+const view = { az: 0, el: .3, d: 3.5, t: new THREE.Vector3(0, .62, 0), taz: 0, tel: .3, td: 3.5, tt: new THREE.Vector3(0, .62, 0) };
+// (the kit grows: the frame steps back and up to keep every piece in it)
+const kitFit = () => clamp((Object.keys(STATE).length - 3) / 6, 0, 1);
+function frameView(name, now) { const v = VIEWS[name], k = name === 'Drums' ? kitFit() : 0; view.taz = v.az; view.tel = v.el; view.td = v.d * (1 + k * .55); view.tt.set(v.t[0], v.t[1] + k * .06, v.t[2]); if (now) { view.az = v.az; view.el = v.el; view.d = v.d; view.t.copy(view.tt); } }
+function placeCam() { const a = stage.clientWidth / stage.clientHeight, pf = (VIEWS[P.look] || {}).pf ?? 1, fit = a < 1 ? 1 + (Math.min(1.9, .95 / a) - 1) * (THUMB ? 1 : pf) : 1;
+  view.az += (view.taz - view.az) * .1; view.el += (view.tel - view.el) * .1; view.d += (view.td - view.d) * .1; view.t.lerp(view.tt, .1);
+  const d = view.d * fit; camera.position.set(view.t.x + Math.sin(view.az) * Math.cos(view.el) * d, view.t.y + Math.sin(view.el) * d, view.t.z + Math.cos(view.az) * Math.cos(view.el) * d); camera.lookAt(view.t); camera.updateMatrixWorld(); }
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage);
+
+// ---------- the letters on the instrument ----------
+const labelsEl = $('labels'), LABELS = new Map();   // id → { el, pos (world), obj }
+function refreshLabels() { labelsEl.innerHTML = ''; LABELS.clear(); if (BARE) return;
+  if (P.look === 'Drums') for (const p of PIECES) { const st = STATE[p.id]; if (!st) continue; const el = document.createElement('span'); el.textContent = p.key; labelsEl.appendChild(el); LABELS.set(p.id, { el, pos: st.obj.userData.label, obj: null }); }
+  if (P.look === 'Xylophone') for (const b of BARS) { const k = KEYMAP_INV[b.userData.midi - LOW]; if (!k) continue; const el = document.createElement('span'); el.textContent = k.toUpperCase(); labelsEl.appendChild(el); LABELS.set('x' + b.userData.midi, { el, pos: null, obj: b }); } }
+const labelFor = id => LABELS.get(id)?.el;
+const V3 = new THREE.Vector3();
+function placeLabels() { if (!LABELS.size || document.body.classList.contains('nokeys')) return; const w = stage.clientWidth, h = stage.clientHeight, r = stage.getBoundingClientRect();
+  for (const [, L] of LABELS) { if (L.obj) V3.copy(L.obj.position).add(new THREE.Vector3(0, .03, L.obj.userData.len / 2 - .03)).applyMatrix4(XY.matrixWorld); else V3.copy(L.pos).applyMatrix4(KIT.matrixWorld);
+    V3.project(camera); L.el.style.transform = `translate(${(r.left + (V3.x + 1) / 2 * w - L.el.offsetWidth / 2).toFixed(1)}px, ${(r.top + (1 - V3.y) / 2 * h - 10).toFixed(1)}px)`; } }
+
+// ---------- the keyboard: drums by letter; the xylophone and the saxophone on two piano rows (Z… and Q…) ----------
+const KEYMAP = { z: 0, s: 1, x: 2, d: 3, c: 4, v: 5, g: 6, b: 7, h: 8, n: 9, j: 10, m: 11, ',': 12, l: 13, '.': 14, q: 12, 2: 13, w: 14, 3: 15, e: 16, r: 17, 5: 18, t: 19, 6: 20, y: 21, 7: 22, u: 23, i: 24 };
+const KEYMAP_INV = {}; for (const k of ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', 'q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i']) if (!(KEYMAP[k] in KEYMAP_INV)) KEYMAP_INV[KEYMAP[k]] = k;
+const SAX_BASE = 48;   // (C3 on Z; the saxophone sounds a ninth below its written note, as a tenor does)
+const down = new Set();
+addEventListener('keydown', e => { if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, .panel')) return; const k = e.key.toLowerCase();
+  if (k === 'arrowright') return stepLook(1); if (k === 'arrowleft') return stepLook(-1);
+  if (P.look === 'Drums') { const p = PIECES.find(p => STATE[p.id] && p.keys.some(x => x.toLowerCase() === k || (x === 'Space' && e.code === 'Space'))); if (p) { e.preventDefault(); hitPiece(p, .95, p.id === 'hihat' && (k === 'g' || e.shiftKey)); } return; }
+  if (P.look === 'Xylophone') { if (k in KEYMAP) { const bar = BARS.find(b => b.userData.midi === LOW + KEYMAP[k]); if (bar) hitBar(bar, .95); } return; }
+  if (P.look === 'Saxophone') { if (P.saxMode === 'melody') { if (e.code === 'Space' || k in KEYMAP) { e.preventDefault(); melodyDown(k); } return; }
+    if (k in KEYMAP) { const m = SAX_BASE + KEYMAP[k]; down.add(k); held.push(m); if (P.saxMode === 'keys') saxOn(m, .9); else breathNote(m); } } });
+addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (P.look !== 'Saxophone') return;
+  if (P.saxMode === 'melody') { melodyUp(k); return; }
+  if (k in KEYMAP && down.has(k)) { down.delete(k); const m = SAX_BASE + KEYMAP[k]; held = held.filter(x => x !== m);
+    if (P.saxMode === 'keys') { if (held.length) saxOn(held[held.length - 1], .9); else saxOff(m); } else breathNote(held[held.length - 1] ?? null); } });
+let melodyKey = null;
+function melodyDown(k) { if (melodyKey) return; melodyKey = k; const ph = PHRASES[P.phrase] || PHRASES.saints; saxOn(ph.n[step % ph.n.length], .9); step = (step + 1) % ph.n.length; renderDots(); }
+function melodyUp(k) { if (melodyKey !== k) return; melodyKey = null; saxOff(); }
+
+// ---------- the breath: the microphone's loudness blows the saxophone; keys (or the keyboard) choose the note ----------
+let mic = null, breath = 0, breathM = null;
+async function startMic() { try { const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); unlock();
+    const src = ctx.createMediaStreamSource(s), an = ctx.createAnalyser(); an.fftSize = 1024; src.connect(an); mic = { s, an, d: new Float32Array(1024) }; renderTools(); say('Blow into the microphone; the keys pick the note'); }
+  catch { say('No microphone: the browser said no. Keys and Melody still play.'); P.saxMode = 'keys'; save(); renderTools(); } }
+function stopMic() { if (!mic) return; mic.s.getTracks().forEach(t => t.stop()); mic = null; }
+function breathNote(m) { breathM = m; }
+function animBreath(dt) { if (!mic || P.look !== 'Saxophone' || P.saxMode !== 'breath') return; mic.an.getFloatTimeDomainData(mic.d); let s = 0; for (const v of mic.d) s += v * v; const rms = Math.sqrt(s / mic.d.length);
+  breath += (clamp((rms - .015) * 9, 0, 1) - breath) * Math.min(1, dt * 14);
+  const m = breathM ?? lastNote;
+  if (breath > .04) { if (!voice || voice.m !== m) saxOn(m, breath); else voice.g.gain.setTargetAtTime(breath, ctx.currentTime, .03); }
+  else if (voice) saxOff(); }
+
+// ---------- the bottom bar: what this instrument offers ----------
+const tools = $('tools'), piano = $('piano');
+function renderTools() { tools.innerHTML = ''; piano.hidden = true; if (BARE) return;
+  if (P.look === 'Drums') { const n = Object.keys(STATE).length, next = PIECES[n];
+    tools.innerHTML = `<div class="tb"><button type="button" id="kMinus" aria-label="Take the last piece away"${n <= 3 ? ' disabled' : ''}>−</button><span class="tl">${n} of ${PIECES.length} pieces</span><button type="button" id="kPlus"${!next ? ' disabled' : ''}>${next ? '+ ' + next.name : 'Full kit'}</button></div>`;
+    $('kMinus').onclick = () => { P.kit = Math.max(3, n - 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); };
+    $('kPlus').onclick = () => { P.kit = Math.min(PIECES.length, n + 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); const p = PIECES[n]; if (p) { load(p.sounds); say(`${p.name}: ${p.key === '␣' ? 'Space' : p.key} on the keyboard`); } }; }
+  if (P.look === 'Saxophone') { const modes = [['keys', 'Keys'], ['melody', 'Melody'], ['breath', 'Breath']];
+    tools.innerHTML = `<div class="tb lab-seg" role="radiogroup" aria-label="How to play">${modes.map(([v, l]) => `<button type="button" role="radio" aria-checked="${P.saxMode === v}" data-m="${v}">${l}</button>`).join('')}</div>`
+      + (P.saxMode === 'melody' ? `<div class="tb" role="radiogroup" aria-label="Tune">${Object.entries(PHRASES).map(([k, p]) => `<button type="button" role="radio" aria-checked="${P.phrase === k}" data-p="${k}">${p.name}</button>`).join('')}</div>` : '')
+      + (P.saxMode === 'breath' && !mic ? `<div class="tb"><button type="button" class="on" id="micOn">Use the microphone</button></div>` : '');
+    tools.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { saxOff(); P.saxMode = b.dataset.m; save(); if (P.saxMode !== 'breath') stopMic(); step = 0; renderTools(); updateHint(); });
+    tools.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { P.phrase = b.dataset.p; step = 0; save(); renderTools(); });
+    const mo = $('micOn'); if (mo) mo.onclick = startMic;
+    buildPiano(); }
+  LabUI.segThumb?.(tools.querySelector('.lab-seg')); }
+function renderDots() { /* (the Melody mode shows where you are in the tune on the piano: the next key glows) */ pianoNext(); }
+// (the touch keyboard: two octaves from C3; in Melody it shows the next note, in Breath it picks the note)
+function buildPiano() { piano.hidden = false; piano.innerHTML = ''; const span = 25, whites = []; for (let i = 0; i < span; i++) if (!isBlack(SAX_BASE + i)) whites.push(i);
+  const W = 100 / whites.length; let wi = 0;
+  for (let i = 0; i < span; i++) { const m = SAX_BASE + i, b = isBlack(m), el = document.createElement('div'); el.className = 'k' + (b ? ' b' : ''); el.dataset.m = m;
+    if (b) { el.style.left = `calc(${wi * W}% - ${W * .3}%)`; el.style.width = W * .6 + '%'; } else { el.style.left = wi * W + '%'; el.style.width = `calc(${W}% - 2px)`; wi++; if (m % 12 === 0) el.textContent = NOTE(m); }
+    piano.appendChild(el); }
+  pianoNext(); }
+const pianoMark = (m, on) => piano.querySelector(`[data-m="${m}"]`)?.classList.toggle('on', on);
+function pianoNext() { piano.querySelectorAll('.k').forEach(k => k.style.outline = ''); if (P.saxMode !== 'melody') return; const ph = PHRASES[P.phrase] || PHRASES.saints, k = piano.querySelector(`[data-m="${ph.n[step % ph.n.length]}"]`); if (k) { k.style.outline = '2px solid #c98a1b'; k.style.outlineOffset = '-4px'; } }
+let pianoDown = null;
+piano.addEventListener('pointerdown', e => { const k = e.target.closest('.k'); if (!k) return; e.preventDefault(); unlock(); try { piano.setPointerCapture(e.pointerId); } catch { }
+  pianoDown = +k.dataset.m; if (P.saxMode === 'melody') melodyDown('touch'); else if (P.saxMode === 'breath') { breathM = pianoDown; pianoMark(pianoDown, true); } else saxOn(pianoDown, .9); });
+piano.addEventListener('pointermove', e => { if (pianoDown == null || P.saxMode === 'melody') return; const el = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('.k'); if (!el) return; const m = +el.dataset.m; if (m === pianoDown) return;
+  if (P.saxMode === 'breath') { pianoMark(pianoDown, false); breathM = m; pianoMark(m, true); } else saxOn(m, .9); pianoDown = m; });
+const pianoUp = () => { if (pianoDown == null) return; if (P.saxMode === 'melody') melodyUp('touch'); else if (P.saxMode === 'breath') { pianoMark(pianoDown, false); breathM = null; } else saxOff(pianoDown); pianoDown = null; };
+piano.addEventListener('pointerup', pianoUp); piano.addEventListener('pointercancel', pianoUp);
+
+// ---------- the hand on the stage: a tap on a part plays it; a drag on the room looks round; the wheel comes closer ----------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pick(e) { const r = stage.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); ray.setFromCamera(ndc, camera);
+  const group = P.look === 'Drums' ? KIT : P.look === 'Xylophone' ? XY : SX, hits = ray.intersectObject(group, true); if (!hits.length) return null;
+  if (P.look === 'Xylophone') { const h = hits.find(h => BARS.includes(h.object)); return h ? { bar: h.object } : null; }
+  if (P.look === 'Drums') { let o = hits[0].object; while (o && !o.userData.piece) o = o.parent; return o ? { piece: o.userData.piece, point: hits[0].point } : null; }
+  return { sax: true }; }
+let drag = null;
+if (!BARE) {
+  stage.addEventListener('pointerdown', e => { unlock(); const h = pick(e);
+    if (h?.piece) { const p = h.piece, open = p.id === 'hihat' && e.shiftKey; hitPiece(p, .8 + Math.random() * .2, open); return; }
+    if (h?.bar) { hitBar(h.bar, .85 + Math.random() * .15); return; }
+    if (h?.sax && P.saxMode === 'melody') { melodyDown('stage'); drag = { melody: true }; return; }
+    if (h?.sax && P.saxMode === 'keys') { saxOn(lastNote, .9); drag = { sax: true }; return; }
+    drag = { x: e.clientX, y: e.clientY, az: view.taz, el: view.tel }; stage.classList.add('dragging'); try { stage.setPointerCapture(e.pointerId); } catch { } });
+  stage.addEventListener('pointermove', e => { if (drag?.x != null) { view.taz = clamp(drag.az - (e.clientX - drag.x) * .005, VIEWS[P.look].az - .9, VIEWS[P.look].az + .9); view.tel = clamp(drag.el + (e.clientY - drag.y) * .004, .02, 1.25); return; }
+    if (!drag && !coarse) stage.classList.toggle('over', !!pick(e)); });
+  const up = () => { if (drag?.melody) melodyUp('stage'); if (drag?.sax) saxOff(); drag = null; stage.classList.remove('dragging'); };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', e => { e.preventDefault(); view.td = clamp(view.td * (1 + e.deltaY * .001), VIEWS[P.look].d * .6, VIEWS[P.look].d * 1.6); }, { passive: false });
+  stage.addEventListener('dblclick', () => frameView(P.look));
+}
+
+// ---------- the looks: one instrument at a time ----------
+const LOOKS = ['Drums', 'Xylophone', 'Saxophone'];
+const SOUNDS = { Drums: () => PIECES.slice(0, P.kit).flatMap(p => p.sounds).concat(['hhopen']), Xylophone: () => XYLO.map(s => s.name), Saxophone: () => SAX.map(s => s.name) };
+function updateHint() { const H = { Drums: coarse ? 'Tap a drum or a cymbal' : 'Click a drum, or play the letters · Shift+H or G opens the hi-hat', Xylophone: coarse ? 'Tap the bars' : 'Click the bars, or play Z…M and Q…I like a piano',
+    Saxophone: P.saxMode === 'melody' ? 'Any key, tap or click plays the next note of the tune' : P.saxMode === 'breath' ? 'Blow into the microphone; hold a key to pick the note' : coarse ? 'Hold a key below' : 'Hold Z…M and Q…I, or the keys below' };
+  $('hint').textContent = H[P.look] || ''; }
+function applyLook(name, now) { if (!LOOKS.includes(name)) name = 'Drums'; P.look = name; if (!BARE) save(); saxOff(); stopMic();
+  KIT.visible = name === 'Drums'; XY.visible = name === 'Xylophone'; SX.visible = name === 'Saxophone'; frameView(name, now); $('nm').textContent = name;
+  load(SOUNDS[name]()); renderTools(); refreshLabels(); updateHint(); }
+const stepLook = d => applyLook(LOOKS[(LOOKS.indexOf(P.look) + d + LOOKS.length) % LOOKS.length]);
+let msgT = 0; function say(t) { const m = $('msg'); m.textContent = t; m.classList.add('show'); clearTimeout(msgT); msgT = setTimeout(() => m.classList.remove('show'), 2600); }
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The sound, the letters, and how the instruments look.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v, then) => { P[k] = v; save(); then && then(); };
+  const g0 = LabUI.group(panel, 'Sound', { key: KEY + '.g.sound', open: true });
+  ctl.vol = LabUI.slider(g0, { label: 'Volume', min: 0, max: 1, step: .01, unit: '', value: P.vol, def: DEF.vol, onInput: v => set('vol', v, () => master.gain.setTargetAtTime(v, ctx.currentTime, .02)) });
+  ctl.room = LabUI.slider(g0, { label: 'Room', min: 0, max: .8, step: .01, unit: '', value: P.room, def: DEF.room, onInput: v => set('room', v, () => send.gain.setTargetAtTime(v, ctx.currentTime, .02)) });
+  ctl.keys = LabUI.check(g0, { label: 'Show the keyboard letters', value: P.keys, onChange: v => set('keys', v, () => document.body.classList.toggle('nokeys', !v)) });
+  const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' });
+  ctl.shell = LabUI.seg(g1, { label: 'Drums', options: [['wine', 'Wine'], ['black', 'Black'], ['ocean', 'Ocean'], ['green', 'Green'], ['pearl', 'Pearl']], value: P.shell, onChange: v => set('shell', v, () => setShell(v)) });
+  ctl.sax = LabUI.seg(g1, { label: 'Saxophone', options: [['gold', 'Gold'], ['silver', 'Silver'], ['black', 'Black']], value: P.sax, onChange: v => set('sax', v, () => setSax(v)) });
+  ctl.light = LabUI.slider(g1, { label: 'Light', min: .5, max: 5, step: .05, unit: '', value: P.light, def: DEF.light, onInput: v => set('light', v, applyLight) });
+  ctl.warmth = LabUI.slider(g1, { label: 'Cool to warm', min: 0, max: 1, step: .01, unit: '', value: P.warmth, def: DEF.warmth, onInput: v => set('warmth', v, applyLight) });
+  const cr = document.createElement('p'); cr.className = 'credit'; cr.innerHTML = 'Recordings: <a href="https://github.com/sgossner/VCSL" target="_blank" rel="noopener">Versilian Community Sample Library</a> (CC0). Models and surfaces made in code.'; panel.appendChild(cr); }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- the loop ----------
+let last = 0, demoT = 0, demoStep = 0;
+const GROOVE = { kick: [0, 7, 8, 10], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], tom: [13], floor: [14, 15] };
+function frame(now) { requestAnimationFrame(frame); const dt = last ? Math.min(.05, (now - last) / 1000) : .016; last = now; if (THUMB) return;
+  if (DEMO) { demoT += dt; const s = Math.floor(demoT / .15); while (demoStep <= s) { const k = demoStep % 16; for (const id in GROOVE) if (GROOVE[id].includes(k) && STATE[id]) { const st = STATE[id]; st.t = 0; st.amp = .9; } demoStep++; } }
+  animKit(dt); animXylo(dt); animSax(dt); animBreath(dt); placeCam(); renderer.render(scene, camera); placeLabels(); }
+
+// ---------- start; the board's box: ?thumb=1 all three in one still, ?demo=1 the drums playing a groove (silent) ----------
+setShell(P.shell); setSax(P.sax); applyLight(); document.body.classList.toggle('nokeys', !P.keys);
+if (THUMB) { buildKit(6); KIT.visible = XY.visible = SX.visible = true; KIT.position.set(-.92, 0, -.4); KIT.rotation.y = .32; XY.position.set(1.02, 0, -.1); XY.rotation.y = -.42; SX.position.set(.12, 0, .55); SX.rotation.y = -.15;
+  for (const id in STATE) STATE[id].born = 9; animKit(0); animXylo(9); animSax(0);
+  view.t.set(.05, .6, 0); view.tt.copy(view.t); view.az = view.taz = 0; view.el = view.tel = .3; view.d = view.td = 4.45; resize(); placeCam(); renderer.render(scene, camera); document.body.classList.add('ready'); }
+else { buildKit(BARE ? 5 : P.kit); if (!BARE) { buildPanel(); LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepLook, items: () => LOOKS, current: () => P.look, onPick: n => applyLook(n) }); }
+  applyLook(BARE ? 'Drums' : P.look, true); resize(); placeCam(); document.body.classList.add('ready'); requestAnimationFrame(frame); }
+window.INSTR = { get P() { return P; }, camera, KIT, applyLook, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx, saxOn, saxOff };
+</script>
+</body>
+</html>
