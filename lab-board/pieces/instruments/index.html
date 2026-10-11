@@ -521,7 +521,7 @@ if (!BARE) {
 
 // ---------- the looks: one instrument at a time ----------
 const LOOKS = ['Drums', 'Xylophone', 'Saxophone', 'Guitar'];
-const SOUNDS = { Drums: () => PIECES.slice(0, P.kit).flatMap(p => p.sounds).concat(['hhopen', 'clap1', 'clap2', 'clap3']), Xylophone: () => XYLO.map(s => s.name), Saxophone: () => SAX.map(s => s.name), Guitar: () => [] };
+const SOUNDS = { Drums: () => PIECES.slice(0, P.kit).flatMap(p => p.sounds).concat(['hhopen', 'clap1', 'clap2', 'clap3']), Xylophone: () => XYLO.map(s => s.name), Saxophone: () => SAX.map(s => s.name), Guitar: () => GTR_SOUNDS };
 function updateHint() { const H = { Drums: coarse ? 'Tap a drum or a cymbal' : 'Click a drum, or play the letters · Shift = a harder hit · G opens the hi-hat', Xylophone: coarse ? 'Tap the bars' : 'Click the bars, or play Z…M and Q…I like a piano',
     Guitar: coarse ? 'Tap a chord below, or the strings' : 'Strum with 1–8 or the pads · Z…M and Q…I pick single notes · click the strings',
     Saxophone: P.saxMode === 'melody' ? 'Any key, tap or click plays the next note of the tune' : P.saxMode === 'breath' ? 'Blow into the microphone; hold a key to pick the note' : coarse ? 'Hold a key below' : 'Hold Z…M and Q…I, or the keys below' };
@@ -783,10 +783,14 @@ const GCH = (() => { const curve = new Float32Array(1024); for (let i = 0; i < 1
   const ein = ctx.createGain(), drive = ctx.createWaveShaper(); drive.curve = curve; drive.oversample = '2x'; const cab = ctx.createBiquadFilter(); cab.type = 'lowpass'; cab.frequency.value = 3400; cab.Q.value = .8;
   const mid = ctx.createBiquadFilter(); mid.type = 'peaking'; mid.frequency.value = 900; mid.gain.value = 3; const eout = ctx.createGain(); eout.gain.value = .32; ein.gain.value = 1.6;
   ein.connect(drive); drive.connect(cab); cab.connect(mid); mid.connect(eout); eout.connect(bus);
-  const ain = ctx.createGain(), bodyR = ctx.createBiquadFilter(); bodyR.type = 'peaking'; bodyR.frequency.value = 180; bodyR.gain.value = 5; bodyR.Q.value = 1.2; const air = ctx.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 4000; air.gain.value = 3; const aout = ctx.createGain(); aout.gain.value = .55;
+  const ain = ctx.createGain(), bodyR = ctx.createBiquadFilter(); bodyR.type = 'peaking'; bodyR.frequency.value = 180; bodyR.gain.value = 1.5; bodyR.Q.value = 1.2; const air = ctx.createBiquadFilter(); air.type = 'highshelf'; air.frequency.value = 4000; air.gain.value = 1; const aout = ctx.createGain(); aout.gain.value = .8;
   ain.connect(bodyR); bodyR.connect(air); air.connect(aout); aout.connect(bus); return { electric: ein, acoustic: ain }; })();
 const ringing = [];   // (one voice per string: a new pluck on a string stops what it was ringing)
-function pluck(m, at = 0, vel = .9, strIdx = 0) { const kind = P.guitar, k = ksBuffer(m, kind), s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = k.b; s.playbackRate.value = k.rate; g.gain.value = vel;
+// (real strings: Open String Guitar by tildesounds, CC0; six open strings E2 A2 D3 F3 G3 C4, each at three strengths; a note plays from the nearest string, retuned, and the string's synthesis stands in until the recordings are loaded)
+const GSTRINGS = [['E', 40], ['A', 45], ['D', 50], ['F', 53], ['G', 55], ['C', 60]], GTIER = v => v < .6 ? 's' : v < .88 ? 'm' : 'h', GTIER_GAIN = { s: .6, m: .8, h: 1 };
+const GTR_SOUNDS = GSTRINGS.flatMap(([L]) => ['s', 'm', 'h'].map(t => 'gtr_' + L + '_' + t));
+function pluck(m, at = 0, vel = .9, strIdx = 0) { const kind = P.guitar, near = GSTRINGS.reduce((a, b) => Math.abs(b[1] - m) < Math.abs(a[1] - m) ? b : a), tier = GTIER(vel), rec = BUF['gtr_' + near[0] + '_' + tier];
+  const s = ctx.createBufferSource(), g = ctx.createGain(); if (rec) { s.buffer = rec; s.playbackRate.value = Math.pow(2, (m - near[1]) / 12); g.gain.value = GTIER_GAIN[tier] * (.75 + vel * .25); } else { const k = ksBuffer(m, kind); s.buffer = k.b; s.playbackRate.value = k.rate; g.gain.value = vel; load(GTR_SOUNDS); }
   s.connect(g); g.connect(GCH[kind]); const t = ctx.currentTime + at; s.start(t); const old = ringing[strIdx]; if (old) { try { old.g.gain.setTargetAtTime(0, t, .015); old.s.stop(t + .1); } catch { } } ringing[strIdx] = { s, g };
   const st = GSTR[strIdx]; if (st) { st.t = -at; st.amp = vel; } }
 // (chords: a root and a quality; the electric plays the root, fifth and octave; the acoustic an open-position six-string voicing)
@@ -945,7 +949,7 @@ function buildPanel() { panel.innerHTML = '';
   ctl.sax = LabUI.seg(g1, { label: 'Saxophone', options: [['gold', 'Gold'], ['silver', 'Silver'], ['black', 'Black']], value: P.sax, onChange: v => set('sax', v, () => setSax(v)) });
   ctl.light = LabUI.slider(g1, { label: 'Light', min: .5, max: 5, step: .05, unit: '', value: P.light, def: DEF.light, onInput: v => set('light', v, applyLight) });
   ctl.warmth = LabUI.slider(g1, { label: 'Cool to warm', min: 0, max: 1, step: .01, unit: '', value: P.warmth, def: DEF.warmth, onInput: v => set('warmth', v, applyLight) });
-  const cr = document.createElement('p'); cr.className = 'credit'; cr.innerHTML = 'Recordings: <a href="https://github.com/sgossner/VCSL" target="_blank" rel="noopener">Versilian Community Sample Library</a> (CC0). Models and surfaces made in code.'; panel.appendChild(cr); }
+  const cr = document.createElement('p'); cr.className = 'credit'; cr.innerHTML = 'Recordings: <a href="https://github.com/sgossner/VCSL" target="_blank" rel="noopener">Versilian Community Sample Library</a> (CC0) and <a href="https://tildesounds.gumroad.com/l/openstringguitar" target="_blank" rel="noopener">Open String Guitar</a> by tildesounds (CC0). Models and surfaces made in code.'; panel.appendChild(cr); }
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
 $('tune').onclick = () => openPanel(true);
 addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
