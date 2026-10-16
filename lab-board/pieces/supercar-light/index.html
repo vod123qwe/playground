@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Supercar Light · lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* Supercar Light: a light car (10k triangles) that looks real because of its maps and its light, not its geometry. Two switches
+     on the stage (Intact / Damaged, PBR Before / After); Customize opens the lab's card beside the stage with everything else. */
+  :root { --bg: #e9ebee; --ink: #1b1c20; --ease: cubic-bezier(.22,.61,.36,1); --page: #fff; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: inset var(--morph), border-radius var(--morph); }
+  body.tuning .stage { border-radius: 26px; }
+  .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .skeleton { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity .4s ease; pointer-events: none; }
+  .skeleton.gone { opacity: 0; }
+  .skeleton .car { width: min(56%, 620px); aspect-ratio: 4.2 / 1; border-radius: 40% 46% 18% 18% / 70% 70% 30% 30%; background: #dcdfe4; position: relative; }
+  .skeleton .car::before, .skeleton .car::after { content: ""; position: absolute; bottom: -14%; width: 17%; aspect-ratio: 1; border-radius: 50%; background: #d0d3d9; }
+  .skeleton .car::before { left: 13%; } .skeleton .car::after { right: 13%; }
+  @media (prefers-reduced-motion: no-preference) { .skeleton .car { animation: pulse 1.6s ease-in-out infinite; } @keyframes pulse { 50% { opacity: .55; } } }
+
+  .back, .tune { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back { top: 30px; left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .back:focus-visible, .tune:focus-visible, .pick button:focus-visible { outline: 2px solid rgba(20,20,20,.35); outline-offset: 2px; }
+
+  /* the two switches on the stage: the lab's segmented pill (one thumb slides to the chosen side) */
+  .dock { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 6; display: flex; gap: 10px; transition: left var(--morph), bottom var(--morph); }
+  .pick { display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); }
+  .pick .tag { padding: 0 6px 0 12px; color: rgba(20,20,20,.42); font-size: 12px; letter-spacing: .04em; }
+  .pick button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; white-space: nowrap; }
+  .pick button:hover { color: #1b1c20; } .pick button[aria-checked=true] { color: #fff; }
+  @media (max-width: 520px) { .dock { flex-direction: column; align-items: center; gap: 8px; } }
+
+  /* the card beside the stage (the lab's shared controls, soft look) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .btns { display: flex; gap: 6px; margin: 2px 0 10px; }
+  .btns button { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-field); font: 500 12.5px var(--lab-font); color: var(--ui-ink); cursor: pointer; transition: background .2s, scale .3s var(--ui-spring); }
+  .btns button:hover { background: var(--ui-field-hi); } .btns button:active { scale: .95; }
+  .foot { margin: auto -20px 0; padding: 16px 20px 18px; font-size: 11.5px; line-height: 1.5; color: var(--ui-muted); }
+  .foot a { color: inherit; }
+
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .dock { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .dock { display: none; }
+    body.tuning .back { top: 18px; left: 18px; } }
+
+  /* the board's box (?thumb, ?demo): the car alone */
+  body.bare .back, body.bare .tune, body.bare .dock, body.bare .panel { display: none; }
+</style>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<main class="stage" id="stage" aria-label="The car in 3D"><div class="skeleton" id="skeleton" aria-hidden="true"><div class="car"></div></div></main>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<div class="dock">
+  <div class="pick lab-seg" id="pickVariant" role="radiogroup" aria-label="Intact or damaged"><button type="button" role="radio" data-v="clean">Intact</button><button type="button" role="radio" data-v="damaged">Damaged</button></div>
+  <div class="pick lab-seg" id="pickPbr" role="radiogroup" aria-label="PBR before or after"><span class="tag" aria-hidden="true">PBR</span><button type="button" role="radio" data-v="before">Before</button><button type="button" role="radio" data-v="after">After</button></div>
+</div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the car"></aside>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { Reflector } from "three/addons/objects/Reflector.js";
+import { GroundedSkybox } from "three/addons/objects/GroundedSkybox.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+
+const $ = (id) => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
+const THUMB = Q.has("thumb"), DEMO = Q.has("demo"), BARE = THUMB || DEMO;
+if (BARE) document.body.classList.add("bare");
+const A = "assets/";
+
+const S = {
+  pbr: "after", variant: "damaged",
+  view: "render", quality: "high",
+  env: "studio_small_09", bg: "color", bgColor: "#e9ebee", envRot: 0, envI: 1, exposure: 0.75,
+  azimuth: 126, elevation: 49, sun: 2.6, spin: false,
+  paint: "orig", paintType: "metallic", flakes: 0.35, rim: "#C9A24A", rimFinish: "satin",
+  relief: "bump", reliefK: 0.5, depth: "none", depthK: 0.5, flat: false,
+  albedo: true, ao: true, orm: true, coat: true, glow: 0, wheels: true,
+  bloom: true, bloomK: 0.5, mirror: true, mirrorK: 0.86, ssao: true, dof: true, dofK: 0.35,
+  dentClick: true, dentR: 18, dentDepth: 2.5, dentK: 1,
+  fur3d: true, furLen: 2.0, furDensity: 1100, furDroop: 0.35,
+};
+const QUALITY = {
+  low:    { pr: 1,   shadow: 1024, mirror: 0.35, samples: 0, shells: 10, label: "low" },
+  medium: { pr: 1.5, shadow: 2048, mirror: 0.6,  samples: 4, shells: 22, label: "medium" },
+  high:   { pr: 2,   shadow: 4096, mirror: 1,    samples: 4, shells: 40, label: "high" },
+};
+//               rough metal coat irid
+const PAINT = {
+  gloss:    [0.16, 0.0,  1, 0],
+  metallic: [0.34, 0.6,  1, 0],
+  pearl:    [0.26, 0.25, 1, 1],
+  matte:    [0.58, 0.12, 0, 0],
+  chrome:   [0.06, 1.0,  0, 0],
+  fur:      [0.92, 0.0,  0, 0],  // + sheen (soft fabric highlight), no clear coat
+};
+const RIM = { matte: [0.6, 0.55], satin: [0.34, 0.85], gloss: [0.12, 1] };
+// the damaged car's dents: rays shot at the body, each hit becomes a dent (from, to, radius cm, depth cm); +Z is the nose, +X its left
+const DENT_RAYS = [
+  [[5, 0.55, 0.35], [0, 0.55, 0.35], 20, 3],
+  [[5, 0.62, -1.25], [0, 0.62, -1.25], 15, 2.5],
+  [[-5, 0.48, 0.1], [0, 0.48, 0.1], 22, 3.5],
+  [[0.25, 5, 1.75], [0.25, 0, 1.75], 30, 4],
+  [[3.5, 0.45, 5], [0.55, 0.45, 2.0], 14, 3],
+  [[-3.5, 0.7, -5], [-0.6, 0.7, -2.1], 18, 3],
+  [[0.2, 5, -0.2], [0.2, 0, -0.2], 24, 2.5],
+];
+
+// ---------------------------------------------------------------- renderer, scene, camera
+const stage = $("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: THUMB });
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.info.autoReset = false;
+stage.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 400);
+camera.position.set(5.6, 1.9, 6.4);
+const START = camera.position.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.45, 0);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.minDistance = 2.2;
+controls.maxDistance = 16;
+// the car turns on its own until the first touch (the board's live preview turns for good)
+controls.autoRotate = !THUMB;
+controls.autoRotateSpeed = 0.9;
+if (!DEMO) controls.addEventListener("start", () => { controls.autoRotate = false; });
+
+let dirty = true;
+const invalidate = () => (dirty = true);
+controls.addEventListener("change", invalidate);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+const roomEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const sun = new THREE.DirectionalLight(0xffffff, S.sun);
+sun.castShadow = true;
+Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.5, far: 30 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+const basicFill = new THREE.HemisphereLight(0xffffff, 0x50505a, 1.1); // "before": a plain viewer's light, no environment
+basicFill.visible = false;
+scene.add(basicFill);
+
+const shadowPlane = new THREE.Mesh(new THREE.CircleGeometry(14, 64), new THREE.ShadowMaterial({ opacity: 0.3 }));
+shadowPlane.rotation.x = -Math.PI / 2;
+shadowPlane.position.y = 0.002;
+shadowPlane.receiveShadow = true;
+shadowPlane.renderOrder = 2; // the shadow darkens the floor reflection, not the other way round
+scene.add(shadowPlane);
+
+// polished-floor reflection: transparent, softly blurred, fading out away from the car
+const FloorReflectionShader = {
+  name: "FloorReflectionShader",
+  uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uStrength: { value: 0.35 } },
+  vertexShader: /* glsl */`
+    uniform mat4 textureMatrix;
+    varying vec4 vUv;
+    varying float vR;
+    void main() {
+      vUv = textureMatrix * vec4(position, 1.0);
+      vR = length(position.xy);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDiffuse;
+    uniform float uStrength;
+    varying vec4 vUv;
+    varying float vR;
+    void main() {
+      vec2 uv = vUv.xy / vUv.w;
+      float b = 0.0015 + vR * 0.0012;
+      vec3 c = texture2D(tDiffuse, uv).rgb * 0.36
+        + (texture2D(tDiffuse, uv + vec2(b, 0.0)).rgb + texture2D(tDiffuse, uv - vec2(b, 0.0)).rgb
+         + texture2D(tDiffuse, uv + vec2(0.0, b)).rgb + texture2D(tDiffuse, uv - vec2(0.0, b)).rgb) * 0.16;
+      float fade = 1.0 - smoothstep(1.0, 7.5, vR);
+      gl_FragColor = vec4(c, uStrength * fade);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+};
+let mirror = null;
+function ensureMirror() {
+  if (mirror) return mirror;
+  mirror = new Reflector(new THREE.CircleGeometry(14, 64), { clipBias: 0.003, textureWidth: 512, textureHeight: 512, shader: FloorReflectionShader });
+  mirror.material.transparent = true;
+  mirror.material.depthWrite = false;
+  mirror.rotation.x = -Math.PI / 2;
+  mirror.position.y = 0.001;
+  mirror.renderOrder = 1;
+  scene.add(mirror);
+  resize();
+  return mirror;
+}
+
+// ---------------------------------------------------------------- post-processing
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+const gtao = new GTAOPass(scene, camera, 1, 1);
+gtao.blendIntensity = 1;
+const bokeh = new BokehPass(scene, camera, { focus: 7, aperture: 0.002, maxblur: 0.01 });
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.5, 0.45, 0.85);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(gtao);
+composer.addPass(bokeh);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+// AO and depth of field only need the car and the floor: hide the projected sky (GTAO would darken it) and the mirror
+// (it would render its whole reflection again inside every pass)
+function hideDuring(pass) {
+  const run = pass.render.bind(pass);
+  pass.render = (...args) => {
+    const objs = [grounded, mirror].filter(Boolean);
+    const vis = objs.map((o) => o.visible);
+    objs.forEach((o) => (o.visible = false));
+    run(...args);
+    objs.forEach((o, i) => (o.visible = vis[i]));
+  };
+}
+hideDuring(gtao);
+hideDuring(bokeh);
+
+function resize() {
+  const r = stage.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const q = QUALITY[S.quality];
+  const pr = Math.min(devicePixelRatio, q.pr);
+  renderer.setPixelRatio(pr);
+  renderer.setSize(r.width, r.height, false);
+  composer.setPixelRatio(pr);
+  composer.setSize(r.width, r.height);
+  camera.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+  if (mirror) mirror.getRenderTarget().setSize(Math.round(r.width * pr * q.mirror), Math.round(r.height * pr * q.mirror));
+  invalidate();
+}
+new ResizeObserver(resize).observe(stage);
+
+// ---------------------------------------------------------------- textures
+const loader = new THREE.TextureLoader();
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+function tex(path, srgb) {
+  return new Promise((ok) => loader.load(A + "tex/" + path, (t) => {
+    t.flipY = false; // glTF UV convention
+    t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+    t.anisotropy = maxAniso;
+    ok(t);
+  }, undefined, () => ok(null)));
+}
+function canvasTex(size, draw, srgb) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  draw(c.getContext("2d"), size);
+  const t = new THREE.CanvasTexture(c);
+  t.flipY = false;
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.anisotropy = maxAniso;
+  return t;
+}
+const checker = () => canvasTex(1024, (g, size) => {
+  const n = 16, s = size / n;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    g.fillStyle = (x + y) % 2 ? "#f3f3f5" : `hsl(${(x * 22 + y * 9) % 360} 55% 62%)`;
+    g.fillRect(x * s, y * s, s, s);
+    g.fillStyle = "#17181b"; g.font = "600 18px sans-serif";
+    g.fillText(`${String.fromCharCode(65 + y)}${x + 1}`, x * s + 6, y * s + 22);
+  }
+}, true);
+const flakeTex = () => {
+  const t = canvasTex(256, (g, size) => {
+    const img = g.createImageData(size, size);
+    for (let i = 0; i < size * size; i++) {
+      const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random());
+      img.data[i * 4] = 128 + Math.cos(a) * r * 127;
+      img.data[i * 4 + 1] = 128 + Math.sin(a) * r * 127;
+      img.data[i * 4 + 2] = 255;
+      img.data[i * 4 + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+  }, false);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+};
+
+// ---------------------------------------------------------------- shader patch: paint, rims, flakes, parallax, dents
+const U = {
+  uMask: { value: null }, uHeight: { value: null }, uFlakeMap: { value: null },
+  uPaintOn: { value: 0 }, uPaintColor: { value: new THREE.Color() }, uPaintLum: { value: 0.48 },
+  uPaintRough: { value: 0.16 }, uPaintMetal: { value: 0 }, uPaintCoat: { value: 1 }, uTypeOn: { value: 0 },
+  uRimOn: { value: 0 }, uRimColor: { value: new THREE.Color() }, uRimLum: { value: 0.05 },
+  uRimRough: { value: 0.34 }, uRimMetal: { value: 0.85 }, uRimFinishOn: { value: 0 },
+  uFlakes: { value: 0 }, uFlakeScale: { value: 70 },
+  uParallax: { value: 0 }, uHeightTop: { value: 0.66 },
+  uDents: { value: Array.from({ length: 24 }, () => new THREE.Vector4()) },    // xyz centre, w radius (m)
+  uDentDirs: { value: Array.from({ length: 24 }, () => new THREE.Vector4()) }, // xyz push direction, w depth (m)
+  uDentCount: { value: 0 }, uDentK: { value: 1 },
+};
+const MAX_DENTS = 24;
+// Dents live in 3D, not in UV: a smooth bowl (1 - s^2)^2 around a point on the body. Every part and every UV island near that point
+// sees the same field, so nothing tears at seams or part joints.
+const DENT_GLSL = /* glsl */`
+uniform vec4 uDents[24];
+uniform vec4 uDentDirs[24];
+uniform int uDentCount;
+uniform float uDentK;
+vec3 labDentOffset(vec3 p) {
+  vec3 o = vec3(0.0);
+  for (int i = 0; i < 24; i++) {
+    if (i >= uDentCount) break;
+    vec3 d = p - uDents[i].xyz;
+    float s2 = dot(d, d) / (uDents[i].w * uDents[i].w);
+    if (s2 < 1.0) { float f = 1.0 - s2; o += uDentDirs[i].xyz * uDentDirs[i].w * uDentK * f * f; }
+  }
+  return o;
+}
+// gradient of the dent depth: the shading normal tilts by it (bowl walls face the bowl's centre)
+vec3 labDentGrad(vec3 p) {
+  vec3 g = vec3(0.0);
+  for (int i = 0; i < 24; i++) {
+    if (i >= uDentCount) break;
+    vec3 d = p - uDents[i].xyz;
+    float r = uDents[i].w;
+    float s2 = dot(d, d) / (r * r);
+    if (s2 < 1.0) g += -4.0 * uDentDirs[i].w * uDentK * (1.0 - s2) * d / (r * r);
+  }
+  return g;
+}
+`;
+const GLSL_PARS = /* glsl */`
+varying vec2 vLabUv;
+uniform sampler2D uMask, uHeight, uFlakeMap;
+uniform float uPaintOn, uPaintLum, uPaintRough, uPaintMetal, uPaintCoat, uTypeOn;
+uniform vec3 uPaintColor, uRimColor;
+uniform float uRimOn, uRimLum, uRimRough, uRimMetal, uRimFinishOn;
+uniform float uFlakes, uFlakeScale, uParallax, uHeightTop;
+float labDepth(vec2 uv, vec2 dx, vec2 dy) {
+  return clamp((uHeightTop - textureGrad(uHeight, uv, dx, dy).r) / uHeightTop, 0.0, 1.0);
+}
+// steep parallax with linear refinement; tangent frame from screen-space derivatives
+vec2 labParallax(vec2 uv) {
+  if (uParallax <= 0.0) return uv;
+  vec3 p = -vViewPosition;
+  vec3 q0 = dFdx(p), q1 = dFdy(p);
+  vec2 st0 = dFdx(uv), st1 = dFdy(uv);
+  vec3 N = normalize(cross(q0, q1));
+  vec3 q1perp = cross(q1, N), q0perp = cross(N, q0);
+  vec3 T = q1perp * st0.x + q0perp * st1.x;
+  vec3 B = q1perp * st0.y + q0perp * st1.y;
+  float det = max(dot(T, T), dot(B, B));
+  if (det == 0.0) return uv;
+  float s = inversesqrt(det);
+  vec3 V = normalize(vViewPosition);
+  vec3 vt = vec3(dot(V, T * s), dot(V, B * s), dot(V, N));
+  if (vt.z <= 0.02) return uv;
+  float layers = mix(28.0, 8.0, clamp(vt.z, 0.0, 1.0));
+  float step = 1.0 / layers;
+  vec2 dUV = vt.xy / max(vt.z, 0.25) * uParallax / layers;
+  vec2 cur = uv;
+  float curD = 0.0;
+  float d = labDepth(cur, st0, st1);
+  for (int i = 0; i < 28; i++) {
+    if (curD >= d || float(i) >= layers) break;
+    cur -= dUV; curD += step; d = labDepth(cur, st0, st1);
+  }
+  vec2 prev = cur + dUV;
+  float after = d - curD;
+  float before = labDepth(prev, st0, st1) - curD + step;
+  float w = after / (after - before + 1e-5);
+  return mix(cur, prev, clamp(w, 0.0, 1.0));
+}
+`;
+const UV_NAMES = ["vMapUv", "vNormalMapUv", "vBumpMapUv", "vRoughnessMapUv", "vMetalnessMapUv", "vAoMapUv", "vEmissiveMapUv", "vClearcoatMapUv"];
+
+function patch(material, key, withPaint) {
+  material.customProgramCacheKey = () => key;
+  material.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec2 vLabUv;\nvarying vec3 vLabPos;\n" + DENT_GLSL)
+      .replace("#include <uv_vertex>", "#include <uv_vertex>\nvLabUv = uv;")
+      .replace("#include <project_vertex>", `vLabPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        #ifdef USE_MORPHTARGETS
+          transformed += labDentOffset(vLabPos); // the dense body really bends; the light one only shades
+        #endif
+        #include <project_vertex>`);
+    let f = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\n" + GLSL_PARS + "varying vec3 vLabPos;\n" + DENT_GLSL)
+      .replace("void main() {", UV_NAMES.map((n) => `#define ${n} labUv`).join("\n") + "\nvoid main() {\nvec2 labUv = labParallax(vLabUv);\nvec4 labMask = texture2D(uMask, labUv);")
+      .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+        vec3 labDentV = uDentCount > 0 ? (viewMatrix * vec4(labDentGrad(vLabPos), 0.0)).xyz : vec3(0.0);
+        normal = normalize(normal + labDentV);`)
+      .replace("#include <clearcoat_normal_fragment_begin>", `#include <clearcoat_normal_fragment_begin>
+        #ifdef USE_CLEARCOAT
+          clearcoatNormal = normalize(clearcoatNormal + labDentV); // dents show most in the clear-coat reflections
+        #endif`);
+    if (withPaint) {
+      f = f
+        .replace("#include <map_fragment>", `#include <map_fragment>
+          float labL = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+          diffuseColor.rgb = mix(diffuseColor.rgb, uPaintColor * clamp(labL / uPaintLum, 0.0, 1.6), labMask.r * uPaintOn);
+          diffuseColor.rgb = mix(diffuseColor.rgb, uRimColor * clamp(labL / uRimLum, 0.0, 3.0), labMask.g * uRimOn);`)
+        .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+          roughnessFactor = mix(roughnessFactor, uPaintRough, labMask.r * uTypeOn);
+          roughnessFactor = mix(roughnessFactor, uRimRough, labMask.g * uRimFinishOn);`)
+        .replace("#include <metalnessmap_fragment>", `#include <metalnessmap_fragment>
+          metalnessFactor = mix(metalnessFactor, uPaintMetal, labMask.r * uTypeOn);
+          metalnessFactor = mix(metalnessFactor, uRimMetal, labMask.g * uRimFinishOn);`)
+        .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+          if (uFlakes > 0.0) {
+            vec3 fl = texture2D(uFlakeMap, labUv * uFlakeScale).xyz * 2.0 - 1.0;
+            normal = normalize(normal + vec3(fl.xy, 0.0) * uFlakes * 0.45 * labMask.r);
+          }`)
+        .replace("#include <lights_physical_fragment>", `#include <lights_physical_fragment>
+          #ifdef USE_CLEARCOAT
+            material.clearcoat = mix(material.clearcoat, uPaintCoat, labMask.r * uTypeOn);
+          #endif
+          #ifdef USE_IRIDESCENCE
+            material.iridescence *= labMask.r;
+          #endif
+          #ifdef USE_SHEEN
+            material.sheenColor *= labMask.r;
+          #endif`);
+    }
+    sh.fragmentShader = f;
+  };
+}
+
+// ---------------------------------------------------------------- environments
+const hdrCache = {};
+let grounded = null, assets = { hdri: {} };
+function loadHDR(id) {
+  if (!hdrCache[id]) {
+    hdrCache[id] = new RGBELoader().loadAsync(A + "hdri/" + (assets.hdri[id] || id + "_1k.hdr")).then((t) => {
+      t.mapping = THREE.EquirectangularReflectionMapping;
+      return t;
+    });
+  }
+  return hdrCache[id];
+}
+let envTex = roomEnv, envEquirect = null, envToken = 0, envReady = false;
+async function setEnv(id) {
+  const token = ++envToken;
+  if (id === "room") { envTex = roomEnv; envEquirect = null; envReady = true; applyEnv(); return; }
+  const t = await loadHDR(id);
+  if (token !== envToken) return;
+  envTex = t; envEquirect = t; envReady = true;
+  applyEnv();
+}
+function applyEnv() {
+  const rot = new THREE.Euler(0, THREE.MathUtils.degToRad(S.envRot), 0);
+  const before = S.pbr === "before";
+  scene.environment = before ? null : envTex;
+  scene.environmentIntensity = S.envI;
+  scene.environmentRotation.copy(rot);
+  scene.backgroundRotation.copy(rot);
+  scene.backgroundIntensity = S.envI;
+  scene.backgroundBlurriness = 0;
+  const mode = before ? "color" : S.bg === "ground" && !envEquirect ? "blur" : S.bg;
+  if (grounded && (mode !== "ground" || grounded.userData.src !== envEquirect)) {
+    scene.remove(grounded);
+    grounded.geometry.dispose();
+    grounded = null;
+  }
+  if (mode === "color") scene.background = new THREE.Color(S.bgColor);
+  else if (mode === "ground") {
+    if (!grounded) {
+      grounded = new GroundedSkybox(envEquirect, 12, 120, 64);
+      grounded.position.y = 12 - 0.01;
+      grounded.userData.src = envEquirect;
+      scene.add(grounded);
+    }
+    grounded.rotation.y = rot.y;
+    scene.background = null;
+  } else {
+    scene.background = envTex;
+    scene.backgroundBlurriness = mode === "blur" ? 0.55 : 0;
+  }
+  const page = mode === "color" ? S.bgColor : "#17181b";
+  stage.style.background = page;
+  document.documentElement.style.setProperty("--bg", page);
+  invalidate();
+}
+
+// ---------------------------------------------------------------- the car
+const T = {};
+const mats = {};
+let meshes = [], wheels = [];
+let body = null, bodyHD = null, bodyHDPromise = null, manifest = {};
+let modelRoot = null, rawRoot = null, rawPromise = null;
+const variantTex = {};
+const gltfLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+
+// ---------------------------------------------------------------- shell fur (paint type "Fur")
+// The body is drawn again N times (one instanced draw call), every copy pushed a bit further out along the normal. In UV space each
+// copy is cut into a grid of strand cells; a cell keeps a dot only while the layer is below that strand's random length, and the dot
+// shrinks towards the tip. Stacked, the dots become hairs. Only triangles under the paint mask get shells.
+const MAX_SHELLS = 40;
+const FU = {
+  uShells: { value: 22 }, uFurLen: { value: 0.016 }, uDensity: { value: 1100 },
+  uGravity: { value: new THREE.Vector3(0, -0.35, 0) }, uThick: { value: 0.48 },
+};
+let furMesh = null;
+const furMat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0, alphaToCoverage: true });
+furMat.customProgramCacheKey = () => "lab-fur";
+furMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, FU, { uMask: U.uMask, uPaintOn: U.uPaintOn, uPaintColor: U.uPaintColor, uPaintLum: U.uPaintLum });
+  sh.vertexShader = sh.vertexShader
+    .replace("#include <common>", "#include <common>\nuniform float uShells, uFurLen;\nuniform vec3 uGravity;\nvarying float vLayer;\nvarying vec2 vLabUv;")
+    .replace("#include <uv_vertex>", "#include <uv_vertex>\nvLabUv = uv;")
+    .replace("#include <begin_vertex>", `#include <begin_vertex>
+      vLayer = float(gl_InstanceID + 1) / uShells;
+      transformed += normalize(objectNormal) * uFurLen * vLayer + uGravity * uFurLen * vLayer * vLayer;`);
+  sh.fragmentShader = sh.fragmentShader
+    .replace("#include <common>", `#include <common>
+      uniform sampler2D uMask;
+      uniform float uDensity, uThick, uPaintOn, uPaintLum;
+      uniform vec3 uPaintColor;
+      varying float vLayer;
+      varying vec2 vLabUv;
+      float labHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`)
+    .replace("void main() {", `void main() {
+      if (texture2D(uMask, vLabUv).r < 0.5) discard;
+      vec2 g = vLabUv * uDensity;
+      vec2 cell = floor(g);
+      float h = mix(0.35, 1.0, labHash(cell));                       // this strand's length
+      vec2 jit = vec2(labHash(cell + 7.1), labHash(cell + 3.3)) - 0.5;
+      float r = length(fract(g) - 0.5 - jit * 0.35);
+      float rad = uThick * (1.0 - vLayer / h);                         // thinner towards the tip
+      if (vLayer > h || r > rad) discard;
+      float strandAlpha = 1.0 - smoothstep(rad * 0.55, rad, r);`)
+    .replace("#include <map_fragment>", `#include <map_fragment>
+      float labL = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+      diffuseColor.rgb = mix(diffuseColor.rgb, uPaintColor * clamp(labL / uPaintLum, 0.0, 1.6), uPaintOn);
+      diffuseColor.rgb *= mix(0.3, 1.08, vLayer);                    // deeper layers sit in the fur's own shadow
+      diffuseColor.a *= strandAlpha;`);
+};
+
+function buildFur() {
+  if (furMesh) { furMesh.parent?.remove(furMesh); furMesh.geometry.dispose(); furMesh = null; }
+  if (!body || !T.mask?.image) return;
+  // keep only triangles whose UVs fall on the paint mask (no fur on glass, trim, lights)
+  const W = 512;
+  const c = Object.assign(document.createElement("canvas"), { width: W, height: W });
+  const g2 = c.getContext("2d", { willReadFrequently: true });
+  g2.drawImage(T.mask.image, 0, 0, W, W);
+  const px = g2.getImageData(0, 0, W, W).data;
+  const red = (u, v) => px[(Math.min(W - 1, Math.max(0, Math.floor(v * W))) * W + Math.min(W - 1, Math.max(0, Math.floor(u * W)))) * 4];
+  const geo = body.geometry;
+  const idx = geo.index.array, uv = geo.attributes.uv;
+  const keep = [];
+  for (let t = 0; t < idx.length; t += 3) {
+    const a = idx[t], b = idx[t + 1], d = idx[t + 2];
+    const cu = (uv.getX(a) + uv.getX(b) + uv.getX(d)) / 3, cv = (uv.getY(a) + uv.getY(b) + uv.getY(d)) / 3;
+    if (red(cu, cv) > 100 || red(uv.getX(a), uv.getY(a)) > 100 || red(uv.getX(b), uv.getY(b)) > 100 || red(uv.getX(d), uv.getY(d)) > 100) keep.push(a, b, d);
+  }
+  const shellGeo = new THREE.BufferGeometry();
+  for (const name of ["position", "normal", "uv"]) shellGeo.setAttribute(name, geo.attributes[name]);
+  shellGeo.setIndex(keep);
+  furMesh = new THREE.InstancedMesh(shellGeo, furMat, MAX_SHELLS);
+  furMesh.castShadow = false;
+  furMesh.receiveShadow = true;
+  furMesh.frustumCulled = false;
+  body.parent.add(furMesh);
+  T.furTris = keep.length / 3;
+}
+
+function makeMaterials() {
+  T.checker = checker();
+  T.flakes = flakeTex();
+  U.uFlakeMap.value = T.flakes;
+  mats.body = new THREE.MeshPhysicalMaterial({ clearcoatRoughness: 0.03, emissive: 0xffffff, iridescenceIOR: 1.35, iridescenceThicknessRange: [180, 520] });
+  mats.clay = new THREE.MeshPhysicalMaterial({ color: 0xd9d9dc, roughness: 0.55 });
+  mats.normals = new THREE.MeshNormalMaterial();
+  mats.uv = new THREE.MeshBasicMaterial({ map: T.checker });
+  mats.glass = new THREE.MeshPhysicalMaterial({
+    color: 0x0b0d12, roughness: 0.02, metalness: 0, transparent: true, opacity: 0.62,
+    clearcoat: 1, clearcoatRoughness: 0.02, depthWrite: false,
+  });
+  patch(mats.body, "lab-body", true);
+  patch(mats.clay, "lab-clay", false);
+}
+
+// the two looks of the car: the same UVs and AO, its own colour, relief, materials and mask each (loaded once, kept)
+function loadVariant(v) {
+  if (!variantTex[v]) variantTex[v] = Promise.all([
+    fetch(`${A}tex/${v}/manifest.json`).then((r) => r.json()).catch(() => ({})),
+    tex(`${v}/albedo.webp`, true), tex(`${v}/normal.webp`, false), tex(`${v}/height.webp`, false), tex(`${v}/orm.webp`, false),
+    tex(`${v}/clearcoat.webp`, false), tex(`${v}/emissive.webp`, true), tex(`${v}/mask.webp`, false),
+  ]).then(([man, albedo, normal, height, orm, coat, emissive, mask]) => ({ man, albedo, normal, height, orm, coat, emissive, mask }));
+  return variantTex[v];
+}
+async function setVariant(v) {
+  S.variant = v;
+  syncPicks();
+  const t = await loadVariant(v);
+  if (S.variant !== v) return;
+  Object.assign(T, { albedo: t.albedo, normal: t.normal, height: t.height, orm: t.orm, coat: t.coat, emissive: t.emissive, mask: t.mask });
+  manifest = t.man;
+  U.uMask.value = T.mask;
+  U.uHeight.value = T.height;
+  U.uPaintLum.value = manifest.paint_lum || 0.48;
+  U.uRimLum.value = Math.max(manifest.rim_lum || 0.05, 0.02);
+  U.uHeightTop.value = (manifest.height_paint_level || 0.62) + 0.04;
+  buildFur();
+  dentPreset(v);
+  apply();
+}
+
+// "before": the downloaded file as it is (its own materials and normals), only placed like the processed one
+function loadRaw() {
+  if (!rawPromise) {
+    rawPromise = gltfLoader.loadAsync(A + "raw.glb").then((g) => {
+      const root = g.scene;
+      const want = new THREE.Box3().setFromObject(modelRoot).getSize(new THREE.Vector3());
+      const have = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
+      root.scale.multiplyScalar(want.z / have.z);
+      root.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(root);
+      const c = box.getCenter(new THREE.Vector3());
+      root.position.set(-c.x, -box.min.y, -c.z);
+      root.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+      rawRoot = root;
+      scene.add(root);
+      apply();
+    });
+  }
+  return rawPromise;
+}
+
+function loadHD() {
+  if (!bodyHDPromise) {
+    bodyHDPromise = gltfLoader.loadAsync(A + "body_hd.glb").then((g) => {
+      g.scene.traverse((o) => { if (o.isMesh) bodyHD = o; });
+      bodyHD.castShadow = bodyHD.receiveShadow = true;
+      bodyHD.userData.hd = true;
+      body.parent.add(bodyHD);
+      meshes.push(bodyHD);
+      apply();
+    });
+  }
+  return bodyHDPromise;
+}
+
+// ---------------------------------------------------------------- apply state
+const paintColor = (v) => new THREE.Color(v); // sRGB hex -> linear working colour
+let lastQuality = null;
+function apply() {
+  if (!mats.body || !modelRoot || !T.albedo) return;
+  const before = S.pbr === "before";
+  if (before && !rawRoot) loadRaw();
+  modelRoot.visible = !(before && rawRoot); // keep the processed car on until the raw file is in
+  if (rawRoot) rawRoot.visible = before;
+  basicFill.visible = before;
+  const reliefNormal = S.relief === "normal" ? T.normal : null;
+  const reliefBump = S.relief === "bump" ? T.height : null;
+  const k = S.reliefK;
+
+  for (const m of [mats.body, mats.clay]) {
+    m.normalMap = reliefNormal;
+    m.normalScale.set(k, k);
+    m.bumpMap = reliefBump;
+    m.bumpScale = k * 2.5;
+    m.aoMap = S.ao ? T.ao : null;
+    m.flatShading = S.flat;
+  }
+  const b = mats.body;
+  b.map = S.albedo ? T.albedo : null;
+  b.color.set(S.albedo ? 0xffffff : 0xb9b9be);
+  b.roughnessMap = b.metalnessMap = S.orm ? T.orm : null;
+  b.roughness = S.orm ? 1 : 0.35;
+  b.metalness = S.orm ? 1 : 0.1;
+  b.clearcoat = S.coat ? 1 : 0;
+  b.clearcoatMap = S.coat ? T.coat : null;
+  b.emissiveMap = T.emissive;
+  b.emissiveIntensity = S.glow;
+  b.iridescence = S.paintType === "pearl" ? 1 : 0;
+  b.sheen = S.paintType === "fur" ? 1 : 0;
+  b.sheenRoughness = 0.7;
+  if (S.paint === "orig") b.sheenColor.setRGB(0.42, 0.27, 0.14);
+  else b.sheenColor.copy(paintColor(S.paint)).multiplyScalar(0.5);
+  mats.normals.normalMap = reliefNormal;
+  mats.normals.normalScale.set(k, k);
+  mats.normals.bumpMap = reliefBump;
+  mats.normals.bumpScale = k * 2.5;
+  mats.normals.flatShading = S.flat;
+  for (const m of Object.values(mats)) m.needsUpdate = true;
+
+  // paint + rims
+  U.uPaintOn.value = S.paint === "orig" ? 0 : 1;
+  if (S.paint !== "orig") U.uPaintColor.value.copy(paintColor(S.paint));
+  const pt = PAINT[S.paintType];
+  U.uTypeOn.value = S.coat || S.paintType !== "gloss" ? 1 : 0;
+  U.uPaintRough.value = pt[0];
+  U.uPaintMetal.value = pt[1];
+  U.uPaintCoat.value = S.coat ? pt[2] : 0;
+  U.uFlakes.value = ["matte", "chrome", "fur"].includes(S.paintType) ? 0 : S.flakes;
+  U.uRimOn.value = S.rim === "orig" ? 0 : 1;
+  if (S.rim !== "orig") U.uRimColor.value.copy(paintColor(S.rim));
+  U.uRimFinishOn.value = 1;
+  [U.uRimRough.value, U.uRimMetal.value] = RIM[S.rimFinish];
+
+  // depth: parallax (in the shader) or displacement (the dense body, with a morph target)
+  U.uParallax.value = S.depth === "parallax" ? 0.004 * S.depthK : 0;
+  U.uDentK.value = S.dentK;
+  renderer.domElement.style.cursor = S.dentClick && !before && !BARE ? "crosshair" : "";
+  if (S.depth === "displace" && !bodyHD) {
+    note("depthNote", "Loading the dense body (1.4 MB)…");
+    loadHD().then(() => note("depthNote", "Displacement: 174k triangles, the vertices really move. Compare the frame rate and the triangle count under Quality."));
+  }
+  const useHD = S.depth === "displace" && bodyHD;
+  if (bodyHD) bodyHD.morphTargetInfluences[0] = S.depthK;
+
+  const viewMat = { render: mats.body, clay: mats.clay, normals: mats.normals, uv: mats.uv }[S.view];
+  for (const o of meshes) {
+    o.material = o.userData.glass ? mats.glass : viewMat;
+    o.visible = !(o.userData.glass && S.view !== "render");
+  }
+  if (body) body.visible = !useHD;
+  if (bodyHD) bodyHD.visible = !!useHD;
+  const furOn = S.paintType === "fur";
+  if ($("furBox")) $("furBox").hidden = !furOn;
+  if (furMesh) {
+    const q2 = QUALITY[S.quality];
+    furMesh.visible = furOn && S.fur3d && S.view === "render" && !before && !useHD;
+    furMesh.count = q2.shells;
+    FU.uShells.value = q2.shells;
+    FU.uFurLen.value = S.furLen / 100;
+    FU.uDensity.value = S.furDensity;
+    FU.uGravity.value.set(0, -S.furDroop, 0);
+    furMat.map = S.albedo ? T.albedo : null;
+    furMat.color.set(S.albedo ? 0xffffff : 0xb9b9be);
+    furMat.needsUpdate = true;
+    note("furNote", `${q2.shells} layers × ${T.furTris.toLocaleString("en")} fur triangles = ${(q2.shells * T.furTris).toLocaleString("en")} in one draw call. The layer count follows Quality.`);
+  }
+
+  // light
+  sun.intensity = S.sun;
+  renderer.toneMappingExposure = S.exposure;
+  const q = QUALITY[S.quality];
+  if (sun.shadow.mapSize.x !== q.shadow) {
+    sun.shadow.mapSize.set(q.shadow, q.shadow);
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+  }
+  placeSun();
+  applyEnv();
+
+  // effects (none "before": a plain viewer)
+  const m = S.mirror ? ensureMirror() : mirror;
+  if (m) {
+    m.visible = S.mirror && !before;
+    m.material.uniforms.uStrength.value = S.mirrorK;
+  }
+  gtao.enabled = S.ssao;
+  bokeh.enabled = S.dof;
+  bokeh.uniforms.aperture.value = 0.0002 + S.dofK * 0.004;
+  bokeh.uniforms.maxblur.value = 0.004 + S.dofK * 0.012;
+  bloom.enabled = S.bloom;
+  bloom.strength = S.bloomK;
+  if (q !== lastQuality) {
+    lastQuality = q;
+    for (const rt of [composer.renderTarget1, composer.renderTarget2]) { rt.samples = q.samples; rt.dispose(); }
+    resize();
+  }
+  showDependents();
+  invalidate();
+}
+
+function placeSun() {
+  const az = THREE.MathUtils.degToRad(S.azimuth), el = THREE.MathUtils.degToRad(S.elevation), r = 12;
+  sun.position.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r);
+  sun.target.position.set(0, 0.4, 0);
+}
+
+// ---------------------------------------------------------------- dents: click to dent, random, undo, clear; the damaged look has its own set
+const dents = [];
+function uploadDents() {
+  dents.forEach((d, i) => {
+    U.uDents.value[i].set(d.c.x, d.c.y, d.c.z, d.r);
+    U.uDentDirs.value[i].set(d.dir.x, d.dir.y, d.dir.z, d.depth);
+  });
+  U.uDentCount.value = dents.length;
+  const n = dents.length;
+  note("dentNote", n
+    ? `${n} ${n === 1 ? "dent" : "dents"} (up to ${MAX_DENTS}). ` + (S.depth === "displace" ? "Dense body: the panels really bend." : "The light body: a dent changes the shading and the reflections. Displacement shows it in the outline too.")
+    : "No dents.");
+  invalidate();
+}
+function addDent(point, normal, r = S.dentR / 100, depth = S.dentDepth / 100) {
+  if (dents.length >= MAX_DENTS) dents.shift();
+  dents.push({ c: point.clone(), dir: normal.clone().negate().normalize(), r, depth });
+  uploadDents();
+}
+const raycaster = new THREE.Raycaster();
+function hitBody(origin, dir) {
+  const target = [body, bodyHD].filter((mm) => mm && mm.visible);
+  raycaster.set(origin, dir);
+  const hit = raycaster.intersectObjects(target, false)[0];
+  if (!hit) return null;
+  const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+  if (n.dot(dir) > 0) n.negate();
+  return { point: hit.point, normal: n };
+}
+function dentPreset(v) {
+  dents.length = 0;
+  if (v === "damaged" && body) {
+    modelRoot.updateMatrixWorld(true);
+    for (const [from, to, r, d] of DENT_RAYS) {
+      const o = new THREE.Vector3(...from), dir = new THREE.Vector3(...to).sub(o).normalize();
+      const h = hitBody(o, dir);
+      if (h) dents.push({ c: h.point.clone(), dir: h.normal.clone().negate().normalize(), r: r / 100, depth: d / 100 });
+    }
+  }
+  uploadDents();
+}
+let downAt = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!downAt || !S.dentClick || S.pbr === "before" || BARE) return;
+  const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+  if (moved > 5 || performance.now() - downAt.t > 450) return; // that was a drag to orbit, not a click
+  const r = renderer.domElement.getBoundingClientRect();
+  const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const h = hitBody(raycaster.ray.origin.clone(), raycaster.ray.direction.clone());
+  if (h) addDent(h.point, h.normal);
+});
+function randomDents() {
+  for (let k = 0, made = 0; k < 40 && made < 6; k++) {
+    const a = Math.random() * Math.PI * 2, up = 0.15 + Math.random() * 0.5;
+    const origin = new THREE.Vector3(Math.cos(a) * 6, 0.5 + up * 4, Math.sin(a) * 6);
+    const target = new THREE.Vector3((Math.random() - 0.5) * 1.2, 0.35 + Math.random() * 0.5, (Math.random() - 0.5) * 3.6);
+    const h = hitBody(origin, target.sub(origin).normalize());
+    if (!h || h.point.y < 0.15) continue;
+    addDent(h.point, h.normal, (8 + Math.random() * 22) / 100, (1 + Math.random() * 3.5) / 100);
+    made++;
+  }
+}
+
+// ---------------------------------------------------------------- the two switches on the stage
+function syncPicks() {
+  for (const [id, key] of [["pickVariant", "variant"], ["pickPbr", "pbr"]])
+    $(id).querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.v === S[key])));
+}
+$("pickVariant").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { if (S.variant !== b.dataset.v) setVariant(b.dataset.v); }));
+$("pickPbr").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { S.pbr = b.dataset.v; syncPicks(); apply(); }));
+syncPicks();
+LabUI.segThumb($("pickVariant"));
+LabUI.segThumb($("pickPbr"));
+
+// ---------------------------------------------------------------- the card (the lab's shared controls, soft look)
+const ctl = {};
+const notes = {};
+function note(id, text) { if (notes[id]) notes[id].textContent = text; }
+function hint(parent, id) { const p = document.createElement("p"); p.className = "ui-hint"; if (id) { p.id = id; notes[id] = p; } parent.appendChild(p); return p; }
+const set = (key, after) => (v) => { S[key] = v; (after || apply)(); };
+const PAINTS = [["orig", "Original"], ["#F2B705", "Yellow"], ["#F26A0A", "Orange"], ["#B3121B", "Red"], ["#1F4FB8", "Blue"], ["#4CB82A", "Lime"], ["#EDEDED", "White"], ["#6E7378", "Grey"], ["#0B0B0C", "Black"]];
+const RIMS = [["orig", "Original"], ["#111214", "Black"], ["#3A3C40", "Graphite"], ["#C8CCD0", "Silver"], ["#C9A24A", "Gold"], ["#5A4632", "Bronze"]];
+const BGS = [["#e9ebee", "Light grey"], ["#f6f4ef", "Cream"], ["#c9ccd2", "Grey"], ["#2a2d33", "Graphite"], ["#0e0f12", "Black"]];
+const sw = (list) => list.map(([v, name]) => ({ v, name, css: v === "orig" ? "conic-gradient(#ce1e1e 0 25%, #17181b 0 50%, #ce1e1e 0 75%, #17181b 0)" : v }));
+
+function buildPanel() {
+  const panel = $("panel");
+  panel.innerHTML = `<div class="ph"><div><h2>Customize</h2><p>A light car (10k triangles) made real by its maps and its light, not by its geometry.</p></div>
+    <button type="button" class="pc" id="pClose" aria-label="Close the panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  $("pClose").addEventListener("click", () => openPanel(false));
+
+  let g = LabUI.group(panel, "View", { open: true, key: "scl.view" });
+  ctl.view = LabUI.seg(g, { label: "Shading", options: [["render", "Render"], ["clay", "Clay"], ["normals", "Normals"], ["uv", "UV"]], value: S.view, onChange: set("view") });
+  ctl.quality = LabUI.seg(g, { label: "Quality", options: [["low", "Low"], ["medium", "Medium"], ["high", "High"]], value: S.quality, onChange: (v) => { autoQuality = false; S.quality = v; apply(); } });
+  hint(g, "perf");
+  hint(g).textContent = "A frame is drawn only when something moves; at rest the graphics card does nothing.";
+
+  g = LabUI.group(panel, "Environment", { key: "scl.env" });
+  ctl.env = LabUI.seg(g, { label: "Light", options: [["room", "Studio (built)"], ["studio_small_09", "Studio HDRI"], ["the_sky_is_on_fire", "Sunset"], ["wide_street_01", "Street"], ["empty_warehouse_01", "Hall"]], value: S.env, onChange: (v) => { S.env = v; setEnv(v); } });
+  ctl.bg = LabUI.seg(g, { label: "Backdrop", options: [["color", "Colour"], ["hdri", "Photo"], ["blur", "Blurred"], ["ground", "On the ground"]], value: S.bg, onChange: set("bg") });
+  ctl.bgColor = LabUI.swatches(g, { label: "Backdrop colour", options: sw(BGS), value: S.bgColor, onChange: set("bgColor") });
+  ctl.envRot = LabUI.slider(g, { label: "Turn", min: 0, max: 360, step: 1, unit: "°", value: S.envRot, def: 0, onInput: set("envRot") });
+  ctl.envI = LabUI.slider(g, { label: "Strength", min: 0, max: 3, step: 0.05, value: S.envI, def: 1, onInput: set("envI") });
+  ctl.exposure = LabUI.slider(g, { label: "Exposure", min: 0.3, max: 2.5, step: 0.05, value: S.exposure, def: 0.75, onInput: set("exposure") });
+
+  g = LabUI.group(panel, "Sun", { key: "scl.sun" });
+  ctl.azimuth = LabUI.slider(g, { label: "Direction", min: 0, max: 360, step: 1, unit: "°", value: S.azimuth, def: 126, onInput: (v) => { S.azimuth = v; placeSun(); invalidate(); } });
+  ctl.elevation = LabUI.slider(g, { label: "Height", min: 4, max: 85, step: 1, unit: "°", value: S.elevation, def: 49, onInput: (v) => { S.elevation = v; placeSun(); invalidate(); } });
+  ctl.sun = LabUI.slider(g, { label: "Power", min: 0, max: 8, step: 0.1, value: S.sun, def: 2.6, onInput: set("sun") });
+  ctl.spin = LabUI.check(g, { label: "Turn the sun", value: S.spin, hint: "shows the relief and the paint best", onChange: set("spin") });
+
+  g = LabUI.group(panel, "Paint", { open: true, key: "scl.paint" });
+  ctl.paint = LabUI.swatches(g, { label: "Colour", options: sw(PAINTS), value: S.paint, onChange: set("paint") });
+  ctl.paintCustom = LabUI.color(g, { label: "Your own colour", value: "#3d7bd9", onInput: (v) => { S.paint = v; ctl.paint.set(v); apply(); } });
+  ctl.paintType = LabUI.seg(g, { label: "Finish", options: [["gloss", "Gloss"], ["metallic", "Metallic"], ["pearl", "Pearl"], ["matte", "Matte"], ["chrome", "Chrome"], ["fur", "Fur"]], value: S.paintType, onChange: set("paintType") });
+  ctl.flakes = LabUI.slider(g, { label: "Metal flakes", min: 0, max: 1, step: 0.01, value: S.flakes, def: 0.35, onInput: set("flakes") });
+  const fb = document.createElement("div"); fb.id = "furBox"; g.appendChild(fb);
+  ctl.fur3d = LabUI.check(fb, { label: "3D fur", value: S.fur3d, hint: "hairs from layers over the body (shell fur)", onChange: set("fur3d") });
+  ctl.furLen = LabUI.slider(fb, { label: "Hair length", min: 0.2, max: 5, step: 0.1, unit: "cm", value: S.furLen, def: 2, onInput: set("furLen") });
+  ctl.furDensity = LabUI.slider(fb, { label: "Density", min: 300, max: 3000, step: 50, value: S.furDensity, def: 1100, onInput: set("furDensity") });
+  ctl.furDroop = LabUI.slider(fb, { label: "Droop", min: 0, max: 1, step: 0.01, value: S.furDroop, def: 0.35, onInput: set("furDroop") });
+  hint(fb, "furNote");
+
+  g = LabUI.group(panel, "Wheels", { key: "scl.wheels" });
+  ctl.rim = LabUI.swatches(g, { label: "Rims", options: sw(RIMS), value: S.rim, onChange: set("rim") });
+  ctl.rimFinish = LabUI.seg(g, { label: "Rim finish", options: [["matte", "Matte"], ["satin", "Satin"], ["gloss", "Gloss"]], value: S.rimFinish, onChange: set("rimFinish") });
+  ctl.wheels = LabUI.check(g, { label: "Spin the wheels", value: S.wheels, onChange: set("wheels") });
+
+  g = LabUI.group(panel, "Relief and depth", { key: "scl.relief" });
+  ctl.relief = LabUI.seg(g, { label: "Relief", options: [["normal", "Normal map"], ["bump", "Bump map"], ["none", "None"]], value: S.relief, onChange: set("relief") });
+  ctl.reliefK = LabUI.slider(g, { label: "Relief strength", min: 0, max: 4, step: 0.05, unit: "×", value: S.reliefK, def: 0.5, onInput: set("reliefK") });
+  ctl.depth = LabUI.seg(g, { label: "Depth", options: [["none", "None"], ["parallax", "Parallax"], ["displace", "Displacement"]], value: S.depth, onChange: (v) => { S.depth = v; apply(); uploadDents(); } });
+  ctl.depthK = LabUI.slider(g, { label: "Depth amount", min: 0, max: 2, step: 0.05, unit: "×", value: S.depthK, def: 0.5, onInput: set("depthK") });
+  hint(g, "depthNote").textContent = "Parallax: depth faked in the shader, not one triangle more. Displacement: a dense body of 174k triangles (1.4 MB), loaded only when picked.";
+  ctl.flat = LabUI.check(g, { label: "Flat shading", value: S.flat, hint: "how the file looked before its normals were fixed", onChange: set("flat") });
+
+  g = LabUI.group(panel, "Dents", { key: "scl.dents" });
+  ctl.dentClick = LabUI.check(g, { label: "Click the car to dent it", value: S.dentClick, hint: "a short click dents, a drag still turns the view", onChange: set("dentClick") });
+  ctl.dentR = LabUI.slider(g, { label: "Radius", min: 4, max: 45, step: 1, unit: "cm", value: S.dentR, def: 18, onInput: (v) => { S.dentR = v; } });
+  ctl.dentDepth = LabUI.slider(g, { label: "Depth", min: 0.5, max: 8, step: 0.1, unit: "cm", value: S.dentDepth, def: 2.5, onInput: (v) => { S.dentDepth = v; } });
+  ctl.dentK = LabUI.slider(g, { label: "All dents", min: 0, max: 2, step: 0.05, unit: "×", value: S.dentK, def: 1, onInput: set("dentK") });
+  const row = document.createElement("div"); row.className = "btns";
+  for (const [label, fn] of [["Random", randomDents], ["Undo", () => { dents.pop(); uploadDents(); }], ["Clear", () => { dents.length = 0; uploadDents(); }]]) {
+    const bt = document.createElement("button"); bt.type = "button"; bt.textContent = label; bt.addEventListener("click", fn); row.appendChild(bt);
+  }
+  g.appendChild(row);
+  hint(g, "dentNote");
+
+  g = LabUI.group(panel, "Maps", { key: "scl.maps" });
+  ctl.albedo = LabUI.check(g, { label: "Colour", value: S.albedo, onChange: set("albedo") });
+  ctl.ao = LabUI.check(g, { label: "Ambient occlusion", value: S.ao, hint: "baked shadows in the recesses", onChange: set("ao") });
+  ctl.orm = LabUI.check(g, { label: "Roughness and metal", value: S.orm, onChange: set("orm") });
+  ctl.coat = LabUI.check(g, { label: "Clear coat", value: S.coat, onChange: set("coat") });
+  ctl.glow = LabUI.slider(g, { label: "Car lights", min: 0, max: 8, step: 0.1, value: S.glow, def: 0, onInput: set("glow") });
+
+  g = LabUI.group(panel, "Effects", { key: "scl.fx" });
+  ctl.bloom = LabUI.check(g, { label: "Bloom", value: S.bloom, hint: "lights and highlights glow as in a camera", onChange: set("bloom") });
+  ctl.bloomK = LabUI.slider(g, { label: "Bloom strength", min: 0, max: 2, step: 0.05, value: S.bloomK, def: 0.5, onInput: set("bloomK") });
+  ctl.mirror = LabUI.check(g, { label: "Mirror floor", value: S.mirror, hint: "draws the scene a second time", onChange: set("mirror") });
+  ctl.mirrorK = LabUI.slider(g, { label: "Reflection", min: 0, max: 1, step: 0.01, value: S.mirrorK, def: 0.86, onInput: set("mirrorK") });
+  ctl.ssao = LabUI.check(g, { label: "Screen-space AO", value: S.ssao, hint: "more contact shadows", onChange: set("ssao") });
+  ctl.dof = LabUI.check(g, { label: "Depth of field", value: S.dof, hint: "sharp on the car, the background soft", onChange: set("dof") });
+  ctl.dofK = LabUI.slider(g, { label: "Blur", min: 0, max: 1, step: 0.01, value: S.dofK, def: 0.35, onInput: set("dofK") });
+
+  const foot = document.createElement("div"); foot.className = "foot";
+  foot.innerHTML = `Model: <a href="https://poly.pizza/m/5zUWP5UsLg-" target="_blank" rel="noopener">CAR Model</a> by Ignition Labs, CC-BY 3.0 · HDRI: <a href="https://polyhaven.com" target="_blank" rel="noopener">Poly Haven</a>, CC0`;
+  panel.appendChild(foot);
+}
+function showDependents() {
+  if (!ctl.flakes) return;
+  LabUI.show(ctl.flakes, !["matte", "chrome", "fur"].includes(S.paintType));
+  LabUI.show(ctl.bloomK, S.bloom);
+  LabUI.show(ctl.mirrorK, S.mirror);
+  LabUI.show(ctl.dofK, S.dof);
+  LabUI.show(ctl.depthK, S.depth !== "none");
+}
+function syncAll() {
+  for (const [key, c] of Object.entries(ctl)) if (key in S) c.set(S[key]);
+  syncPicks();
+}
+function openPanel(on) {
+  document.body.classList.toggle("tuning", on);
+  $("tune").setAttribute("aria-expanded", String(on));
+}
+$("tune").addEventListener("click", () => openPanel(!document.body.classList.contains("tuning")));
+addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("tuning")) openPanel(false); });
+
+// ---------------------------------------------------------------- loop: draw only when something changed; step quality down if it struggles
+const clock = new THREE.Clock();
+let frames = 0, lastStat = performance.now(), lastInfo = { calls: 0, triangles: 0 }, autoQuality = !BARE, slow = 0, autoFrom = Infinity;
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (S.spin) { S.azimuth = (S.azimuth + dt * 24) % 360; ctl.azimuth?.set(S.azimuth); placeSun(); dirty = true; }
+  if (S.wheels && wheels.length && !THUMB && !window.__rec) { for (const w of wheels) w.rotation.x += dt * 6; dirty = true; }
+  controls.update();
+  if (dirty) {
+    dirty = false;
+    renderer.info.reset();
+    if (S.dof) bokeh.uniforms.focus.value = camera.position.distanceTo(controls.target);
+    const post = S.pbr === "after" && (S.bloom || S.ssao || S.dof);
+    if (post) composer.render(dt); else renderer.render(scene, camera);
+    lastInfo = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+    frames++;
+  }
+  const now = performance.now();
+  if (now - lastStat > 500) {
+    const fps = (frames * 1000) / (now - lastStat);
+    // (a busy card on a slow device: after about two seconds under 26 fps step down one notch, until someone picks a quality)
+    if (autoQuality && now > autoFrom && frames > 5 && fps < 26 && S.quality !== "low" && document.visibilityState === "visible") {
+      if (++slow >= 4) { slow = 0; S.quality = S.quality === "high" ? "medium" : "low"; ctl.quality?.set(S.quality); apply(); }
+    } else slow = 0;
+    note("perf", frames
+      ? `${fps.toFixed(0)} fps · ${lastInfo.triangles.toLocaleString("en")} triangles · ${lastInfo.calls} draw calls · ${QUALITY[S.quality].label} quality`
+      : `at rest · 0 fps · last frame ${lastInfo.triangles.toLocaleString("en")} triangles`);
+    frames = 0;
+    lastStat = now;
+  }
+});
+
+// ---------------------------------------------------------------- start
+async function init() {
+  makeMaterials();
+  if (!BARE) buildPanel();
+  assets = await fetch(A + "assets.json").then((r) => r.json()).catch(() => ({ hdri: {} }));
+  const [gltf, ao] = await Promise.all([gltfLoader.loadAsync(A + "model.glb"), tex("ao.webp", false)]);
+  T.ao = ao;
+  meshes = []; wheels = []; body = null;
+  gltf.scene.traverse((o) => {
+    if (/^Wheels?_/.test(o.name)) wheels.push(o);
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = true;
+    const isGlass = o.material.name === "Glass";
+    o.userData.glass = isGlass;
+    if (isGlass) o.castShadow = false;
+    if (o.name === "Body") body = o;
+    meshes.push(o);
+  });
+  modelRoot = gltf.scene;
+  scene.add(modelRoot);
+  await Promise.all([setVariant(S.variant), setEnv(S.env)]);
+  syncAll();
+  apply();
+  const skel = $("skeleton");
+  skel.classList.add("gone");
+  setTimeout(() => skel.remove(), 600);
+  loadVariant(S.variant === "damaged" ? "clean" : "damaged"); // the other look, quietly, so the switch is instant
+  requestAnimationFrame(() => requestAnimationFrame(() => (window.__ready = true))); // (for the board's thumbnail shot)
+  autoFrom = performance.now() + 4000; // (shaders compile in the first seconds: slow frames then say nothing about the device)
+}
+init().catch((e) => console.error(e));
+// the board's hover video, frame by frame: the camera at an angle round the car from the start view, the wheels at a turn
+if (BARE) window.__orbit = (deg, wheel = 0) => {
+  window.__rec = true;
+  controls.autoRotate = false;
+  const off = START.clone().sub(controls.target).applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(deg));
+  camera.position.copy(controls.target).add(off);
+  controls.update();
+  for (const w of wheels) w.rotation.x = wheel;
+  invalidate();
+};
+window.__lab = { S, apply, scene, camera, controls, mats, U, invalidate, dents, addDent, uploadDents, setVariant };
+</script>
+</body>
+</html>
