@@ -64,6 +64,11 @@
   .chips { display: flex; gap: 8px; padding: 4px 0 10px; } .chips span { flex: 1; height: 28px; border-radius: 9px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
   .note { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: var(--ui-muted); } .note a { color: inherit; }
   .code { position: relative; margin: 0 0 8px; padding: 14px 14px 46px; border-radius: 14px; background: var(--ui-field); font: 12px/1.6 'Geist Mono', ui-monospace, monospace; color: var(--ui-ink); white-space: pre-wrap; word-break: break-all; user-select: text; -webkit-user-select: text; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; }
+  .presets button { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-field); font: 500 12.5px var(--font); cursor: pointer; color: var(--ui-ink); transition: background .2s, color .2s, scale .3s var(--ui-spring); }
+  .presets button:hover { background: var(--ui-field-hi); } .presets button:active { scale: .95; } .presets button.on { background: var(--ui-on); color: var(--ui-on-text); }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  .note code { font: 11.5px 'Geist Mono', ui-monospace, monospace; }
   .code button { position: absolute; right: 8px; bottom: 8px; height: 30px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-on); color: var(--ui-on-text); font: 600 12px var(--font); cursor: pointer; }
   @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .dock { bottom: calc(34px + env(safe-area-inset-bottom)); } body.tuning .states { bottom: calc(98px + env(safe-area-inset-bottom)); } }
   @media (max-width: 760px) {
@@ -90,7 +95,7 @@
 <div class="states" id="states" role="group" aria-label="State"></div>
 <div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Orbs">
   <button id="prev" type="button" aria-label="Previous orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-  <span class="vn" id="nm" aria-live="polite">Glass</span>
+  <span class="vn" id="nm" aria-live="polite">Halo</span>
   <button id="next" type="button" aria-label="Next orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
 </div></div>
 <aside class="panel lab-ui soft" id="panel" aria-label="Customize the orb"></aside>
@@ -99,14 +104,21 @@
 <script type="module">
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
 const KEY = 'lab.ai-blob.v1';
-const ORBS = [['glass', 'Glass'], ['cloud', 'Cloud'], ['nebula', 'Nebula'], ['swarm', 'Swarm'], ['rings', 'Rings']];
+const ORBS = [['glass', 'Glass'], ['halo', 'Halo'], ['cloud', 'Cloud'], ['nebula', 'Nebula'], ['dots', 'Dots'], ['swirl', 'Swirl'], ['swarm', 'Swarm'], ['rings', 'Rings']];
 const STATES = [['default', 'Default'], ['listening', 'Listening'], ['speaking', 'Speaking'], ['thinking', 'Thinking'], ['connecting', 'Connecting'], ['error', 'Error'], ['muted', 'Muted']];
 const PALS = [['aurora', 'Aurora'], ['ocean', 'Ocean'], ['sunset', 'Sunset'], ['mint', 'Mint'], ['mono', 'Mono'], ['custom', 'Custom']];
-const DEF = { variant: 'glass', state: 'default', theme: 'light', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1, view: 'one', mic: false };
+// (the tunables: settings key → attribute, label, min, max, step)
+const TUNE = [['glow', 'glow', 'Glow', 0, 2, .05], ['halo', 'halo', 'Halo', 0, 2.5, .05], ['rim', 'rim', 'Rim', 0, 2.5, .05], ['core', 'core', 'Core', 0, 2.5, .05], ['glints', 'glints', 'Glints', 0, 2, .05],
+  ['detail', 'detail', 'Detail', .3, 3, .05], ['wobble', 'wobble', 'Wobble', 0, 1, .01], ['cspeed', 'color-speed', 'Colour speed', 0, 4, .05]];
+const DEF = { variant: 'halo', state: 'default', theme: 'light', blend: 'auto', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1, view: 'one', ground: true, lift: 1, interactive: true, intro: true,
+  glow: 1, halo: 1, rim: 1, core: 1, glints: 1, detail: 1, wobble: 0, cspeed: 1 };
+// (presets: an orb, its colours and a few settings that suit it)
+const PRESETS = [['Iridescent', { variant: 'halo', palette: 'aurora' }], ['Pearl', { variant: 'halo', palette: 'mono', glow: .8, rim: .8, core: 1.3 }], ['Liquid', { variant: 'glass', palette: 'ocean' }],
+  ['Silk', { variant: 'cloud', palette: 'sunset' }], ['Smoke', { variant: 'nebula', palette: 'aurora', halo: 1.4 }], ['Print', { variant: 'dots', palette: 'aurora', detail: 1.3 }],
+  ['Calm', { variant: 'swirl', palette: 'ocean' }], ['Orbit', { variant: 'rings', palette: 'mint', rim: 1.3 }], ['Stardust', { variant: 'swarm', palette: 'sunset' }]];
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
-if (BARE) P = { ...DEF, variant: q.get('variant') || 'glass' };
+if (BARE) P = { ...DEF, variant: q.get('variant') || 'halo', ground: !q.has('flat'), theme: q.get('theme') === 'dark' ? 'dark' : 'light' };
 const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k] && !(k === 'state' && (P[k] === 'connecting' || P[k] === 'error'))) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
-const blobs = () => [...document.querySelectorAll(P.view === 'sizes' ? '.sizes ai-blob' : 'ai-blob.one')];
 const all = () => [...document.querySelectorAll('ai-blob')];
 
 // ---------- the colours from one seed, in HCT (Material colour utilities): the seed, two neighbours in hue, a light accent opposite ----------
@@ -116,12 +128,16 @@ function seedColours() { if (!MCU) return null; const { Hct, hexFromArgb } = MCU
 const colours = () => P.palette === 'custom' ? seedColours() : null;
 
 // ---------- applying the settings to every orb on the page ----------
-function apply() { const cols = colours();
-  for (const b of all()) { b.variant = P.variant; b.theme = P.theme; b.speed = P.speed; if (cols) b.colors = cols; else { b.removeAttribute('colors'); b.palette = P.palette === 'custom' ? 'aurora' : P.palette; } }
+const attrs = () => { const a = {}; if (P.blend !== 'auto') a.blend = P.blend; if (P.ground) { a.ground = ''; if (P.lift !== 1) a.lift = P.lift; } if (!P.interactive) a.interactive = 'false'; if (!P.intro) a.intro = 'false';
+  if (P.speed !== 1) a.speed = P.speed; for (const [k, at] of TUNE) if (P[k] !== DEF[k]) a[at] = P[k]; return a; };
+function apply() { const cols = colours(), a = attrs(), names = ['blend', 'ground', 'lift', 'interactive', 'intro', 'speed', ...TUNE.map(t => t[1])];
+  for (const b of all()) { b.variant = P.variant; b.removeAttribute('theme'); for (const n of names) { if (n in a) b.setAttribute(n, a[n]); else b.removeAttribute(n); }
+    if (cols) b.colors = cols; else { b.removeAttribute('colors'); b.palette = P.palette === 'custom' ? 'aurora' : P.palette; } }
   document.body.classList.toggle('dark', P.theme === 'dark'); document.body.classList.toggle('view-sizes', P.view === 'sizes');
   document.querySelector('meta[name=theme-color]').content = P.theme === 'dark' ? '#0e0f13' : '#f4f3ef'; $('vars').classList.toggle('dark', P.theme === 'dark');
   document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === P.theme)));
-  $('nm').textContent = ORBS.find(o => o[0] === P.variant)?.[1] || 'Glass'; paintStates(); paintChips(); paintCode(); }
+  requestAnimationFrame(() => all().forEach(b => b.refresh?.()));   // (the orb looks at the new background straight away)
+  $('nm').textContent = ORBS.find(o => o[0] === P.variant)?.[1] || 'Halo'; paintStates(); paintChips(); paintCode(); markPresets(); vis(); }
 function setState(s) { P.state = s; save(); for (const b of all()) b.state = s; paintStates(); paintCode(); }
 // (connecting and error go back by themselves: the bar follows the orb)
 $('one').addEventListener('statechange', e => { if (e.detail.auto) { P.state = e.detail.state; for (const b of document.querySelectorAll('.sizes ai-blob')) b.state = P.state; save(); paintStates(); paintCode(); } });
@@ -131,12 +147,12 @@ $('states').innerHTML = STATES.map(([v, l], i) => `<button type="button" data-s=
 $('states').querySelectorAll('button').forEach(b => b.onclick = () => setState(b.dataset.s));
 function paintStates() { $('states').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === P.state))); }
 const stepOrb = d => { const i = ORBS.findIndex(o => o[0] === P.variant); P.variant = ORBS[(i + d + ORBS.length) % ORBS.length][0]; save(); apply(); };
-LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepOrb, items: () => ORBS.map(o => o[1]), current: () => ORBS.find(o => o[0] === P.variant)[1],
+LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepOrb, items: () => ORBS.map(o => o[1]), current: () => ORBS.find(o => o[0] === P.variant)?.[1],
   onPick: n => { P.variant = ORBS.find(o => o[1] === n)[0]; save(); apply(); } });
-document.querySelectorAll('#mode button').forEach(b => b.onclick = () => { P.theme = b.dataset.m; save(); apply(); ctl.theme?.set(P.theme); });
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => { P.theme = b.dataset.m; save(); apply(); });
 addEventListener('keydown', e => { if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, .panel, textarea')) return;
   if (e.key === 'ArrowRight') stepOrb(1); else if (e.key === 'ArrowLeft') stepOrb(-1); else if (e.key === 'Escape') openPanel(false);
-  else { const i = '1234567'.indexOf(e.key); if (i >= 0) setState(STATES[i][0]); } });
+  else if (e.key === ' ') { e.preventDefault(); $('one').tap(); } else { const i = '1234567'.indexOf(e.key); if (i >= 0) setState(STATES[i][0]); } });
 
 // ---------- the microphone: one source for every orb on the page ----------
 let mic = null;
@@ -148,42 +164,63 @@ async function useMic(on) { if (!on) { mic?.stream.getTracks().forEach(t => t.st
 // ---------- the panel ----------
 const panel = $('panel'), ctl = {};
 function buildPanel() { panel.innerHTML = '';
-  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The orb’s look and colours, the sizes, and the tag to use it in your own page.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>Pick a preset or shape your own orb: colours, depth, light and touch. The tag at the end takes it to your page.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
   const set = (k, v) => { P[k] = v; save(); apply(); };
+  const gP = LabUI.group(panel, 'Presets', { key: KEY + '.g.pre', open: true }), pb = document.createElement('div'); pb.className = 'presets'; gP.appendChild(pb);
+  pb.innerHTML = PRESETS.map(([n]) => `<button type="button" data-n="${n}">${n}</button>`).join('');
+  pb.querySelectorAll('button').forEach(b => b.onclick = () => { const pr = PRESETS.find(p => p[0] === b.dataset.n)[1]; for (const [k] of TUNE) P[k] = DEF[k]; Object.assign(P, pr); save(); syncCtl(); apply(); });
   const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look', open: true });
   ctl.palette = LabUI.seg(g1, { label: 'Colours', options: PALS, value: P.palette, onChange: v => set('palette', v) });
-  ctl.theme = LabUI.seg(g1, { label: 'Page', options: [['light', 'Light'], ['dark', 'Dark']], value: P.theme, onChange: v => set('theme', v) });
+  ctl.blend = LabUI.seg(g1, { label: 'Blend', options: [['auto', 'Auto'], ['ink', 'Ink'], ['glow', 'Glow']], value: P.blend, onChange: v => set('blend', v) });
+  const bn = document.createElement('p'); bn.className = 'note'; bn.textContent = 'Ink draws clean colour for light pages, Glow shines on dark ones; Auto reads the background behind the orb.'; g1.appendChild(bn);
   ctl.speed = LabUI.slider(g1, { label: 'Speed', min: .25, max: 2, step: .05, unit: '×', value: P.speed, def: DEF.speed, onInput: v => set('speed', v) });
-  const g2 = LabUI.group(panel, 'Your colour (HCT)', { key: KEY + '.g.seed', open: true });
+  const gD = LabUI.group(panel, 'Depth', { key: KEY + '.g.depth', open: true });
+  ctl.ground = LabUI.check(gD, { label: 'Stand on a ground', value: P.ground, onChange: v => set('ground', v) });
+  ctl.lift = LabUI.slider(gD, { label: 'Lift', min: 0, max: 2, step: .05, unit: '×', value: P.lift, def: DEF.lift, onInput: v => set('lift', v) });
+  const dn = document.createElement('p'); dn.className = 'note'; dn.id = 'dnote'; dn.textContent = 'The orb floats over a soft shadow: muted, it sits down; it stands up again when it wakes, listens or speaks.'; gD.appendChild(dn);
+  const gT = LabUI.group(panel, 'Fine tune', { key: KEY + '.g.tune', open: true });
+  for (const [k, , label, min, max, step] of TUNE) ctl[k] = LabUI.slider(gT, { label, min, max, step, unit: '', value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g2 = LabUI.group(panel, 'Your colour (HCT)', { key: KEY + '.g.seed' });
   const note = document.createElement('p'); note.className = 'note'; note.textContent = 'One seed colour in hue, chroma and tone; the other three come from it: two neighbours in hue and a light accent across the wheel.'; g2.appendChild(note);
   const seed = k => v => { P[k] = v; P.palette = 'custom'; ctl.palette.set('custom'); save(); apply(); };
   ctl.h = LabUI.slider(g2, { label: 'Hue', min: 0, max: 360, step: 1, unit: '°', value: P.h, def: DEF.h, onInput: seed('h') });
   ctl.c = LabUI.slider(g2, { label: 'Chroma', min: 8, max: 110, step: 1, unit: '', value: P.c, def: DEF.c, onInput: seed('c') });
   ctl.t = LabUI.slider(g2, { label: 'Tone', min: 25, max: 80, step: 1, unit: '', value: P.t, def: DEF.t, onInput: seed('t') });
   const chips = document.createElement('div'); chips.className = 'chips'; chips.id = 'chips'; g2.appendChild(chips);
-  const g3 = LabUI.group(panel, 'Preview', { key: KEY + '.g.view', open: true });
-  ctl.view = LabUI.seg(g3, { label: 'Show', options: [['one', 'One orb'], ['sizes', 'Three sizes']], value: P.view, onChange: v => { P.view = v; save(); apply(); } });
+  const g3 = LabUI.group(panel, 'Touch and sound', { key: KEY + '.g.touch', open: true });
+  ctl.interactive = LabUI.check(g3, { label: 'Tap to squeeze (or Space)', value: P.interactive, onChange: v => set('interactive', v) });
+  ctl.intro = LabUI.check(g3, { label: 'Pop in on start', value: P.intro, onChange: v => set('intro', v) });
+  const ri = document.createElement('div'); ri.className = 'presets'; ri.innerHTML = '<button type="button" id="replay">Replay the pop-in</button><button type="button" id="tapit">Tap it</button>'; g3.appendChild(ri);
+  ri.querySelector('#replay').onclick = () => all().forEach(b => b.replayIntro()); ri.querySelector('#tapit').onclick = () => all().forEach(b => b.tap());
   ctl.mic = LabUI.check(g3, { label: 'Listen through the microphone', value: false, onChange: async v => { const ok = await useMic(v); if (!ok) { ctl.mic.set(false); alert('The browser did not allow the microphone.'); } } });
-  const g4 = LabUI.group(panel, 'Use it', { key: KEY + '.g.code', open: true });
-  const how = document.createElement('p'); how.className = 'note'; how.innerHTML = 'Add <a href="ai-blob.js" download>ai-blob.js</a> to your page once, then place the tag at any size. Set <code>state</code> from your code as the assistant listens, thinks and talks; <code>level</code> (0–1) or <code>useAnalyser()</code> lets your own audio move it.'; g4.appendChild(how);
-  const pre = document.createElement('pre'); pre.className = 'code'; pre.innerHTML = '<span id="code"></span><button type="button" id="copy">Copy</button>'; g4.appendChild(pre);
-  pre.querySelector('#copy').onclick = e => { navigator.clipboard?.writeText($('code').textContent); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy', 1200); }; }
-function paintChips() { const el = $('chips'); if (!el) return; const cols = colours() || (window.customElements.get('ai-blob')?.palettes[P.palette === 'custom' ? 'aurora' : P.palette]) || [];
+  const g4 = LabUI.group(panel, 'Preview', { key: KEY + '.g.view' });
+  ctl.view = LabUI.seg(g4, { label: 'Show', options: [['one', 'One orb'], ['sizes', 'Three sizes']], value: P.view, onChange: v => { P.view = v; save(); apply(); } });
+  const g5 = LabUI.group(panel, 'Use it', { key: KEY + '.g.code', open: true });
+  const how = document.createElement('p'); how.className = 'note'; how.innerHTML = 'Add <a href="ai-blob.js" download>ai-blob.js</a> to your page once, then place the tag at any size. Set <code>state</code> from your code as the assistant listens, thinks and talks; <code>level</code> (0–1) or <code>useAnalyser()</code> lets your own audio move it; <code>tap()</code> squeezes it.'; g5.appendChild(how);
+  const pre = document.createElement('pre'); pre.className = 'code'; pre.innerHTML = '<span id="code"></span><button type="button" id="copy">Copy</button>'; g5.appendChild(pre);
+  pre.querySelector('#copy').onclick = e => { navigator.clipboard?.writeText($('code').textContent); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy', 1200); };
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" id="reset">Reset</button>'; panel.appendChild(acts);
+  acts.querySelector('#reset').onclick = () => { const keep = { theme: P.theme, view: P.view, state: P.state }; P = { ...DEF, ...keep }; save(); syncCtl(); apply(); }; }
+function syncCtl() { for (const k in ctl) if (k in P) ctl[k].set?.(P[k]); }
+function vis() { if (ctl.lift) ctl.lift.row.style.display = P.ground ? '' : 'none'; const dn = $('dnote'); if (dn) dn.style.display = P.ground ? '' : 'none'; }
+function markPresets() { panel.querySelectorAll('[data-n]').forEach(b => { const pr = PRESETS.find(p => p[0] === b.dataset.n)[1]; b.classList.toggle('on', Object.entries(pr).every(([k, v]) => P[k] === v) && TUNE.every(([k]) => k in pr || P[k] === DEF[k])); }); }
+function paintChips() { const el = $('chips'); if (!el) return; const cols = colours() || (customElements.get('ai-blob')?.palettes[P.palette === 'custom' ? 'aurora' : P.palette]) || [];
   el.innerHTML = cols.map(c => `<span style="background:${c}" title="${c}"></span>`).join('') || '<p class="note">The colour library did not load (offline?); the ready palettes still work.</p>'; }
-function paintCode() { const el = $('code'); if (!el) return; const cols = colours();
-  el.textContent = `<script src="ai-blob.js"><\/script>\n<ai-blob variant="${P.variant}" state="${P.state}" theme="${P.theme}"${cols ? ` colors="${cols.join(' ')}"` : ` palette="${P.palette === 'custom' ? 'aurora' : P.palette}"`}${P.speed !== 1 ? ` speed="${P.speed}"` : ''} style="width:160px;height:160px"></ai-blob>`; }
+function paintCode() { const el = $('code'); if (!el) return; const cols = colours(), a = attrs();
+  const extra = Object.entries(a).map(([k, v]) => v === '' ? ` ${k}` : ` ${k}="${v}"`).join('');
+  el.textContent = `<script src="ai-blob.js"><\/script>\n<ai-blob variant="${P.variant}" state="${P.state}"${cols ? ` colors="${cols.join(' ')}"` : ` palette="${P.palette === 'custom' ? 'aurora' : P.palette}"`}${extra} style="width:200px;height:200px"></ai-blob>`; }
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
 $('tune').onclick = () => openPanel(true);
 
-// ---------- start; the board's box: ?thumb=1 one still orb, ?demo=1 the orb going through its states ----------
-if (BARE) { document.body.classList.add('bare'); P.view = 'one'; }
+// ---------- start; the board's box: ?thumb=1 one still orb, ?demo=1 the orb going through its states (it sits down and stands up) ----------
+if (BARE) { document.body.classList.add('bare'); P.view = 'one'; for (const b of all()) b.intro = !THUMB; }
 else buildPanel();
 apply(); setState(BARE ? (THUMB ? (q.get('state') || 'speaking') : 'connecting') : (P.state === 'connecting' || P.state === 'error' ? 'default' : P.state));
 LabUI.segThumb($('mode'));
-if (DEMO) { const seq = [['listening', 3200], ['thinking', 3000], ['speaking', 3600], ['default', 2000]], wait = ms => new Promise(r => setTimeout(r, ms));
+if (DEMO) { const seq = [['listening', 3000], ['thinking', 2800], ['speaking', 3400], ['muted', 2200], ['default', 1800]], wait = ms => new Promise(r => setTimeout(r, ms));
   (async () => { await wait(1700); for (;;) for (const [s, ms] of seq) { setState(s); await wait(ms); } })(); }
-window.BLOB = { get P() { return P; }, setState, apply };
+window.BLOB = { get P() { return P; }, set P(v) { P = v; }, setState, apply };
 </script>
 </body>
 </html>

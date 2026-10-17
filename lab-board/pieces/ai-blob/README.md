@@ -1,12 +1,12 @@
 # AI Blob
 
-Żywa kula asystenta AI jako **jeden web component** (`ai-blob.js`, bez zależności, WebGL2, przezroczyste tło). Ta strona to jego plac zabaw: pasek kul na dole, pasek stanów nad nim, panel Customize (kolory, motyw strony, rozmiary, mikrofon i gotowy tag do skopiowania).
+Żywa kula asystenta AI jako **jeden web component** (`ai-blob.js`, bez zależności, WebGL2, przezroczyste tło). Ta strona to jego plac zabaw: pasek kul na dole, pasek stanów nad nim (1–7), Light/Dark u góry, panel Customize (presety, kolory, blend, głębia, strojenie, dotyk i dźwięk, rozmiary, gotowy tag).
 
 ## Użycie w innym projekcie
 
 ```html
 <script src="ai-blob.js"></script>
-<ai-blob variant="glass" state="default" theme="light" palette="aurora" style="width:200px;height:200px"></ai-blob>
+<ai-blob variant="halo" state="default" palette="aurora" ground style="width:240px;height:240px"></ai-blob>
 ```
 
 ```js
@@ -17,29 +17,45 @@ orb.state = 'speaking';       // gdy asystent odpowiada
 orb.level = 0.6;              // własna głośność 0–1 (np. z TTS); bez niej ruch daje wbudowany „głos”
 orb.useAnalyser(analyser);    // albo dowolny AnalyserNode z Web Audio (np. odtwarzanie mowy)
 await orb.useMicrophone();    // albo mikrofon (pyta o zgodę)
+orb.tap(90, 1);               // ściśnięcie i rozbłysk (kąt w stopniach, siła)
+orb.replayIntro();            // jeszcze raz wejście na sprężynie
+orb.refresh();                // od razu zbadaj tło (np. po przełączeniu strony na ciemną)
 orb.addEventListener('statechange', e => console.log(e.detail));   // { state, previous, auto }
+orb.addEventListener('tap', e => console.log(e.detail));           // { angle, strength }
 ```
 
-**Atrybuty / właściwości:** `variant` glass | cloud | nebula | swarm | rings; `state` default | listening | speaking | thinking | connecting | error | muted; `theme` light | dark (jak mieszać się ze stroną); `palette` aurora | ocean | sunset | mint | mono; `colors` cztery kolory zamiast palety; `speed` (1 = normalnie); `level` 0–1; `label` (dla czytnika ekranu, domyślnie „AI assistant”).
+**Atrybuty:**
+- `variant` glass | halo | cloud | nebula | dots | swirl | swarm | rings
+- `state` default | listening | speaking | thinking | connecting | error | muted
+- `blend` auto | ink | glow: ink = czysty kolor na jasnych stronach (bez świecenia, które na bieli się pierze), glow = świecenie na ciemnych; auto czyta tło za kulą (co 1,2 s i po `refresh()`); `theme="light|dark"` dalej działa i wygrywa z auto
+- `palette` aurora | ocean | sunset | mint | mono albo `colors` (4 kolory)
+- `ground` kula stoi nad podłogą w perspektywie (poniżej 72 px sama ją pomija: ikona tylko się unosi), `lift` mnoży wysokość
+- strojenie: `glow`, `halo`, `rim`, `core`, `glints` (0–2/2,5), `detail` (skala szumu 0,3–3), `wobble` (0–1, falowanie obrysu), `color-speed`, `speed`, `resolution` (0,4–1,5 × gęstość pikseli)
+- `interactive="false"` wyłącza stuknięcie, `intro="false"` wejście; `level` 0–1; `label` dla czytnika ekranu
 
-**Stany:** każda zmiana to płynne przejście (wszystkie parametry dążą do celu, nie przeskakują). `connecting` (kula zbiera się z niczego, z odbiciem) i `error` (czerwienieje, drgnie) grają raz i same wracają: connecting do default, error do stanu sprzed błędu (zdarzenie `statechange` z `auto: true`). Listening dostaje fale wchodzące do środka, speaking pulsuje z głosem, thinking wiruje w środku, muted szarzeje i prawie zamiera.
+## Głębia („wstawanie”)
 
-**Rozmiar:** dowolny kwadrat od 24 do 600 px. Poniżej ok. 200 px rysuje prostszą wersję (mniej kroków promienia, mniej oktaw szumu, mniej i większe punkty, grubsze linie), żeby ikona 40 px była czytelna i lekka. Zatrzymuje się, gdy jest poza ekranem albo karta jest w tle; przy „ograniczonym ruchu” w systemie zwalnia do 35% i nie drga przy błędzie. Każda kula to osobny kontekst WebGL (przeglądarki pozwalają na kilkanaście naraz).
+Ciało kuli ma sprężyny: wysokość nad podłogą (każdy stan swoją: Muted 0, czyli siedzi, Default 0,15, Speaking 0,19, Thinking 0,21, Listening 0,25 – wstaje najwyżej), lekkie bujanie i podbicie od głosu; przy lądowaniu spłaszcza się (impuls z prędkości), przy wznoszeniu wydłuża; Muted siedzi lekko spłaszczony. Connecting zaczyna od kałuży na podłodze i wstaje. Cień (osobny przebieg): elipsa w perspektywie, przy kuli wysoko szersza, miękka i jaśniejsza, nisko ciaśniejsza z ciemnym kontaktem; na ciemnych stronach to kolorowa plama światła. Wszystko przez jedną macierz „ciała” (uniesienie, spłaszczenie, ściśnięcie od stuknięcia, wejście), wspólną dla wszystkich ośmiu shaderów (dla płaskich odwrotna w vertex shaderze, dla roju wprost na punktach).
 
 ## Kule (shadery)
 
-- **Glass:** ciekła kula liczona promieniami (ray marching po polu odległości z szumem simplex). W środku światło załamane przez skórę, każdy kanał RGB załamany trochę inaczej (rozszczepienie: tęczowe brzegi), kolor z palety i cienkie, płynące „żyłki” światła (grzbiety szumu), mocniejsze przy mówieniu. Na skórze światło główne, miękkie od dołu i cienka warstwa opalizacji przy krawędzi; na jasnej stronie lekko ciemniejszy brzeg, żeby trzymała kształt na bieli.
-- **Cloud:** miękkie plamy koloru krążące w sobie, kolor w środku jak jedwab (szum fbm zawinięty sam w siebie dwa razy), żywa krawędź.
-- **Nebula:** kula kolorowego dymu, promień przechodzi przez objętość i zbiera gęstość (fbm 3D); przy myśleniu się kłębi, przy głosie puchnie.
-- **Swarm:** 2600 punktów na sferze Fibonacciego (mniej i większe przy małych rozmiarach), oddychają szumem, przy myśleniu się rozluźniają, na ciemnym świecą addytywnie.
-- **Rings:** cztery cienkie pętle wokół środka, falują z głosem, przy myśleniu obracają się w przestrzeni jak orbity.
+- **Halo:** przezroczyste szkło: płynący kolorowy brzeg (pasmo + cienka jasna linia, połysk szumu wzdłuż brzegu), rdzeń światła wędrujący i puchnący z głosem, dwa błyski, aura. Ink: matowe białe szkło oświetlone z lewej góry, kolor położony na nim.
+- **Glass:** ciekła kula liczona promieniami; w środku rozszczepienie (R, G, B załamane inaczej) i płynące żyłki światła.
+- **Cloud:** miękkie plamy z kolorem jak jedwab (fbm zawinięty dwa razy).
+- **Nebula:** objętość kolorowego dymu (ray marching przez kulę, fbm 3D).
+- **Dots:** raster: siatka kropek, wielkość = światło na obracającej się kuli z pasmami szumu; głos wysyła pierścienie większych kropek, słuchanie je wciąga, myślenie zamiata wokół; kolor płynie za szumem.
+- **Swirl:** spokojna kula w jednym kolorze (z koloru bazowego), dwa tony zawinięte wokół środka, miękkie przejście z delikatnym zagięciem; myślenie mocniej skręca.
+- **Swarm:** 2600 punktów na sferze (mniej i większe na małych).
+- **Rings:** cienkie pętle; `rim` = grubość linii, `core` = środek.
 
-Wspólne dla wszystkich: paleta jako pętla czterech kolorów, „muted” zmniejsza nasycenie, „error” miesza w czerwień, poświata gaśnie okrągło przed krawędzią płótna.
+## Presety (panel)
+
+Iridescent (halo, aurora), Pearl (halo, mono), Liquid (glass, ocean), Silk (cloud, sunset), Smoke (nebula), Print (dots), Calm (swirl, ocean), Orbit (rings, mint), Stardust (swarm, sunset). Preset ustawia kulę, paletę i kilka suwaków, reszta wraca do domyślnych.
 
 ## Kolory
 
-Gotowe palety albo **jeden kolor bazowy w HCT** (panel: Hue, Chroma, Tone; biblioteka Material Color Utilities z jsDelivr). Z niego cztery kolory: baza, dwaj sąsiedzi w odcieniu (+42°, −46°, ton +12 / −8) i jasny akcent po drugiej stronie koła (+150°, chroma ×0,55, ton +26). Panel pokazuje gotowy tag z `colors="…"`.
+Gotowe palety albo jeden kolor bazowy w HCT (Material Color Utilities z jsDelivr): baza, dwaj sąsiedzi w odcieniu (+42°, −46°), jasny akcent naprzeciw (+150°).
 
 ## Lab
 
-Ustawienia: `lab.ai-blob.v1`. Klawiatura: 1–7 stany, ← → kule. Plansza: `?thumb=1` (szkło, speaking), `?demo=1` (kula przechodzi przez stany: connecting, listening, thinking, speaking, default). Do testów: `window.BLOB`.
+Ustawienia: `lab.ai-blob.v1`. Klawisze: 1–7 stany, ← → kule, Spacja stuknięcie. Plansza: `?thumb=1` (opcjonalnie `&theme=dark&state=…&variant=…&flat`), `?demo=1` (Halo nad podłogą: listening, thinking, speaking, muted – siada, default – wstaje). Do testów: `window.BLOB`. Inspiracja kierunkiem: React Bits Pro (AI Blob, Agentic Ball, Glyph Orb); kod własny.
