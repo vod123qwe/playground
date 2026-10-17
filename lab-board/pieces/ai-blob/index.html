@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Blob · lab</title>
+<meta name="theme-color" content="#f4f3ef">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* An AI orb as one web component (ai-blob.js): four orbs (liquid glass, a colour cloud, a swarm of points, glowing rings), each in
+     seven states (default, listening, speaking, thinking, connecting, error, muted) that morph into one another. This page is its
+     playground: pick the orb at the bottom, the state above it, the colours and the theme in the panel, and copy the tag to use it
+     in another project (transparent, any size from an icon to a hero). */
+  :root { --font: var(--lab-font); --bg: #f4f3ef; --ink: #1b1c20; --muted: rgba(20,20,20,.45); --chip: #fff; --ease: cubic-bezier(.22,.61,.36,1);
+    --page: #fff; --box: var(--bg); --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  body.dark { --bg: #0e0f13; --ink: #f2f2f0; --muted: rgba(255,255,255,.42); --chip: #1c1c21; --page: #17181b; --box: #0e0f13; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; transition: background .4s, color .4s; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { background: var(--box); border-radius: 26px; }
+  /* the orbs: one big, or the three sizes side by side */
+  .one { width: min(54vmin, 440px); height: min(54vmin, 440px); }
+  .sizes { display: none; align-items: flex-end; gap: clamp(20px, 5vw, 64px); }
+  body.view-sizes .one { display: none; } body.view-sizes .sizes { display: flex; }
+  .sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .sizes figcaption { font: 500 12px var(--font); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .s1 { width: min(30vmin, 260px); height: min(30vmin, 260px); } .s2 { width: 112px; height: 112px; } .s3 { width: 40px; height: 40px; }
+  /* chrome, as on the other lab pieces */
+  .back { position: fixed; top: 16px; left: 16px; z-index: 6; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: var(--chip); color: var(--ink); transition: top var(--morph), left var(--morph), translate .2s var(--ease), background .4s; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { position: fixed; top: 16px; right: 16px; z-index: 6; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: var(--chip); color: var(--ink);
+    font: 600 14px var(--font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s, background .4s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; }
+  body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { position: fixed; top: 16px; left: 50%; z-index: 6; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--chip); font: 600 13px var(--font); transition: left var(--morph), top var(--morph), background .4s; }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; cursor: pointer; transition: color .25s; }
+  .mode button:hover { color: var(--ink); } .mode button[aria-checked=true] { color: var(--bg); }
+  body.dark .mode { --seg-on: #f2f2f0; }
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); transition: left var(--morph), bottom var(--morph); }
+  /* the states, above the orb pill */
+  .states { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; width: max-content; max-width: calc(100vw - 24px);
+    padding: 4px; border-radius: 23px; background: var(--chip); font: 600 13px var(--font); transition: left var(--morph), background .4s; }
+  .states button { display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; cursor: pointer; white-space: nowrap; transition: background .2s, color .2s; }
+  .states button:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .states button[aria-pressed=true] { background: var(--ink); color: var(--bg); }
+  .states i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; } .states button[aria-pressed=true] i { opacity: 1; }
+  .states kbd { font: 500 10px var(--font); opacity: .45; margin-left: 1px; } @media (pointer: coarse) { .states kbd { display: none; } }
+  @media (min-width: 761px) { body.tuning .mode, body.tuning .states, body.tuning .dock { left: calc(50% - 176px); } }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  /* the panel: a card beside the stage (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .lab-ui { font-family: var(--font); }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .chips { display: flex; gap: 8px; padding: 4px 0 10px; } .chips span { flex: 1; height: 28px; border-radius: 9px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+  .note { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: var(--ui-muted); } .note a { color: inherit; }
+  .code { position: relative; margin: 0 0 8px; padding: 14px 14px 46px; border-radius: 14px; background: var(--ui-field); font: 12px/1.6 'Geist Mono', ui-monospace, monospace; color: var(--ui-ink); white-space: pre-wrap; word-break: break-all; user-select: text; -webkit-user-select: text; }
+  .code button { position: absolute; right: 8px; bottom: 8px; height: 30px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--ui-on); color: var(--ui-on-text); font: 600 12px var(--font); cursor: pointer; }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .dock { bottom: calc(34px + env(safe-area-inset-bottom)); } body.tuning .states { bottom: calc(98px + env(safe-area-inset-bottom)); } }
+  @media (max-width: 760px) {
+    .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .dock, body.tuning .states { display: none; }
+    body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; }
+    .one { width: 70vmin; height: 70vmin; } .states { bottom: calc(80px + env(safe-area-inset-bottom)); } .states button { height: 34px; padding: 0 12px 0 10px; } }
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .dock, body.bare .states, body.bare .panel { display: none !important; }
+  body.bare .one { width: 92vmin; height: 92vmin; }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage" aria-label="An AI orb">
+  <ai-blob class="one" id="one"></ai-blob>
+  <div class="sizes" aria-label="The same orb in three sizes">
+    <figure><ai-blob class="s1"></ai-blob><figcaption>Hero · 260</figcaption></figure>
+    <figure><ai-blob class="s2"></ai-blob><figcaption>Card · 112</figcaption></figure>
+    <figure><ai-blob class="s3"></ai-blob><figcaption>Icon · 40</figcaption></figure>
+  </div>
+</main>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<div class="states" id="states" role="group" aria-label="State"></div>
+<div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Orbs">
+  <button id="prev" type="button" aria-label="Previous orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm" aria-live="polite">Glass</span>
+  <button id="next" type="button" aria-label="Next orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the orb"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script src="ai-blob.js?v=1"></script>
+<script type="module">
+const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
+const KEY = 'lab.ai-blob.v1';
+const ORBS = [['glass', 'Glass'], ['cloud', 'Cloud'], ['nebula', 'Nebula'], ['swarm', 'Swarm'], ['rings', 'Rings']];
+const STATES = [['default', 'Default'], ['listening', 'Listening'], ['speaking', 'Speaking'], ['thinking', 'Thinking'], ['connecting', 'Connecting'], ['error', 'Error'], ['muted', 'Muted']];
+const PALS = [['aurora', 'Aurora'], ['ocean', 'Ocean'], ['sunset', 'Sunset'], ['mint', 'Mint'], ['mono', 'Mono'], ['custom', 'Custom']];
+const DEF = { variant: 'glass', state: 'default', theme: 'light', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1, view: 'one', mic: false };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+if (BARE) P = { ...DEF, variant: q.get('variant') || 'glass' };
+const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k] && !(k === 'state' && (P[k] === 'connecting' || P[k] === 'error'))) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const blobs = () => [...document.querySelectorAll(P.view === 'sizes' ? '.sizes ai-blob' : 'ai-blob.one')];
+const all = () => [...document.querySelectorAll('ai-blob')];
+
+// ---------- the colours from one seed, in HCT (Material colour utilities): the seed, two neighbours in hue, a light accent opposite ----------
+let MCU = null; import('https://cdn.jsdelivr.net/npm/@material/material-color-utilities@0.3.0/+esm').then(m => { MCU = m; if (P.palette === 'custom') apply(); paintChips(); }).catch(() => { MCU = false; paintChips(); });
+function seedColours() { if (!MCU) return null; const { Hct, hexFromArgb } = MCU, h = P.h, c = P.c, t = P.t, H = (hh, cc, tt) => hexFromArgb(Hct.from((hh % 360 + 360) % 360, Math.max(0, cc), Math.min(96, Math.max(8, tt))).toInt());
+  return [H(h, c, t), H(h + 42, c * .9, t + 12), H(h - 46, c * 1.05, t - 8), H(h + 150, c * .55, t + 26)]; }
+const colours = () => P.palette === 'custom' ? seedColours() : null;
+
+// ---------- applying the settings to every orb on the page ----------
+function apply() { const cols = colours();
+  for (const b of all()) { b.variant = P.variant; b.theme = P.theme; b.speed = P.speed; if (cols) b.colors = cols; else { b.removeAttribute('colors'); b.palette = P.palette === 'custom' ? 'aurora' : P.palette; } }
+  document.body.classList.toggle('dark', P.theme === 'dark'); document.body.classList.toggle('view-sizes', P.view === 'sizes');
+  document.querySelector('meta[name=theme-color]').content = P.theme === 'dark' ? '#0e0f13' : '#f4f3ef'; $('vars').classList.toggle('dark', P.theme === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === P.theme)));
+  $('nm').textContent = ORBS.find(o => o[0] === P.variant)?.[1] || 'Glass'; paintStates(); paintChips(); paintCode(); }
+function setState(s) { P.state = s; save(); for (const b of all()) b.state = s; paintStates(); paintCode(); }
+// (connecting and error go back by themselves: the bar follows the orb)
+$('one').addEventListener('statechange', e => { if (e.detail.auto) { P.state = e.detail.state; for (const b of document.querySelectorAll('.sizes ai-blob')) b.state = P.state; save(); paintStates(); paintCode(); } });
+
+// ---------- the states bar and the orb pill ----------
+$('states').innerHTML = STATES.map(([v, l], i) => `<button type="button" data-s="${v}" aria-pressed="false"><i></i>${l}<kbd>${i + 1}</kbd></button>`).join('');
+$('states').querySelectorAll('button').forEach(b => b.onclick = () => setState(b.dataset.s));
+function paintStates() { $('states').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === P.state))); }
+const stepOrb = d => { const i = ORBS.findIndex(o => o[0] === P.variant); P.variant = ORBS[(i + d + ORBS.length) % ORBS.length][0]; save(); apply(); };
+LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepOrb, items: () => ORBS.map(o => o[1]), current: () => ORBS.find(o => o[0] === P.variant)[1],
+  onPick: n => { P.variant = ORBS.find(o => o[1] === n)[0]; save(); apply(); } });
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => { P.theme = b.dataset.m; save(); apply(); ctl.theme?.set(P.theme); });
+addEventListener('keydown', e => { if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, .panel, textarea')) return;
+  if (e.key === 'ArrowRight') stepOrb(1); else if (e.key === 'ArrowLeft') stepOrb(-1); else if (e.key === 'Escape') openPanel(false);
+  else { const i = '1234567'.indexOf(e.key); if (i >= 0) setState(STATES[i][0]); } });
+
+// ---------- the microphone: one source for every orb on the page ----------
+let mic = null;
+async function useMic(on) { if (!on) { mic?.stream.getTracks().forEach(t => t.stop()); mic = null; all().forEach(b => b.useAnalyser(null)); return true; }
+  try { const ac = new AudioContext(); await ac.resume(); const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    const an = ac.createAnalyser(); an.fftSize = 1024; ac.createMediaStreamSource(stream).connect(an); mic = { stream, an }; all().forEach(b => b.useAnalyser(an)); if (P.state !== 'listening' && P.state !== 'speaking') setState('listening'); return true; }
+  catch { return false; } }
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The orb’s look and colours, the sizes, and the tag to use it in your own page.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); apply(); };
+  const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look', open: true });
+  ctl.palette = LabUI.seg(g1, { label: 'Colours', options: PALS, value: P.palette, onChange: v => set('palette', v) });
+  ctl.theme = LabUI.seg(g1, { label: 'Page', options: [['light', 'Light'], ['dark', 'Dark']], value: P.theme, onChange: v => set('theme', v) });
+  ctl.speed = LabUI.slider(g1, { label: 'Speed', min: .25, max: 2, step: .05, unit: '×', value: P.speed, def: DEF.speed, onInput: v => set('speed', v) });
+  const g2 = LabUI.group(panel, 'Your colour (HCT)', { key: KEY + '.g.seed', open: true });
+  const note = document.createElement('p'); note.className = 'note'; note.textContent = 'One seed colour in hue, chroma and tone; the other three come from it: two neighbours in hue and a light accent across the wheel.'; g2.appendChild(note);
+  const seed = k => v => { P[k] = v; P.palette = 'custom'; ctl.palette.set('custom'); save(); apply(); };
+  ctl.h = LabUI.slider(g2, { label: 'Hue', min: 0, max: 360, step: 1, unit: '°', value: P.h, def: DEF.h, onInput: seed('h') });
+  ctl.c = LabUI.slider(g2, { label: 'Chroma', min: 8, max: 110, step: 1, unit: '', value: P.c, def: DEF.c, onInput: seed('c') });
+  ctl.t = LabUI.slider(g2, { label: 'Tone', min: 25, max: 80, step: 1, unit: '', value: P.t, def: DEF.t, onInput: seed('t') });
+  const chips = document.createElement('div'); chips.className = 'chips'; chips.id = 'chips'; g2.appendChild(chips);
+  const g3 = LabUI.group(panel, 'Preview', { key: KEY + '.g.view', open: true });
+  ctl.view = LabUI.seg(g3, { label: 'Show', options: [['one', 'One orb'], ['sizes', 'Three sizes']], value: P.view, onChange: v => { P.view = v; save(); apply(); } });
+  ctl.mic = LabUI.check(g3, { label: 'Listen through the microphone', value: false, onChange: async v => { const ok = await useMic(v); if (!ok) { ctl.mic.set(false); alert('The browser did not allow the microphone.'); } } });
+  const g4 = LabUI.group(panel, 'Use it', { key: KEY + '.g.code', open: true });
+  const how = document.createElement('p'); how.className = 'note'; how.innerHTML = 'Add <a href="ai-blob.js" download>ai-blob.js</a> to your page once, then place the tag at any size. Set <code>state</code> from your code as the assistant listens, thinks and talks; <code>level</code> (0–1) or <code>useAnalyser()</code> lets your own audio move it.'; g4.appendChild(how);
+  const pre = document.createElement('pre'); pre.className = 'code'; pre.innerHTML = '<span id="code"></span><button type="button" id="copy">Copy</button>'; g4.appendChild(pre);
+  pre.querySelector('#copy').onclick = e => { navigator.clipboard?.writeText($('code').textContent); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy', 1200); }; }
+function paintChips() { const el = $('chips'); if (!el) return; const cols = colours() || (window.customElements.get('ai-blob')?.palettes[P.palette === 'custom' ? 'aurora' : P.palette]) || [];
+  el.innerHTML = cols.map(c => `<span style="background:${c}" title="${c}"></span>`).join('') || '<p class="note">The colour library did not load (offline?); the ready palettes still work.</p>'; }
+function paintCode() { const el = $('code'); if (!el) return; const cols = colours();
+  el.textContent = `<script src="ai-blob.js"><\/script>\n<ai-blob variant="${P.variant}" state="${P.state}" theme="${P.theme}"${cols ? ` colors="${cols.join(' ')}"` : ` palette="${P.palette === 'custom' ? 'aurora' : P.palette}"`}${P.speed !== 1 ? ` speed="${P.speed}"` : ''} style="width:160px;height:160px"></ai-blob>`; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+
+// ---------- start; the board's box: ?thumb=1 one still orb, ?demo=1 the orb going through its states ----------
+if (BARE) { document.body.classList.add('bare'); P.view = 'one'; }
+else buildPanel();
+apply(); setState(BARE ? (THUMB ? (q.get('state') || 'speaking') : 'connecting') : (P.state === 'connecting' || P.state === 'error' ? 'default' : P.state));
+LabUI.segThumb($('mode'));
+if (DEMO) { const seq = [['listening', 3200], ['thinking', 3000], ['speaking', 3600], ['default', 2000]], wait = ms => new Promise(r => setTimeout(r, ms));
+  (async () => { await wait(1700); for (;;) for (const [s, ms] of seq) { setState(s); await wait(ms); } })(); }
+window.BLOB = { get P() { return P; }, setState, apply };
+</script>
+</body>
+</html>
