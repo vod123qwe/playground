@@ -6,7 +6,7 @@
 
 ```html
 <script src="ai-blob.js"></script>
-<ai-blob variant="halo" state="default" palette="aurora" ground style="width:240px;height:240px"></ai-blob>
+<ai-blob variant="halo" state="default" palette="aurora" style="width:240px;height:240px"></ai-blob>
 ```
 
 ```js
@@ -58,4 +58,4 @@ Gotowe palety albo jeden kolor bazowy w HCT (Material Color Utilities z jsDelivr
 
 ## Lab
 
-Ustawienia: `lab.ai-blob.v1`. Klawisze: 1–7 stany, ← → kule, Spacja stuknięcie. Plansza: `?thumb=1` (opcjonalnie `&theme=dark&state=…&variant=…&flat`), `?demo=1` (Halo nad podłogą: listening, thinking, speaking, muted – siada, default – wstaje). Do testów: `window.BLOB`. Inspiracja kierunkiem: React Bits Pro (AI Blob, Agentic Ball, Glyph Orb); kod własny.
+Ustawienia: `lab.ai-blob.v1`. Klawisze: 1–7 stany, ← → kule, Spacja stuknięcie. Plansza: `?thumb=1` (opcjonalnie `&theme=dark&state=…&variant=…&ground`), `?demo=1` (Halo przez stany; z `&ground` nad podłogą). Podłoga jest domyślnie wyłączona wszędzie (w panelu „Stand on a ground”). Do testów: `window.BLOB`. Inspiracja kierunkiem: React Bits Pro (AI Blob, Agentic Ball, Glyph Orb); kod własny.
