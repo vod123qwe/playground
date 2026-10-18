@@ -104,7 +104,7 @@
 <script type="module">
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
 const KEY = 'lab.ai-blob.v1';
-const ORBS = [['glass', 'Glass'], ['halo', 'Halo'], ['cloud', 'Cloud'], ['nebula', 'Nebula'], ['dots', 'Dots'], ['swirl', 'Swirl'], ['swarm', 'Swarm'], ['rings', 'Rings']];
+const ORBS = [['glass', 'Glass'], ['halo', 'Halo'], ['core', 'Core'], ['aurora', 'Aurora'], ['synapse', 'Synapse'], ['mercury', 'Mercury'], ['cloud', 'Cloud'], ['nebula', 'Nebula'], ['dots', 'Dots'], ['swirl', 'Swirl'], ['swarm', 'Swarm'], ['rings', 'Rings']];
 const STATES = [['default', 'Default'], ['listening', 'Listening'], ['speaking', 'Speaking'], ['thinking', 'Thinking'], ['connecting', 'Connecting'], ['error', 'Error'], ['muted', 'Muted']];
 const PALS = [['aurora', 'Aurora'], ['ocean', 'Ocean'], ['sunset', 'Sunset'], ['mint', 'Mint'], ['mono', 'Mono'], ['custom', 'Custom']];
 // (the tunables: settings key → attribute, label, min, max, step)
@@ -113,7 +113,8 @@ const TUNE = [['glow', 'glow', 'Glow', 0, 2, .05], ['halo', 'halo', 'Halo', 0, 2
 const DEF = { variant: 'halo', state: 'default', theme: 'light', blend: 'auto', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1, view: 'one', ground: false, lift: 1, interactive: true, intro: true,
   glow: 1, halo: 1, rim: 1, core: 1, glints: 1, detail: 1, wobble: 0, cspeed: 1 };
 // (presets: an orb, its colours and a few settings that suit it)
-const PRESETS = [['Iridescent', { variant: 'halo', palette: 'aurora' }], ['Pearl', { variant: 'halo', palette: 'mono', glow: .8, rim: .8, core: 1.3 }], ['Liquid', { variant: 'glass', palette: 'ocean' }],
+const PRESETS = [['Iridescent', { variant: 'halo', palette: 'aurora' }], ['Pearl', { variant: 'halo', palette: 'mono', glow: .8, rim: .8, core: 1.3 }], ['Liquid', { variant: 'glass', palette: 'ocean' }], ['Lava lamp', { variant: 'core', palette: 'aurora' }], ['Northern', { variant: 'aurora', palette: 'mint' }],
+  ['Neural', { variant: 'synapse', palette: 'ocean' }], ['Chrome', { variant: 'mercury', palette: 'mono' }], ['Opal', { variant: 'mercury', palette: 'aurora' }],
   ['Silk', { variant: 'cloud', palette: 'sunset' }], ['Smoke', { variant: 'nebula', palette: 'aurora', halo: 1.4 }], ['Print', { variant: 'dots', palette: 'aurora', detail: 1.3 }],
   ['Calm', { variant: 'swirl', palette: 'ocean' }], ['Orbit', { variant: 'rings', palette: 'mint', rim: 1.3 }], ['Stardust', { variant: 'swarm', palette: 'sunset' }]];
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();

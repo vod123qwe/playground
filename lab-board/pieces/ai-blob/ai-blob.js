@@ -4,7 +4,7 @@
    <ai-blob variant="glass" state="listening" theme="light" palette="aurora"></ai-blob>
 
    Attributes (each is also a property):
-     variant   glass | halo | cloud | nebula | dots | swirl | swarm | rings   (default glass)
+     variant   glass | halo | core | aurora | synapse | mercury | cloud | nebula | dots | swirl | swarm | rings
      state     default | listening | speaking | thinking | connecting | error | muted
                connecting and error play once, then go back by themselves (connecting to default, error to the state before it)
      blend     auto | ink | glow: ink draws clean colour for light pages, glow shines on dark ones, auto looks at the
@@ -34,7 +34,7 @@
     mint: ['#12b886', '#4dd4ac', '#3ba7ff', '#c3f584'],
     mono: ['#3d3f4a', '#8a8e9e', '#5d6170', '#c9ccd6'],
   };
-  const VARIANTS = ['glass', 'halo', 'cloud', 'nebula', 'dots', 'swirl', 'swarm', 'rings'];
+  const VARIANTS = ['glass', 'halo', 'core', 'aurora', 'synapse', 'mercury', 'cloud', 'nebula', 'dots', 'swirl', 'swarm', 'rings'];
   // (what each state asks of the orb; the orb eases towards it, so every change is a morph)
   //  amp: how much it wobbles · freq: how fine the wobble · spin: turning speed · voice: how much the voice moves it · scale · sat: colour
   //  glow · think: inner swirl · tint: the error red · ripple: rings coming in, listening · spread: the inside comes loose
@@ -327,6 +327,111 @@ void main(){
   else { vec3 c = finish(pal(uCT * .03)) * .2; float a = (soft * .2 + contact * .22) * op; o = vec4(c * a, a); }
   o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
 
+
+  // ---------- the vessels: a glass sphere with a world inside. The shell is an exact sphere: the ray bends where it enters and then
+  // travels through what lives inside (so the glass truly lenses it), and the shell adds a studio reflection, a highlight, a thin
+  // film of colour and a rainbow fringe at the edge. Four insides: 1 liquid light (glowing drops that merge and part), 2 aurora
+  // (folded curtains of light), 3 synapses (threads with sparks running along them), 4 mercury (an iridescent liquid metal) ----------
+  const VESSEL_BODY = `
+in vec2 vUv; in vec2 vRaw; out vec4 o;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float smin(float a, float b, float k){ float h = clamp(.5 + .5 * (b - a) / k, 0., 1.); return mix(b, a, h) - k * h * (1. - h); }
+vec3 inFrame(vec3 p){ p.xz *= rot(uR * .5); p.xy *= rot(uR * .15 + uThink * .35 * sin(uT * .5)); return p; }
+// (the studio the glass and the metal reflect: bright above, dark below, two soft boxes, tinted a touch by the palette)
+vec3 env(vec3 d){ vec3 c = mix(vec3(.07, .075, .09), vec3(.96), smoothstep(-.35, .65, d.y));
+  c += vec3(1.) * smoothstep(.88, .97, dot(d, normalize(vec3(-.55, .62, .55)))) * 1.6 + vec3(1.) * smoothstep(.82, .94, dot(d, normalize(vec3(.75, .15, .6)))) * .55;
+  return mix(c, c * (pal(d.y * .5 + uCT * .02) * 1.5), .22); }
+#if INTERIOR == 1
+float sdIn(vec3 p){ p = inFrame(p); float d = 1e9;
+  for (int i = 0; i < 6; i++) { float fi = float(i), s = 1. + fi * .17;
+    vec3 c = vec3(sin(uT * .55 * s + fi * 1.7), cos(uT * .47 * s + fi * 2.3), sin(uT * .38 * s + fi * 4.1)) * (.24 + uSpread * .12 - uThink * .06);
+    float r = .085 + .03 * sin(uT * 1.3 + fi * 2.) + uPulse * .05 + uTap * .03; d = smin(d, length(p - c) - r, .16 + uThink * .06); }
+  return d; }
+vec3 nIn(vec3 p){ vec2 e = vec2(.003, 0.); return normalize(vec3(sdIn(p + e.xyy) - sdIn(p - e.xyy), sdIn(p + e.yxy) - sdIn(p - e.yxy), sdIn(p + e.yyx) - sdIn(p - e.yyx))); }
+#endif
+#if INTERIOR == 4
+float sdIn(vec3 p){ vec3 q = inFrame(p); float r = .29 * (1. + uPulse * .13 + uTap * .06);
+  float n = snoise(q * 1.55 + vec3(0., uT * .45, 0.)) * (.035 + uAmp * .22) + snoise(q * 3.4 - uT * .35) * .008 * uDetail + uRipple * .014 * sin(q.y * 16. - uT * 6.);
+  q.y *= 1. - uThink * .12 * sin(uT * 2.); return length(q) - r - n; }
+vec3 nIn(vec3 p){ vec2 e = vec2(.003, 0.); return normalize(vec3(sdIn(p + e.xyy) - sdIn(p - e.xyy), sdIn(p + e.yxy) - sdIn(p - e.yxy), sdIn(p + e.yyx) - sdIn(p - e.yyx))); }
+#endif
+void main(){
+  o = vec4(0.); vec2 uv = vUv - uShake; vec3 ro = vec3(0., 0., 2.6), rd = normalize(vec3(uv * .98, -2.3));
+  float R = .62 * uScale * (1. + uPulse * .035), b = dot(ro, rd), c0 = dot(ro, ro) - R * R, h = b * b - c0;
+  float dRay = length(cross(rd, -ro)), px = uPx * 1.13, cov = smoothstep(R + px * 1.5, R - px * 1.5, dRay);
+  bool dark = uDark > .5; vec4 acc = vec4(0.); vec3 shell = vec3(0.); float shellA = 0.;
+  if (h > 0.) {
+    float t0 = -b - sqrt(h); vec3 P = ro + rd * t0, N = normalize(P);
+    N = normalize(N + (vec3(snoise(N * 2. + uT * .2), snoise(N * 2. + 7. + uT * .2), 0.)) * (.025 + uAmp * .12));   // (a soft wobble of the glass)
+    float cosi = max(dot(N, -rd), 0.), fr = .04 + .96 * pow(1. - cosi, 4.);
+    vec3 rd2 = refract(rd, N, .7), q0 = P - N * .002;
+    float b2 = dot(q0, rd2), c2 = dot(q0, q0) - (R * .97) * (R * .97), tEx = -b2 + sqrt(max(b2 * b2 - c2, 0.));
+    int steps = uDetail > .5 ? 44 : uDetail > .15 ? 26 : 14; float dt = tEx / float(steps), j = hash(gl_FragCoord.xy + fract(uT) * 31.);
+    // ---- the inside ----
+#if INTERIOR == 1 || INTERIOR == 4
+    float t = j * dt * .5, glow = 0.;
+    for (int i = 0; i < 96; i++) { if (i >= steps * 2 || t > tEx) break; vec3 p = (q0 + rd2 * t) / max(uScale, .2); float d = sdIn(p);
+#if INTERIOR == 1
+      glow += exp(-max(d, 0.) * 18.) * .06;
+#endif
+      if (d < .0015) {
+        vec3 n = nIn(p), v = -rd2;
+#if INTERIOR == 1
+        float f = pow(1. - max(dot(n, v), 0.), 2.);
+        vec3 cc = pal(dot(n, vec3(.3, .6, .2)) * .35 + uCT * .05 + .1) * (.75 + .55 * pow(max(dot(n, v), 0.), 2.) + uPulse * .5 + uTap * .4) + vec3(1.) * (f * .45 + pow(max(dot(n, v), 0.), 8.) * .35);
+#else
+        vec3 rf = reflect(-v, n); float f = pow(1. - max(dot(n, v), 0.), 1.6);
+        vec3 cc = env(rf) * .9 + pal(f * 1.4 + n.y * .35 + uCT * .04) * (.25 + f * .5) + vec3(1.) * pow(max(dot(rf, normalize(vec3(-.5, .6, .6))), 0.), 50.) * 1.2;
+#endif
+        acc = vec4(cc, 1.); break; }
+      t += max(d * .8, dt * .25); }
+#if INTERIOR == 1
+    vec3 gc = pal(.55 + uCT * .03) * glow * (1. + uPulse * .8 + uThink * .3) * uCoreK;
+    acc.rgb = acc.a > .5 ? acc.rgb + gc * .3 : gc; acc.a = max(acc.a, clamp(glow * (dark ? .55 : .9) * uCoreK, 0., 1.));
+#endif
+#else
+    for (int i = 0; i < 48; i++) { if (i >= steps) break; float t = (float(i) + j) * dt; vec3 p = inFrame((q0 + rd2 * t) / max(uScale, .2)); float dens = 0.; vec3 cc = vec3(0.);
+#if INTERIOR == 2
+      // two folded curtains, rays streaming down them, brightest at their lower edge
+      for (int k = 0; k < 2; k++) { float fk = float(k), ph = fk * 2.1;
+        float s = p.z + (fk - .5) * .22 + .2 * sin(p.x * 3.1 + uT * (.45 + uThink * .8) + ph) + .12 * fbm(vec3(p.x * 1.8, p.y * .6, uT * .12 + ph), 2);
+        // (a curtain: a sharp bright lower edge, rays rising from it and fading up)
+        float base = -.3 + .07 * sin(p.x * 2.3 + uT * .35 + ph) + fk * .05, up = p.y - base;
+        float sheet = exp(-s * s * 240.), vert = smoothstep(-.035, 0., up) * exp(-max(up, 0.) * 2.4) * (1. + uPulse * .8);
+        float rays = .25 + .75 * pow(.5 + .5 * sin(p.x * 44. + fbm(vec3(p.x * 2., p.z, uT * .25 + ph), 2) * 8.), 3.);
+        float dk = sheet * vert * rays * (1. + 1.6 * exp(-max(up, 0.) * 16.)); dens += dk; cc += pal(.35 + up * 1.1 + fk * .2 + uCT * .03) * dk; }
+      cc /= max(dens, 1e-4); dens *= (.55 + uGlow * .25) * (1. + uPulse * .6) * (uDark > .5 ? 1.15 : 2.2); cc *= uDark > .5 ? 1.15 : .9;
+#else
+      // threads where two noise fields both cross zero; sparks run along them (a storm of them when thinking)
+      vec3 sp = p * 2.1 + vec3(0., uT * .04, 0.); float n1 = snoise(sp), n2 = snoise(sp + vec3(5.2, 1.3, 3.1)), f = abs(n1) + abs(n2);
+      float thread = exp(-f * f * (uDark > .5 ? 130. : 85.)), halo = exp(-f * 9.) * .06, n3 = snoise(p * 1.3 + 11.);
+      float spark = pow(.5 + .5 * sin(n3 * 22. - uT * (2.8 + uThink * 5.)), 14.) * (1.4 + uThink * 2.2 + uPulse * 2.2 + uTap * 1.5);
+      dens = thread * (.35 + spark) + halo * (.5 + uPulse); cc = mix(pal(n3 * .6 + uCT * .03) * (uDark > .5 ? 1.25 : .85), vec3(1.), clamp(spark * thread * .3, 0., .55) * uDark);
+      dens *= uDark > .5 ? 4.5 : 5.5;
+#endif
+      float a = clamp(dens * dt * 9., 0., 1.); acc.rgb += (1. - acc.a) * cc * a; acc.a += (1. - acc.a) * a; if (acc.a > .97) break; }
+    acc.rgb = acc.a > 0. ? acc.rgb : vec3(0.);
+#endif
+    // ---- the shell ----
+    vec3 rf = reflect(rd, N), refl = env(rf);
+    float spec = pow(max(dot(rf, normalize(vec3(-.5, .62, .6))), 0.), 90.) * 1.6 * uGlintK + pow(max(dot(rf, normalize(vec3(.7, -.35, .6))), 0.), 28.) * .25 * uGlintK;
+    vec3 film = pal(fr * 2. + N.y * .3 + uCT * .03) * fr * (.35 + uRimK * .35);
+    float edge = smoothstep(.55, 1., 1. - cosi); vec3 fringe = (.5 + .5 * cos(6.283 * (edge * 1.6 + vec3(0., .33, .67)))) * edge * .22 * uRimK;
+    if (dark) { shell = refl * fr * .85 + film + fringe + vec3(spec); shellA = clamp(fr * .5 + spec + .05, 0., 1.); }
+    else { refl = mix(refl, refl * vec3(.62, .66, .74), .55); shell = refl * fr * .7 + film * .75 + fringe * .7 + vec3(spec) * .9; shellA = clamp(fr * .55 + spec * .6 + .07, 0., 1.); }
+    // (on a light page the inside is laid down as colour, not light, so it does not wash out on white)
+    vec3 ins = acc.rgb * (dark ? (1. + uGlow * .35) : .92) * (1. - fr * .5);
+    float ia = acc.a * (dark ? .8 : .95);
+    vec3 col = finish(ins * ia + shell * (1. - ia * .35)); float a = clamp(ia + shellA * (1. - ia), 0., 1.);
+    o = vec4(col, a) * cov;
+  }
+  // the aura round the glass
+  float out_ = max(dRay - R, 0.), halo = uHaloK * exp(-out_ * 10. / max(uHaloK, .05)) * (1. - cov) * uGlow * (dark ? .42 : .14) * smoothstep(.98, .5, length(vRaw - uOff));
+  vec3 hc = finish(pal(atan(uv.y, uv.x) / 6.283 + uCT * .03));
+  o += vec4(hc * halo, halo);
+  o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
+  const VESSEL = n => COMMON + `\n#define INTERIOR ${n}\n` + VESSEL_BODY;
+
   // ---------- small helpers ----------
   const hex = h => { h = String(h).trim().replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return Number.isFinite(n) ? [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255] : [.5, .5, .5]; };
   const easeBack = k => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
@@ -421,7 +526,7 @@ void main(){
       const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); } return { p, u }; }
     _get(key, vs, fs) { if (!this._progs[key]) { try { this._progs[key] = this._compile(vs, fs); } catch (e) { console.error('ai-blob shader (' + key + ')', e); this._progs[key] = null; } } return this._progs[key]; }
     _program() { const gl = this._gl; if (!gl) return; const v = this.variant;
-      const FS = { glass: GLASS_FS, halo: HALO_FS, cloud: CLOUD_FS, nebula: NEBULA_FS, dots: DOTS_FS, swirl: SWIRL_FS, rings: RINGS_FS };
+      const FS = { glass: GLASS_FS, halo: HALO_FS, core: VESSEL(1), aurora: VESSEL(2), synapse: VESSEL(3), mercury: VESSEL(4), cloud: CLOUD_FS, nebula: NEBULA_FS, dots: DOTS_FS, swirl: SWIRL_FS, rings: RINGS_FS };
       this._prog = v === 'swarm' ? this._get(v, SWARM_VS, SWARM_FS) : this._get(v, QUAD_VS, FS[v]); this._points(); }
     // (the swarm's points: a Fibonacci sphere, fewer and larger on small orbs)
     _points() { const gl = this._gl; if (this.variant !== 'swarm' || !gl) return; const n = this._detail > .5 ? 2600 : this._detail > .15 ? 1200 : 420; if (this._pts?.n === n) return;
