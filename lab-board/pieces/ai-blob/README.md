@@ -25,7 +25,7 @@ orb.addEventListener('tap', e => console.log(e.detail));           // { angle, s
 ```
 
 **Atrybuty:**
-- `variant` glass | halo | cloud | nebula | dots | swirl | swarm | rings
+- `variant` glass | halo | core | aurora | synapse | mercury | cloud | nebula | dots | swirl | swarm | rings
 - `state` default | listening | speaking | thinking | connecting | error | muted
 - `blend` auto | ink | glow: ink = czysty kolor na jasnych stronach (bez świecenia, które na bieli się pierze), glow = świecenie na ciemnych; auto czyta tło za kulą (co 1,2 s i po `refresh()`); `theme="light|dark"` dalej działa i wygrywa z auto
 - `palette` aurora | ocean | sunset | mint | mono albo `colors` (4 kolory)
@@ -39,6 +39,13 @@ Ciało kuli ma sprężyny: wysokość nad podłogą (każdy stan swoją: Muted 0
 
 ## Kule (shadery)
 
+**Naczynia (szklana kula ze światem w środku):** skorupa to dokładna sfera; promień załamuje się na wejściu (n ≈ 1,43) i dopiero potem leci przez wnętrze, więc szkło naprawdę soczewkuje to, co w środku. Na skorupie: odbicie studia (jasno u góry, ciemno u dołu, dwa softboxy, lekko w kolorze palety), błysk, cienka warstwa opalizacji, tęczowa obwódka przy krawędzi; na jasnej stronie odbicie przygaszone, a wnętrze kładzione jako kolor, nie światło. Kroki wnętrza: 44 / 26 / 14 zależnie od rozmiaru, start promienia z drżeniem (zamiast pasków: drobne ziarno).
+- **Core:** sześć kropli światła (metaballe ze smooth-min), krążą, zlewają się i rozdzielają, poświata wokół nich; mowa = puchną, myślenie = ciaśniej i szybciej.
+- **Aurora:** dwie pofałdowane kurtyny zorzy: ostra jasna dolna krawędź, promienie gasnące ku górze, kolor od wysokości (najładniej z paletą Mint).
+- **Synapse:** nitki tam, gdzie dwa pola szumu jednocześnie przechodzą przez zero, iskry biegnące wzdłuż nich (burza przy myśleniu i mowie).
+- **Mercury:** opalizujący płynny metal (SDF z szumem), odbija studio, warstwa koloru zależna od kąta; mowa = fale.
+
+
 - **Halo:** przezroczyste szkło: płynący kolorowy brzeg (pasmo + cienka jasna linia, połysk szumu wzdłuż brzegu), rdzeń światła wędrujący i puchnący z głosem, dwa błyski, aura. Ink: matowe białe szkło oświetlone z lewej góry, kolor położony na nim.
 - **Glass:** ciekła kula liczona promieniami; w środku rozszczepienie (R, G, B załamane inaczej) i płynące żyłki światła.
 - **Cloud:** miękkie plamy z kolorem jak jedwab (fbm zawinięty dwa razy).
@@ -50,7 +57,7 @@ Ciało kuli ma sprężyny: wysokość nad podłogą (każdy stan swoją: Muted 0
 
 ## Presety (panel)
 
-Iridescent (halo, aurora), Pearl (halo, mono), Liquid (glass, ocean), Silk (cloud, sunset), Smoke (nebula), Print (dots), Calm (swirl, ocean), Orbit (rings, mint), Stardust (swarm, sunset). Preset ustawia kulę, paletę i kilka suwaków, reszta wraca do domyślnych.
+Iridescent (halo, aurora), Pearl (halo, mono), Liquid (glass, ocean), Lava lamp (core), Northern (aurora, mint), Neural (synapse, ocean), Chrome (mercury, mono), Opal (mercury, aurora), Silk (cloud, sunset), Smoke (nebula), Print (dots), Calm (swirl, ocean), Orbit (rings, mint), Stardust (swarm, sunset). Preset ustawia kulę, paletę i kilka suwaków, reszta wraca do domyślnych.
 
 ## Kolory
 
