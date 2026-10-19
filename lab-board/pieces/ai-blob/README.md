@@ -57,6 +57,9 @@ Ciało kuli ma sprężyny: wysokość nad podłogą (każdy stan swoją: Muted 0
 
 ## Presety (panel)
 
+**Baza labu (Glass, ustawienia Jarka z 20.10):** Light sweep 1,15, Glow 1,35, Halo 2,10, Rim 2,05, Core 1,55, Glints 1,70, Detail 1,05, Wobble 0,76, Colour speed 1,70. Od niej lab startuje i do niej wraca Reset; preset **Glass** ustawia ją z powrotem. Pozostałe presety startują od wartości neutralnych komponentu (wszystko 1, Wobble 0), a tag do skopiowania porównuje z tymi neutralnymi, więc zawsze niesie całe strojenie.
+
+
 Iridescent (halo, aurora), Pearl (halo, mono), Liquid (glass, ocean), Lava lamp (core), Northern (aurora, mint), Neural (synapse, ocean), Chrome (mercury, mono), Opal (mercury, aurora), Silk (cloud, sunset), Smoke (nebula), Print (dots), Calm (swirl, ocean), Orbit (rings, mint), Stardust (swarm, sunset). Preset ustawia kulę, paletę i kilka suwaków, reszta wraca do domyślnych.
 
 ## Kolory

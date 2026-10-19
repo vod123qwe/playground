@@ -110,10 +110,13 @@ const PALS = [['aurora', 'Aurora'], ['ocean', 'Ocean'], ['sunset', 'Sunset'], ['
 // (the tunables: settings key → attribute, label, min, max, step)
 const TUNE = [['sweep', 'sweep', 'Light sweep (glass)', 0, 2, .05], ['glow', 'glow', 'Glow', 0, 2, .05], ['halo', 'halo', 'Halo', 0, 2.5, .05], ['rim', 'rim', 'Rim', 0, 2.5, .05], ['core', 'core', 'Core', 0, 2.5, .05], ['glints', 'glints', 'Glints', 0, 2, .05],
   ['detail', 'detail', 'Detail', .3, 3, .05], ['wobble', 'wobble', 'Wobble', 0, 1, .01], ['cspeed', 'color-speed', 'Colour speed', 0, 4, .05]];
+// (the component's own neutral values, and Jarek's base for the glass, 20.10: the lab starts from it)
+const NEUTRAL = { sweep: 1, glow: 1, halo: 1, rim: 1, core: 1, glints: 1, detail: 1, wobble: 0, cspeed: 1 };
+const GLASS_BASE = { sweep: 1.15, glow: 1.35, halo: 2.1, rim: 2.05, core: 1.55, glints: 1.7, detail: 1.05, wobble: .76, cspeed: 1.7 };
 const DEF = { variant: 'glass', state: 'default', theme: 'light', blend: 'auto', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1, view: 'one', ground: false, lift: 1, interactive: true, intro: true,
-  sweep: 1, glow: 1, halo: 1, rim: 1, core: 1, glints: 1, detail: 1, wobble: 0, cspeed: 1 };
+  ...GLASS_BASE };
 // (presets: an orb, its colours and a few settings that suit it)
-const PRESETS = [['Iridescent', { variant: 'halo', palette: 'aurora' }], ['Pearl', { variant: 'halo', palette: 'mono', glow: .8, rim: .8, core: 1.3 }], ['Liquid', { variant: 'glass', palette: 'ocean' }], ['Lava lamp', { variant: 'core', palette: 'aurora' }], ['Northern', { variant: 'aurora', palette: 'mint' }],
+const PRESETS = [['Glass', { variant: 'glass', palette: 'aurora', ...GLASS_BASE }], ['Iridescent', { variant: 'halo', palette: 'aurora' }], ['Pearl', { variant: 'halo', palette: 'mono', glow: .8, rim: .8, core: 1.3 }], ['Liquid', { variant: 'glass', palette: 'ocean' }], ['Lava lamp', { variant: 'core', palette: 'aurora' }], ['Northern', { variant: 'aurora', palette: 'mint' }],
   ['Neural', { variant: 'synapse', palette: 'ocean' }], ['Chrome', { variant: 'mercury', palette: 'mono' }], ['Opal', { variant: 'mercury', palette: 'aurora' }],
   ['Silk', { variant: 'cloud', palette: 'sunset' }], ['Smoke', { variant: 'nebula', palette: 'aurora', halo: 1.4 }], ['Print', { variant: 'dots', palette: 'aurora', detail: 1.3 }],
   ['Calm', { variant: 'swirl', palette: 'ocean' }], ['Orbit', { variant: 'rings', palette: 'mint', rim: 1.3 }], ['Stardust', { variant: 'swarm', palette: 'sunset' }]];
@@ -130,7 +133,7 @@ const colours = () => P.palette === 'custom' ? seedColours() : null;
 
 // ---------- applying the settings to every orb on the page ----------
 const attrs = () => { const a = {}; if (P.blend !== 'auto') a.blend = P.blend; if (P.ground) { a.ground = ''; if (P.lift !== 1) a.lift = P.lift; } if (!P.interactive) a.interactive = 'false'; if (!P.intro) a.intro = 'false';
-  if (P.speed !== 1) a.speed = P.speed; for (const [k, at] of TUNE) if (P[k] !== DEF[k]) a[at] = P[k]; return a; };
+  if (P.speed !== 1) a.speed = P.speed; for (const [k, at] of TUNE) if (P[k] !== NEUTRAL[k]) a[at] = P[k]; return a; };   // (against the component's own defaults, so the copied tag keeps the tuning)
 function apply() { const cols = colours(), a = attrs(), names = ['blend', 'ground', 'lift', 'interactive', 'intro', 'speed', ...TUNE.map(t => t[1])];
   for (const b of all()) { b.variant = P.variant; b.removeAttribute('theme'); for (const n of names) { if (n in a) b.setAttribute(n, a[n]); else b.removeAttribute(n); }
     if (cols) b.colors = cols; else { b.removeAttribute('colors'); b.palette = P.palette === 'custom' ? 'aurora' : P.palette; } }
@@ -170,7 +173,7 @@ function buildPanel() { panel.innerHTML = '';
   const set = (k, v) => { P[k] = v; save(); apply(); };
   const gP = LabUI.group(panel, 'Presets', { key: KEY + '.g.pre', open: true }), pb = document.createElement('div'); pb.className = 'presets'; gP.appendChild(pb);
   pb.innerHTML = PRESETS.map(([n]) => `<button type="button" data-n="${n}">${n}</button>`).join('');
-  pb.querySelectorAll('button').forEach(b => b.onclick = () => { const pr = PRESETS.find(p => p[0] === b.dataset.n)[1]; for (const [k] of TUNE) P[k] = DEF[k]; Object.assign(P, pr); save(); syncCtl(); apply(); });
+  pb.querySelectorAll('button').forEach(b => b.onclick = () => { const pr = PRESETS.find(p => p[0] === b.dataset.n)[1]; for (const [k] of TUNE) P[k] = NEUTRAL[k]; Object.assign(P, pr); save(); syncCtl(); apply(); });
   const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look', open: true });
   ctl.palette = LabUI.seg(g1, { label: 'Colours', options: PALS, value: P.palette, onChange: v => set('palette', v) });
   ctl.blend = LabUI.seg(g1, { label: 'Blend', options: [['auto', 'Auto'], ['ink', 'Ink'], ['glow', 'Glow']], value: P.blend, onChange: v => set('blend', v) });
@@ -205,7 +208,7 @@ function buildPanel() { panel.innerHTML = '';
   acts.querySelector('#reset').onclick = () => { const keep = { theme: P.theme, view: P.view, state: P.state }; P = { ...DEF, ...keep }; save(); syncCtl(); apply(); }; }
 function syncCtl() { for (const k in ctl) if (k in P) ctl[k].set?.(P[k]); }
 function vis() { if (ctl.lift) ctl.lift.row.style.display = P.ground ? '' : 'none'; const dn = $('dnote'); if (dn) dn.style.display = P.ground ? '' : 'none'; }
-function markPresets() { panel.querySelectorAll('[data-n]').forEach(b => { const pr = PRESETS.find(p => p[0] === b.dataset.n)[1]; b.classList.toggle('on', Object.entries(pr).every(([k, v]) => P[k] === v) && TUNE.every(([k]) => k in pr || P[k] === DEF[k])); }); }
+function markPresets() { panel.querySelectorAll('[data-n]').forEach(b => { const pr = PRESETS.find(p => p[0] === b.dataset.n)[1]; b.classList.toggle('on', Object.entries(pr).every(([k, v]) => P[k] === v) && TUNE.every(([k]) => k in pr || P[k] === NEUTRAL[k])); }); }
 function paintChips() { const el = $('chips'); if (!el) return; const cols = colours() || (customElements.get('ai-blob')?.palettes[P.palette === 'custom' ? 'aurora' : P.palette]) || [];
   el.innerHTML = cols.map(c => `<span style="background:${c}" title="${c}"></span>`).join('') || '<p class="note">The colour library did not load (offline?); the ready palettes still work.</p>'; }
 function paintCode() { const el = $('code'); if (!el) return; const cols = colours(), a = attrs();
