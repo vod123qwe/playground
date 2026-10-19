@@ -4,7 +4,7 @@
    <ai-blob variant="glass" state="listening" theme="light" palette="aurora"></ai-blob>
 
    Attributes (each is also a property):
-     variant   glass | halo | core | aurora | synapse | mercury | cloud | nebula | dots | swirl | swarm | rings
+     variant   glass | soft | halo | core | aurora | mercury | cloud | nebula | dots | swarm | rings
      state     default | listening | speaking | thinking | connecting | error | muted
                connecting and error play once, then go back by themselves (connecting to default, error to the state before it)
      blend     auto | ink | glow: ink draws clean colour for light pages, glow shines on dark ones, auto looks at the
@@ -12,6 +12,7 @@
      ground    present = the orb floats over a ground with a soft shadow in perspective; it sits down when muted and
                stands up when it wakes (lift scales the height)
      interactive  tap to squeeze and flare it (default on; "false" turns it off) · intro  pops in with a spring (default on)
+     lines     rings: how many loops (2–16, default 5)
      tuning    sweep (glass: light through it every few seconds, 0–2), glow, halo, rim, core, glints (0–2), detail (noise scale), wobble (0–1), color-speed, lift, resolution
      palette   aurora | ocean | sunset | mint | mono              (default aurora)
      colors    four colours, space separated, instead of a palette: "#7b5cff #2ec5ff #ff6fd8 #ffd38a"
@@ -34,7 +35,7 @@
     mint: ['#12b886', '#4dd4ac', '#3ba7ff', '#c3f584'],
     mono: ['#3d3f4a', '#8a8e9e', '#5d6170', '#c9ccd6'],
   };
-  const VARIANTS = ['glass', 'halo', 'core', 'aurora', 'synapse', 'mercury', 'cloud', 'nebula', 'dots', 'swirl', 'swarm', 'rings'];
+  const VARIANTS = ['glass', 'soft', 'halo', 'core', 'aurora', 'mercury', 'cloud', 'nebula', 'dots', 'swarm', 'rings'];
   // (what each state asks of the orb; the orb eases towards it, so every change is a morph)
   //  amp: how much it wobbles · freq: how fine the wobble · spin: turning speed · voice: how much the voice moves it · scale · sat: colour
   //  glow · think: inner swirl · tint: the error red · ripple: rings coming in, listening · spread: the inside comes loose
@@ -80,7 +81,7 @@ float fbm(vec3 p, int oct){ float s = 0., a = .5; for (int i = 0; i < 4; i++) { 
 in vec2 aP; out vec2 vUv; out vec2 vRaw; uniform vec2 uRes, uOff; uniform mat2 uWarp; void main(){ vRaw = aP * (uRes / min(uRes.x, uRes.y)); vUv = uWarp * (vRaw - uOff); gl_Position = vec4(aP, 0., 1.); }`;
 
   // glass: a liquid orb, ray marched; the inside is coloured light that swirls, the skin catches highlights and a thin iridescence
-  const GLASS_FS = COMMON + `
+  const GLASS_SRC = `
 in vec2 vUv; in vec2 vRaw; out vec4 o;
 float field(vec3 p){ vec3 q = p; q.xz *= rot(uR * .6); q.xy *= rot(uR * .25);
   float f = uFreq * .72, n = snoise(q * f + vec3(0., uT * .55, uT * .3)), n2 = snoise(q * f * 1.9 - vec3(uT * .4, 0., uT * .2));
@@ -96,6 +97,9 @@ void main(){
   float t = 1.4, md = 1e9, mt = t; int steps = uDetail > .5 ? 70 : 42;
   for (int i = 0; i < 70; i++) { if (i >= steps) break; float d = sdf(ro + rd * t); if (d < md) { md = d; mt = t; } if (d < .0008) break; t += d * .72; if (t > 3.8) break; }
   vec3 p = ro + rd * mt, n = nrm(p); float cov = 1. - smoothstep(0., uPx * 1.6, md);
+#ifdef SOFT
+  cov = 1. - smoothstep(-.03, .17 + .08 * uHaloK, md); cov *= cov;   // (the soft one: the colour fades out over a wide edge)
+#endif
   float fr = pow(1. - max(dot(n, -rd), 0.), 2.6);
   // the inside: light bent through the skin, red, green and blue each bent a little differently (dispersion), coloured by the
   // palette and stirred (harder when thinking)
@@ -116,15 +120,25 @@ void main(){
   vec3 col = inner * (1. - fr * .55) + film * (uDark > .5 ? .9 : .65) + vec3(spec);
   col *= .78 + .3 * uGlow;
   col += mix(vec3(1.), pal(dot(n.xy, sdir) * .6 + uCT * .05), .35) * sg * (uDark > .5 ? .55 : .5) * (.6 + .4 * fr);
+#ifndef SOFT
   if (uDark < .5) col = mix(col, col * vec3(.9, .9, .95), fr * .4);   // (a hint of a darker rim, so it holds its edge on white)
+#endif
   col = finish(col);
   float a = cov * (uDark > .5 ? .93 + fr * .07 : .97);
+#ifdef SOFT
+  a = cov * (1. - smoothstep(.1, .9, fr) * .9);   // (the soft one turns clear towards its edge and melts into its own light)
+#endif
   // the aura round it: light on dark pages, a faint tinted haze on light ones
   float halo = uHaloK * exp(-max(md, 0.) * 11. / max(uHaloK, .05)) * smoothstep(.98, .55, length(uv)) * (1. - cov) * uGlow * (uDark > .5 ? .55 : .2);
   vec3 hc = finish(pal(atan(uv.y, uv.x) / 6.283 + uT * .04));
+#ifdef SOFT
+  hc = mix(hc, col, .7); halo *= 2.4;
+#endif
   o = vec4(col * a + hc * halo, a + halo * (uDark > .5 ? .6 : 1.));
   o = clamp(o, 0., 1.);
   o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
+
+  const GLASS_FS = COMMON + GLASS_SRC, SOFT_FS = COMMON + '\n#define SOFT 1\n' + GLASS_SRC;
 
   // cloud: soft colour blobs drifting inside one another, their edge a living outline
   const CLOUD_FS = COMMON + `
@@ -155,47 +169,73 @@ void main(){
   o = clamp(vec4(col * a + hc * halo, a + halo), 0., 1.);
   o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
 
+  // nebula: a mass of coloured gas in space. The ray marches through it; at every step a second look towards the light says how much
+  // gas stands in the way, so the cloud has a lit side and a shadowed one (it reads as a form, not a haze); the core is denser and
+  // glows; stars sit behind and inside it in three layers that turn at different speeds (depth)
   const NEBULA_FS = COMMON + `
 in vec2 vUv; in vec2 vRaw; out vec4 o;
+float hash3(vec3 p){ return fract(sin(dot(p, vec3(17.1, 113.3, 71.7))) * 43758.5453); }
+float gas(vec3 q, float r, int oc){
+  vec3 sw = uThink * .45 * vec3(sin(uT * 1.3 + q.y * 4.), 0., cos(uT * 1.3 + q.y * 4.));
+  float b = fbm(q * 1.2 * uFreq / 1.4 + vec3(0., -uT * .3, uT * .18) + sw, oc), fine = uDetail > .5 ? fbm(q * 3.4 + vec3(uT * .2, 0., 0.), 2) * .35 : 0.;
+  return clamp((1. - r) * 1.55 + b * .95 + fine - .42 + uAmp * 1.4 + uPulse * .3 + uRipple * .1 * sin(r * 18. - uT * 5.), 0., 1.); }
 void main(){
   vec2 uv = vUv - uShake; vec3 ro = vec3(0., 0., 2.6), rd = normalize(vec3(uv * .98, -2.3));
   float R = .66 * uScale * (1. + uPulse * .07), b = dot(ro, rd), c = dot(ro, ro) - R * R, h = b * b - c;
-  vec4 acc = vec4(0.); int oc = 2, N = uDetail > .5 ? 34 : 18;
-  if (h > 0.) { h = sqrt(h); float t0 = -b - h, t1 = -b + h, dt = (t1 - t0) / float(N);
-    for (int i = 0; i < 34; i++) { if (i >= N) break; vec3 p = ro + rd * (t0 + dt * (float(i) + .5)), q = p;
-      q.xz *= rot(uR * .55); q.xy *= rot(uR * .2); float r = length(p) / R;
-      vec3 sw = uThink * .45 * vec3(sin(uT * 1.3 + q.y * 4.), 0., cos(uT * 1.3 + q.y * 4.));
-      float d = fbm(q * 1.05 * uFreq / 1.4 + vec3(0., -uT * .35, uT * .2) + sw, oc);
-      float dens = smoothstep(0., .85, d * .55 + .55 - r * r * .95 + uAmp * 1.6 + uPulse * .25 + uRipple * .12 * sin(r * 18. - uT * 5.)) * (1. - smoothstep(.6, 1., r));
-      vec3 cc = pal(d * .45 + r * .3 + atan(q.z, q.x) / 6.283 + uT * .03) * (1. + uGlow * .35) * (1. + max(d, 0.) * .25);
-      float a = clamp(dens * dt * 5.2, 0., 1.);
-      acc.rgb += (1. - acc.a) * cc * a; acc.a += (1. - acc.a) * a; if (acc.a > .97) break; } }
-  vec3 col = finish(acc.rgb / max(acc.a, 1e-3)) * (uDark > .5 ? 1. : .9); float a = acc.a * (uDark > .5 ? 1. : .94);
+  vec4 acc = vec4(0.); int oc = uDetail > .5 ? 3 : 2, N = uDetail > .5 ? 36 : 18; vec3 L = normalize(vec3(-.55, .65, .5));
+  if (h > 0.) { h = sqrt(h); float t0 = -b - h, t1 = -b + h, dt = (t1 - t0) / float(N), jit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+    for (int i = 0; i < 36; i++) { if (i >= N) break; vec3 p = ro + rd * (t0 + dt * (float(i) + jit)), q = p / R;
+      q.xz *= rot(uR * .5); q.xy *= rot(uR * .18); float r = length(p) / R, d = gas(q, r, oc);
+      if (d < .01) continue;
+      float sh = gas(q + L * .22, length(p / R + L * .22), 2), lit = exp(-sh * 2.6);   // (how much gas lies towards the light)
+      float core = exp(-r * r * 7.) * (.9 + uPulse * .8 + uTap * .6);
+      vec3 cc = pal(d * .4 + r * .35 + atan(q.z, q.x) / 6.283 + uCT * .03);
+      cc = cc * (.22 + lit * 1.05) * (1. + uGlow * .35) + pal(.55 + uCT * .03) * core * 1.1 + vec3(1.) * core * core * .25;
+      float a = clamp(d * dt * 7.5 / R, 0., 1.);
+      acc.rgb += (1. - acc.a) * cc * a; acc.a += (1. - acc.a) * a; if (acc.a > .98) break; }
+    // stars: three layers turning at different speeds, seen through the thinner gas
+    vec3 sc = vec3(0.); for (int k = 0; k < 3; k++) { float fk = float(k), sp = .2 + fk * .25;
+      vec2 su = rot(uR * sp + fk) * (uv / R) * (6. + fk * 5.), cell = floor(su), f = fract(su) - .5; float hh = hash3(vec3(cell, fk));
+      float star = step(.86, hh) * smoothstep(.12 + fk * .03, 0., length(f - (vec2(hash3(vec3(cell, fk + 4.)), hash3(vec3(cell, fk + 9.))) - .5) * .6));
+      sc += star * (.6 + .4 * sin(uT * 3. + hh * 40.)) * (1. - fk * .25); }
+    float inside = smoothstep(1., .75, length(uv) / R); acc.rgb += sc * inside * (1. - acc.a * .85) * (uDark > .5 ? .9 : .5) * uGlintK; acc.a = max(acc.a, length(sc) * inside * .5 * (uDark > .5 ? 1. : .0)); }
+  vec3 col = finish(acc.rgb / max(acc.a, 1e-3)) * (uDark > .5 ? 1. : .92); float a = acc.a * (uDark > .5 ? 1. : .95);
   float rr = length(uv), halo = uHaloK * exp(-rr * rr / (R * R) * 2.2 / max(uHaloK, .05)) * smoothstep(.98, .6, rr) * (1. - a) * uGlow * (uDark > .5 ? .42 : .14);
   vec3 hc = finish(pal(atan(uv.y, uv.x) / 6.283 + uT * .04));
   o = clamp(vec4(col * a + hc * halo, a + halo), 0., 1.);
   o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
 
-  // rings: thin glowing loops round the centre, wavering with the voice, turning in space when thinking
-  const RINGS_FS = COMMON + `
-in vec2 vUv; in vec2 vRaw; out vec4 o; uniform float uRings;
+  // rings: loops in space. Each lies in its own tilted plane (spread round the sphere), turns slowly, wavers with the voice; they
+  // are drawn as thin ribbons that always face the eye, the near side stronger than the far one. On a dark page a soft glow pass
+  // goes under them. lines = how many (2–16)
+  const RINGS_VS = `#version 300 es
+precision highp float;
+in float aT, aSide, aRing; out vec3 vCol; out float vA, vSide;
+uniform vec2 uRes, uShake, uOff; uniform mat2 uWarpF; uniform float uT, uR, uCT, uAmp, uFreq, uPulse, uScale, uSat, uGlow, uThink, uTint, uRipple, uSpread, uDark, uLines, uLW, uPassA, uPassW, uTap;
+uniform vec3 uC0, uC1, uC2, uC3;
+vec3 pal(float x){ x = fract(x) * 4.; vec3 a = x < 1. ? uC0 : x < 2. ? uC1 : x < 3. ? uC2 : uC3; vec3 b = x < 1. ? uC1 : x < 2. ? uC2 : x < 3. ? uC3 : uC0; float f = fract(x); return mix(a, b, f * f * (3. - 2. * f)); }
+vec3 finish(vec3 c){ float g = dot(c, vec3(.299, .587, .114)); c = mix(vec3(g), c, uSat); vec3 red = uDark > .5 ? vec3(1., .33, .36) : vec3(.86, .2, .24); return mix(c, red * (.75 + .35 * g), uTint * .78); }
+mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+vec3 ring(float th, float fi){
+  float k = uFreq / 1.4, r = .5 * (1. - fi * .01) * (1. + uSpread * (fract(fi * .37) - .5) * .35 + uRipple * .04 * sin(uT * 3. + fi));
+  r *= 1. + uAmp * .55 * sin(3. * th + uT * (.6 + fi * .2) + fi) + uAmp * .3 * sin(5. * th - uT * (.9 + fi * .15)) + uAmp * .18 * (k - .7) * sin(8. * th + uT * 1.3 + fi * 3.)
+     + uPulse * .09 * sin(9. * th + uT * 7. + fi * 2.) * (.5 + .5 * sin(uT * 3. + fi)) + uTap * .05 * sin(6. * th - uT * 9.);
+  vec3 p = vec3(cos(th), sin(th), 0.) * r;
+  float a1 = fi * 2.399 + uR * (.3 + fi * .07) * (mod(fi, 2.) < .5 ? 1. : -1.), a2 = (.35 + .55 * fract(fi * .618)) * (1. + uThink * .5) + .15 * sin(uT * .3 + fi);
+  p.yz *= rot(a2); p.xy *= rot(a1); p.xz *= rot(uR * .25); return p * uScale; }
+vec2 proj(vec3 p){ return p.xy * (2.3 / (2.6 - p.z)) / .98; }
 void main(){
-  vec2 p = (vUv - uShake) / uScale; vec3 acc = vec3(0.); float al = 0.;
-  for (int i = 0; i < 5; i++) { float fi = float(i); if (fi >= uRings) break;
-    float tilt = .25 + uThink * (1.05 + .25 * sin(uR * .9 + fi * 1.7)), phi = fi * 1.1 + uR * (.35 + fi * .12) * (i % 2 == 0 ? 1. : -1.);
-    vec2 q = rot(phi) * p; q.y /= max(.18, cos(tilt * (.6 + fi * .18)));
-    float th = atan(q.y, q.x), R = .5 - fi * .028;
-    float r = R * (1. + uAmp * .55 * sin(3. * th + uT * (.6 + fi * .2) + fi) + uAmp * .3 * sin(5. * th - uT * (.9 + fi * .15)) + uPulse * .1 * sin(9. * th + uT * 7. + fi * 2.) * (.5 + .5 * sin(uT * 3. + fi)));
-    float d = abs(length(q) - r) * cos(tilt * (.6 + fi * .18) * .5);
-    float lw = (uPx * (uDetail > .5 ? 1.1 : 1.6) + .002) * (.5 + uRimK * .5), line = smoothstep(lw + uPx, lw * .3, d), glow = exp(-d * (uDark > .5 ? 38. : 60.)) * .35 * uGlow;
-    vec3 c = pal(fi / uRings * .8 + sin(th) * .1 + cos(th * 2.) * .05 + uT * .03); float v = line + glow * (1. - line);
-    acc += c * v; al += v; }
-  float r0 = length(p);
-  if (uRipple > .01) for (int k = 0; k < 3; k++) { float f = fract(uT * .32 + float(k) / 3.), rr = .62 + f * .28, v = uRipple * (1. - f) * .5 * smoothstep(uPx * 1.6, 0., abs(r0 - rr)); acc += pal(f) * v; al += v; }
-  float core = exp(-r0 * r0 * 22. / max(uCoreK * uCoreK, .05)) * (.25 + uPulse * .5 + uThink * .2 + uTap * .4) * uGlow * min(uCoreK, 1.5); acc += pal(uT * .05) * core; al += core * .8;
-  vec3 col = finish(acc / max(al, 1e-4)) * (uDark > .5 ? 1. : .92); float a = clamp(al, 0., 1.);
-  o = vec4(col * a, a);
-  o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
+  float fi = aRing, th = aT * 6.2831853; vec3 P = ring(th, fi);
+  vec2 s = proj(P), tg = normalize(proj(ring(th + .012, fi)) - proj(ring(th - .012, fi)) + 1e-6), nr = vec2(-tg.y, tg.x);
+  float depth = clamp(P.z / .55 * .5 + .5, 0., 1.), lw = uLW * uPassW * (.75 + depth * .5);
+  vec2 sp = uWarpF * (s + nr * aSide * lw) + uOff + uShake, asp = uRes / min(uRes.x, uRes.y);
+  gl_Position = vec4(sp / asp, 0., 1.);
+  vCol = finish(pal(fi / max(uLines, 1.) * .85 + sin(th) * .08 + uCT * .03)) * (uDark > .5 ? 1.05 + uGlow * .2 : .88);
+  vA = ((uDark > .5 ? .5 : .72) + depth * (uDark > .5 ? .55 : .28)) * uPassA; vSide = aSide; }`;
+  const RINGS_FS = `#version 300 es
+precision highp float;
+in vec3 vCol; in float vA, vSide; out vec4 o;
+void main(){ float a = vA * smoothstep(1., .35, abs(vSide)); o = vec4(vCol * a, a); }`;
 
   // swarm: thousands of points making a sphere that breathes; they come loose when thinking and pulse with the voice
   const SWARM_VS = `#version 300 es
@@ -292,32 +332,16 @@ void main(){
   float gl = uDark > .5 ? exp(-max(d, 0.) / (uCell * .22)) * .3 * v * uGlow * uHaloK : 0.;
   o = vec4(c * (a + gl), a + gl * .6); o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
 
-  // swirl: a calm monochrome orb, two tones of one colour folded round the middle and turning, like ink stirred in milk;
-  // thinking twists it tighter, the voice ripples the fold, a highlight and a soft rim make it round
-  const SWIRL_FS = COMMON + `
-in vec2 vUv; in vec2 vRaw; out vec4 o;
+  const TAPWAVE_FS = COMMON + `
+in vec2 vUv; in vec2 vRaw; out vec4 o; uniform vec4 uTW[3];
 void main(){
-  vec2 p = vUv - uShake; float R = .6 * uScale * (1. + uPulse * .05), r = length(p);
-  float wob = snoise(vec3(p / max(r, 1e-4) * 1.2, uT * .4)) * (.006 + uAmp * .1), Rw = R * (1. + wob), e = r / Rw, aa = uPx * 1.5 / Rw;
-  float inside = smoothstep(1. + aa, 1. - aa, e);
-  vec3 n = vec3(p / Rw, sqrt(max(0., 1. - min(e * e, 1.)))); vec2 q = n.xy / (1. + n.z * .35); float qa = atan(q.y, q.x), qr = length(q);
-  float tw = 1.5 + uThink * 1.4 + uFreq * .2;
-  float field = sin(qa + qr * tw * 2.3 - uR * 1.6 + snoise(vec3(q * 1.4, uT * .25)) * (.7 + uAmp * 2.) + uPulse * .9 * sin(qr * 11. - uT * 8.) + uRipple * .45 * sin(qr * 12. + uT * 5.));
-  float m = smoothstep(-.55, .55, field);
-  // (one colour: the seed's hue, toned light and dark; the mono palette is plain grey)
-  float l0 = dot(uC0, vec3(.299, .587, .114)); vec3 hue = uC0 / max(l0, .05) * .5;
-  vec3 dark = mix(vec3(.42), clamp(hue * .7, 0., 1.), .45), light = mix(vec3(.97), clamp(hue * 1.6, 0., 1.), .1);
-  if (uDark > .5) { dark = mix(vec3(.2), clamp(hue * .6, 0., 1.), .5); light = mix(vec3(.9), clamp(hue * 1.7, 0., 1.), .18); }
-  float crease = exp(-field * field * 9.) * .08;
-  vec3 col = finish(mix(dark, light, m) + crease);
-  vec3 L = normalize(vec3(-.45, .55, .7)); float lit = .62 + .38 * max(dot(n, L), 0.);
-  col *= lit; float fr = pow(1. - n.z, 2.5); col = mix(col, finish(light), fr * .28);
-  col += vec3(pow(max(dot(reflect(vec3(0., 0., -1.), n), L), 0.), 36.)) * .55 * uGlintK;
-  col *= .82 + uGlow * .22 + uTap * .25;
-  float d = max(r - Rw, 0.), halo = exp(-d * 9. / max(uHaloK, .05)) * (1. - inside) * (uDark > .5 ? .25 : .1) * uGlow * smoothstep(.98, .5, length(vRaw - uOff));
-  vec3 hc = finish(uDark > .5 ? light : dark);
-  float a = inside;
-  o = vec4(col * a + hc * halo, a + halo); o *= smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
+  vec2 c = vRaw - uOff; float r = length(c), ang = atan(c.y, c.x); vec3 col = vec3(0.); float al = 0.;
+  for (int i = 0; i < 3; i++) { vec4 w = uTW[i]; if (w.y <= 0.) continue; float k = w.x, rad = mix(.52 * w.z, .93, 1. - pow(1. - k, 2.2)), wd = .028 + k * .04, fade = w.y * (1. - k) * smoothstep(0., .06, k) * smoothstep(.99, .8, rad);
+    for (int ch = 0; ch < 3; ch++) { float off = (float(ch) - 1.) * wd * .45 * (.5 + uRimK * .5), x = (r - rad - off) / wd, g = exp(-x * x) * fade;
+      vec3 rc = mix(vec3(1.), finish(pal(ang / 6.283 + uCT * .05 + k * .3)), .5); col[ch] += rc[ch] * g; al += g / 3.; }
+    float wash = smoothstep(rad, rad - .25, r) * smoothstep(.5 * w.z, rad, r) * fade * .06 * smoothstep(.97, .7, r); col += vec3(wash); al += wash; }
+  al = clamp(al * (uDark > .5 ? .7 : 1.), 0., 1.); col *= uDark > .5 ? 1. : .85;
+  o = vec4(col, al) * smoothstep(1., .9, max(abs(vRaw.x), abs(vRaw.y))); }`;
 
   // the ground: a soft shadow under the orb in perspective (a light pool on dark pages); it tightens and darkens as the orb
   // comes down and spreads and fades as it rises
@@ -335,8 +359,8 @@ void main(){
 
   // ---------- the vessels: a glass sphere with a world inside. The shell is an exact sphere: the ray bends where it enters and then
   // travels through what lives inside (so the glass truly lenses it), and the shell adds a studio reflection, a highlight, a thin
-  // film of colour and a rainbow fringe at the edge. Four insides: 1 liquid light (glowing drops that merge and part), 2 aurora
-  // (folded curtains of light), 3 synapses (threads with sparks running along them), 4 mercury (an iridescent liquid metal) ----------
+  // film of colour and a rainbow fringe at the edge. Three insides: 1 liquid light (glowing drops that merge and part), 2 aurora
+  // (folded curtains of light), 4 mercury (an iridescent liquid metal) ----------
   const VESSEL_BODY = `
 in vec2 vUv; in vec2 vRaw; out vec4 o;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -406,13 +430,6 @@ void main(){
         float rays = .25 + .75 * pow(.5 + .5 * sin(p.x * 44. + fbm(vec3(p.x * 2., p.z, uT * .25 + ph), 2) * 8.), 3.);
         float dk = sheet * vert * rays * (1. + 1.6 * exp(-max(up, 0.) * 16.)); dens += dk; cc += pal(.35 + up * 1.1 + fk * .2 + uCT * .03) * dk; }
       cc /= max(dens, 1e-4); dens *= (.55 + uGlow * .25) * (1. + uPulse * .6) * (uDark > .5 ? 1.15 : 2.2); cc *= uDark > .5 ? 1.15 : .9;
-#else
-      // threads where two noise fields both cross zero; sparks run along them (a storm of them when thinking)
-      vec3 sp = p * 2.1 + vec3(0., uT * .04, 0.); float n1 = snoise(sp), n2 = snoise(sp + vec3(5.2, 1.3, 3.1)), f = abs(n1) + abs(n2);
-      float thread = exp(-f * f * (uDark > .5 ? 130. : 85.)), halo = exp(-f * 9.) * .06, n3 = snoise(p * 1.3 + 11.);
-      float spark = pow(.5 + .5 * sin(n3 * 22. - uT * (2.8 + uThink * 5.)), 14.) * (1.4 + uThink * 2.2 + uPulse * 2.2 + uTap * 1.5);
-      dens = thread * (.35 + spark) + halo * (.5 + uPulse); cc = mix(pal(n3 * .6 + uCT * .03) * (uDark > .5 ? 1.25 : .85), vec3(1.), clamp(spark * thread * .3, 0., .55) * uDark);
-      dens *= uDark > .5 ? 4.5 : 5.5;
 #endif
       float a = clamp(dens * dt * 9., 0., 1.); acc.rgb += (1. - acc.a) * cc * a; acc.a += (1. - acc.a) * a; if (acc.a > .97) break; }
     acc.rgb = acc.a > 0. ? acc.rgb : vec3(0.);
@@ -442,7 +459,7 @@ void main(){
   const easeBack = k => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   // (the tunable numbers: attribute → [default, min, max])
-  const NUM = { sweep: [1, 0, 2], speed: [1, 0, 4], glow: [1, 0, 2], halo: [1, 0, 2.5], rim: [1, 0, 2.5], core: [1, 0, 2.5], glints: [1, 0, 2], detail: [1, .3, 3], wobble: [0, 0, 1], 'color-speed': [1, 0, 4], lift: [1, 0, 2], resolution: [1, .4, 1.5] };
+  const NUM = { lines: [5, 2, 16], sweep: [1, 0, 2], speed: [1, 0, 4], glow: [1, 0, 2], halo: [1, 0, 2.5], rim: [1, 0, 2.5], core: [1, 0, 2.5], glints: [1, 0, 2], detail: [1, .3, 3], wobble: [0, 0, 1], 'color-speed': [1, 0, 4], lift: [1, 0, 2], resolution: [1, .4, 1.5] };
   // (how high the orb floats over the ground in each state: muted sits on it, listening stands up tallest)
   const LIFT = { default: .15, listening: .25, speaking: .19, thinking: .21, connecting: .15, error: .1, muted: 0 };
   const GROUND_Y = -.74;
@@ -455,7 +472,7 @@ void main(){
       root.innerHTML = `<style>:host{display:inline-block;width:160px;aspect-ratio:1;position:relative;contain:strict;vertical-align:middle;-webkit-tap-highlight-color:transparent}:host([hidden]){display:none}
         canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.fb{position:absolute;inset:18%;border-radius:50%;display:none}</style><canvas part="canvas"></canvas><div class="fb" part="fallback"></div>`;
       this._cv = root.querySelector('canvas'); this._fb = root.querySelector('.fb');
-      this._p = { ...STATES.default }; this._t = 0; this._r = 0; this._ct = 0; this._sw = 2.6; this._lvl = 0; this._sim = { on: false, until: 0, ph: 0, rate: 5, gain: .8 };
+      this._p = { ...STATES.default }; this._t = 0; this._r = 0; this._ct = 0; this._sw = 2.6; this._tw = []; this._lvl = 0; this._sim = { on: false, until: 0, ph: 0, rate: 5, gain: .8 };
       this._state = 'default'; this._back = 'default'; this._since = 0; this._shake = [0, 0]; this._visible = true; this._ink = true;
       // (the body's springs: height, the squash on landing, the squash of a tap, the pop-in)
       this._lift = .15; this._liftV = 0; this._sq = 0; this._sqV = 0; this._tap = 0; this._tapV = 0; this._tapA = 0; this._flare = 0; this._intro = 1; this._introV = 0; this._introDone = false;
@@ -506,7 +523,7 @@ void main(){
       this._aria(); if (prev !== s) this.dispatchEvent(new CustomEvent('statechange', { detail: { state: s, previous: prev, auto } })); this._kick(); }
 
     // ---------- touch: a tap squeezes the orb from the side it came from and flares it ----------
-    tap(angle = Math.random() * 360, strength = 1) { this._sw = 0;   // (a tap also sends light through the glass)
+    tap(angle = Math.random() * 360, strength = 1) { this._sw = 0; this._tw.push({ k: 0, s: Math.min(1.4, strength) }); if (this._tw.length > 3) this._tw.shift();   // (a tap also sends light through the glass)
       this._tapA = angle * Math.PI / 180; this._tapV += 6.5 * strength; this._flare = Math.min(1.6, this._flare + strength); this.dispatchEvent(new CustomEvent('tap', { detail: { angle, strength } })); this._kick(); }
     _down(e) { if (!this.interactive) return; const r = this.getBoundingClientRect(); this.tap(Math.atan2(-(e.clientY - r.top - r.height / 2), e.clientX - r.left - r.width / 2) * 180 / Math.PI, 1); }
     refresh() { this._detect(); this._kick(); }   // (look at the background again, e.g. right after the page switched light and dark)
@@ -523,7 +540,7 @@ void main(){
     // ---------- WebGL ----------
     _setup() { if (this._gl || this._noGL) return; const gl = this._cv.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: 'low-power' });
       if (!gl) { this._noGL = true; const c = this._colors(); this._fb.style.display = 'block'; this._fb.style.background = `radial-gradient(circle at 35% 30%, ${c[3]}, ${c[0]} 45%, ${c[1]})`; return; }
-      this._gl = gl; this._cv.addEventListener('webglcontextlost', e => { e.preventDefault(); this._gl = null; this._prog = null; this._progs = {}; });
+      this._gl = gl; this._cv.addEventListener('webglcontextlost', e => { e.preventDefault(); this._gl = null; this._prog = null; this._progs = {}; this._rg = null; this._pts = null; });
       this._cv.addEventListener('webglcontextrestored', () => { this._setup(); this._kick(); });
       this._quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this._quad); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
       this._progs = {}; this._program(); this._resize(); }
@@ -532,8 +549,11 @@ void main(){
       const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); } return { p, u }; }
     _get(key, vs, fs) { if (!this._progs[key]) { try { this._progs[key] = this._compile(vs, fs); } catch (e) { console.error('ai-blob shader (' + key + ')', e); this._progs[key] = null; } } return this._progs[key]; }
     _program() { const gl = this._gl; if (!gl) return; const v = this.variant;
-      const FS = { glass: GLASS_FS, halo: HALO_FS, core: VESSEL(1), aurora: VESSEL(2), synapse: VESSEL(3), mercury: VESSEL(4), cloud: CLOUD_FS, nebula: NEBULA_FS, dots: DOTS_FS, swirl: SWIRL_FS, rings: RINGS_FS };
-      this._prog = v === 'swarm' ? this._get(v, SWARM_VS, SWARM_FS) : this._get(v, QUAD_VS, FS[v]); this._points(); }
+      const FS = { glass: GLASS_FS, soft: SOFT_FS, halo: HALO_FS, core: VESSEL(1), aurora: VESSEL(2), mercury: VESSEL(4), cloud: CLOUD_FS, nebula: NEBULA_FS, dots: DOTS_FS, rings: RINGS_FS };
+      this._prog = v === 'swarm' ? this._get(v, SWARM_VS, SWARM_FS) : v === 'rings' ? this._get(v, RINGS_VS, RINGS_FS) : this._get(v, QUAD_VS, FS[v]); this._points(); this._loops(); }
+    _loops() { const gl = this._gl; if (this.variant !== 'rings' || !gl || this._rg) return; const SEG = 220, n = (SEG + 1) * 2, d = new Float32Array(16 * n * 3);
+      for (let r = 0; r < 16; r++) for (let i = 0; i <= SEG; i++) for (let sd = 0; sd < 2; sd++) d.set([i / SEG, sd ? 1 : -1, r], ((r * n) + i * 2 + sd) * 3);
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, d, gl.STATIC_DRAW); this._rg = { b, n }; }
     // (the swarm's points: a Fibonacci sphere, fewer and larger on small orbs)
     _points() { const gl = this._gl; if (this.variant !== 'swarm' || !gl) return; const n = this._detail > .5 ? 2600 : this._detail > .15 ? 1200 : 420; if (this._pts?.n === n) return;
       const base = new Float32Array(n * 3), seed = new Float32Array(n * 2), ga = Math.PI * (3 - Math.sqrt(5));
@@ -564,6 +584,7 @@ void main(){
       if (lv == null) lv = this._p.voice > .02 ? this._voice(dt) : 0;
       this._lvl += (lv - this._lvl) * (1 - Math.exp(-dt * (lv > this._lvl ? 28 : 9)));
       this._t += dt * sp * (.55 + this._p.amp * 2.5 + this._p.think * .4); this._r += dt * sp * this._p.spin; this._ct += dt * sp * this.num('color-speed'); this._sw += dt * sp;
+      for (const w of this._tw) w.k += dt / 1.05; this._tw = this._tw.filter(w => w.k < 1);   // (a tap wave crosses the box in about a second)
       const e = this._state === 'error' && !reduced.matches ? this._since : 9; this._shake[0] = e < .55 ? .035 * Math.exp(-e * 6) * Math.sin(e * 55) : 0;
       // (the body: it floats at the state's height on a spring, with a slow bob and a little lift from the voice; landing squashes it,
       //  rising stretches it; muted, it sits on the ground, slightly flattened)
@@ -592,7 +613,7 @@ void main(){
       f1('uT', this._t); f1('uR', this._r); f1('uCT', this._ct); f1('uAmp', p.amp + this.num('wobble') * .14); f1('uFreq', p.freq * this.num('detail')); f1('uPulse', this._lvl * p.voice);
       f1('uScale', Math.max(.001, p.scale)); f1('uSat', p.sat); f1('uGlow', (p.glow + flare * .5) * this.num('glow'));
       f1('uThink', p.think); f1('uTint', p.tint); f1('uRipple', p.ripple); f1('uSpread', p.spread); f1('uDark', ink ? 0 : 1); f1('uDetail', this._detail); f1('uDpr', this._dpr);
-      f1('uPx', 2 / Math.min(this._cv.width, this._cv.height) / Math.max(.3, w.gs)); f1('uRings', this._detail > .5 ? 4 : 3); f1('uPt', (this._detail > .5 ? 2.6 : this._detail > .15 ? 3.2 : 3.6) * w.gs);
+      f1('uPx', 2 / Math.min(this._cv.width, this._cv.height) / Math.max(.3, w.gs)); f1('uLines', Math.round(this.num('lines'))); f1('uLW', (1.05 + this.num('rim') * .9) * this._dpr * 2 / Math.min(this._cv.width, this._cv.height) / Math.max(.3, w.gs) * (this._detail > .15 ? 1 : 1.4)); f1('uPt', (this._detail > .5 ? 2.6 : this._detail > .15 ? 3.2 : 3.6) * w.gs);
       f1('uHaloK', this.num('halo')); f1('uRimK', this.num('rim')); f1('uCoreK', this.num('core')); f1('uGlintK', this.num('glints')); f1('uTap', Math.min(1, flare));
       { const per = 5.2 - 2.4 * this._p.think, ph = (this._sw % per) / 1.25; f1('uSweep', ph < 1 ? ph * ph * (3 - 2 * ph) : -1); f1('uSweepK', (this._p.sweep || 0) * this.num('sweep') * (reduced.matches ? .5 : 1)); }
       f1('uCell', 2 / (this._css / Math.min(12, Math.max(4, this._css / 30))) / Math.max(.3, w.gs));
@@ -612,7 +633,17 @@ void main(){
         gl.bindBuffer(gl.ARRAY_BUFFER, pt.b1); gl.enableVertexAttribArray(a1); gl.vertexAttribPointer(a1, 3, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, pt.b2); gl.enableVertexAttribArray(a2); gl.vertexAttribPointer(a2, 2, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.POINTS, 0, pt.n); gl.disableVertexAttribArray(a1); gl.disableVertexAttribArray(a2); }
-      else { gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); this._quadDraw(P); } }
+      else if (this.variant === 'rings') { const rg = this._rg; if (!rg) return; const loc = n => gl.getAttribLocation(P.p, n), aT = loc('aT'), aS = loc('aSide'), aR = loc('aRing');
+        gl.bindBuffer(gl.ARRAY_BUFFER, rg.b); for (const [a, o] of [[aT, 0], [aS, 4], [aR, 8]]) { gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 1, gl.FLOAT, false, 12, o); }
+        const lines = Math.round(this.num('lines')), glow = (this._p.glow + this._flare * .5) * this.num('glow'), u = P.u;
+        // (on a dark page a wide soft pass first, the glow; then the thin lines)
+        if (dark && glow > .08) { gl.blendFunc(gl.ONE, gl.ONE); gl.uniform1f(u.uPassW, 5); gl.uniform1f(u.uPassA, .1 * Math.min(glow, 2)); for (let i = 0; i < lines; i++) gl.drawArrays(gl.TRIANGLE_STRIP, i * rg.n, rg.n); }
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.uniform1f(u.uPassW, 1); gl.uniform1f(u.uPassA, 1); for (let i = 0; i < lines; i++) gl.drawArrays(gl.TRIANGLE_STRIP, i * rg.n, rg.n);
+        for (const a of [aT, aS, aR]) gl.disableVertexAttribArray(a); }
+      else { gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); this._quadDraw(P); }
+      // (the tap waves over everything)
+      if (this._tw.length) { const T = this._get('tapwave', QUAD_VS, TAPWAVE_FS); if (T) { gl.useProgram(T.p); this._uniforms(T, w); const arr = new Float32Array(12);
+          this._tw.forEach((x, i) => arr.set([x.k, x.s, w.gs, 0], i * 4)); gl.uniform4fv(T.u['uTW[0]'] || T.u.uTW, arr); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); this._quadDraw(T); } } }
   }
   customElements.define('ai-blob', AIBlob);
 })();
