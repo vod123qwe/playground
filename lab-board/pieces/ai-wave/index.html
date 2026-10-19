@@ -12,7 +12,7 @@
 <style>
   /* The AirDrop wave, used for an AI at work: a screen of an assistant app, the orb at the top. When the orb starts to think, a wave
      of light runs out of it across the whole screen, bending what it passes over like a lens, its edge split into a rainbow; while
-     it speaks, softer waves follow the voice; while it listens, a wave runs in to it. The screen is drawn into a texture and the
+     it speaks, softer waves follow the voice; while it listens, a wave runs in to it. The orb is Glass by default (Nebula and Halo in the panel). The screen is drawn into a texture and the
      wave is a shader over it (real displacement of the pixels, red, green and blue bent a little apart). Tap anywhere to send one. */
   :root { --font: var(--lab-font); --bg: #ebe9e4; --ink: #1b1c20; --muted: rgba(20,20,20,.45); --chip: #fff; --ease: cubic-bezier(.22,.61,.36,1);
     --page: #fff; --box: var(--bg); --morph: .55s cubic-bezier(.3,1.12,.4,1); }
@@ -67,7 +67,7 @@
 <main class="stage" id="stage">
   <div class="screen" id="screen" aria-label="An assistant app; a wave runs from the orb when it works. Tap to send a wave.">
     <canvas id="gl" aria-hidden="true"></canvas>
-    <ai-blob id="orb" variant="halo" palette="aurora" blend="ink" intro="false" interactive="false"></ai-blob>
+    <ai-blob id="orb" variant="glass" palette="aurora" blend="ink" intro="false" interactive="false"></ai-blob>
   </div>
 </main>
 <div class="states" id="states" role="group" aria-label="What the AI is doing"></div>
@@ -84,11 +84,13 @@ const $ = id => document.getElementById(id), q = new URLSearchParams(location.se
 const KEY = 'lab.ai-wave.v1';
 const STYLES = [['airdrop', 'AirDrop'], ['ripple', 'Ripple'], ['glow', 'Glow']];
 const STATES = [['default', 'Default'], ['listening', 'Listening'], ['thinking', 'Thinking'], ['speaking', 'Speaking'], ['muted', 'Muted']];
-const DEF = { style: 'airdrop', speed: 1, width: 34, strength: 1, chroma: .5, glow: 1, onWork: true, onSpeak: true, onListen: true };
+const ORBS = [['glass', 'Glass'], ['nebula', 'Nebula'], ['halo', 'Halo']];
+const DEF = { orb: 'glass', style: 'airdrop', speed: 1, width: 34, strength: 1, chroma: .5, glow: 1, onWork: true, onSpeak: true, onListen: true };
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
-if (BARE) P = { ...DEF };
+if (BARE) P = { ...DEF, orb: ORBS.some(o => o[0] === q.get('orb')) ? q.get('orb') : 'glass' };
 const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const screen = $('screen'), orb = $('orb'), cv = $('gl');
+orb.variant = P.orb;
 let state = 'default';
 
 // ---------- the screen, drawn into a canvas (sample content: an assistant's home) ----------
@@ -177,7 +179,8 @@ screen.addEventListener('pointerdown', e => { const r = screen.getBoundingClient
 
 // ---------- the AI's states drive the waves ----------
 function setState(s) { const was = state; state = s; orb.state = s; drawUI(); paintStates();
-  if (P.onWork && s === 'thinking' && was !== 'thinking') fromOrb(1.15, 1); }
+  if (P.onWork && s === 'thinking' && was !== 'thinking') fromOrb(1.15, 1);
+  next = performance.now() / 1000 + (s === 'thinking' ? 2.6 : .8); }   // (the next automatic wave waits, so two never start together)
 let next = 0;
 function auto(now) { if (now < next) return;
   if (state === 'speaking' && P.onSpeak) { fromOrb(.42 + Math.random() * .25, 1); next = now + 1.1 + Math.random() * 1.1; }
@@ -229,12 +232,13 @@ function buildPanel() { panel.innerHTML = '';
   ctl.strength = LabUI.slider(g1, { label: 'Bend', min: 0, max: 2, step: .05, unit: '×', value: P.strength, def: DEF.strength, onInput: v => set('strength', v), onChange: () => fromOrb(1, 1) });
   ctl.chroma = LabUI.slider(g1, { label: 'Rainbow', min: 0, max: 1.5, step: .05, unit: '', value: P.chroma, def: DEF.chroma, onInput: v => set('chroma', v), onChange: () => fromOrb(1, 1) });
   ctl.glow = LabUI.slider(g1, { label: 'Light', min: 0, max: 1.5, step: .05, unit: '', value: P.glow, def: DEF.glow, onInput: v => set('glow', v), onChange: () => fromOrb(1, 1) });
+  ctl.orb = LabUI.seg(g1, { label: 'Orb', options: ORBS, value: P.orb, onChange: v => { set('orb', v); orb.variant = v; fromOrb(1, 1); } });
   const g2 = LabUI.group(panel, 'When it runs', { key: KEY + '.g.when', open: true });
   ctl.onWork = LabUI.check(g2, { label: 'A wave out as the AI starts to think', value: P.onWork, onChange: v => set('onWork', v) });
   ctl.onSpeak = LabUI.check(g2, { label: 'Softer waves while it speaks', value: P.onSpeak, onChange: v => set('onSpeak', v) });
   ctl.onListen = LabUI.check(g2, { label: 'A wave in to it while it listens', value: P.onListen, onChange: v => set('onListen', v) });
   const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" id="reset">Reset</button>'; panel.appendChild(acts);
-  acts.querySelector('#reset').onclick = () => { P = { ...DEF, style: P.style }; save(); for (const k in ctl) ctl[k].set?.(P[k]); }; }
+  acts.querySelector('#reset').onclick = () => { P = { ...DEF, style: P.style, orb: P.orb }; save(); for (const k in ctl) ctl[k].set?.(P[k]); }; }
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); setTimeout(drawUI, 600); }
 $('tune').onclick = () => openPanel(true);
 new ResizeObserver(() => drawUI()).observe(screen);
