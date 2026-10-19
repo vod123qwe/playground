@@ -12,7 +12,7 @@
      ground    present = the orb floats over a ground with a soft shadow in perspective; it sits down when muted and
                stands up when it wakes (lift scales the height)
      interactive  tap to squeeze and flare it (default on; "false" turns it off) · intro  pops in with a spring (default on)
-     tuning    glow, halo, rim, core, glints (0–2), detail (noise scale), wobble (0–1), color-speed, lift, resolution
+     tuning    sweep (glass: light through it every few seconds, 0–2), glow, halo, rim, core, glints (0–2), detail (noise scale), wobble (0–1), color-speed, lift, resolution
      palette   aurora | ocean | sunset | mint | mono              (default aurora)
      colors    four colours, space separated, instead of a palette: "#7b5cff #2ec5ff #ff6fd8 #ffd38a"
      speed     motion speed, 1 = normal
@@ -38,14 +38,15 @@
   // (what each state asks of the orb; the orb eases towards it, so every change is a morph)
   //  amp: how much it wobbles · freq: how fine the wobble · spin: turning speed · voice: how much the voice moves it · scale · sat: colour
   //  glow · think: inner swirl · tint: the error red · ripple: rings coming in, listening · spread: the inside comes loose
+  //  sweep: a band of light that runs through the glass every few seconds (a small AirDrop inside the orb)
   const STATES = {
-    default:    { amp: .10, freq: 1.4, spin: .25, voice: 0,   scale: 1,    sat: 1,   glow: .85, think: 0, tint: 0, ripple: 0, spread: 0 },
-    listening:  { amp: .12, freq: 1.5, spin: .32, voice: .6,  scale: 1.05, sat: 1,   glow: 1,   think: 0, tint: 0, ripple: 1, spread: .08 },
-    speaking:   { amp: .12, freq: 1.6, spin: .4,  voice: 1,   scale: 1,    sat: 1.06, glow: 1.05, think: 0, tint: 0, ripple: 0, spread: .15 },
-    thinking:   { amp: .16, freq: 2.1, spin: 1.3, voice: 0,   scale: .96,  sat: 1,   glow: .95, think: 1, tint: 0, ripple: 0, spread: .45 },
-    connecting: { amp: .1,  freq: 1.4, spin: .5,  voice: 0,   scale: 1,    sat: 1,   glow: .9,  think: .3, tint: 0, ripple: 0, spread: 0 },
-    error:      { amp: .07, freq: 2.6, spin: .12, voice: 0,   scale: .93,  sat: .9,  glow: .75, think: 0, tint: 1, ripple: 0, spread: 0 },
-    muted:      { amp: .03, freq: 1.2, spin: .06, voice: 0,   scale: .9,   sat: .12, glow: .45, think: 0, tint: 0, ripple: 0, spread: 0 },
+    default:    { amp: .10, freq: 1.4, spin: .25, voice: 0,   scale: 1,    sat: 1,   glow: .85, think: 0, tint: 0, ripple: 0, spread: 0, sweep: 1 },
+    listening:  { amp: .12, freq: 1.5, spin: .32, voice: .6,  scale: 1.05, sat: 1,   glow: 1,   think: 0, tint: 0, ripple: 1, spread: .08, sweep: 0.55 },
+    speaking:   { amp: .12, freq: 1.6, spin: .4,  voice: 1,   scale: 1,    sat: 1.06, glow: 1.05, think: 0, tint: 0, ripple: 0, spread: .15, sweep: 0.35 },
+    thinking:   { amp: .16, freq: 2.1, spin: 1.3, voice: 0,   scale: .96,  sat: 1,   glow: .95, think: 1, tint: 0, ripple: 0, spread: .45, sweep: 0.75 },
+    connecting: { amp: .1,  freq: 1.4, spin: .5,  voice: 0,   scale: 1,    sat: 1,   glow: .9,  think: .3, tint: 0, ripple: 0, spread: 0, sweep: 0 },
+    error:      { amp: .07, freq: 2.6, spin: .12, voice: 0,   scale: .93,  sat: .9,  glow: .75, think: 0, tint: 1, ripple: 0, spread: 0, sweep: 0 },
+    muted:      { amp: .03, freq: 1.2, spin: .06, voice: 0,   scale: .9,   sat: .12, glow: .45, think: 0, tint: 0, ripple: 0, spread: 0, sweep: 0 },
   };
   const KEYS = Object.keys(STATES.default);
   const TRANSIENT = { connecting: 1.5, error: 1.7 };   // (seconds, then it goes back)
@@ -67,7 +68,7 @@ vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);m=m*m;return
   const COMMON = `#version 300 es
 precision highp float;
 uniform vec2 uRes; uniform float uT, uR, uAmp, uFreq, uPulse, uScale, uSat, uGlow, uThink, uTint, uRipple, uSpread, uDark, uDetail, uPx;
-uniform vec2 uShake, uOff; uniform vec3 uC0, uC1, uC2, uC3; uniform float uCT, uHaloK, uRimK, uCoreK, uGlintK, uTap;
+uniform vec2 uShake, uOff; uniform vec3 uC0, uC1, uC2, uC3; uniform float uCT, uHaloK, uRimK, uCoreK, uGlintK, uTap, uSweep, uSweepK;
 ${NOISE}
 // (the palette as a loop: 0 → c0 → c1 → c2 → c3 → back to c0)
 vec3 pal(float x){ x = fract(x) * 4.; vec3 a = x < 1. ? uC0 : x < 2. ? uC1 : x < 3. ? uC2 : uC3; vec3 b = x < 1. ? uC1 : x < 2. ? uC2 : x < 3. ? uC3 : uC0; float f = fract(x); return mix(a, b, f * f * (3. - 2. * f)); }
@@ -99,7 +100,10 @@ void main(){
   // the inside: light bent through the skin, red, green and blue each bent a little differently (dispersion), coloured by the
   // palette and stirred (harder when thinking)
   float thick = clamp(dot(n, -rd), 0., 1.);
-  vec3 rrR = refract(rd, n, .72), rrG = refract(rd, n, .75), rrB = refract(rd, n, .78); float kG = kOf(rrG);
+  // (the sweep: a band across the orb from the top left to the bottom right; ahead of it the light inside is pushed, behind it pulled)
+  vec2 sdir = normalize(vec2(1., -.62)); float sx = (dot(n.xy, sdir) - mix(-1.3, 1.3, uSweep)) / .24, sg = exp(-sx * sx) * uSweepK * step(0., uSweep);
+  vec3 soff = vec3(sdir * (-2. * sx * sg) * .075, 0.);
+  vec3 rrR = refract(rd, n, .72) + soff * 1.2, rrG = refract(rd, n, .75) + soff, rrB = refract(rd, n, .78) + soff * .8; float kG = kOf(rrG);
   vec3 inner = (uDetail > .3 ? vec3(pal(kOf(rrR)).r, pal(kG).g, pal(kOf(rrB)).b) : pal(kG)) * (.62 + .5 * thick);
   // (veins of light in the liquid: the thin bright ridges of a slow noise, brighter while it speaks)
   float cz = snoise(rrG * 2. + vec3(0., uT * .32, uT * .18) + uThink * vec3(sin(uR), 0., cos(uR)));
@@ -111,6 +115,7 @@ void main(){
   vec3 film = pal(fr * 1.6 + n.y * .2 + uT * .03) * fr;
   vec3 col = inner * (1. - fr * .55) + film * (uDark > .5 ? .9 : .65) + vec3(spec);
   col *= .78 + .3 * uGlow;
+  col += mix(vec3(1.), pal(dot(n.xy, sdir) * .6 + uCT * .05), .35) * sg * (uDark > .5 ? .55 : .5) * (.6 + .4 * fr);
   if (uDark < .5) col = mix(col, col * vec3(.9, .9, .95), fr * .4);   // (a hint of a darker rim, so it holds its edge on white)
   col = finish(col);
   float a = cov * (uDark > .5 ? .93 + fr * .07 : .97);
@@ -437,7 +442,7 @@ void main(){
   const easeBack = k => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   // (the tunable numbers: attribute → [default, min, max])
-  const NUM = { speed: [1, 0, 4], glow: [1, 0, 2], halo: [1, 0, 2.5], rim: [1, 0, 2.5], core: [1, 0, 2.5], glints: [1, 0, 2], detail: [1, .3, 3], wobble: [0, 0, 1], 'color-speed': [1, 0, 4], lift: [1, 0, 2], resolution: [1, .4, 1.5] };
+  const NUM = { sweep: [1, 0, 2], speed: [1, 0, 4], glow: [1, 0, 2], halo: [1, 0, 2.5], rim: [1, 0, 2.5], core: [1, 0, 2.5], glints: [1, 0, 2], detail: [1, .3, 3], wobble: [0, 0, 1], 'color-speed': [1, 0, 4], lift: [1, 0, 2], resolution: [1, .4, 1.5] };
   // (how high the orb floats over the ground in each state: muted sits on it, listening stands up tallest)
   const LIFT = { default: .15, listening: .25, speaking: .19, thinking: .21, connecting: .15, error: .1, muted: 0 };
   const GROUND_Y = -.74;
@@ -450,7 +455,7 @@ void main(){
       root.innerHTML = `<style>:host{display:inline-block;width:160px;aspect-ratio:1;position:relative;contain:strict;vertical-align:middle;-webkit-tap-highlight-color:transparent}:host([hidden]){display:none}
         canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.fb{position:absolute;inset:18%;border-radius:50%;display:none}</style><canvas part="canvas"></canvas><div class="fb" part="fallback"></div>`;
       this._cv = root.querySelector('canvas'); this._fb = root.querySelector('.fb');
-      this._p = { ...STATES.default }; this._t = 0; this._r = 0; this._ct = 0; this._lvl = 0; this._sim = { on: false, until: 0, ph: 0, rate: 5, gain: .8 };
+      this._p = { ...STATES.default }; this._t = 0; this._r = 0; this._ct = 0; this._sw = 2.6; this._lvl = 0; this._sim = { on: false, until: 0, ph: 0, rate: 5, gain: .8 };
       this._state = 'default'; this._back = 'default'; this._since = 0; this._shake = [0, 0]; this._visible = true; this._ink = true;
       // (the body's springs: height, the squash on landing, the squash of a tap, the pop-in)
       this._lift = .15; this._liftV = 0; this._sq = 0; this._sqV = 0; this._tap = 0; this._tapV = 0; this._tapA = 0; this._flare = 0; this._intro = 1; this._introV = 0; this._introDone = false;
@@ -501,7 +506,8 @@ void main(){
       this._aria(); if (prev !== s) this.dispatchEvent(new CustomEvent('statechange', { detail: { state: s, previous: prev, auto } })); this._kick(); }
 
     // ---------- touch: a tap squeezes the orb from the side it came from and flares it ----------
-    tap(angle = Math.random() * 360, strength = 1) { this._tapA = angle * Math.PI / 180; this._tapV += 6.5 * strength; this._flare = Math.min(1.6, this._flare + strength); this.dispatchEvent(new CustomEvent('tap', { detail: { angle, strength } })); this._kick(); }
+    tap(angle = Math.random() * 360, strength = 1) { this._sw = 0;   // (a tap also sends light through the glass)
+      this._tapA = angle * Math.PI / 180; this._tapV += 6.5 * strength; this._flare = Math.min(1.6, this._flare + strength); this.dispatchEvent(new CustomEvent('tap', { detail: { angle, strength } })); this._kick(); }
     _down(e) { if (!this.interactive) return; const r = this.getBoundingClientRect(); this.tap(Math.atan2(-(e.clientY - r.top - r.height / 2), e.clientX - r.left - r.width / 2) * 180 / Math.PI, 1); }
     refresh() { this._detect(); this._kick(); }   // (look at the background again, e.g. right after the page switched light and dark)
     replayIntro() { this._introDone = false; this._startIntro(); }
@@ -557,7 +563,7 @@ void main(){
       if (lv == null && this._an && (this._state === 'listening' || this._state === 'speaking')) { this._an.getFloatTimeDomainData(this._buf); let s = 0; for (const v of this._buf) s += v * v; lv = Math.min(1, Math.sqrt(s / this._buf.length) * 6); }
       if (lv == null) lv = this._p.voice > .02 ? this._voice(dt) : 0;
       this._lvl += (lv - this._lvl) * (1 - Math.exp(-dt * (lv > this._lvl ? 28 : 9)));
-      this._t += dt * sp * (.55 + this._p.amp * 2.5 + this._p.think * .4); this._r += dt * sp * this._p.spin; this._ct += dt * sp * this.num('color-speed');
+      this._t += dt * sp * (.55 + this._p.amp * 2.5 + this._p.think * .4); this._r += dt * sp * this._p.spin; this._ct += dt * sp * this.num('color-speed'); this._sw += dt * sp;
       const e = this._state === 'error' && !reduced.matches ? this._since : 9; this._shake[0] = e < .55 ? .035 * Math.exp(-e * 6) * Math.sin(e * 55) : 0;
       // (the body: it floats at the state's height on a spring, with a slow bob and a little lift from the voice; landing squashes it,
       //  rising stretches it; muted, it sits on the ground, slightly flattened)
@@ -588,6 +594,7 @@ void main(){
       f1('uThink', p.think); f1('uTint', p.tint); f1('uRipple', p.ripple); f1('uSpread', p.spread); f1('uDark', ink ? 0 : 1); f1('uDetail', this._detail); f1('uDpr', this._dpr);
       f1('uPx', 2 / Math.min(this._cv.width, this._cv.height) / Math.max(.3, w.gs)); f1('uRings', this._detail > .5 ? 4 : 3); f1('uPt', (this._detail > .5 ? 2.6 : this._detail > .15 ? 3.2 : 3.6) * w.gs);
       f1('uHaloK', this.num('halo')); f1('uRimK', this.num('rim')); f1('uCoreK', this.num('core')); f1('uGlintK', this.num('glints')); f1('uTap', Math.min(1, flare));
+      { const per = 5.2 - 2.4 * this._p.think, ph = (this._sw % per) / 1.25; f1('uSweep', ph < 1 ? ph * ph * (3 - 2 * ph) : -1); f1('uSweepK', (this._p.sweep || 0) * this.num('sweep') * (reduced.matches ? .5 : 1)); }
       f1('uCell', 2 / (this._css / Math.min(12, Math.max(4, this._css / 30))) / Math.max(.3, w.gs));
       if (u.uShake) gl.uniform2f(u.uShake, this._shake[0], this._shake[1]);
       if (u.uWarp) gl.uniformMatrix2fv(u.uWarp, false, w.W); if (u.uWarpF) gl.uniformMatrix2fv(u.uWarpF, false, w.F); if (u.uOff) gl.uniform2f(u.uOff, w.off[0], w.off[1]);

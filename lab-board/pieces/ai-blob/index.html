@@ -108,10 +108,10 @@ const ORBS = [['glass', 'Glass'], ['halo', 'Halo'], ['core', 'Core'], ['aurora',
 const STATES = [['default', 'Default'], ['listening', 'Listening'], ['speaking', 'Speaking'], ['thinking', 'Thinking'], ['connecting', 'Connecting'], ['error', 'Error'], ['muted', 'Muted']];
 const PALS = [['aurora', 'Aurora'], ['ocean', 'Ocean'], ['sunset', 'Sunset'], ['mint', 'Mint'], ['mono', 'Mono'], ['custom', 'Custom']];
 // (the tunables: settings key → attribute, label, min, max, step)
-const TUNE = [['glow', 'glow', 'Glow', 0, 2, .05], ['halo', 'halo', 'Halo', 0, 2.5, .05], ['rim', 'rim', 'Rim', 0, 2.5, .05], ['core', 'core', 'Core', 0, 2.5, .05], ['glints', 'glints', 'Glints', 0, 2, .05],
+const TUNE = [['sweep', 'sweep', 'Light sweep (glass)', 0, 2, .05], ['glow', 'glow', 'Glow', 0, 2, .05], ['halo', 'halo', 'Halo', 0, 2.5, .05], ['rim', 'rim', 'Rim', 0, 2.5, .05], ['core', 'core', 'Core', 0, 2.5, .05], ['glints', 'glints', 'Glints', 0, 2, .05],
   ['detail', 'detail', 'Detail', .3, 3, .05], ['wobble', 'wobble', 'Wobble', 0, 1, .01], ['cspeed', 'color-speed', 'Colour speed', 0, 4, .05]];
 const DEF = { variant: 'glass', state: 'default', theme: 'light', blend: 'auto', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1, view: 'one', ground: false, lift: 1, interactive: true, intro: true,
-  glow: 1, halo: 1, rim: 1, core: 1, glints: 1, detail: 1, wobble: 0, cspeed: 1 };
+  sweep: 1, glow: 1, halo: 1, rim: 1, core: 1, glints: 1, detail: 1, wobble: 0, cspeed: 1 };
 // (presets: an orb, its colours and a few settings that suit it)
 const PRESETS = [['Iridescent', { variant: 'halo', palette: 'aurora' }], ['Pearl', { variant: 'halo', palette: 'mono', glow: .8, rim: .8, core: 1.3 }], ['Liquid', { variant: 'glass', palette: 'ocean' }], ['Lava lamp', { variant: 'core', palette: 'aurora' }], ['Northern', { variant: 'aurora', palette: 'mint' }],
   ['Neural', { variant: 'synapse', palette: 'ocean' }], ['Chrome', { variant: 'mercury', palette: 'mono' }], ['Opal', { variant: 'mercury', palette: 'aurora' }],
