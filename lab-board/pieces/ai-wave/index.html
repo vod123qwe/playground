@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Wave · lab</title>
+<meta name="theme-color" content="#ebe9e4">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* The AirDrop wave, used for an AI at work: a screen of an assistant app, the orb at the top. When the orb starts to think, a wave
+     of light runs out of it across the whole screen, bending what it passes over like a lens, its edge split into a rainbow; while
+     it speaks, softer waves follow the voice; while it listens, a wave runs in to it. The screen is drawn into a texture and the
+     wave is a shader over it (real displacement of the pixels, red, green and blue bent a little apart). Tap anywhere to send one. */
+  :root { --font: var(--lab-font); --bg: #ebe9e4; --ink: #1b1c20; --muted: rgba(20,20,20,.45); --chip: #fff; --ease: cubic-bezier(.22,.61,.36,1);
+    --page: #fff; --box: var(--bg); --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; padding: 70px 0 150px; background: var(--bg); transition: inset var(--morph), border-radius var(--morph); }
+  body.tuning .stage { background: var(--box); border-radius: 26px; }
+  /* the screen: a phone-sized card on a desk, full screen on a phone */
+  .screen { position: relative; width: min(400px, calc(100vw - 32px)); height: min(820px, calc(100vh - 220px)); border-radius: 44px; overflow: hidden; background: #f7f6f3;
+    box-shadow: 0 0 0 1px rgba(20,20,20,.06), 0 30px 80px -30px rgba(20,20,20,.35); touch-action: manipulation; cursor: pointer; }
+  .screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .screen ai-blob { position: absolute; left: 50%; top: 72px; width: 120px; height: 120px; translate: -50% 0; z-index: 2; }
+  @media (max-width: 560px) { .stage { padding: 0; } .screen { width: 100vw; height: 100dvh; border-radius: 0; box-shadow: none; } }
+  /* chrome, as on the other lab pieces */
+  .back { position: fixed; top: 16px; left: 16px; z-index: 6; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: var(--chip); color: var(--ink); transition: top var(--morph), left var(--morph), translate .2s var(--ease); }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { position: fixed; top: 16px; right: 16px; z-index: 6; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: var(--chip); color: var(--ink);
+    font: 600 14px var(--font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; }
+  body.tuning .tune { opacity: 0; pointer-events: none; }
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); transition: left var(--morph); }
+  .states { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; width: max-content; max-width: calc(100vw - 24px);
+    padding: 4px; border-radius: 23px; background: var(--chip); font: 600 13px var(--font); transition: left var(--morph); }
+  .states button { display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; cursor: pointer; white-space: nowrap; transition: background .2s, color .2s; }
+  .states button:hover { color: var(--ink); background: rgba(20,20,20,.05); }
+  .states button[aria-pressed=true] { background: var(--ink); color: #fff; }
+  .states i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; } .states button[aria-pressed=true] i { opacity: 1; }
+  .states .send { color: var(--ink); }
+  @media (max-width: 560px) { .states, .dock { z-index: 7; } .states { bottom: calc(80px + env(safe-area-inset-bottom)); } .back, .tune { z-index: 8; } }
+  /* the panel: a card beside the stage (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .lab-ui { font-family: var(--font); }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .dock, body.tuning .states { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); } body.tuning .panel { translate: 0 0; }
+    body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .dock, body.tuning .states { display: none; } }
+  body.bare .back, body.bare .tune, body.bare .dock, body.bare .states, body.bare .panel { display: none !important; }
+  body.bare .stage { padding: 0; } body.bare .screen { width: 100vw; height: 100vh; border-radius: 0; box-shadow: none; }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage">
+  <div class="screen" id="screen" aria-label="An assistant app; a wave runs from the orb when it works. Tap to send a wave.">
+    <canvas id="gl" aria-hidden="true"></canvas>
+    <ai-blob id="orb" variant="halo" palette="aurora" blend="ink" intro="false" interactive="false"></ai-blob>
+  </div>
+</main>
+<div class="states" id="states" role="group" aria-label="What the AI is doing"></div>
+<div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Wave styles">
+  <button id="prev" type="button" aria-label="Previous wave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm" aria-live="polite">AirDrop</span>
+  <button id="next" type="button" aria-label="Next wave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the wave"></aside>
+<script src="../../shared/lab-ui.js?v=19"></script>
+<script src="../ai-blob/ai-blob.js?v=4"></script>
+<script type="module">
+const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
+const KEY = 'lab.ai-wave.v1';
+const STYLES = [['airdrop', 'AirDrop'], ['ripple', 'Ripple'], ['glow', 'Glow']];
+const STATES = [['default', 'Default'], ['listening', 'Listening'], ['thinking', 'Thinking'], ['speaking', 'Speaking'], ['muted', 'Muted']];
+const DEF = { style: 'airdrop', speed: 1, width: 34, strength: 1, chroma: .5, glow: 1, onWork: true, onSpeak: true, onListen: true };
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+if (BARE) P = { ...DEF };
+const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const screen = $('screen'), orb = $('orb'), cv = $('gl');
+let state = 'default';
+
+// ---------- the screen, drawn into a canvas (sample content: an assistant's home) ----------
+const ui = document.createElement('canvas'), g = ui.getContext('2d');
+const STATUS = { default: 'Ready when you are', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking…', muted: 'Microphone off' };
+function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function drawUI() { const W = screen.clientWidth, H = screen.clientHeight, d = Math.min(devicePixelRatio || 1, 2); ui.width = Math.round(W * d); ui.height = Math.round(H * d); g.setTransform(d, 0, 0, d, 0, 0);
+  const F = w => `${w} ${'Geist, system-ui, sans-serif'}`;
+  g.fillStyle = '#f7f6f3'; g.fillRect(0, 0, W, H);
+  // (a soft wash behind the orb)
+  const glow = g.createRadialGradient(W / 2, 132, 10, W / 2, 132, 230); glow.addColorStop(0, 'rgba(160,140,255,.16)'); glow.addColorStop(1, 'rgba(160,140,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, W, 380);
+  g.textAlign = 'center'; g.fillStyle = 'rgba(20,20,20,.5)'; g.font = F('500 13px'); g.fillText(STATUS[state] || '', W / 2, 220);
+  g.fillStyle = '#16171b'; g.font = F('600 27px'); g.fillText('How can I help today?', W / 2, 268);
+  g.fillStyle = 'rgba(20,20,20,.5)'; g.font = F('400 14px'); g.fillText('Ask, or pick something to start with', W / 2, 294);
+  // suggestion cards
+  const cards = [['Plan my week', 'From your calendar', '#7b5cff'], ['Summarise a file', 'PDF, doc or slides', '#2ec5ff'], ['Draft a reply', 'In your own tone', '#ff6fd8'], ['Explain a chart', 'In plain words', '#ffb547']];
+  const pad = 20, gap = 10, cw = (W - pad * 2 - gap) / 2, ch = 92; g.textAlign = 'left';
+  const fieldTop = H - 78;
+  cards.forEach(([t, s, c], i) => { const x = pad + (i % 2) * (cw + gap), y = 322 + Math.floor(i / 2) * (ch + gap); if (y + ch > fieldTop - 14) return;   // (a short screen shows fewer)
+    g.fillStyle = '#fff'; rr(x, y, cw, ch, 20); g.fill(); g.strokeStyle = 'rgba(20,20,20,.06)'; g.lineWidth = 1; g.stroke();
+    g.fillStyle = c; g.globalAlpha = .16; rr(x + 14, y + 14, 30, 30, 10); g.fill(); g.globalAlpha = 1; g.fillStyle = c; g.beginPath(); g.arc(x + 29, y + 29, 5, 0, 7); g.fill();
+    g.fillStyle = '#16171b'; g.font = F('600 14px'); g.fillText(t, x + 14, y + 64); g.fillStyle = 'rgba(20,20,20,.5)'; g.font = F('400 12px'); g.fillText(s, x + 14, y + 81); });
+  // recent
+  let y = 322 + 2 * (ch + gap) + 24; if (y + 70 < fieldTop) { g.fillStyle = 'rgba(20,20,20,.45)'; g.font = F('600 12px'); g.fillText('RECENT', pad, y); } y += 14;
+  const rows = [['Trip to Lisbon, day by day', 'Yesterday'], ['Notes from the design review', 'Monday'], ['Budget for October', 'Last week'], ['Gift ideas for Ana', 'Last week'], ['Workout plan, 4 weeks', 'Sep 28']];
+  for (const [t, s] of rows) { if (y + 52 > H - 90) break; g.fillStyle = '#fff'; rr(pad, y, W - pad * 2, 52, 16); g.fill();
+    g.fillStyle = 'rgba(20,20,20,.06)'; rr(pad + 12, y + 12, 28, 28, 9); g.fill(); g.fillStyle = '#16171b'; g.font = F('500 14px'); g.fillText(t, pad + 52, y + 24); g.fillStyle = 'rgba(20,20,20,.45)'; g.font = F('400 12px'); g.fillText(s, pad + 52, y + 41); y += 60; }
+  // the field at the bottom
+  const fy = H - 78; g.fillStyle = '#fff'; rr(pad, fy, W - pad * 2, 54, 27); g.fill(); g.strokeStyle = 'rgba(20,20,20,.08)'; g.stroke();
+  g.fillStyle = 'rgba(20,20,20,.4)'; g.font = F('400 15px'); g.fillText('Ask anything', pad + 22, fy + 32);
+  g.fillStyle = '#16171b'; g.beginPath(); g.arc(W - pad - 27, fy + 27, 19, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.lineCap = 'round'; g.beginPath(); g.moveTo(W - pad - 27, fy + 34); g.lineTo(W - pad - 27, fy + 20); g.moveTo(W - pad - 33, fy + 26); g.lineTo(W - pad - 27, fy + 20); g.lineTo(W - pad - 21, fy + 26); g.stroke();
+  dirty = true; }
+
+// ---------- the wave: a shader over the screen's texture ----------
+const gl = cv.getContext('webgl2', { premultipliedAlpha: false, antialias: false });
+const VS = `#version 300 es
+in vec2 aP; out vec2 vUv; void main(){ vUv = aP * .5 + .5; gl_Position = vec4(aP, 0., 1.); }`;
+const FS = `#version 300 es
+precision highp float;
+in vec2 vUv; out vec4 o;
+uniform sampler2D uTex; uniform vec2 uRes; uniform vec4 uW[8]; uniform float uDir[8]; uniform int uN; uniform float uWidth, uAmp, uChroma, uGlow, uStyle, uT;
+uniform vec3 uC0, uC1, uC2, uC3;
+vec3 pal(float x){ x = fract(x) * 4.; vec3 a = x < 1. ? uC0 : x < 2. ? uC1 : x < 3. ? uC2 : uC3; vec3 b = x < 1. ? uC1 : x < 2. ? uC2 : x < 3. ? uC3 : uC0; float f = fract(x); return mix(a, b, f * f * (3. - 2. * f)); }
+vec3 tex(vec2 p){ return texture(uTex, vec2(p.x / uRes.x, 1. - p.y / uRes.y)).rgb; }
+void main(){
+  vec2 P = vec2(vUv.x, 1. - vUv.y) * uRes;
+  vec2 disp = vec2(0.); float ring = 0., wash = 0., shade = 0.; vec3 rc = vec3(0.);
+  for (int i = 0; i < 8; i++) { if (i >= uN) break; vec4 w = uW[i]; vec2 d = P - w.xy; float L = length(d); vec2 dir = d / max(L, 1.);
+    float x = (L - w.z) / uWidth * uDir[i], gss = exp(-x * x), s = w.w;
+    if (uStyle < .5) {
+      // airdrop: a lens; what is just ahead is pushed out, what is just behind is pulled in; a bright edge; a little light left behind
+      disp += dir * (-2. * x * gss) * uAmp * s * uDir[i]; ring += gss * s; wash += smoothstep(.6, -5., x) * smoothstep(-14., -5., x) * s; shade += exp(-(x - 1.6) * (x - 1.6) * 1.5) * s;
+    } else if (uStyle < 1.5) {
+      // ripple: a train of rings behind the front, dying away
+      float wv = sin(x * 4.4) * exp(-max(-x, 0.) * .28) * smoothstep(1.2, 0., x) * smoothstep(-16., -6., x);
+      disp += dir * wv * uAmp * .7 * s * uDir[i]; ring += max(wv, 0.) * .35 * s;
+    } else {
+      // glow: light only, a soft band and a wash behind it
+      ring += exp(-x * x * .35) * s * .9; wash += smoothstep(1., -8., x) * smoothstep(-20., -8., x) * s * 1.4;
+    }
+    rc += pal(atan(d.y, d.x) / 6.283 + w.z * .0015 + uT * .05) * gss * s; }
+  float ca = uChroma * .45;
+  vec3 col = vec3(tex(P - disp * (1. + ca)).r, tex(P - disp).g, tex(P - disp * (1. - ca)).b);
+  vec3 rim = mix(vec3(1.), rc / max(ring, 1e-3), .3 + .3 * uChroma);
+  col *= 1. - shade * .05 * uAmp / 26.;
+  col = mix(col, vec3(1.), clamp(wash * .05 * uGlow, 0., .4));
+  col = mix(col, rim, clamp(ring * .42 * uGlow, 0., .8)); col += rim * ring * .1 * uGlow;
+  o = vec4(col, 1.); }`;
+let prog, U = {}, texture, dirty = true;
+function sh(t, s) { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; }
+if (gl) { prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+  const n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const nm = gl.getActiveUniform(prog, i).name; U[nm.replace('[0]', '')] = gl.getUniformLocation(prog, nm); }
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const a = gl.getAttribLocation(prog, 'aP'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  texture = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, texture); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); }
+const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
+const COLS = ['#7b5cff', '#2ec5ff', '#ff6fd8', '#ffc56e'].map(hex);
+
+// ---------- the waves: born at a point, the front runs out (or in) across the screen and fades ----------
+const waves = [];
+function orbCentre() { const s = screen.getBoundingClientRect(), o = orb.getBoundingClientRect(); return [o.left - s.left + o.width / 2, o.top - s.top + o.height / 2]; }
+function wave(x, y, strength = 1, dir = 1) { if (waves.length >= 8) waves.shift(); waves.push({ x, y, born: performance.now() / 1000, strength, dir }); orb.tap(dir > 0 ? 90 : 270, .35 * strength); }
+const fromOrb = (s, dir) => { const [x, y] = orbCentre(); wave(x, y, s, dir); };
+screen.addEventListener('pointerdown', e => { const r = screen.getBoundingClientRect(); wave(e.clientX - r.left, e.clientY - r.top, 1); });
+
+// ---------- the AI's states drive the waves ----------
+function setState(s) { const was = state; state = s; orb.state = s; drawUI(); paintStates();
+  if (P.onWork && s === 'thinking' && was !== 'thinking') fromOrb(1.15, 1); }
+let next = 0;
+function auto(now) { if (now < next) return;
+  if (state === 'speaking' && P.onSpeak) { fromOrb(.42 + Math.random() * .25, 1); next = now + 1.1 + Math.random() * 1.1; }
+  else if (state === 'listening' && P.onListen) { fromOrb(.4, -1); next = now + 2.2; }
+  else if (state === 'thinking' && P.onWork) { fromOrb(.55, 1); next = now + 2.6; }
+  else next = now + .3; }
+
+// ---------- the loop ----------
+let last = 0;
+function frame(ms) { requestAnimationFrame(frame); if (!gl) return; const now = ms / 1000;
+  const W = screen.clientWidth, H = screen.clientHeight, d = Math.min(devicePixelRatio || 1, 2);
+  if (cv.width !== Math.round(W * d) || cv.height !== Math.round(H * d)) { cv.width = Math.round(W * d); cv.height = Math.round(H * d); drawUI(); }
+  if (dirty) { gl.bindTexture(gl.TEXTURE_2D, texture); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ui); dirty = false; }
+  auto(now);
+  // (the front's speed: it crosses the screen in about 0.9 s at 1×; it fades as it reaches the far corner)
+  const diag = Math.hypot(W, H), sp = diag / .95 * P.speed, arr = new Float32Array(32), dirs = new Float32Array(8); let n = 0;
+  for (let i = waves.length - 1; i >= 0; i--) { const w = waves[i], age = now - w.born, travel = age * sp * (1 + age * .35), far = Math.max(Math.hypot(w.x, w.y), Math.hypot(W - w.x, w.y), Math.hypot(w.x, H - w.y), Math.hypot(W - w.x, H - w.y));
+    if (travel > far * 1.15) { waves.splice(i, 1); continue; } }
+  for (const w of waves) { const age = now - w.born, travel = age * sp * (1 + age * .35), far = Math.max(Math.hypot(w.x, w.y), Math.hypot(W - w.x, w.y), Math.hypot(w.x, H - w.y), Math.hypot(W - w.x, H - w.y));
+    const r = w.dir > 0 ? travel : Math.max(0, far * .9 - travel * .8), k = Math.min(1, travel / (far * (w.dir > 0 ? 1 : .9)));
+    const s = w.strength * Math.min(1, age / .08) * (1 - Math.pow(k, 2.2)) * (w.dir > 0 ? 1 : .7);
+    arr.set([w.x * d, w.y * d, r * d, Math.max(0, s)], n * 4); dirs[n] = w.dir; n++; }
+  gl.viewport(0, 0, cv.width, cv.height); gl.useProgram(prog);
+  gl.uniform2f(U.uRes, cv.width, cv.height); gl.uniform4fv(U.uW, arr); gl.uniform1fv(U.uDir, dirs); gl.uniform1i(U.uN, n);
+  gl.uniform1f(U.uWidth, P.width * d); gl.uniform1f(U.uAmp, 15 * P.strength * d); gl.uniform1f(U.uChroma, P.chroma); gl.uniform1f(U.uGlow, P.glow);
+  gl.uniform1f(U.uStyle, STYLES.findIndex(s => s[0] === P.style)); gl.uniform1f(U.uT, now);
+  COLS.forEach((c, i) => gl.uniform3f(U['uC' + i], ...c)); gl.uniform1i(U.uTex, 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+
+// ---------- the bars ----------
+$('states').innerHTML = STATES.map(([v, l]) => `<button type="button" data-s="${v}" aria-pressed="false"><i></i>${l}</button>`).join('') + '<button type="button" class="send" id="send">Send a wave</button>';
+$('states').querySelectorAll('[data-s]').forEach(b => b.onclick = () => setState(b.dataset.s)); $('send').onclick = () => fromOrb(1.1, 1);
+function paintStates() { $('states').querySelectorAll('[data-s]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === state))); }
+const stepStyle = dd => { const i = STYLES.findIndex(s => s[0] === P.style); P.style = STYLES[(i + dd + STYLES.length) % STYLES.length][0]; save(); $('nm').textContent = STYLES.find(s => s[0] === P.style)[1]; fromOrb(1, 1); };
+LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepStyle, items: () => STYLES.map(s => s[1]), current: () => STYLES.find(s => s[0] === P.style)[1],
+  onPick: nm => { P.style = STYLES.find(s => s[1] === nm)[0]; save(); fromOrb(1, 1); } });
+addEventListener('keydown', e => { if (e.target.closest?.('input, .panel')) return; if (e.key === 'ArrowRight') stepStyle(1); else if (e.key === 'ArrowLeft') stepStyle(-1); else if (e.key === ' ') { e.preventDefault(); fromOrb(1.1, 1); }
+  else if (e.key === 'Escape') openPanel(false); else { const i = '12345'.indexOf(e.key); if (i >= 0) setState(STATES[i][0]); } });
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The wave that runs from the orb when the AI works. Tap the screen to send one from anywhere.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); };
+  const g1 = LabUI.group(panel, 'Wave', { key: KEY + '.g.wave', open: true });
+  ctl.speed = LabUI.slider(g1, { label: 'Speed', min: .4, max: 2, step: .05, unit: '×', value: P.speed, def: DEF.speed, onInput: v => set('speed', v), onChange: () => fromOrb(1, 1) });
+  ctl.width = LabUI.slider(g1, { label: 'Width', min: 20, max: 160, step: 1, unit: 'px', value: P.width, def: DEF.width, onInput: v => set('width', v), onChange: () => fromOrb(1, 1) });
+  ctl.strength = LabUI.slider(g1, { label: 'Bend', min: 0, max: 2, step: .05, unit: '×', value: P.strength, def: DEF.strength, onInput: v => set('strength', v), onChange: () => fromOrb(1, 1) });
+  ctl.chroma = LabUI.slider(g1, { label: 'Rainbow', min: 0, max: 1.5, step: .05, unit: '', value: P.chroma, def: DEF.chroma, onInput: v => set('chroma', v), onChange: () => fromOrb(1, 1) });
+  ctl.glow = LabUI.slider(g1, { label: 'Light', min: 0, max: 1.5, step: .05, unit: '', value: P.glow, def: DEF.glow, onInput: v => set('glow', v), onChange: () => fromOrb(1, 1) });
+  const g2 = LabUI.group(panel, 'When it runs', { key: KEY + '.g.when', open: true });
+  ctl.onWork = LabUI.check(g2, { label: 'A wave out as the AI starts to think', value: P.onWork, onChange: v => set('onWork', v) });
+  ctl.onSpeak = LabUI.check(g2, { label: 'Softer waves while it speaks', value: P.onSpeak, onChange: v => set('onSpeak', v) });
+  ctl.onListen = LabUI.check(g2, { label: 'A wave in to it while it listens', value: P.onListen, onChange: v => set('onListen', v) });
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" id="reset">Reset</button>'; panel.appendChild(acts);
+  acts.querySelector('#reset').onclick = () => { P = { ...DEF, style: P.style }; save(); for (const k in ctl) ctl[k].set?.(P[k]); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); setTimeout(drawUI, 600); }
+$('tune').onclick = () => openPanel(true);
+new ResizeObserver(() => drawUI()).observe(screen);
+
+// ---------- start ----------
+if (BARE) document.body.classList.add('bare'); else buildPanel();
+$('nm').textContent = STYLES.find(s => s[0] === P.style)?.[1] || 'AirDrop';
+document.fonts.load('600 27px Geist').catch(() => { }).finally(() => { drawUI(); paintStates(); requestAnimationFrame(frame);
+  if (DEMO) { const seq = [['thinking', 3200], ['speaking', 4200], ['listening', 4400], ['default', 1600]], wait = ms => new Promise(r => setTimeout(r, ms)); (async () => { await wait(900); for (;;) for (const [s, ms] of seq) { setState(s); await wait(ms); } })(); } });
+window.WAVE = { get P() { return P; }, wave, fromOrb, setState, waves };
+</script>
+</body>
+</html>
