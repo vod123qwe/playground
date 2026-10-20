@@ -197,7 +197,7 @@ const KITS = { tool: { name: 'Tool', low: 3, high: 2.5, thr: -18, ratio: 3.2, at
 function setKit() { const k = KITS.tool, t = ctx.currentTime; DK.low.gain.setTargetAtTime(k.low, t, .02); DK.high.gain.setTargetAtTime(k.high, t, .02); DK.cmp.threshold.value = k.thr; DK.cmp.ratio.value = k.ratio; DK.cmp.attack.value = k.att; DK.cmp.release.value = k.rel;
   DK.snd.gain.setTargetAtTime(k.room, t, .02); DK.out.gain.setTargetAtTime(k.out, t, .02); DK.rv.buffer = IRS[k.ir]; }
 // (the metal kick's click: the beater on a hard head, a short falling ping)
-function kickClick(vel) { const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime; o.frequency.setValueAtTime(3200, t); o.frequency.exponentialRampToValueAtTime(700, t + .012); g.gain.setValueAtTime(.5 * vel, t); g.gain.exponentialRampToValueAtTime(.001, t + .02); o.connect(g); g.connect(DK.inp); o.start(t); o.stop(t + .03); }
+function kickClick(vel, at = 0) { const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + at; o.frequency.setValueAtTime(3200, t); o.frequency.exponentialRampToValueAtTime(700, t + .012); g.gain.setValueAtTime(.5 * vel, t); g.gain.exponentialRampToValueAtTime(.001, t + .02); o.connect(g); g.connect(DK.inp); o.start(t); o.stop(t + .03); }
 function fadeOut(v, dt = .08) { if (!v) return; const t = ctx.currentTime; try { v.g.gain.cancelScheduledValues(t); v.g.gain.setValueAtTime(v.g.gain.value, t); v.g.gain.linearRampToValueAtTime(0, t + dt); v.s.stop(t + dt + .02); } catch { } }
 // (pitched sets: which recording is nearest, and how much to speed it up or slow it down)
 const XYLO = [['G3', 67], ['C4', 72], ['G4', 79], ['C5', 84], ['G5', 91], ['C6', 96], ['G6', 103], ['C7', 108]].map(([n, m]) => ({ name: 'xylo_' + n, midi: m }));
@@ -276,14 +276,14 @@ function buildKit(n) { const want = PIECES.slice(0, clamp(n, 3, PIECES.length));
     if (!on && STATE[p.id]) { KIT.remove(STATE[p.id].obj); delete STATE[p.id]; } }
   refreshLabels(); }
 // (a hit: the piece moves, its letter lights, its recording plays through the kit's chain; harder = the louder recording)
-function hitPiece(p, vel = 1, open = false, zone = 0) { const st = STATE[p.id]; if (!st) return; unlock();
+function hitPiece(p, vel = 1, open = false, zone = 0, at = 0) { const st = STATE[p.id]; if (!st) return; unlock();
   st.t = 0; st.amp = vel; if (p.zones) { st.zt[zone] = 0; st.za[zone] = vel; }
   const label = labelFor(p.zones ? p.id + ':' + zone : p.id); if (label) { label.classList.add('hit'); setTimeout(() => label.classList.remove('hit'), 110); }
   const x = p.zones ? st.obj.position.x + st.obj.userData.tubes[zone].position.x : st.obj.position.x, pan = clamp(x * .32, -.65, .65);
-  if (p.id === 'hihat') { fadeOut(openHat, .05); openHat = null; const v = play(open ? 'hhopen' : 'hhclosed', { gain: .9 * vel, pan, out: DK.inp }); if (open) openHat = v; st.open = open; return; }
+  if (p.id === 'hihat') { fadeOut(openHat, .05); openHat = null; const v = play(open ? 'hhopen' : 'hhclosed', { gain: .9 * vel, pan, at, out: DK.inp }); if (open) openHat = v; st.open = open; return; }
   const tier = p.tiers ? p.tiers[vel < .6 ? 0 : vel < .88 ? 1 : 2] : p.sounds, name = tier[st.rr++ % tier.length], g = (p.gain || 1) * (p.tiers ? .7 + vel * .3 : vel);
-  play(name, { rate: (p.zones ? p.rates[zone] : p.rate || 1) * (1 + (Math.random() - .5) * .02), gain: g, pan, out: DK.inp });
-  if ((p.id === 'kick' || p.id === 'kick2') && vel > .85) kickClick(vel * .6); if (p.id === 'snare' && vel > .9) play('rimshot', { gain: .35 * vel, pan, out: DK.inp }); }
+  play(name, { rate: (p.zones ? p.rates[zone] : p.rate || 1) * (1 + (Math.random() - .5) * .02), gain: g, pan, at, out: DK.inp });
+  if ((p.id === 'kick' || p.id === 'kick2') && vel > .85) kickClick(vel * .6, at); if (p.id === 'snare' && vel > .9) play('rimshot', { gain: .35 * vel, pan, at, out: DK.inp }); }
 function animKit(dt) { for (const id in STATE) { const st = STATE[id], o = st.obj, b = o.userData.body; st.t += dt; st.born = Math.min(9, st.born + dt);
     // (a new piece drops in from above and settles)
     const k = clamp(st.born / .7, 0, 1), e = 1 - Math.pow(1 - k, 3); o.position.y = (1 - e) * .8 + Math.sin(k * Math.PI) * -.02; o.scale.setScalar(lerp(.6, 1, e));
@@ -362,8 +362,79 @@ addEventListener('keydown', e => { if (e.metaKey || e.ctrlKey || e.altKey || e.r
 const tools = $('tools');
 function renderTools() { tools.innerHTML = ''; if (BARE || P.look !== 'Drums') return; const n = Object.keys(STATE).length, next = PIECES[n], lastP = PIECES[n - 1];
   tools.innerHTML = `<div class="tb"><button type="button" id="kMinus" aria-label="Take away the ${lastP.name.toLowerCase()}"${n <= 3 ? ' disabled' : ''}>−</button><span class="tl">${n} of ${PIECES.length} pieces</span><button type="button" id="kPlus"${!next ? ' disabled' : ''}>${next ? '+ ' + next.name : 'Full kit'}</button></div>`;
+  tools.insertAdjacentHTML('beforeend', PLAY.notes.length
+    ? `<div class="tb"><button type="button" id="pPlay" class="on">${PLAY.on ? 'Pause' : 'Play'}</button><button type="button" id="pStop" aria-label="Back to the start">↺</button><span class="tl" id="pPos" title="${PLAY.name}">${mmss(PLAY.pos)} / ${mmss(PLAY.dur)}</span>${[.5, .75, 1].map(v => `<button type="button" data-ps="${v}" class="${PLAY.speed === v ? 'on' : ''}">${v * 100}%</button>`).join('')}<button type="button" id="pLoad" aria-label="Load another drum file">…</button></div>`
+    : '<div class="tb"><button type="button" id="pLoad">Load drum MIDI</button></div>');
+  $('pLoad').onclick = pickDrumMidi; if ($('pPlay')) { $('pPlay').onclick = () => PLAY.on ? stopPlay() : startPlay(); $('pStop').onclick = () => stopPlay(true); tools.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => setPlaySpeed(+b.dataset.ps)); }
   $('kMinus').onclick = () => { P.kit = Math.max(3, n - 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); };
   $('kPlus').onclick = () => { P.kit = Math.min(PIECES.length, n + 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); const p = PIECES[n]; if (p) { load(p.sounds); say(`${p.name}: ${p.zones ? p.keys.join(' ') : p.key === '␣' ? 'Space' : p.key} on the keyboard`); } }; }
+
+// ---------- your drum file on this kit: load a MIDI file (exported from your tab editor or Guitar Pro), press Play and the kit
+// plays its drum track (MIDI channel 10) note for note, with the file's strengths. General MIDI drum notes go to the pieces: kicks
+// alternate onto the second kick when they come fast (double bass), toms high to low across the four rack toms and two floors,
+// crashes, ride (and bell), china, splash. Missing pieces join the kit by themselves. The file never leaves the browser ----------
+function parseMidi(buf) { const d = new DataView(buf), u8 = new Uint8Array(buf); let p = 0;
+  const str = n => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(u8[p + i]); return s; };
+  const vlq = () => { let v = 0, b; do { b = u8[p++]; v = v * 128 + (b & 127); } while (b & 128 && p < u8.length); return v; };
+  if (str(4) !== 'MThd') throw new Error('This is not a MIDI file.'); p += 4; const hl = d.getUint32(p); p += 4; const ntr = d.getUint16(p + 2), ppq = d.getUint16(p + 4); p += hl;
+  if (ppq & 0x8000) throw new Error('This MIDI file counts time in SMPTE frames, which is not supported.');
+  const tempos = [], tracks = [], progs = {}; let title = '';
+  for (let ti = 0; ti < ntr && p + 8 <= u8.length; ti++) { const id = str(4); p += 4; const len = d.getUint32(p); p += 4; const end = Math.min(u8.length, p + len); if (id !== 'MTrk') { p = end; continue; }
+    const tr = { name: '', notes: [], prog: {} }, on = new Map(); let tick = 0, run = 0;
+    const close = k => { const n = on.get(k); on.delete(k); n.dur = Math.max(1, tick - n.tick); tr.notes.push(n); };
+    while (p < end) { tick += vlq(); let st = u8[p]; if (st & 128) { p++; if (st < 0xF0) run = st; } else st = run;
+      if (st === 0xFF) { const ty = u8[p++], l = vlq(); if (ty === 0x51 && l >= 3) tempos.push({ tick, us: (u8[p] << 16) | (u8[p + 1] << 8) | u8[p + 2] });
+        else if (ty === 0x03) { const s = new TextDecoder('latin1').decode(u8.subarray(p, p + l)).trim(); if (!tr.name) tr.name = s; if (ti === 0 && !title) title = s; }
+        p += l; if (ty === 0x2F) break; continue; }
+      if (st === 0xF0 || st === 0xF7) { p += vlq(); continue; }
+      const ty = st & 0xF0, ch = st & 15, a = u8[p++], b = ty === 0xC0 || ty === 0xD0 ? 0 : u8[p++];
+      if (ty === 0x90 && b > 0) { const k = ch * 128 + a; if (on.has(k)) close(k); on.set(k, { tick, m: a, vel: b / 127, ch }); }
+      else if (ty === 0x80 || ty === 0x90) { const k = ch * 128 + a; if (on.has(k)) close(k); }
+      else if (ty === 0xC0) { if (tr.prog[ch] == null) tr.prog[ch] = a; if (progs[ch] == null) progs[ch] = a; } }
+    for (const k of [...on.keys()]) close(k); p = end; tracks.push(tr); }
+  // (the tempo map: seconds and seconds-per-beat at any tick)
+  tempos.sort((a, b) => a.tick - b.tick); if (!tempos.length || tempos[0].tick > 0) tempos.unshift({ tick: 0, us: tempos[0]?.us ?? 500000 });
+  let acc = 0; tempos.forEach((t, i) => { if (i) acc += (t.tick - tempos[i - 1].tick) / ppq * tempos[i - 1].us / 1e6; t.sec = acc; });
+  const seg = tick => { let lo = 0, hi = tempos.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (tempos[mid].tick <= tick) lo = mid; else hi = mid - 1; } return tempos[lo]; };
+  const secOf = tick => { const t = seg(tick); return t.sec + (tick - t.tick) / ppq * t.us / 1e6; }, spb = tick => seg(tick).us / 1e6;
+  const bpms = [...new Set(tempos.map(t => Math.round(6e7 / t.us * 2) / 2))];
+  // (a part = one track's notes on one channel; format 0 files keep everything in one track)
+  const parts = []; for (const tr of tracks) { const by = {}; for (const n of tr.notes) (by[n.ch] = by[n.ch] || []).push(n);
+    for (const ch in by) parts.push({ name: tr.name, ch: +ch, prog: tr.prog[ch] ?? progs[ch] ?? 0, notes: by[ch].sort((a, b) => a.tick - b.tick) }); }
+  return { ppq, parts, secOf, spb, title, single: bpms.length === 1, bpm0: 6e7 / tempos[0].us, names: tracks.map(t => t.name) }; }
+// (General MIDI note → [piece, octoban tube, open hi-hat, strength factor])
+const GM_KIT = { 35: ['kick'], 36: ['kick'], 37: ['snare', 0, 0, .6], 38: ['snare'], 39: ['snare', 0, 0, .8], 40: ['snare'], 42: ['hihat'], 44: ['hihat', 0, 0, .7], 46: ['hihat', 0, 1],
+  50: ['tom1'], 48: ['tom2'], 47: ['tom3'], 45: ['tom4'], 43: ['floor1'], 41: ['floor2'], 49: ['crash'], 57: ['crash2'], 51: ['ride'], 59: ['ride'], 53: ['ride', 0, 0, 1.1],
+  52: ['china'], 55: ['splash'], 60: ['octo', 0], 61: ['octo', 1], 62: ['octo', 2], 63: ['octo', 3], 64: ['octo', 3], 75: ['octo', 1], 76: ['octo', 0], 77: ['octo', 2], 58: ['gong'] };
+const PLAY = { notes: [], name: '', i: 0, t0: 0, pos: 0, on: false, speed: 1, dur: 0, skipped: 0 };
+function loadDrumMidi(buf, name) {
+  const M = parseMidi(buf), raw = M.parts.filter(p => p.ch === 9).flatMap(p => p.notes).sort((a, b) => a.tick - b.tick);
+  if (!raw.length) throw new Error('There is no drum track in this file (drums are on MIDI channel 10).');
+  const notes = []; let skipped = 0, lastKick = -9, alt = false;
+  for (const n of raw) { const m = GM_KIT[n.m]; if (!m) { skipped++; continue; } const t = M.secOf(n.tick); let id = m[0];
+    if (id === 'kick') { alt = t - lastKick < .17 ? !alt : false; lastKick = t; if (alt) id = 'kick2'; }
+    notes.push({ t, id, zone: m[1] || 0, open: !!m[2], vel: clamp((.35 + n.vel * .7) * (m[3] || 1), .25, 1) }); }
+  if (!notes.length) throw new Error('None of the drum notes in this file match the kit.');
+  stopPlay(); Object.assign(PLAY, { notes, name: (name || 'Drum file').replace(/\.(mid|midi)$/i, ''), i: 0, pos: 0, dur: notes[notes.length - 1].t + 1.2, skipped });
+  // (the kit grows to hold every piece the file uses)
+  const need = Math.max(...notes.map(n => PIECES.findIndex(p => p.id === n.id))) + 1;
+  if (need > Object.keys(STATE).length) { P.kit = need; save(); buildKit(need); frameView('Drums'); }
+  load(PIECES.slice(0, Math.max(need, Object.keys(STATE).length)).flatMap(p => p.sounds).concat(['hhopen']));
+  say(`“${PLAY.name}”: ${notes.length} hits${skipped ? `, ${skipped} notes with no piece on this kit` : ''}. Press Play.`); renderTools(); }
+function startPlay() { if (!PLAY.notes.length) return; unlock(); if (PLAY.pos >= PLAY.dur) { PLAY.pos = 0; PLAY.i = 0; } PLAY.t0 = performance.now() / 1000 - PLAY.pos / PLAY.speed; PLAY.on = true; renderTools(); }
+function stopPlay(rewind) { PLAY.on = false; if (rewind) { PLAY.pos = 0; PLAY.i = 0; } renderTools(); }
+function setPlaySpeed(v) { const pos = PLAY.on ? (performance.now() / 1000 - PLAY.t0) * PLAY.speed : PLAY.pos; PLAY.speed = v; PLAY.pos = pos; PLAY.t0 = performance.now() / 1000 - pos / v; renderTools(); }
+const mmss = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+// (each frame: hits due within the next 70 ms are scheduled on the audio clock, so the timing is exact even when frames are uneven)
+function playerFrame() { if (!PLAY.on) return; const now = (performance.now() / 1000 - PLAY.t0) * PLAY.speed; PLAY.pos = now;
+  while (PLAY.i < PLAY.notes.length && PLAY.notes[PLAY.i].t <= now + .07 * PLAY.speed) { const n = PLAY.notes[PLAY.i++], p = PIECES.find(q => q.id === n.id);
+    if (p && STATE[p.id]) hitPiece(p, n.vel, n.open, n.zone, Math.max(0, (n.t - now) / PLAY.speed)); }
+  if (now > PLAY.dur) { PLAY.on = false; PLAY.pos = PLAY.dur; renderTools(); return; }
+  const el = $('pPos'); if (el) el.textContent = mmss(now) + ' / ' + mmss(PLAY.dur); }
+function pickDrumMidi() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.mid,.midi,audio/midi'; inp.onchange = () => readDrumFile(inp.files[0]); inp.click(); }
+async function readDrumFile(f) { if (!f) return; try { loadDrumMidi(await f.arrayBuffer(), f.name); } catch (e) { say(e.message); } }
+addEventListener('dragover', e => { if ([...(e.dataTransfer?.items || [])].some(i => i.kind === 'file')) e.preventDefault(); });
+addEventListener('drop', e => { const f = [...(e.dataTransfer?.files || [])].find(x => /\.(mid|midi)$/i.test(x.name)); if (!f) return; e.preventDefault(); if (P.look !== 'Drums') applyLook('Drums'); readDrumFile(f); });
 
 // ---------- the hand on the stage: a tap on a part plays it; a drag on the room looks round; the wheel comes closer ----------
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -420,7 +491,7 @@ let last = 0, demoT = 0, demoStep = 0;
 const GROOVE = { kick: [0, 7, 8, 10], kick2: [3, 11], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], tom1: [13], tom2: [14], floor1: [15] };
 function frame(now) { requestAnimationFrame(frame); const dt = last ? Math.min(.05, (now - last) / 1000) : .016; last = now; if (THUMB) return;
   if (DEMO) { demoT += dt; const s = Math.floor(demoT / .15); while (demoStep <= s) { const k = demoStep % 16; for (const id in GROOVE) if (GROOVE[id].includes(k) && STATE[id]) { const st = STATE[id]; st.t = 0; st.amp = .9; } demoStep++; } }
-  animKit(dt); animXylo(dt); placeCam(); renderer.render(scene, camera); placeLabels(); }
+  playerFrame(); animKit(dt); animXylo(dt); placeCam(); renderer.render(scene, camera); placeLabels(); }
 
 // ---------- start; the board's box: ?thumb=1 the full kit and the xylophone in one still, ?demo=1 the drums playing a groove (silent) ----------
 setShell(P.shell); setKit(); applyLight(); document.body.classList.toggle('nokeys', !P.keys);
@@ -429,7 +500,7 @@ if (THUMB) { buildKit(PIECES.length); KIT.visible = XY.visible = true; KIT.posit
   view.t.set(.12, .74, -.25); view.tt.copy(view.t); view.az = view.taz = 0; view.el = view.tel = .3; view.d = view.td = 6.5; resize(); placeCam(); renderer.render(scene, camera); document.body.classList.add('ready'); }
 else { buildKit(BARE ? PIECES.length : P.kit); if (!BARE) { buildPanel(); LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepLook, items: () => LOOKS, current: () => P.look, onPick: n => applyLook(n) }); }
   applyLook(BARE ? 'Drums' : P.look, true); resize(); placeCam(); document.body.classList.add('ready'); requestAnimationFrame(frame); }
-window.INSTR = { get P() { return P; }, camera, KIT, XY, view, applyLook, frameView, buildKit, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx };
+window.INSTR = { PLAY, loadDrumMidi, startPlay, stopPlay, get P() { return P; }, camera, KIT, XY, view, applyLook, frameView, buildKit, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx };
 </script>
 </body>
 </html>
