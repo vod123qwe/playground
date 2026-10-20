@@ -161,7 +161,7 @@
     place(); }
 
   function variants(pill, o) {
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, drag = { id: null, x0: 0, y0: 0, dx: 0, dy: 0, moved: false };
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, drag = { id: null, x0: 0, y0: 0, dx: 0, dy: 0, moved: false, hist: [] };
     // (the feel, tunable: resistance of the band, the swipe that steps, the spring back, the menu's morph, its corners, the options' stagger)
     const C = () => Object.assign({ band: .45, threshold: 44, back: 550, bounce: 1.6, morph: 520, overshoot: 1.06, radius: 22, stagger: 32, stretch: 0, lift: 1 }, o.cfg ? o.cfg() : {});
     const band = dx => dx * C().band / (1 + Math.abs(dx) / 160);
@@ -175,11 +175,12 @@
       const grow = Math.abs(x) * .5 * st;                 // (px it gets wider; the arrows go out by half of it each, keeping to the edges)
       pill.style.setProperty('--lv-sa', Math.round((1 + grow / (pill.offsetWidth || 1)) * 1000) / 1000); pill.style.setProperty('--lv-w', Math.round(grow / 2 * 10) / 10 + 'px'); return x; };
     pill.classList.add('lab-vars');
-    pill.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag.id = e.pointerId; drag.x0 = e.clientX; drag.y0 = e.clientY; drag.dx = drag.dy = 0; drag.moved = false;
+    pill.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag.id = e.pointerId; drag.x0 = e.clientX; drag.y0 = e.clientY; drag.dx = drag.dy = 0; drag.moved = false; drag.hist = [[e.timeStamp, e.clientX]];
       const c = C();
       pill.style.transition = reduce || !c.stretch ? 'none' : 'scale .35s cubic-bezier(.3,1.5,.5,1)'; if (c.stretch && c.lift !== 1) pill.style.scale = c.lift; shape(0, 0); });
     pill.addEventListener('pointermove', e => {
       if (e.pointerId !== drag.id) return; drag.dx = e.clientX - drag.x0; drag.dy = e.clientY - drag.y0; const st = C().stretch;
+      drag.hist.push([e.timeStamp, e.clientX]); while (drag.hist.length > 2 && e.timeStamp - drag.hist[0][0] > 90) drag.hist.shift();   // (the last ~90 ms, for the speed of a flick)
       // (captured only once it moves, so a plain tap still reaches the arrow)
       if (!drag.moved && Math.abs(drag.dx) > 6) { drag.moved = true; pill.classList.add('dragging'); try { pill.setPointerCapture(e.pointerId); } catch (err) {} }
       if (drag.moved) { if (st) pill.style.transform = `translateX(${shape(band(drag.dx), 0)}px)`;
@@ -188,10 +189,19 @@
     const end = e => {
       if (e.pointerId !== drag.id) return; drag.id = null; pill.classList.remove('dragging');
       const c = C(); pill.style.transition = reduce ? 'none' : `transform ${c.back}ms cubic-bezier(.2,${c.bounce},.4,1), scale ${c.back}ms cubic-bezier(.2,${c.bounce},.4,1)`; pill.style.transform = ''; pill.style.scale = ''; shape(0, reduce ? 0 : c.back, `cubic-bezier(.2,${c.bounce},.4,1)`);
-      if (drag.moved && Math.abs(drag.dx) > c.threshold) step(drag.dx < 0 ? 1 : -1);
+      // (a step: pulled past the threshold, or a quick flick (over 18 px at more than about 0.45 px/ms) that was short)
+      const h = drag.hist, v = h.length > 1 ? (h[h.length - 1][1] - h[0][1]) / Math.max(1, h[h.length - 1][0] - h[0][0]) : 0;
+      if (drag.moved && (Math.abs(drag.dx) > c.threshold || (Math.abs(drag.dx) > 18 && Math.abs(v) > .45 && Math.sign(v) === Math.sign(drag.dx)))) step(drag.dx < 0 ? 1 : -1);
       setTimeout(() => { drag.moved = false; }, 0);
     };
     pill.addEventListener('pointerup', end); pill.addEventListener('pointercancel', end);
+    // (a two-finger swipe on a touchpad: the pill goes after the fingers; past the threshold it steps once, and the rest of that
+    //  gesture (its momentum included) is spent, so one swipe is always one step; it springs back when the fingers stop)
+    const wh = { x: 0, done: false, t: 0 };
+    pill.addEventListener('wheel', e => { const dx = (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1) * (Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : e.shiftKey ? e.deltaY : 0); if (!dx) return;
+      e.preventDefault(); const c = C(); wh.x += dx; clearTimeout(wh.t);
+      if (!wh.done) { pill.style.transition = 'none'; pill.style.transform = 'translateX(' + band(-wh.x) + 'px)'; if (Math.abs(wh.x) > c.threshold * 1.2) { wh.done = true; step(wh.x > 0 ? 1 : -1); pill.style.transition = reduce ? 'none' : 'transform ' + c.back + 'ms cubic-bezier(.2,' + c.bounce + ',.4,1)'; pill.style.transform = ''; } }
+      wh.t = setTimeout(() => { wh.x = 0; wh.done = false; pill.style.transition = reduce ? 'none' : 'transform ' + c.back + 'ms cubic-bezier(.2,' + c.bounce + ',.4,1)'; pill.style.transform = ''; }, 180); }, { passive: false });
     o.prev?.addEventListener('click', () => { if (!drag.moved) step(-1); });
     o.next?.addEventListener('click', () => { if (!drag.moved) step(1); });
     // ---------- the menu: the pill grows into it ----------
