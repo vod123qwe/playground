@@ -51,7 +51,29 @@
   .msg { position: fixed; left: 50%; top: 64px; z-index: 5; transform: translateX(-50%); max-width: calc(100vw - 32px); padding: 9px 14px; border-radius: 12px; background: #1b1c20; color: #fff; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .3s; text-align: center; }
   .msg.show { opacity: 1; }
   .tools { flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 24px); }
-  body.bare .back, body.bare .tune, body.bare .dock, body.bare .tools, body.bare .panel, body.bare .hint, body.bare .loading, body.bare .labels, body.bare .msg { display: none !important; }
+  .tb[hidden] { display: none; }
+  /* play along: the lanes beside the kit, the caps under them, the kick a wide bar */
+  .hero { position: fixed; top: 78px; right: 16px; bottom: 150px; width: min(480px, 40vw); z-index: 3; display: flex; flex-direction: column; padding: 10px 10px 10px; border-radius: 26px; isolation: isolate; }
+  .hero::before { content: ''; position: absolute; inset: -24px -16px 0; z-index: -1; border-radius: 34px; background: linear-gradient(to bottom, rgba(238,237,233,0), rgba(238,237,233,.5) 38%, rgba(238,237,233,.72));
+    -webkit-backdrop-filter: blur(16px) saturate(1.06); backdrop-filter: blur(16px) saturate(1.06); -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34%); mask-image: linear-gradient(to bottom, transparent, #000 34%); }
+  .hero[hidden], .hkick[hidden], .hres[hidden] { display: none; }
+  .hhud { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 2px 8px 4px; font-variant-numeric: tabular-nums; }
+  .hhud b { font: 700 24px var(--lab-font); letter-spacing: -.02em; } .hhud span { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .hero canvas { flex: 1; min-height: 0; width: 100%; display: block; }
+  .hcaps { display: grid; grid-template-columns: repeat(var(--n, 1), 1fr); gap: 6px; margin-top: 6px; }
+  .hcaps button, .hkick { height: 52px; min-width: 0; border: 0; border-radius: 14px; background: rgba(255,255,255,.55); color: #1b1c20; font: 600 11px var(--lab-font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), inset 0 -2px 0 rgba(0,0,0,.05); transition: transform .08s, background .08s, box-shadow .12s; touch-action: none; }
+  .hcaps button b, .hkick b { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 7px; background: var(--c); color: #fff; font-size: 13px; }
+  .hcaps button span { max-width: 100%; padding: 0 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .hkick { width: 100%; height: 34px; margin-top: 6px; flex-direction: row; gap: 10px; }
+  .hcaps button.on, .hkick.on { transform: translateY(2px); background: color-mix(in srgb, var(--c) 16%, rgba(255,255,255,.7)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), 0 0 18px color-mix(in srgb, var(--c) 45%, transparent); }
+  .hres { position: absolute; left: 10px; right: 10px; top: 48px; z-index: 2; padding: 22px 16px 18px; border-radius: 20px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.1); text-align: center; }
+  .hres h3 { margin: 0; font-size: 17px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .hres .rm { margin: 4px 0 14px; font-size: 12px; color: var(--muted); }
+  .hres .rg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .hres .rg b { display: block; font: 700 22px var(--lab-font); font-variant-numeric: tabular-nums; } .hres .rg span { font-size: 11px; color: var(--muted); }
+  .hres .rc { margin: 14px 0 16px; font-size: 12px; line-height: 1.5; color: rgba(20,20,20,.65); }
+  .hres .rb { display: flex; gap: 8px; justify-content: center; } .hres .rb button { height: 38px; padding: 0 18px; border: 0; border-radius: 999px; background: rgba(20,20,20,.06); color: #1b1c20; font: 600 13px var(--lab-font); cursor: pointer; } .hres .rb button:first-child { background: #1b1c20; color: #fff; }
+  body.tuning .hero { display: none; }
+  @media (max-width: 760px) { .tb button { padding: 0 9px; } .tb .tl { padding: 0 5px; } .hcaps button span { font-size: 10px; } .hero { top: auto; left: 8px; right: 8px; width: auto; height: 46vh; border-radius: 22px; } }
+  body.bare .back, body.bare .tune, body.bare .dock, body.bare .tools, body.bare .panel, body.bare .hint, body.bare .loading, body.bare .labels, body.bare .msg, body.bare .hero { display: none !important; }
   /* the panel: a card beside the stage (lab-ui soft) */
   .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
     font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
@@ -76,6 +98,13 @@
 <div class="labels" id="labels" aria-hidden="true"></div>
 <p class="msg" id="msg" role="status"></p>
 <div class="tools" id="tools"></div>
+<section class="hero" id="hero" hidden aria-label="Play along: the notes fall to the line, hit them on the keys">
+  <div class="hhud" id="hhud"></div>
+  <canvas id="hcv"></canvas>
+  <div class="hcaps" id="hcaps"></div>
+  <button class="hkick" id="hkick" type="button"><b>Space</b><span>Kick</span></button>
+  <div class="hres" id="hres" hidden></div>
+</section>
 <div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="Instruments">
   <button id="prev" type="button" aria-label="Previous instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
   <span class="vn" id="nm" aria-live="polite">Drums</span>
@@ -93,7 +122,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 
 // ---------- the settings; kept in the browser ----------
 const KEY = 'lab.instruments.v1';
-const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', light: 2.6, warmth: .55 };
+const DEF = { look: 'Drums', kit: 3, vol: .85, room: .22, keys: true, shell: 'wine', light: 2.6, warmth: .55, along: false, level: 'all' };
 let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
 const save = () => { try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
 const q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
@@ -333,7 +362,7 @@ function frameView(name, now) { const v = VIEWS[name] || VIEWS.Drums, k = name =
   if (now) { view.az = view.taz; view.el = view.tel; view.d = view.td; view.t.copy(view.tt); } }
 function placeCam() { const a = stage.clientWidth / stage.clientHeight, pf = (VIEWS[P.look] || {}).pf ?? 1, fit = a < 1 ? 1 + (Math.min(1.9, .95 / a) - 1) * (THUMB ? 1 : pf) : 1;
   view.az += (view.taz - view.az) * .1; view.el += (view.tel - view.el) * .1; view.d += (view.td - view.d) * .1; view.t.lerp(view.tt, .1);
-  const d = view.d * fit; camera.position.set(view.t.x + Math.sin(view.az) * Math.cos(view.el) * d, view.t.y + Math.sin(view.el) * d, view.t.z + Math.cos(view.az) * Math.cos(view.el) * d); camera.lookAt(view.t); camera.updateMatrixWorld(); }
+  const d = view.d * fit * (1 + heroK * (innerWidth <= 760 ? .75 : .2)); camera.position.set(view.t.x + Math.sin(view.az) * Math.cos(view.el) * d, view.t.y + Math.sin(view.el) * d, view.t.z + Math.cos(view.az) * Math.cos(view.el) * d); camera.lookAt(view.t); camera.updateMatrixWorld(); }
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(stage);
 
@@ -341,7 +370,9 @@ new ResizeObserver(resize).observe(stage);
 const labelsEl = $('labels'), LABELS = new Map();   // id → { el, pos (world), obj }
 function refreshLabels() { labelsEl.innerHTML = ''; LABELS.clear(); if (BARE) return;
   const add = (id, text, pos, obj) => { const el = document.createElement('span'); el.textContent = text; labelsEl.appendChild(el); LABELS.set(id, { el, pos, obj }); };
-  if (P.look === 'Drums') for (const p of PIECES) { const st = STATE[p.id]; if (!st) continue; if (p.zones) st.obj.userData.labels.forEach((pos, i) => add(p.id + ':' + i, p.keys[i], pos, null)); else add(p.id, p.key, st.obj.userData.label, null); }
+  if (P.look === 'Drums') for (const p of PIECES) { const st = STATE[p.id]; if (!st) continue;
+    if (heroLive()) { const hl = laneOf(p.id); if (!HERO.lanes.includes(hl)) continue; const t = hl.key === ' ' ? '␣' : hl.key.toUpperCase(); if (p.zones) st.obj.userData.labels.forEach((pos, i) => add(p.id + ':' + i, t, pos, null)); else add(p.id, t, st.obj.userData.label, null); continue; }
+    if (p.zones) st.obj.userData.labels.forEach((pos, i) => add(p.id + ':' + i, p.keys[i], pos, null)); else add(p.id, p.key, st.obj.userData.label, null); }
   if (P.look === 'Xylophone') for (const b of BARS) { const k = KEYMAP_INV[b.userData.midi - LOW]; if (k) add('x' + b.userData.midi, k.toUpperCase(), null, b); } }
 const labelFor = id => LABELS.get(id)?.el;
 const V3 = new THREE.Vector3();
@@ -366,6 +397,10 @@ function renderTools() { tools.innerHTML = ''; if (BARE || P.look !== 'Drums') r
     ? `<div class="tb"><button type="button" id="pPlay" class="on">${PLAY.on ? 'Pause' : 'Play'}</button><button type="button" id="pStop" aria-label="Back to the start">↺</button><span class="tl" id="pPos" title="${PLAY.name}">${mmss(PLAY.pos)} / ${mmss(PLAY.dur)}</span>${[.5, .75, 1].map(v => `<button type="button" data-ps="${v}" class="${PLAY.speed === v ? 'on' : ''}">${v * 100}%</button>`).join('')}<button type="button" id="pLoad" aria-label="Load another drum file">…</button></div>`
     : '<div class="tb"><button type="button" id="pLoad">Load drum MIDI</button></div>');
   $('pLoad').onclick = pickDrumMidi; if ($('pPlay')) { $('pPlay').onclick = () => PLAY.on ? stopPlay() : startPlay(); $('pStop').onclick = () => stopPlay(true); tools.querySelectorAll('[data-ps]').forEach(b => b.onclick = () => setPlaySpeed(+b.dataset.ps)); }
+  if (PLAY.notes.length) { tools.insertAdjacentHTML('beforeend', `<div class="tb"><button type="button" id="pHero" class="${HERO.on ? 'on' : ''}" aria-pressed="${HERO.on}">Play along</button></div>`
+      + (HERO.on ? `<div class="tb" role="radiogroup" aria-label="What you play">${LEVELS.map(([v, t]) => `<button type="button" role="radio" data-lv="${v}" aria-checked="${P.level === v}">${t}</button>`).join('')}</div>` : ''));
+    $('pHero').onclick = () => setHero(!HERO.on); tools.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { P.level = b.dataset.lv; save(); heroBuild(); renderTools(); updateHint(); });
+    if (HERO.on) tools.firstElementChild.hidden = true; }
   $('kMinus').onclick = () => { P.kit = Math.max(3, n - 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); };
   $('kPlus').onclick = () => { P.kit = Math.min(PIECES.length, n + 1); save(); buildKit(P.kit); renderTools(); frameView('Drums'); const p = PIECES[n]; if (p) { load(p.sounds); say(`${p.name}: ${p.zones ? p.keys.join(' ') : p.key === '␣' ? 'Space' : p.key} on the keyboard`); } }; }
 
@@ -378,12 +413,13 @@ function parseMidi(buf) { const d = new DataView(buf), u8 = new Uint8Array(buf);
   const vlq = () => { let v = 0, b; do { b = u8[p++]; v = v * 128 + (b & 127); } while (b & 128 && p < u8.length); return v; };
   if (str(4) !== 'MThd') throw new Error('This is not a MIDI file.'); p += 4; const hl = d.getUint32(p); p += 4; const ntr = d.getUint16(p + 2), ppq = d.getUint16(p + 4); p += hl;
   if (ppq & 0x8000) throw new Error('This MIDI file counts time in SMPTE frames, which is not supported.');
-  const tempos = [], tracks = [], progs = {}; let title = '';
+  const tempos = [], tracks = [], progs = {}, sigs = []; let title = '';
   for (let ti = 0; ti < ntr && p + 8 <= u8.length; ti++) { const id = str(4); p += 4; const len = d.getUint32(p); p += 4; const end = Math.min(u8.length, p + len); if (id !== 'MTrk') { p = end; continue; }
     const tr = { name: '', notes: [], prog: {} }, on = new Map(); let tick = 0, run = 0;
     const close = k => { const n = on.get(k); on.delete(k); n.dur = Math.max(1, tick - n.tick); tr.notes.push(n); };
     while (p < end) { tick += vlq(); let st = u8[p]; if (st & 128) { p++; if (st < 0xF0) run = st; } else st = run;
       if (st === 0xFF) { const ty = u8[p++], l = vlq(); if (ty === 0x51 && l >= 3) tempos.push({ tick, us: (u8[p] << 16) | (u8[p + 1] << 8) | u8[p + 2] });
+        else if (ty === 0x58 && l >= 2) sigs.push({ tick, num: u8[p] || 4, den: 2 ** u8[p + 1] });
         else if (ty === 0x03) { const s = new TextDecoder('latin1').decode(u8.subarray(p, p + l)).trim(); if (!tr.name) tr.name = s; if (ti === 0 && !title) title = s; }
         p += l; if (ty === 0x2F) break; continue; }
       if (st === 0xF0 || st === 0xF7) { p += vlq(); continue; }
@@ -401,7 +437,7 @@ function parseMidi(buf) { const d = new DataView(buf), u8 = new Uint8Array(buf);
   // (a part = one track's notes on one channel; format 0 files keep everything in one track)
   const parts = []; for (const tr of tracks) { const by = {}; for (const n of tr.notes) (by[n.ch] = by[n.ch] || []).push(n);
     for (const ch in by) parts.push({ name: tr.name, ch: +ch, prog: tr.prog[ch] ?? progs[ch] ?? 0, notes: by[ch].sort((a, b) => a.tick - b.tick) }); }
-  return { ppq, parts, secOf, spb, title, single: bpms.length === 1, bpm0: 6e7 / tempos[0].us, names: tracks.map(t => t.name) }; }
+  return { ppq, parts, secOf, spb, sigs, title, single: bpms.length === 1, bpm0: 6e7 / tempos[0].us, names: tracks.map(t => t.name) }; }
 // (General MIDI note → [piece, octoban tube, open hi-hat, strength factor])
 const GM_KIT = { 35: ['kick'], 36: ['kick'], 37: ['snare', 0, 0, .6], 38: ['snare'], 39: ['snare', 0, 0, .8], 40: ['snare'], 42: ['hihat'], 44: ['hihat', 0, 0, .7], 46: ['hihat', 0, 1],
   50: ['tom1'], 48: ['tom2'], 47: ['tom3'], 45: ['tom4'], 43: ['floor1'], 41: ['floor2'], 49: ['crash'], 57: ['crash2'], 51: ['ride'], 59: ['ride'], 53: ['ride', 0, 0, 1.1],
@@ -415,26 +451,162 @@ function loadDrumMidi(buf, name) {
     if (id === 'kick') { alt = t - lastKick < .17 ? !alt : false; lastKick = t; if (alt) id = 'kick2'; }
     notes.push({ t, id, zone: m[1] || 0, open: !!m[2], vel: clamp((.35 + n.vel * .7) * (m[3] || 1), .25, 1) }); }
   if (!notes.length) throw new Error('None of the drum notes in this file match the kit.');
+  // (the beats and bars, from the file's tempo map and time signatures: lines on the lanes)
+  const sg = M.sigs.sort((a, b) => a.tick - b.tick); if (!sg.length || sg[0].tick > 0) sg.unshift({ tick: 0, num: 4, den: 4 });
+  const beats = [], endT = raw[raw.length - 1].tick + M.ppq * 4;
+  for (let tk = 0, si = 0; tk <= endT && beats.length < 30000;) { while (si + 1 < sg.length && sg[si + 1].tick <= tk) si++; const g = sg[si], u = M.ppq * 4 / g.den, nx = sg[si + 1]?.tick ?? Infinity;
+    for (let b = 0; b < g.num; b++) { const bt = tk + b * u; if (bt >= nx) break; beats.push({ t: M.secOf(bt), bar: b === 0 }); } tk = Math.min(tk + g.num * u, nx); }
+  PLAY.beats = beats; PLAY.beat0 = 60 / M.bpm0;
   stopPlay(); Object.assign(PLAY, { notes, name: (name || 'Drum file').replace(/\.(mid|midi)$/i, ''), i: 0, pos: 0, dur: notes[notes.length - 1].t + 1.2, skipped });
   // (the kit grows to hold every piece the file uses)
   const need = Math.max(...notes.map(n => PIECES.findIndex(p => p.id === n.id))) + 1;
   if (need > Object.keys(STATE).length) { P.kit = need; save(); buildKit(need); frameView('Drums'); }
   load(PIECES.slice(0, Math.max(need, Object.keys(STATE).length)).flatMap(p => p.sounds).concat(['hhopen']));
-  say(`“${PLAY.name}”: ${notes.length} hits${skipped ? `, ${skipped} notes with no piece on this kit` : ''}. Press Play.`); renderTools(); }
-function startPlay() { if (!PLAY.notes.length) return; unlock(); if (PLAY.pos >= PLAY.dur) { PLAY.pos = 0; PLAY.i = 0; } PLAY.t0 = performance.now() / 1000 - PLAY.pos / PLAY.speed; PLAY.on = true; renderTools(); }
-function stopPlay(rewind) { PLAY.on = false; if (rewind) { PLAY.pos = 0; PLAY.i = 0; } renderTools(); }
+  heroBuild(); updateHint(); say(`“${PLAY.name}”: ${notes.length} hits${skipped ? `, ${skipped} notes with no piece on this kit` : ''}. Press Play.`); renderTools(); }
+function startPlay() { if (!PLAY.notes.length) return; unlock(); if (PLAY.pos >= PLAY.dur) { PLAY.pos = 0; PLAY.i = 0; heroReset(); } if (HERO.on && PLAY.pos <= 0) heroCountIn(); PLAY.t0 = performance.now() / 1000 - PLAY.pos / PLAY.speed; PLAY.on = true; renderTools(); }
+function stopPlay(rewind) { PLAY.on = false; if (rewind) { PLAY.pos = 0; PLAY.i = 0; heroReset(); } renderTools(); }
 function setPlaySpeed(v) { const pos = PLAY.on ? (performance.now() / 1000 - PLAY.t0) * PLAY.speed : PLAY.pos; PLAY.speed = v; PLAY.pos = pos; PLAY.t0 = performance.now() / 1000 - pos / v; renderTools(); }
-const mmss = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+const mmss = t => (t = Math.max(0, t), Math.floor(t / 60)) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
 // (each frame: hits due within the next 70 ms are scheduled on the audio clock, so the timing is exact even when frames are uneven)
 function playerFrame() { if (!PLAY.on) return; const now = (performance.now() / 1000 - PLAY.t0) * PLAY.speed; PLAY.pos = now;
   while (PLAY.i < PLAY.notes.length && PLAY.notes[PLAY.i].t <= now + .07 * PLAY.speed) { const n = PLAY.notes[PLAY.i++], p = PIECES.find(q => q.id === n.id);
-    if (p && STATE[p.id]) hitPiece(p, n.vel, n.open, n.zone, Math.max(0, (n.t - now) / PLAY.speed)); }
-  if (now > PLAY.dur) { PLAY.on = false; PLAY.pos = PLAY.dur; renderTools(); return; }
+    if (p && STATE[p.id] && !n.mine) hitPiece(p, n.vel, n.open, n.zone, Math.max(0, (n.t - now) / PLAY.speed)); }
+  if (now > PLAY.dur) { PLAY.on = false; PLAY.pos = PLAY.dur; heroFinish(); renderTools(); return; }
   const el = $('pPos'); if (el) el.textContent = mmss(now) + ' / ' + mmss(PLAY.dur); }
 function pickDrumMidi() { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.mid,.midi,audio/midi'; inp.onchange = () => readDrumFile(inp.files[0]); inp.click(); }
 async function readDrumFile(f) { if (!f) return; try { loadDrumMidi(await f.arrayBuffer(), f.name); } catch (e) { say(e.message); } }
 addEventListener('dragover', e => { if ([...(e.dataTransfer?.items || [])].some(i => i.kind === 'file')) e.preventDefault(); });
 addEventListener('drop', e => { const f = [...(e.dataTransfer?.files || [])].find(x => /\.(mid|midi)$/i.test(x.name)); if (!f) return; e.preventDefault(); if (P.look !== 'Drums') applyLook('Drums'); readDrumFile(f); });
+
+// ---------- play along: the file's notes fall down lanes beside the kit, as in Guitar Hero, and you hit them on the keys.
+// Seven lanes on the middle row (S hi-hat, D snare, F high toms and octobans, G low toms, H floors, J ride, K crashes, china,
+// splash and gong) and the kick on Space, drawn as a bar across all the lanes. Only the lanes the file uses show. What you don't
+// play, the kit plays in time: Everything (you play it all), Kick auto (the kit plays the feet) or Snare + cymbals (the kit plays the
+// feet and the toms). A hit plays the note from the file (its piece, its strength); a note let past stays silent. Perfect within
+// 60 ms, Good within 140 ms, in real time at any tempo; the combo multiplies the score (up to ×4). Every press leaves its mark:
+// early or late, with the milliseconds, and a dot on the timing bar at the top ----------
+const LANES = [
+  { id: 'kick', key: ' ', name: 'Kick', color: '#2a2b30', ids: ['kick', 'kick2'] },
+  { id: 'hh', key: 's', name: 'Hi-hat', color: '#e0a82e', ids: ['hihat'] },
+  { id: 'sn', key: 'd', name: 'Snare', color: '#e8604c', ids: ['snare'] },
+  { id: 'hi', key: 'f', name: 'Toms', color: '#3f7cf0', ids: ['tom1', 'tom2', 'octo'] },
+  { id: 'lo', key: 'g', name: 'Low toms', color: '#6a6fe0', ids: ['tom3', 'tom4'] },
+  { id: 'fl', key: 'h', name: 'Floors', color: '#2bb39a', ids: ['floor1', 'floor2'] },
+  { id: 'ride', key: 'j', name: 'Ride', color: '#8a6ad8', ids: ['ride'] },
+  { id: 'cr', key: 'k', name: 'Crashes', color: '#c94f8a', ids: ['crash', 'crash2', 'china', 'splash', 'gong'] }];
+const laneOf = id => LANES.find(l => l.ids.includes(id));
+const LEVELS = [['all', 'Everything'], ['nofeet', 'Kick auto'], ['hands', 'Snare + cymbals']];
+const MINE = { all: () => true, nofeet: l => l.id !== 'kick', hands: l => ['hh', 'sn', 'ride', 'cr'].includes(l.id) };
+const HIT = { perfect: .06, good: .14 }, AHEAD = 2.2;
+const HERO = { on: !BARE && P.along, lanes: [], notes: [], at: 0, score: 0, combo: 0, max: 0, n: { perfect: 0, good: 0, miss: 0 }, fx: [], marks: [], meter: [], sum: 0, cnt: 0, hud: '' };
+const heroEl = $('hero'), hcv = $('hcv'), hctx = hcv.getContext('2d'), hcaps = $('hcaps'), hkick = $('hkick'), hhud = $('hhud'), hres = $('hres');
+const heroLive = () => HERO.on && PLAY.notes.length > 0 && P.look === 'Drums';
+const songNow = () => PLAY.on ? (performance.now() / 1000 - PLAY.t0) * PLAY.speed : PLAY.pos;
+let heroK = 0, heroBox = { l: innerWidth - 496, t: innerHeight * .5 };
+// (your notes: those in your lanes; hits that land together in one lane, within 30 ms, are one note that plays them all)
+function heroBuild() { const lv = MINE[P.level] || MINE.all, used = new Set(PLAY.notes.map(n => laneOf(n.id)?.id));
+  HERO.lanes = LANES.filter(l => used.has(l.id) && lv(l)); const mine = [];
+  for (const n of PLAY.notes) { const l = laneOf(n.id); n.mine = HERO.on && HERO.lanes.includes(l); if (!n.mine) continue;
+    let prev = null; for (let k = mine.length - 1; k >= 0 && n.t - mine[k].t < .03; k--) if (mine[k].lane === l) { prev = mine[k]; break; }
+    if (prev) prev.hits.push(n); else mine.push({ t: n.t, lane: l, hits: [n], j: null }); }
+  HERO.notes = mine; heroReset(); buildHeroCaps(); refreshLabels(); }
+function heroReset() { Object.assign(HERO, { at: 0, score: 0, combo: 0, max: 0, n: { perfect: 0, good: 0, miss: 0 }, fx: [], marks: [], meter: [], sum: 0, cnt: 0, hud: '' }); for (const n of HERO.notes) n.j = null; hres.hidden = true; }
+function setHero(on) { HERO.on = P.along = on; save(); heroBuild(); renderTools(); updateHint();
+  if (on) say(`Play along: ${HERO.lanes.map(l => (l.key === ' ' ? 'Space' : l.key.toUpperCase()) + ' ' + l.name.toLowerCase()).join(', ')}`); }
+const capOf = l => l.id === 'kick' ? hkick : hcaps.querySelector(`[data-lane="${l.id}"]`);
+function capPress(b, getLane) { b.addEventListener('pointerdown', e => { e.preventDefault(); const l = getLane(); if (!l) return; heroPress(l); b.classList.add('on'); });
+  const up = () => b.classList.remove('on'); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); }
+function buildHeroCaps() { const hands = HERO.lanes.filter(l => l.id !== 'kick'), kick = HERO.lanes.find(l => l.id === 'kick');
+  hcaps.style.setProperty('--n', Math.max(1, hands.length)); hcaps.innerHTML = '';
+  for (const l of hands) { const b = document.createElement('button'); b.type = 'button'; b.dataset.lane = l.id; b.style.setProperty('--c', l.color); b.innerHTML = `<b>${l.key.toUpperCase()}</b><span>${l.name}</span>`; capPress(b, () => l); hcaps.appendChild(b); }
+  hkick.hidden = !kick; hkick.style.setProperty('--c', LANES[0].color); }
+capPress(hkick, () => HERO.lanes.find(l => l.id === 'kick'));
+// (the count-in: four clicks on the file's beat, the notes already falling)
+function click(at, accent) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = accent ? 1760 : 1180; g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(.2, at + .002); g.gain.exponentialRampToValueAtTime(.001, at + .07); o.connect(g); g.connect(master); o.start(at); o.stop(at + .09); }
+function heroCountIn() { const b = PLAY.beat0 || .5, sp = PLAY.speed, k = Math.max(4, Math.ceil((AHEAD + .5) * sp / b)), lead = k * b; PLAY.pos = -lead; PLAY.i = 0;
+  const t0 = ctx.currentTime + .03; for (let i = 4; i >= 1; i--) click(t0 + (lead - i * b) / sp, i === 4); }
+// (a press: the nearest of your notes in that lane within 140 ms is judged and plays as written; a press with no note plays the lane's piece)
+function heroPress(l, vel, piece, zone = 0) { unlock(); l.flash = performance.now(); const now = songNow(), sp = PLAY.speed; let best = null, bd = 9;
+  if (PLAY.on) for (let i = HERO.at; i < HERO.notes.length; i++) { const n = HERO.notes[i]; if ((n.t - now) / sp > HIT.good) break; if (n.j || n.lane !== l) continue; const d = Math.abs(n.t - now) / sp; if (d < bd) { bd = d; best = n; } }
+  if (best && bd <= HIT.good) { const dt = (now - best.t) / sp; heroJudge(best, bd <= HIT.perfect ? 'perfect' : 'good');
+    for (const h of best.hits) { const p = PIECES.find(q => q.id === h.id); if (p) hitPiece(p, h.vel, h.open, h.zone); }
+    const tn = performance.now(); HERO.marks.push({ l, dt, kind: best.j, t: tn }); HERO.meter.push({ dt, kind: best.j, t: tn }); HERO.sum += dt; HERO.cnt++; return; }
+  const p = piece || PIECES.find(q => l.ids.includes(q.id) && STATE[q.id]); if (p) hitPiece(p, vel ?? .8, false, zone);
+  if (PLAY.on && now > 0) HERO.marks.push({ l, dt: null, kind: 'stray', t: performance.now() }); }
+function heroJudge(n, kind) { n.j = kind; HERO.n[kind]++;
+  if (kind === 'miss') HERO.combo = 0; else { HERO.combo++; HERO.max = Math.max(HERO.max, HERO.combo); HERO.score += (kind === 'perfect' ? 100 : 60) * Math.min(4, 1 + Math.floor(HERO.combo / 10)); }
+  HERO.fx = HERO.fx.filter(f => f.l !== n.lane); HERO.fx.push({ l: n.lane, kind, t: performance.now() }); }
+// (the keys: your lanes come first; the kit's other letters still play their pieces)
+const heldKeys = new Set(), keyOf = e => e.code === 'Space' ? ' ' : e.key.toLowerCase();
+addEventListener('keydown', e => { if (!heroLive() || document.body.classList.contains('tuning') || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, .panel')) return;
+  const k = keyOf(e), l = HERO.lanes.find(x => x.key === k); if (!l) return; e.preventDefault(); e.stopImmediatePropagation(); if (document.activeElement?.tagName === 'BUTTON') document.activeElement.blur();
+  if (e.repeat || heldKeys.has(k)) return; heldKeys.add(k); heroPress(l, e.shiftKey ? 1 : .85); capOf(l)?.classList.add('on'); }, true);
+addEventListener('keyup', e => { const k = keyOf(e); if (!heldKeys.delete(k)) return; e.preventDefault(); const l = LANES.find(x => x.key === k); if (l) capOf(l)?.classList.remove('on'); }, true);
+function heroFinish() { if (!HERO.on || !HERO.notes.length) return; const tot = HERO.n.perfect + HERO.n.good + HERO.n.miss || 1, acc = (HERO.n.perfect + HERO.n.good * .6) / tot, avg = HERO.cnt ? HERO.sum / HERO.cnt : 0;
+  const lean = Math.abs(avg) < .015 ? 'right on the beat' : avg < 0 ? `a touch early (${Math.round(-avg * 1000)} ms)` : `a touch late (${Math.round(avg * 1000)} ms)`;
+  const id = PLAY.name + '|' + P.level + '|' + PLAY.speed; let all = {}; try { all = JSON.parse(localStorage.getItem(KEY + '.best') || '{}'); } catch { }
+  const best = all[id], isNew = !best || HERO.score > best; if (isNew) { all[id] = HERO.score; try { localStorage.setItem(KEY + '.best', JSON.stringify(all)); } catch { } }
+  hres.innerHTML = `<h3>${PLAY.name}</h3><p class="rm">${(LEVELS.find(l => l[0] === P.level) || LEVELS[0])[1]} · ${Math.round(PLAY.speed * 100)}% tempo</p>
+    <div class="rg"><div><b>${HERO.score.toLocaleString('en')}</b><span>${isNew ? 'new best' : 'best ' + best.toLocaleString('en')}</span></div><div><b>${Math.round(acc * 100)}%</b><span>accuracy</span></div><div><b>${HERO.max}</b><span>best combo</span></div></div>
+    <p class="rc">${HERO.n.perfect} perfect · ${HERO.n.good} good · ${HERO.n.miss} missed<br>On average ${lean}</p><div class="rb"><button type="button" data-r="again">Again</button><button type="button" data-r="close">Done</button></div>`;
+  hres.querySelector('[data-r=again]').onclick = () => { stopPlay(true); startPlay(); }; hres.querySelector('[data-r=close]').onclick = () => { hres.hidden = true; }; hres.hidden = false; }
+const rrect = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect(x, y, w, h, r); };
+const FONT = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
+function heroFrame() { const show = heroLive(); if (heroEl.hidden === show) heroEl.hidden = !show; if (!show) return;
+  const now = songNow(), sp = PLAY.speed, tn = performance.now();
+  // (notes let past are missed)
+  while (HERO.at < HERO.notes.length) { const n = HERO.notes[HERO.at]; if (n.j) { HERO.at++; continue; } if ((now - n.t) / sp > HIT.good) { heroJudge(n, 'miss'); HERO.at++; continue; } break; }
+  // (the card keeps clear of the bar under it, however that bar wraps)
+  if (tools.childElementCount) { const b = Math.round(innerHeight - tools.getBoundingClientRect().top + 12); if (heroEl._b !== b) { heroEl.style.bottom = b + 'px'; heroEl._b = b; } }
+  const W = hcv.clientWidth, H = hcv.clientHeight, dpr = Math.min(devicePixelRatio, 2); if (!W || !H) return;
+  if (hcv.width !== Math.round(W * dpr) || hcv.height !== Math.round(H * dpr)) { hcv.width = Math.round(W * dpr); hcv.height = Math.round(H * dpr); }
+  const c = hctx; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+  const hands = HERO.lanes.filter(l => l.id !== 'kick'), kl = HERO.lanes.find(l => l.id === 'kick'), n = Math.max(1, hands.length), gap = 6, lw = (W - gap * (n - 1)) / n;
+  hands.forEach((l, i) => { l.x = i * (lw + gap); l.w = lw; }); if (kl) { kl.x = 0; kl.w = W; }
+  const hitY = H - 12, topY = 30, span = hitY - topY, yOf = t => hitY - (t - now) / (AHEAD * sp) * span;
+  // the lanes: tinted faintly towards the line; a press lights its lane (the kick lights them all)
+  const fade = y => clamp((y - topY) / (span * .3), 0, 1);
+  for (const l of hands) { const g = c.createLinearGradient(0, topY, 0, hitY + 10); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.55, l.color + '0c'); g.addColorStop(1, l.color + '30'); c.fillStyle = g; rrect(c, l.x, topY, l.w, span + 10, 10); c.fill(); }
+  for (const l of HERO.lanes) { const fl = l.flash ? Math.max(0, 1 - (tn - l.flash) / 220) : 0; if (fl <= 0) continue; const g2 = c.createLinearGradient(0, hitY - 120, 0, hitY); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, l.color + Math.round(fl * (l === kl ? 60 : 110)).toString(16).padStart(2, '0')); c.fillStyle = g2; c.fillRect(l.x, hitY - 120, l.w, 130); }
+  // the beats from the file's tempo, stronger on each bar
+  const B = PLAY.beats || []; let lo = 0, hi = B.length; while (lo < hi) { const m = (lo + hi) >> 1; if (B[m].t < now - .2 * sp) lo = m + 1; else hi = m; }
+  for (let i = lo; i < B.length; i++) { const y = yOf(B[i].t); if (y < topY) break; if (y > hitY) continue; c.globalAlpha = fade(y); c.fillStyle = B[i].bar ? 'rgba(20,20,20,.13)' : 'rgba(20,20,20,.045)'; c.fillRect(0, Math.round(y), W, 1); } c.globalAlpha = 1;
+  // the line: a slot per lane; the kick a rule across
+  if (kl) { c.fillStyle = kl.color + '40'; c.fillRect(0, hitY - 1, W, 2); }
+  for (const l of hands) { c.save(); c.shadowColor = l.color + '99'; c.shadowBlur = 12; c.lineWidth = 1.5; c.strokeStyle = l.color + '99'; c.fillStyle = l.color + '14'; rrect(c, l.x + 4, hitY - 8, l.w - 8, 16, 8); c.fill(); c.stroke(); c.restore(); }
+  // the notes: the kicks as bars across, then the pills in their lanes; they swell a little at the line; a missed one stays faint
+  c.save(); c.beginPath(); c.rect(0, 0, W, hitY + 10); c.clip();
+  const from = Math.max(0, HERO.at - 40);
+  for (let pass = 0; pass < 2; pass++) for (let i = from; i < HERO.notes.length; i++) { const nt = HERO.notes[i]; if ((nt.t - now) / sp > AHEAD) break; const isK = nt.lane === kl; if (isK !== (pass === 0)) continue;
+    if (nt.j === 'perfect' || nt.j === 'good') continue; const y = yOf(nt.t); if (y > hitY + 16 || y < topY - 10) continue; const l = nt.lane;
+    c.globalAlpha = (nt.j === 'miss' ? .2 : 1) * fade(y); c.fillStyle = l.color; c.shadowColor = l.color + '88'; c.shadowBlur = nt.j === 'miss' ? 0 : 10;
+    if (isK) { c.shadowBlur = 0; c.globalAlpha *= .6; rrect(c, 4, y - 2, W - 8, 4, 2); c.fill(); }
+    else { const near = clamp(1 - Math.abs(nt.t - now) / sp / .25, 0, 1), sw = (l.w - 8) * (1 + near * .05), h = 14 + near * 2, x = l.x + (l.w - sw) / 2;
+      rrect(c, x, y - h / 2, sw, h, h / 2); c.fill(); c.shadowBlur = 0; c.fillStyle = 'rgba(255,255,255,.35)'; rrect(c, x + 3, y - h / 2 + 2, sw - 6, h * .38, h * .2); c.fill(); }
+    c.globalAlpha = 1; c.shadowBlur = 0; }
+  c.restore();
+  // your marks: early above the line, late below, with the milliseconds; a press with no note a small cross
+  HERO.marks = HERO.marks.filter(m => tn - m.t < 900); c.textAlign = 'center';
+  for (const m of HERO.marks) { const l = m.l, cx = l === kl ? W / 2 : l.x + l.w / 2; c.globalAlpha = 1 - (tn - m.t) / 900;
+    if (m.kind === 'stray') { c.strokeStyle = 'rgba(20,20,20,.4)'; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - 5, hitY - 5); c.lineTo(cx + 5, hitY + 5); c.moveTo(cx + 5, hitY - 5); c.lineTo(cx - 5, hitY + 5); c.stroke(); c.globalAlpha = 1; continue; }
+    const y = hitY + clamp(m.dt / HIT.good, -1, 1) * 10, col = m.kind === 'perfect' ? '#1f9d55' : '#c98a1b'; c.fillStyle = col; if (l === kl) c.fillRect(8, y - 1.5, W - 16, 3); else { rrect(c, l.x + 6, y - 2, l.w - 12, 4, 2); c.fill(); }
+    if (l !== kl && l.w > 54) { c.font = '600 10px ' + FONT; c.fillText(Math.abs(m.dt) < .012 ? 'on time' : `${m.dt < 0 ? 'early' : 'late'} ${Math.round(Math.abs(m.dt) * 1000)}`, cx, hitY - 16); } c.globalAlpha = 1; }
+  HERO.fx = HERO.fx.filter(f => tn - f.t < 600);
+  for (const f of HERO.fx) { const l = f.l, k = (tn - f.t) / 600, cx = l === kl ? W / 2 : l.x + l.w / 2; c.globalAlpha = 1 - k; c.fillStyle = f.kind === 'perfect' ? '#1f9d55' : f.kind === 'good' ? '#c98a1b' : '#b23b3b';
+    c.font = `700 ${f.kind === 'perfect' ? 13 : 12}px ${FONT}`; c.fillText(f.kind === 'perfect' ? 'Perfect' : f.kind === 'good' ? 'Good' : 'Miss', cx, hitY - (l === kl ? 52 : 32) - k * 24); c.globalAlpha = 1; }
+  // the timing bar at the top: the Perfect zone in the middle; each hit a dot, early left, late right, fading over 4 s
+  const mw = Math.min(220, W - 40), mx = W / 2 - mw / 2, my = 10; HERO.meter = HERO.meter.filter(m => tn - m.t < 4000);
+  c.fillStyle = 'rgba(20,20,20,.08)'; rrect(c, mx, my - 2, mw, 4, 2); c.fill(); c.fillStyle = 'rgba(31,157,85,.25)'; const pz = mw * HIT.perfect / HIT.good / 2; rrect(c, W / 2 - pz, my - 3, pz * 2, 6, 3); c.fill();
+  c.fillStyle = '#1b1c20'; c.fillRect(W / 2 - .5, my - 6, 1, 12);
+  for (const m of HERO.meter) { c.globalAlpha = 1 - (tn - m.t) / 4000; c.fillStyle = m.kind === 'perfect' ? '#1f9d55' : '#c98a1b'; c.beginPath(); c.arc(W / 2 + clamp(m.dt / HIT.good, -1, 1) * mw / 2, my, 3.5, 0, 7); c.fill(); }
+  c.globalAlpha = 1; c.font = '600 10px ' + FONT; c.fillStyle = 'rgba(20,20,20,.4)'; c.textAlign = 'right'; c.fillText('early', mx - 6, my + 3.5); c.textAlign = 'left'; c.fillText('late', mx + mw + 6, my + 3.5);
+  const done = HERO.n.perfect + HERO.n.good + HERO.n.miss, hud = `<b>${HERO.score.toLocaleString('en')}</b><span>${now < 0 && !(HERO.notes[0]?.t > AHEAD * sp) ? 'Get ready…' : HERO.notes[HERO.at] && (HERO.notes[HERO.at].t - now) / sp > 4 ? `Next hit in ${Math.ceil((HERO.notes[HERO.at].t - now) / sp)} s` : HERO.combo > 1 ? `${HERO.combo} combo · ×${Math.min(4, 1 + Math.floor(HERO.combo / 10))}` : `${done} / ${HERO.notes.length}`}</span>`;
+  if (hud !== HERO.hud) { hhud.innerHTML = hud; HERO.hud = hud; } }
+// (the kit makes room: it slides left of the lanes, or above them on a phone, and steps back a little)
+function heroView() { const vis = !heroEl.hidden && !document.body.classList.contains('tuning'); if (vis) { const r = heroEl.getBoundingClientRect(); heroBox = { l: r.left, t: r.top }; }
+  heroK += ((vis ? 1 : 0) - heroK) * .1; renderer.toneMappingExposure = 1.02 * (1 - heroK * .1); const w = stage.clientWidth, h = stage.clientHeight;
+  if (heroK < .002) { if (camera.view?.enabled) camera.clearViewOffset(); return; }
+  const narrow = innerWidth <= 760; camera.setViewOffset(w, h, narrow ? 0 : heroK * (w - heroBox.l) / 2, narrow ? heroK * (h / 2 - (64 + heroBox.t) / 2) : 0, w, h); }   // (the kit's middle: the middle of what the lanes leave free)
 
 // ---------- the hand on the stage: a tap on a part plays it; a drag on the room looks round; the wheel comes closer ----------
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -445,7 +617,7 @@ function pick(e) { const r = stage.getBoundingClientRect(); ndc.set((e.clientX -
 let drag = null;
 if (!BARE) {
   stage.addEventListener('pointerdown', e => { unlock(); const h = pick(e);
-    if (h?.piece) { const p = h.piece; hitPiece(p, .8 + Math.random() * .2, p.id === 'hihat' && e.shiftKey, h.zone); return; }
+    if (h?.piece) { const p = h.piece, hl = laneOf(p.id); if (heroLive() && HERO.lanes.includes(hl)) { heroPress(hl, .85, p, h.zone); return; } hitPiece(p, .8 + Math.random() * .2, p.id === 'hihat' && e.shiftKey, h.zone); return; }
     if (h?.bar) { hitBar(h.bar, .85 + Math.random() * .15); return; }
     drag = { x: e.clientX, y: e.clientY, az: view.taz, el: view.tel }; stage.classList.add('dragging'); try { stage.setPointerCapture(e.pointerId); } catch { } });
   stage.addEventListener('pointermove', e => { if (drag) { view.taz = clamp(drag.az - (e.clientX - drag.x) * .005, VIEWS[P.look].az - .9, VIEWS[P.look].az + .9); view.tel = clamp(drag.el + (e.clientY - drag.y) * .004, .02, 1.25); return; }
@@ -460,7 +632,7 @@ if (!BARE) {
 const LOOKS = ['Drums', 'Xylophone'];
 const SOUNDS = { Drums: () => PIECES.slice(0, P.kit).flatMap(p => p.sounds).concat(['hhopen']), Xylophone: () => XYLO.map(s => s.name) };
 function updateHint() { const H = { Drums: coarse ? 'Tap a drum or a cymbal' : 'Click a drum, or play the letters · Shift = a harder hit · G opens the hi-hat', Xylophone: coarse ? 'Tap the bars' : 'Click the bars, or play Z…M and Q…I like a piano' };
-  $('hint').textContent = H[P.look] || ''; }
+  $('hint').textContent = heroLive() ? (coarse ? 'Tap the caps as the notes reach the line' : 'Hit the notes as they reach the line · ' + HERO.lanes.map(l => l.key === ' ' ? 'Space' : l.key.toUpperCase()).join(' ')) : H[P.look] || ''; }
 function applyLook(name, now) { if (!LOOKS.includes(name)) name = 'Drums'; P.look = name; if (!BARE) save();
   KIT.visible = name === 'Drums'; XY.visible = name === 'Xylophone'; frameView(name, now); $('nm').textContent = name;
   load(SOUNDS[name]()); renderTools(); refreshLabels(); updateHint(); }
@@ -491,7 +663,7 @@ let last = 0, demoT = 0, demoStep = 0;
 const GROOVE = { kick: [0, 7, 8, 10], kick2: [3, 11], snare: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], tom1: [13], tom2: [14], floor1: [15] };
 function frame(now) { requestAnimationFrame(frame); const dt = last ? Math.min(.05, (now - last) / 1000) : .016; last = now; if (THUMB) return;
   if (DEMO) { demoT += dt; const s = Math.floor(demoT / .15); while (demoStep <= s) { const k = demoStep % 16; for (const id in GROOVE) if (GROOVE[id].includes(k) && STATE[id]) { const st = STATE[id]; st.t = 0; st.amp = .9; } demoStep++; } }
-  playerFrame(); animKit(dt); animXylo(dt); placeCam(); renderer.render(scene, camera); placeLabels(); }
+  playerFrame(); heroFrame(); animKit(dt); animXylo(dt); heroView(); placeCam(); renderer.render(scene, camera); placeLabels(); }
 
 // ---------- start; the board's box: ?thumb=1 the full kit and the xylophone in one still, ?demo=1 the drums playing a groove (silent) ----------
 setShell(P.shell); setKit(); applyLight(); document.body.classList.toggle('nokeys', !P.keys);
@@ -500,7 +672,7 @@ if (THUMB) { buildKit(PIECES.length); KIT.visible = XY.visible = true; KIT.posit
   view.t.set(.12, .74, -.25); view.tt.copy(view.t); view.az = view.taz = 0; view.el = view.tel = .3; view.d = view.td = 6.5; resize(); placeCam(); renderer.render(scene, camera); document.body.classList.add('ready'); }
 else { buildKit(BARE ? PIECES.length : P.kit); if (!BARE) { buildPanel(); LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepLook, items: () => LOOKS, current: () => P.look, onPick: n => applyLook(n) }); }
   applyLook(BARE ? 'Drums' : P.look, true); resize(); placeCam(); document.body.classList.add('ready'); requestAnimationFrame(frame); }
-window.INSTR = { PLAY, loadDrumMidi, startPlay, stopPlay, get P() { return P; }, camera, KIT, XY, view, applyLook, frameView, buildKit, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx };
+window.INSTR = { step(n = 60) { for (let i = 0; i < n; i++) { heroFrame(); heroView(); placeCam(); } renderer.render(scene, camera); placeLabels(); }, PLAY, HERO, heroPress, setHero, heroBuild, loadDrumMidi, startPlay, stopPlay, get P() { return P; }, camera, KIT, XY, view, applyLook, frameView, buildKit, hitPiece, hitBar, BARS, PIECES, STATE, BUF, ctx };
 </script>
 </body>
 </html>
