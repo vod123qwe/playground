@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multiselect · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* A multiselect with pills: what you tick in the list flies into the field as a pill. One line: what doesn't fit hides behind
+     a "+N" chip, and the pills slide left and right under the finger, with a glide when let go and a soft give at the ends. A pill
+     goes out with its x (it hops and falls off the screen) or by hand: grab it, throw it down. Everything moves on springs. */
+  :root { --font: var(--lab-font); --bg: #f3f2ee; --ink: #1b1c20; --muted: rgba(20,20,20,.5); --field: #fff; --line: rgba(20,20,20,.07); --pill: #f2f1ed; --menu: #fff;
+    --hover: rgba(20,20,20,.045); --red: #e5484d; --ease: cubic-bezier(.22,.61,.36,1); --soft: cubic-bezier(.3,1.25,.45,1); --page: #fff; --box: var(--bg); --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  body.dark { --bg: #121214; --ink: #f2f2f0; --muted: rgba(255,255,255,.5); --field: #1c1c1f; --line: rgba(255,255,255,.07); --pill: #2a2a2e; --menu: #1c1c1f; --hover: rgba(255,255,255,.06); --page: #17181b; --box: #121214; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; -webkit-font-smoothing: antialiased; transition: background .4s; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { background: var(--box); border-radius: 26px; }
+
+  /* ---------- the multiselect ---------- */
+  .ms { position: absolute; left: 50%; top: max(96px, 24vh); width: min(var(--w, 400px), calc(100% - 32px)); translate: -50% 0; }
+  .ms-top { display: flex; align-items: baseline; justify-content: space-between; margin: 0 6px 8px; font-size: 13px; }
+  .ms-label { font-weight: 600; } .ms-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ms-field { position: relative; display: flex; height: 52px; border-radius: 18px; background: var(--field); box-shadow: 0 0 0 1px var(--line); overflow: hidden; cursor: pointer; outline: none; transition: box-shadow .25s, background .4s; }
+  .ms-field:focus-visible { box-shadow: 0 0 0 1px var(--line), 0 0 0 4px color-mix(in srgb, var(--ink) 7%, transparent); }
+  .ms-box { position: relative; }
+  .ms-field { transition: box-shadow .35s, background .4s; }
+  .ms.open .ms-field { box-shadow: 0 0 0 1px var(--line), 0 14px 34px -22px rgba(0,0,0,.28); }
+  .ms-view { position: relative; flex: 1; min-width: 0; touch-action: none; --fl: 0px; --fr: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fl), #000 calc(100% - var(--fr)), transparent); mask-image: linear-gradient(to right, transparent, #000 var(--fl), #000 calc(100% - var(--fr)), transparent); }
+  .ms-ph { position: absolute; left: 16px; top: 16px; color: var(--muted); font-size: 15px; line-height: 20px; pointer-events: none; transition: opacity .2s; }
+  .ms-ph.off { opacity: 0; }
+  .ms-pill, .fly .ms-pill { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 5px 0 8px; border-radius: 999px; background: var(--pill); color: var(--ink);
+    font: 500 14px/1 var(--font); white-space: nowrap; user-select: none; -webkit-user-select: none; will-change: transform; cursor: grab; transition: background .2s, box-shadow .25s; }
+  .ms-pill .fi { width: 18px; height: 18px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .ms-x { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; transition: background .2s, color .2s; }
+  .ms-x:hover { background: var(--hover); color: var(--ink); } .ms-x svg { width: 13px; height: 13px; }
+  .ms-x:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 40%, transparent); outline-offset: 0; }
+  .fly { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+  .fly .ms-pill { box-shadow: 0 10px 26px -10px rgba(0,0,0,.28), 0 0 0 1px var(--line); background: var(--field); }
+  .fly .ms-pill.lifted { cursor: grabbing; }
+  .fly .ms-pill.out { background: color-mix(in srgb, var(--red) 12%, var(--field)); } .fly .ms-pill.out .ms-x { color: var(--red); }
+  .fly .ms-pill.falling { box-shadow: 0 6px 18px -8px rgba(0,0,0,.22); }
+  .fly .ms-pill.ghost { background: var(--pill); box-shadow: none; }
+  .fx { position: fixed; inset: 0; z-index: 31; width: 100%; height: 100%; pointer-events: none; }
+  .dock { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); transition: left var(--morph), bottom var(--morph); }
+  .ms-more { flex: none; align-self: center; width: 0; height: 30px; margin: 0; padding: 0; border: 0; border-radius: 999px; overflow: hidden; background: var(--ink); color: var(--field); font: 600 12.5px/30px var(--font);
+    font-variant-numeric: tabular-nums; text-align: center; opacity: 0; cursor: pointer; transition: width .45s var(--soft), margin .45s var(--soft), opacity .2s, scale .35s var(--soft); }
+  .ms-more.on { width: 44px; margin: 0 2px 0 0; opacity: 1; }
+  .ms-more.bump { scale: 1.12; transition: scale .08s; }
+  .ms-chev { flex: none; width: 44px; height: 52px; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+  .ms-chev svg { width: 18px; height: 18px; transition: rotate .45s var(--soft); } .ms.open .ms-chev svg { rotate: 180deg; } .ms-chev:hover { color: var(--ink); }
+  .ms-hint { margin: 14px 0 0; text-align: center; color: var(--muted); font-size: 13px; transition: opacity .5s; } .ms-hint.gone { opacity: 0; }
+  /* the list: a card under the field, opening with a soft spring */
+  .ms-menu { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; display: grid; grid-template-rows: 0fr; border-radius: 18px; background: var(--menu);
+    box-shadow: 0 0 0 1px var(--line), 0 24px 44px -20px rgba(0,0,0,.24); opacity: 0; translate: 0 -6px; visibility: hidden;
+    transition: grid-template-rows .34s cubic-bezier(.4,0,.6,1), translate .34s var(--ease), opacity .2s .12s, visibility 0s .34s; }
+  .ms.open .ms-menu { grid-template-rows: 1fr; opacity: 1; translate: 0 0; visibility: visible; transition: grid-template-rows .62s cubic-bezier(.2,.9,.22,1), translate .62s var(--soft), opacity .14s; }
+  .ms-in { min-height: 0; overflow: hidden; padding: 0 6px; }
+  .ms-in > :first-child { margin-top: 6px; } .ms-in > :last-child { margin-bottom: 6px; }
+  .ms-search, .ms-opt { opacity: 0; translate: 0 -8px; }
+  .ms.open .ms-search, .ms.open .ms-opt { opacity: 1; translate: 0 0; transition: opacity .3s var(--d, 0s), translate .55s var(--soft) var(--d, 0s), background .15s; }
+  .ms-search { position: relative; display: block; margin-bottom: 4px; --d: 40ms; transition: opacity .15s, translate .15s; }
+  .ms-search svg { position: absolute; left: 12px; top: 11px; width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
+  .ms-search input { width: 100%; height: 40px; padding: 0 12px 0 38px; border: 0; border-radius: 14px; background: var(--hover); color: var(--ink); font: 500 14px var(--font); outline: none; }
+  .ms-search input::placeholder { color: var(--muted); }
+  .ms-list { max-height: 264px; margin: 0; padding: 0; overflow: auto; overscroll-behavior: contain; list-style: none; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) transparent; }
+  .ms-opt { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 13px; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity .15s, translate .15s, background .15s; }
+  .ms-opt:hover, .ms-opt.act { background: var(--hover); }
+  .ms-opt .fi { width: 22px; height: 22px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .ms-opt .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ms-check { display: grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 22%, transparent); color: var(--field); transition: background .2s, box-shadow .2s; }
+  .ms-check svg { width: 12px; height: 12px; scale: 0; transition: scale .35s var(--soft); }
+  .ms-opt[aria-selected=true] .ms-check { background: var(--ink); box-shadow: none; } .ms-opt[aria-selected=true] .ms-check svg { scale: 1; }
+  .ms-empty { padding: 14px 12px; color: var(--muted); font-size: 14px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---------- the page's chrome (as the other lab pieces) ---------- */
+  .back { position: fixed; top: 16px; left: 16px; z-index: 6; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; transition: top var(--morph), left var(--morph), translate .2s var(--ease); }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { position: fixed; top: 16px; right: 16px; z-index: 6; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20;
+    font: 600 14px var(--font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  body.dark .back, body.dark .tune { background: #1c1c1f; color: #f2f2f0; }
+  body.tuning .back { top: 30px; left: 30px; }
+  body.thumb .ms { top: 50px; } body.thumb .ms-list { max-height: 132px; }
+  body.bare .back, body.bare .tune, body.bare .panel, body.bare .ms-hint, body.bare .dock { display: none !important; }
+  /* the panel: a card beside the stage (lab-ui soft) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; display: flex; gap: 8px; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  .acts button { flex: 1; height: 40px; border: 0; border-radius: 999px; background: var(--ui-field); color: var(--ui-ink); font: 600 13px var(--font); cursor: pointer; } .acts button:hover { background: var(--ui-field-hi); }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .dock { left: calc(50% - 176px); bottom: calc(34px + env(safe-area-inset-bottom)); } }
+  @media (max-width: 760px) {
+    .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .back { top: 18px; left: 18px; } body.tuning .dock { display: none; }
+    .ms { top: 84px; }
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage">
+  <div class="ms" id="ms">
+    <div class="ms-top"><span class="ms-label" id="lbl">Countries</span><span class="ms-count" id="cnt"></span></div>
+    <div class="ms-box">
+    <div class="ms-field" id="field" role="combobox" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-controls="list" aria-labelledby="lbl">
+      <div class="ms-view" id="view"><span class="ms-ph" id="ph">Choose countries</span></div>
+      <button class="ms-more" id="more" type="button" tabindex="-1"></button>
+      <button class="ms-chev" id="chev" type="button" tabindex="-1" aria-label="Show the list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
+    <div class="ms-menu" id="menu"><div class="ms-in">
+      <label class="ms-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+        <input id="search" type="text" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search countries" aria-controls="list"></label>
+      <ul class="ms-list" id="list" role="listbox" aria-multiselectable="true" aria-label="Countries"></ul>
+    </div></div>
+    </div>
+    <p class="ms-hint" id="hint">Swipe the pills · drag one down to remove it</p>
+  </div>
+</main>
+<div class="fly" id="fly" aria-hidden="true"></div>
+<canvas class="fx" id="fx" aria-hidden="true"></canvas>
+<div class="dock" id="dock"><div class="vars" id="vars" role="group" aria-label="How a pill goes">
+  <button id="prev" type="button" aria-label="Previous way out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="vn" id="nm" aria-live="polite">Fall</span>
+  <button id="next" type="button" aria-label="Next way out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div></div>
+<p class="sr" id="live" aria-live="polite"></p>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the multiselect"></aside>
+<script src="../../shared/lab-ui.js?v=20"></script>
+<script>
+// ---------- the settings and the choice; kept in the browser ----------
+const KEY = 'lab.multiselect.v1';
+const DEF = { theme: 'light', width: 400, soft: .5, bounce: .35, glide: .38, gravity: 2600, spin: 1, throwAway: true, flyIn: true, exit: 'fall' };
+const START = ['pl', 'de', 'fr', 'it', 'es', 'pt', 'nl', 'se', 'no'];
+const q = new URLSearchParams(location.search), THUMB = q.has('thumb');
+let P = (() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF }; } })();
+let SEL = (() => { try { const s = JSON.parse(localStorage.getItem(KEY + '.sel')); return Array.isArray(s) ? s : START.slice(); } catch { return START.slice(); } })();
+if (THUMB) { P = { ...DEF }; SEL = START.slice(); document.body.classList.add('bare'); }
+const save = () => { if (THUMB) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); localStorage.setItem(KEY + '.sel', JSON.stringify(SEL)); } catch { } };
+const $ = id => document.getElementById(id), clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches, coarse = matchMedia('(pointer: coarse)').matches;
+
+const COUNTRIES = [['ar', 'Argentina'], ['au', 'Australia'], ['at', 'Austria'], ['be', 'Belgium'], ['br', 'Brazil'], ['ca', 'Canada'], ['cl', 'Chile'], ['cn', 'China'], ['hr', 'Croatia'], ['cz', 'Czechia'],
+  ['dk', 'Denmark'], ['ee', 'Estonia'], ['fi', 'Finland'], ['fr', 'France'], ['de', 'Germany'], ['gr', 'Greece'], ['hu', 'Hungary'], ['is', 'Iceland'], ['in', 'India'], ['id', 'Indonesia'], ['ie', 'Ireland'],
+  ['il', 'Israel'], ['it', 'Italy'], ['jp', 'Japan'], ['ke', 'Kenya'], ['lv', 'Latvia'], ['lt', 'Lithuania'], ['mx', 'Mexico'], ['ma', 'Morocco'], ['nl', 'Netherlands'], ['nz', 'New Zealand'], ['ng', 'Nigeria'],
+  ['no', 'Norway'], ['pe', 'Peru'], ['ph', 'Philippines'], ['pl', 'Poland'], ['pt', 'Portugal'], ['ro', 'Romania'], ['sg', 'Singapore'], ['sk', 'Slovakia'], ['si', 'Slovenia'], ['za', 'South Africa'],
+  ['kr', 'South Korea'], ['es', 'Spain'], ['se', 'Sweden'], ['ch', 'Switzerland'], ['th', 'Thailand'], ['tr', 'Türkiye'], ['ua', 'Ukraine'], ['ae', 'United Arab Emirates'], ['gb', 'United Kingdom'],
+  ['us', 'United States'], ['vn', 'Vietnam']];
+const NAME = Object.fromEntries(COUNTRIES);
+SEL = SEL.filter(c => NAME[c]);
+
+const ms = $('ms'), field = $('field'), view = $('view'), more = $('more'), fly = $('fly'), list = $('list'), search = $('search');
+const PADL = 9, PADT = 9, ROWH = 34, GAP = 6, CHEVW = 44, CHIPW = 46;
+const X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+// ---------- the springs: one feel for everything (Softness = how slow, Bounce = how much it overshoots) ----------
+let K = 300, C = 26;
+function tune() { K = REDUCED ? 900 : lerp(560, 150, P.soft); C = 2 * (REDUCED ? 1 : lerp(1, .5, P.bounce)) * Math.sqrt(K); }
+const spring = (o, k, t, dt, kk = K, cc = C) => { const a = kk * (t - o[k]) - cc * o['v' + k]; o['v' + k] += a * dt; o[k] += o['v' + k] * dt; };
+
+// ---------- the pills ----------
+// (a pill lives in the field (x, y in the row, under the scroll) or, when lifted, flying in or falling, on the fly layer over
+//  the page (fx, fy on the screen, a turn r and a scale sc))
+const PILLS = new Map(), FALL = [];
+function makePill(code) { const el = document.createElement('span'); el.className = 'ms-pill'; el.dataset.code = code;
+  el.innerHTML = `<span class="fi fis fi-${code}" aria-hidden="true"></span><span>${NAME[code]}</span><button class="ms-x" type="button" aria-label="Remove ${NAME[code]}">${X_ICON}</button>`;
+  const p = { code, el, w: 0, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, state: 'in', fx: 0, fy: 0, vfx: 0, vfy: 0, r: 0, vr: 0, sc: 1, vsc: 0, out: false, gx: 0, gy: 0 };
+  const x = el.querySelector('.ms-x'); x.addEventListener('click', e => { e.stopPropagation(); remove(code); });
+  x.addEventListener('focus', () => reveal(p)); x.addEventListener('keydown', e => { if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); focusNext(code); remove(code); } });
+  view.appendChild(el); p.w = el.offsetWidth; flagImg(code); return p; }
+const FLAGS = {}; function flagImg(c) { if (FLAGS[c]) return FLAGS[c]; const i = new Image(); i.crossOrigin = 'anonymous'; i.src = `https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/flags/1x1/${c}.svg`; return FLAGS[c] = i; }
+for (const c of SEL) { const p = makePill(c); PILLS.set(c, p); }
+
+// ---------- the layout: one row (collapsed) or wrapped rows (expanded); everything springs to its place ----------
+let EXP = false, S = 0, vS = 0, STO = null, maxS = 0, viewW = 300, chipOn = false, FH = 52, vFH = 0, FH_T = 52, wheelT = -1e9, DRAG = null;
+function layout() { const fw = field.clientWidth, live = SEL.map(c => PILLS.get(c)).filter(p => p && !p.out);
+  const natural = live.reduce((a, p) => a + p.w + GAP, 0) - GAP + PADL * 2;
+  chipOn = EXP || natural > fw - CHEVW; viewW = fw - CHEVW - (chipOn ? CHIPW : 0);
+  let x = 0, y = 0, rows = 1; const avail = viewW - PADL * 2;
+  for (const p of live) { if (EXP && x > 0 && x + p.w > avail) { x = 0; y += ROWH + GAP; rows++; } p.tx = x; p.ty = y; x += p.w + GAP; }
+  maxS = EXP ? 0 : Math.max(0, x - GAP + PADL * 2 - viewW);
+  FH_T = EXP ? Math.max(52, PADT * 2 + rows * ROWH + (rows - 1) * GAP) : 52;
+  more.classList.toggle('on', chipOn); $('ph').classList.toggle('off', SEL.length > 0);
+  $('cnt').textContent = SEL.length ? SEL.length + ' selected' : ''; }
+// (how many pills are not fully in view: the chip's number)
+function hidden() { if (EXP) return 0; let n = 0; for (const c of SEL) { const p = PILLS.get(c); if (!p || p.out) continue; const l = PADL + p.tx - S, r = l + p.w; if (l < -1 || r > viewW + 1) n++; } return n; }
+const slot = p => { const v = view.getBoundingClientRect(); return { x: v.left + PADL + p.tx - S, y: v.top + PADT + p.ty }; };
+function toFly(p) { const r = p.el.getBoundingClientRect(); p.fx = r.left; p.fy = r.top; p.vfx = p.vx; p.vfy = p.vy; p.r = 0; p.vr = 0; p.sc = 1; p.vsc = 0; fly.appendChild(p.el); }
+function land(p) { const v = view.getBoundingClientRect(); p.x = p.fx - v.left - PADL + S; p.y = p.fy - v.top - PADT; p.vx = p.vfx; p.vy = p.vfy; p.state = 'in'; p.el.classList.remove('lifted', 'out'); view.appendChild(p.el); }
+// (bring a pill into view: the row glides to it)
+function reveal(p) { if (EXP || p.state !== 'in') return; const l = PADL + p.tx, r = l + p.w; if (l - PADL < S) STO = Math.max(0, l - PADL); else if (r + PADL > S + viewW) STO = Math.min(maxS, r + PADL - viewW); }
+
+// ---------- adding and removing ----------
+function add(code, from) { if (PILLS.has(code)) return; SEL.push(code); const p = makePill(code); PILLS.set(code, p); layout(); if (!EXP) STO = maxS;
+  if (from && P.flyIn && !REDUCED) { fly.appendChild(p.el); p.state = 'fly'; p.fx = from.x; p.fy = from.y; p.sc = .9; }
+  else { p.x = p.tx; p.y = p.ty + 10; p.el.animate([{ opacity: 0 }, { opacity: 1 }], 220); }
+  save(); sync(); say(NAME[code] + ' added'); hint(); }
+// (out it goes: a small hop and a fall off the screen, turning; thrown, it keeps the throw)
+function remove(code, v) { const p = PILLS.get(code); if (!p) return; SEL = SEL.filter(c => c !== code); PILLS.delete(code);
+  if (p.state === 'in') toFly(p); p.el.classList.remove('lifted', 'out'); p.state = 'gone'; p.el.querySelector('.ms-x').tabIndex = -1;
+  (EXIT_FX[REDUCED ? 'classic' : P.exit] || EXIT_FX.fall)(p, v);
+  layout(); save(); sync(); say(NAME[code] + ' removed'); hint(); }
+// ---------- the ways out ----------
+const EXITS = ['classic', 'fall', 'split', 'pop', 'dust', 'swirl'], EXIT_NAME = { classic: 'Classic', fall: 'Fall', split: 'Split', pop: 'Pop', dust: 'Dust', swirl: 'Swirl' };
+const at = p => `translate(${p.fx}px, ${p.fy}px) rotate(${p.r}deg) scale(${p.sc})`;
+function drop(p, v, hop = 1) { if (v) { p.vfx = v.x; p.vfy = v.y; } else { p.vfx = (Math.random() - .5) * 180; p.vfy = (-360 - Math.random() * 140) * hop; }
+  p.vr = (p.vfx * .22 + (Math.random() - .5) * 260) * P.spin; FALL.push(p); }
+const EXIT_FX = {
+  // (quiet: it fades as it slips down a touch)
+  classic(p) { p.el.classList.add('ghost'); p.el.animate([{ transform: at(p), opacity: 1 }, { transform: `translate(${p.fx}px, ${p.fy + 12}px) scale(.94)`, opacity: 0 }], { duration: 260, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).onfinish = () => p.el.remove(); },
+  // (a small hop, then it falls off the screen, turning; thrown, it keeps the throw)
+  fall(p, v) { p.el.classList.add('falling'); drop(p, v); },
+  // (it cracks down the middle and the two halves tumble apart)
+  split(p, v) { p.el.classList.add('falling'); const b = p.el.cloneNode(true); fly.appendChild(b); const crack = 'calc(50% + 3px) -30px, calc(50% - 3px) 30%, calc(50% + 3px) 55%, calc(50% - 2px) 78%, calc(50% + 2px) calc(100% + 30px)';
+    p.el.style.clipPath = `polygon(-30px -30px, ${crack}, -30px calc(100% + 30px))`; b.style.clipPath = `polygon(calc(100% + 30px) -30px, ${crack}, calc(100% + 30px) calc(100% + 30px))`;
+    p.el.style.transformOrigin = '25% 50%'; b.style.transformOrigin = '75% 50%';
+    const q = { el: b, fx: p.fx, fy: p.fy, r: p.r, sc: p.sc }, base = v || { x: 0, y: -300 };
+    drop(p, { x: base.x - 90 - Math.random() * 60, y: base.y }); drop(q, { x: base.x + 90 + Math.random() * 60, y: base.y }); p.vr = -Math.abs(p.vr) - 120 * P.spin; q.vr = Math.abs(q.vr) + 120 * P.spin; },
+  // (it swells a touch and bursts into dots in its flag's colours, a ring going out)
+  pop(p) { p.el.classList.add('ghost'); const R = raster(p); p.el.animate([{ transform: at(p) }, { transform: at({ ...p, sc: p.sc * 1.1 }) }], { duration: 110, easing: 'cubic-bezier(.3,0,.6,1)', fill: 'forwards' }).onfinish = () => {
+      p.el.remove(); if (!R) return; const cols = R.colors(); PARTS.push({ k: 'ring', x: R.cx, y: R.cy, w: R.w * 1.1, h: R.h * 1.1, r: p.r, t: 0, life: .42, c: cols[0] });
+      for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2 + Math.random() * .3, ex = Math.cos(a) * R.w * .55, ey = Math.sin(a) * R.h * .55, sp = 180 + Math.random() * 260;
+        PARTS.push({ k: 'dot', x: R.cx + ex, y: R.cy + ey, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .8 - 60, g: 900, s: 2.5 + Math.random() * 3, c: cols[i % cols.length], t: 0, life: .45 + Math.random() * .3, drag: 3.2 }); } }; },
+  // (it turns to dust from left to right and drifts away)
+  dust(p, v) { const R = raster(p); if (!R) return EXIT_FX.classic(p); p.el.classList.add('ghost'); const m = 'linear-gradient(to right, transparent 45%, #000 55%)';
+    Object.assign(p.el.style, { maskImage: m, webkitMaskImage: m, maskSize: '220% 100%', webkitMaskSize: '220% 100%', maskRepeat: 'no-repeat', webkitMaskRepeat: 'no-repeat' });
+    p.el.animate([{ maskPosition: '100% 0', webkitMaskPosition: '100% 0' }, { maskPosition: '0% 0', webkitMaskPosition: '0% 0' }], { duration: 500, fill: 'forwards' }).onfinish = () => p.el.remove();   // (the pill wipes away from the left as its dust lifts off)
+    const vx0 = v ? v.x * .15 : 0, vy0 = v ? v.y * .1 : 0;
+    for (const d of R.pixels(2)) PARTS.push({ k: 'px', x: d.x, y: d.y, vx: 0, vy: 0, ax: 40 + Math.random() * 120 + vx0, ay: -(30 + Math.random() * 90) + vy0, s: 2, c: d.c, t: -(.5 * (d.u + .1) / 1.2 + Math.random() * .04), life: .7 + Math.random() * .6, drag: .6 }); },
+  // (it spins and shrinks into its own x, like water down a drain)
+  swirl(p) { p.el.classList.add('ghost'); const w = p.el.offsetWidth, dx = (w / 2 - 17) * Math.cos(p.r * Math.PI / 180);
+    p.el.animate([{ transform: at(p), opacity: 1, filter: 'blur(0px)' }, { transform: at({ ...p, sc: p.sc * 1.05 }), opacity: 1, filter: 'blur(0px)', offset: .16 },
+      { transform: `translate(${p.fx + dx}px, ${p.fy}px) rotate(${p.r - 400}deg) scale(.04)`, opacity: .2, filter: 'blur(1.5px)' }], { duration: 620, easing: 'cubic-bezier(.55,0,.7,.4)', fill: 'forwards' }).onfinish = () => p.el.remove(); } };
+// (the pill drawn into a canvas, as it sits on the screen: its pixels for Dust, its flag's colours for Pop)
+function raster(p) { try { const el = p.el, w = el.offsetWidth, h = el.offsetHeight, d = 2, c = document.createElement('canvas'); c.width = w * d; c.height = h * d; const g = c.getContext('2d', { willReadFrequently: true }); g.scale(d, d);
+    const cs = getComputedStyle(el); g.fillStyle = cs.backgroundColor; g.beginPath(); g.roundRect(0, 0, w, h, h / 2); g.fill();
+    const img = FLAGS[p.code]; if (img && img.complete && img.naturalWidth) { g.save(); g.beginPath(); g.arc(17, h / 2, 9, 0, 7); g.clip(); g.drawImage(img, 8, h / 2 - 9, 18, 18); g.restore(); }
+    g.fillStyle = cs.color; g.font = `500 14px ${cs.fontFamily}`; g.textBaseline = 'middle'; g.fillText(NAME[p.code], 33, h / 2 + .5);
+    g.strokeStyle = getComputedStyle(el.querySelector('.ms-x')).color; g.lineWidth = 1.6; g.lineCap = 'round'; const xc = w - 17; g.beginPath(); g.moveTo(xc - 3.6, h / 2 - 3.6); g.lineTo(xc + 3.6, h / 2 + 3.6); g.moveTo(xc + 3.6, h / 2 - 3.6); g.lineTo(xc - 3.6, h / 2 + 3.6); g.stroke();
+    const data = g.getImageData(0, 0, c.width, c.height).data, cx = p.fx + w / 2, cy = p.fy + h / 2, a = p.r * Math.PI / 180, ca = Math.cos(a) * p.sc, sa = Math.sin(a) * p.sc;
+    const px = (x, y) => { const i = (Math.round(y * d) * c.width + Math.round(x * d)) * 4; return [data[i], data[i + 1], data[i + 2], data[i + 3]]; };
+    const scr = (x, y) => ({ x: cx + (x - w / 2) * ca - (y - h / 2) * sa, y: cy + (x - w / 2) * sa + (y - h / 2) * ca });
+    return { w, h, cx, cy,
+      pixels(step) { const out = []; for (let y = step / 2; y < h; y += step) for (let x = step / 2; x < w; x += step) { const [r, gg, b, al] = px(x, y); if (al < 40) continue; out.push({ ...scr(x, y), u: x / w, c: `rgb(${r},${gg},${b})` }); } return out; },
+      colors() { const out = []; for (let i = 0; i < 14; i++) { const a2 = Math.random() * 7, rr = Math.random() * 7; const [r, gg, b, al] = px(17 + Math.cos(a2) * rr, h / 2 + Math.sin(a2) * rr); if (al > 100) out.push(`rgb(${r},${gg},${b})`); } return out.length ? out : [cs.color]; } };
+  } catch { return null; } }
+// (the effects' particles, drawn on one canvas over the page)
+const fxc = $('fx'), fxg = fxc.getContext('2d'), PARTS = []; let fxOn = false;
+function drawFx(dt) { if (!PARTS.length && !fxOn) return; const dpr = Math.min(devicePixelRatio, 2), W = innerWidth, H = innerHeight;
+  if (fxc.width !== Math.round(W * dpr) || fxc.height !== Math.round(H * dpr)) { fxc.width = Math.round(W * dpr); fxc.height = Math.round(H * dpr); }
+  fxg.setTransform(dpr, 0, 0, dpr, 0, 0); fxg.clearRect(0, 0, W, H); fxOn = PARTS.length > 0;
+  for (let i = PARTS.length - 1; i >= 0; i--) { const q = PARTS[i]; q.t += dt; if (q.t >= q.life) { PARTS.splice(i, 1); continue; } const k = Math.max(0, q.t / q.life);
+    if (q.k === 'ring') { fxg.save(); fxg.translate(q.x, q.y); fxg.rotate(q.r * Math.PI / 180); const sc = 1 + k * .45; fxg.globalAlpha = (1 - k) * .55; fxg.strokeStyle = q.c; fxg.lineWidth = 2.5 * (1 - k) + .5; fxg.beginPath(); fxg.roundRect(-q.w * sc / 2, -q.h * sc / 2, q.w * sc, q.h * sc, q.h * sc / 2); fxg.stroke(); fxg.restore(); continue; }
+    if (q.t > 0) { if (q.ax != null) { q.vx += q.ax * dt * 2.2; q.vy += q.ay * dt * 2.2; q.vx += Math.sin(q.y * .06 + q.t * 5) * 30 * dt; } q.vy += (q.g || 0) * dt; const f = Math.exp(-(q.drag || 0) * dt); q.vx *= f; q.vy *= f; q.x += q.vx * dt; q.y += q.vy * dt; }
+    if (q.t <= 0) continue; fxg.globalAlpha = 1 - k * k; fxg.fillStyle = q.c;
+    if (q.k === 'dot') { fxg.beginPath(); fxg.arc(q.x, q.y, q.s * (1 - k * .5), 0, 7); fxg.fill(); } else fxg.fillRect(q.x - q.s / 2, q.y - q.s / 2, q.s * (q.t <= 0 ? 1 : 1 - k * .4), q.s * (q.t <= 0 ? 1 : 1 - k * .4)); }
+  fxg.globalAlpha = 1; }
+// (on the variant pill: a new way out shows itself on the last pill, which then flies back in)
+let demoT = 0;
+function setExit(k) { if (!EXITS.includes(k)) return; P.exit = k; save(); $('nm').textContent = EXIT_NAME[k]; clearTimeout(demoT); const code = SEL[SEL.length - 1]; if (!code) return;
+  if (!EXP) STO = maxS; demoT = setTimeout(() => { remove(code); demoT = setTimeout(() => { const r = field.getBoundingClientRect(); add(code, { x: r.right - 140, y: -60 }); }, 1250); }, 320); }
+function focusNext(code) { const i = SEL.indexOf(code), n = SEL[i + 1] ?? SEL[i - 1]; if (n) PILLS.get(n).el.querySelector('.ms-x').focus(); else field.focus(); }
+let liveT = 0; const say = t => { clearTimeout(liveT); liveT = setTimeout(() => { $('live').textContent = t; }, 60); };
+let hinted = false; function hint() { if (hinted) return; hinted = true; $('hint').classList.add('gone'); }
+
+// ---------- the hand in the field: a sideways swipe slides the row (with a glide and a soft give at the ends); a pill pulled
+// up or down lifts off and follows; let go far enough (or thrown), it falls; otherwise it springs back to its place ----------
+const band = (o, d) => (1 - 1 / (o * .55 / d + 1)) * d;
+const rubber = v => v < 0 ? -band(-v, viewW) : v > maxS ? maxS + band(v - maxS, viewW) : v;
+function velocity(h) { const now = performance.now(), a = h.filter(s => now - s[0] < 90); if (a.length < 2) return { x: 0, y: 0 }; const f = a[0], l = a[a.length - 1], dt = Math.max(.008, (l[0] - f[0]) / 1000); return { x: (l[1] - f[1]) / dt, y: (l[2] - f[2]) / dt }; }
+view.addEventListener('pointerdown', e => { if (e.button > 0 || e.target.closest('.ms-x') || THUMB) return; const pe = e.target.closest('.ms-pill'), p = pe && PILLS.get(pe.dataset.code);
+  DRAG = { id: e.pointerId, x0: e.clientX, y0: e.clientY, p: p && p.state === 'in' ? p : null, mode: 'wait', h: [[performance.now(), e.clientX, e.clientY]] };
+  STO = null; vS = 0; e.preventDefault(); });
+addEventListener('pointermove', e => { const D = DRAG; if (!D || e.pointerId !== D.id) return; const dx = e.clientX - D.x0, dy = e.clientY - D.y0; D.h.push([performance.now(), e.clientX, e.clientY]); if (D.h.length > 14) D.h.shift();
+  if (D.mode === 'wait' && Math.hypot(dx, dy) > 6) {
+    if (D.p && P.throwAway && (EXP || Math.abs(dy) > Math.abs(dx))) { const p = D.p; D.mode = 'lift'; toFly(p); p.state = 'lift'; p.el.classList.add('lifted'); D.ox = e.clientX - p.fx; D.oy = e.clientY - p.fy; hint(); }
+    else if (!EXP) { D.mode = 'scroll'; D.raw = S; D.dx0 = dx; hint(); } else D.mode = 'none'; }
+  if (D.mode === 'scroll') S = rubber(D.raw - (dx - D.dx0));
+  if (D.mode === 'lift') { const p = D.p; p.gx = e.clientX - D.ox; p.gy = e.clientY - D.oy; const s = slot(p), far = Math.hypot(p.gx - s.x, p.gy - s.y) > 56;
+    if (far !== p.out) { p.out = far; p.el.classList.toggle('out', far); layout(); } } });
+function up(e) { const D = DRAG; if (!D || e.pointerId !== D.id) return; DRAG = null; const v = velocity(D.h);
+  if (D.mode === 'scroll') vS = -v.x;
+  else if (D.mode === 'lift') { const p = D.p; if (p.out || Math.hypot(v.x, v.y) > 1100) remove(p.code, v); else { p.state = 'fly'; p.vfx = v.x; p.vfy = v.y; p.el.classList.remove('lifted', 'out'); } }
+  else if (D.mode === 'wait' && e.type === 'pointerup') openMenu(!OPEN); }
+addEventListener('pointerup', up); addEventListener('pointercancel', up);
+// (a touchpad swipe or the mouse wheel slides the row too; past an end it gives a little and springs back when the swipe stops)
+view.addEventListener('wheel', e => { if (EXP) return; e.preventDefault(); let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; if (e.deltaMode === 1) d *= 16;
+  STO = null; vS = 0; const over = S < 0 ? S : S > maxS ? S - maxS : 0; if (over && Math.sign(d) === Math.sign(over)) d *= Math.max(.03, .45 * (1 - Math.abs(over) / 80));
+  S += d; wheelT = performance.now(); hint(); }, { passive: false });
+
+// ---------- the list ----------
+let OPEN = false, ACT = 0, ROWS = [];
+function openMenu(on) { if (THUMB && !on) return; OPEN = on; if (on) { search.value = ''; render(); void list.offsetHeight; }   // (rows in place first, so they settle in one by one)
+  ms.classList.toggle('open', on); field.setAttribute('aria-expanded', String(on));
+  if (on) { if (!coarse && !THUMB) setTimeout(() => search.focus({ preventScroll: true }), 20); }
+  else if (document.activeElement === search) field.focus({ preventScroll: true }); }
+function render() { const f = search.value.trim().toLowerCase(); ROWS = COUNTRIES.filter(([, n]) => n.toLowerCase().includes(f)); ACT = clamp(ACT, 0, Math.max(0, ROWS.length - 1));
+  list.innerHTML = ROWS.length ? ROWS.map(([c, n], i) => `<li class="ms-opt${i === ACT ? ' act' : ''}" style="--d:${Math.min(i, 8) * 24 + 70}ms" id="o-${c}" role="option" data-code="${c}" aria-selected="${SEL.includes(c)}"><span class="fi fis fi-${c}" aria-hidden="true"></span><span class="nm">${n}</span><span class="ms-check">${CHECK}</span></li>`).join('')
+    : `<li class="ms-empty">No country matches “${search.value.replace(/[<&]/g, '')}”</li>`;
+  search.setAttribute('aria-activedescendant', ROWS[ACT] ? 'o-' + ROWS[ACT][0] : ''); }
+function sync() { list.querySelectorAll('.ms-opt').forEach(li => li.setAttribute('aria-selected', String(SEL.includes(li.dataset.code)))); }
+function pick(code) { if (SEL.includes(code)) { remove(code); return; }
+  const fl = list.querySelector(`#o-${code} .fi`)?.getBoundingClientRect(); add(code, fl && { x: fl.left - 8 + 2, y: fl.top - (ROWH - 18) / 2 + 2 }); }
+list.addEventListener('click', e => { const li = e.target.closest('.ms-opt'); if (li) pick(li.dataset.code); });
+list.addEventListener('pointermove', e => { const li = e.target.closest('.ms-opt'); if (!li) return; const i = ROWS.findIndex(r => r[0] === li.dataset.code); if (i !== ACT) { ACT = i; list.querySelectorAll('.ms-opt').forEach((x, j) => x.classList.toggle('act', j === i)); } });
+search.addEventListener('input', () => { ACT = 0; render(); });
+search.addEventListener('keydown', e => { const n = ROWS.length;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!n) return; ACT = (ACT + (e.key === 'ArrowDown' ? 1 : -1) + n) % n; list.querySelectorAll('.ms-opt').forEach((x, j) => x.classList.toggle('act', j === ACT)); list.children[ACT]?.scrollIntoView({ block: 'nearest' }); search.setAttribute('aria-activedescendant', 'o-' + ROWS[ACT][0]); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (ROWS[ACT]) pick(ROWS[ACT][0]); }
+  else if (e.key === 'Escape') { e.preventDefault(); openMenu(false); }
+  else if (e.key === 'Backspace' && !search.value && SEL.length) remove(SEL[SEL.length - 1]); });
+field.addEventListener('keydown', e => { if (e.target !== field) return;
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); openMenu(true); }
+  else if (e.key === 'Backspace' && SEL.length) { e.preventDefault(); remove(SEL[SEL.length - 1]); }
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); STO = clamp((STO ?? S) + (e.key === 'ArrowRight' ? 140 : -140), 0, maxS); }
+  else if (e.key === 'Escape') { openMenu(false); setExp(false); } });
+$('chev').addEventListener('click', e => { e.stopPropagation(); openMenu(!OPEN); });
+// (+N opens the field to every pill; Less folds it back to one line)
+function setExp(on) { if (on === EXP) return; EXP = on; layout(); if (!on) STO = clamp(S, 0, maxS); }
+more.addEventListener('click', e => { e.stopPropagation(); setExp(!EXP); });
+addEventListener('pointerdown', e => { if (ms.contains(e.target) || e.target.closest('.panel, .tune')) return; openMenu(false); setExp(false); });
+addEventListener('resize', () => layout());
+
+// ---------- the loop ----------
+let last = 0, shown = -1;
+function frame(t) { requestAnimationFrame(frame); const dt = Math.min(.034, last ? (t - last) / 1000 : .016); last = t; const n = Math.ceil(dt / .004), h = dt / n, now = performance.now();
+  for (let i = 0; i < n; i++) {
+    // the row: a target glide, the spring back from past an end (after a swipe stops), or the glide after a let go
+    if (!(DRAG && DRAG.mode === 'scroll')) { const bound = S < 0 ? 0 : S > maxS ? maxS : null;
+      if (STO != null) { const o = { S, vS }; spring(o, 'S', STO, h); S = o.S; vS = o.vS; if (Math.abs(STO - S) < .2 && Math.abs(vS) < 4) { S = STO; vS = 0; STO = null; } }
+      else if (bound != null) { if (now - wheelT > 110) { const k = 210, o = { S, vS }; spring(o, 'S', bound, h, k, 2 * .92 * Math.sqrt(k)); S = o.S; vS = o.vS; } }
+      else if (vS) { vS *= Math.exp(-h / P.glide); S += vS * h; if (Math.abs(vS) < 3) vS = 0; } }
+    const fh = { FH, vFH }; spring(fh, 'FH', FH_T, h); FH = fh.FH; vFH = fh.vFH;
+    for (const p of PILLS.values()) {
+      if (p.state === 'in') { spring(p, 'x', p.tx, h); spring(p, 'y', p.ty, h); }
+      else if (p.state === 'lift') { const k = 1500, c = 2 * .8 * Math.sqrt(k); spring(p, 'fx', p.gx, h, k, c); spring(p, 'fy', p.gy, h, k, c); spring(p, 'r', clamp(p.vfx * .014, -14, 14), h, 420, 30); spring(p, 'sc', 1.05, h, 420, 30); }
+      else if (p.state === 'fly') { const s = slot(p); spring(p, 'fx', s.x, h); spring(p, 'fy', s.y, h); spring(p, 'r', 0, h); spring(p, 'sc', 1, h);
+        if (Math.hypot(s.x - p.fx, s.y - p.fy) < .6 && Math.hypot(p.vfx, p.vfy) < 30 && Math.abs(p.r) < .3) land(p); } }
+    for (const p of FALL) { p.vfy += P.gravity * h; p.vfx *= Math.exp(-h * .4); p.fx += p.vfx * h; p.fy += p.vfy * h; p.r += p.vr * h; } }
+  // draw
+  field.style.height = FH.toFixed(2) + 'px'; view.style.setProperty('--fl', clamp(S * .6, 0, 18).toFixed(1) + 'px'); view.style.setProperty('--fr', clamp((maxS - S) * .6, 0, 18).toFixed(1) + 'px');
+  for (const p of PILLS.values()) { if (p.state === 'in') p.el.style.transform = `translate(${(PADL + p.x - S).toFixed(2)}px, ${(PADT + p.y).toFixed(2)}px)`;
+    else p.el.style.transform = `translate(${p.fx.toFixed(2)}px, ${p.fy.toFixed(2)}px) rotate(${p.r.toFixed(2)}deg) scale(${p.sc.toFixed(4)})`; }
+  drawFx(dt);
+  for (let i = FALL.length - 1; i >= 0; i--) { const p = FALL[i]; p.el.style.transform = `translate(${p.fx.toFixed(2)}px, ${p.fy.toFixed(2)}px) rotate(${p.r.toFixed(2)}deg)`; if (p.fy > innerHeight + 140) { p.el.remove(); FALL.splice(i, 1); } }
+  const hn = EXP ? -2 : hidden(); if (hn !== shown) { more.textContent = EXP ? 'Less' : '+' + hn; more.setAttribute('aria-label', EXP ? 'Show one line' : `${hn} more, show all`);
+    if (shown >= 0 && hn >= 0) { more.classList.add('bump'); setTimeout(() => more.classList.remove('bump'), 90); } shown = hn; } }
+
+// ---------- the panel ----------
+const panel = $('panel'), ctl = {};
+function apply() { document.body.classList.toggle('dark', P.theme === 'dark'); panel.classList.toggle('dark', P.theme === 'dark'); $('vars').classList.toggle('dark', P.theme === 'dark'); $('nm').textContent = EXIT_NAME[P.exit] || 'Fall'; document.querySelector('meta[name=theme-color]').content = P.theme === 'dark' ? '#121214' : '#f3f2ee';
+  ms.style.setProperty('--w', P.width + 'px'); tune(); layout(); }
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>How the pills move, fall and look.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { P[k] = v; save(); apply(); };
+  const sl = (g, k, label, min, max, step, unit = '') => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g1 = LabUI.group(panel, 'Look', { key: KEY + '.g.look', open: true });
+  ctl.theme = LabUI.seg(g1, { label: 'Theme', options: [['light', 'Light'], ['dark', 'Dark']], value: P.theme, onChange: v => set('theme', v) });
+  sl(g1, 'width', 'Field width', 260, 560, 4, 'px');
+  const g2 = LabUI.group(panel, 'Motion', { key: KEY + '.g.motion', open: true });
+  sl(g2, 'soft', 'Softness', 0, 1, .01); sl(g2, 'bounce', 'Bounce', 0, 1, .01); sl(g2, 'glide', 'Glide after a swipe', .1, .8, .01, 's');
+  const g3 = LabUI.group(panel, 'Throw away', { key: KEY + '.g.fall' });
+  ctl.throwAway = LabUI.check(g3, { label: 'Grab a pill and throw it down', value: P.throwAway, onChange: v => set('throwAway', v) });
+  ctl.flyIn = LabUI.check(g3, { label: 'Picked items fly into the field', value: P.flyIn, onChange: v => set('flyIn', v) });
+  sl(g3, 'gravity', 'Gravity', 800, 4400, 50); sl(g3, 'spin', 'Spin', 0, 2, .05, '×');
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="fill">Refill the field</button><button type="button" data-a="reset">Reset</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=fill]').onclick = () => { let d = 0; for (const c of START) if (!SEL.includes(c)) { const r = field.getBoundingClientRect(); setTimeout(() => add(c, { x: r.left + r.width / 2 - 40, y: r.top - 70 }), d); d += 70; } };
+  acts.querySelector('[data-a=reset]').onclick = () => { P = { ...DEF }; save(); for (const k in ctl) ctl[k].set?.(P[k]); apply(); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); setTimeout(layout, 600); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- start (?thumb=1: the lab board's still picture: no chrome, the list open) ----------
+if (!THUMB) { buildPanel(); const stepExit = d => setExit(EXITS[(EXITS.indexOf(P.exit) + d + EXITS.length) % EXITS.length]);
+  LabUI.variants($('vars'), { prev: $('prev'), next: $('next'), name: $('nm'), onStep: stepExit, items: () => EXITS.map(k => EXIT_NAME[k]), current: () => EXIT_NAME[P.exit], onPick: n => setExit(EXITS.find(k => EXIT_NAME[k] === n)) });
+  addEventListener('keydown', e => { if (e.target.closest?.('input, .panel, .ms')) return; if (e.key === 'ArrowRight') stepExit(1); if (e.key === 'ArrowLeft') stepExit(-1); }); }
+apply(); for (const p of PILLS.values()) { p.x = p.tx; p.y = p.ty; }
+if (THUMB) { document.body.classList.add('thumb'); openMenu(true); ACT = ROWS.findIndex(r => r[0] === 'fr'); render(); const fi = $('o-fi'); if (fi) list.scrollTop = fi.offsetTop - list.offsetTop; }
+requestAnimationFrame(frame);
+window.MS = { setExit, PARTS, get P() { return P; }, get SEL() { return SEL; }, PILLS, FALL, add, remove, openMenu, setExp, layout, get S() { return S; }, set S(v) { S = v; }, get maxS() { return maxS; }, hidden };
+</script>
+</body>
+</html>
