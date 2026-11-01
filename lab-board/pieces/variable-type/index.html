@@ -173,9 +173,10 @@ function go(to, ms = P.ms) { cancelAnimationFrame(anim); const from = { ...P }, 
 const pick = n => { aim = n; render(); go({ ...P, ...STYLES[n] }); };
 function stop() { if (anim) { cancelAnimationFrame(anim); anim = 0; aim = null; } play(false); }
 
-// ---------- Loop: one style after another, a beat on each, until a style is picked by hand ----------
+// ---------- Loop: one style after another, a beat on each, until a style is picked by hand. On from the start: the first style
+// stays for a beat before the next comes (wait) ----------
 let playing = false, playT = 0;
-function play(on) { if (playing === on) return; playing = on; clearTimeout(playT); $('play').setAttribute('aria-pressed', String(on)); if (on) next(); }
+function play(on, wait) { if (playing === on) return; playing = on; clearTimeout(playT); $('play').setAttribute('aria-pressed', String(on)); if (on) playT = setTimeout(next, wait ? P.hold : 0); }
 function next() { if (!playing) return; const names = Object.keys(STYLES), cur = aim || match(); pick(names[(names.indexOf(cur) + 1) % names.length]); playT = setTimeout(next, P.ms + P.hold); }
 $('play').onclick = () => { if (playing) play(false); else { if (anim) { cancelAnimationFrame(anim); aim = null; } play(true); } };
 
@@ -234,6 +235,7 @@ if (BARE) { document.body.classList.add('bare'); P = { ...DEF, ...(STYLES[q.get(
   document.documentElement.style.visibility = 'hidden'; }   // (shown only once the type is in, so it lands exactly on the still picture under it)
 buildPanel(); setText(); render(); setMode(mode);
 document.querySelectorAll('.lab-seg').forEach(LabUI.segThumb);
+if (!BARE && !reduce) play(true, true);   // (the page opens looping; a pick by hand switches it off. Not with reduced motion)
 if (BARE) document.fonts.load('400 100px "Google Sans Flex"').then(() => { document.documentElement.style.visibility = '';
   if (DEMO) setTimeout(() => play(true), 600); });
 </script>

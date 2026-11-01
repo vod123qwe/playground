@@ -6,7 +6,7 @@ Kafel labu: jeden font zmienny pokazany od najspokojniejszej do najbardziej skra
 
 **Na scenie (bez przeładowania):**
 - sześć stylów: Classic, Elegant (cienki i szeroki, z oddechem między literami, dwupiętrowe g), Friendly (zaokrąglony, jednopiętrowe a), Poster (wąski i czarny), Extended (szeroki, ciężki, pochylony, przekreślone zero), Hairline. Klik morfuje wszystkie osie naraz (ease in-out, 0,9 s), alternatywne znaki podmieniają się w połowie ruchu;
-- przełącznik Loop (ikona i napis, wciśnięty jest wypełniony): style zmieniają się same po kolei, co chwilę; klik w styl, suwak, przełącznik znaków albo przeciągnięcie liter wyłącza Loop;
+- przełącznik Loop (ikona i napis, wciśnięty jest wypełniony), domyślnie włączony (poza ograniczonym ruchem w systemie): style zmieniają się same po kolei, co chwilę; klik w styl, suwak, przełącznik znaków albo przeciągnięcie liter wyłącza Loop;
 - suwaki: Weight, Width, Roundness (wspólne `LabUI.slider`, wygląd `soft`);
 - dwa przełączniki znaków: a / a jednopiętrowe, 0 / 0 przekreślone (przyciski rysowane tym samym fontem);
 - przeciąganie samych liter: góra i dół = waga, w bok = szerokość; kółko myszy = waga.
