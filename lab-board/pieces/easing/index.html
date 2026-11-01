@@ -10,9 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
 <style>
-  /* Two curves side by side, to see the difference. Each column: a ball rolling on a rail (real 3D, three.js), the curve under it
-     (value over time on a time axis both share, the neighbour's curve faint behind) and a preset pill: Stiff, Snappy, Bounce, Calm,
-     and Custom once you grab the curve. One Play runs both at once. The timed curves are cubic-beziers with a length: two handles
+  /* Two motions one under the other, to see the difference: each a ball in a soft groove (real 3D, three.js), nothing else on the
+     stage. The Curves card at the side holds the rest: each one's preset (Stiff, Snappy, Bounce, Calm, and Custom once you grab its
+     curve), the curve itself (value over time on a time axis both share, the neighbour faint behind), its numbers and Copy CSS. One
+     Play runs both at once. The timed curves are cubic-beziers with a length: two handles
      and an end you drag for the time; the spring has one handle on its peak (up and down: bounce; sideways: speed). */
   :root { --bg: #f3f2ee; --ink: #1b1c20; --muted: rgba(27,28,32,.5); --line: rgba(27,28,32,.1); --field: rgba(20,20,20,.05); --ease: cubic-bezier(.22,.61,.36,1); --k: 1; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -28,13 +29,12 @@
   body.dark .back, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
   body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
 
-  /* the rig: two columns at a fixed size, scaled to the window (--k); on a tall narrow screen one above the other */
-  .rig { position: fixed; left: 50%; top: calc(50% - 30px); translate: -50% -50%; scale: var(--k); display: grid; grid-template-columns: 360px 360px; gap: 40px; }
-  body.stack .rig { grid-template-columns: 360px; gap: 24px; }
-  .col { display: flex; flex-direction: column; align-items: center; }
+  /* the rig: the two grooves one under the other, nothing else, at a fixed size scaled to the window (--k) */
+  .rig { position: fixed; left: 50%; top: calc(50% - 30px); translate: -50% -50%; scale: var(--k); display: grid; grid-template-columns: 360px; gap: 16px; transition: left var(--morph); }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .scene { position: relative; width: 360px; height: 150px; cursor: pointer; }
   .scene canvas { display: block; width: 360px; height: 150px; }   /* (clear: the groove is cut into the page itself) */
-  .chart { display: block; width: 360px; height: 190px; overflow: visible; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .chart { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; user-select: none; -webkit-user-select: none; }
   .chart .guide { stroke: var(--line); stroke-width: 1; fill: none; } .chart .guide.one { stroke-dasharray: 3 4; }
   .chart text { fill: var(--muted); font: 11px var(--lab-font); font-variant-numeric: tabular-nums; }
   .chart .curve { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -43,25 +43,45 @@
   .chart .h { cursor: grab; outline: none; } .chart .h .hit { fill: transparent; } .chart .h .ring { fill: var(--bg); stroke: var(--ink); stroke-width: 1.5; transition: r .18s var(--ease); }
   .chart .h:hover .ring, .chart .h:focus-visible .ring, .chart .h.on .ring { r: 7.5px; } .chart .h.on { cursor: grabbing; } .chart .h:focus-visible .ring { stroke-width: 2.5; }
   .chart .tdot { fill: var(--ink); } .chart .tline { stroke: var(--ink); stroke-opacity: .16; stroke-width: 1; }
-  .foot { display: flex; align-items: center; justify-content: center; gap: 8px; height: 28px; margin: 2px 0 12px; }
-  .spec { font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 6px; }
+  .spec { font-size: 12px; line-height: 1.4; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .copy { flex: none; }
   .copy { height: 24px; padding: 0 9px; border: 0; border-radius: 999px; background: var(--field); color: var(--ink); font: 500 11.5px var(--lab-font); cursor: pointer; transition: background .2s; }
   .copy:hover { background: rgba(20,20,20,.09); } body.dark .copy:hover { background: rgba(255,255,255,.12); }
   /* Play both, and beside it the loop switch (there and back, a beat at each end, until it is switched off) */
-  .ctrl { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 4; display: flex; gap: 8px; }
+  .ctrl { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 4; display: flex; gap: 8px; transition: left var(--morph); }
   .loop { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; cursor: pointer; transition: background .25s, color .25s, scale .25s var(--ease); }
   .loop:active { scale: .93; } .loop svg { width: 19px; height: 19px; } .loop[aria-pressed=true] { background: var(--ink); color: var(--bg); }
   body.dark .loop { background: #1c1c1f; color: #f2f2f0; } body.dark .loop[aria-pressed=true] { background: var(--ink); color: var(--bg); }
   .play { display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 22px 0 18px; border: 0; border-radius: 999px;
     background: var(--ink); color: var(--bg); font: 600 14px var(--lab-font); cursor: pointer; transition: scale .25s var(--ease); }
   .play:active { scale: .95; } .play svg { width: 15px; height: 15px; }
-  body.bare .back, body.bare .mode, body.bare .ctrl, body.bare .copy { display: none; } body.bare .rig { top: 50%; }
+  /* Curves: a card beside the stage (lab-ui soft) with the two charts, their numbers and Copy CSS; the stage moves aside */
+  :root { --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  .tune { position: fixed; top: 16px; right: 16px; z-index: 6; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; } body.dark .tune { background: #1c1c1f; color: #f2f2f0; }
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px 14px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 6px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .pcol h3 { margin: 18px 0 2px; font-size: 14px; font-weight: 600; }
+  .pcol + .pcol { border-top: 1px solid var(--line); margin-top: 8px; }
+  .mode { transition: left var(--morph); }
+  @media (min-width: 761px) { body.tuning .rig, body.tuning .ctrl, body.tuning .mode { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 60vh; translate: 0 calc(100% + 16px); } body.tuning .panel { translate: 0 0; } body.tuning .ctrl { display: none; } }
+  body.bare .back, body.bare .mode, body.bare .ctrl, body.bare .tune, body.bare .panel { display: none; } body.bare .rig { top: 50%; }
 </style>
 </head>
 <body>
 <a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
 <div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20c4 0 5-16 9-16s5 16 9 16"/></svg>Curves</button>
 <main class="rig" id="rig"></main>
+<aside class="panel lab-ui soft" id="panel" aria-label="Curves"><header class="ph"><div><h2>Curves</h2><p>Value over time, both on one time axis. Grab a handle to make your own.</p></div><button class="pc" id="pclose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header><div id="charts"></div></aside>
 <div class="ctrl"><button class="play" id="play" type="button" title="Play both (Space)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>Play both</button><button class="loop" id="loop" type="button" aria-pressed="false" aria-label="Loop" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2.5l3 3-3 3"/><path d="M4 11.5v-1a5 5 0 0 1 5-5h11"/><path d="M7 21.5l-3-3 3-3"/><path d="M20 12.5v1a5 5 0 0 1-5 5H4"/></svg></button></div>
 <script src="../../shared/lab-ui.js?v=20"></script>
 <script type="importmap">
@@ -110,21 +130,17 @@ function css(c) { if (c.kind === 'bezier') { const [a, b, d, e] = c.b; return `t
 const NS = 'http://www.w3.org/2000/svg';
 const X0 = 30, X1 = 344, Y0 = 168, Y1 = 68, U = Y0 - Y1;   // (the plot: 0 ms → X0, the shared axis → X1; value 0 → Y0, 1 → Y1)
 const cols = [0, 1].map(i => { const el = document.createElement('section'); el.className = 'col'; el.innerHTML = `
-  <div class="scene" title="Play both"><canvas></canvas></div>
+  <div class="scene" title="Play both"><canvas></canvas></div>`; $('rig').appendChild(el);
+  const pc = document.createElement('section'); pc.className = 'pcol'; pc.innerHTML = `<h3 class="pt">${i ? 'Bottom' : 'Top'}</h3><div class="pseg"></div>
   <svg class="chart" viewBox="0 20 360 190" aria-label="Curve ${i ? 'B' : 'A'}">
     <line class="guide" x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}"/><line class="guide one" x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}"/>
     <text x="${X0 - 10}" y="${Y0 + 4}" text-anchor="end">0</text><text x="${X0 - 10}" y="${Y1 + 4}" text-anchor="end">1</text>
     <g class="ticks"></g><path class="ghost"/><path class="curve"/><g class="arms"></g>
     <line class="tline" y1="0" y2="${Y0}"/><circle class="tdot" r="4.5"/><g class="hs"></g>
   </svg>
-  <div class="foot"><span class="spec"></span><button class="copy" type="button">Copy CSS</button></div>
-  <div class="vars" role="group" aria-label="Preset ${i ? 'B' : 'A'}">
-    <button class="pv" type="button" aria-label="Previous preset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <span class="vn"></span>
-    <button class="nx" type="button" aria-label="Next preset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-  </div>`; $('rig').appendChild(el);
-  const g = s => el.querySelector(s);
-  return { el, svg: g('.chart'), curve: g('.curve'), ghost: g('.ghost'), arms: g('.arms'), hs: g('.hs'), ticks: g('.ticks'), tdot: g('.tdot'), tline: g('.tline'), spec: g('.spec'), vars: g('.vars'), nm: g('.vn'), canvas: g('canvas'), scene: g('.scene'), copy: g('.copy') }; });
+  <div class="foot"><span class="spec"></span><button class="copy" type="button">Copy CSS</button></div>`; $('charts').appendChild(pc);
+  const g = s => el.querySelector(s) || pc.querySelector(s);
+  return { el, svg: g('.chart'), curve: g('.curve'), ghost: g('.ghost'), arms: g('.arms'), hs: g('.hs'), ticks: g('.ticks'), tdot: g('.tdot'), tline: g('.tline'), spec: g('.spec'), seg: g('.pseg'), canvas: g('canvas'), scene: g('.scene'), copy: g('.copy'), pt: g('.pt') }; });
 
 // (the time axis both charts share, rounded up; frozen while a handle is held so the curve under the finger does not slide)
 let axis = 1000, frozen = false;
@@ -148,11 +164,11 @@ function drawChart(i) { const C = cols[i], c = cur(i);
       node('circle', { class: 'hit', r: 16 }, n); node('circle', { class: 'ring', r: 5.5 }, n); }
     n.setAttribute('transform', `translate(${tx(h.ms).toFixed(1)} ${ty(h.v).toFixed(1)})`); n.setAttribute('aria-valuetext', spec(c)); });
   C.hs.querySelectorAll('.h').forEach(n => { if (!H.some(h => h.id === n.dataset.h)) n.remove(); });
-  C.spec.textContent = spec(c); C.nm.textContent = c.name; }
+  C.spec.textContent = spec(c); }
 function drawAll() { if (!frozen) axis = niceAxis(); drawChart(0); drawChart(1); drawTrace(performance.now()); }
 
 // ---------- grabbing a curve: the first move makes the column's own copy (Custom), so the preset stays as it was ----------
-function own(i) { const col = S.cols[i]; if (col.key !== 'custom') { col.custom = { ...structuredClone(PRESETS[col.key]), name: 'Custom' }; col.key = 'custom'; } return col.custom; }
+function own(i) { const col = S.cols[i]; if (col.key !== 'custom') { col.custom = { ...structuredClone(PRESETS[col.key]), name: 'Custom' }; col.key = 'custom'; presetSeg(i); } return col.custom; }
 function moveHandle(i, id, ms, v) { const c = own(i);
   if (id === 'peak') fromPeak(c, ms, v);
   else if (id === 'end') c.ms = clamp(Math.round(ms / 10) * 10, 60, 3000);
@@ -170,11 +186,11 @@ cols.forEach((C, i) => {
     const m = e.shiftKey ? 10 : 1, now = handles(cur(i)).find(x => x.id === h.dataset.h); moveHandle(i, now.id, now.ms + d[0] * 10 * m, now.v + d[1] * .01 * m); });
   C.copy.onclick = () => { navigator.clipboard?.writeText(css(cur(i))); C.copy.textContent = 'Copied'; setTimeout(() => C.copy.textContent = 'Copy CSS', 1200); };
   C.scene.onclick = () => play(false);
-  // (the preset pill: the four, and Custom once the curve was grabbed)
-  const names = () => [...KEYS.map(k => PRESETS[k].name), ...(S.cols[i].custom ? ['Custom'] : [])], keyOf = n => n === 'Custom' ? 'custom' : KEYS.find(k => PRESETS[k].name === n);
-  const pick = n => { S.cols[i].key = keyOf(n); save(); drawAll(); play(true); };
-  C.V = LabUI.variants(C.vars, { prev: C.el.querySelector('.pv'), next: C.el.querySelector('.nx'), name: C.nm, items: names, current: () => cur(i).name,
-    onStep: d => { const l = names(); pick(l[(l.indexOf(cur(i).name) + d + l.length) % l.length]); }, onPick: pick }); });
+  presetSeg(i); });
+// (the preset, in the card above its chart: the four, and Custom once the curve was grabbed; rebuilt when Custom appears)
+function presetSeg(i) { const C = cols[i]; C.seg.innerHTML = '';
+  const options = [...KEYS.map(k => [k, PRESETS[k].name]), ...(S.cols[i].custom ? [['custom', 'Custom']] : [])];
+  C.segKeys = options.length; LabUI.seg(C.seg, { label: 'Preset', options, value: S.cols[i].key, onChange: k => { S.cols[i].key = k; save(); drawAll(); play(true); } }); }
 
 // ---------- playing: both columns from one clock; there, and on the next, back ----------
 let t0 = -1e9, dir = 0;   // (dir 1: going to the end; the ball's value is the progress, or one minus it on the way back)
@@ -202,7 +218,7 @@ addEventListener('keydown', e => { if (e.code === 'Space' && !e.target.closest('
 // rounded channel with no edge anywhere (its slope is zero at the wall and at the bottom; the ends round off by themselves). Its
 // shading is computed per point and baked in: how it turns to the light, how deep it is, and a soft shadow of its own upper lip,
 // marched along the light; the flat wall comes out exactly the page's colour, so there is no seam. A glossy ball sits in it, lit
-// for real, throwing a very soft shadow. Small scored ticks above and below mark start and end; the groove runs on past them,
+// for real, throwing a very soft shadow. The groove runs on past where the ball starts and stops,
 // room for a spring to overshoot ----------
 const scenes = [];
 let THREE = null;
@@ -252,9 +268,6 @@ function makeScene(canvas) {
   const surf = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
   const skin = new THREE.Mesh(geo, new THREE.ShadowMaterial({ opacity: .2, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); skin.receiveShadow = true;
   scene.add(surf, skin);
-  // (the ticks: short scores on the wall above and below the groove, at start and at end)
-  const tickMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: .28, depthWrite: false }), tg = new THREE.PlaneGeometry(.02, .12);
-  for (const x of [XA, XB]) for (const y of [-1, 1]) { const t = new THREE.Mesh(tg, tickMat); t.position.set(x, y * (WO + .14), .002); scene.add(t); }
   // (the ball: in the groove against its bottom; it rolls about the axis pointing at you)
   const ballMat = new THREE.MeshPhysicalMaterial({ roughness: .28, clearcoat: 1, clearcoatRoughness: .06, metalness: 0 });
   const ball = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 40), ballMat); ball.castShadow = true; ball.position.set(XA, 0, R - DP + .004); scene.add(ball);
@@ -262,22 +275,25 @@ function makeScene(canvas) {
   const S3 = {
     set(nv) { v = nv; const x = XA + (XB - XA) * roomy(v); ball.position.x = x; ball.rotation.z = -(x - XA) / R; renderer.render(scene, cam); },
     theme(dark) { shade(geo, dark); sky.groundColor.set(dark ? 0x0e0e10 : 0xf3f2ee); sun.intensity = dark ? 2.2 : 1.6;
-      tickMat.color.set(dark ? 0xf2f2f0 : 0x1b1c20); tickMat.opacity = dark ? .3 : .28; skin.material.opacity = dark ? .55 : .2;
+      skin.material.opacity = dark ? .55 : .2;
       ballMat.map?.dispose(); ballMat.map = ballTexture(dark); ballMat.needsUpdate = true; S3.set(v); },
     size(px) { renderer.setPixelRatio(px); renderer.setSize(360, 150, false); S3.set(v); } };
   return S3; }
 if (THREE) cols.forEach(C => { try { scenes.push(makeScene(C.canvas)); } catch { } });
 
 // ---------- light and dark, the fit ----------
-function setMode(m) { S.mode = m; save(); const dark = m === 'dark'; document.body.classList.toggle('dark', dark); cols.forEach(C => C.vars.classList.toggle('dark', dark)); scenes.forEach(s => s.theme(dark));
+function setMode(m) { S.mode = m; save(); const dark = m === 'dark'; document.body.classList.toggle('dark', dark); $('panel').classList.toggle('dark', dark); scenes.forEach(s => s.theme(dark));
   document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = dark ? '#0e0e10' : '#f3f2ee'; drawAll(); }
 document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
-function fit() { const W = innerWidth, H = innerHeight, bare = document.body.classList.contains('bare'), stack = !bare && W < 640 && H > W;
-  document.body.classList.toggle('stack', stack);
-  const rw = stack ? 360 : 760, rh = stack ? 2 * 434 + 24 : 434;
-  const k = bare ? Math.min(W / (rw + 30), H / (rh + 10)) : clamp(Math.min((W - 32) / rw, (H - 150) / rh), .35, 1.5);
+// (the rows fit what is left of the window; with Curves open on a wide screen, what is left beside the card)
+function fit() { const bare = document.body.classList.contains('bare'), side = document.body.classList.contains('tuning') && innerWidth > 760, W = innerWidth - (side ? 368 : 0), H = innerHeight;
+  const rw = 360, rh = 2 * 150 + 16;
+  const k = bare ? Math.min(W / (rw + 30), H / (rh + 48)) : clamp(Math.min((W - 40) / rw, (H - 170) / rh), .35, 1.6);
   document.documentElement.style.setProperty('--k', k.toFixed(3)); scenes.forEach(s => s.size(Math.min(3, (devicePixelRatio || 1) * k))); }
 addEventListener('resize', fit);
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); fit(); }
+$('tune').onclick = () => openPanel(true); $('pclose').onclick = () => openPanel(false);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
 LabUI.segThumb($('mode'));
 
 // ---------- the board's box: ?thumb=1 the still (Snappy and Bounce, both arrived), ?demo=1 the live preview: pairs of presets
@@ -287,7 +303,7 @@ setMode(S.mode); fit(); drawAll(); scenes.forEach((s, i) => s.set(0)); $('loop')
 if (q.has('thumb')) { t0 = performance.now() - 5000; dir = 1; drawTrace(performance.now()); scenes.forEach((s, i) => s.set(1)); }
 if (q.has('demo')) { const wait = ms => new Promise(r => setTimeout(r, ms)), PAIRS = [['stiff', 'calm'], ['snappy', 'bounce'], ['stiff', 'bounce'], ['snappy', 'calm']];
   await document.fonts.ready; await wait(400);
-  for (let k = 0; ; k++) { const [a, b] = PAIRS[k % PAIRS.length]; S.cols[0].key = a; S.cols[1].key = b; drawAll(); cols.forEach(C => C.V.flash?.(1));
+  for (let k = 0; ; k++) { const [a, b] = PAIRS[k % PAIRS.length]; S.cols[0].key = a; S.cols[1].key = b; drawAll();
     const T = Math.max(msOf(cur(0)), msOf(cur(1)));
     dir = 0; play(false); await wait(T + 700); play(false); await wait(T + 700); } }
 </script>
