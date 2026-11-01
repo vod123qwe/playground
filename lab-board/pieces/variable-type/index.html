@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Variable Type · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,slnt,wdth,wght,ROND@1..144,-10..0,25..151,1..1000,0..100&family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* One variable font, pushed as far as it goes: Google Sans Flex (Google Fonts) has five axes (weight 1–1000, width 25–151, optical
+     size 1–144, roundness 0–100, slant 0 to −10) and three alternate glyphs (a single-story a, a double-story g, a slashed zero).
+     Letters on the left, figures on the right; under them a few controls: six styles that morph into one another (Classic to Elegant,
+     Poster, Hairline…), weight, width and roundness, and the two alternates you can see. Drag the letters themselves: up and down is
+     weight, sideways is width; the wheel is weight too. Customize holds the rest (optical size, slant, spacing, the text, the morph). */
+  :root { --bg: #f3f2ee; --ink: #1b1c20; --muted: rgba(20,20,20,.42); --ease: cubic-bezier(.22,.61,.36,1); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
+  body.dark { --bg: #0e0e10; --ink: #f2f2f0; --muted: rgba(255,255,255,.4); }
+  /* (Customize: the page draws back to a lighter ground and the stage morphs into a rounded box beside the card) */
+  :root { --page: #fff; --box: #f3f2ee; --morph: .55s cubic-bezier(.3,1.12,.4,1); }
+  body.dark { --page: #17181b; --box: #151517; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; padding: 84px 16px 20px; border-radius: 0; background: var(--bg);
+    transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { background: var(--box); border-radius: 26px; }
+  .back, .tune, .mode { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  body.tuning .back, body.tuning .mode { top: 30px; } body.tuning .back { left: 30px; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .2s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); transition: left .45s var(--ease); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .tune, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+
+  /* the specimen: two halves, the type as big as the box allows (container units), so a wide black still fits */
+  .spec { flex: 1; align-self: stretch; min-height: 0; container-type: size; display: grid; grid-template-columns: 1fr 1fr; align-items: center;
+    cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .spec.drag { cursor: grabbing; }
+  .gl { display: block; text-align: center; white-space: nowrap; overflow: visible; color: var(--ink); transition: color .4s;
+    font-family: "Google Sans Flex", system-ui, sans-serif; font-size: calc(min(17cqw, 62cqh) * var(--k, 1)); line-height: 1;
+    font-variation-settings: var(--fvs); font-feature-settings: var(--ffs); letter-spacing: var(--ls, 0); }
+  .gl span { margin-right: calc(-1 * var(--ls, 0)); }   /* (letter-spacing also trails the last glyph: taken back, so the pair stays centred) */
+  .hint { margin: 6px 0 14px; font-size: 13px; color: var(--muted); text-align: center; transition: opacity .3s; }
+
+  /* the dock: the styles on top, the three big axes and the two alternates under them (the lab's soft controls on a white card) */
+  .dock { width: min(860px, 100%); padding: 10px; border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); transition: background .4s, border-color .4s; }
+  .drow { display: flex; align-items: center; gap: 8px; }
+  .presets { flex: 1; min-width: 0; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--ui-field); overflow-x: auto; scrollbar-width: none; }
+  .presets::-webkit-scrollbar { display: none; }
+  .presets.none::before { opacity: 0; }
+  .presets button { flex: 1 0 auto; height: 38px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--ui-muted); font: 600 13px var(--lab-font); cursor: pointer; }
+  .presets button:hover { color: var(--ui-ink); } .presets button[aria-checked=true] { color: var(--ui-on-text); }
+  .play { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border: 0; border-radius: 999px; background: var(--ui-field); color: var(--ui-ink); cursor: pointer; transition: background .2s, scale .3s var(--ui-spring); }
+  .play:hover { background: var(--ui-field-hi); } .play:active { scale: .94; } .play svg { width: 18px; height: 18px; }
+  .play[aria-pressed=true] { background: var(--ui-on); color: var(--ui-on-text); }
+  .play .i-stop, .play[aria-pressed=true] .i-play { display: none; } .play[aria-pressed=true] .i-stop { display: block; }
+  .srow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; margin-top: 8px; align-items: center; }
+  .srow > .ui-row { margin: 0 !important; min-width: 0; }
+  .alts { display: flex; gap: 6px; }
+  .alt { display: flex; gap: 0; padding: 3px; border-radius: 999px; background: var(--ui-field); }
+  .alt button { width: 38px; height: 36px; border: 0; border-radius: 999px; background: transparent; color: var(--ui-muted); cursor: pointer;
+    font: 500 21px/1 "Google Sans Flex", system-ui, sans-serif; font-variation-settings: "opsz" 24; }
+  .alt button:hover { color: var(--ui-ink); } .alt button[aria-checked=true] { color: var(--ui-on-text); }
+  .alt .ss01 { font-feature-settings: "ss01" 1; } .alt .zero { font-feature-settings: "zero" 1; }
+
+  body.bare .back, body.bare .tune, body.bare .mode, body.bare .hint, body.bare .dock, body.bare .panel { display: none; }
+  body.bare .stage { padding: 0 3vw; } body.bare .spec { cursor: default; } body.bare .gl { font-size: calc(min(18.5cqw, 62cqh) * var(--k, 1)); }
+
+  /* the panel: a card beside the stage (the lab's shared controls in their soft look) */
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden;
+    transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; transition: background .2s; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  .acts { position: sticky; bottom: 0; display: flex; margin: auto -20px 0; padding: 14px 20px 20px; background: var(--ui-bg); }
+  .trow { display: flex !important; align-items: center; justify-content: space-between; gap: 12px; }
+  .txt { width: 120px; height: 34px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ui-field); color: var(--ui-ink); font: 500 15px "Google Sans Flex", system-ui, sans-serif; text-align: right; outline: none; }
+  .txt:focus-visible { box-shadow: 0 0 0 2px var(--ui-focus); }
+
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .mode { left: calc(50% - 176px); } }
+  @media (max-width: 760px) {
+    .stage { padding: 76px 8px 8px; } .spec { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } .gl { font-size: calc(min(29cqw, 31cqh) * var(--k, 1)); }
+    body.bare .spec { grid-template-columns: 1fr 1fr; grid-template-rows: none; } body.bare .gl { font-size: calc(min(18.5cqw, 62cqh) * var(--k, 1)); } .srow { grid-template-columns: 1fr; } .alts { justify-content: center; }
+    .presets button { flex: none; padding: 0 12px; }
+    .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); }
+    body.tuning .panel { translate: 0 0; } body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .dock, body.tuning .hint { display: none; }
+    body.tuning .back, body.tuning .mode { top: 18px; } body.tuning .back { left: 18px; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage">
+  <div class="spec" id="spec" aria-label="Specimen: drag up and down for weight, sideways for width">
+    <div class="gl"><span id="tl">Aa</span></div>
+    <div class="gl"><span id="tr">09</span></div>
+  </div>
+  <p class="hint" id="hint">Drag the letters: up and down for weight, sideways for width</p>
+  <section class="dock lab-ui soft" id="dock" aria-label="Type controls">
+    <div class="drow">
+      <div class="presets lab-seg" id="presets" role="radiogroup" aria-label="Styles"></div>
+      <button class="play" id="play" type="button" aria-pressed="false" aria-label="Play through the styles" title="Play through the styles"><svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg><svg class="i-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg></button>
+    </div>
+    <div class="srow" id="srow">
+      <div class="alts">
+        <div class="alt lab-seg" id="alt-a" role="radiogroup" aria-label="The a"><button type="button" role="radio" data-v="0" aria-label="Double-story a">a</button><button type="button" role="radio" data-v="1" class="ss01" aria-label="Single-story a">a</button></div>
+        <div class="alt lab-seg" id="alt-0" role="radiogroup" aria-label="The zero"><button type="button" role="radio" data-v="0" aria-label="Plain zero">0</button><button type="button" role="radio" data-v="1" class="zero" aria-label="Slashed zero">0</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+<aside class="panel lab-ui soft lab-card" id="panel" aria-label="Customize the type"></aside>
+<script src="../../shared/lab-ui.js?v=20"></script>
+<script>
+// ---------- the styles: each a point in the font's design space plus its alternates; the playground morphs between them ----------
+const NUM = ['wght', 'wdth', 'opsz', 'ROND', 'slnt', 'track'], FEAT = ['ss01', 'ss02', 'zero'];
+const STYLES = {
+  Classic:  { wght: 400,  wdth: 100, opsz: 72,  ROND: 0,   slnt: 0,   track: 0,  ss01: false, ss02: false, zero: false },
+  Elegant:  { wght: 140,  wdth: 116, opsz: 144, ROND: 0,   slnt: 0,   track: 4,  ss01: false, ss02: true,  zero: false },
+  Friendly: { wght: 640,  wdth: 104, opsz: 48,  ROND: 100, slnt: 0,   track: 0,  ss01: true,  ss02: false, zero: false },
+  Poster:   { wght: 1000, wdth: 25,  opsz: 144, ROND: 0,   slnt: 0,   track: -2, ss01: false, ss02: false, zero: false },
+  Extended: { wght: 900,  wdth: 151, opsz: 96,  ROND: 40,  slnt: -10, track: -2, ss01: true,  ss02: false, zero: true },
+  Hairline: { wght: 1,    wdth: 132, opsz: 144, ROND: 0,   slnt: 0,   track: 8,  ss01: true,  ss02: false, zero: true },
+};
+// ---------- the settings: where the type stands now, the text and the morph; kept in the browser ----------
+const KEY = 'lab.variable-type.v1';
+const DEF = { ...STYLES.Classic, size: 1, ms: 900, hold: 1500, left: 'Aa', right: '09' };
+const q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
+let P = (() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEF }; } })();
+const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), spec = $('spec'), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// ---------- drawing: the axes and features go to the two glyph blocks as CSS (the same lines Copy CSS hands out) ----------
+const fvs = () => `"wght" ${Math.round(P.wght)}, "wdth" ${Math.round(P.wdth)}, "opsz" ${Math.round(P.opsz)}, "ROND" ${Math.round(P.ROND)}, "slnt" ${+P.slnt.toFixed(1)}`;
+const ffs = () => FEAT.filter(k => P[k]).map(k => `"${k}" 1`).join(', ') || 'normal';
+const ls = () => (P.track / 100).toFixed(3) + 'em';
+let aim = null;   // (the style a morph is heading to: its button stays on while the type travels)
+const match = () => Object.keys(STYLES).find(n => { const s = STYLES[n]; return NUM.every(k => Math.abs(P[k] - s[k]) < .5) && FEAT.every(k => !!P[k] === s[k]); }) || null;
+function render() {
+  spec.style.setProperty('--fvs', fvs()); spec.style.setProperty('--ffs', ffs()); spec.style.setProperty('--ls', ls()); spec.style.setProperty('--k', P.size);
+  for (const k of ['wght', 'wdth', 'ROND', 'opsz', 'slnt', 'track']) ctl[k]?.set(P[k]);
+  ctl.ss02?.set(P.ss02);
+  const on = aim || match();
+  $('presets').classList.toggle('none', !on);
+  for (const b of $('presets').children) b.setAttribute('aria-checked', String(b.dataset.s === on));
+  if (on && on !== render.on) { const box = $('presets'), b = box.querySelector(`[data-s=${on}]`);   // (on a phone the row scrolls: the chosen style comes into view)
+    if (box.scrollWidth > box.clientWidth) box.scrollTo({ left: b.offsetLeft - (box.clientWidth - b.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' }); }
+  render.on = on;
+  for (const [id, k] of [['alt-a', 'ss01'], ['alt-0', 'zero']]) for (const b of $(id).children) b.setAttribute('aria-checked', String(b.dataset.v === (P[k] ? '1' : '0')));
+}
+
+// ---------- the morph: every axis eases to the target together; an alternate glyph swaps halfway, when the shape is most in motion ----------
+let anim = 0;
+function go(to, ms = P.ms) { cancelAnimationFrame(anim); const from = { ...P }, t0 = performance.now(); if (reduce) ms = 0;
+  const tick = now => { const t = ms ? Math.min(1, (now - t0) / ms) : 1, e = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    for (const k of NUM) P[k] = from[k] + (to[k] - from[k]) * e;
+    if (t >= .5) for (const k of FEAT) P[k] = to[k];
+    if (t < 1) { render(); anim = requestAnimationFrame(tick); } else { for (const k of NUM) P[k] = to[k]; aim = null; render(); save(); } };
+  anim = requestAnimationFrame(tick); }
+const pick = n => { aim = n; render(); go({ ...P, ...STYLES[n] }); };
+function stop() { if (anim) { cancelAnimationFrame(anim); anim = 0; aim = null; } play(false); }
+
+// ---------- play: one style after another, a beat on each ----------
+let playing = false, playT = 0;
+function play(on) { if (playing === on) return; playing = on; clearTimeout(playT); $('play').setAttribute('aria-pressed', String(on)); if (on) next(); }
+function next() { if (!playing) return; const names = Object.keys(STYLES), cur = aim || match(); pick(names[(names.indexOf(cur) + 1) % names.length]); playT = setTimeout(next, P.ms + P.hold); }
+$('play').onclick = () => { if (playing) play(false); else { if (anim) { cancelAnimationFrame(anim); aim = null; } play(true); } };
+
+// ---------- the dock: the styles, the three big axes, the two alternates you can see ----------
+const ctl = {};
+for (const n of Object.keys(STYLES)) { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.s = n; b.textContent = n;
+  b.onclick = () => { stop(); pick(n); }; $('presets').appendChild(b); }
+{ const row = $('srow'), alts = row.querySelector('.alts'), wrap = document.createElement('div');
+  const sl = (k, label, min, max) => { ctl[k] = LabUI.slider(wrap, { label, min, max, step: 1, value: P[k], def: DEF[k], onInput: v => { stop(); P[k] = v; render(); save(); } }); row.insertBefore(ctl[k].row, alts); };
+  sl('wght', 'Weight', 1, 1000); sl('wdth', 'Width', 25, 151); sl('ROND', 'Roundness', 0, 100); }
+for (const [id, k] of [['alt-a', 'ss01'], ['alt-0', 'zero']]) for (const b of $(id).children) b.onclick = () => { stop(); P[k] = b.dataset.v === '1'; render(); save(); };
+
+// ---------- the letters themselves: drag up and down for weight, sideways for width; the wheel is weight ----------
+let drag = null;
+spec.addEventListener('pointerdown', e => { if (BARE || e.button !== 0) return; stop(); drag = { x: e.clientX, y: e.clientY, w: P.wght, d: P.wdth }; spec.setPointerCapture(e.pointerId); spec.classList.add('drag'); });
+spec.addEventListener('pointermove', e => { if (!drag) return; P.wght = Math.round(clamp(drag.w - (e.clientY - drag.y) * 2.2, 1, 1000)); P.wdth = Math.round(clamp(drag.d + (e.clientX - drag.x) * .35, 25, 151)); render(); });
+const up = () => { if (!drag) return; drag = null; spec.classList.remove('drag'); save(); };
+spec.addEventListener('pointerup', up); spec.addEventListener('pointercancel', up);
+spec.addEventListener('wheel', e => { if (BARE) return; e.preventDefault(); stop(); P.wght = Math.round(clamp(P.wght - e.deltaY * .6, 1, 1000)); render(); clearTimeout(spec._w); spec._w = setTimeout(save, 300); }, { passive: false });
+
+// ---------- the text ----------
+function setText() { $('tl').textContent = P.left || ' '; $('tr').textContent = P.right || ' '; }
+
+// ---------- light and dark ----------
+let mode = (() => { try { return localStorage.getItem(KEY + '.mode') || 'light'; } catch { return 'light'; } })();
+function setMode(m) { mode = m; if (!BARE) try { localStorage.setItem(KEY + '.mode', m); } catch { } document.body.classList.toggle('dark', m === 'dark'); $('dock').classList.toggle('dark', m === 'dark'); $('panel').classList.toggle('dark', m === 'dark');
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = m === 'dark' ? '#0e0e10' : '#f3f2ee'; }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the panel: what is not on the dock ----------
+const panel = $('panel');
+function buildPanel() { panel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>The quieter axes, the spacing, your own text and how the styles morph.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); panel.appendChild(head);
+  const set = (k, v) => { stop(); P[k] = v; render(); save(); };
+  const sl = (g, k, label, min, max, step, unit) => ctl[k] = LabUI.slider(g, { label, min, max, step, unit, value: P[k], def: DEF[k], onInput: v => set(k, v) });
+  const g0 = LabUI.group(panel, 'Axes', { key: KEY + '.g.axes', open: true }); sl(g0, 'opsz', 'Optical size', 1, 144, 1); sl(g0, 'slnt', 'Slant', -10, 0, .5, '°');
+  const g1 = LabUI.group(panel, 'Glyphs', { key: KEY + '.g.glyphs' }); ctl.ss02 = LabUI.check(g1, { label: 'Double-story g', value: P.ss02, onChange: v => set('ss02', v) });
+  sl(g1, 'track', 'Letter spacing', -8, 20, 1);
+  const g2 = LabUI.group(panel, 'Text', { key: KEY + '.g.text' });
+  for (const [k, label] of [['left', 'Left'], ['right', 'Right']]) { const r = document.createElement('div'); r.className = 'ui-row trow'; r.innerHTML = `<label class="ui-label" for="t-${k}">${label}</label>`;
+    const inp = document.createElement('input'); inp.className = 'txt'; inp.id = 't-' + k; inp.maxLength = 8; inp.spellcheck = false; inp.value = P[k]; inp.oninput = () => { P[k] = inp.value; setText(); save(); }; r.appendChild(inp); g2.appendChild(r); ctl[k] = { set: v => { inp.value = v; } }; }
+  const g3 = LabUI.group(panel, 'Motion', { key: KEY + '.g.motion' }); sl(g3, 'ms', 'Morph time', 0, 2400, 50, 'ms'); sl(g3, 'hold', 'Play: hold each', 300, 4000, 50, 'ms');
+  const g4 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' }); sl(g4, 'size', 'Size', .5, 1.3, .05, '×');
+  const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy CSS</button>'; panel.appendChild(acts);
+  acts.querySelector('[data-a=reset]').onclick = () => { stop(); P = { ...DEF }; save(); for (const k of ['ms', 'hold', 'size', 'left', 'right']) ctl[k].set(P[k]); setText(); render(); };
+  acts.querySelector('[data-a=copy]').onclick = e => { const css = `font-family: "Google Sans Flex", sans-serif;\nfont-variation-settings: ${fvs()};\nfont-feature-settings: ${ffs()};\nletter-spacing: ${ls()};`;
+    navigator.clipboard?.writeText(css); e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy CSS', 1200); }; }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('tuning')) openPanel(false); });
+
+// ---------- the board's box: ?thumb=1 the still (a style by ?style=, Classic otherwise), ?demo=1 the live preview: the styles in a
+// loop. Neither touches the saved settings ----------
+if (BARE) { document.body.classList.add('bare'); P = { ...DEF, ...(STYLES[q.get('style')] || {}) }; mode = 'light';
+  document.documentElement.style.visibility = 'hidden'; }   // (shown only once the type is in, so it lands exactly on the still picture under it)
+buildPanel(); setText(); render(); setMode(mode);
+document.querySelectorAll('.lab-seg').forEach(LabUI.segThumb);
+if (BARE) document.fonts.load('400 100px "Google Sans Flex"').then(() => { document.documentElement.style.visibility = '';
+  if (DEMO) setTimeout(() => play(true), 600); });
+</script>
+</body>
+</html>
