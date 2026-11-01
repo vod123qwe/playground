@@ -6,14 +6,14 @@ Kafel labu: jeden font zmienny pokazany od najspokojniejszej do najbardziej skra
 
 **Na scenie (bez przeładowania):**
 - sześć stylów: Classic, Elegant (cienki i szeroki, z oddechem między literami, dwupiętrowe g), Friendly (zaokrąglony, jednopiętrowe a), Poster (wąski i czarny), Extended (szeroki, ciężki, pochylony, przekreślone zero), Hairline. Klik morfuje wszystkie osie naraz (ease in-out, 0,9 s), alternatywne znaki podmieniają się w połowie ruchu;
-- przycisk Play: style po kolei, w pętli;
+- przełącznik Loop (ikona i napis, wciśnięty jest wypełniony): style zmieniają się same po kolei, co chwilę; klik w styl, suwak, przełącznik znaków albo przeciągnięcie liter wyłącza Loop;
 - suwaki: Weight, Width, Roundness (wspólne `LabUI.slider`, wygląd `soft`);
 - dwa przełączniki znaków: a / a jednopiętrowe, 0 / 0 przekreślone (przyciski rysowane tym samym fontem);
 - przeciąganie samych liter: góra i dół = waga, w bok = szerokość; kółko myszy = waga.
 
-**Customize:** optical size, pochylenie, dwupiętrowe g, odstępy między literami, własny tekst (lewy i prawy), czas morfowania, czas postoju w Play, rozmiar. „Copy CSS” kopiuje `font-variation-settings`, `font-feature-settings` i `letter-spacing`.
+**Customize:** optical size, pochylenie, dwupiętrowe g, odstępy między literami, własny tekst (lewy i prawy), czas morfowania, czas postoju w Loop, rozmiar. „Copy CSS” kopiuje `font-variation-settings`, `font-feature-settings` i `letter-spacing`.
 
-**Plansza:** `?thumb=1` (opcjonalnie `&style=Elegant` itd.) to miniatura, `?demo=1` podgląd na żywo (Play w pętli). Kafel 520×300, miniatura `thumbs/variable-type.jpg` (1040×600, styl Classic, zrzut z headless Edge).
+**Plansza:** `?thumb=1` (opcjonalnie `&style=Elegant` itd.) to miniatura, `?demo=1` podgląd na żywo (Loop). Kafel 520×300, miniatura `thumbs/variable-type.jpg` (1040×600, styl Classic, zrzut z headless Edge).
 
 **Telefon:** litery jedna nad drugą, kontrolki w kolumnie, pasek stylów przewija się w bok i sam pokazuje wybrany styl.
 

@@ -57,10 +57,11 @@
   .presets.none::before { opacity: 0; }
   .presets button { flex: 1 0 auto; height: 38px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--ui-muted); font: 600 13px var(--lab-font); cursor: pointer; }
   .presets button:hover { color: var(--ui-ink); } .presets button[aria-checked=true] { color: var(--ui-on-text); }
-  .play { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border: 0; border-radius: 999px; background: var(--ui-field); color: var(--ui-ink); cursor: pointer; transition: background .2s, scale .3s var(--ui-spring); }
-  .play:hover { background: var(--ui-field-hi); } .play:active { scale: .94; } .play svg { width: 18px; height: 18px; }
-  .play[aria-pressed=true] { background: var(--ui-on); color: var(--ui-on-text); }
-  .play .i-stop, .play[aria-pressed=true] .i-play { display: none; } .play[aria-pressed=true] .i-stop { display: block; }
+  /* Loop: a toggle; on, the styles take turns by themselves; a pick of a style (or any hand on the type) turns it off */
+  .loop { flex: none; display: flex; align-items: center; gap: 7px; height: 46px; padding: 0 16px 0 13px; border: 0; border-radius: 999px; background: var(--ui-field); color: var(--ui-ink);
+    font: 600 13px var(--lab-font); cursor: pointer; transition: background .25s, color .25s, scale .3s var(--ui-spring); }
+  .loop:hover { background: var(--ui-field-hi); } .loop:active { scale: .95; } .loop svg { width: 17px; height: 17px; transition: rotate .6s var(--ui-spring); }
+  .loop[aria-pressed=true] { background: var(--ui-on); color: var(--ui-on-text); } .loop[aria-pressed=true] svg { rotate: 180deg; }
   .srow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; margin-top: 8px; align-items: center; }
   .srow > .ui-row { margin: 0 !important; min-width: 0; }
   .alts { display: flex; gap: 6px; }
@@ -110,7 +111,7 @@
   <section class="dock lab-ui soft" id="dock" aria-label="Type controls">
     <div class="drow">
       <div class="presets lab-seg" id="presets" role="radiogroup" aria-label="Styles"></div>
-      <button class="play" id="play" type="button" aria-pressed="false" aria-label="Play through the styles" title="Play through the styles"><svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg><svg class="i-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg></button>
+      <button class="loop" id="play" type="button" aria-pressed="false" title="Loop through the styles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2.5l3 3-3 3"/><path d="M4 11.5v-1a5 5 0 0 1 5-5h11"/><path d="M7 21.5l-3-3 3-3"/><path d="M20 12.5v1a5 5 0 0 1-5 5H4"/></svg>Loop</button>
     </div>
     <div class="srow" id="srow">
       <div class="alts">
@@ -172,7 +173,7 @@ function go(to, ms = P.ms) { cancelAnimationFrame(anim); const from = { ...P }, 
 const pick = n => { aim = n; render(); go({ ...P, ...STYLES[n] }); };
 function stop() { if (anim) { cancelAnimationFrame(anim); anim = 0; aim = null; } play(false); }
 
-// ---------- play: one style after another, a beat on each ----------
+// ---------- Loop: one style after another, a beat on each, until a style is picked by hand ----------
 let playing = false, playT = 0;
 function play(on) { if (playing === on) return; playing = on; clearTimeout(playT); $('play').setAttribute('aria-pressed', String(on)); if (on) next(); }
 function next() { if (!playing) return; const names = Object.keys(STYLES), cur = aim || match(); pick(names[(names.indexOf(cur) + 1) % names.length]); playT = setTimeout(next, P.ms + P.hold); }
@@ -217,7 +218,7 @@ function buildPanel() { panel.innerHTML = '';
   const g2 = LabUI.group(panel, 'Text', { key: KEY + '.g.text' });
   for (const [k, label] of [['left', 'Left'], ['right', 'Right']]) { const r = document.createElement('div'); r.className = 'ui-row trow'; r.innerHTML = `<label class="ui-label" for="t-${k}">${label}</label>`;
     const inp = document.createElement('input'); inp.className = 'txt'; inp.id = 't-' + k; inp.maxLength = 8; inp.spellcheck = false; inp.value = P[k]; inp.oninput = () => { P[k] = inp.value; setText(); save(); }; r.appendChild(inp); g2.appendChild(r); ctl[k] = { set: v => { inp.value = v; } }; }
-  const g3 = LabUI.group(panel, 'Motion', { key: KEY + '.g.motion' }); sl(g3, 'ms', 'Morph time', 0, 2400, 50, 'ms'); sl(g3, 'hold', 'Play: hold each', 300, 4000, 50, 'ms');
+  const g3 = LabUI.group(panel, 'Motion', { key: KEY + '.g.motion' }); sl(g3, 'ms', 'Morph time', 0, 2400, 50, 'ms'); sl(g3, 'hold', 'Loop: hold each', 300, 4000, 50, 'ms');
   const g4 = LabUI.group(panel, 'Look', { key: KEY + '.g.look' }); sl(g4, 'size', 'Size', .5, 1.3, .05, '×');
   const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button type="button" data-a="reset">Reset all</button><button type="button" data-a="copy">Copy CSS</button>'; panel.appendChild(acts);
   acts.querySelector('[data-a=reset]').onclick = () => { stop(); P = { ...DEF }; save(); for (const k of ['ms', 'hold', 'size', 'left', 'right']) ctl[k].set(P[k]); setText(); render(); };
