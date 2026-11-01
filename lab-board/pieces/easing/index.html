@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Easing · lab</title>
+<meta name="theme-color" content="#f3f2ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* Two curves side by side, to see the difference. Each column: a ball rolling on a rail (real 3D, three.js), the curve under it
+     (value over time on a time axis both share, the neighbour's curve faint behind) and a preset pill: Stiff, Snappy, Bounce, Calm,
+     and Custom once you grab the curve. One Play runs both at once. The timed curves are cubic-beziers with a length: two handles
+     and an end you drag for the time; the spring has one handle on its peak (up and down: bounce; sideways: speed). */
+  :root { --bg: #f3f2ee; --ink: #1b1c20; --muted: rgba(27,28,32,.5); --line: rgba(27,28,32,.1); --field: rgba(20,20,20,.05); --ease: cubic-bezier(.22,.61,.36,1); --k: 1; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; transition: background .4s; }
+  body.dark { --bg: #0e0e10; --ink: #f2f2f0; --muted: rgba(242,242,240,.5); --line: rgba(242,242,240,.12); --field: rgba(255,255,255,.07); }
+  .back, .mode { position: fixed; top: 16px; z-index: 6; }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: #fff; color: #1b1c20; }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .mode { left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: #fff; font: 600 13px var(--lab-font); }
+  .mode button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(20,20,20,.55); font: inherit; cursor: pointer; }
+  .mode button:hover { color: #1b1c20; } .mode button[aria-checked=true] { background: #1b1c20; color: #fff; }
+  body.dark .back, body.dark .mode { background: #1c1c1f; color: #f2f2f0; }
+  body.dark .mode button { color: rgba(255,255,255,.5); } body.dark .mode button[aria-checked=true] { background: #f2f2f0; color: #1b1c20; }
+
+  /* the rig: two columns at a fixed size, scaled to the window (--k); on a tall narrow screen one above the other */
+  .rig { position: fixed; left: 50%; top: calc(50% - 30px); translate: -50% -50%; scale: var(--k); display: grid; grid-template-columns: 360px 360px; gap: 40px; }
+  body.stack .rig { grid-template-columns: 360px; gap: 24px; }
+  .col { display: flex; flex-direction: column; align-items: center; }
+  .scene { position: relative; width: 360px; height: 150px; cursor: pointer; }
+  .scene canvas { display: block; width: 360px; height: 150px; }   /* (clear: the groove is cut into the page itself) */
+  .chart { display: block; width: 360px; height: 190px; overflow: visible; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .chart .guide { stroke: var(--line); stroke-width: 1; fill: none; } .chart .guide.one { stroke-dasharray: 3 4; }
+  .chart text { fill: var(--muted); font: 11px var(--lab-font); font-variant-numeric: tabular-nums; }
+  .chart .curve { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .chart .ghost { stroke: var(--ink); stroke-opacity: .16; stroke-width: 1.5; fill: none; stroke-dasharray: 2 4; stroke-linecap: round; }
+  .chart .arm { stroke: var(--ink); stroke-opacity: .3; stroke-width: 1; }
+  .chart .h { cursor: grab; outline: none; } .chart .h .hit { fill: transparent; } .chart .h .ring { fill: var(--bg); stroke: var(--ink); stroke-width: 1.5; transition: r .18s var(--ease); }
+  .chart .h:hover .ring, .chart .h:focus-visible .ring, .chart .h.on .ring { r: 7.5px; } .chart .h.on { cursor: grabbing; } .chart .h:focus-visible .ring { stroke-width: 2.5; }
+  .chart .tdot { fill: var(--ink); } .chart .tline { stroke: var(--ink); stroke-opacity: .16; stroke-width: 1; }
+  .foot { display: flex; align-items: center; justify-content: center; gap: 8px; height: 28px; margin: 2px 0 12px; }
+  .spec { font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .copy { height: 24px; padding: 0 9px; border: 0; border-radius: 999px; background: var(--field); color: var(--ink); font: 500 11.5px var(--lab-font); cursor: pointer; transition: background .2s; }
+  .copy:hover { background: rgba(20,20,20,.09); } body.dark .copy:hover { background: rgba(255,255,255,.12); }
+  /* Play both, and beside it the loop switch (there and back, a beat at each end, until it is switched off) */
+  .ctrl { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 4; display: flex; gap: 8px; }
+  .loop { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 0; border-radius: 999px; background: #fff; color: #1b1c20; cursor: pointer; transition: background .25s, color .25s, scale .25s var(--ease); }
+  .loop:active { scale: .93; } .loop svg { width: 19px; height: 19px; } .loop[aria-pressed=true] { background: var(--ink); color: var(--bg); }
+  body.dark .loop { background: #1c1c1f; color: #f2f2f0; } body.dark .loop[aria-pressed=true] { background: var(--ink); color: var(--bg); }
+  .play { display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 22px 0 18px; border: 0; border-radius: 999px;
+    background: var(--ink); color: var(--bg); font: 600 14px var(--lab-font); cursor: pointer; transition: scale .25s var(--ease); }
+  .play:active { scale: .95; } .play svg { width: 15px; height: 15px; }
+  body.bare .back, body.bare .mode, body.bare .ctrl, body.bare .copy { display: none; } body.bare .rig { top: 50%; }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
+<main class="rig" id="rig"></main>
+<div class="ctrl"><button class="play" id="play" type="button" title="Play both (Space)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>Play both</button><button class="loop" id="loop" type="button" aria-pressed="false" aria-label="Loop" title="Loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2.5l3 3-3 3"/><path d="M4 11.5v-1a5 5 0 0 1 5-5h11"/><path d="M7 21.5l-3-3 3-3"/><path d="M20 12.5v1a5 5 0 0 1-5 5H4"/></svg></button></div>
+<script src="../../shared/lab-ui.js?v=20"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }
+</script>
+<script type="module">
+const $ = id => document.getElementById(id), clamp = (v, a, b) => Math.min(b, Math.max(a, v)), q = new URLSearchParams(location.search);
+
+// ---------- the presets: a timed curve is a cubic-bezier and a length; the spring is a response and a bounce ----------
+const PRESETS = {
+  stiff:  { name: 'Stiff',  kind: 'bezier', b: [.25, .25, .75, .75], ms: 300 },   // (linear; the handles sit on the line)
+  snappy: { name: 'Snappy', kind: 'bezier', b: [.33, 1, .68, 1], ms: 280 },       // (ease out cubic)
+  bounce: { name: 'Bounce', kind: 'spring', response: .5, bounce: .5 },
+  calm:   { name: 'Calm',   kind: 'bezier', b: [.25, 1, .5, 1], ms: 1300 } };     // (ease out quart)
+const KEYS = Object.keys(PRESETS);
+
+// ---------- what the page remembers: light or dark, and each column's preset (and its custom curve) ----------
+const KEY = 'lab.easing.v2';
+const DEF = { mode: 'light', loop: false, cols: [{ key: 'stiff', custom: null }, { key: 'calm', custom: null }] };
+let S = (() => { try { return structuredClone({ ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }); } catch { return structuredClone(DEF); } })();
+let save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } };
+const cur = i => S.cols[i].key === 'custom' ? S.cols[i].custom : PRESETS[S.cols[i].key];
+
+// ---------- the maths: progress (0 → 1) after e ms; a spring runs past 1 and back ----------
+function bez([x1, y1, x2, y2], p) { if (p <= 0) return 0; if (p >= 1) return 1;
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const X = t => ((ax * t + bx) * t + cx) * t, dX = t => (3 * ax * t + 2 * bx) * t + cx, Y = t => ((ay * t + by) * t + cy) * t;
+  let t = p; for (let i = 0; i < 8; i++) { const e = X(t) - p, d = dX(t); if (Math.abs(e) < 1e-6) return Y(t); if (Math.abs(d) < 1e-6) break; t -= e / d; if (t < 0 || t > 1) break; }
+  let lo = 0, hi = 1; t = p; for (let i = 0; i < 40; i++) { const x = X(t); if (Math.abs(x - p) < 1e-6) break; if (x < p) lo = t; else hi = t; t = (lo + hi) / 2; } return Y(t); }
+const zeta = c => clamp(1 - c.bounce, .05, 1), omega = c => 2 * Math.PI / c.response;
+function springAt(c, s) { const z = zeta(c), w = omega(c); if (z >= .999) return 1 - Math.exp(-w * s) * (1 + w * s);
+  const wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * s) * (Math.cos(wd * s) + (z * w / wd) * Math.sin(wd * s)); }
+const msOf = c => c.kind === 'spring' ? Math.round(1000 * 6.9 / (zeta(c) * omega(c))) : c.ms;
+function prog(c, e) { const T = msOf(c); if (e <= 0) return 0; if (e >= T) return 1; return c.kind === 'spring' ? springAt(c, e / 1000) : bez(c.b, e / T); }
+// (the spring's peak: when it comes, and how far past 1; and back from a peak to the spring)
+function peak(c) { const z = Math.min(zeta(c), .99), wd = omega(c) * Math.sqrt(1 - z * z), tp = Math.PI / wd; return { ms: 1000 * tp, v: 1 + Math.exp(-z * omega(c) * tp) }; }
+function fromPeak(c, ms, v) { const o = clamp(v - 1, .01, .45), L = Math.log(o), z = -L / Math.sqrt(Math.PI * Math.PI + L * L);
+  const tp = clamp(ms, 60, 2000) / 1000, w0 = Math.PI / (tp * Math.sqrt(1 - z * z)); c.response = 2 * Math.PI / w0; c.bounce = 1 - z; }
+const r2 = v => +v.toFixed(2);
+function spec(c) { if (c.kind === 'spring') return `spring · response ${c.response.toFixed(2)} s · bounce ${c.bounce.toFixed(2)} · ${msOf(c)} ms`;
+  const [a, b, d, e] = c.b; return (a === b && d === e ? 'linear' : `cubic-bezier(${r2(a)}, ${r2(b)}, ${r2(d)}, ${r2(e)})`) + ` · ${c.ms} ms`; }
+function css(c) { if (c.kind === 'bezier') { const [a, b, d, e] = c.b; return `transition: transform ${c.ms}ms ${a === b && d === e ? 'linear' : `cubic-bezier(${r2(a)}, ${r2(b)}, ${r2(d)}, ${r2(e)})`};`; }
+  const T = msOf(c), pts = []; for (let i = 0; i <= 40; i++) pts.push(+prog(c, T * i / 40).toFixed(3)); return `transition: transform ${T}ms linear(${pts.join(', ')});`; }
+
+// ---------- the columns ----------
+const NS = 'http://www.w3.org/2000/svg';
+const X0 = 30, X1 = 344, Y0 = 168, Y1 = 68, U = Y0 - Y1;   // (the plot: 0 ms → X0, the shared axis → X1; value 0 → Y0, 1 → Y1)
+const cols = [0, 1].map(i => { const el = document.createElement('section'); el.className = 'col'; el.innerHTML = `
+  <div class="scene" title="Play both"><canvas></canvas></div>
+  <svg class="chart" viewBox="0 20 360 190" aria-label="Curve ${i ? 'B' : 'A'}">
+    <line class="guide" x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}"/><line class="guide one" x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}"/>
+    <text x="${X0 - 10}" y="${Y0 + 4}" text-anchor="end">0</text><text x="${X0 - 10}" y="${Y1 + 4}" text-anchor="end">1</text>
+    <g class="ticks"></g><path class="ghost"/><path class="curve"/><g class="arms"></g>
+    <line class="tline" y1="0" y2="${Y0}"/><circle class="tdot" r="4.5"/><g class="hs"></g>
+  </svg>
+  <div class="foot"><span class="spec"></span><button class="copy" type="button">Copy CSS</button></div>
+  <div class="vars" role="group" aria-label="Preset ${i ? 'B' : 'A'}">
+    <button class="pv" type="button" aria-label="Previous preset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <span class="vn"></span>
+    <button class="nx" type="button" aria-label="Next preset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>`; $('rig').appendChild(el);
+  const g = s => el.querySelector(s);
+  return { el, svg: g('.chart'), curve: g('.curve'), ghost: g('.ghost'), arms: g('.arms'), hs: g('.hs'), ticks: g('.ticks'), tdot: g('.tdot'), tline: g('.tline'), spec: g('.spec'), vars: g('.vars'), nm: g('.vn'), canvas: g('canvas'), scene: g('.scene'), copy: g('.copy') }; });
+
+// (the time axis both charts share, rounded up; frozen while a handle is held so the curve under the finger does not slide)
+let axis = 1000, frozen = false;
+const niceAxis = () => { const m = Math.max(msOf(cur(0)), msOf(cur(1))); return Math.max(400, Math.ceil(m * 1.04 / 100) * 100); };
+const tx = ms => X0 + (X1 - X0) * ms / axis, ty = v => Y0 - U * v;
+function pathOf(c) { let d = ''; const n = 200; for (let k = 0; k <= n; k++) { const e = axis * k / n; d += (k ? 'L' : 'M') + tx(e).toFixed(1) + ' ' + ty(prog(c, e)).toFixed(1); } return d; }
+const node = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+function drawTicks(C) { C.ticks.innerHTML = ''; const step = axis <= 800 ? 200 : axis <= 2000 ? 500 : 1000;
+  for (let e = 0; e <= axis + 1; e += step) { node('line', { class: 'guide', x1: tx(e), x2: tx(e), y1: Y0, y2: Y0 + 4 }, C.ticks); node('text', { x: tx(e), y: Y0 + 18, 'text-anchor': e ? 'middle' : 'start' }, C.ticks).textContent = !e ? (step < 1000 ? '0 ms' : '0') : step < 1000 ? e + '' : e / 1000 + ' s'; } }
+// (the handles of a column: where they are, in chart units)
+function handles(c) { if (c.kind === 'spring') { const p = peak(c); return [{ id: 'peak', ms: p.ms, v: p.v }]; }
+  const [x1, y1, x2, y2] = c.b; return [{ id: 'p1', ms: x1 * c.ms, v: y1 }, { id: 'p2', ms: x2 * c.ms, v: y2 }, { id: 'end', ms: c.ms, v: 1 }]; }
+function drawChart(i) { const C = cols[i], c = cur(i);
+  drawTicks(C); C.curve.setAttribute('d', pathOf(c)); C.ghost.setAttribute('d', pathOf(cur(1 - i)));
+  C.arms.innerHTML = ''; const H = handles(c);
+  if (c.kind === 'bezier') { node('line', { class: 'arm', x1: tx(0), y1: ty(0), x2: tx(H[0].ms), y2: ty(H[0].v) }, C.arms); node('line', { class: 'arm', x1: tx(c.ms), y1: ty(1), x2: tx(H[1].ms), y2: ty(H[1].v) }, C.arms); }
+  else node('line', { class: 'arm', x1: tx(H[0].ms), y1: ty(1), x2: tx(H[0].ms), y2: ty(H[0].v) }, C.arms);
+  // (the handle nodes stay, so one held keeps its pointer capture while it moves)
+  H.forEach(h => { let n = C.hs.querySelector(`[data-h=${h.id}]`);
+    if (!n) { n = node('g', { class: 'h', 'data-h': h.id, tabindex: 0, role: 'slider', 'aria-label': { p1: 'First handle', p2: 'Second handle', end: 'Length', peak: 'Spring peak' }[h.id] }, C.hs);
+      node('circle', { class: 'hit', r: 16 }, n); node('circle', { class: 'ring', r: 5.5 }, n); }
+    n.setAttribute('transform', `translate(${tx(h.ms).toFixed(1)} ${ty(h.v).toFixed(1)})`); n.setAttribute('aria-valuetext', spec(c)); });
+  C.hs.querySelectorAll('.h').forEach(n => { if (!H.some(h => h.id === n.dataset.h)) n.remove(); });
+  C.spec.textContent = spec(c); C.nm.textContent = c.name; }
+function drawAll() { if (!frozen) axis = niceAxis(); drawChart(0); drawChart(1); drawTrace(performance.now()); }
+
+// ---------- grabbing a curve: the first move makes the column's own copy (Custom), so the preset stays as it was ----------
+function own(i) { const col = S.cols[i]; if (col.key !== 'custom') { col.custom = { ...structuredClone(PRESETS[col.key]), name: 'Custom' }; col.key = 'custom'; } return col.custom; }
+function moveHandle(i, id, ms, v) { const c = own(i);
+  if (id === 'peak') fromPeak(c, ms, v);
+  else if (id === 'end') c.ms = clamp(Math.round(ms / 10) * 10, 60, 3000);
+  else { const k = id === 'p1' ? 0 : 2; c.b[k] = r2(clamp(ms / c.ms, 0, 1)); c.b[k + 1] = r2(clamp(v, -.6, 1.6)); }
+  save(); drawAll(); }
+let drag = null;
+cols.forEach((C, i) => {
+  C.hs.addEventListener('pointerdown', e => { const h = e.target.closest('.h'); if (!h) return; e.preventDefault(); h.setPointerCapture(e.pointerId); h.classList.add('on'); frozen = true; drag = { i, id: h.dataset.h, el: h }; });
+  C.hs.addEventListener('pointermove', e => { if (!drag || drag.i !== i) return; const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(C.svg.getScreenCTM().inverse());
+    moveHandle(i, drag.id, (pt.x - X0) / (X1 - X0) * axis, (Y0 - pt.y) / U); });
+  const up = () => { if (!drag || drag.i !== i) return; drag.el.classList.remove('on'); drag = null; frozen = false; drawAll(); play(true); };
+  C.hs.addEventListener('pointerup', up); C.hs.addEventListener('pointercancel', up);
+  // (the keyboard: arrows move a focused handle, Shift for ten times as much)
+  C.hs.addEventListener('keydown', e => { const h = e.target.closest('.h'); if (!h) return; const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key]; if (!d) return; e.preventDefault();
+    const m = e.shiftKey ? 10 : 1, now = handles(cur(i)).find(x => x.id === h.dataset.h); moveHandle(i, now.id, now.ms + d[0] * 10 * m, now.v + d[1] * .01 * m); });
+  C.copy.onclick = () => { navigator.clipboard?.writeText(css(cur(i))); C.copy.textContent = 'Copied'; setTimeout(() => C.copy.textContent = 'Copy CSS', 1200); };
+  C.scene.onclick = () => play(false);
+  // (the preset pill: the four, and Custom once the curve was grabbed)
+  const names = () => [...KEYS.map(k => PRESETS[k].name), ...(S.cols[i].custom ? ['Custom'] : [])], keyOf = n => n === 'Custom' ? 'custom' : KEYS.find(k => PRESETS[k].name === n);
+  const pick = n => { S.cols[i].key = keyOf(n); save(); drawAll(); play(true); };
+  C.V = LabUI.variants(C.vars, { prev: C.el.querySelector('.pv'), next: C.el.querySelector('.nx'), name: C.nm, items: names, current: () => cur(i).name,
+    onStep: d => { const l = names(); pick(l[(l.indexOf(cur(i).name) + d + l.length) % l.length]); }, onPick: pick }); });
+
+// ---------- playing: both columns from one clock; there, and on the next, back ----------
+let t0 = -1e9, dir = 0;   // (dir 1: going to the end; the ball's value is the progress, or one minus it on the way back)
+// (fromStart: a new preset or a let-go handle runs both from the start; Play goes the other way each time)
+function play(fromStart) { dir = fromStart ? 1 : 1 - dir; t0 = performance.now(); kick(); }
+const ballV = i => { const p = prog(cur(i), performance.now() - t0); return dir ? p : 1 - p; };
+function drawTrace(now) { cols.forEach((C, i) => { const c = cur(i), e = clamp(now - t0, 0, msOf(c)), started = t0 > 0;
+  C.tdot.style.opacity = C.tline.style.opacity = started ? 1 : 0; const x = tx(e), y = ty(prog(c, e));
+  C.tdot.setAttribute('cx', x); C.tdot.setAttribute('cy', y); C.tline.setAttribute('x1', x); C.tline.setAttribute('x2', x); C.tline.setAttribute('y1', y); }); }
+// (one loop of frames, run while something moves or the loop is on; looping turns round off the same clock: a beat at each end,
+// then the other way. In the beat nothing is redrawn)
+let raf = 0;
+const BEAT = 600, longest = () => Math.max(msOf(cur(0)), msOf(cur(1)));
+function frame() { const now = performance.now(), T = longest();
+  if (S.loop && now - t0 >= T + BEAT) { dir = 1 - dir; t0 = now; }
+  if (now - t0 < T + 50) { drawTrace(now); scenes.forEach((s, i) => s.set(ballV(i))); }
+  raf = S.loop || now - t0 < T + 50 ? requestAnimationFrame(frame) : 0; }
+const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+$('play').onclick = () => play(false);
+function setLoop(on) { S.loop = on; save(); $('loop').setAttribute('aria-pressed', String(on)); if (on) { if (performance.now() - t0 >= longest()) play(false); else kick(); } }
+$('loop').onclick = () => setLoop(!S.loop);
+addEventListener('keydown', e => { if (e.code === 'Space' && !e.target.closest('input, button, [role=slider], .lv-menu')) { e.preventDefault(); play(false); } });
+
+// ---------- the 3D: the page is a wall seen head-on, and a soft groove is pressed into it: one smooth surface, the wall easing into a
+// rounded channel with no edge anywhere (its slope is zero at the wall and at the bottom; the ends round off by themselves). Its
+// shading is computed per point and baked in: how it turns to the light, how deep it is, and a soft shadow of its own upper lip,
+// marched along the light; the flat wall comes out exactly the page's colour, so there is no seam. A glossy ball sits in it, lit
+// for real, throwing a very soft shadow. Small scored ticks above and below mark start and end; the groove runs on past them,
+// room for a spring to overshoot ----------
+const scenes = [];
+let THREE = null;
+try { THREE = await import('three'); } catch { }
+const { RoomEnvironment } = THREE ? await import('three/addons/environments/RoomEnvironment.js').catch(() => ({})) : {};
+const R = .24, WO = .52, DP = .34, XA = -1.2, XB = 1.2, OV = .28, HALF = XB + OV * (XB - XA);
+// (the ball; the groove's half-width where it meets the wall, and its depth; start and end; the overshoot room, as a share of the way;
+// the groove's half-length to its end centres)
+const roomy = v => v > 1 ? 1 + OV * Math.tanh((v - 1) / OV) : v < 0 ? -OV * Math.tanh(-v / OV) : v;
+// (the groove's surface: depth below the wall from the distance to its centre line; a rounded bottom, then a long soft rise to the wall)
+const FLAT = .25, ss = s => s * s * s * (s * (s * 6 - 15) + 10);
+function hgt(x, y) { const t = Math.hypot(Math.max(Math.abs(x) - HALF, 0), y) / WO; if (t >= 1) return 0; return -DP * (1 - ss(clamp((t - FLAT) / (1 - FLAT), 0, 1))); }
+const LIGHT = [-.42, .55, .72], LN = Math.hypot(...LIGHT), L = LIGHT.map(c => c / LN);   // (towards the light: above-left, in front of the wall)
+const GX = 3.1, GY = 1.25;   // (the surface's half-size: the whole view)
+function ballTexture(dark) { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256; const g = cv.getContext('2d');
+  g.fillStyle = dark ? '#ecebe6' : '#26272b'; g.fillRect(0, 0, 512, 256);
+  // (a band round it and a small dot, so the roll shows)
+  g.fillStyle = dark ? '#9d9b94' : '#55565c'; g.fillRect(0, 118, 512, 20); g.beginPath(); g.arc(128, 60, 14, 0, Math.PI * 2); g.fill();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
+// (the baked shading: the page's colour, pulled toward black where the surface turns from the light, lies deep or in the lip's soft
+// shadow, and toward white where it turns to it)
+function shade(geo, dark) { const pos = geo.attributes.position, col = geo.attributes.color, pg = new THREE.Color(dark ? 0x0e0e10 : 0xf3f2ee), c = new THREE.Color(), black = new THREE.Color(0, 0, 0), white = new THREE.Color(1, 1, 1);
+  const K1 = dark ? .55 : .32, KD = dark ? .35 : .07, KS = dark ? .45 : .14, K2 = dark ? .14 : .3, e = .004;
+  for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i), h = pos.getZ(i);
+    if (h === 0 && hgt(x + e, y) === 0 && hgt(x - e, y) === 0 && hgt(x, y + e) === 0 && hgt(x, y - e) === 0) { col.setXYZ(i, pg.r, pg.g, pg.b); continue; }
+    const nx = -(hgt(x + e, y) - hgt(x - e, y)) / (2 * e), ny = -(hgt(x, y + e) - hgt(x, y - e)) / (2 * e), nl = Math.hypot(nx, ny, 1);
+    const lam = (nx * L[0] + ny * L[1] + L[2]) / nl - L[2];   // (how much more, or less, it faces the light than the flat wall)
+    // (the lip's soft shadow: march toward the light; the closest the ray passes under the surface, over the distance, softens it)
+    let vis = 1; for (let k = 1; k <= 22; k++) { const t = k * .03, rz = h + L[2] * t; if (rz >= 0) break; const d = rz - hgt(x + L[0] * t, y + L[1] * t); vis = Math.min(vis, clamp(.5 + 5 * d / t, 0, 1)); }
+    const dark1 = clamp(K1 * Math.max(0, -lam) + KD * (-h / DP) + KS * (1 - vis), 0, .95), glow = K2 * Math.max(0, lam) * vis;
+    c.copy(pg).lerp(black, dark1).lerp(white, glow); col.setXYZ(i, c.r, c.g, c.b); }
+  col.needsUpdate = true; }
+function makeScene(canvas) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0); renderer.toneMapping = THREE.NeutralToneMapping; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap;
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(18, 360 / 150, .1, 60);
+  cam.position.set(0, 0, 6.9); cam.lookAt(0, 0, 0);
+  if (RoomEnvironment) { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), .04).texture; pm.dispose(); scene.environmentIntensity = .4; }
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(L[0] * 6, L[1] * 6, L[2] * 6);
+  sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.radius = 14; sun.shadow.blurSamples = 20; sun.shadow.bias = -.0005;
+  Object.assign(sun.shadow.camera, { left: -3.2, right: 3.2, top: 2, bottom: -2, near: 1, far: 14 });
+  const sky = new THREE.HemisphereLight(0xffffff, 0xffffff, .5); scene.add(sun, sky);
+  // (the surface: a fine grid over the whole view, pressed in where the groove is; a shadow-only skin over it takes the ball's shadow)
+  const geo = new THREE.PlaneGeometry(GX * 2, GY * 2, 520, 120), pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) pos.setZ(i, hgt(pos.getX(i), pos.getY(i)));
+  geo.computeVertexNormals(); geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pos.count * 3), 3));
+  const surf = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
+  const skin = new THREE.Mesh(geo, new THREE.ShadowMaterial({ opacity: .2, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })); skin.receiveShadow = true;
+  scene.add(surf, skin);
+  // (the ticks: short scores on the wall above and below the groove, at start and at end)
+  const tickMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: .28, depthWrite: false }), tg = new THREE.PlaneGeometry(.02, .12);
+  for (const x of [XA, XB]) for (const y of [-1, 1]) { const t = new THREE.Mesh(tg, tickMat); t.position.set(x, y * (WO + .14), .002); scene.add(t); }
+  // (the ball: in the groove against its bottom; it rolls about the axis pointing at you)
+  const ballMat = new THREE.MeshPhysicalMaterial({ roughness: .28, clearcoat: 1, clearcoatRoughness: .06, metalness: 0 });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 40), ballMat); ball.castShadow = true; ball.position.set(XA, 0, R - DP + .004); scene.add(ball);
+  let v = 0;
+  const S3 = {
+    set(nv) { v = nv; const x = XA + (XB - XA) * roomy(v); ball.position.x = x; ball.rotation.z = -(x - XA) / R; renderer.render(scene, cam); },
+    theme(dark) { shade(geo, dark); sky.groundColor.set(dark ? 0x0e0e10 : 0xf3f2ee); sun.intensity = dark ? 2.2 : 1.6;
+      tickMat.color.set(dark ? 0xf2f2f0 : 0x1b1c20); tickMat.opacity = dark ? .3 : .28; skin.material.opacity = dark ? .55 : .2;
+      ballMat.map?.dispose(); ballMat.map = ballTexture(dark); ballMat.needsUpdate = true; S3.set(v); },
+    size(px) { renderer.setPixelRatio(px); renderer.setSize(360, 150, false); S3.set(v); } };
+  return S3; }
+if (THREE) cols.forEach(C => { try { scenes.push(makeScene(C.canvas)); } catch { } });
+
+// ---------- light and dark, the fit ----------
+function setMode(m) { S.mode = m; save(); const dark = m === 'dark'; document.body.classList.toggle('dark', dark); cols.forEach(C => C.vars.classList.toggle('dark', dark)); scenes.forEach(s => s.theme(dark));
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === m))); document.querySelector('meta[name=theme-color]').content = dark ? '#0e0e10' : '#f3f2ee'; drawAll(); }
+document.querySelectorAll('#mode button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+function fit() { const W = innerWidth, H = innerHeight, bare = document.body.classList.contains('bare'), stack = !bare && W < 640 && H > W;
+  document.body.classList.toggle('stack', stack);
+  const rw = stack ? 360 : 760, rh = stack ? 2 * 434 + 24 : 434;
+  const k = bare ? Math.min(W / (rw + 30), H / (rh + 10)) : clamp(Math.min((W - 32) / rw, (H - 150) / rh), .35, 1.5);
+  document.documentElement.style.setProperty('--k', k.toFixed(3)); scenes.forEach(s => s.size(Math.min(3, (devicePixelRatio || 1) * k))); }
+addEventListener('resize', fit);
+LabUI.segThumb($('mode'));
+
+// ---------- the board's box: ?thumb=1 the still (Snappy and Bounce, both arrived), ?demo=1 the live preview: pairs of presets
+// played there and back, in turn. Neither touches the saved settings ----------
+if (q.has('thumb') || q.has('demo')) { document.body.classList.add('bare'); S = structuredClone(DEF); save = () => { }; }
+setMode(S.mode); fit(); drawAll(); scenes.forEach((s, i) => s.set(0)); $('loop').setAttribute('aria-pressed', String(!!S.loop)); if (S.loop) play(false);
+if (q.has('thumb')) { t0 = performance.now() - 5000; dir = 1; drawTrace(performance.now()); scenes.forEach((s, i) => s.set(1)); }
+if (q.has('demo')) { const wait = ms => new Promise(r => setTimeout(r, ms)), PAIRS = [['stiff', 'calm'], ['snappy', 'bounce'], ['stiff', 'bounce'], ['snappy', 'calm']];
+  await document.fonts.ready; await wait(400);
+  for (let k = 0; ; k++) { const [a, b] = PAIRS[k % PAIRS.length]; S.cols[0].key = a; S.cols[1].key = b; drawAll(); cols.forEach(C => C.V.flash?.(1));
+    const T = Math.max(msOf(cur(0)), msOf(cur(1)));
+    dir = 0; play(false); await wait(T + 700); play(false); await wait(T + 700); } }
+</script>
+</body>
+</html>
