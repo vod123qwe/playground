@@ -1,13 +1,8 @@
-# AI Wave (draft)
+# AI Wave
 
-Efekt fali z AirDrop (iOS 17) użyty inaczej: jako znak, że AI pracuje. Ekran aplikacji asystenta (przykładowa treść), u góry kula `<ai-blob>` (domyślnie Glass, w panelu Nebula i Halo; z `../ai-blob/ai-blob.js`). Gdy kula zaczyna myśleć, z niej wychodzi fala światła przez cały ekran: treść pod frontem wygina się jak pod soczewką, brzeg fali jest jasny z tęczowym rozszczepieniem, za nią zostaje odrobina światła. Podczas mówienia lecą słabsze fale, podczas słuchania fala zbiega do kuli. Kliknięcie w ekran wysyła falę z miejsca kliknięcia, Spacja albo „Send a wave” z kuli.
+Sama fala z AirDrop (iOS 17), bez telefonu, ekranu asystenta i kuli (zmiana Jarka 06.11.2026). Pierścień światła rozchodzi się po stronie i gaśnie: krawędź biała z tęczą w środku, trochę światła zostaje za nim, lekki cień przed nim, a to, co leży pod nim, wygina się jak pod soczewką.
 
-**Jak to działa:** ekran jest rysowany w canvasie 2D (tekstura), fala to shader WebGL2 nad nim: dla każdej fali odległość od frontu w szerokościach pasma, przesunięcie pikseli wzdłuż promienia (pochodna gaussa: przed frontem wypchnięte, za nim wciągnięte, czyli soczewka), czerwony, zielony i niebieski przesunięte trochę różnie (tęcza), kolor brzegu z palety kuli po kącie. Front przechodzi ekran w ok. 0,95 s (lekko przyspiesza), gaśnie przy najdalszym rogu. Do 8 fal naraz.
-
-**Style (pasek na dole):** AirDrop (soczewka + jasny brzeg), Ripple (pociąg wodnych pierścieni za frontem), Glow (samo światło, bez wyginania).
-
-**Panel:** Speed, Width (szerokość pasma, domyślnie 34 px), Bend (siła wygięcia), Rainbow, Light; kiedy fala: przy starcie myślenia, podczas mówienia, do środka przy słuchaniu.
-
-**Lab:** ustawienia `lab.ai-wave.v1`; klawisze 1–5 stany, ← → style, Spacja fala; `?thumb=1` (ekran na cały kadr), `?demo=1` (thinking, speaking, listening w pętli); do testów `window.WAVE`.
-
-**Draft, czyli czego jeszcze nie ma:** fala działa na narysowanej makiecie, nie na prawdziwym DOM (do prawdziwej strony trzeba by renderować ją do tekstury albo użyć filtra SVG); kula sama nie jest wyginana; brak ciemnego motywu.
+- Co kilka sekund fala wychodzi ze środka (wyłączalne, odstęp 1,5–8 s); klik albo dotyk puszcza falę z dowolnego miejsca; Spacja ze środka.
+- **Jak to działa:** powierzchnia jest rysowana w canvasie 2D (tekstura), fala to shader WebGL2 nad nią: odległość od frontu w szerokościach pasma, przesunięcie pikseli wzdłuż promienia (przed frontem na zewnątrz, za nim do środka), czerwony, zielony i niebieski przesunięte odrobinę inaczej (tęcza), jasna krawędź w kolorach palety zależnych od kąta, poświata za frontem, cień przed. Front przyspiesza i gaśnie przy najdalszym rogu.
+- **Panel:** Speed, Width, Bend, Rainbow, Light, pod spodem Plain (czyste tło labu) albo Dots (siatka kropek, żeby było widać wygięcie), fala sama co X s.
+- Plansza: `?thumb=1` stopklatka fali (`&t=` moment w sekundach), `?demo=1` same fale.
