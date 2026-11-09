@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control Studio · lab</title>
+<meta name="theme-color" content="#ecebe7">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* Control Studio: a round control modelled as a stack of layers, outside in (a panel, a slot with light, a knob, a ring in it …).
+     Each layer: a radius, a height (raised or sunk), a face (flat, domed, dished), an edge (how strong the rounding is, how far it
+     reaches, and whether it flows into the next layer, meets it sharp, or sits apart behind a fine seam), a material, details.
+     Left the layers, in the middle the 3D view with the cross-section under it (handles to drag), right the chosen layer. */
+  :root { --bg: #ecebe7; --card: #fff; --ink: #1d1e22; --sub: rgba(29,30,34,.55); --line: rgba(29,30,34,.1); --acc: #ff8a12; --sel: rgba(255,138,18,.12); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; display: grid; grid-template-columns: 236px 1fr 300px; grid-template-rows: 52px 1fr; gap: 10px; padding: 10px; }
+  button { font: inherit; color: inherit; }
+  .bar { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+  .bar h1 { font-size: 15px; font-weight: 600; margin: 0 14px 0 4px; letter-spacing: -.01em; }
+  .btn { height: 34px; padding: 0 14px; border: 0; border-radius: 17px; background: var(--card); cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 7px; transition: background .2s, scale .2s; }
+  .btn:hover { background: #f6f5f2; } .btn:active { scale: .97; } .btn.dark { background: var(--ink); color: #fff; } .btn.dark:hover { background: #33343a; }
+  .btn svg { width: 16px; height: 16px; } .btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  .sp { flex: 1; }
+  select.btn { appearance: none; padding-right: 30px; background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%231d1e22' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 12px center; }
+  .seg { display: inline-flex; background: var(--card); border-radius: 17px; padding: 3px; height: 34px; }
+  .seg button { border: 0; background: none; border-radius: 14px; padding: 0 13px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--sub); transition: background .25s, color .25s; }
+  .seg button[aria-pressed=true] { background: var(--ink); color: #fff; }
+  .card { background: var(--card); border-radius: 18px; overflow: hidden; min-height: 0; }
+  /* layers */
+  .layers { display: flex; flex-direction: column; }
+  .layers h2, .insp h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--sub); margin: 16px 16px 8px; }
+  .list { flex: 1; overflow: auto; padding: 0 8px; }
+  .ly { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; width: 100%; border: 0; background: none; text-align: left; padding: 7px 8px; border-radius: 11px; cursor: pointer; font-size: 13px; transition: background .2s; }
+  .ly:hover { background: #f5f4f1; } .ly[aria-selected=true] { background: var(--sel); }
+  .ly .ic { width: 30px; height: 30px; } .ly small { display: block; color: var(--sub); font-size: 11px; margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .ly .tag { font-size: 10px; color: var(--sub); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; }
+  .ly.hov { box-shadow: inset 0 0 0 1px rgba(255,138,18,.5); }
+  .lyacts { display: flex; gap: 6px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+  .lyacts .btn { flex: 1; justify-content: center; background: #f3f2ef; height: 32px; padding: 0 8px; font-size: 12px; }
+  .lyacts .btn:hover { background: #ebeae6; } .lyacts .btn:disabled { opacity: .4; cursor: default; }
+  /* centre: the 3D view and the cross-section under it */
+  .centre { display: grid; grid-template-rows: 1fr var(--secH, 250px); gap: 10px; min-height: 0; }
+  .split { position: absolute; left: 30px; right: 30px; top: -10px; height: 10px; cursor: row-resize; z-index: 3; }
+  .split::after { content: ''; position: absolute; left: 50%; top: 3px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(0,0,0,.12); transition: background .2s; } .split:hover::after { background: rgba(0,0,0,.3); }
+  .stools { position: absolute; right: 10px; top: 8px; display: flex; gap: 6px; z-index: 2; align-items: center; }
+  .stools button { height: 26px; padding: 0 10px; border: 0; border-radius: 13px; background: #f3f2ef; font: 500 12px var(--lab-font); color: var(--ink); cursor: pointer; transition: background .2s, color .2s; }
+  .stools button:hover { background: #e9e8e4; } .stools button[aria-pressed=true] { background: var(--ink); color: #fff; } .stools button:disabled { opacity: .4; cursor: default; }
+  .exs { display: inline-flex; background: #f3f2ef; border-radius: 13px; } .exs button { background: none; padding: 0 8px; }
+  .sec .seg { cursor: copy; } .sec .seg:hover { stroke: rgba(255,138,18,.18); }
+  .btn.ic { width: 34px; padding: 0; justify-content: center; } .btn:disabled { opacity: .35; cursor: default; }
+  .pop { position: fixed; z-index: 40; width: 270px; border-radius: 16px; box-shadow: 0 14px 44px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.05); padding: 4px 14px 12px; --ui-pad: 14px;
+    opacity: 0; pointer-events: none; transform: translateY(6px) scale(.98); transform-origin: left bottom; transition: opacity .16s, transform .24s cubic-bezier(.2,1.25,.4,1); }
+  .pop.on { opacity: 1; pointer-events: auto; transform: none; }
+  .pop h3 { font-size: 12px; font-weight: 600; margin: 10px 0 6px; color: var(--sub); }
+  .prow { display: flex; gap: 6px; margin-top: 10px; } .prow button { flex: 1; height: 32px; border: 0; border-radius: 10px; background: #f3f2ef; font: 500 12px var(--lab-font); cursor: pointer; } .prow button:hover { background: #e9e8e4; } .prow button:disabled { opacity: .4; cursor: default; }
+  .view { position: relative; }
+  .view .hint { position: absolute; left: 14px; bottom: 12px; font-size: 11px; color: var(--sub); pointer-events: none; transition: opacity .3s; }
+  .view .hint.dk { color: rgba(255,255,255,.45); }
+  .sec { position: relative; user-select: none; -webkit-user-select: none; } .sec svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .sec .cap { position: absolute; left: 14px; top: 14px; right: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; color: var(--sub); pointer-events: none; }
+  .sec .cap b { color: var(--ink); font-weight: 600; }
+  .hd { cursor: grab; } .hd:active { cursor: grabbing; }
+  /* inspector */
+  .insp { overflow: auto; padding-bottom: 14px; }
+  .insp .lab-ui { background: none; box-shadow: none; position: static; width: auto; max-height: none; padding: 0 16px; --ui-pad: 16px; margin: 0; }
+  .insp .nm { margin: 0 16px 6px; display: flex; gap: 8px; }
+  .insp .nm input { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; font: 600 14px var(--lab-font); color: var(--ink); background: #faf9f7; }
+  .insp .nm input:focus { outline: 2px solid var(--acc); outline-offset: -1px; }
+  .insp .note { font-size: 12px; color: var(--sub); margin: 4px 16px 10px; line-height: 1.45; }
+  /* preview: the dial alone, full size */
+  body.preview { grid-template-columns: 0 1fr 0; } body.preview .layers, body.preview .insp { visibility: hidden; } body.preview .centre { grid-template-rows: 1fr 0; } body.preview .sec { visibility: hidden; }
+  .toast { position: fixed; left: 50%; bottom: 22px; translate: -50% 20px; background: var(--ink); color: #fff; font-size: 13px; padding: 10px 16px; border-radius: 20px; opacity: 0; pointer-events: none; transition: opacity .25s, translate .35s cubic-bezier(.2,1.3,.4,1); z-index: 50; }
+  .toast.on { opacity: 1; translate: -50% 0; }
+  .rec { position: absolute; right: 14px; top: 12px; font-size: 12px; color: #fff; background: #d6342c; border-radius: 12px; padding: 4px 10px; display: none; }
+  .rec.on { display: block; }
+  @media (max-width: 900px) { body { grid-template-columns: 1fr; grid-template-rows: 52px 46vh auto auto; overflow: auto; height: auto; } .layers { order: 3; } .insp { order: 4; } .centre { grid-template-rows: 46vh 180px; } }
+  /* the thumbnail */
+  body.thumb { display: block; padding: 0; background: #d9d8d4; } body.thumb > :not(.centre) { display: none; } body.thumb .centre { position: fixed; inset: 0; display: block; }
+  body.thumb .view { position: absolute; inset: 0; border-radius: 0; } body.thumb .sec, body.thumb .hint { display: none; }
+</style>
+<script src="../../shared/lab-ui.js?v=20"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }
+</script>
+</head>
+<body>
+<header class="bar">
+  <h1>Control Studio</h1>
+  <select class="btn" id="preset" aria-label="Start from a preset"></select>
+  <div class="seg" role="group" aria-label="Mode"><button type="button" data-m="edit" aria-pressed="true">Edit</button><button type="button" data-m="preview" aria-pressed="false">Preview</button></div>
+  <span class="sp"></span>
+  <button class="btn ic" id="undo" type="button" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
+  <button class="btn ic" id="redo" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
+  <button class="btn" id="png" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>Image</button>
+  <button class="btn" id="vid" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3"/></svg>Video</button>
+  <button class="btn dark" id="ctl" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>Control</button>
+</header>
+<section class="card layers" aria-label="Layers">
+  <h2>Layers · outside in</h2>
+  <div class="list" id="list" role="listbox" aria-label="Layers"></div>
+  <div class="lyacts"><button class="btn" id="add" type="button">+ Circle inside</button><button class="btn" id="del" type="button">Delete</button></div>
+</section>
+<main class="centre">
+  <div class="card view" id="view"><div class="hint" id="hint"></div><div class="rec" id="rec">● Recording</div></div>
+  <div class="card sec" id="sec"><div class="split" id="split" title="Drag to resize"></div><div class="cap" id="cap"></div><div class="stools"><button type="button" id="pts" aria-pressed="false" title="Edit the chosen layer as points with handles">Points</button><span class="exs" id="exs" title="Height drawn larger"><button type="button" data-ex="1">×1</button><button type="button" data-ex="2">×2</button><button type="button" data-ex="4">×4</button></span><button type="button" id="fit">Fit</button></div><svg id="svg" aria-label="Cross-section"></svg></div>
+</main>
+<aside class="card insp" id="insp" aria-label="The chosen layer"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { createDial, normalise, profile, PRESETS, MATERIALS, PANEL_R, clamp, toPath, pathNodes, smooth } from './engine.js';
+const $ = id => document.getElementById(id), KEY = 'lab.control-studio.v1', Q = new URLSearchParams(location.search), THUMB = Q.has('thumb');
+const clone = o => JSON.parse(JSON.stringify(o));
+let S = { preset: 'Thermostat', design: clone(PRESETS.Thermostat), sel: 2, mode: 'edit' };
+if (!THUMB) try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.design) S = { ...S, ...s }; } catch { }
+else if (PRESETS[Q.get('preset')]) S = { ...S, preset: Q.get('preset'), design: clone(PRESETS[Q.get('preset')]) };
+const save = () => { if (!THUMB) try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } if (typeof record === 'function') record(); };
+let D = normalise(S.design); S.design = D;
+if (THUMB) document.body.classList.add('thumb');
+
+// ---------- the 3D view ----------
+const dial = createDial($('view'), D, { orbit: true, editing: S.mode === 'edit', thumb: THUMB, capture: true });
+window.STUDIO = { dial, get S() { return S; } };
+const hint = () => { $('hint').classList.toggle('dk', isDark(D.page));
+  $('hint').textContent = S.mode === 'edit' ? 'Click a layer to pick it · drag to turn the view · wheel to zoom · double-click to reset' : 'Turn the knob · drag around it to look · double-click to reset'; };
+function isDark(hex) { const c = parseInt(hex.slice(1), 16), r = c >> 16 & 255, g = c >> 8 & 255, b = c & 255; return (r * .3 + g * .59 + b * .11) < 90; }
+dial.on('pick', k => { if (S.mode !== 'edit') return; select(k); });
+dial.on('hover', k => { document.querySelectorAll('.ly').forEach(b => b.classList.toggle('hov', +b.dataset.k === k)); hovSec = k; drawSection(); });
+dial.on('change', v => { D.control.value = v; save(); });
+
+// every change: the design rebuilt in place, the list and the section redrawn; the inspector only when told (sliders keep focus)
+function changed({ insp = false, list = true } = {}) { const keep = D.layers[S.sel], inner = D.layers.slice(1).sort((a, b) => b.r - a.r); D.layers.splice(1, D.layers.length, ...inner); S.sel = Math.max(0, D.layers.indexOf(keep)); S.design = D; S.sel = clamp(S.sel, 0, D.layers.length - 1); dial.update(D); dial.setPick(S.mode === 'edit' ? S.sel : -1);
+  if (list) drawList(); drawSection(); if (insp) drawInspector(); save(); hint(); }
+function select(k) { if (k !== S.sel) selNode = -1; S.sel = k; dial.setPick(k); drawList(); drawSection(); drawInspector(); save(); }
+
+// ---------- the list of layers: a small section icon for each ----------
+function icon(l, k) { const t = l.kind === 'slot', up = k > 0 && l.h > D.layers[k - 1].h;
+  const path = k === 0 ? 'M3 13h24' : t ? 'M3 10h7v9h10v-9h7' : up ? 'M3 19h7c0-6 1-7 3-7h4c2 0 3 1 3 7h7' : 'M3 11h7c0 6 1 7 3 7h4c2 0 3-1 3-7h7';
+  return `<svg class="ic" viewBox="0 0 30 30" fill="none" stroke="${t ? '#ff8a12' : 'currentColor'}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x=".5" y=".5" width="29" height="29" rx="8" stroke="rgba(0,0,0,.08)" fill="${l.material.color}"/><path d="${path}" stroke="${isDark(l.material.color) ? '#fff' : '#1d1e22'}" opacity=".7"/>${t ? '<circle cx="15" cy="15" r="2" fill="#ff8a12" stroke="none"/>' : ''}</svg>`; }
+function drawList() { const L = D.layers; $('list').innerHTML = '';
+  L.forEach((l, k) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'ly'; b.dataset.k = k; b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(k === S.sel));
+    b.innerHTML = `${icon(l, k)}<span><span class="n"></span><small>${k ? 'r ' + Math.round(l.r) + ' · ' : ''}h ${l.h > 0 ? '+' : ''}${+l.h.toFixed(1)}</small></span>${l.rotates ? '<span class="tag">turns</span>' : ''}`;
+    b.querySelector('.n').textContent = l.name; b.onclick = () => select(k); $('list').appendChild(b); });
+  $('del').disabled = S.sel === 0 || L.length < 2; }
+$('add').onclick = () => { const L = D.layers, k = S.sel, cur = L[k], next = L[k + 1], rO = k === 0 ? (next ? next.r + 60 : 300) : cur.r, rI = next ? next.r : 0;
+  const r = k === 0 ? rO : Math.max(rI + (rO - rI) * .55, rI + 3), base = clone(cur), n = { ...base, name: k === 0 ? 'Circle' : 'Circle in ' + cur.name, kind: 'solid', r, h: cur.h + 6, face: { bulge: 0, spread: 2.5 }, edge: { round: .6, reach: 4, join: 'blend' }, details: { knurl: false, dots: 0, dotsR: .85, mark: false, markR: .84 } };
+  L.splice(k + 1, 0, n); S.sel = k + 1; changed({ insp: true }); toast('Added a circle inside ' + cur.name + ' · drag it in the section'); };
+$('del').onclick = () => { if (S.sel === 0) return; const n = D.layers[S.sel].name; D.layers.splice(S.sel, 1); S.sel = Math.max(0, S.sel - 1); changed({ insp: true }); toast(n + ' deleted'); };
+
+// ---------- the cross-section: the right half of the dial seen from the side ----------
+// Parametric layers: a dot (radius and height), a diamond (reach) and a square (face); a click on any of them opens a small menu.
+// "Points" turns the chosen layer's outline into a path, as a vector in Figma: click it to add a point, drag points, click a point to
+// see its handles and drag them (round, longer, at an angle; Alt breaks them apart, Shift snaps), double-click toggles sharp/smooth.
+// Wheel zooms round the pointer, dragging the background pans, Fit brings it all back.
+let hovSec = -1, secDrag = null, selNode = -1, lastClick = { t: 0, i: -1 }; const view = { zoom: 1, cr: null, cz: null };
+let ex = 1; try { ex = +sessionStorage.getItem(KEY + '.ex') || 1; } catch { }
+const svg = $('svg'), NS = 'http://www.w3.org/2000/svg', cur = () => D.layers[S.sel];
+const endOf = (F, k) => { const L = D.layers; return k >= L.length - 1 ? 0 : L[k + 1].path ? L[k + 1].path[0].r : L[k + 1].r + F.pr.steps[k].padOut; };
+function secFrame() { if (secDrag?.F && secDrag.kind !== 'pan') return { ...secDrag.F, pr: profile(D) };
+  const W = svg.clientWidth, H = svg.clientHeight, L = D.layers, rMax = (L[1]?.r || 300) + 70, pr = profile(D);
+  const zs = pr.pts.filter(p => p.r <= rMax).map(p => p.z), zMin = Math.min(...zs, 0) - 8, zMax = Math.max(...zs, 0) + 8;
+  const padL = 26, padR = 22, padT = 44, padB = 16, iw = W - padL - padR, ih = H - padT - padB;
+  const fit = Math.min(iw / rMax, ih / Math.max(1, (zMax - zMin) * ex)), sx = fit * view.zoom, sz = sx * ex;
+  const cr = view.cr ?? rMax / 2, cz = view.cz ?? (zMin + zMax) / 2, cx = padL + iw / 2, cy = padT + ih / 2;
+  return { W, H, rMax, pr, sx, sz, cr, cz, X: r => cx + (r - cr) * sx, Y: z => cy - (z - cz) * sz, R: x => cr + (x - cx) / sx, Z: y => cz - (y - cy) / sz }; }
+const P2 = (F, r, z) => F.X(r).toFixed(1) + ' ' + F.Y(z).toFixed(1);
+function nodesOf(F, k) { const L = D.layers; return pathNodes(L[k].path, L[k - 1].h, endOf(F, k), L[k].h); }
+function drawSection() { const F = secFrame(), L = D.layers, k = S.sel, l = L[k]; svg.setAttribute('viewBox', `0 0 ${F.W} ${F.H}`); svg.innerHTML = '';
+  const el = (t, a, p = svg) => { const e = document.createElementNS(NS, t); for (const q in a) e.setAttribute(q, a[q]); p.appendChild(e); return e; };
+  const bottom = F.H + 60;
+  // (each layer's own body, filled down past the bottom of the view, in its colour)
+  F.pr.runs.forEach((run, j) => { if (run.length < 2) return; const line = 'M' + run.map(p => P2(F, p[0], p[1])).join('L');
+    el('path', { d: line + `L${F.X(run[run.length - 1][0]).toFixed(1)} ${bottom}L${F.X(run[0][0]).toFixed(1)} ${bottom}Z`, fill: L[j].material.color, opacity: j === k ? 1 : .85 });
+    el('path', { d: line, fill: 'none', stroke: j === k ? '#ff8a12' : j === hovSec ? 'rgba(255,138,18,.55)' : 'rgba(0,0,0,.35)', 'stroke-width': j === k ? 1.6 : 1, 'stroke-linejoin': 'round' }); });
+  L.forEach((o, j) => { if (o.kind !== 'slot' || !j) return; const rIn = L[j + 1]?.r || 0, rm = (o.r + rIn) / 2; el('ellipse', { cx: F.X(rm), cy: F.Y(F.pr.faceZ(j, rm)) - 2, rx: Math.max(2, (o.r - rIn) * F.sx * .35), ry: 3, fill: o.slot.colors[2], opacity: .8 }); });
+  el('line', { x1: F.X(0), x2: F.X(0), y1: 30, y2: F.H, stroke: 'rgba(0,0,0,.2)', 'stroke-dasharray': '3 4' });
+  $('cap').innerHTML = `<b>${esc(l.name)}</b> · ` + (k && l.path ? 'points: click the outline to add one, click a point for its handles' : k ? 'click the dot, the diamond or the square for a menu, or drag them' : 'the panel: drag the dot up or down');
+  $('pts').setAttribute('aria-pressed', String(!!(k && l.path))); $('pts').disabled = !k; document.querySelectorAll('#exs button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.ex === ex)));
+  if (k && l.path) drawPath(F, el, k);
+  else { const hz = k ? Math.max(l.h, L[k - 1].h) : l.h, hx = k ? l.r : Math.min(F.rMax, (L[1]?.r || 300) + 40);
+    if (k) { const s = F.pr.steps[k - 1], up = l.h > L[k - 1].h, rr = up ? l.r - s.reachH : l.r + s.reachH, ty = F.Y(hz) - 14;
+      el('line', { x1: F.X(l.r), x2: F.X(rr), y1: ty, y2: ty, stroke: '#ff8a12', 'stroke-width': 1, opacity: .6 });
+      el('rect', { x: F.X(rr) - 5, y: ty - 5, width: 10, height: 10, transform: `rotate(45 ${F.X(rr)} ${ty})`, fill: '#fff', stroke: '#ff8a12', 'stroke-width': 1.6, class: 'hd', 'data-h': 'reach' }).appendChild(title('Rounding: click for the menu, drag for its reach'));
+      const rIn = L[k + 1]?.r || 0, rm = rIn ? (l.r + rIn) / 2 : l.r * .35;
+      el('rect', { x: F.X(rm) - 5, y: F.Y(F.pr.faceZ(k, rm)) - 5, width: 10, height: 10, rx: 2, fill: '#fff', stroke: '#ff8a12', 'stroke-width': 1.6, class: 'hd', 'data-h': 'face' }).appendChild(title('Face: click for the menu, drag to dome or dish it')); }
+    el('circle', { cx: F.X(hx), cy: F.Y(l.h), r: 7, fill: '#ff8a12', stroke: '#fff', 'stroke-width': 2, class: 'hd', 'data-h': 'corner' }).appendChild(title(k ? 'Edge: click for the menu, drag for radius and height' : 'Height')); }
+  L.forEach((o, j) => { if (!j || j === k) return; el('circle', { cx: F.X(o.r), cy: F.Y(o.h), r: 4, fill: '#fff', stroke: 'rgba(0,0,0,.45)', 'stroke-width': 1.2, class: 'hd', 'data-pick': j }).appendChild(title(o.name)); }); }
+// (the path of the chosen layer: its segments (a wide invisible stroke to click into), the chosen point's handles, the points)
+function drawPath(F, el, k) { const N = nodesOf(F, k);
+  for (let i = 0; i < N.length - 1; i++) { const A = N[i], B = N[i + 1], d = `M${P2(F, A.r, A.z)}C${P2(F, A.r + (A.ho?.[0] || 0), A.z + (A.ho?.[1] || 0))} ${P2(F, B.r + (B.hi?.[0] || 0), B.z + (B.hi?.[1] || 0))} ${P2(F, B.r, B.z)}`;
+    el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 14, class: 'seg', 'data-seg': i }).appendChild(title('Click to add a point')); }
+  const showH = i => i === selNode || Math.abs(i - selNode) === 1;
+  N.forEach((n, i) => { if (!showH(i)) return; for (const w of ['hi', 'ho']) { const h = n[w]; if (!h) continue; const x = F.X(n.r + h[0]), y = F.Y(n.z + h[1]);
+      el('line', { x1: F.X(n.r), y1: F.Y(n.z), x2: x, y2: y, stroke: '#ff8a12', 'stroke-width': 1, opacity: i === selNode ? .9 : .45 });
+      el('circle', { cx: x, cy: y, r: i === selNode ? 4.5 : 3.5, fill: '#fff', stroke: '#ff8a12', 'stroke-width': 1.4, class: 'hd', 'data-hnd': i + ':' + w }); } });
+  N.forEach((n, i) => { const x = F.X(n.r), y = F.Y(n.z), s = i === selNode ? 9 : 8, end = i === 0 || i === N.length - 1;
+    el('rect', { x: x - s / 2, y: y - s / 2, width: s, height: s, rx: end ? s / 2 : 1.5, fill: i === selNode ? '#ff8a12' : '#fff', stroke: '#ff8a12', 'stroke-width': 1.5, class: 'hd', 'data-node': i })
+      .appendChild(title(i === 0 ? 'Start: slides along the outer face' : i === N.length - 1 ? 'End: drag up or down for the height' : n.t === 'sharp' ? 'Sharp point' : 'Smooth point')); }); }
+const title = t => { const e = document.createElementNS(NS, 'title'); e.textContent = t; return e; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const ptr = e => { const b = svg.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+// (a point on a cubic segment: split there, the new point gets the halves' handles)
+function splitAt(F, k, i, px, py) { const N = nodesOf(F, k), A = N[i], B = N[i + 1], P = [[A.r, A.z], [A.r + (A.ho?.[0] || 0), A.z + (A.ho?.[1] || 0)], [B.r + (B.hi?.[0] || 0), B.z + (B.hi?.[1] || 0)], [B.r, B.z]];
+  const at = t => { const L = (a, b) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], a = L(P[0], P[1]), b = L(P[1], P[2]), c = L(P[2], P[3]), d = L(a, b), e2 = L(b, c); return { a, c, d, e: e2, p: L(d, e2) }; };
+  let bt = .5, bd = 1e9; for (let j = 1; j < 100; j++) { const t = j / 100, p = at(t).p, dd = Math.hypot(F.X(p[0]) - px, F.Y(p[1]) - py); if (dd < bd) { bd = dd; bt = t; } }
+  const q = at(bt), l = cur(), curved = A.ho || B.hi, n = { r: q.p[0], z: q.p[1], hi: curved ? [q.d[0] - q.p[0], q.d[1] - q.p[1]] : null, ho: curved ? [q.e[0] - q.p[0], q.e[1] - q.p[1]] : null, t: curved ? 'smooth' : 'sharp' };
+  if (curved) { l.path[i].ho = A.ho ? [q.a[0] - A.r, q.a[1] - A.z] : null; l.path[i + 1].hi = B.hi ? [q.c[0] - B.r, q.c[1] - B.z] : null; }
+  l.path.splice(i + 1, 0, n); return i + 1; }
+svg.addEventListener('pointerdown', e => { if (e.button > 0) return; closeMenu(); const t = e.target, F = secFrame(), k = S.sel, l = cur(), [px, py] = ptr(e);
+  const base = { x: e.clientX, y: e.clientY, F, moved: false, cx: e.clientX, cy: e.clientY };
+  if (t.dataset.pick) { select(+t.dataset.pick); return; }
+  if (t.dataset.node != null) { const i = +t.dataset.node; selNode = i; secDrag = { ...base, kind: 'node', i, n0: clone(nodesOf(F, k)[i]), r0: l.r, h0: l.h }; }
+  else if (t.dataset.hnd) { const [i, w] = t.dataset.hnd.split(':'); secDrag = { ...base, kind: 'hnd', i: +i, w }; }
+  else if (t.dataset.seg != null) { selNode = splitAt(F, k, +t.dataset.seg, px, py); secDrag = { ...base, kind: 'node', i: selNode, n0: clone(cur().path[selNode]), r0: l.r, h0: l.h, moved: true }; changed(); }
+  else if (t.dataset.h) secDrag = { ...base, kind: 'param', h: t.dataset.h, r: l.r, hh: l.h, reach: l.edge.reach, bulge: l.face.bulge, up: k > 0 && l.h > D.layers[k - 1].h };
+  else secDrag = { ...base, kind: 'pan', cr: F.cr, cz: F.cz, F };
+  try { svg.setPointerCapture(e.pointerId); } catch { } drawSection(); });
+svg.addEventListener('pointermove', e => { const g = secDrag; if (!g) return; const dxp = e.clientX - g.x, dyp = e.clientY - g.y; if (!g.moved && Math.hypot(dxp, dyp) < 3) return; g.moved = true;
+  const fine = e.altKey && g.kind !== 'hnd' ? .2 : 1, dr = dxp / g.F.sx * fine, dz = -dyp / g.F.sz * fine, k = S.sel, l = cur(), L = D.layers;
+  if (g.kind === 'pan') { view.cr = g.cr - dxp / g.F.sx; view.cz = g.cz - dz / fine; drawSection(); return; }
+  if (g.kind === 'node') { const p = l.path[g.i], last = l.path.length - 1; let nr = g.n0.r + dr, nz = g.n0.z + dz; if (e.shiftKey) { if (Math.abs(dr) > Math.abs(dz)) nz = g.n0.z; else nr = g.n0.r; }
+    if (g.i === 0) { p.r = +clamp(nr, (L[k + 1]?.r || 0) + 1, k > 1 ? L[k - 1].r - 1 : 1200).toFixed(2); l.r = +clamp(g.r0 + (p.r - g.n0.r), (L[k + 1]?.r || 0) + 3, k > 1 ? L[k - 1].r - 3 : 1200).toFixed(2); }
+    else if (g.i === last) { l.h = +nz.toFixed(2); p.z = l.h; }
+    else { p.r = +nr.toFixed(2); p.z = +nz.toFixed(2); } }
+  if (g.kind === 'hnd') { const [px, py] = ptr(e), n = nodesOf(g.F, k)[g.i], p = l.path[g.i]; let v = [g.F.R(px) - n.r, g.F.Z(py) - n.z];
+    if (e.shiftKey) { const a = Math.round(Math.atan2(v[1], v[0]) / (Math.PI / 12)) * (Math.PI / 12), m = Math.hypot(...v); v = [Math.cos(a) * m, Math.sin(a) * m]; }
+    p[g.w] = [+v[0].toFixed(2), +v[1].toFixed(2)]; if (e.altKey) p.t = 'free';
+    const o = g.w === 'ho' ? 'hi' : 'ho', m = Math.hypot(...v) || 1; if (p.t !== 'free' && g.i > 0 && g.i < l.path.length - 1) { const lo = p[o] ? Math.hypot(...p[o]) : m; p[o] = [-v[0] / m * lo, -v[1] / m * lo]; } if (p.t === 'sharp') p.t = 'smooth'; }
+  if (g.kind === 'param') { if (g.h === 'corner') { if (k) l.r = clamp(+(g.r + dr).toFixed(1), (L[k + 1]?.r || 0) + 3, k > 1 ? L[k - 1].r - 3 : 1200); l.h = +(g.hh + dz).toFixed(1); }
+    if (g.h === 'reach') l.edge.reach = clamp(+(g.reach + (g.up ? -dr : dr)).toFixed(1), 0, 60);
+    if (g.h === 'face') l.face.bulge = clamp(+(g.bulge + dz).toFixed(1), -60, 60); }
+  changed(); syncInspector(); });
+const endSec = e => { const g = secDrag; if (!g) return; secDrag = null;
+  if (!g.moved) { const k = S.sel;
+    if (g.kind === 'node') { const now = performance.now(); if (now - lastClick.t < 350 && lastClick.i === g.i) { toggleNode(g.i); lastClick.t = 0; } else { lastClick = { t: now, i: g.i }; openMenu(g.cx, g.cy, p => nodeMenu(p, g.i)); } }
+    else if (g.kind === 'param') openMenu(g.cx, g.cy, p => g.h === 'face' ? faceMenu(p) : k ? edgeMenu(p) : panelMenu(p));
+    else if (g.kind === 'pan') { // (a click on the background picks the body under it, or lets go of the point)
+      const F = g.F, [px, py] = ptr(e), r = F.R(px), z = F.Z(py), L = D.layers; let best = -1; for (let j = L.length - 1; j >= 0; j--) { const rO = j ? L[j].r : 1e9, rI = L[j + 1]?.r || 0; if (r <= rO && r >= rI) { best = j; break; } }
+      selNode = -1; if (best >= 0 && z <= F.pr.faceZ(best, Math.max(0, r)) + 2 && best !== S.sel) select(best); } }
+  else if (g.kind !== 'pan') drawInspector();
+  drawSection(); };
+svg.addEventListener('pointerup', endSec); svg.addEventListener('pointercancel', endSec);
+svg.addEventListener('wheel', e => { e.preventDefault(); const F = secFrame(), [px, py] = ptr(e), r = F.R(px), z = F.Z(py); view.cr = F.cr; view.cz = F.cz;
+  view.zoom = clamp(view.zoom * Math.exp(-e.deltaY * .0015), .5, 60); const F2 = secFrame(); view.cr += r - F2.R(px); view.cz += z - F2.Z(py); drawSection(); }, { passive: false });
+new ResizeObserver(() => drawSection()).observe($('sec'));
+$('fit').onclick = () => { view.zoom = 1; view.cr = view.cz = null; drawSection(); };
+document.querySelectorAll('#exs button').forEach(b => b.onclick = () => { ex = +b.dataset.ex; try { sessionStorage.setItem(KEY + '.ex', ex); } catch { } view.cr = view.cz = null; view.zoom = 1; drawSection(); });
+$('pts').onclick = () => { const k = S.sel, l = cur(); if (!k) return; closeMenu(); selNode = -1;
+  if (l.path) { l.path = null; changed({ insp: true }); toast('Back to rounding and reach · Ctrl+Z to undo'); }
+  else { l.path = toPath(D, k); changed({ insp: true }); toast('Points: click the outline to add one, click a point for its handles'); } };
+// (a point: sharp ⇄ smooth)
+function toggleNode(i) { const F = secFrame(), l = cur(), p = l.path[i]; if (p.t === 'sharp' || (!p.hi && !p.ho)) { const N = nodesOf(F, S.sel); smooth(N, i, i); p.hi = i > 0 ? N[i].hi : null; p.ho = i < N.length - 1 ? N[i].ho : null; p.t = 'smooth'; } else { p.hi = p.ho = null; p.t = 'sharp'; } changed(); }
+
+// ---------- the small menu by a handle or a point ----------
+const pop = document.createElement('div'); pop.className = 'pop lab-ui soft'; pop.setAttribute('role', 'dialog'); document.body.appendChild(pop);
+function openMenu(x, y, build) { pop.innerHTML = ''; build(pop); pop.classList.add('on'); const w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = clamp(x + 16, 8, innerWidth - w - 8) + 'px'; pop.style.top = clamp(y - h - 14 < 8 ? y + 16 : y - h - 14, 8, innerHeight - h - 8) + 'px'; }
+function closeMenu() { pop.classList.remove('on'); }
+document.addEventListener('pointerdown', e => { if (pop.classList.contains('on') && !pop.contains(e.target) && !svg.contains(e.target)) closeMenu(); }, true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && pop.classList.contains('on')) closeMenu(); });
+const head = (p, t) => { const h = document.createElement('h3'); h.textContent = t; p.appendChild(h); };
+const rowBtns = (p, list) => { const r = document.createElement('div'); r.className = 'prow'; for (const [t, f, dis] of list) { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.disabled = !!dis; b.onclick = f; r.appendChild(b); } p.appendChild(r); };
+const live = () => { changed(); syncInspector(); };
+function edgeMenu(p) { const l = cur(); head(p, 'Edge · ' + l.name);
+  LabUI.slider(p, { label: 'Rounding', min: 0, max: 1, step: .01, unit: '', value: l.edge.round, def: .5, onInput: v => { cur().edge.round = v; live(); } });
+  LabUI.slider(p, { label: 'Reach', min: 0, max: 60, step: .1, unit: 'px', value: l.edge.reach, def: 4, onInput: v => { cur().edge.reach = v; live(); } });
+  LabUI.seg(p, { label: 'Meets', options: [['blend', 'Flows'], ['crease', 'Sharp'], ['seam', 'Apart']], value: l.edge.join, onChange: v => { cur().edge.join = v; live(); } });
+  LabUI.check(p, { label: 'Polished chamfer', value: l.edge.polish, onChange: v => { cur().edge.polish = v; live(); } });
+  rowBtns(p, [['Edit as points', () => { closeMenu(); $('pts').click(); }]]); }
+function faceMenu(p) { const l = cur(); head(p, 'Face · ' + l.name);
+  LabUI.slider(p, { label: 'Dome / dish', min: -60, max: 60, step: .1, unit: 'px', value: l.face.bulge, def: 0, onInput: v => { cur().face.bulge = v; live(); } });
+  LabUI.slider(p, { label: 'Flatness', min: .4, max: 8, step: .05, unit: '', value: l.face.spread, def: 2.5, onInput: v => { cur().face.spread = v; live(); } }); }
+function panelMenu(p) { head(p, 'Panel'); LabUI.slider(p, { label: 'Height', min: -40, max: 40, step: .5, unit: 'px', value: cur().h, onInput: v => { cur().h = v; live(); } }); }
+function nodeMenu(p, i) { const l = cur(), n = l.path[i], last = l.path.length - 1, F = secFrame(); head(p, i === 0 ? 'Start point' : i === last ? 'End point' : 'Point ' + i);
+  const hv = () => { const q = cur().path[i]; return q.ho || (q.hi ? [-q.hi[0], -q.hi[1]] : null); };
+  const ang0 = () => { const v = hv(); return v ? Math.round(Math.atan2(v[1], v[0]) * 180 / Math.PI) : 180; };
+  let curve, angle;
+  LabUI.seg(p, { label: 'Point', options: [['sharp', 'Sharp'], ['smooth', 'Smooth'], ['free', 'Free']], value: n.t === 'mirror' ? 'smooth' : n.t, onChange: v => { const q = cur().path[i];
+    if (v === 'sharp') { q.hi = q.ho = null; q.t = 'sharp'; } else { if (!q.hi && !q.ho) { const N = nodesOf(secFrame(), S.sel); smooth(N, i, i); q.hi = i > 0 ? N[i].hi : null; q.ho = i < last ? N[i].ho : null; } q.t = v; }
+    live(); curve.set(Math.hypot(...(hv() || [0, 0]))); angle.set(ang0()); } });
+  // (how long the handles are: how far the curve swings; at what angle they lie)
+  curve = LabUI.slider(p, { label: 'Curve', min: 0, max: 120, step: .5, unit: 'px', value: Math.hypot(...(hv() || [0, 0])), onInput: v => { const q = cur().path[i];
+    if (!q.hi && !q.ho) { const N = nodesOf(secFrame(), S.sel); smooth(N, i, i); q.hi = i > 0 ? N[i].hi : null; q.ho = i < last ? N[i].ho : null; q.t = 'smooth'; }
+    for (const w of ['hi', 'ho']) { const h = q[w]; if (!h) continue; const m = Math.hypot(...h) || 1; q[w] = [h[0] / m * v, h[1] / m * v]; } live(); } });
+  angle = LabUI.slider(p, { label: 'Angle', min: -180, max: 180, step: 1, unit: '°', value: ang0(), onInput: v => { const q = cur().path[i], a = v * Math.PI / 180;
+    if (q.ho) { const m = Math.hypot(...q.ho); q.ho = [Math.cos(a) * m, Math.sin(a) * m]; } if (q.hi) { const m = Math.hypot(...q.hi); q.hi = [-Math.cos(a) * m, -Math.sin(a) * m]; } live(); } });
+  rowBtns(p, [['Delete point', () => { cur().path.splice(i, 1); selNode = -1; closeMenu(); changed(); }, i === 0 || i === last || l.path.length < 3]]); }
+
+// ---------- undo / redo (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y): snapshots of the design a moment after each change ----------
+var HIST = { stack: [], i: -1, t: 0 }; const snapOf = () => JSON.stringify({ d: D, sel: S.sel }, (k, v) => k === 'value' && typeof v === 'number' ? undefined : v);
+function snapshot() { clearTimeout(HIST.t); const j = snapOf(); if (HIST.stack[HIST.i] === j) return; HIST.stack.splice(HIST.i + 1); HIST.stack.push(j); if (HIST.stack.length > 300) HIST.stack.shift(); HIST.i = HIST.stack.length - 1; paintUndo(); }
+function record() { clearTimeout(HIST.t); HIST.t = setTimeout(snapshot, 320); }
+function travel(d) { snapshot(); const i = HIST.i + d; if (i < 0 || i >= HIST.stack.length) return; HIST.i = i; const s = JSON.parse(HIST.stack[i]), v = D.control.value;
+  D = normalise(s.d); D.control.value = v; S.design = D; S.sel = clamp(s.sel, 0, D.layers.length - 1); selNode = -1; closeMenu();
+  dial.update(D); dial.setPick(S.mode === 'edit' ? S.sel : -1); drawList(); drawSection(); drawInspector(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { } paintUndo(); toast(d < 0 ? 'Undone' : 'Redone'); }
+function paintUndo() { $('undo').disabled = HIST.i <= 0; $('redo').disabled = HIST.i >= HIST.stack.length - 1; }
+$('undo').onclick = () => travel(-1); $('redo').onclick = () => travel(1);
+addEventListener('keydown', e => { if (!(e.ctrlKey || e.metaKey)) return; const t = e.target, typing = t.matches?.('textarea, [contenteditable], input:not([type=range]):not([type=checkbox]):not([type=color])');
+  const k = e.key.toLowerCase(); if (typing) return; if (k === 'z' && !e.shiftKey) { e.preventDefault(); travel(-1); } else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); travel(1); } });
+// (Delete takes the chosen point away)
+addEventListener('keydown', e => { if ((e.key === 'Delete' || e.key === 'Backspace') && selNode > 0 && cur().path && selNode < cur().path.length - 1 && !e.target.closest?.('input, textarea')) { e.preventDefault(); e.stopImmediatePropagation(); cur().path.splice(selNode, 1); selNode = -1; closeMenu(); changed(); } }, true);
+// (the section's height: drag the line between it and the view)
+{ let sy = null, h0 = 0; const sp = $('split'), c = document.querySelector('.centre'); try { const h = +localStorage.getItem(KEY + '.secH'); if (h) c.style.setProperty('--secH', h + 'px'); } catch { }
+  sp.addEventListener('pointerdown', e => { sy = e.clientY; h0 = $('sec').offsetHeight; sp.setPointerCapture(e.pointerId); });
+  sp.addEventListener('pointermove', e => { if (sy == null) return; const h = clamp(h0 - (e.clientY - sy), 140, c.offsetHeight - 160); c.style.setProperty('--secH', h + 'px'); try { localStorage.setItem(KEY + '.secH', h); } catch { } });
+  sp.addEventListener('pointerup', () => { sy = null; }); }
+
+
+// ---------- the inspector: the chosen layer ----------
+let ctls = {};
+function drawInspector() { const I = $('insp'), k = S.sel, l = D.layers[k], L = D.layers; I.innerHTML = ''; ctls = {};
+  const h2 = document.createElement('h2'); h2.textContent = k ? 'Layer ' + k : 'Panel'; I.appendChild(h2);
+  const nm = document.createElement('div'); nm.className = 'nm'; nm.innerHTML = '<input aria-label="Layer name" maxlength="32">'; nm.firstChild.value = l.name; nm.firstChild.oninput = e => { l.name = e.target.value || 'Layer'; drawList(); drawSection(); save(); }; I.appendChild(nm);
+  const P = document.createElement('div'); P.className = 'lab-ui soft'; I.appendChild(P);
+  const up = (fn, o = {}) => v => { fn(v); changed(o); }, bump = () => { dial.update(D); save(); drawSection(); };
+  if (k) { const g = LabUI.group(P, 'Shape', { key: KEY + '.gs', open: true });
+    LabUI.seg(g, { label: 'Kind', options: [['solid', 'Solid'], ['slot', 'Slot with light']], value: l.kind, onChange: up(v => { l.kind = v; }, { insp: true }) });
+    ctls.r = LabUI.slider(g, { label: 'Radius', min: (L[k + 1]?.r || 0) + 3, max: k > 1 ? L[k - 1].r - 3 : 600, step: .5, unit: 'px', value: l.r, onInput: up(v => { l.r = v; }) });
+    ctls.h = LabUI.slider(g, { label: 'Height', min: -80, max: 80, step: .5, unit: 'px', value: l.h, onInput: up(v => { l.h = v; }) });
+    LabUI.check(g, { label: 'Turns with the value', value: l.rotates, onChange: up(v => { l.rotates = v; }) });
+    if (l.path) { const gp = LabUI.group(P, 'Outline', { key: KEY + '.gpt', open: true }), n = document.createElement('p'); n.className = 'note'; n.textContent = 'Drawn as points (' + l.path.length + '). Shape it in the section: click the outline to add a point, click a point for its handles, double-click to make it sharp or smooth.'; gp.appendChild(n);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.style.cssText = 'margin: 0 0 12px; background: #f3f2ef'; b.textContent = 'Back to rounding and reach'; b.onclick = () => $('pts').click(); gp.appendChild(b); } else {
+    const ge = LabUI.group(P, 'Edge', { key: KEY + '.ge', open: true });
+    ctls.round = LabUI.slider(ge, { label: 'Rounding', min: 0, max: 1, step: .01, unit: '', value: l.edge.round, def: .5, onInput: up(v => { l.edge.round = v; }) });
+    ctls.reach = LabUI.slider(ge, { label: 'Reach', min: 0, max: 24, step: .1, unit: 'px', value: l.edge.reach, def: 4, onInput: up(v => { l.edge.reach = v; }) });
+    LabUI.check(ge, { label: 'Polished chamfer', value: l.edge.polish, onChange: up(v => { l.edge.polish = v; }) });
+    LabUI.seg(ge, { label: 'Meets the layer outside', options: [['blend', 'Flows'], ['crease', 'Sharp'], ['seam', 'Apart']], value: l.edge.join, onChange: up(v => { l.edge.join = v; }) });
+    const n = document.createElement('p'); n.className = 'note'; n.textContent = 'Flows: the foot rounds into the layer outside, one surface. Sharp: it stands on it. Apart: a fine seam, two parts.'; ge.appendChild(n);
+    const gf = LabUI.group(P, 'Face', { key: KEY + '.gf', open: true });
+    ctls.bulge = LabUI.slider(gf, { label: 'Dome / dish', min: -40, max: 40, step: .1, unit: 'px', value: l.face.bulge, def: 0, onInput: up(v => { l.face.bulge = v; }) });
+    LabUI.slider(gf, { label: 'Flatness', min: .4, max: 8, step: .05, unit: '', value: l.face.spread, def: 2.5, onInput: up(v => { l.face.spread = v; }) }); } }
+  else { const g = LabUI.group(P, 'Panel', { key: KEY + '.gp', open: true });
+    ctls.h = LabUI.slider(g, { label: 'Height', min: -40, max: 40, step: .5, unit: 'px', value: l.h, onInput: up(v => { l.h = v; }) });
+    LabUI.color(g, { label: 'Background', value: D.page, onInput: v => { D.page = v; bump(); hint(); } }); }
+  const gm = LabUI.group(P, 'Material', { key: KEY + '.gm', open: true });
+  LabUI.seg(gm, { label: 'Material', options: [['plastic', 'Plastic'], ['ceramic', 'Ceramic'], ['anodized', 'Anodized']], value: ['plastic', 'ceramic', 'anodized'].includes(l.material.type) ? l.material.type : '', onChange: v => { l.material.type = v; bump(); drawInspector(); } });
+  LabUI.seg(gm, { label: '', options: [['steel', 'Steel'], ['rubber', 'Rubber'], ['glass', 'Glass']], value: ['steel', 'rubber', 'glass'].includes(l.material.type) ? l.material.type : '', onChange: v => { l.material.type = v; bump(); drawInspector(); } });
+  LabUI.color(gm, { label: 'Colour', value: l.material.color, onInput: v => { l.material.color = v; bump(); drawList(); } });
+  LabUI.slider(gm, { label: 'Grain', min: 0, max: 2.5, step: .05, unit: '×', value: l.material.grain, def: 1, onInput: v => { l.material.grain = v; bump(); } });
+  if (k) { const gd = LabUI.group(P, 'Details', { key: KEY + '.gd', open: true });
+    const dt = l.details, st = [['engraved', 'Engraved'], ['applied', 'Applied'], ['printed', 'Printed']];
+    LabUI.check(gd, { label: 'Knurl round its side', value: dt.knurl, onChange: v => { dt.knurl = v; bump(); } });
+    LabUI.slider(gd, { label: 'Indices', min: 0, max: 120, step: 1, unit: '', value: dt.ticks, def: 0, onInput: v => { dt.ticks = v; bump(); } });
+    LabUI.seg(gd, { label: 'Index style', options: st, value: dt.tickStyle, onChange: v => { dt.tickStyle = v; bump(); } });
+    LabUI.slider(gd, { label: 'Indices at', min: 0, max: 1, step: .01, unit: '', value: dt.tickR, onInput: v => { dt.tickR = v; bump(); } });
+    LabUI.slider(gd, { label: 'Length', min: 1, max: 40, step: .5, unit: 'px', value: dt.tickLen, def: 9, onInput: v => { dt.tickLen = v; bump(); } });
+    LabUI.slider(gd, { label: 'Width', min: 1, max: 14, step: .1, unit: 'px', value: dt.tickW, def: 3, onInput: v => { dt.tickW = v; bump(); } });
+    LabUI.slider(gd, { label: 'Major every', min: 0, max: 15, step: 1, unit: '', value: dt.major, def: 0, onInput: v => { dt.major = v; bump(); } });
+    LabUI.check(gd, { label: 'Mark', value: dt.mark, onChange: v => { dt.mark = v; bump(); } });
+    LabUI.seg(gd, { label: 'Mark style', options: [['light', 'Lit']].concat(st), value: dt.markStyle, onChange: v => { dt.markStyle = v; bump(); } });
+    LabUI.slider(gd, { label: 'Mark at', min: 0, max: 1, step: .01, unit: '', value: dt.markR, onInput: v => { dt.markR = v; bump(); } });
+    LabUI.slider(gd, { label: 'Mark length', min: 4, max: 80, step: .5, unit: 'px', value: dt.markLen, def: 30, onInput: v => { dt.markLen = v; bump(); } });
+    LabUI.slider(gd, { label: 'Mark width', min: 2, max: 16, step: .1, unit: 'px', value: dt.markW, def: 7, onInput: v => { dt.markW = v; bump(); } }); }
+  if (l.kind === 'slot' && k) { const gl = LabUI.group(P, 'Light', { key: KEY + '.gl', open: true }), s = l.slot, live = () => save();
+    ['Start', 'Middle', 'Tip'].forEach((t, i) => LabUI.color(gl, { label: t, value: s.colors[i], onInput: v => { s.colors[i] = v; live(); drawSection(); } }));
+    LabUI.slider(gl, { label: 'Brightness', min: 0, max: 2, step: .05, unit: '×', value: s.glow, def: 1, onInput: v => { s.glow = v; live(); } });
+    LabUI.slider(gl, { label: 'Haze', min: 0, max: 2, step: .05, unit: '×', value: s.haze, def: .9, onInput: v => { s.haze = v; live(); } });
+    LabUI.slider(gl, { label: 'Haze size', min: .4, max: 2.5, step: .05, unit: '×', value: s.hazeSize, def: 1, onInput: v => { s.hazeSize = v; live(); } });
+    LabUI.slider(gl, { label: 'Energy', min: 0, max: 1.5, step: .05, unit: '', value: s.energy, def: .6, onInput: v => { s.energy = v; live(); } });
+    LabUI.slider(gl, { label: 'Energy speed', min: .2, max: 3, step: .05, unit: '×', value: s.speed, def: 1, onInput: v => { s.speed = v; live(); } }); }
+  // the whole control
+  const gc = LabUI.group(P, 'Control', { key: KEY + '.gc', open: false }), c = D.control;
+  LabUI.slider(gc, { label: 'From', min: -100, max: 100, step: .5, unit: '', value: c.min, onInput: v => { c.min = Math.min(v, c.max - c.step); bump(); dial.setValue(c.value, true); } });
+  LabUI.slider(gc, { label: 'To', min: -100, max: 200, step: .5, unit: '', value: c.max, onInput: v => { c.max = Math.max(v, c.min + c.step); bump(); dial.setValue(c.value, true); } });
+  LabUI.slider(gc, { label: 'Step', min: .1, max: 10, step: .1, unit: '', value: c.step, onInput: v => { c.step = v; bump(); } });
+  LabUI.slider(gc, { label: 'Sweep', min: 90, max: 340, step: 5, unit: '°', value: c.sweep, onInput: v => { c.sweep = v; bump(); } });
+  LabUI.seg(gc, { label: 'Reading', options: [['off', 'Off'], ['printed', 'Printed'], ['engraved', 'Engraved']], value: D.reading.show ? D.reading.style : 'off', onChange: v => { D.reading.show = v !== 'off'; if (v !== 'off') D.reading.style = v; changed(); } });
+  LabUI.seg(gc, { label: 'Unit', options: [['c', 'Celsius'], ['f', 'Fahrenheit']], value: c.unit, onChange: v => { c.unit = v; changed(); } });
+  const gL = LabUI.group(P, 'Lighting', { key: KEY + '.gL', open: false });
+  LabUI.slider(gL, { label: 'Key light', min: 0, max: 3, step: .05, unit: '×', value: D.light.key, def: 1.25, onInput: v => { D.light.key = v; bump(); } });
+  LabUI.slider(gL, { label: 'Room light', min: 0, max: 1.5, step: .05, unit: '×', value: D.light.ambient, def: .5, onInput: v => { D.light.ambient = v; bump(); } });
+  LabUI.slider(gL, { label: 'Exposure', min: .3, max: 1.8, step: .02, unit: '', value: D.light.exposure, def: .8, onInput: v => { D.light.exposure = v; bump(); } }); }
+// (while a handle in the section is dragged, the inspector's sliders follow without being rebuilt)
+function syncInspector() { const l = D.layers[S.sel]; ctls.r?.set?.(l.r); ctls.h?.set?.(l.h); ctls.reach?.set?.(l.edge.reach); ctls.bulge?.set?.(l.face.bulge); }
+
+// ---------- presets, the mode ----------
+for (const n of Object.keys(PRESETS)) { const o = document.createElement('option'); o.value = n; o.textContent = n; $('preset').appendChild(o); }
+const cust = document.createElement('option'); cust.value = ''; cust.textContent = 'My control'; cust.hidden = true; $('preset').appendChild(cust);
+$('preset').value = S.preset in PRESETS ? S.preset : '';
+$('preset').onchange = e => { const n = e.target.value; if (!PRESETS[n]) return; S.preset = n; D = normalise(clone(PRESETS[n])); S.design = D; S.sel = Math.min(2, D.layers.length - 1); dial.setDesign(D); dial.setPick(S.mode === 'edit' ? S.sel : -1); drawList(); drawSection(); drawInspector(); save(); hint(); };
+const markCustom = () => { if (S.preset) { S.preset = ''; $('preset').value = ''; save(); } };
+['list', 'insp', 'sec'].forEach(id => $(id).addEventListener('input', markCustom, true)); svg.addEventListener('pointerdown', e => { if (e.target.dataset.h) markCustom(); }, true);
+function setMode(m) { S.mode = m; document.body.classList.toggle('preview', m === 'preview'); document.querySelectorAll('.seg [data-m]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
+  dial.setOptions({ editing: m === 'edit' }); dial.setPick(m === 'edit' ? S.sel : -1); hint(); save(); requestAnimationFrame(() => dial.resize()); }
+document.querySelectorAll('.seg [data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+// ---------- the reading, drawn into a picture (for the image and the video) ----------
+const fmtVal = v => D.control.unit === 'f' ? String(Math.round(v * 9 / 5 + 32)) : (Math.abs(v % 1) > 1e-6 ? v.toFixed(1) : String(v));
+function paintReading(x, W, H, scale) { if (!D.reading.show) return; const K = dial.state.K * scale, dark = isDark(D.page), eng = D.reading.style === 'engraved';
+  const ink = eng ? (dark ? '#1b1c21' : '#c4c2bc') : (dark ? '#e7e7e7' : '#292929'); x.save(); x.translate(W / 2, H / 2); x.scale(K, K); x.textAlign = 'center'; x.textBaseline = 'middle';
+  const draw = (t, font, y, a) => { x.font = font; if (eng) { x.fillStyle = dark ? 'rgba(255,255,255,.09)' : 'rgba(255,255,255,.85)'; x.fillText(t, 0, y + 1.4); x.fillStyle = dark ? 'rgba(0,0,0,.65)' : 'rgba(0,0,0,.22)'; x.fillText(t, 0, y - 1); }
+    x.globalAlpha = a; x.fillStyle = ink; x.fillText(t, 0, y); x.globalAlpha = 1; };
+  draw(fmtVal(dial.value) + '°', "600 77px Unbounded, sans-serif", -26, 1); draw(D.control.unit === 'f' ? 'FAHRENHEIT' : 'CELSIUS', "700 30px 'JetBrains Mono', monospace", 48, eng ? 1 : dark ? .25 : .9); x.restore(); }
+function frameCanvas(scale) { const src = dial.canvas, c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d'); x.drawImage(src, 0, 0); if (dial.state.orbit.p < .03) paintReading(x, c.width, c.height, src.width / src.clientWidth); return c; }
+const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+const slug = () => (S.preset || 'my-control').toLowerCase().replace(/\s+/g, '-');
+$('png').onclick = async () => { const pr = dial.renderer.getPixelRatio(), w = $('view').clientWidth, h = $('view').clientHeight; dial.renderer.setPixelRatio(Math.min(3, pr * 1.5)); dial.renderer.setSize(w, h, false); dial.render();
+  const c = frameCanvas(); dial.renderer.setPixelRatio(pr); dial.renderer.setSize(w, h, false); c.toBlob(b => { download(b, slug() + '.png'); toast('Image saved · ' + c.width + ' × ' + c.height); }, 'image/png'); };
+
+// the video: six seconds, the value sweeps to the top and back while the view rises a little and turns; the reading drawn in
+let recording = false;
+$('vid').onclick = () => { if (recording || !window.MediaRecorder) { if (!window.MediaRecorder) toast('This browser cannot record video'); return; } recording = true; $('rec').classList.add('on');
+  const src = dial.canvas, c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d'), stream = c.captureStream(60);
+  const type = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(t => MediaRecorder.isTypeSupported(t)), rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 12e6 }), chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data); rec.onstop = () => { download(new Blob(chunks, { type }), slug() + (type.includes('mp4') ? '.mp4' : '.webm')); recording = false; $('rec').classList.remove('on'); toast('Video saved'); };
+  const c0 = D.control, v0 = dial.value, t0 = performance.now(), T = 6000, o = dial.state.orbit, o0 = { ...o };
+  rec.start(); (function tick(now) { const t = Math.min(1, (now - t0) / T), e = .5 - .5 * Math.cos(t * Math.PI * 2);
+    dial.setValue(c0.min + (c0.max - c0.min) * (t < .5 ? lerp(.15, 1, e) : lerp(.15, 1, e)), true); o.tp = .42 * Math.sin(t * Math.PI); o.tt = o0.tt + .5 * Math.sin(t * Math.PI * 2);
+    x.clearRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0); if (o.p < .03) paintReading(x, c.width, c.height, src.width / src.clientWidth);
+    if (t < 1) requestAnimationFrame(tick); else { dial.setValue(v0, true); Object.assign(o, { tt: o0.tt, tp: o0.tp }); setTimeout(() => rec.stop(), 250); } })(t0); };
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// the working control: a page with only the dial, its design in it, ready to drop into a project (three.js from the CDN)
+$('ctl').onclick = async () => { const eng = await (await fetch('engine.js')).text(), design = JSON.stringify(D);
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(S.preset || 'My control')}</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>html, body { margin: 0; height: 100%; background: ${D.page}; } #dial { position: relative; width: min(92vw, 92vh); aspect-ratio: 1; margin: 4vh auto; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }<\/script>
+</head>
+<body>
+<div id="dial"></div>
+<script type="module">
+// Made in Control Studio. createDial(host, design, { orbit, sound }) returns { value, setValue(v), on('change', fn), destroy() }.
+${eng}
+const DESIGN = ${design};
+const dial = createDial(document.getElementById('dial'), DESIGN, { orbit: false });
+dial.on('change', v => console.log('value', v));
+<\/script>
+</body>
+</html>
+`;
+  download(new Blob([html], { type: 'text/html' }), slug() + '.html'); toast('Control saved · one HTML file, works on its own'); };
+
+// ---------- small things ----------
+let tt = 0; function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => e.classList.remove('on'), 2400); }
+addEventListener('keydown', e => { if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if ((e.key === 'Delete' || e.key === 'Backspace') && S.mode === 'edit' && S.sel > 0) { e.preventDefault(); $('del').click(); }
+  if (e.key === 'p' && !e.metaKey && !e.ctrlKey) setMode(S.mode === 'edit' ? 'preview' : 'edit'); });
+
+drawList(); drawSection(); drawInspector(); setMode(THUMB ? 'preview' : S.mode); hint(); snapshot();
+if (THUMB) { dial.setPick(-1); dial.render(); }
+</script>
+</body>
+</html>

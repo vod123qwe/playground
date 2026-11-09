@@ -105,8 +105,8 @@ void main(){
   // palette and stirred (harder when thinking)
   float thick = clamp(dot(n, -rd), 0., 1.);
   // (the sweep: a band across the orb from the top left to the bottom right; ahead of it the light inside is pushed, behind it pulled)
-  vec2 sdir = normalize(vec2(1., -.62)); float sx = (dot(n.xy, sdir) - mix(-1.3, 1.3, uSweep)) / .24, sg = exp(-sx * sx) * uSweepK * step(0., uSweep);
-  vec3 soff = vec3(sdir * (-2. * sx * sg) * .075, 0.);
+  vec2 sdir = normalize(vec2(1., -.62)); float sx = (dot(n.xy, sdir) - mix(-1.3, 1.3, uSweep)) / .28, sg = exp(-sx * sx) * uSweepK * step(0., uSweep);
+  vec3 soff = vec3(sdir * (-2. * sx * sg) * .058, 0.);
   vec3 rrR = refract(rd, n, .72) + soff * 1.2, rrG = refract(rd, n, .75) + soff, rrB = refract(rd, n, .78) + soff * .8; float kG = kOf(rrG);
   vec3 inner = (uDetail > .3 ? vec3(pal(kOf(rrR)).r, pal(kG).g, pal(kOf(rrB)).b) : pal(kG)) * (.62 + .5 * thick);
   // (veins of light in the liquid: the thin bright ridges of a slow noise, brighter while it speaks)
@@ -119,7 +119,7 @@ void main(){
   vec3 film = pal(fr * 1.6 + n.y * .2 + uT * .03) * fr;
   vec3 col = inner * (1. - fr * .55) + film * (uDark > .5 ? .9 : .65) + vec3(spec);
   col *= .78 + .3 * uGlow;
-  col += mix(vec3(1.), pal(dot(n.xy, sdir) * .6 + uCT * .05), .35) * sg * (uDark > .5 ? .55 : .5) * (.6 + .4 * fr);
+  col += mix(vec3(1.), pal(dot(n.xy, sdir) * .6 + uCT * .05), .35) * sg * (uDark > .5 ? .33 : .3) * (.6 + .4 * fr);   // (a soft pass of light, not a white stripe)
 #ifndef SOFT
   if (uDark < .5) col = mix(col, col * vec3(.9, .9, .95), fr * .4);   // (a hint of a darker rim, so it holds its edge on white)
 #endif

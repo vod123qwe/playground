@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thermostat · lab</title>
+<meta name="theme-color" content="#d9d8d4">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/lab-ui.css?v=21">
+<style>
+  /* A thermostat dial, after a skeuomorphic design in Figma (UI Practice, Playground #1), made as a real object: a knob turned in
+     3D (a chamfered top edge that catches the light, a fine knurl round its side, a dished display with a raised lip), set in a
+     housing with a channel where the light arc glows. It works: drag round it, the wheel, the arrow keys; half degrees with a soft
+     click; the knob follows on a spring and leans a touch towards the pointer; the number rolls digit by digit. Light by default. */
+  :root { --bg: #d9d8d4; --ink: #292929; --sub: #292929; --chip: #fff; --chip-ink: #1b1c20; --hint: rgba(41,41,41,.4); --ease: cubic-bezier(.22,.61,.36,1); --morph: .55s cubic-bezier(.3,1.12,.4,1); --page: #fff; }
+  body.dark { --bg: #1d1f27; --ink: #e7e7e7; --sub: rgba(231,231,231,.22); --chip: #2a2d36; --chip-ink: #e7e7e7; --hint: rgba(231,231,231,.35); --page: #15161c; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--lab-font); overflow: hidden; user-select: none; -webkit-user-select: none; transition: background .4s; }
+  body.tuning { background: var(--page); }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: inset var(--morph), border-radius var(--morph), background .4s; }
+  body.tuning .stage { border-radius: 26px; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  /* the hand and the reading sit over the 3D, at the design's size (700 × 700), scaled with it */
+  .dial { position: absolute; left: 50%; top: 50%; width: 700px; height: 700px; translate: -50% -50%; scale: var(--k, 1); pointer-events: none; }
+  .knob { position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; translate: -50% -50%; border-radius: 50%; pointer-events: auto; cursor: grab; touch-action: none; outline: none; }
+  .knob.drag { cursor: grabbing; }
+  .knob:focus-visible::after { content: ''; position: absolute; inset: -10px; border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 25%, transparent); }
+  .dish { position: absolute; left: 50%; top: 50%; width: 330px; height: 330px; translate: -50% -50%; margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink);
+    font: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; pointer-events: auto; cursor: pointer; transition: scale .4s cubic-bezier(.3,1.5,.5,1); }
+  .dish:active { scale: .985; } .dish:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 30%, transparent); outline-offset: 6px; }
+  /* the number: a column of digits per place, rolling to the new value on a spring, fading at its top and bottom instead of cut */
+  .num { display: flex; align-items: center; height: 1.3em; margin: -.14em 0; font-variant-numeric: tabular-nums; font: 600 77px/1.3em 'Unbounded', var(--lab-font); letter-spacing: -.02em; color: var(--ink); text-shadow: 0 1px 0 rgba(255,255,255,.35);
+    -webkit-mask: linear-gradient(transparent, #000 24%, #000 76%, transparent); mask: linear-gradient(transparent, #000 24%, #000 76%, transparent); }
+  body.dark .num { text-shadow: 0 -1px 0 rgba(0,0,0,.4); }
+  .col { position: relative; height: 1.3em; overflow: visible; display: inline-block; text-align: center; transition: width .5s cubic-bezier(.3,1.2,.4,1), opacity .3s; }
+  .col .strip { display: flex; flex-direction: column; transition: transform .62s cubic-bezier(.25,1.25,.4,1); }
+  .col .strip span { display: block; height: 1.3em; }
+  .col.static { width: auto; }
+  .col.gone { opacity: 0; }
+  /* engraved: the reading pressed into the dish, a shade of its surface, lit on the lower lip and shaded on the upper */
+  body.engraved .num, body.engraved .unit { color: #c4c2bc; text-shadow: 0 1.4px 1px rgba(255,255,255,.85), 0 -1px 1.2px rgba(0,0,0,.22); }
+  body.engraved.dark .num, body.engraved.dark .unit { color: #1b1c21; text-shadow: 0 1px .5px rgba(255,255,255,.09), 0 -1.2px 1.2px rgba(0,0,0,.65); }
+  .unit { font: 700 30px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .02em; text-transform: uppercase; color: var(--sub); }
+  /* chrome, as on the other lab pieces */
+  .back, .tune { position: fixed; top: 16px; z-index: 6; transition: top var(--morph), left var(--morph); }
+  .back { left: 16px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: var(--chip); color: var(--chip-ink); }
+  .back:hover { translate: -2px 0; } .back svg { width: 20px; height: 20px; }
+  .tune { right: 16px; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: var(--chip); color: var(--chip-ink); font: 600 14px var(--lab-font); cursor: pointer; transition: transform .2s var(--ease), opacity .3s; }
+  .tune:hover { transform: translateY(-1px); } .tune svg { width: 19px; height: 19px; } body.tuning .tune { opacity: 0; pointer-events: none; } body.tuning .back { top: 30px; left: 30px; }
+  .hint { position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; color: var(--hint); font-size: 13px; pointer-events: none; transition: opacity .6s, left var(--morph); white-space: nowrap; }
+  .hint.gone { opacity: 0; }
+  /* edit: a pill at the bottom; over the dial a highlight of the ring under the pointer and a card with its controls */
+  .modes { position: fixed; left: 50%; bottom: calc(52px + env(safe-area-inset-bottom)); z-index: 4; transform: translateX(-50%); transition: left var(--morph); }
+  .modes button { height: 40px; padding: 0 16px 0 13px; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; background: var(--chip); color: var(--chip-ink); font: 600 13px var(--lab-font); cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .modes button svg { width: 17px; height: 17px; } .modes button[aria-pressed=true] { background: var(--chip-ink); color: var(--chip); }
+  body.editing .knob { pointer-events: none; } body.editing .dish { pointer-events: none; } body.editing .stage { cursor: grab; } body.editing .stage.orbiting { cursor: grabbing; }
+  .dial { transition: opacity .3s; } body.away .dial { opacity: 0; }
+  /* the shape editor: a card docked at the left; the rings by name, the picked one's controls */
+  .shaper { position: fixed; left: 16px; top: 78px; z-index: 7; width: 290px; max-height: calc(100vh - 170px); overflow: auto; padding: 4px 16px 14px; --ui-pad: 16px; border-radius: 22px;
+    border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); box-shadow: 0 18px 40px -20px rgba(0,0,0,.3); font-family: var(--lab-font); opacity: 0; translate: -10px 0; pointer-events: none; transition: opacity .25s, translate .45s cubic-bezier(.3,1.3,.5,1); }
+  body.editing .shaper { opacity: 1; translate: 0 0; pointer-events: auto; }
+  .shaper h3 { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 8px; font-size: 15px; font-weight: 600; }
+  .shaper .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .shaper .chips button { height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--ui-field); color: var(--ui-ink); font: 500 12.5px var(--lab-font); cursor: pointer; transition: background .2s, color .2s; }
+  .shaper .chips button.hov { box-shadow: inset 0 0 0 1.5px #ff8a12; } .shaper .chips button.on { background: var(--ui-on, #1b1c20); color: var(--ui-on-text, #fff); }
+  .shaper p { margin: 2px 0 6px; font-size: 12.5px; line-height: 1.45; color: var(--ui-muted); }
+  .shaper .row { display: flex; gap: 6px; margin-top: 10px; } .shaper .row button { flex: 1; height: 34px; border: 0; border-radius: 999px; background: var(--ui-field); color: var(--ui-ink); font: 600 12.5px var(--lab-font); cursor: pointer; }
+  .shaper .row button.dark { background: var(--ui-on, #1b1c20); color: var(--ui-on-text, #fff); }
+  @media (max-width: 760px) { .shaper { left: 8px; right: 8px; top: auto; bottom: 104px; width: auto; max-height: 46vh; } }
+  body.tuning .modes { left: calc(50% - 176px); } body.bare .modes { display: none !important; }
+  @media (max-width: 760px) { body.tuning .modes { display: none; } }
+  .loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--hint); font-size: 13px; pointer-events: none; transition: opacity .4s; } body.ready .loading { opacity: 0; }
+  .panel { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 340px; z-index: 5; display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain; padding: 0 20px; --ui-pad: 20px;
+    font-family: var(--lab-font); border-radius: 26px; border: 1px solid var(--ui-card-line, rgba(20,20,20,.08)); opacity: 0; translate: 24px 0; visibility: hidden; transition: translate var(--morph), opacity .3s, visibility 0s .55s; }
+  body.tuning .panel { opacity: 1; translate: 0 0; visibility: visible; transition: translate var(--morph), opacity .35s .08s; }
+  .panel::-webkit-scrollbar { width: 0; }
+  .ph { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 -20px; padding: 22px 20px 12px; background: var(--ui-bg); }
+  .ph h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; } .ph p { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--ui-muted); }
+  .pc { flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--ui-ink); cursor: pointer; } .pc:hover { background: var(--ui-field); } .pc svg { width: 18px; height: 18px; }
+  @media (min-width: 761px) { body.tuning .stage { inset: 16px 368px 16px 16px; } body.tuning .hint { left: calc(50% - 176px); } }
+  @media (max-width: 760px) { .panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; translate: 0 calc(100% + 16px); } body.tuning .panel { translate: 0 0; }
+    body.tuning .stage { inset: 8px 8px calc(56vh + 16px) 8px; border-radius: 22px; } body.tuning .hint { display: none; } }
+  body.bare .back, body.bare .tune, body.bare .panel, body.bare .hint, body.bare .loading { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .col .strip, .col, .dish { transition: none; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../" aria-label="Back to the lab" title="Back to the lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+<button class="tune" id="tune" type="button" aria-controls="panel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Customize</button>
+<main class="stage" id="stage">
+  <div class="dial" id="dial">
+    <div class="knob" id="knob" role="slider" tabindex="0" aria-label="Temperature" aria-valuemin="8" aria-valuemax="28" aria-valuenow="21" aria-valuetext="21 degrees Celsius"></div>
+    <button class="dish" id="dish" type="button" aria-label="Switch between Celsius and Fahrenheit"><div class="num" id="num" aria-hidden="true"></div><div class="unit" id="unit">Celsius</div></button>
+  </div>
+</main>
+<p class="loading" id="loading">Warming up…</p>
+<p class="hint" id="hint">Turn the dial · tap the middle for °F</p>
+<div class="modes"><button type="button" id="bEdit" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5" stroke-dasharray="2.4 2.2"/></svg>Edit shape</button></div>
+<aside class="shaper lab-ui soft" id="shaper" aria-label="Shape the rings"></aside>
+<aside class="panel lab-ui soft" id="panel" aria-label="Customize the thermostat"></aside>
+<script src="../../shared/lab-ui.js?v=20"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ---------- the settings; kept in the browser ----------
+const KEY = 'lab.thermostat.v2', MIN = 8, MAX = 28, STEP = .5, SWEEP = 270;
+const SHAPE = { pe: { round: .55, reach: 6, layer: 'joined' }, rf: { round: 1, reach: 3, layer: 'joined' }, ke: { round: .6, reach: 3.5, layer: 'joined' }, ds: { round: .5, reach: 1.8, layer: 'joined' }, dish: { depth: 10.7, spread: 2.6 } };
+const cloneShape = () => JSON.parse(JSON.stringify(SHAPE));
+const DEF = { value: 21, unit: 'c', text: 'printed', theme: 'light', sound: true, glow: 1, tilt: true, grain: 1, grainSize: 1, haze: .9, hazeSize: 1, energy: .6, energySpeed: 1, shape: cloneShape() };
+const q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
+let P = (() => { const p = { ...DEF }; try { const o = JSON.parse(localStorage.getItem(KEY) || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) p[k] = o[k]; } catch { } return p; })();
+if (BARE) P = { ...DEF, theme: q.get('theme') === 'dark' ? 'dark' : 'light' };
+{ const sh = cloneShape(); for (const k in sh) Object.assign(sh[k], (P.shape || {})[k] || {}); P.shape = sh; }   // (a saved shape over the defaults, ring by ring)
+const save = () => { if (BARE) return; try { const d = {}; for (const k in P) if (P[k] !== DEF[k]) d[k] = P[k]; localStorage.setItem(KEY, JSON.stringify(d)); } catch { } };
+const $ = id => document.getElementById(id), stage = $('stage'), dial = $('dial'), knobEl = $('knob');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), snap = v => Math.round(v / STEP) * STEP, rad = d => d * Math.PI / 180;
+const angleOf = v => -SWEEP / 2 + (v - MIN) / (MAX - MIN) * SWEEP;   // (degrees, clockwise from the top)
+
+// ---------- the room: the dial is set into a flat panel, seen from above; soft light from the room, a key light from the upper
+// right, low enough to fall into the recess (the panel's edge throws its shadow onto the knob) ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: THUMB });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; stage.prepend(renderer.domElement);
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(18, 1, 100, 9000); camera.up.set(0, 1, 0);
+const pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture;
+const key = new THREE.DirectionalLight(0xffffff, 2); key.position.set(340, 560, 880); key.castShadow = true;
+Object.assign(key.shadow.camera, { left: -420, right: 420, top: 420, bottom: -420, near: 200, far: 2400 }); key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 5; key.shadow.bias = -.0003; key.shadow.normalBias = 1.2;
+const fill = new THREE.HemisphereLight(0xffffff, 0x9a9aa0, .5); scene.add(key, fill);
+
+// ---------- the material: a fine grain on every surface (bead-blasted, as on a camera ring): the normal and the colour stirred by a
+// small noise that sits on the part itself, so the knob's grain turns with the knob ----------
+const GRAIN_GLSL = `varying vec3 vGP; uniform float uGrain, uGrainS, uGrainC;
+float gh(vec3 p){ p = fract(p * .1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }   // (a hash without sin: no streaks far from the middle)
+float gn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+  return mix(mix(mix(gh(i), gh(i + vec3(1, 0, 0)), f.x), mix(gh(i + vec3(0, 1, 0)), gh(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(gh(i + vec3(0, 0, 1)), gh(i + vec3(1, 0, 1)), f.x), mix(gh(i + vec3(0, 1, 1)), gh(i + vec3(1, 1, 1)), f.x), f.y), f.z); }
+`;
+function grained(params) { const m = new THREE.MeshPhysicalMaterial(params); m.userData.grain = { uGrain: { value: .22 }, uGrainS: { value: .85 }, uGrainC: { value: .06 } };
+  m.onBeforeCompile = sh => { Object.assign(sh.uniforms, m.userData.grain);
+    sh.vertexShader = 'varying vec3 vGP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGP = position;');
+    sh.fragmentShader = GRAIN_GLSL + sh.fragmentShader
+      .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= 1. + (gn(vGP * uGrainS * .8 + 7.3) - .5) * uGrainC;')
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { vec3 gp = vGP * uGrainS; normal = normalize(normal + vec3(gn(gp) - .5, gn(gp + 31.7) - .5, 0.) * uGrain); }'); };
+  return m; }
+
+// ---------- the shapes (px of the design; the panel's face is z = 0): the panel with a round cut, a machined chamfer and a straight
+// wall down into the recess, the channel at its floor where the light runs; the knob sunk in it, its face 7 below the panel, a crisp
+// chamfer at its edge, a fine knurl round its side, a stepped dish in the middle ----------
+function lathe(pts, seg = 256) { const g = new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), seg); g.rotateX(Math.PI / 2); return g; }
+const FACE = -7, FLOOR = -31, W_R = 295, KR = 272.8, DISH_R = 205;
+// (a rounded corner: from reach before the corner to reach after it, between a straight chamfer (round 0) and a full curve (round 1))
+function corner(C, dIn, dOut, rIn, rOut, round, n = 18) { const A = [C[0] - dIn[0] * rIn, C[1] - dIn[1] * rIn], B = [C[0] + dOut[0] * rOut, C[1] + dOut[1] * rOut], out = [];
+  for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t, lx = A[0] + (B[0] - A[0]) * t, ly = A[1] + (B[1] - A[1]) * t, bx = u * u * A[0] + 2 * u * t * C[0] + t * t * B[0], by = u * u * A[1] + 2 * u * t * C[1] + t * t * B[1];
+    out.push([lx + (bx - lx) * round, ly + (by - ly) * round]); } return out; }
+// (the profiles, built from the rings: the panel's edge (pe) and the recess's floor (rf); the knob's edge (ke), the dish's edge (ds), the dish)
+// (a ring's reach runs fully across a face and as far down a wall as the wall allows, so a big reach makes a wide, soft bevel)
+const reachOf = () => { const S = P.shape, peV = Math.min(S.pe.reach, 22), rfV = Math.min(S.rf.reach, -FLOOR - peV - 1.5), keV = Math.min(S.ke.reach, FACE - FLOOR - 6),
+    room = KR - DISH_R - 6, keH = Math.min(S.ke.reach, room * .7), dsH = Math.min(S.ds.reach, room - keH), dsV = Math.min(S.ds.reach, Math.max(1, S.dish.depth - 1));
+  return { peV, peH: S.pe.reach, rfV, rfH: Math.min(S.rf.reach, 120), keV, keH, dsH, dsV }; };
+// (an edge set as its own layer: a small step of LEDGE between it and the surface next to it, as on a stepped camera ring)
+const LEDGE = 1.8;
+let peOut = W_R;
+function profiles() { const S = P.shape, R = reachOf(), sep = id => S[id].layer === 'separate';
+  const recess = [[0, FLOOR]];
+  if (sep('rf')) recess.push([W_R - 6.5, FLOOR], [W_R - 6.5, FLOOR + LEDGE], ...corner([W_R, FLOOR + LEDGE], [1, 0], [0, 1], Math.min(R.rfH, 6), R.rfV, S.rf.round));
+  else recess.push(...corner([W_R, FLOOR], [1, 0], [0, 1], R.rfH, R.rfV, S.rf.round));
+  peOut = W_R; if (sep('pe')) { const zs = -R.peV - LEDGE * 1.6; recess.push([W_R, zs], [W_R + 5, zs]); peOut = W_R + 5; }
+  recess.push(...corner([peOut, 0], [0, 1], [1, 0], R.peV, R.peH, S.pe.round));
+  const keZ = sep('ke') ? FACE - LEDGE : FACE, dsZ = sep('ds') ? FACE - LEDGE : FACE;
+  const stepH = Math.max(2.4, R.dsV + .3), rimZ = dsZ - stepH, fall = Math.max(.5, S.dish.depth - (FACE - rimZ)), bowl = [];
+  for (let i = 1; i <= 48; i++) { const r = DISH_R * (1 - i / 48); bowl.push([r, rimZ - fall * (1 - Math.pow(r / DISH_R, S.dish.spread))]); }
+  const knob = [[262, FLOOR], [269.5, FLOOR + .8], [KR - .3, FLOOR + 3.6], [KR, Math.min(-12, keZ - R.keV - .5)], ...corner([KR, keZ], [0, 1], [-1, 0], R.keV, R.keH, S.ke.round)];
+  if (sep('ke')) knob.push([KR - R.keH - 2.2, keZ], [KR - R.keH - 2.2, FACE]);
+  if (sep('ds')) knob.push([DISH_R + R.dsH + 2.2, FACE], [DISH_R + R.dsH + 2.2, dsZ]);
+  knob.push(...corner([DISH_R, dsZ], [-1, 0], [0, -1], R.dsH, R.dsV, S.ds.round), [DISH_R, rimZ], ...bowl);
+  return { recess, knob: knob.reverse() }; }
+function panelGeometry(hr) { const sh = new THREE.Shape(); sh.moveTo(-5000, -5000); sh.lineTo(5000, -5000); sh.lineTo(5000, 5000); sh.lineTo(-5000, 5000); sh.lineTo(-5000, -5000);
+  const h = new THREE.Path(); h.absarc(0, 0, hr, 0, Math.PI * 2, true); sh.holes.push(h); return new THREE.ShapeGeometry(sh, 256); }
+// (the knurl: fine ridges round the side, 180 of them, deepest half way down the side)
+function knurl(g) { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), r = Math.hypot(x, y); if (r < 272 || z < -27 || z > -12.5) continue;
+    const a = Math.atan2(y, x), band = Math.sin(Math.PI * (z + 27) / 14.5), d = (Math.abs(Math.sin(a * 90)) - .64) * .8 * band; p.setX(i, x * (r + d) / r); p.setY(i, y * (r + d) / r); }
+  g.computeVertexNormals(); return g; }
+const pr0 = profiles(), panelGeo = panelGeometry(peOut + reachOf().peH), recessGeo = lathe(pr0.recess, 360), knobGeo = knurl(lathe(pr0.knob, 720));
+function rebuild() { const pr = profiles(); recess.geometry.dispose(); recess.geometry = lathe(pr.recess, 360); knobMesh.geometry.dispose(); knobMesh.geometry = knurl(lathe(pr.knob, 720));
+  panel.geometry.dispose(); panel.geometry = panelGeometry(peOut + reachOf().peH); }
+// (light: a pale warm grey, anodised and blasted; dark: graphite)
+const MAT = {
+  light: { body: { color: 0xd9d8d3, roughness: .62, metalness: 0, clearcoat: .18, clearcoatRoughness: .55 }, knob: { color: 0xdfddd8, roughness: .56, metalness: 0, clearcoat: .22, clearcoatRoughness: .52 }, dot: 0x9e9d99, page: '#d9d8d4' },
+  dark: { body: { color: 0x1f2127, roughness: .6, metalness: 0, clearcoat: .2, clearcoatRoughness: .55 }, knob: { color: 0x25272e, roughness: .55, metalness: 0, clearcoat: .24, clearcoatRoughness: .52 }, dot: 0x0f1014, page: '#1c1e24' } };
+const bodyMat = grained({ ...MAT.light.body, side: THREE.DoubleSide }), knobMat = grained({ ...MAT.light.knob, side: THREE.DoubleSide });
+const panel = new THREE.Mesh(panelGeo, bodyMat); panel.receiveShadow = panel.castShadow = true;
+const recess = new THREE.Mesh(recessGeo, bodyMat); recess.receiveShadow = recess.castShadow = true; scene.add(panel, recess);
+const knob = new THREE.Group(); scene.add(knob);
+const knobMesh = new THREE.Mesh(knobGeo, knobMat); knobMesh.castShadow = knobMesh.receiveShadow = true; knob.add(knobMesh);
+// the dots: small pressed-in pills round the face; the mark: a glowing pill where the dot under it would be
+const dotMat = new THREE.MeshStandardMaterial({ color: MAT.light.dot, roughness: .7 }), dotGeo = new THREE.CapsuleGeometry(3, 3.6, 6, 12);
+for (let i = 1; i < 16; i++) { const a = rad(i * 22.5), d = new THREE.Mesh(dotGeo, dotMat); d.position.set(233 * Math.sin(a), 233 * Math.cos(a), FACE - 1.1); d.rotation.z = -a; d.scale.z = .5; knob.add(d); }
+const markMat = new THREE.MeshStandardMaterial({ color: 0xff8f1f, emissive: 0xff7a12, emissiveIntensity: .9, roughness: .35 });
+const mark = new THREE.Mesh(new THREE.CapsuleGeometry(4.4, 28, 8, 16), markMat); mark.position.set(0, 229, FACE - .5); mark.scale.z = .5; knob.add(mark);
+
+// ---------- the light: a comet on the channel's floor, from the start of the scale to the set temperature; its glow lights the
+// recess's wall and, in the dark, spills over the knob and out over the panel's edge ----------
+const ARC_VS = `varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`;
+const ARC_FS = `varying vec2 vP; uniform float uTip, uSpan, uStart, uR, uW, uGain, uDark, uFeather, uHot, uFloor, uSoft, uTime, uEnergy; uniform vec3 uA, uB, uC; uniform float uPa, uPb;
+  void main(){ float a = atan(vP.x, vP.y), ahead = a - uTip, fe = 1.;
+    // (past the tip and before the scale's start the light fades out over uFeather instead of stopping on a line)
+    if (ahead > 0.) { fe = 1. - smoothstep(0., uFeather, ahead); if (fe <= 0.) discard; }
+    float rel = max(0., uTip - a); if (rel > uSpan) discard; fe *= 1. - smoothstep(0., uFeather, uStart - a);
+    float t = 1. - rel / uSpan; vec3 c = t < uPb ? mix(uA, uB, smoothstep(0., uPb, t)) : mix(uB, uC, (t - uPb) / (1. - uPb)); float al = mix(uFloor, 1., smoothstep(0., 1., t)) * smoothstep(0., uSoft, a - uStart);   // (lit from the start, faint there, full at the tip; the very start fades in)
+    float r = length(vP), d = (r - uR) / uW; float f = exp(-d * d);
+    float pk = pow(.5 + .5 * sin((a - uStart) * 2.6 - uTime), 12.), en = 1. + uEnergy * (pk * 1.5 - .22 + .07 * sin(uTime * .45));   // (the packets and the breath)
+    al *= mix(1., en, .55); c = mix(c, vec3(1.), uHot * pow(f, 5.) * al * (1. + uEnergy * pk * .8)); c *= en;
+    gl_FragColor = vec4(c * uGain, al * f * fe); }`;
+function arcLayer(r0, r1, z, R, W, blend) { const m = new THREE.ShaderMaterial({ vertexShader: ARC_VS, fragmentShader: ARC_FS, transparent: true, depthWrite: false, blending: blend, toneMapped: false,
+    uniforms: { uTip: { value: 0 }, uSpan: { value: 3.4 }, uStart: { value: rad(-135) }, uR: { value: R }, uW: { value: W }, uGain: { value: 1 }, uDark: { value: 0 }, uFeather: { value: .01 }, uHot: { value: 0 }, uFloor: { value: .28 }, uSoft: { value: .5 }, uTime: { value: 0 }, uEnergy: { value: 0 }, uA: { value: new THREE.Color() }, uB: { value: new THREE.Color() }, uC: { value: new THREE.Color() }, uPa: { value: .3 }, uPb: { value: .3 } } });
+  const mesh = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 512, 1), m); mesh.position.z = z; mesh.renderOrder = 2; scene.add(mesh); return m; }
+const arcCore = arcLayer(273, 295, -30.4, 284, 6.5, THREE.NormalBlending), arcWall = arcLayer(270, 296, -30.2, 286, 12, THREE.AdditiveBlending),
+  arcGlow = arcLayer(230, 300, FACE + .4, 272, 22, THREE.AdditiveBlending), arcSpill = arcLayer(298, 380, .4, 300, 26, THREE.AdditiveBlending);
+arcCore.uniforms.uFeather.value = .012; arcCore.uniforms.uHot.value = .55; arcWall.uniforms.uFeather.value = .12; arcGlow.uniforms.uFeather.value = .3; arcSpill.uniforms.uFeather.value = .35;
+// (a gentle falloff, the lamps lifted off the floor: the strip lights the walls evenly, no hot spots)
+let ETIME = 0;   // (the energy's clock: radians the packets have run)
+const LAMPS = []; for (let i = 0; i < 18; i++) { const l = new THREE.PointLight(0xffffff, 0, 220, 1.1); scene.add(l); LAMPS.push(l); }
+const stop = (u, t) => t < u.uPb.value ? u.uA.value.clone().lerp(u.uB.value, THREE.MathUtils.smoothstep(t, 0, u.uPb.value)) : u.uB.value.clone().lerp(u.uC.value, (t - u.uPb.value) / (1 - u.uPb.value));
+function paintLamps() { const u = arcCore.uniforms, tip = u.uTip.value, span = u.uSpan.value, start = u.uStart.value, dark = P.theme === 'dark';
+  LAMPS.forEach((l, i) => { const k = i / (LAMPS.length - 1), a = tip - Math.pow(k, 1.2) * span, t = 1 - (tip - a) / span, on = (.28 + .72 * THREE.MathUtils.smoothstep(t, 0, 1)) * THREE.MathUtils.smoothstep(a - start, 0, u.uSoft.value);
+    l.position.set(284 * Math.sin(a), 284 * Math.cos(a), -18); l.color.copy(stop(u, t)); l.intensity = on * (dark ? 135 : 90) * P.glow * (1 + P.energy * (Math.pow(.5 + .5 * Math.sin((a - start) * 2.6 - ETIME), 12) * 1.2 - .2)) * (i === 0 ? 1.3 : 1); }); }
+const hazeTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,255,255,.75)'); gr.addColorStop(.4, 'rgba(255,255,255,.3)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+const HAZE = []; let hazeAcc = 0;
+function puff(atTip) { if (HAZE.length > 120 || matchMedia('(prefers-reduced-motion: reduce)').matches) return; const u = arcCore.uniforms, tip = u.uTip.value, span = u.uSpan.value, dark = P.theme === 'dark';
+  const k = atTip ? Math.random() * .08 : Math.pow(Math.random(), 1.5) * .85, a = tip - k * span; if (a < u.uStart.value) return; const t = 1 - (tip - a) / span;
+  const m = new THREE.SpriteMaterial({ map: hazeTex, color: stop(u, t).lerp(new THREE.Color(1, 1, 1), dark ? .15 : .45), transparent: true, depthWrite: false, opacity: 0, blending: dark ? THREE.AdditiveBlending : THREE.NormalBlending });
+  const sp = new THREE.Sprite(m), r = 284 + (Math.random() - .5) * 12; sp.position.set(r * Math.sin(a), r * Math.cos(a), -27 + Math.random() * 4); scene.add(sp);
+  HAZE.push({ s: sp, a, r, z: sp.position.z, va: (Math.random() < .5 ? -1 : 1) * (.015 + Math.random() * .04), vr: (Math.random() - .35) * 7, vz: 3 + Math.random() * 5, age: 0, life: 2.4 + Math.random() * 2.2, sz: (22 + Math.random() * 18) * P.hazeSize, op: (dark ? .13 : .2) * (.6 + .4 * Math.min(1, t * 1.4)) * (atTip ? 1.4 : 1) }); }
+function stepHaze(dt) { hazeAcc += dt * P.haze * 14; while (hazeAcc >= 1) { hazeAcc--; puff(false); }
+  for (let i = HAZE.length - 1; i >= 0; i--) { const h = HAZE[i]; h.age += dt; const t = h.age / h.life; if (t >= 1) { scene.remove(h.s); h.s.material.dispose(); HAZE.splice(i, 1); continue; }
+    h.a += h.va * dt; h.r += h.vr * dt; h.z = Math.min(-4, h.z + h.vz * dt); h.s.position.set(h.r * Math.sin(h.a), h.r * Math.cos(h.a), h.z); h.s.scale.setScalar(h.sz * (1 + t * 1.3));
+    h.s.material.opacity = Math.sin(Math.PI * Math.min(1, t * 1.15)) * h.op * Math.min(1.4, P.haze * 1.4); } }
+// (the colours: light, as in Figma, lime into yellow into orange; dark, out of the dark into blue into the tip's warmth)
+const C = (h) => new THREE.Color(h);
+const warmth = t => { const S = [[0, '#3fb8ff'], [.3, '#36c6c0'], [.5, '#e8b32a'], [.65, '#ff8a12'], [1, '#ff4f1f']]; for (let i = 1; i < S.length; i++) if (t <= S[i][0]) return C(S[i - 1][1]).lerp(C(S[i][1]), (t - S[i - 1][0]) / (S[i][0] - S[i - 1][0])); return C(S[S.length - 1][1]); };
+function paintArc(v) { const tip = rad(angleOf(v)), t = (v - MIN) / (MAX - MIN), dark = P.theme === 'dark', tipC = dark ? warmth(t) : C('#ff9a2e').lerp(C('#ff6a12'), Math.max(0, t - .5) * 2);
+  for (const [m, gain] of [[arcCore, dark ? 1.3 : 1.05], [arcWall, dark ? .3 : .12], [arcGlow, dark ? .14 : 0], [arcSpill, dark ? .08 : .02]]) { const u = m.uniforms;
+    u.uTip.value = tip; u.uSpan.value = Math.max(.04, tip - u.uStart.value); u.uTime.value = ETIME; u.uEnergy.value = P.energy; u.uGain.value = m === arcCore ? gain : gain * P.glow * (.65 + .45 * t);
+    if (dark) { u.uA.value.set('#1f5c8c'); u.uB.value.set('#1a86c4'); u.uC.value.copy(tipC); u.uPb.value = .5; }
+    else { u.uA.value.set('#c0ff13'); u.uB.value.set('#ffeb13'); u.uC.value.copy(tipC); u.uPb.value = .35; } }
+  markMat.color.copy(tipC); markMat.emissive.copy(tipC).multiplyScalar(dark ? 1 : .55); paintLamps(); }
+
+// ---------- the theme ----------
+function paintGrain() { const dark = P.theme === 'dark'; for (const m of [bodyMat, knobMat]) { const g = m.userData.grain; g.uGrain.value = (dark ? .12 : .2) * P.grain; g.uGrainC.value = (dark ? .03 : .055) * P.grain; g.uGrainS.value = .85 / P.grainSize; } }
+function applyTheme() { const dark = P.theme === 'dark', M = MAT[P.theme]; document.body.classList.toggle('dark', dark); document.querySelector('meta[name=theme-color]').content = M.page;
+  document.documentElement.style.setProperty('--bg', M.page); bodyMat.setValues(M.body); knobMat.setValues(M.knob); dotMat.color.setHex(M.dot);
+  renderer.toneMappingExposure = dark ? 1 : .8; paintGrain();
+  key.intensity = dark ? 1.2 : 1.25; fill.intensity = dark ? .22 : .3; scene.environmentIntensity = dark ? .45 : .5; uiPanel.classList.toggle('dark', dark); paintArc(cur); }
+
+// ---------- the reading: one rolling column per digit ----------
+const fmt = v => P.unit === 'f' ? String(Math.round(v * 9 / 5 + 32)) : (v % 1 ? v.toFixed(1) : String(v));
+const numEl = $('num'); let cols = [];
+function readout(v) { const s = fmt(v) + '°', chars = [...s];
+  // (the columns follow the characters: a digit is a strip 0–9 moved to its place; a new place grows in, a lost one shrinks out)
+  if (cols.length !== chars.length || cols.some((c, i) => c.digit !== /\d/.test(chars[i]))) {
+    numEl.innerHTML = ''; cols = chars.map(ch => { const el = document.createElement('span'); el.className = 'col'; const digit = /\d/.test(ch);
+      if (digit) { const st = document.createElement('span'); st.className = 'strip'; st.innerHTML = '0123456789'.split('').map(d => `<span>${d}</span>`).join(''); el.appendChild(st); } else { el.classList.add('static'); el.textContent = ch; }
+      numEl.appendChild(el); return { el, digit, strip: el.firstChild, d: -1 }; });
+  }
+  chars.forEach((ch, i) => { const c = cols[i]; if (!c.digit) { c.el.textContent = ch; return; } const d = +ch; if (d === c.d) return; c.d = d; c.strip.style.transform = `translateY(${-d * 1.3}em)`; });
+  $('unit').textContent = P.unit === 'f' ? 'Fahrenheit' : 'Celsius';
+  knobEl.setAttribute('aria-valuenow', String(v)); knobEl.setAttribute('aria-valuetext', `${fmt(v)} degrees ${P.unit === 'f' ? 'Fahrenheit' : 'Celsius'}`); }
+
+// ---------- the click of each step ----------
+let ac = null; function click(up) { if (!P.sound || BARE) return; try { ac = ac || new AudioContext(); if (ac.state === 'suspended') ac.resume();
+  // (a muted detent: a short low tick, its noise through a soft low-pass, a faint body under it)
+  const t = ac.currentTime, b = ac.createBuffer(1, Math.round(ac.sampleRate * .018), ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 8);
+  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); s.buffer = b; f.type = 'lowpass'; f.frequency.value = up ? 1500 : 1300; f.Q.value = .5; g.gain.value = .035; s.connect(f); f.connect(g); g.connect(ac.destination); s.start(t);
+  const o = ac.createOscillator(), og = ac.createGain(); o.frequency.setValueAtTime(up ? 210 : 190, t); o.frequency.exponentialRampToValueAtTime(120, t + .03); og.gain.setValueAtTime(.025, t); og.gain.exponentialRampToValueAtTime(.0001, t + .035); o.connect(og); og.connect(ac.destination); o.start(t); o.stop(t + .04); } catch { } }
+
+// ---------- the value; the knob follows on a spring; it leans a touch towards the pointer ----------
+let target = clamp(snap(P.value), MIN, MAX), cur = target, vel = 0, tilt = { x: 0, y: 0, tx: 0, ty: 0 };
+function set(v) { v = clamp(snap(v), MIN, MAX); if (v === target) return; const dir = Math.sign(v - target); target = v; P.value = v; if (THUMB) { cur = v; render(); } save(); readout(v); click(dir > 0); if (P.haze > 0) { puff(true); puff(true); } $('hint').classList.add('gone'); }
+const angleAt = e => { const r = dial.getBoundingClientRect(); return Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI; };
+let grab = null;
+knobEl.addEventListener('pointerdown', e => { if (e.button > 0 || EDIT) return; e.preventDefault(); knobEl.focus({ preventScroll: true }); try { knobEl.setPointerCapture(e.pointerId); } catch { } knobEl.classList.add('drag'); grab = { id: e.pointerId, a: angleAt(e), v: target }; });
+knobEl.addEventListener('pointermove', e => { if (!grab || e.pointerId !== grab.id) return; const a = angleAt(e); let d = a - grab.a; if (d > 180) d -= 360; if (d < -180) d += 360; grab.a = a; grab.v = clamp(grab.v + d / SWEEP * (MAX - MIN), MIN - .4, MAX + .4); set(grab.v); });
+const release = e => { if (!grab || e.pointerId !== grab.id) return; grab = null; knobEl.classList.remove('drag'); };
+knobEl.addEventListener('pointerup', release); knobEl.addEventListener('pointercancel', release);
+let wheelAcc = 0; stage.addEventListener('wheel', e => { e.preventDefault(); if (EDIT) return; wheelAcc += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? -e.deltaY : e.deltaX; while (Math.abs(wheelAcc) >= 40) { set(target + Math.sign(wheelAcc) * STEP); wheelAcc -= Math.sign(wheelAcc) * 40; } }, { passive: false });
+knobEl.addEventListener('keydown', e => { const m = { ArrowUp: STEP, ArrowRight: STEP, ArrowDown: -STEP, ArrowLeft: -STEP, PageUp: 2, PageDown: -2 }[e.key];
+  if (m != null) { e.preventDefault(); set(target + m); } else if (e.key === 'Home') { e.preventDefault(); set(MIN); } else if (e.key === 'End') { e.preventDefault(); set(MAX); } });
+$('dish').addEventListener('click', () => { P.unit = P.unit === 'c' ? 'f' : 'c'; save(); readout(target); });
+stage.addEventListener('pointermove', e => { if (!P.tilt || EDIT || e.pointerType !== 'mouse') return; const r = dial.getBoundingClientRect(); tilt.tx = clamp((e.clientX - r.left - r.width / 2) / r.width, -.8, .8); tilt.ty = clamp((e.clientY - r.top - r.height / 2) / r.height, -.8, .8); });
+stage.addEventListener('pointerleave', () => { tilt.tx = tilt.ty = 0; });
+
+// ---------- edit: the shape editor docked at the left: pick a ring by name (or hover the dial to light one, click to pick it) and
+// shape it: Round (from a sharp chamfer to a full curve) and Reach (how far the rounding runs); the dish: Depth and Spread. While
+// editing, a drag turns the whole scene round in 3D to see the depth, the wheel comes closer, a double click faces it again ----------
+const RINGS = [
+  { id: 'pe', name: 'Panel edge', note: 'Where the panel turns down into the recess.', at: () => [W_R + reachOf().peH * .4, -reachOf().peV * .4], params: [['round', 'Round', 0, 1, .01, ''], ['reach', 'Reach', .5, 96, .5, 'px']] },
+  { id: 'rf', name: 'Recess floor', note: 'The bottom of the wall, where the light lies.', at: () => [W_R - Math.min(reachOf().rfH, W_R - KR) * .4, FLOOR + reachOf().rfV * .4], params: [['round', 'Round', 0, 1, .01, ''], ['reach', 'Reach', 0, 48, .5, 'px']] },
+  { id: 'ke', name: 'Knob edge', note: 'The rim of the knob’s face.', at: () => [KR - reachOf().keH * .4, FACE - reachOf().keV * .4], params: [['round', 'Round', 0, 1, .01, ''], ['reach', 'Reach', .3, 64, .1, 'px']] },
+  { id: 'ds', name: 'Dish edge', note: 'Where the face steps down into the dish.', at: () => [DISH_R + reachOf().dsH * .4, FACE - reachOf().dsV * .4], params: [['round', 'Round', 0, 1, .01, ''], ['reach', 'Reach', .2, 48, .1, 'px']] },
+  { id: 'dish', name: 'Dish', note: 'How deep the middle goes, and whether it spreads wide or narrows.', at: () => [DISH_R * .6, FACE - P.shape.dish.depth * .8], params: [['depth', 'Depth', 3, 26, .5, 'px'], ['spread', 'Spread', 1, 7, .1, '']] }];
+// (which ring a point of the surface belongs to)
+function ringAt(p) { const r = Math.hypot(p.x, p.y), z = p.z, R = reachOf();
+  if (r >= W_R - 1 && z > FLOOR + R.rfV + .5) return RINGS[0]; if (r >= KR + 1) return RINGS[1]; if (r >= DISH_R + R.dsH + 6) return z > FACE - R.keV - 3 && r > KR - R.keH - 10 ? RINGS[2] : null;
+  if (r >= DISH_R - 4) return RINGS[3]; return RINGS[4]; }
+// (the rings drawn in the scene: the picked one solid, the one under the pointer dashed)
+const loopGeo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 257 }, (_, i) => new THREE.Vector3(Math.sin(i / 256 * Math.PI * 2), Math.cos(i / 256 * Math.PI * 2), 0)));
+const pickLine = new THREE.Line(loopGeo, new THREE.LineBasicMaterial({ color: 0xff8a12, transparent: true, opacity: 0, depthTest: false })), hoverLine = new THREE.Line(loopGeo.clone(), new THREE.LineDashedMaterial({ color: 0xff8a12, dashSize: .02, gapSize: .016, transparent: true, opacity: .45, depthTest: false }));
+let shapedAt = -1e9;
+function stepLines() { const busy = performance.now() - shapedAt < 900, want = !pickLine.visible ? 0 : busy ? 0 : .5; pickLine.material.opacity += (want - pickLine.material.opacity) * (busy ? .3 : .08); }
+hoverLine.computeLineDistances(); pickLine.renderOrder = hoverLine.renderOrder = 9; pickLine.visible = hoverLine.visible = false; scene.add(pickLine, hoverLine);
+function placeLine(line, ring) { line.visible = !!ring && EDIT; if (!line.visible) return; const [r, z] = ring.at(); line.scale.setScalar(r); line.position.z = z + .4; }
+let EDIT = false, hoverRing = null, pickRing = RINGS[2];
+const shaper = $('shaper');
+function buildShaper() { shaper.innerHTML = '';
+  const h = document.createElement('h3'); h.textContent = 'Shape'; shaper.appendChild(h);
+  const chips = document.createElement('div'); chips.className = 'chips'; RINGS.forEach(r => { const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name; b.dataset.id = r.id; b.className = r === pickRing ? 'on' : ''; b.onclick = () => pick(r); chips.appendChild(b); }); shaper.appendChild(chips);
+  const p = document.createElement('p'); p.textContent = pickRing.note; shaper.appendChild(p);
+  const ctl = pickRing.params.map(([k, label, min, max, step, unit]) => LabUI.slider(shaper, { label, min, max, step, unit, value: P.shape[pickRing.id][k], def: SHAPE[pickRing.id][k], onInput: v => { P.shape[pickRing.id][k] = v; save(); rebuild(); placeLine(pickLine, pickRing); shapedAt = performance.now(); } }));
+  let lay = null; if ('layer' in P.shape[pickRing.id]) lay = LabUI.seg(shaper, { label: 'Layers', options: [['joined', 'Joined'], ['separate', 'Separate']], value: P.shape[pickRing.id].layer, onChange: v => { P.shape[pickRing.id].layer = v; save(); rebuild(); placeLine(pickLine, pickRing); shapedAt = performance.now(); } });
+  const row = document.createElement('div'); row.className = 'row'; row.innerHTML = '<button type="button" data-a="ring">Reset ring</button><button type="button" data-a="all">Reset all</button><button type="button" class="dark" data-a="done">Done</button>'; shaper.appendChild(row);
+  row.querySelector('[data-a=ring]').onclick = () => { Object.assign(P.shape[pickRing.id], SHAPE[pickRing.id]); save(); rebuild(); ctl.forEach((c, i) => c.set?.(SHAPE[pickRing.id][pickRing.params[i][0]])); lay?.set?.(SHAPE[pickRing.id].layer); placeLine(pickLine, pickRing); };
+  row.querySelector('[data-a=all]').onclick = () => { P.shape = cloneShape(); save(); rebuild(); buildShaper(); placeLine(pickLine, pickRing); };
+  row.querySelector('[data-a=done]').onclick = () => setEdit(false);
+  const tip = document.createElement('p'); tip.style.marginTop = '12px'; tip.textContent = 'Drag to look round in 3D · scroll to come closer · double-click to face it again.'; shaper.appendChild(tip); }
+function pick(r) { pickRing = r; buildShaper(); placeLine(pickLine, r); }
+function hover(r) { if (r === hoverRing) return; hoverRing = r; placeLine(hoverLine, r && r !== pickRing ? r : null); shaper.querySelectorAll('.chips button').forEach(b => b.classList.toggle('hov', !!r && b.dataset.id === r.id)); }
+function setEdit(on) { EDIT = on; document.body.classList.toggle('editing', on); $('bEdit').setAttribute('aria-pressed', String(on)); $('hint').classList.remove('gone');
+  $('hint').textContent = on ? 'Pick a ring · drag to look round' : 'Turn the dial · tap the middle for °F';
+  if (on) { buildShaper(); placeLine(pickLine, pickRing); } else { hover(null); placeLine(pickLine, null); orbit.tt = 0; orbit.tp = 0; orbit.tz = 1; } }
+// (the orbit: azimuth, polar angle from straight above, zoom; eased)
+const orbit = { t: 0, p: 0, z: 1, tt: 0, tp: 0, tz: 1 }; let od = null;
+const rayE = new THREE.Raycaster(), ndcE = new THREE.Vector2();
+function surfaceAt(e) { const r = stage.getBoundingClientRect(); ndcE.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); rayE.setFromCamera(ndcE, camera);
+  const hit = rayE.intersectObjects([knobMesh, recess, panel], false)[0]; if (!hit) return null; const p = hit.point.clone(); if (hit.object === knobMesh) knob.worldToLocal(p); return p; }
+stage.addEventListener('pointerdown', e => { if (!EDIT || e.button > 0 || e.target.closest('.shaper')) return; od = { id: e.pointerId, x: e.clientX, y: e.clientY, t: orbit.tt, p: orbit.tp, moved: false }; try { stage.setPointerCapture(e.pointerId); } catch { } });
+stage.addEventListener('pointermove', e => { if (!EDIT) return;
+  if (od && e.pointerId === od.id) { const dx = e.clientX - od.x, dy = e.clientY - od.y; if (!od.moved && Math.hypot(dx, dy) > 4) { od.moved = true; stage.classList.add('orbiting'); }
+    if (od.moved) { orbit.tt = od.t - dx * .006; orbit.tp = clamp(od.p + dy * .005, 0, 1.25); return; } }
+  const p = surfaceAt(e); hover(p ? ringAt(p) : null); });
+const endOrbit = e => { if (!od || e.pointerId !== od.id) return; if (!od.moved && hoverRing) pick(hoverRing); od = null; stage.classList.remove('orbiting'); };
+stage.addEventListener('pointerup', endOrbit); stage.addEventListener('pointercancel', endOrbit);
+stage.addEventListener('wheel', e => { if (!EDIT) return; e.preventDefault(); orbit.tz = clamp(orbit.tz * Math.exp(e.deltaY * .0012), .45, 2.2); }, { passive: false });
+stage.addEventListener('dblclick', () => { if (EDIT) { orbit.tt = 0; orbit.tp = 0; orbit.tz = 1; } });
+$('bEdit').onclick = () => setEdit(!EDIT);
+addEventListener('keydown', e => { if (e.key === 'Escape' && EDIT) setEdit(false); });
+
+// ---------- the view: the dial fills what the screen leaves, the camera straight above it (tilted a little with the pointer) ----------
+let K = 1;
+function frameView() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  K = Math.max(.3, Math.min(1, (w - 24) / 700, (h - (BARE ? 0 : 90)) / 700)); dial.style.setProperty('--k', K.toFixed(4)); }
+function place() { const h = stage.clientHeight, vf = 2 * Math.tan(rad(camera.fov / 2)), dist = h / K / vf;   // (one pixel of the design is K pixels on the screen, at the face's height)
+  const ax = tilt.x * .09, ay = tilt.y * .09, d = dist * orbit.z, sp = Math.sin(orbit.p), cp = Math.cos(orbit.p);
+  camera.position.set(Math.sin(ax) * d + sp * Math.sin(orbit.t) * d, -Math.sin(ay) * d - sp * Math.cos(orbit.t) * d, FACE + cp * Math.cos(ax) * Math.cos(ay) * d); camera.lookAt(0, 0, FACE);
+  // (the reading and the hand sit flat over the dial: they step aside while the view is turned or closer)
+  document.body.classList.toggle('away', orbit.p > .03 || Math.abs(orbit.z - 1) > .03); }
+new ResizeObserver(() => { frameView(); if (THUMB) render(); }).observe(stage);
+
+// ---------- the loop ----------
+let last = 0;
+function render() { place(); knob.rotation.z = -rad(angleOf(cur)); paintArc(cur); renderer.render(scene, camera); }
+function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.033, last ? (now - last) / 1000 : .016); last = now;
+  const k = 420, c = 2 * .8 * Math.sqrt(k); vel += (k * (target - cur) - c * vel) * dt; cur += vel * dt;
+  tilt.x += (tilt.tx - tilt.x) * .08; tilt.y += (tilt.ty - tilt.y) * .08; for (const k of ['t', 'p', 'z']) orbit[k] += (orbit['t' + k] - orbit[k]) * .14; ETIME += dt * 2.4 * P.energySpeed; stepLines(); stepHaze(dt); render(); }
+
+// ---------- the panel ----------
+const uiPanel = $('panel');
+function buildPanel() { uiPanel.innerHTML = '';
+  const head = document.createElement('header'); head.className = 'ph'; head.innerHTML = '<div><h2>Tune</h2><p>Light or dark, the unit, the glow and the click of each step.</p></div><button class="pc" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  head.querySelector('.pc').onclick = () => openPanel(false); uiPanel.appendChild(head);
+  const g = LabUI.group(uiPanel, 'Dial', { key: KEY + '.g', open: true });
+  LabUI.seg(g, { label: 'Theme', options: [['light', 'Light'], ['dark', 'Dark']], value: P.theme, onChange: v => { P.theme = v; save(); applyTheme(); } });
+  LabUI.seg(g, { label: 'Reading', options: [['printed', 'Printed'], ['engraved', 'Engraved']], value: P.text, onChange: v => { P.text = v; save(); document.body.classList.toggle('engraved', v === 'engraved'); } });
+  LabUI.seg(g, { label: 'Unit', options: [['c', 'Celsius'], ['f', 'Fahrenheit']], value: P.unit, onChange: v => { P.unit = v; save(); readout(target); } });
+
+  LabUI.check(g, { label: 'A soft click at each half degree', value: P.sound, onChange: v => { P.sound = v; save(); } });
+  LabUI.check(g, { label: 'Lean towards the pointer', value: P.tilt, onChange: v => { P.tilt = v; save(); if (!v) tilt.tx = tilt.ty = 0; } });
+  const gl = LabUI.group(uiPanel, 'Light', { key: KEY + '.gl', open: true });
+  LabUI.slider(gl, { label: 'Brightness', min: 0, max: 2, step: .05, unit: '×', value: P.glow, def: DEF.glow, onInput: v => { P.glow = v; save(); } });
+  LabUI.slider(gl, { label: 'Haze', min: 0, max: 2, step: .05, unit: '×', value: P.haze, def: DEF.haze, onInput: v => { P.haze = v; save(); } });
+  LabUI.slider(gl, { label: 'Haze size', min: .4, max: 2.5, step: .05, unit: '×', value: P.hazeSize, def: DEF.hazeSize, onInput: v => { P.hazeSize = v; save(); } });
+  LabUI.slider(gl, { label: 'Energy', min: 0, max: 1.5, step: .05, unit: '', value: P.energy, def: DEF.energy, onInput: v => { P.energy = v; save(); } });
+  LabUI.slider(gl, { label: 'Energy speed', min: .2, max: 3, step: .05, unit: '×', value: P.energySpeed, def: DEF.energySpeed, onInput: v => { P.energySpeed = v; save(); } });
+  const gm = LabUI.group(uiPanel, 'Material', { key: KEY + '.gm', open: true });
+  LabUI.slider(gm, { label: 'Grain', min: 0, max: 2.5, step: .05, unit: '×', value: P.grain, def: DEF.grain, onInput: v => { P.grain = v; save(); paintGrain(); } });
+  LabUI.slider(gm, { label: 'Grain size', min: .5, max: 4, step: .05, unit: '×', value: P.grainSize, def: DEF.grainSize, onInput: v => { P.grainSize = v; save(); paintGrain(); } });
+  const gs = LabUI.group(uiPanel, 'Shape', { key: KEY + '.gs', open: true });
+  const p = document.createElement('p'); p.className = 'note'; p.style.cssText = 'margin:2px 0 10px; font-size:12.5px; line-height:1.45; color:var(--ui-muted)'; p.textContent = 'Edit shape (at the bottom) opens the rings: pick one, shape its rounding and reach, and turn the dial round in 3D to see it.'; gs.appendChild(p);
+  const rb = document.createElement('button'); rb.type = 'button'; rb.textContent = 'Reset the shape'; rb.style.cssText = 'height:36px; padding:0 14px; border:0; border-radius:999px; background:var(--ui-field); color:var(--ui-ink); font:600 13px var(--lab-font); cursor:pointer; margin-bottom:10px';
+  rb.onclick = () => { P.shape = cloneShape(); save(); rebuild(); if (EDIT) buildShaper(); }; gs.appendChild(rb); }
+function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
+$('tune').onclick = () => openPanel(true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && !EDIT) openPanel(false); });
+
+// ---------- start (?thumb=1 the still at 21°, &theme=dark; ?demo=1 it turns by itself) ----------
+if (BARE) document.body.classList.add('bare'); else buildPanel();
+frameView(); applyTheme(); readout(target); document.body.classList.toggle('engraved', P.text === 'engraved' || q.get('text') === 'engraved');
+document.fonts.ready.then(() => readout(target));
+if (THUMB) render(); else requestAnimationFrame(frame);
+document.body.classList.add('ready');
+if (DEMO) { const seq = [24, 18, 21], wait = ms => new Promise(r => setTimeout(r, ms)); (async () => { for (;;) for (const v of seq) { await wait(1800); while (target !== v) { set(target + Math.sign(v - target) * STEP); await wait(90); } } })(); }
+window.DIAL = { orbit, pick, ringAt, surfaceAt, set, get value() { return target; }, render, scene, camera, knob, setEdit, rebuild, get P() { return P; }, HAZE, stepHaze };
+</script>
+</body>
+</html>

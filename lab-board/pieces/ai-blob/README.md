@@ -72,3 +72,16 @@ Gotowe palety albo jeden kolor bazowy w HCT (Material Color Utilities z jsDelivr
 ## Lab
 
 Ustawienia: `lab.ai-blob.v1`. Klawisze: 1–7 stany, ← → kule, Spacja stuknięcie. Plansza: `?thumb=1` (opcjonalnie `&theme=dark&state=…&variant=…&ground`), `?demo=1` (Halo przez stany; z `&ground` nad podłogą). Podłoga jest domyślnie wyłączona wszędzie (w panelu „Stand on a ground”). Do testów: `window.BLOB`. Inspiracja kierunkiem: React Bits Pro (AI Blob, Agentic Ball, Glyph Orb); kod własny.
+
+## Ask AI pill (`ai-pill.js`)
+Przycisk „Ask AI” z małą żywą kulą (Glass Soft) po lewej, napisem i szewronem › po prawej. Osobny web component, dociąga `ai-blob.js` z tego samego folderu, jeśli go nie ma.
+
+```html
+<script src="ai-blob.js"></script>
+<script src="ai-pill.js"></script>
+<ai-pill label="Ask AI" palette="aurora"></ai-pill>
+```
+
+- Atrybuty: `label`, `state` (idle | thinking), `thinking-label` (domyślnie „Thinking”), `size` (s 40 / m 48 / l 56 px), `theme` (light | dark), `palette` albo `colors`, `orb` (dowolny wariant kuli, domyślnie soft).
+- Zachowanie: kula spokojnie płynie; najechanie albo fokus z klawiatury budzi ją (stan listening) i przesuwa szewron o 2 px; wciśnięcie lekko zapada przycisk; klik puszcza z kuli falę w jej kolorach przez cały przycisk i wysyła zdarzenie `ask`. Strona ustawia `state="thinking"` na czas odpowiedzi: kula myśli, napis płynnie zmienia się na „Thinking”, szewron na trzy pulsujące kropki, przycisk dopasowuje szerokość sprężyście, `aria-busy`.
+- W labie: Customize → Preview → „Ask AI pill” (trzy rozmiary, motyw i paleta z panelu; klik pokazuje 2,6 s myślenia).

@@ -27,6 +27,8 @@
   .one { width: min(54vmin, 440px); height: min(54vmin, 440px); }
   .sizes { display: none; align-items: flex-end; gap: clamp(20px, 5vw, 64px); }
   body.view-sizes .one { display: none; } body.view-sizes .sizes { display: flex; }
+  /* the Ask AI pill: the orb in a button, in its three sizes */
+  .pills { display: none; flex-direction: column; align-items: center; gap: 26px; } body.view-pill .one { display: none; } body.view-pill .pills { display: flex; }
   .sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .sizes figcaption { font: 500 12px var(--font); color: var(--muted); font-variant-numeric: tabular-nums; }
   .s1 { width: min(30vmin, 260px); height: min(30vmin, 260px); } .s2 { width: 112px; height: 112px; } .s3 { width: 40px; height: 40px; }
@@ -90,6 +92,7 @@
     <figure><ai-blob class="s2"></ai-blob><figcaption>Card · 112</figcaption></figure>
     <figure><ai-blob class="s3"></ai-blob><figcaption>Icon · 40</figcaption></figure>
   </div>
+  <div class="pills" aria-label="The orb in an Ask AI button"><ai-pill size="l"></ai-pill><ai-pill></ai-pill><ai-pill size="s"></ai-pill></div>
 </main>
 <div class="mode lab-seg" id="mode" role="radiogroup" aria-label="Light or dark"><button type="button" role="radio" data-m="light">Light</button><button type="button" role="radio" data-m="dark">Dark</button></div>
 <div class="states" id="states" role="group" aria-label="State"></div>
@@ -100,7 +103,8 @@
 </div></div>
 <aside class="panel lab-ui soft" id="panel" aria-label="Customize the orb"></aside>
 <script src="../../shared/lab-ui.js?v=20"></script>
-<script src="ai-blob.js?v=1"></script>
+<script src="ai-blob.js?v=2"></script>
+<script src="ai-pill.js?v=2"></script>
 <script type="module">
 const $ = id => document.getElementById(id), q = new URLSearchParams(location.search), THUMB = q.has('thumb'), DEMO = q.has('demo'), BARE = THUMB || DEMO;
 const KEY = 'lab.ai-blob.v1';
@@ -113,7 +117,7 @@ const TUNE = [['lines', 'lines', 'Lines (rings)', 2, 16, 1], ['sweep', 'sweep', 
 // (the component's own neutral values, and Jarek's base for the glass, 20.10: the lab starts from it)
 const NEUTRAL = { lines: 5, sweep: 1, glow: 1, halo: 1, rim: 1, core: 1, glints: 1, detail: 1, wobble: 0, cspeed: 1 };
 const GLASS_BASE = { sweep: 1.15, glow: 1.35, halo: 2.1, rim: 2.05, core: 1.55, glints: 1.7, detail: 1.05, wobble: .76, cspeed: 1.7 };
-const DEF = { variant: 'glass', state: 'default', theme: 'light', blend: 'auto', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1, view: 'one', ground: false, lift: 1, interactive: true, intro: true,
+const DEF = { variant: 'glass', state: 'default', theme: 'light', blend: 'auto', palette: 'aurora', h: 285, c: 72, t: 52, speed: 1.25, view: 'one', ground: false, lift: 1, interactive: true, intro: true,
   lines: 5, ...GLASS_BASE };
 // (presets: an orb, its colours and a few settings that suit it)
 const PRESETS = [['Glass', { variant: 'glass', palette: 'aurora', ...GLASS_BASE }], ['Drop of light', { variant: 'soft', palette: 'aurora', ...GLASS_BASE, halo: 1.6 }], ['Cosmos', { variant: 'nebula', palette: 'aurora', glow: 1.3, halo: 1.6 }], ['Iridescent', { variant: 'halo', palette: 'aurora' }], ['Pearl', { variant: 'halo', palette: 'mono', glow: .8, rim: .8, core: 1.3 }], ['Liquid', { variant: 'glass', palette: 'ocean' }], ['Lava lamp', { variant: 'core', palette: 'aurora' }], ['Northern', { variant: 'aurora', palette: 'mint' }],
@@ -137,12 +141,13 @@ const attrs = () => { const a = {}; if (P.blend !== 'auto') a.blend = P.blend; i
 function apply() { const cols = colours(), a = attrs(), names = ['blend', 'ground', 'lift', 'interactive', 'intro', 'speed', ...TUNE.map(t => t[1])];
   for (const b of all()) { b.variant = P.variant; b.removeAttribute('theme'); for (const n of names) { if (n in a) b.setAttribute(n, a[n]); else b.removeAttribute(n); }
     if (cols) b.colors = cols; else { b.removeAttribute('colors'); b.palette = P.palette === 'custom' ? 'aurora' : P.palette; } }
-  document.body.classList.toggle('dark', P.theme === 'dark'); document.body.classList.toggle('view-sizes', P.view === 'sizes');
+  document.body.classList.toggle('dark', P.theme === 'dark'); document.body.classList.toggle('view-sizes', P.view === 'sizes'); document.body.classList.toggle('view-pill', P.view === 'pill');
+  for (const p of document.querySelectorAll('ai-pill')) { p.setAttribute('theme', P.theme); if (cols) p.setAttribute('colors', cols.join(' ')); else { p.removeAttribute('colors'); p.setAttribute('palette', P.palette === 'custom' ? 'aurora' : P.palette); } p.state = P.state === 'thinking' ? 'thinking' : 'idle'; }
   document.querySelector('meta[name=theme-color]').content = P.theme === 'dark' ? '#0e0f13' : '#f4f3ef'; $('vars').classList.toggle('dark', P.theme === 'dark');
   document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === P.theme)));
   requestAnimationFrame(() => all().forEach(b => b.refresh?.()));   // (the orb looks at the new background straight away)
   $('nm').textContent = ORBS.find(o => o[0] === P.variant)?.[1] || 'Glass'; paintStates(); paintChips(); paintCode(); markPresets(); vis(); }
-function setState(s) { P.state = s; save(); for (const b of all()) b.state = s; paintStates(); paintCode(); }
+function setState(s) { P.state = s; save(); for (const b of all()) b.state = s; for (const p of document.querySelectorAll('ai-pill')) p.state = s === 'thinking' ? 'thinking' : 'idle'; paintStates(); paintCode(); }
 // (connecting and error go back by themselves: the bar follows the orb)
 $('one').addEventListener('statechange', e => { if (e.detail.auto) { P.state = e.detail.state; for (const b of document.querySelectorAll('.sizes ai-blob')) b.state = P.state; save(); paintStates(); paintCode(); } });
 
@@ -199,7 +204,7 @@ function buildPanel() { panel.innerHTML = '';
   ri.querySelector('#replay').onclick = () => all().forEach(b => b.replayIntro()); ri.querySelector('#tapit').onclick = () => all().forEach(b => b.tap());
   ctl.mic = LabUI.check(g3, { label: 'Listen through the microphone', value: false, onChange: async v => { const ok = await useMic(v); if (!ok) { ctl.mic.set(false); alert('The browser did not allow the microphone.'); } } });
   const g4 = LabUI.group(panel, 'Preview', { key: KEY + '.g.view' });
-  ctl.view = LabUI.seg(g4, { label: 'Show', options: [['one', 'One orb'], ['sizes', 'Three sizes']], value: P.view, onChange: v => { P.view = v; save(); apply(); } });
+  ctl.view = LabUI.seg(g4, { label: 'Show', options: [['one', 'One orb'], ['sizes', 'Three sizes'], ['pill', 'Ask AI pill']], value: P.view, onChange: v => { P.view = v; save(); apply(); } });
   const g5 = LabUI.group(panel, 'Use it', { key: KEY + '.g.code', open: true });
   const how = document.createElement('p'); how.className = 'note'; how.innerHTML = 'Add <a href="ai-blob.js" download>ai-blob.js</a> to your page once, then place the tag at any size. Set <code>state</code> from your code as the assistant listens, thinks and talks; <code>level</code> (0–1) or <code>useAnalyser()</code> lets your own audio move it; <code>tap()</code> squeezes it.'; g5.appendChild(how);
   const pre = document.createElement('pre'); pre.className = 'code'; pre.innerHTML = '<span id="code"></span><button type="button" id="copy">Copy</button>'; g5.appendChild(pre);
@@ -212,6 +217,7 @@ function markPresets() { panel.querySelectorAll('[data-n]').forEach(b => { const
 function paintChips() { const el = $('chips'); if (!el) return; const cols = colours() || (customElements.get('ai-blob')?.palettes[P.palette === 'custom' ? 'aurora' : P.palette]) || [];
   el.innerHTML = cols.map(c => `<span style="background:${c}" title="${c}"></span>`).join('') || '<p class="note">The colour library did not load (offline?); the ready palettes still work.</p>'; }
 function paintCode() { const el = $('code'); if (!el) return; const cols = colours(), a = attrs();
+  if (P.view === 'pill') { el.textContent = `<script src="ai-blob.js"><\/script>\n<script src="ai-pill.js"><\/script>\n<ai-pill label="Ask AI"${cols ? ` colors="${cols.join(' ')}"` : ` palette="${P.palette === 'custom' ? 'aurora' : P.palette}"`}${P.theme === 'dark' ? ' theme="dark"' : ''}></ai-pill>`; return; }
   const extra = Object.entries(a).map(([k, v]) => v === '' ? ` ${k}` : ` ${k}="${v}"`).join('');
   el.textContent = `<script src="ai-blob.js"><\/script>\n<ai-blob variant="${P.variant}" state="${P.state}"${cols ? ` colors="${cols.join(' ')}"` : ` palette="${P.palette === 'custom' ? 'aurora' : P.palette}"`}${extra} style="width:200px;height:200px"></ai-blob>`; }
 function openPanel(on) { document.body.classList.toggle('tuning', on); $('tune').setAttribute('aria-expanded', String(on)); }
@@ -224,6 +230,8 @@ apply(); setState(BARE ? (THUMB ? (q.get('state') || 'speaking') : 'connecting')
 LabUI.segThumb($('mode'));
 if (DEMO) { const seq = [['listening', 3000], ['thinking', 2800], ['speaking', 3400], ['muted', 2200], ['default', 1800]], wait = ms => new Promise(r => setTimeout(r, ms));
   (async () => { await wait(1700); for (;;) for (const [s, ms] of seq) { setState(s); await wait(ms); } })(); }
+// (in the lab a click on a pill plays the answer: it thinks a moment, then rests)
+document.querySelectorAll('ai-pill').forEach(p => p.addEventListener('ask', () => { if (p.state === 'thinking') return; p.state = 'thinking'; setTimeout(() => { p.state = P.state === 'thinking' ? 'thinking' : 'idle'; }, 2600); }));
 window.BLOB = { get P() { return P; }, set P(v) { P = v; }, setState, apply };
 </script>
 </body>
