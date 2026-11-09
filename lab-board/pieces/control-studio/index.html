@@ -58,6 +58,7 @@
   .pop h3 { font-size: 12px; font-weight: 600; margin: 10px 0 6px; color: var(--sub); }
   .prow { display: flex; gap: 6px; margin-top: 10px; } .prow button { flex: 1; height: 32px; border: 0; border-radius: 10px; background: #f3f2ef; font: 500 12px var(--lab-font); cursor: pointer; } .prow button:hover { background: #e9e8e4; } .prow button:disabled { opacity: .4; cursor: default; }
   .view { position: relative; }
+  .view .hint, .view .rec, .view .hqp { z-index: 2; }
   .view .hint { position: absolute; left: 14px; bottom: 12px; font-size: 11px; color: var(--sub); pointer-events: none; transition: opacity .3s; }
   .view .hint.dk { color: rgba(255,255,255,.45); }
   .sec { position: relative; user-select: none; -webkit-user-select: none; } .sec svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -66,6 +67,19 @@
   .hd { cursor: grab; } .hd:active { cursor: grabbing; }
   /* inspector */
   .insp { overflow: auto; padding-bottom: 14px; }
+  .tabs { display: flex; gap: 4px; margin: 12px 12px 10px; padding: 3px; background: #f3f2ef; border-radius: 13px; position: sticky; top: 0; z-index: 2; }
+  .tabs button { flex: 1; min-width: 0; height: 30px; border: 0; border-radius: 10px; background: none; font: 500 13px var(--lab-font); color: var(--sub); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px; transition: background .2s, color .2s, box-shadow .2s; }
+  .tabs button[aria-selected=true] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .sun { display: flex; gap: 14px; align-items: center; padding: 6px 0 12px; }
+  .sun svg { width: 112px; height: 112px; flex: none; cursor: crosshair; touch-action: none; border-radius: 50%; }
+  .sun svg:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+  .sun .s0 { fill: #f6f5f2; stroke: rgba(0,0,0,.08); } .sun .s1 { fill: none; stroke: rgba(0,0,0,.07); stroke-dasharray: 2 3; } .sun .s2 { fill: rgba(0,0,0,.25); }
+  .sun .s3 { stroke: rgba(255,138,18,.5); stroke-width: 1.4; } .sun .s4 { fill: #ffb547; stroke: #fff; stroke-width: 2.5; filter: drop-shadow(0 0 6px rgba(255,170,60,.8)); }
+  .sun .st { display: flex; flex-direction: column; gap: 3px; font-size: 13px; } .sun .st span { color: var(--ink); } .sun .st small { color: var(--sub); font-size: 11px; line-height: 1.4; }
+  .btn[aria-pressed=true] { background: var(--ink); color: #fff; }
+  .hqp { position: absolute; right: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--sub); opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .hqp.on { opacity: 1; } .hqp::before { content: ''; width: 60px; height: 3px; border-radius: 2px; background: rgba(0,0,0,.1); }
+  .hqp i { position: absolute; left: 0; top: 50%; height: 3px; margin-top: -1.5px; width: 0; max-width: 60px; border-radius: 2px; background: var(--acc); }
   .insp .lab-ui { background: none; box-shadow: none; position: static; width: auto; max-height: none; padding: 0 16px; --ui-pad: 16px; margin: 0; }
   .insp .nm { margin: 0 16px 6px; display: flex; gap: 8px; }
   .insp .nm input { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; font: 600 14px var(--lab-font); color: var(--ink); background: #faf9f7; }
@@ -92,6 +106,7 @@
   <h1>Control Studio</h1>
   <select class="btn" id="preset" aria-label="Start from a preset"></select>
   <div class="seg" role="group" aria-label="Mode"><button type="button" data-m="edit" aria-pressed="true">Edit</button><button type="button" data-m="preview" aria-pressed="false">Preview</button></div>
+  <button class="btn" id="hq" type="button" aria-pressed="false" title="Studio quality: the picture refines while nothing moves (smooth edges, soft shadows)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.4l-1.8-4.9L5 9.7l5.2-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg>Studio quality</button>
   <span class="sp"></span>
   <button class="btn ic" id="undo" type="button" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
   <button class="btn ic" id="redo" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
@@ -105,14 +120,14 @@
   <div class="lyacts"><button class="btn" id="add" type="button">+ Circle inside</button><button class="btn" id="del" type="button">Delete</button></div>
 </section>
 <main class="centre">
-  <div class="card view" id="view"><div class="hint" id="hint"></div><div class="rec" id="rec">● Recording</div></div>
+  <div class="card view" id="view"><div class="hint" id="hint"></div><div class="rec" id="rec">● Recording</div><div class="hqp" id="hqp"><i></i><span></span></div></div>
   <div class="card sec" id="sec"><div class="split" id="split" title="Drag to resize"></div><div class="cap" id="cap"></div><div class="stools"><button type="button" id="pts" aria-pressed="false" title="Edit the chosen layer as points with handles">Points</button><span class="exs" id="exs" title="Height drawn larger"><button type="button" data-ex="1">×1</button><button type="button" data-ex="2">×2</button><button type="button" data-ex="4">×4</button></span><button type="button" id="fit">Fit</button></div><svg id="svg" aria-label="Cross-section"></svg></div>
 </main>
 <aside class="card insp" id="insp" aria-label="The chosen layer"></aside>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-import { createDial, normalise, profile, PRESETS, MATERIALS, PANEL_R, clamp, toPath, pathNodes, smooth } from './engine.js';
+import { createDial, normalise, profile, PRESETS, MATERIALS, PANEL_R, clamp, toPath, pathNodes, smooth, lookOf } from './engine.js';
 const $ = id => document.getElementById(id), KEY = 'lab.control-studio.v1', Q = new URLSearchParams(location.search), THUMB = Q.has('thumb');
 const clone = o => JSON.parse(JSON.stringify(o));
 let S = { preset: 'Thermostat', design: clone(PRESETS.Thermostat), sel: 2, mode: 'edit' };
@@ -135,15 +150,15 @@ dial.on('change', v => { D.control.value = v; save(); });
 // every change: the design rebuilt in place, the list and the section redrawn; the inspector only when told (sliders keep focus)
 function changed({ insp = false, list = true } = {}) { const keep = D.layers[S.sel], inner = D.layers.slice(1).sort((a, b) => b.r - a.r); D.layers.splice(1, D.layers.length, ...inner); S.sel = Math.max(0, D.layers.indexOf(keep)); S.design = D; S.sel = clamp(S.sel, 0, D.layers.length - 1); dial.update(D); dial.setPick(S.mode === 'edit' ? S.sel : -1);
   if (list) drawList(); drawSection(); if (insp) drawInspector(); save(); hint(); }
-function select(k) { if (k !== S.sel) selNode = -1; S.sel = k; dial.setPick(k); drawList(); drawSection(); drawInspector(); save(); }
+function select(k) { if (k !== S.sel) selNode = -1; S.sel = k; S.tab = 'layer'; dial.setPick(k); drawList(); drawSection(); drawInspector(); save(); }
 
 // ---------- the list of layers: a small section icon for each ----------
 function icon(l, k) { const t = l.kind === 'slot', up = k > 0 && l.h > D.layers[k - 1].h;
   const path = k === 0 ? 'M3 13h24' : t ? 'M3 10h7v9h10v-9h7' : up ? 'M3 19h7c0-6 1-7 3-7h4c2 0 3 1 3 7h7' : 'M3 11h7c0 6 1 7 3 7h4c2 0 3-1 3-7h7';
-  return `<svg class="ic" viewBox="0 0 30 30" fill="none" stroke="${t ? '#ff8a12' : 'currentColor'}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x=".5" y=".5" width="29" height="29" rx="8" stroke="rgba(0,0,0,.08)" fill="${l.material.color}"/><path d="${path}" stroke="${isDark(l.material.color) ? '#fff' : '#1d1e22'}" opacity=".7"/>${t ? '<circle cx="15" cy="15" r="2" fill="#ff8a12" stroke="none"/>' : ''}</svg>`; }
+  return `<svg class="ic" viewBox="0 0 30 30" fill="none" stroke="${t ? '#ff8a12' : 'currentColor'}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x=".5" y=".5" width="29" height="29" rx="8" stroke="rgba(0,0,0,.08)" fill="${lookOf(D, l).color}"/><path d="${path}" stroke="${isDark(lookOf(D, l).color) ? '#fff' : '#1d1e22'}" opacity=".7"/>${t ? '<circle cx="15" cy="15" r="2" fill="#ff8a12" stroke="none"/>' : ''}</svg>`; }
 function drawList() { const L = D.layers; $('list').innerHTML = '';
   L.forEach((l, k) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'ly'; b.dataset.k = k; b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(k === S.sel));
-    b.innerHTML = `${icon(l, k)}<span><span class="n"></span><small>${k ? 'r ' + Math.round(l.r) + ' · ' : ''}h ${l.h > 0 ? '+' : ''}${+l.h.toFixed(1)}</small></span>${l.rotates ? '<span class="tag">turns</span>' : ''}`;
+    b.innerHTML = `${icon(l, k)}<span><span class="n"></span><small>${k ? 'r ' + Math.round(l.r) + ' · ' : ''}h ${l.h > 0 ? '+' : ''}${+l.h.toFixed(1)}</small></span>${l.material.own ? '<span class="tag">own</span>' : ''}${l.rotates ? '<span class="tag">turns</span>' : ''}`;
     b.querySelector('.n').textContent = l.name; b.onclick = () => select(k); $('list').appendChild(b); });
   $('del').disabled = S.sel === 0 || L.length < 2; }
 $('add').onclick = () => { const L = D.layers, k = S.sel, cur = L[k], next = L[k + 1], rO = k === 0 ? (next ? next.r + 60 : 300) : cur.r, rI = next ? next.r : 0;
@@ -310,38 +325,89 @@ addEventListener('keydown', e => { if ((e.key === 'Delete' || e.key === 'Backspa
   sp.addEventListener('pointerup', () => { sy = null; }); }
 
 
-// ---------- the inspector: the chosen layer ----------
+// ---------- the inspector: Scene (the whole control: finish, light, background, the slot's light, range) | Layer (its shape) ----------
 let ctls = {};
-function drawInspector() { const I = $('insp'), k = S.sel, l = D.layers[k], L = D.layers; I.innerHTML = ''; ctls = {};
-  const h2 = document.createElement('h2'); h2.textContent = k ? 'Layer ' + k : 'Panel'; I.appendChild(h2);
-  const nm = document.createElement('div'); nm.className = 'nm'; nm.innerHTML = '<input aria-label="Layer name" maxlength="32">'; nm.firstChild.value = l.name; nm.firstChild.oninput = e => { l.name = e.target.value || 'Layer'; drawList(); drawSection(); save(); }; I.appendChild(nm);
-  const P = document.createElement('div'); P.className = 'lab-ui soft'; I.appendChild(P);
-  const up = (fn, o = {}) => v => { fn(v); changed(o); }, bump = () => { dial.update(D); save(); drawSection(); };
+const MATS = [['plastic', 'Plastic'], ['ceramic', 'Ceramic'], ['anodized', 'Anodized'], ['steel', 'Steel'], ['rubber', 'Rubber'], ['glass', 'Glass']];
+function materialRows(g, m, onType, onColor, onGrain) {
+  LabUI.seg(g, { label: 'Material', options: MATS.slice(0, 3), value: MATS.slice(0, 3).some(o => o[0] === m.type) ? m.type : '', onChange: onType });
+  LabUI.seg(g, { label: '', options: MATS.slice(3), value: MATS.slice(3).some(o => o[0] === m.type) ? m.type : '', onChange: onType });
+  LabUI.color(g, { label: 'Colour', value: m.color, onInput: onColor });
+  LabUI.slider(g, { label: 'Grain', min: 0, max: 2.5, step: .05, unit: '×', value: m.grain, def: 1, onInput: onGrain }); }
+// (where the light comes from: drag the sun; in the middle it is right above, at the rim low from the side)
+function sunPad(parent, onMove) { const w = document.createElement('div'); w.className = 'sun';
+  w.innerHTML = '<svg viewBox="0 0 132 132" aria-hidden="true"><circle cx="66" cy="66" r="60" class="s0"/><circle cx="66" cy="66" r="40" class="s1"/><circle cx="66" cy="66" r="20" class="s1"/><circle cx="66" cy="66" r="4" class="s2"/><line class="s3" x1="66" y1="66"/><circle class="s4" r="10"/></svg><div class="st"><b>Light from</b><span></span><small>Drag the sun. Middle: right above. Rim: low, from the side.</small></div>';
+  const svg = w.querySelector('svg'), dot = w.querySelector('.s4'), ln = w.querySelector('.s3'), tx = w.querySelector('span');
+  const paint = () => { const L = D.light, d = (90 - L.el) / 82 * 60, x = 66 + Math.sin(L.az * Math.PI / 180) * d, y = 66 - Math.cos(L.az * Math.PI / 180) * d;
+    dot.setAttribute('cx', x); dot.setAttribute('cy', y); ln.setAttribute('x2', x); ln.setAttribute('y2', y);
+    const side = ['top', 'top right', 'right', 'bottom right', 'bottom', 'bottom left', 'left', 'top left'][Math.round(((L.az % 360) + 360) % 360 / 45) % 8];
+    tx.textContent = (L.el > 80 ? 'right above' : 'the ' + side) + ' · ' + Math.round(L.el) + '° high'; };
+  const set = e => { const b = svg.getBoundingClientRect(), dx = (e.clientX - b.left) / b.width * 132 - 66, dy = (e.clientY - b.top) / b.height * 132 - 66, d = Math.min(60, Math.hypot(dx, dy));
+    D.light.az = Math.round(((Math.atan2(dx, -dy) * 180 / Math.PI) + 360) % 360); D.light.el = Math.round(90 - d / 60 * 82); paint(); onMove(); };
+  let on = false; svg.addEventListener('pointerdown', e => { on = true; try { svg.setPointerCapture(e.pointerId); } catch { } set(e); }); svg.addEventListener('pointermove', e => on && set(e)); svg.addEventListener('pointerup', () => on = false);
+  svg.tabIndex = 0; svg.setAttribute('role', 'slider'); svg.setAttribute('aria-label', 'Light direction (arrows: round, Shift+arrows: height)');
+  svg.addEventListener('keydown', e => { const L = D.light, m = { ArrowLeft: -5, ArrowRight: 5, ArrowUp: 5, ArrowDown: -5 }[e.key]; if (m == null) return; e.preventDefault();
+    if (e.shiftKey || e.key === 'ArrowUp' || e.key === 'ArrowDown') L.el = clamp(L.el + (e.key === 'ArrowUp' || e.key === 'ArrowRight' ? 3 : -3), 8, 90); else L.az = (L.az + m + 360) % 360; paint(); onMove(); });
+  parent.appendChild(w); paint(); }
+const setTab = t => { S.tab = t; drawInspector(); save(); };
+function drawInspector() { const I = $('insp'), k = S.sel, l = D.layers[k], L = D.layers; I.innerHTML = ''; ctls = {}; const tab = S.tab === 'scene' ? 'scene' : 'layer';
+  const tabs = document.createElement('div'); tabs.className = 'tabs'; tabs.setAttribute('role', 'tablist');
+  for (const [t, label] of [['scene', 'Scene'], ['layer', k ? l.name : 'Panel']]) { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(t === tab)); b.textContent = label; b.onclick = () => setTab(t); tabs.appendChild(b); }
+  I.appendChild(tabs);
+  const P = document.createElement('div'); P.className = 'lab-ui soft';
+  const up = (fn, o = {}) => v => { fn(v); changed(o); }, bump = () => { dial.update(D); save(); drawSection(); drawList(); }, relight = () => { dial.relight(D); save(); };
+  if (tab === 'scene') { I.appendChild(P);
+    const gf = LabUI.group(P, 'Finish', { key: KEY + '.sf', open: true }), f = D.finish;
+    const n0 = document.createElement('p'); n0.className = 'note'; n0.textContent = 'Every layer takes this, unless it has its own material.'; gf.appendChild(n0);
+    materialRows(gf, f, v => { f.type = v; bump(); drawInspector(); }, v => { f.color = v; bump(); }, v => { f.grain = v; bump(); });
+    LabUI.color(gf, { label: 'Background', value: D.page, onInput: v => { D.page = v; relight(); hint(); } });
+    const gl = LabUI.group(P, 'Light', { key: KEY + '.sl', open: true }), Lt = D.light;
+    sunPad(gl, relight);
+    LabUI.slider(gl, { label: 'Strength', min: 0, max: 3, step: .05, unit: '×', value: Lt.key, def: 1.25, onInput: v => { Lt.key = v; relight(); } });
+    LabUI.slider(gl, { label: 'Shadow softness', min: 0, max: 1, step: .01, unit: '', value: Lt.soft, def: .35, onInput: v => { Lt.soft = v; relight(); } });
+    LabUI.slider(gl, { label: 'Highlights', min: 0, max: 1, step: .01, unit: '', value: Lt.hl, def: .2, format: v => v < .15 ? 'Crisp' : v > .7 ? 'Soft' : (+v).toFixed(2), onInput: v => { Lt.hl = v; relight(); } });
+    LabUI.slider(gl, { label: 'Room light', min: 0, max: 1.5, step: .05, unit: '×', value: Lt.ambient, def: .5, onInput: v => { Lt.ambient = v; relight(); } });
+    LabUI.slider(gl, { label: 'Exposure', min: .3, max: 1.8, step: .02, unit: '', value: Lt.exposure, def: .8, onInput: v => { Lt.exposure = v; relight(); } });
+    if (L.some((o, j) => j && o.kind === 'slot')) { const gs = LabUI.group(P, 'Light in the slot', { key: KEY + '.sg', open: false }), s = D.glow, live = () => save();
+      ['Start', 'Middle', 'Tip'].forEach((t, i) => LabUI.color(gs, { label: t, value: s.colors[i], onInput: v => { s.colors[i] = v; live(); drawSection(); } }));
+      LabUI.slider(gs, { label: 'Brightness', min: 0, max: 2, step: .05, unit: '×', value: s.glow, def: 1, onInput: v => { s.glow = v; live(); } });
+      LabUI.slider(gs, { label: 'Haze', min: 0, max: 2, step: .05, unit: '×', value: s.haze, def: .9, onInput: v => { s.haze = v; live(); } });
+      LabUI.slider(gs, { label: 'Haze size', min: .4, max: 2.5, step: .05, unit: '×', value: s.hazeSize, def: 1, onInput: v => { s.hazeSize = v; live(); } });
+      LabUI.slider(gs, { label: 'Energy', min: 0, max: 1.5, step: .05, unit: '', value: s.energy, def: .6, onInput: v => { s.energy = v; live(); } });
+      LabUI.slider(gs, { label: 'Energy speed', min: .2, max: 3, step: .05, unit: '×', value: s.speed, def: 1, onInput: v => { s.speed = v; live(); } }); }
+    const gc = LabUI.group(P, 'Control', { key: KEY + '.sc', open: false }), c = D.control;
+    LabUI.slider(gc, { label: 'From', min: -100, max: 100, step: .5, unit: '', value: c.min, onInput: v => { c.min = Math.min(v, c.max - c.step); bump(); dial.setValue(c.value, true); } });
+    LabUI.slider(gc, { label: 'To', min: -100, max: 200, step: .5, unit: '', value: c.max, onInput: v => { c.max = Math.max(v, c.min + c.step); bump(); dial.setValue(c.value, true); } });
+    LabUI.slider(gc, { label: 'Step', min: .1, max: 10, step: .1, unit: '', value: c.step, onInput: v => { c.step = v; bump(); } });
+    LabUI.slider(gc, { label: 'Sweep', min: 90, max: 340, step: 5, unit: '°', value: c.sweep, onInput: v => { c.sweep = v; bump(); } });
+    LabUI.seg(gc, { label: 'Reading', options: [['off', 'Off'], ['printed', 'Printed'], ['engraved', 'Engraved']], value: D.reading.show ? D.reading.style : 'off', onChange: v => { D.reading.show = v !== 'off'; if (v !== 'off') D.reading.style = v; changed(); } });
+    LabUI.seg(gc, { label: 'Unit', options: [['c', 'Celsius'], ['f', 'Fahrenheit']], value: c.unit, onChange: v => { c.unit = v; changed(); } });
+    return; }
+  // the chosen layer: its name, its shape, its material (the finish, or its own), its details
+  const nm = document.createElement('div'); nm.className = 'nm'; nm.innerHTML = '<input aria-label="Layer name" maxlength="32">'; nm.firstChild.value = l.name; nm.firstChild.oninput = e => { l.name = e.target.value || 'Layer'; drawList(); drawSection(); save(); tabs.lastChild.textContent = l.name; }; I.appendChild(nm);
+  I.appendChild(P);
   if (k) { const g = LabUI.group(P, 'Shape', { key: KEY + '.gs', open: true });
     LabUI.seg(g, { label: 'Kind', options: [['solid', 'Solid'], ['slot', 'Slot with light']], value: l.kind, onChange: up(v => { l.kind = v; }, { insp: true }) });
     ctls.r = LabUI.slider(g, { label: 'Radius', min: (L[k + 1]?.r || 0) + 3, max: k > 1 ? L[k - 1].r - 3 : 600, step: .5, unit: 'px', value: l.r, onInput: up(v => { l.r = v; }) });
     ctls.h = LabUI.slider(g, { label: 'Height', min: -80, max: 80, step: .5, unit: 'px', value: l.h, onInput: up(v => { l.h = v; }) });
     LabUI.check(g, { label: 'Turns with the value', value: l.rotates, onChange: up(v => { l.rotates = v; }) });
     if (l.path) { const gp = LabUI.group(P, 'Outline', { key: KEY + '.gpt', open: true }), n = document.createElement('p'); n.className = 'note'; n.textContent = 'Drawn as points (' + l.path.length + '). Shape it in the section: click the outline to add a point, click a point for its handles, double-click to make it sharp or smooth.'; gp.appendChild(n);
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.style.cssText = 'margin: 0 0 12px; background: #f3f2ef'; b.textContent = 'Back to rounding and reach'; b.onclick = () => $('pts').click(); gp.appendChild(b); } else {
-    const ge = LabUI.group(P, 'Edge', { key: KEY + '.ge', open: true });
-    ctls.round = LabUI.slider(ge, { label: 'Rounding', min: 0, max: 1, step: .01, unit: '', value: l.edge.round, def: .5, onInput: up(v => { l.edge.round = v; }) });
-    ctls.reach = LabUI.slider(ge, { label: 'Reach', min: 0, max: 24, step: .1, unit: 'px', value: l.edge.reach, def: 4, onInput: up(v => { l.edge.reach = v; }) });
-    LabUI.check(ge, { label: 'Polished chamfer', value: l.edge.polish, onChange: up(v => { l.edge.polish = v; }) });
-    LabUI.seg(ge, { label: 'Meets the layer outside', options: [['blend', 'Flows'], ['crease', 'Sharp'], ['seam', 'Apart']], value: l.edge.join, onChange: up(v => { l.edge.join = v; }) });
-    const n = document.createElement('p'); n.className = 'note'; n.textContent = 'Flows: the foot rounds into the layer outside, one surface. Sharp: it stands on it. Apart: a fine seam, two parts.'; ge.appendChild(n);
-    const gf = LabUI.group(P, 'Face', { key: KEY + '.gf', open: true });
-    ctls.bulge = LabUI.slider(gf, { label: 'Dome / dish', min: -40, max: 40, step: .1, unit: 'px', value: l.face.bulge, def: 0, onInput: up(v => { l.face.bulge = v; }) });
-    LabUI.slider(gf, { label: 'Flatness', min: .4, max: 8, step: .05, unit: '', value: l.face.spread, def: 2.5, onInput: up(v => { l.face.spread = v; }) }); } }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.style.cssText = 'margin: 0 0 12px; background: #f3f2ef'; b.textContent = 'Back to rounding and reach'; b.onclick = () => $('pts').click(); gp.appendChild(b); }
+    else { const ge = LabUI.group(P, 'Edge', { key: KEY + '.ge', open: true });
+      ctls.round = LabUI.slider(ge, { label: 'Rounding', min: 0, max: 1, step: .01, unit: '', value: l.edge.round, def: .5, onInput: up(v => { l.edge.round = v; }) });
+      ctls.reach = LabUI.slider(ge, { label: 'Reach', min: 0, max: 60, step: .1, unit: 'px', value: l.edge.reach, def: 4, onInput: up(v => { l.edge.reach = v; }) });
+      LabUI.seg(ge, { label: 'Meets', options: [['blend', 'Flows'], ['crease', 'Sharp'], ['seam', 'Apart']], value: l.edge.join, onChange: up(v => { l.edge.join = v; }) });
+      LabUI.check(ge, { label: 'Polished chamfer', value: l.edge.polish, onChange: up(v => { l.edge.polish = v; }) });
+      const gf = LabUI.group(P, 'Face', { key: KEY + '.gf', open: false });
+      ctls.bulge = LabUI.slider(gf, { label: 'Dome / dish', min: -60, max: 60, step: .1, unit: 'px', value: l.face.bulge, def: 0, onInput: up(v => { l.face.bulge = v; }) });
+      LabUI.slider(gf, { label: 'Flatness', min: .4, max: 8, step: .05, unit: '', value: l.face.spread, def: 2.5, onInput: up(v => { l.face.spread = v; }) }); } }
   else { const g = LabUI.group(P, 'Panel', { key: KEY + '.gp', open: true });
-    ctls.h = LabUI.slider(g, { label: 'Height', min: -40, max: 40, step: .5, unit: 'px', value: l.h, onInput: up(v => { l.h = v; }) });
-    LabUI.color(g, { label: 'Background', value: D.page, onInput: v => { D.page = v; bump(); hint(); } }); }
-  const gm = LabUI.group(P, 'Material', { key: KEY + '.gm', open: true });
-  LabUI.seg(gm, { label: 'Material', options: [['plastic', 'Plastic'], ['ceramic', 'Ceramic'], ['anodized', 'Anodized']], value: ['plastic', 'ceramic', 'anodized'].includes(l.material.type) ? l.material.type : '', onChange: v => { l.material.type = v; bump(); drawInspector(); } });
-  LabUI.seg(gm, { label: '', options: [['steel', 'Steel'], ['rubber', 'Rubber'], ['glass', 'Glass']], value: ['steel', 'rubber', 'glass'].includes(l.material.type) ? l.material.type : '', onChange: v => { l.material.type = v; bump(); drawInspector(); } });
-  LabUI.color(gm, { label: 'Colour', value: l.material.color, onInput: v => { l.material.color = v; bump(); drawList(); } });
-  LabUI.slider(gm, { label: 'Grain', min: 0, max: 2.5, step: .05, unit: '×', value: l.material.grain, def: 1, onInput: v => { l.material.grain = v; bump(); } });
-  if (k) { const gd = LabUI.group(P, 'Details', { key: KEY + '.gd', open: true });
+    ctls.h = LabUI.slider(g, { label: 'Height', min: -40, max: 40, step: .5, unit: 'px', value: l.h, onInput: up(v => { l.h = v; }) }); }
+  const gm = LabUI.group(P, 'Material', { key: KEY + '.gm', open: true }), m = l.material;
+  LabUI.check(gm, { label: 'Own material', value: !!m.own, onChange: v => { m.own = v; if (v) Object.assign(m, lookOf(D, l), { own: true }); bump(); drawInspector(); } });
+  if (m.own) materialRows(gm, m, v => { m.type = v; bump(); drawInspector(); }, v => { m.color = v; bump(); }, v => { m.grain = v; bump(); });
+  else { LabUI.slider(gm, { label: 'Tone', min: -.25, max: .25, step: .005, unit: '', value: l.tone || 0, def: 0, format: v => (v > 0 ? 'lighter ' : v < 0 ? 'darker ' : '') + Math.abs(Math.round(v * 100)), onInput: v => { l.tone = v; bump(); } });
+    const n = document.createElement('p'); n.className = 'note'; n.textContent = 'Takes the finish from Scene (' + MATS.find(o => o[0] === D.finish.type)?.[1].toLowerCase() + '), a touch lighter or darker if you like.'; gm.appendChild(n); }
+  if (k) { const gd = LabUI.group(P, 'Details', { key: KEY + '.gd', open: false });
     const dt = l.details, st = [['engraved', 'Engraved'], ['applied', 'Applied'], ['printed', 'Printed']];
     LabUI.check(gd, { label: 'Knurl round its side', value: dt.knurl, onChange: v => { dt.knurl = v; bump(); } });
     LabUI.slider(gd, { label: 'Indices', min: 0, max: 120, step: 1, unit: '', value: dt.ticks, def: 0, onInput: v => { dt.ticks = v; bump(); } });
@@ -354,28 +420,10 @@ function drawInspector() { const I = $('insp'), k = S.sel, l = D.layers[k], L = 
     LabUI.seg(gd, { label: 'Mark style', options: [['light', 'Lit']].concat(st), value: dt.markStyle, onChange: v => { dt.markStyle = v; bump(); } });
     LabUI.slider(gd, { label: 'Mark at', min: 0, max: 1, step: .01, unit: '', value: dt.markR, onInput: v => { dt.markR = v; bump(); } });
     LabUI.slider(gd, { label: 'Mark length', min: 4, max: 80, step: .5, unit: 'px', value: dt.markLen, def: 30, onInput: v => { dt.markLen = v; bump(); } });
-    LabUI.slider(gd, { label: 'Mark width', min: 2, max: 16, step: .1, unit: 'px', value: dt.markW, def: 7, onInput: v => { dt.markW = v; bump(); } }); }
-  if (l.kind === 'slot' && k) { const gl = LabUI.group(P, 'Light', { key: KEY + '.gl', open: true }), s = l.slot, live = () => save();
-    ['Start', 'Middle', 'Tip'].forEach((t, i) => LabUI.color(gl, { label: t, value: s.colors[i], onInput: v => { s.colors[i] = v; live(); drawSection(); } }));
-    LabUI.slider(gl, { label: 'Brightness', min: 0, max: 2, step: .05, unit: '×', value: s.glow, def: 1, onInput: v => { s.glow = v; live(); } });
-    LabUI.slider(gl, { label: 'Haze', min: 0, max: 2, step: .05, unit: '×', value: s.haze, def: .9, onInput: v => { s.haze = v; live(); } });
-    LabUI.slider(gl, { label: 'Haze size', min: .4, max: 2.5, step: .05, unit: '×', value: s.hazeSize, def: 1, onInput: v => { s.hazeSize = v; live(); } });
-    LabUI.slider(gl, { label: 'Energy', min: 0, max: 1.5, step: .05, unit: '', value: s.energy, def: .6, onInput: v => { s.energy = v; live(); } });
-    LabUI.slider(gl, { label: 'Energy speed', min: .2, max: 3, step: .05, unit: '×', value: s.speed, def: 1, onInput: v => { s.speed = v; live(); } }); }
-  // the whole control
-  const gc = LabUI.group(P, 'Control', { key: KEY + '.gc', open: false }), c = D.control;
-  LabUI.slider(gc, { label: 'From', min: -100, max: 100, step: .5, unit: '', value: c.min, onInput: v => { c.min = Math.min(v, c.max - c.step); bump(); dial.setValue(c.value, true); } });
-  LabUI.slider(gc, { label: 'To', min: -100, max: 200, step: .5, unit: '', value: c.max, onInput: v => { c.max = Math.max(v, c.min + c.step); bump(); dial.setValue(c.value, true); } });
-  LabUI.slider(gc, { label: 'Step', min: .1, max: 10, step: .1, unit: '', value: c.step, onInput: v => { c.step = v; bump(); } });
-  LabUI.slider(gc, { label: 'Sweep', min: 90, max: 340, step: 5, unit: '°', value: c.sweep, onInput: v => { c.sweep = v; bump(); } });
-  LabUI.seg(gc, { label: 'Reading', options: [['off', 'Off'], ['printed', 'Printed'], ['engraved', 'Engraved']], value: D.reading.show ? D.reading.style : 'off', onChange: v => { D.reading.show = v !== 'off'; if (v !== 'off') D.reading.style = v; changed(); } });
-  LabUI.seg(gc, { label: 'Unit', options: [['c', 'Celsius'], ['f', 'Fahrenheit']], value: c.unit, onChange: v => { c.unit = v; changed(); } });
-  const gL = LabUI.group(P, 'Lighting', { key: KEY + '.gL', open: false });
-  LabUI.slider(gL, { label: 'Key light', min: 0, max: 3, step: .05, unit: '×', value: D.light.key, def: 1.25, onInput: v => { D.light.key = v; bump(); } });
-  LabUI.slider(gL, { label: 'Room light', min: 0, max: 1.5, step: .05, unit: '×', value: D.light.ambient, def: .5, onInput: v => { D.light.ambient = v; bump(); } });
-  LabUI.slider(gL, { label: 'Exposure', min: .3, max: 1.8, step: .02, unit: '', value: D.light.exposure, def: .8, onInput: v => { D.light.exposure = v; bump(); } }); }
+    LabUI.slider(gd, { label: 'Mark width', min: 2, max: 16, step: .1, unit: 'px', value: dt.markW, def: 7, onInput: v => { dt.markW = v; bump(); } }); } }
 // (while a handle in the section is dragged, the inspector's sliders follow without being rebuilt)
 function syncInspector() { const l = D.layers[S.sel]; ctls.r?.set?.(l.r); ctls.h?.set?.(l.h); ctls.reach?.set?.(l.edge.reach); ctls.bulge?.set?.(l.face.bulge); }
+
 
 // ---------- presets, the mode ----------
 for (const n of Object.keys(PRESETS)) { const o = document.createElement('option'); o.value = n; o.textContent = n; $('preset').appendChild(o); }
@@ -398,7 +446,7 @@ function paintReading(x, W, H, scale) { if (!D.reading.show) return; const K = d
 function frameCanvas(scale) { const src = dial.canvas, c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d'); x.drawImage(src, 0, 0); if (dial.state.orbit.p < .03) paintReading(x, c.width, c.height, src.width / src.clientWidth); return c; }
 const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 const slug = () => (S.preset || 'my-control').toLowerCase().replace(/\s+/g, '-');
-$('png').onclick = async () => { const pr = dial.renderer.getPixelRatio(), w = $('view').clientWidth, h = $('view').clientHeight; dial.renderer.setPixelRatio(Math.min(3, pr * 1.5)); dial.renderer.setSize(w, h, false); dial.render();
+$('png').onclick = async () => { const pr = dial.renderer.getPixelRatio(), w = $('view').clientWidth, h = $('view').clientHeight; dial.renderer.setPixelRatio(Math.min(3, pr * 1.5)); dial.renderer.setSize(w, h, false); dial.renderStill(96);
   const c = frameCanvas(); dial.renderer.setPixelRatio(pr); dial.renderer.setSize(w, h, false); c.toBlob(b => { download(b, slug() + '.png'); toast('Image saved · ' + c.width + ' × ' + c.height); }, 'image/png'); };
 
 // the video: six seconds, the value sweeps to the top and back while the view rises a little and turns; the reading drawn in
@@ -448,6 +496,10 @@ addEventListener('keydown', e => { if (e.target.closest('input, textarea, select
 
 drawList(); drawSection(); drawInspector(); setMode(THUMB ? 'preview' : S.mode); hint(); snapshot();
 if (THUMB) { dial.setPick(-1); dial.render(); }
+// (studio quality: on or off, remembered; while it refines, a thin bar and a count in the corner)
+function setHQ(on) { S.hq = !!on; dial.setQuality(S.hq); $('hq').setAttribute('aria-pressed', String(S.hq)); document.body.classList.toggle('hqon', S.hq); save(); }
+$('hq').onclick = () => setHQ(!S.hq); if (!THUMB && S.hq) setHQ(true);
+(function hqTick() { const q = dial.quality, e = $('hqp'); e.classList.toggle('on', q.on); if (q.on) { const p = Math.min(1, q.n / q.N); e.firstChild.style.width = (p * 60).toFixed(1) + 'px'; e.lastChild.textContent = p < 1 ? 'Refining ' + Math.round(p * 100) + '%' : 'Studio quality'; } requestAnimationFrame(hqTick); })();
 </script>
 </body>
 </html>

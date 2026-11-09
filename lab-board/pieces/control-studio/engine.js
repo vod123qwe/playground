@@ -28,19 +28,29 @@ const rad = d => d * Math.PI / 180, lerp = (a, b, t) => a + (b - a) * t;
 const isDark = hex => new THREE.Color(hex).getHSL({}).l < .35;
 
 // ---------- a design, filled out with defaults (old saves too: dots became ticks, aluminium became anodized) ----------
+const fixType = t => t === 'aluminium' ? 'anodized' : t;
+// (a colour a touch lighter or darker: how a layer sets itself apart while it keeps the finish)
+export const toned = (hex, t) => { if (!t) return hex; const c = new THREE.Color(hex), h = {}; c.getHSL(h); c.setHSL(h.h, h.s, clamp(h.l + t, 0, 1)); return '#' + c.getHexString(); };
+export function lookOf(D, l) { const m = l.material; return m.own ? { type: m.type, color: m.color, grain: m.grain } : { type: D.finish.type, color: toned(D.finish.color, l.tone), grain: D.finish.grain }; }
 export function normalise(d) {
-  const L = (d.layers || []).map((l, i) => { const det = { ...(l.details || {}) }; if (det.dots != null && det.ticks == null) { det.ticks = det.dots; det.tickR = det.dotsR; } delete det.dots; delete det.dotsR;
-    const mat = { type: 'plastic', color: '#dfddd8', grain: 1, ...(l.material || {}) }; if (mat.type === 'aluminium') mat.type = 'anodized';
+  const src = d.layers || [], legacy = !d.finish, first = { type: 'plastic', color: '#dfddd8', grain: 1, ...(src[0]?.material || {}) };
+  const finish = { ...first, ...(d.finish || {}) }; finish.type = fixType(finish.type); delete finish.own;
+  const same = m => fixType(m.type) === finish.type && String(m.color).toLowerCase() === String(finish.color).toLowerCase() && +m.grain === +finish.grain;
+  const glow = Object.assign(d.glow || {}, { colors: ['#c0ff13', '#ffeb13', '#ff8a12'], mid: .35, glow: 1, haze: .9, hazeSize: 1, energy: .6, speed: 1, ...(d.glow || src.find(l => l.kind === 'slot')?.slot || {}) });
+  const L = src.map((l, i) => { const det = { ...(l.details || {}) }; if (det.dots != null && det.ticks == null) { det.ticks = det.dots; det.tickR = det.dotsR; } delete det.dots; delete det.dotsR;
+    const mat = { type: 'plastic', color: '#dfddd8', grain: 1, ...(l.material || {}) }; mat.type = fixType(mat.type); mat.own = legacy ? !same(mat) : !!mat.own;
     const path = Array.isArray(l.path) && l.path.length >= 2 && i > 0 ? l.path.map(p => ({ r: +p.r, z: +p.z, hi: p.hi ? [+p.hi[0], +p.hi[1]] : null, ho: p.ho ? [+p.ho[0], +p.ho[1]] : null, t: p.t || 'smooth' })) : null;
-    return { path, name: l.name || (i ? 'Layer ' + i : 'Panel'), kind: l.kind === 'slot' ? 'slot' : 'solid', r: +l.r || 200, h: +l.h || 0, rotates: !!l.rotates,
+    return { path, name: l.name || (i ? 'Layer ' + i : 'Panel'), kind: l.kind === 'slot' ? 'slot' : 'solid', r: +l.r || 200, h: +l.h || 0, rotates: !!l.rotates, tone: +l.tone || 0,
       face: { bulge: 0, spread: 2.5, ...(l.face || {}) }, edge: { round: .5, reach: 4, join: 'blend', polish: false, ...(l.edge || {}) }, material: mat,
-      details: { knurl: false, ticks: 0, tickR: .85, tickLen: 9, tickW: 3, major: 0, tickStyle: 'engraved', mark: false, markR: .84, markLen: 30, markW: 7, markStyle: 'light', ...det },
-      slot: { colors: ['#c0ff13', '#ffeb13', '#ff8a12'], mid: .35, glow: 1, haze: .9, hazeSize: 1, energy: .6, speed: 1, ...(l.slot || {}) } }; });
+      details: { knurl: false, ticks: 0, tickR: .85, tickLen: 9, tickW: 3, major: 0, tickStyle: 'engraved', mark: false, markR: .84, markLen: 30, markW: 7, markStyle: 'light', ...det }, slot: glow }; });
   if (!L.length) L.push(normalise({ layers: [{}] }).layers[0]);
   // (the rings always run from the outside in: sorted by radius, never closer than 2 px)
   const inner = L.slice(1).sort((a, b) => b.r - a.r); for (let i = 0; i < inner.length; i++) inner[i].r = clamp(inner[i].r, 4 + (inner.length - 1 - i) * 2, i ? inner[i - 1].r - 2 : 1200); L.splice(1, L.length, ...inner);
-  return { control: { min: 8, max: 28, step: .5, value: 21, sweep: 270, unit: 'c', ...(d.control || {}) }, reading: { show: true, style: 'printed', ...(d.reading || {}) },
-    light: { key: 1.25, ambient: .5, exposure: .8, ...(d.light || {}) }, page: d.page || '#d9d8d4', layers: L }; }
+  const D = { control: { min: 8, max: 28, step: .5, value: 21, sweep: 270, unit: 'c', ...(d.control || {}) }, reading: { show: true, style: 'printed', ...(d.reading || {}) },
+    // light: key (strength), ambient (the room), exposure, az (where it comes from, degrees clockwise from the top), el (how high), soft (shadows), hl (highlights: crisp 0 … soft 1)
+    light: { key: 1.25, ambient: .5, exposure: .8, az: 31, el: 54, soft: .35, hl: .2, ...(d.light || {}) }, page: d.page || '#d9d8d4', finish, glow, layers: L };
+  for (const l of L) l.look = lookOf(D, l);
+  return D; }
 
 // ---------- the profile: walked from the panel in to the centre; every point owned by its layer, flagged if polished ----------
 function corner(C, dIn, dOut, rIn, rOut, round, n = 18) { const A = [C[0] - dIn[0] * rIn, C[1] - dIn[1] * rIn], B = [C[0] + dOut[0] * rOut, C[1] + dOut[1] * rOut], out = [];
@@ -123,7 +133,7 @@ function occlusion(pts) { const n = pts.length, R = 46;
 
 // ---------- shaders shared by every surface: grain, occlusion, the slot's light ----------
 const HEAD = `varying vec3 vGP, vWP; varying float vAO; uniform float uGrain, uGrainS, uGrainC;
-uniform float uArcOn, uArcR, uArcZ, uArcStart, uArcTip, uArcGain, uArcTime, uArcEnergy, uArcMid, uArcFall; uniform vec3 uArcA, uArcB, uArcC;
+uniform float uMinRough, uArcOn, uArcR, uArcZ, uArcStart, uArcTip, uArcGain, uArcTime, uArcEnergy, uArcMid, uArcFall; uniform vec3 uArcA, uArcB, uArcC;
 float gh(vec3 p){ p = fract(p * .1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
 float gn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
   return mix(mix(mix(gh(i), gh(i + vec3(1, 0, 0)), f.x), mix(gh(i + vec3(0, 1, 0)), gh(i + vec3(1, 1, 0)), f.x), f.y), mix(mix(gh(i + vec3(0, 0, 1)), gh(i + vec3(1, 0, 1)), f.x), mix(gh(i + vec3(0, 1, 1)), gh(i + vec3(1, 1, 1)), f.x), f.y), f.z); }
@@ -155,7 +165,7 @@ const DECALS = {
   printed: { color: `\n  { float dd = dSd(vSh); diffuseColor.rgb = uDColor; diffuseColor.a *= 1. - smoothstep(-.18, .18, dd); }`, normal: '', ao: '' } };
 
 // ---------- the studio round the dial: softboxes, reflected in every surface ----------
-function studio(renderer) { const s = new THREE.Scene();
+function studio(renderer, sigma = .015) { const s = new THREE.Scene();
   // (a dome: a bright soft ceiling fading to a dim floor, so flat metal seen from above reads silver, not grey)
   const dome = new THREE.SphereGeometry(20, 64, 32), dp = dome.attributes.position, col = []; for (let i = 0; i < dp.count; i++) { const t = (dp.getY(i) / 20 + 1) / 2, I = .1 + 1.35 * t * t; col.push(I, I, I * 1.02); }
   dome.rotateX(Math.PI / 2); dome.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); s.add(new THREE.Mesh(dome, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
@@ -164,7 +174,7 @@ function studio(renderer) { const s = new THREE.Scene();
   box(2.4, 20, 13, 3, 7, 4);      // a tall strip on the right: the long bright line on every chamfer
   box(2, 18, -13, -3, 6, 1.6);    // a weaker strip on the left
   box(20, 2.2, 0, -14, 5, 1.8);   // a low strip in front: the near rims light up
-  const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(s, .015).texture; pm.dispose(); return t; }
+  const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(s, sigma).texture; pm.dispose(); return t; }
 
 const hazeTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
   gr.addColorStop(0, 'rgba(255,255,255,.75)'); gr.addColorStop(.4, 'rgba(255,255,255,.3)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
@@ -201,7 +211,7 @@ export function createDial(host, design, opt = {}) {
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   const cv = renderer.domElement; cv.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none'; host.appendChild(cv);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(18, 1, 50, 20000);
-  scene.environment = studio(renderer);
+  let envHl = -1;
   const key = new THREE.DirectionalLight(0xffffff, 1.3); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 6; key.shadow.bias = -.0003; key.shadow.normalBias = 1.2;
   const fill = new THREE.HemisphereLight(0xffffff, 0x9a9aa0, .3); scene.add(key, fill);
   const world = new THREE.Group(), turning = new THREE.Group(); scene.add(world); world.add(turning);
@@ -211,7 +221,7 @@ export function createDial(host, design, opt = {}) {
   const angleOf = v => -D.control.sweep / 2 + (v - D.control.min) / Math.max(1e-6, D.control.max - D.control.min) * D.control.sweep;
 
   // ---------- materials: physical, with grain, the section's occlusion and the slot's light patched in ----------
-  const ARC = { uArcOn: { value: 0 }, uArcR: { value: 280 }, uArcZ: { value: -30 }, uArcStart: { value: 0 }, uArcTip: { value: 0 }, uArcGain: { value: 1 }, uArcTime: { value: 0 }, uArcEnergy: { value: 0 }, uArcMid: { value: .35 }, uArcFall: { value: 14 },
+  const ARC = { uMinRough: { value: .02 }, uArcOn: { value: 0 }, uArcR: { value: 280 }, uArcZ: { value: -30 }, uArcStart: { value: 0 }, uArcTip: { value: 0 }, uArcGain: { value: 1 }, uArcTime: { value: 0 }, uArcEnergy: { value: 0 }, uArcMid: { value: .35 }, uArcFall: { value: 14 },
     uArcA: { value: new THREE.Color() }, uArcB: { value: new THREE.Color() }, uArcC: { value: new THREE.Color() } };
   function makeMat(params, color, grain, decal = null, side = THREE.DoubleSide) {
     const mat = new THREE.MeshPhysicalMaterial({ ...params, color: new THREE.Color(color), side }), metal = mat.metalness > .5 ? .16 : 1;
@@ -224,6 +234,7 @@ export function createDial(host, design, opt = {}) {
       sh.fragmentShader = HEAD + (dk ? DECAL_HEAD : '') + sh.fragmentShader
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= 1. + (gn(vGP * uGrainS * .8 + 7.3) - .5) * uGrainC;' + (dk ? dk.color : ''))
         .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { vec3 gp = vGP * uGrainS; normal = normalize(normal + vec3(gn(gp) - .5, gn(gp + 31.7) - .5, 0.) * uGrain); }' + (dk ? dk.normal : ''))
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = max(roughnessFactor, uMinRough);')
         .replace('#include <aomap_fragment>', '#include <aomap_fragment>\n' + AO_ARC + (dk ? dk.ao : '')); };
     mat.customProgramCacheKey = () => 'cs-' + (decal ? decal.kind : 'body');
     return mat; }
@@ -231,6 +242,28 @@ export function createDial(host, design, opt = {}) {
     // (a diamond-cut chamfer: the same stuff cut bright and polished)
     const metal = (base.metalness || 0) > .5, c = new THREE.Color(m.color); if (metal) c.lerp(new THREE.Color('#eceef1'), .45);
     return makeMat({ ...base, roughness: metal ? .06 : .12, clearcoat: metal ? 0 : 1, clearcoatRoughness: .02, transmission: 0, iridescence: 0 }, '#' + c.getHexString(), 0); };
+
+  const HQ = { on: false, n: 0, N: 128, sig: '', ver: 0, a: null, b: null, f: null };
+  const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), QV = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }';
+  const blendMat = new THREE.ShaderMaterial({ vertexShader: QV, fragmentShader: 'uniform sampler2D tPrev, tCur; uniform float uW; varying vec2 vUv; void main(){ gl_FragColor = mix(texture2D(tPrev, vUv), texture2D(tCur, vUv), uW); }',
+    uniforms: { tPrev: { value: null }, tCur: { value: null }, uW: { value: 1 } }, depthTest: false, depthWrite: false, toneMapped: false });
+  const showMat = new THREE.ShaderMaterial({ vertexShader: QV, fragmentShader: 'uniform sampler2D tAcc; varying vec2 vUv; void main(){ gl_FragColor = texture2D(tAcc, vUv);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+    uniforms: { tAcc: { value: null } }, depthTest: false, depthWrite: false });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blendMat), qScene = new THREE.Scene(); quad.frustumCulled = false; qScene.add(quad);
+  const halton = (i, b) => { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; };
+  function hqTargets() { const w = cv.width, h = cv.height; if (HQ.a && HQ.a.width === w && HQ.a.height === h) return; for (const t of [HQ.a, HQ.b, HQ.f]) t?.dispose();
+    const o = { type: THREE.HalfFloatType, depthBuffer: false }; HQ.a = new THREE.WebGLRenderTarget(w, h, o); HQ.b = new THREE.WebGLRenderTarget(w, h, o); HQ.f = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: 4 }); HQ.n = 0; }
+  const sigOf = () => camera.matrixWorld.elements.map(v => v.toFixed(2)).join() + '|' + turning.rotation.z.toFixed(5) + '|' + cv.width + 'x' + cv.height + '|' + HQ.ver + '|' + state.cur.toFixed(4);
+  function hqFrame() { const sig = sigOf(); if (sig !== HQ.sig) { HQ.sig = sig; HQ.n = 0; } if (HQ.n >= HQ.N) return false; hqTargets(); paintSlots(0);
+    const w = cv.width, h = cv.height, n = HQ.n, kp = key.position.clone(), pr = key.shadow.radius;
+    if (n) { camera.setViewOffset(w, h, halton(n, 2) - .5, halton(n, 3) - .5, w, h);
+      // (the light from a small disc instead of a point: its angle grows with Shadow softness)
+      const a = halton(n, 5) * Math.PI * 2, r = Math.sqrt(halton(n, 7)) * kp.length() * Math.tan(rad(.6 + D.light.soft * 7)), u = new THREE.Vector3(0, 0, 1).cross(kp).normalize(), v = kp.clone().cross(u).normalize();
+      key.position.addScaledVector(u, Math.cos(a) * r).addScaledVector(v, Math.sin(a) * r); key.shadow.radius = 1.2; }
+    const pv = pickLine.visible, hv = hoverLine.visible; pickLine.visible = hoverLine.visible = false; renderer.setRenderTarget(HQ.f); renderer.render(scene, camera); pickLine.visible = pv; hoverLine.visible = hv; key.position.copy(kp); key.shadow.radius = pr; camera.clearViewOffset();
+    quad.material = blendMat; blendMat.uniforms.tPrev.value = HQ.a.texture; blendMat.uniforms.tCur.value = HQ.f.texture; blendMat.uniforms.uW.value = 1 / (n + 1);
+    renderer.setRenderTarget(HQ.b); renderer.render(qScene, quadCam); const t = HQ.a; HQ.a = HQ.b; HQ.b = t;
+    quad.material = showMat; showMat.uniforms.tAcc.value = HQ.a.texture; renderer.setRenderTarget(null); renderer.render(qScene, quadCam); HQ.n++; return true; }
 
   // ---------- building ----------
   const slots = [];
@@ -244,7 +277,7 @@ export function createDial(host, design, opt = {}) {
     const g = new THREE.LatheGeometry(out.map(p => new THREE.Vector2(Math.max(0, p[0]), p[1])), seg); g.rotateX(Math.PI / 2);
     const ao = new Float32Array(g.attributes.position.count); for (let i = 0; i < ao.length; i++) ao[i] = out[i % out.length][2] ?? 1; g.setAttribute('aAO', new THREE.BufferAttribute(ao, 1)); return g; }
   const put = (o, l) => { (l.rotates ? turning : world).add(o); parts.push(o); return o; };
-  function build() { clear(); const pr = profile(D), L = D.layers; R = L.length > 1 ? L[1].r : 300;
+  function build() { HQ.ver++; clear(); const pr = profile(D), L = D.layers; R = L.length > 1 ? L[1].r : 300;
     L.forEach((l, k) => { const run = pr.runs[k]; if (run.length < 2) return; const seg = l.rotates ? 720 : 540;
       // (split where the polish starts and stops: the chamfer is its own surface, its edges crisp)
       const pieces = []; let cur = [run[0]]; for (let i = 1; i < run.length; i++) { cur.push(run[i]); if (run[i][3] !== run[i - 1][3] && i < run.length - 1) { pieces.push({ c: run[i - 1][3], pts: cur }); cur = [run[i]]; } } pieces.push({ c: cur[cur.length - 1][3], pts: cur });
@@ -253,16 +286,16 @@ export function createDial(host, design, opt = {}) {
             for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), rr = Math.hypot(x, y); if (Math.abs(rr - l.r) > 1.2 || z < zl || z > zh) continue;
               const a = Math.atan2(y, x), band = Math.sin(Math.PI * (z - zl) / Math.max(.1, zh - zl)), d = (Math.abs(Math.sin(a * 120)) - .64) * .7 * band; p.setX(i, x * (rr + d) / rr); p.setY(i, y * (rr + d) / rr); } } }
         g.computeVertexNormals();
-        const mesh = new THREE.Mesh(g, matOf(l.material, !!pc.c)); mesh.castShadow = l.material.type !== 'glass'; mesh.receiveShadow = true; mesh.userData.layer = k; put(mesh, l); }
+        const mesh = new THREE.Mesh(g, matOf(l.look, !!pc.c)); mesh.castShadow = l.look.type !== 'glass'; mesh.receiveShadow = true; mesh.userData.layer = k; put(mesh, l); }
       if (k === 0) { const far = Math.max((L[1]?.r || 300) * 2.2, 200), sh = new THREE.Shape(); sh.moveTo(-9000, -9000); sh.lineTo(9000, -9000); sh.lineTo(9000, 9000); sh.lineTo(-9000, 9000); sh.lineTo(-9000, -9000);
         const hp = new THREE.Path(); hp.absarc(0, 0, far - .5, 0, Math.PI * 2, true); sh.holes.push(hp);
-        const pm = new THREE.Mesh(withAO(new THREE.ShapeGeometry(sh, 128)), matOf(l.material)); pm.position.z = l.h; pm.receiveShadow = true; pm.userData.layer = 0; put(pm, l); }
+        const pm = new THREE.Mesh(withAO(new THREE.ShapeGeometry(sh, 128)), matOf(l.look)); pm.position.z = l.h; pm.receiveShadow = true; pm.userData.layer = 0; put(pm, l); }
       const rIn = k < L.length - 1 ? L[k + 1].r : 0, rOut = k ? l.r : PANEL_R, dt = l.details;
       // the indices round its face, and the mark
       if (k > 0 && dt.ticks > 0) indices(l, k, pr, rIn, rOut, false);
       if (k > 0 && dt.mark) indices(l, k, pr, rIn, rOut, true);
       // glass gets an inside: a dark barrel and a coated lens element far down in it
-      if (l.material.type === 'glass' && rIn === 0) { const rr = l.r - .6, z0 = l.h - 1.5;
+      if (l.look.type === 'glass' && rIn === 0) { const rr = l.r - .6, z0 = l.h - 1.5;
         const barrel = lathe([[rr, z0, 1], [rr * .97, z0 - 5, .8], [rr * .7, z0 - 22, .5], [rr * .46, z0 - 26, .4], [0, z0 - 27, .5]], 360);
         put(new THREE.Mesh(barrel, makeMat({ roughness: .55, metalness: .2 }, '#060608', .4)), l);
         const lens = []; for (let i = 0; i <= 16; i++) { const t = i / 16, rr2 = rr * .44 * (1 - t); lens.push([rr2, z0 - 26 + 6 * Math.sqrt(1 - Math.pow(1 - t, 2)), 1]); }
@@ -276,11 +309,11 @@ export function createDial(host, design, opt = {}) {
           glow = mk(Math.max(1, rIn - 50), l.r + 10, Math.max(z, L[k + 1] ? L[k + 1].h : z) + .5, rIn + (l.r - rIn) * .2, 22, THREE.AdditiveBlending), spill = mk(l.r, l.r + 90, L[k - 1].h + .4, l.r + 5, 26, THREE.AdditiveBlending);
         core.uniforms.uHot.value = .55; wall.uniforms.uFeather.value = .12; glow.uniforms.uFeather.value = .3; spill.uniforms.uFeather.value = .35;
         slots.push({ k, l, rm, z, w: l.r - rIn, core, wall, glow, spill, haze: [], acc: 0 }); } });
-    const s = Math.max(R, 200) * 1.45; Object.assign(key.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 50, far: s * 8 }); key.shadow.camera.updateProjectionMatrix(); key.position.set(R * 1.13, R * 1.87, R * 2.95);
+    const s = Math.max(R, 200) * 1.45; Object.assign(key.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 50, far: s * 8 }); key.shadow.camera.updateProjectionMatrix();
     applyLight(); placeLines(); }
   // (indices: engraved into the face, printed on it, or applied (polished pills standing proud); every major one longer)
   function indices(l, k, pr, rIn, rOut, isMark) { const dt = l.details, style = isMark ? dt.markStyle : dt.tickStyle, n = isMark ? 1 : Math.round(dt.ticks);
-    const rr = lerp(rIn, rOut, clamp(isMark ? dt.markR : dt.tickR, 0, 1)), zf = pr.faceZ(k, rr), dark = isDark(l.material.color);
+    const rr = lerp(rIn, rOut, clamp(isMark ? dt.markR : dt.tickR, 0, 1)), zf = pr.faceZ(k, rr), dark = isDark(l.look.color);
     const groups = {}; for (let i = isMark ? 0 : (dt.mark ? 1 : 0); i < n; i++) { const major = isMark || (dt.major > 0 && i % dt.major === 0), Lh = isMark ? dt.markLen : dt.tickLen * (major && dt.major ? 1.7 : 1), W = isMark ? dt.markW : dt.tickW * (major && dt.major ? 1.25 : 1);
       const key = Lh.toFixed(2) + '|' + W.toFixed(2); (groups[key] = groups[key] || { Lh, W, at: [] }).at.push(i / n * Math.PI * 2); }
     for (const gk in groups) { const { Lh, W, at } = groups[gk], items = [];
@@ -291,12 +324,16 @@ export function createDial(host, design, opt = {}) {
       const geo = bake(items); g.dispose(); let mat;
       if (lit) { mat = makeMat({ roughness: .22, metalness: 0, clearcoat: 1, clearcoatRoughness: .04 }, '#ff8a12', 0, null, THREE.FrontSide); mat.emissive = new THREE.Color('#ff7a12'); mat.emissiveIntensity = .9; }
       else if (applied) mat = makeMat({ roughness: .1, metalness: 1 }, dark ? '#a9abb1' : '#e4e5e8', 0, null, THREE.FrontSide);
-      else { const base = (MATERIALS[l.material.type] || MATERIALS.plastic).p, ink = isMark ? '#ff8a12' : dark ? '#e6e6e8' : '#2b2c30';
-        mat = makeMat(style === 'printed' ? { roughness: .3, metalness: 0, clearcoat: .5, clearcoatRoughness: .1 } : { ...base, transmission: 0 }, l.material.color, style === 'printed' ? 0 : l.material.grain,
+      else { const base = (MATERIALS[l.look.type] || MATERIALS.plastic).p, ink = isMark ? '#ff8a12' : dark ? '#e6e6e8' : '#2b2c30';
+        mat = makeMat(style === 'printed' ? { roughness: .3, metalness: 0, clearcoat: .5, clearcoatRoughness: .1 } : { ...base, transmission: 0 }, l.look.color, style === 'printed' ? 0 : l.look.grain,
           { kind: style === 'printed' ? 'printed' : 'engraved', u: { uDL: { value: Lh }, uDW: { value: W }, uDDepth: { value: Math.min(1.3, W * .38) }, uDBevel: { value: W * .42 }, uDColor: { value: new THREE.Color(ink) } } }, THREE.FrontSide);
         if (style === 'printed') { mat.transparent = true; mat.depthWrite = false; } mat.polygonOffset = true; mat.polygonOffsetFactor = -2; mat.polygonOffsetUnits = -2; }
       const m = new THREE.Mesh(geo, mat); m.castShadow = applied; m.receiveShadow = true; m.renderOrder = 1; m.userData.mark = isMark && lit; put(m, l); } }
-  function applyLight() { key.intensity = D.light.key; fill.intensity = D.light.ambient * .5; scene.environmentIntensity = D.light.ambient * 1.1; renderer.toneMappingExposure = D.light.exposure; host.style.background = D.page; }
+  function applyLight() { const Lt = D.light, d = R * 3.67, az = rad(Lt.az), el = rad(clamp(Lt.el, 8, 90));
+    key.position.set(d * Math.cos(el) * Math.sin(az), d * Math.cos(el) * Math.cos(az), d * Math.sin(el)); key.shadow.radius = 1 + Lt.soft * 14;
+    if (Math.abs(envHl - Lt.hl) > .001) { scene.environment?.dispose(); scene.environment = studio(renderer, .012 + Lt.hl * .055); envHl = Lt.hl; }
+    scene.environmentRotation.set(0, 0, -rad(Lt.az - 31)); ARC.uMinRough.value = .02 + Lt.hl * .32; HQ.ver++;
+    key.intensity = D.light.key; fill.intensity = D.light.ambient * .5; scene.environmentIntensity = D.light.ambient * 1.1; renderer.toneMappingExposure = D.light.exposure; host.style.background = D.page; }
 
   // ---------- the light, each frame ----------
   const C = h => new THREE.Color(h);
@@ -339,7 +376,7 @@ export function createDial(host, design, opt = {}) {
   // ---------- the reading: one rolling column per digit, pressed in or printed ----------
   const numEl = overlay.firstChild, unitEl = overlay.lastChild; let cols = [];
   const fmt = v => D.control.unit === 'f' ? String(Math.round(v * 9 / 5 + 32)) : (Math.abs(v % 1) > 1e-6 ? v.toFixed(1) : String(v));
-  function readout() { overlay.style.display = D.reading.show ? '' : 'none'; overlay.classList.toggle('engraved', D.reading.style === 'engraved'); overlay.classList.toggle('dark', isDark(D.layers[D.layers.length - 1].material.color));
+  function readout() { overlay.style.display = D.reading.show ? '' : 'none'; overlay.classList.toggle('engraved', D.reading.style === 'engraved'); overlay.classList.toggle('dark', isDark(D.layers[D.layers.length - 1].look.color));
     const chars = [...(fmt(state.value) + '°')];
     if (cols.length !== chars.length || cols.some((c, i) => c.digit !== /\d/.test(chars[i]))) { numEl.innerHTML = '';
       cols = chars.map(ch => { const el = document.createElement('span'); el.className = 'cs-col'; const digit = /\d/.test(ch);
@@ -368,7 +405,7 @@ export function createDial(host, design, opt = {}) {
       if (drag.mode === 'turn') { const a = angleAt(e.clientX, e.clientY); let d = a - drag.a; if (d > 180) d -= 360; if (d < -180) d += 360; drag.a = a; const c = D.control; drag.v = clamp(drag.v + d / c.sweep * (c.max - c.min), c.min - .4, c.max + .4); setValue(drag.v); }
       else if (drag.mode === 'orbit' && drag.moved) { state.orbit.tt = drag.t - dx * .006; state.orbit.tp = clamp(drag.p + dy * .005, 0, 1.3); }
       return; }
-    if (e.pointerType === 'mouse') { const r = cv.getBoundingClientRect(); state.tilt.tx = O.editing ? 0 : clamp((e.clientX - r.left - r.width / 2) / r.width, -.8, .8); state.tilt.ty = O.editing ? 0 : clamp((e.clientY - r.top - r.height / 2) / r.height, -.8, .8);
+    if (e.pointerType === 'mouse') { const r = cv.getBoundingClientRect(); state.tilt.tx = O.editing || HQ.on ? 0 : clamp((e.clientX - r.left - r.width / 2) / r.width, -.8, .8); state.tilt.ty = O.editing || HQ.on ? 0 : clamp((e.clientY - r.top - r.height / 2) / r.height, -.8, .8);
       const h = hit(e.clientX, e.clientY), k = h ? h.layer : -1; if (k !== state.hover) { state.hover = k; placeLines(); emit('hover', k); }
       cv.style.cursor = O.interactive && !O.editing && h && D.layers[k]?.rotates ? 'grab' : O.orbit ? 'move' : ''; } });
   const up = e => { if (!drag || e.pointerId !== drag.id) return; if (!drag.moved && drag.h) emit('pick', drag.h.layer); drag = null; cv.style.cursor = ''; };
@@ -385,10 +422,10 @@ export function createDial(host, design, opt = {}) {
   function frame(now) { if (!alive) return; raf = requestAnimationFrame(frame); const dt = Math.min(.033, last ? (now - last) / 1000 : .016); last = now;
     const k = 420, c = 2 * .8 * Math.sqrt(k); state.vel += (k * (state.value - state.cur) - c * state.vel) * dt; state.cur += state.vel * dt;
     const T = state.tilt, o = state.orbit; T.x += (T.tx - T.x) * .08; T.y += (T.ty - T.y) * .08; for (const q of ['t', 'p', 'z']) o[q] += (o['t' + q] - o[q]) * .14;
-    state.time += dt * 2.4 * (slots[0]?.l.slot.speed ?? 1);
+    if (!HQ.on) state.time += dt * 2.4 * (slots[0]?.l.slot.speed ?? 1);
     const busy = performance.now() - shapedAt < 900; pickLine.material.opacity += ((state.pick > 0 ? (busy ? 0 : .5) : 0) - pickLine.material.opacity) * (busy ? .3 : .08);
     render(dt); }
-  function render(dt = 0) { place(); turning.rotation.z = -rad(angleOf(state.cur)); paintSlots(dt); renderer.render(scene, camera); }
+  function render(dt = 0) { place(); turning.rotation.z = -rad(angleOf(state.cur)); camera.updateMatrixWorld(); if (HQ.on) { hqFrame(); return; } paintSlots(dt); renderer.render(scene, camera); }
   const ro = new ResizeObserver(() => { resize(); if (O.thumb) render(); }); ro.observe(host);
   build(); resize(); readout(); if (O.thumb) render(); else raf = requestAnimationFrame(frame);
 
@@ -396,7 +433,12 @@ export function createDial(host, design, opt = {}) {
     get design() { return D; }, setDesign(d) { D = normalise(d); state.value = state.cur = clamp(D.control.value, D.control.min, D.control.max); build(); resize(); readout(); if (O.thumb) render(); },
     update(d) { D = normalise(d); build(); readout(); shapedAt = performance.now(); },
     setValue, get value() { return state.value; }, setOptions(o) { Object.assign(O, o); if (!O.editing) state.hover = -1; placeLines(); },
-    setPick(k) { state.pick = k; placeLines(); }, hit, render, resize, profile: () => profile(D), angleOf,
+    setPick(k) { state.pick = k; placeLines(); },
+    relight(d) { Object.assign(D.light, d.light); D.page = d.page; applyLight(); },
+    // (studio quality on or off; how far it has refined; a finished still at once, for a picture)
+    setQuality(on) { HQ.on = !!on; HQ.sig = ''; if (!on) { renderer.setRenderTarget(null); } },
+    get quality() { return { on: HQ.on, n: HQ.n, N: HQ.N }; },
+    renderStill(N = HQ.N) { const was = HQ.on; HQ.on = true; HQ.sig = ''; place(); turning.rotation.z = -rad(angleOf(state.cur)); camera.updateMatrixWorld(); for (let i = 0; i < N; i++) hqFrame(); HQ.on = was; if (!was) HQ.sig = ''; }, hit, render, resize, profile: () => profile(D), angleOf,
     on(n, f) { listeners[n].push(f); },
     async still(scale = 2) { const w = host.clientWidth, h = host.clientHeight, pr = renderer.getPixelRatio(); renderer.setPixelRatio(scale); renderer.setSize(w, h, false); render(); const b = await new Promise(r => cv.toBlob(r, 'image/png')); renderer.setPixelRatio(pr); renderer.setSize(w, h, false); return b; },
     destroy() { alive = false; cancelAnimationFrame(raf); ro.disconnect(); clear(); renderer.dispose(); cv.remove(); overlay.remove(); } }; }
@@ -414,44 +456,50 @@ if (!document.getElementById('cs-style')) { const st = document.createElement('s
   .cs-reading.engraved.dark { color: #1b1c21; } .cs-reading.engraved.dark .cs-num, .cs-reading.engraved.dark .cs-unit { text-shadow: 0 1px .5px rgba(255,255,255,.09), 0 -1.2px 1.2px rgba(0,0,0,.65); }
   @media (prefers-reduced-motion: reduce) { .cs-strip { transition: none; } }`; document.head.appendChild(st); }
 
-// ---------- presets ----------
-const thermoKnob = (c) => ({ knurl: true, ticks: 16, tickR: .41, tickLen: 9, tickW: 5, tickStyle: 'engraved', mark: true, markR: .36, markLen: 34, markW: 8.4, markStyle: 'light' });
+// ---------- presets: a finish for the whole control; a layer's own material only where it is really another thing (glass, a metal cap) ----------
+const thermoKnob = { knurl: true, ticks: 16, tickR: .41, tickLen: 9, tickW: 5, tickStyle: 'engraved', mark: true, markR: .36, markLen: 34, markW: 8.4, markStyle: 'light' };
+const crown = style => ({ knurl: true, ticks: 60, tickR: .78, tickLen: 9, tickW: 2.2, major: 5, tickStyle: style, mark: true, markR: .78, markLen: 22, markW: 5, markStyle: 'light' });
+const glass = { own: true, type: 'glass', color: '#e3e7ec', grain: 0 };
 export const PRESETS = {
-  Thermostat: { page: '#d9d8d4', light: { key: 1.25, ambient: .5, exposure: .8 }, control: { min: 8, max: 28, step: .5, value: 21, sweep: 270, unit: 'c' }, reading: { show: true, style: 'printed' },
+  Thermostat: { page: '#d9d8d4', finish: { type: 'plastic', color: '#d9d8d3', grain: 1 }, light: { key: 1.25, ambient: .5, exposure: .8, az: 31, el: 54, soft: .35, hl: .2 },
+    glow: { colors: ['#c0ff13', '#ffeb13', '#ff8a12'], mid: .35, glow: 1, haze: .9, hazeSize: 1, energy: .6, speed: 1 }, control: { min: 8, max: 28, step: .5, value: 21, sweep: 270, unit: 'c' }, reading: { show: true, style: 'printed' },
     layers: [
-      { name: 'Panel', h: 0, material: { type: 'plastic', color: '#d9d8d3', grain: 1 } },
-      { name: 'Light slot', kind: 'slot', r: 295, h: -31, edge: { round: .55, reach: 6, join: 'blend' }, material: { type: 'plastic', color: '#d9d8d3', grain: 1 }, slot: { colors: ['#c0ff13', '#ffeb13', '#ff8a12'], mid: .35 } },
-      { name: 'Knob', r: 272.8, h: -7, rotates: true, edge: { round: .6, reach: 3.5, join: 'blend', polish: true }, material: { type: 'plastic', color: '#dfddd8', grain: 1 }, details: thermoKnob() },
-      { name: 'Dish', r: 205, h: -9.4, rotates: true, face: { bulge: -8.3, spread: 2.6 }, edge: { round: .5, reach: 1.8, join: 'blend' }, material: { type: 'plastic', color: '#dfddd8', grain: 1 } }] },
-  Night: { page: '#1c1e24', light: { key: 1.2, ambient: .45, exposure: 1 }, control: { min: 8, max: 28, step: .5, value: 21, sweep: 270, unit: 'c' }, reading: { show: true, style: 'printed' },
+      { name: 'Panel', h: 0 },
+      { name: 'Light slot', kind: 'slot', r: 295, h: -31, edge: { round: .55, reach: 6, join: 'blend' } },
+      { name: 'Knob', r: 272.8, h: -7, rotates: true, tone: .018, edge: { round: .6, reach: 3.5, join: 'blend', polish: true }, details: thermoKnob },
+      { name: 'Dish', r: 205, h: -9.4, rotates: true, tone: .018, face: { bulge: -8.3, spread: 2.6 }, edge: { round: .5, reach: 1.8, join: 'blend' } }] },
+  Night: { page: '#1c1e24', finish: { type: 'plastic', color: '#1f2127', grain: .6 }, light: { key: 1.2, ambient: .45, exposure: 1, az: 31, el: 54, soft: .35, hl: .2 },
+    glow: { colors: ['#1f5c8c', '#1a86c4', '#ff8a12'], mid: .5, glow: 1, haze: .9, hazeSize: 1, energy: .6, speed: 1 }, control: { min: 8, max: 28, step: .5, value: 21, sweep: 270, unit: 'c' }, reading: { show: true, style: 'printed' },
     layers: [
-      { name: 'Panel', h: 0, material: { type: 'plastic', color: '#1f2127', grain: .6 } },
-      { name: 'Light slot', kind: 'slot', r: 295, h: -31, edge: { round: .55, reach: 6, join: 'blend' }, material: { type: 'plastic', color: '#1f2127', grain: .6 }, slot: { colors: ['#1f5c8c', '#1a86c4', '#ff8a12'], mid: .5 } },
-      { name: 'Knob', r: 272.8, h: -7, rotates: true, edge: { round: .6, reach: 3.5, join: 'blend', polish: true }, material: { type: 'plastic', color: '#25272e', grain: .6 }, details: thermoKnob() },
-      { name: 'Dish', r: 205, h: -9.4, rotates: true, face: { bulge: -8.3, spread: 2.6 }, edge: { round: .5, reach: 1.8, join: 'blend' }, material: { type: 'plastic', color: '#25272e', grain: .6 } }] },
-  Aluminium: { page: '#d3d4d7', light: { key: 1.15, ambient: .62, exposure: .86 }, control: { min: 0, max: 100, step: 1, value: 64, sweep: 280, unit: 'c' }, reading: { show: false },
+      { name: 'Panel', h: 0 },
+      { name: 'Light slot', kind: 'slot', r: 295, h: -31, edge: { round: .55, reach: 6, join: 'blend' } },
+      { name: 'Knob', r: 272.8, h: -7, rotates: true, tone: .025, edge: { round: .6, reach: 3.5, join: 'blend', polish: true }, details: thermoKnob },
+      { name: 'Dish', r: 205, h: -9.4, rotates: true, tone: .025, face: { bulge: -8.3, spread: 2.6 }, edge: { round: .5, reach: 1.8, join: 'blend' } }] },
+  Aluminium: { page: '#d3d4d7', finish: { type: 'anodized', color: '#c9cbcf', grain: .6 }, light: { key: 1.15, ambient: .62, exposure: .86, az: 31, el: 58, soft: .45, hl: .25 },
+    glow: { colors: ['#7cc8ff', '#d9f0ff', '#ffffff'], mid: .5, glow: 1, haze: .4, hazeSize: 1, energy: .35, speed: 1 }, control: { min: 0, max: 100, step: 1, value: 64, sweep: 280, unit: 'c' }, reading: { show: false },
     layers: [
-      { name: 'Housing', h: 0, material: { type: 'anodized', color: '#c9cbcf', grain: .6 } },
-      { name: 'Light slot', kind: 'slot', r: 300, h: -22, edge: { round: .35, reach: 3, join: 'blend', polish: true }, material: { type: 'anodized', color: '#b9bbc0', grain: .6 }, slot: { colors: ['#7cc8ff', '#d9f0ff', '#ffffff'], mid: .5, haze: .4, energy: .35 } },
-      { name: 'Crown', r: 284, h: 10, rotates: true, edge: { round: .3, reach: 4, join: 'seam', polish: true }, material: { type: 'anodized', color: '#c5c7cb', grain: .6 },
-        details: { knurl: true, ticks: 60, tickR: .78, tickLen: 9, tickW: 2.2, major: 5, tickStyle: 'engraved', mark: true, markR: .78, markLen: 22, markW: 5, markStyle: 'light' } },
-      { name: 'Cap', r: 206, h: 7, rotates: true, face: { bulge: -3, spread: 3 }, edge: { round: .85, reach: 3, join: 'crease', polish: true }, material: { type: 'anodized', color: '#c5c7cb', grain: .5 } }] },
-  Graphite: { page: '#17181b', light: { key: 1.3, ambient: .55, exposure: 1 }, control: { min: 0, max: 100, step: 1, value: 72, sweep: 280, unit: 'c' }, reading: { show: false },
+      { name: 'Housing', h: 0 },
+      { name: 'Light slot', kind: 'slot', r: 300, h: -22, tone: -.05, edge: { round: .35, reach: 3, join: 'blend', polish: true } },
+      { name: 'Crown', r: 284, h: 10, rotates: true, tone: -.01, edge: { round: .3, reach: 4, join: 'seam', polish: true }, details: crown('engraved') },
+      { name: 'Cap', r: 206, h: 7, rotates: true, tone: -.01, face: { bulge: -3, spread: 3 }, edge: { round: .85, reach: 3, join: 'crease', polish: true } }] },
+  Graphite: { page: '#17181b', finish: { type: 'anodized', color: '#2c2d31', grain: .6 }, light: { key: 1.3, ambient: .55, exposure: 1, az: 31, el: 54, soft: .35, hl: .2 },
+    glow: { colors: ['#ff5a1f', '#ff9a2e', '#ffd9a0'], mid: .55, glow: 1, haze: .5, hazeSize: 1, energy: .4, speed: 1 }, control: { min: 0, max: 100, step: 1, value: 72, sweep: 280, unit: 'c' }, reading: { show: false },
     layers: [
-      { name: 'Housing', h: 0, material: { type: 'anodized', color: '#2c2d31', grain: .6 } },
-      { name: 'Light slot', kind: 'slot', r: 300, h: -22, edge: { round: .35, reach: 3, join: 'blend', polish: true }, material: { type: 'anodized', color: '#1d1e21', grain: .6 }, slot: { colors: ['#ff5a1f', '#ff9a2e', '#ffd9a0'], mid: .55, haze: .5, energy: .4 } },
-      { name: 'Crown', r: 284, h: 10, rotates: true, edge: { round: .3, reach: 4, join: 'seam', polish: true }, material: { type: 'anodized', color: '#34353a', grain: .6 },
-        details: { knurl: true, ticks: 60, tickR: .78, tickLen: 9, tickW: 2.2, major: 5, tickStyle: 'applied', mark: true, markR: .78, markLen: 22, markW: 5, markStyle: 'light' } },
-      { name: 'Glass', r: 206, h: 6, face: { bulge: 3, spread: 3 }, rotates: false, edge: { round: .9, reach: 3, join: 'seam', polish: true }, material: { type: 'glass', color: '#e3e7ec', grain: 0 } }] },
-  Braun: { page: '#e6e3dc', light: { key: 1.3, ambient: .5, exposure: .82 }, control: { min: 0, max: 10, step: 1, value: 6, sweep: 300, unit: 'c' }, reading: { show: false },
+      { name: 'Housing', h: 0 },
+      { name: 'Light slot', kind: 'slot', r: 300, h: -22, tone: -.06, edge: { round: .35, reach: 3, join: 'blend', polish: true } },
+      { name: 'Crown', r: 284, h: 10, rotates: true, tone: .03, edge: { round: .3, reach: 4, join: 'seam', polish: true }, details: crown('applied') },
+      { name: 'Glass', r: 206, h: 6, face: { bulge: 3, spread: 3 }, edge: { round: .9, reach: 3, join: 'seam', polish: true }, material: glass }] },
+  Braun: { page: '#e6e3dc', finish: { type: 'plastic', color: '#e6e3dc', grain: .8 }, light: { key: 1.3, ambient: .5, exposure: .82, az: 31, el: 54, soft: .5, hl: .3 },
+    control: { min: 0, max: 10, step: 1, value: 6, sweep: 300, unit: 'c' }, reading: { show: false },
     layers: [
-      { name: 'Panel', h: 0, material: { type: 'plastic', color: '#e6e3dc', grain: .8 } },
-      { name: 'Seam', r: 250, h: -3, edge: { round: .3, reach: 2, join: 'crease' }, material: { type: 'plastic', color: '#d8d4cb', grain: .8 }, details: { ticks: 11, tickR: .55, tickLen: 7, tickW: 2.4, tickStyle: 'printed' } },
-      { name: 'Knob', r: 232, h: 46, rotates: true, edge: { round: .25, reach: 5, join: 'seam' }, material: { type: 'plastic', color: '#f1eee8', grain: .7 }, details: { knurl: true, mark: true, markR: .8, markLen: 26, markW: 6, markStyle: 'printed' } },
-      { name: 'Cap', r: 150, h: 44, rotates: true, face: { bulge: -5, spread: 2 }, edge: { round: .6, reach: 3, join: 'crease', polish: true }, material: { type: 'anodized', color: '#c9cbcf', grain: .5 } }] },
-  'Camera ring': { page: '#1b1b1d', light: { key: 1.6, ambient: .5, exposure: 1 }, control: { min: 0, max: 100, step: 1, value: 40, sweep: 270, unit: 'c' }, reading: { show: false },
+      { name: 'Panel', h: 0 },
+      { name: 'Seam', r: 250, h: -3, tone: -.04, edge: { round: .3, reach: 2, join: 'crease' }, details: { ticks: 11, tickR: .55, tickLen: 7, tickW: 2.4, tickStyle: 'printed' } },
+      { name: 'Knob', r: 232, h: 46, rotates: true, tone: .03, edge: { round: .25, reach: 5, join: 'seam' }, details: { knurl: true, mark: true, markR: .8, markLen: 26, markW: 6, markStyle: 'printed' } },
+      { name: 'Cap', r: 150, h: 44, rotates: true, face: { bulge: -5, spread: 2 }, edge: { round: .6, reach: 3, join: 'crease', polish: true }, material: { own: true, type: 'anodized', color: '#c9cbcf', grain: .5 } }] },
+  'Camera ring': { page: '#1b1b1d', finish: { type: 'anodized', color: '#3a2a2d', grain: .4 }, light: { key: 1.6, ambient: .5, exposure: 1, az: 31, el: 54, soft: .35, hl: .15 },
+    control: { min: 0, max: 100, step: 1, value: 40, sweep: 270, unit: 'c' }, reading: { show: false },
     layers: [
-      { name: 'Body', h: 0, material: { type: 'anodized', color: '#3a2a2d', grain: .4 } },
-      { name: 'Bezel', r: 300, h: 14, edge: { round: .15, reach: 6, join: 'blend', polish: true }, material: { type: 'anodized', color: '#4a3236', grain: .3 } },
-      { name: 'Step', r: 262, h: 6, edge: { round: .2, reach: 4, join: 'crease', polish: true }, material: { type: 'anodized', color: '#3e2b2f', grain: .3 } },
-      { name: 'Glass', r: 220, h: 2, face: { bulge: 4, spread: 3 }, edge: { round: .8, reach: 3, join: 'seam' }, material: { type: 'glass', color: '#e3e7ec', grain: 0 } }] } };
+      { name: 'Body', h: 0 },
+      { name: 'Bezel', r: 300, h: 14, tone: .05, edge: { round: .15, reach: 6, join: 'blend', polish: true } },
+      { name: 'Step', r: 262, h: 6, tone: .02, edge: { round: .2, reach: 4, join: 'crease', polish: true } },
+      { name: 'Glass', r: 220, h: 2, face: { bulge: 4, spread: 3 }, edge: { round: .8, reach: 3, join: 'seam' }, material: glass }] } };
