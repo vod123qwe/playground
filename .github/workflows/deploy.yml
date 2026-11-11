@@ -55,6 +55,7 @@ jobs:
           cp -r lithos/dist _site/lithos
           cp -r aura/dist _site/aura
           cp -r lab-board _site/lab-board
+          cp -r nitka _site/nitka
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
