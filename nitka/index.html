@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Nitka">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Nitka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF; --ink: #3C3C3C; --ink-2: #777777; --muted: #AFAFAF; --line: #E5E5E5; --soft: #F7F7F7;
+    --green: #58CC02; --green-d: #58A700; --blue: #1CB0F6; --blue-d: #1899D6;
+    --red: #FF4B4B; --red-d: #EA2B2B; --yellow: #FFC800; --yellow-d: #E6A800;
+    --orange: #FF9600; --orange-d: #E58700; --purple: #CE82FF; --purple-d: #A568CC;
+    --p0: #A5ED6E; --p1: #58CC02; --p2: #2BB5A0;
+    --font: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* gra przejmuje cały dotyk: bez przewijania, odświeżania pociągnięciem, zoomu i zaznaczania */
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none;
+    touch-action: none; position: fixed; inset: 0;
+  }
+  body {
+    font-family: var(--font); font-weight: 800; color: var(--ink); background: var(--bg);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-user-drag: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  button { font-family: var(--font); -webkit-user-select: none; user-select: none; }
+  .scroll { touch-action: pan-y; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+  #app {
+    position: relative; height: 100%; display: flex; flex-direction: column; align-items: center;
+    padding: max(10px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+  }
+  header { width: 100%; max-width: 560px; }
+  .row1 { display: flex; align-items: center; gap: 6px; }
+  .row1 .sp { flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px; border-radius: 12px;
+    font-size: 17px; font-weight: 900; background: transparent; border: 0; color: var(--ink);
+  }
+  .pill svg { width: 24px; height: 24px; }
+  .pill.coin { color: var(--orange); cursor: pointer; border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); }
+  .pill.coin:active { transform: translateY(3px); box-shadow: none; }
+  .pill.streak { color: var(--orange); }
+  .pill.streak.zero { color: var(--muted); }
+  .pill.stars { color: var(--yellow-d); }
+  .ib {
+    width: 38px; height: 38px; border-radius: 12px; border: 2px solid var(--line); background: #fff; color: var(--muted);
+    display: grid; place-items: center; cursor: pointer; touch-action: manipulation; box-shadow: 0 3px 0 var(--line);
+  }
+  .ib:active { transform: translateY(3px); box-shadow: none; }
+  .ib svg { width: 20px; height: 20px; }
+  .ib.on { color: #fff; background: var(--blue); border-color: var(--blue-d); box-shadow: 0 3px 0 var(--blue-d); }
+
+  .row2 { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 10px; gap: 10px; }
+  .world { font-size: 13px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--p1); filter: brightness(.85); }
+  .lname { font-size: 26px; font-weight: 900; line-height: 1.1; letter-spacing: -.01em; }
+  .clock { text-align: right; }
+  .time { font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .time.over { color: var(--red); }
+  .stars { display: flex; gap: 2px; justify-content: flex-end; margin-top: 2px; }
+  .stars svg { width: 18px; height: 18px; transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .35s, filter .35s; }
+  .stars svg.off { opacity: .3; filter: grayscale(1); transform: scale(.82); }
+  .stars svg.lost { animation: lose .6s; }
+  @keyframes lose { 0% { transform: scale(1.5); } 40% { transform: scale(1.5) rotate(18deg); } 100% { transform: scale(.82); } }
+
+  .dots { display: flex; gap: 6px; margin-top: 10px; align-items: center; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--line); box-shadow: inset 0 -2px 0 #0000000f; display: grid; place-items: center; }
+  .dot.done { background: var(--p1); box-shadow: inset 0 -2px 0 #00000026; }
+  .dot.cur { background: #fff; border: 3px solid var(--p1); animation: pulse 1.2s infinite; }
+  .dot.boss { width: 22px; height: 22px; border-radius: 8px; color: #fff; }
+  .dot.boss svg { width: 14px; height: 14px; }
+  .dot.boss:not(.done):not(.cur) { color: var(--muted); }
+  .dot.boss.cur { color: var(--p1); }
+  .dot.ch::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--orange); }
+  .dot.ch.done::after { background: #fff; }
+  @keyframes pulse { 50% { transform: scale(1.2); } }
+
+  .progress { position: relative; height: 18px; border-radius: 10px; background: var(--line); margin-top: 10px; overflow: hidden; }
+  .progress .fill {
+    position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 10px; background: var(--p1);
+    transition: width .2s ease-out; min-width: 18px;
+  }
+  .progress .fill::after { content: ''; position: absolute; left: 8px; right: 8px; top: 4px; height: 5px; border-radius: 4px; background: #ffffff55; }
+  .progress .pct { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 900; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  .chal {
+    margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800;
+    padding: 6px 12px; border-radius: 12px; border: 2px solid var(--orange); color: var(--orange-d); background: #FFF5E5; width: fit-content;
+  }
+  .chal svg { width: 18px; height: 18px; }
+  .chal.ok { border-color: var(--green); color: var(--green-d); background: #F0FAE6; }
+  .chal.fail { border-color: var(--line); color: var(--muted); background: var(--soft); text-decoration: line-through; }
+
+  #stage { flex: 1; width: 100%; display: grid; place-items: center; min-height: 0; position: relative; touch-action: none; }
+  #board { display: block; touch-action: none; }
+  #board.shake { animation: shake .32s; }
+  @keyframes shake { 20% { transform: translateX(-8px); } 45% { transform: translateX(7px); } 70% { transform: translateX(-3px); } 100% { transform: none; } }
+  #board.enter { animation: enter .5s cubic-bezier(.2,1.3,.4,1); }
+  @keyframes enter { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+  #combo {
+    position: absolute; top: 4px; left: 50%; transform: translateX(-50%) scale(.6); opacity: 0; pointer-events: none;
+    font-size: 22px; font-weight: 900; color: var(--orange); letter-spacing: .04em; white-space: nowrap;
+    transition: opacity .25s, transform .25s cubic-bezier(.2,1.8,.4,1); text-shadow: 0 2px 0 #fff, 0 -2px 0 #fff, 2px 0 0 #fff, -2px 0 0 #fff;
+  }
+  #combo.show { opacity: 1; transform: translateX(-50%) scale(1); }
+  #combo.bump { transform: translateX(-50%) scale(1.18); }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 800; color: var(--muted); }
+
+  footer { display: flex; gap: 12px; width: 100%; max-width: 560px; padding-top: 10px; }
+  .tool {
+    flex: 1; height: 58px; border-radius: 16px; border: 2px solid var(--line); background: #fff; color: var(--ink-2);
+    box-shadow: 0 4px 0 var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    cursor: pointer; touch-action: manipulation; font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .tool svg { width: 24px; height: 24px; }
+  .tool:active { transform: translateY(4px); box-shadow: none; }
+  .tool.hint { color: var(--orange-d); border-color: var(--yellow); background: #FFF8DB; box-shadow: 0 4px 0 var(--yellow-d); flex: 1.3; }
+  .tool { position: relative; }
+  .tool .price {
+    position: absolute; top: -9px; right: -6px; display: inline-flex; align-items: center; gap: 2px;
+    background: #fff; border: 2px solid var(--yellow); border-radius: 10px; padding: 1px 6px 1px 3px; font-size: 12px; color: var(--orange-d); letter-spacing: 0;
+  }
+  .tool .price svg { width: 14px; height: 14px; }
+  .tool.dis { opacity: .5; }
+
+  /* pasek komunikatów od dołu */
+  #banner {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; transform: translateY(105%); transition: transform .28s cubic-bezier(.2,1.2,.4,1);
+    padding: 16px 20px max(18px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px;
+    font-size: 18px; font-weight: 900; background: #D7FFB8; color: var(--green-d); pointer-events: none;
+  }
+  #banner .ic { width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; flex: none; }
+  #banner .ic svg { width: 20px; height: 20px; }
+  #banner.show { transform: none; }
+  #banner.err { background: #FFDFE0; color: var(--red-d); }
+  #banner.info { background: #DDF4FF; color: var(--blue-d); }
+  #banner small { display: block; font-size: 14px; font-weight: 700; opacity: .85; }
+
+  /* arkusze pełnoekranowe */
+  .sheet {
+    position: fixed; inset: 0; z-index: 30; background: #fff; display: flex; flex-direction: column;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    transform: translateY(100%); transition: transform .38s cubic-bezier(.2,1,.3,1); touch-action: none;
+  }
+  .sheet.show { transform: none; }
+  .sheet .body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 0; }
+  .sheet h1 { font-size: 34px; font-weight: 900; margin: 10px 0 0; line-height: 1.1; color: var(--p1); filter: brightness(.9); }
+  .sheet p { font-size: 18px; font-weight: 700; color: var(--ink-2); margin: 10px 0 0; max-width: 360px; line-height: 1.4; }
+  .sheet .acts { display: flex; gap: 12px; width: 100%; max-width: 560px; margin: 0 auto; }
+  .btn {
+    flex: 1; height: 54px; border-radius: 16px; border: 0; cursor: pointer; touch-action: manipulation;
+    font-size: 17px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; --shade: var(--green-d);
+    background: var(--green); color: #fff; box-shadow: 0 4px 0 var(--shade);
+  }
+  .btn:active { transform: translateY(4px); box-shadow: none; }
+  .btn.ghost { background: #fff; color: var(--blue); border: 2px solid var(--line); --shade: var(--line); }
+  .btn.blue { background: var(--blue); --shade: var(--blue-d); }
+
+  .bigstars { display: flex; gap: 8px; justify-content: center; margin: 18px 0 6px; }
+  .bigstars svg { width: 62px; height: 62px; opacity: .25; filter: grayscale(1); transform: scale(.7); transition: transform .45s cubic-bezier(.2,1.8,.4,1), opacity .2s, filter .2s; }
+  .bigstars svg:nth-child(2) { transform: scale(.7) translateY(-14px); }
+  .bigstars svg.on { opacity: 1; filter: none; transform: scale(1); }
+  .bigstars svg:nth-child(2).on { transform: scale(1.18) translateY(-14px); }
+  .stats { display: flex; gap: 10px; margin-top: 18px; width: 100%; max-width: 380px; }
+  .stat { flex: 1; border-radius: 16px; border: 2px solid var(--c); overflow: hidden; background: var(--c); animation: pop .45s cubic-bezier(.2,1.6,.4,1) both; }
+  .stat .h { font-size: 12px; font-weight: 900; letter-spacing: .08em; color: #fff; padding: 5px 0 4px; text-transform: uppercase; }
+  .stat .v { background: #fff; border-radius: 13px; font-size: 22px; font-weight: 900; color: var(--c); padding: 10px 0; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .stat .v svg { width: 22px; height: 22px; }
+  .stat.y { --c: var(--yellow); } .stat.y .v { color: var(--orange); }
+  .stat.b { --c: var(--blue); } .stat.g { --c: var(--green); } .stat.p { --c: var(--purple); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; min-height: 30px; }
+  .badge { font-size: 14px; font-weight: 900; padding: 6px 12px; border-radius: 12px; background: var(--soft); color: var(--ink-2); border: 2px solid var(--line); animation: pop .45s cubic-bezier(.2,1.8,.4,1) both; }
+  .badge.hot { background: #FFF5E5; color: var(--orange-d); border-color: var(--orange); }
+  .badge.good { background: #F0FAE6; color: var(--green-d); border-color: var(--green); }
+  @keyframes pop { from { transform: scale(0); } to { transform: none; } }
+  .ill { width: 200px; height: 200px; }
+  .ill svg { width: 100%; height: 100%; }
+  .kicker { font-size: 14px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+  /* sklep */
+  #shop .head { display: flex; align-items: center; justify-content: space-between; max-width: 560px; width: 100%; margin: 0 auto; }
+  #shop .head h2 { font-size: 26px; font-weight: 900; margin: 0; }
+  #shop .grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; margin: 16px auto; max-width: 560px; width: 100%; padding-bottom: 8px; }
+  .skin { border: 2px solid var(--line); border-radius: 18px; box-shadow: 0 4px 0 var(--line); padding: 12px; text-align: left; background: #fff; }
+  .skin.eq { border-color: var(--blue); box-shadow: 0 4px 0 var(--blue-d); background: #F2FBFF; }
+  .skin .sw { height: 54px; border-radius: 14px; position: relative; overflow: hidden; }
+  .skin .sw::after { content: ''; position: absolute; left: 10px; right: 10px; top: 8px; height: 8px; border-radius: 6px; background: #ffffff55; }
+  .skin .nm { font-size: 17px; font-weight: 900; margin: 10px 2px 8px; }
+  .skin .btn { height: 42px; font-size: 14px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .skin .btn svg { width: 18px; height: 18px; }
+  .skin .btn.y { background: var(--yellow); --shade: var(--yellow-d); color: #7A5200; }
+  .skin .btn.off { background: var(--line); --shade: #CFCFCF; color: var(--muted); }
+  .rainbow-anim { background: linear-gradient(90deg, #FF4B4B, #FF9600, #FFC800, #58CC02, #1CB0F6, #CE82FF, #FF4B4B); background-size: 200% 100%; animation: rb 3s linear infinite; }
+  @keyframes rb { to { background-position: 200% 0; } }
+
+  #qrcard {
+    position: fixed; right: 18px; bottom: 18px; z-index: 10; background: #fff; border-radius: 18px; padding: 14px; border: 2px solid var(--line);
+    box-shadow: 0 4px 0 var(--line); width: 176px; text-align: center; display: none;
+  }
+  #qrcard.show { display: block; }
+  #qrcard .q { width: 144px; height: 144px; margin: 0 auto; }
+  #qrcard .q svg { width: 100%; height: 100%; display: block; }
+  #qrcard p { margin: 8px 0 0; font-size: 13px; font-weight: 800; color: var(--ink-2); }
+  #qrcard button { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border: 0; background: transparent; cursor: pointer; color: var(--muted); font-size: 15px; }
+  /* odchudzony HUD w trakcie gry */
+  .bar { display: flex; align-items: center; gap: 12px; }
+  .bar .progress { flex: 1; margin: 0; }
+  .bar .time { min-width: 52px; text-align: right; font-size: 20px; }
+  .sub { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-height: 24px; }
+  .sub .lname { font-size: 15px; font-weight: 900; color: var(--ink-2); }
+  .sub .sp { flex: 1; }
+  .sub .stars { margin: 0; }
+  .sub .chal { margin: 0; padding: 2px 8px; font-size: 12px; border-radius: 10px; }
+  .sub .chal svg { width: 14px; height: 14px; }
+  .opp { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .opp .oname { font-size: 13px; font-weight: 900; color: var(--red-d); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opp .progress { flex: 1; margin: 0; height: 12px; }
+  .opp .progress .fill { background: var(--red); min-width: 12px; }
+  .opp .progress .fill::after { top: 3px; height: 3px; }
+  .opp .oscore { font-size: 15px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  #count {
+    position: fixed; inset: 0; z-index: 26; display: grid; place-items: center; pointer-events: none;
+    font-size: 120px; font-weight: 900; color: var(--blue); text-shadow: 0 6px 0 var(--blue-d), 0 0 30px #fff;
+    opacity: 0; transition: opacity .2s;
+  }
+  #count.show { opacity: 1; pointer-events: auto; background: #ffffffaa; }
+  #count span { animation: cnt .9s cubic-bezier(.2,1.6,.4,1); display: block; }
+  @keyframes cnt { from { transform: scale(2.2); opacity: 0; } 30% { opacity: 1; } to { transform: scale(1); } }
+
+  /* menu */
+  .sheet .body.top { justify-content: flex-start; padding-top: 6px; }
+  .pills { display: flex; gap: 6px; justify-content: center; }
+  .pills .pill.coin { cursor: default; }
+  #menu .kicker { margin-top: 18px; color: var(--p1); filter: brightness(.85); }
+  #menu .dots { justify-content: center; margin: 10px 0 18px; }
+  .mlist { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 420px; }
+  .mbtn {
+    display: flex; align-items: center; gap: 14px; text-align: left; width: 100%; padding: 12px 14px; border-radius: 16px;
+    border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); background: #fff; color: var(--ink); cursor: pointer; touch-action: manipulation;
+    font-size: 17px; font-weight: 900;
+  }
+  .mbtn:active { transform: translateY(4px); box-shadow: none; }
+  .mbtn small { display: block; font-size: 13px; font-weight: 700; color: var(--ink-2); margin-top: 1px; }
+  .mbtn .mi { width: 40px; height: 40px; border-radius: 12px; background: var(--soft); color: var(--ink-2); display: grid; place-items: center; flex: none; }
+  .mbtn .mi svg { width: 22px; height: 22px; }
+  .mbtn.duel { border-color: var(--red); box-shadow: 0 4px 0 var(--red-d); background: #FFF0F0; }
+  .mbtn.duel .mi { background: var(--red); color: #fff; }
+  .mrow { display: flex; gap: 10px; }
+  .mbtn.sm { justify-content: center; font-size: 15px; padding: 12px; }
+
+  /* pojedynek */
+  .dpane { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 420px; }
+  .fld { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left; font-size: 13px; font-weight: 900; color: var(--ink-2); letter-spacing: .06em; text-transform: uppercase; margin-top: 20px; }
+  .fld input, .joinrow input {
+    height: 52px; border-radius: 14px; border: 2px solid var(--line); background: var(--soft); padding: 0 14px;
+    font: 800 18px var(--font); color: var(--ink); outline: none; user-select: text; -webkit-user-select: text; touch-action: manipulation; text-transform: none; letter-spacing: 0;
+  }
+  .fld input:focus, .joinrow input:focus { border-color: var(--blue); background: #fff; }
+  .seg { display: flex; gap: 8px; width: 100%; margin: 14px 0 16px; }
+  .seg button {
+    flex: 1; padding: 10px 4px; border-radius: 14px; border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); background: #fff;
+    font-size: 15px; font-weight: 900; color: var(--ink-2); cursor: pointer; touch-action: manipulation;
+  }
+  .seg button small { display: block; font-size: 11px; font-weight: 800; color: var(--muted); }
+  .seg button.on { border-color: var(--blue); box-shadow: 0 3px 0 var(--blue-d); background: #DDF4FF; color: var(--blue-d); }
+  .dpane > .btn { width: 100%; flex: none; }
+  .or { margin: 18px 0 10px; font-size: 13px; font-weight: 900; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .joinrow { display: flex; gap: 10px; width: 100%; }
+  .joinrow input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .3em; text-align: center; font-size: 22px; font-weight: 900; }
+  .joinrow .btn { flex: none; width: 130px; }
+  .code { font-size: 64px; font-weight: 900; letter-spacing: .14em; color: var(--blue); margin: 8px 0 4px; text-shadow: 0 4px 0 #DDF4FF; }
+  .waiting { margin-top: 18px; font-size: 15px; font-weight: 800; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .waiting i { font-style: normal; }
+  .waiting span { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); animation: wd 1s infinite; }
+  .waiting span:nth-child(2) { animation-delay: .15s; } .waiting span:nth-child(3) { animation-delay: .3s; margin-right: 6px; }
+  @keyframes wd { 50% { transform: translateY(-5px); background: var(--blue); } }
+  .score { font-size: 54px; font-weight: 900; margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+  .dres { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .drow { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 14px; border: 2px solid var(--line); font-size: 17px; font-weight: 900; }
+  .drow.win { border-color: var(--green); background: #F0FAE6; color: var(--green-d); }
+  .drow .t { font-variant-numeric: tabular-nums; }
+  #duel h1.lose { color: var(--red); }
+
+  #fx { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+  [hidden] { display: none !important; }
+  @media (max-height: 680px) {
+    .lname, .time { font-size: 22px; } .dots { margin-top: 6px; } .row2 { margin-top: 6px; }
+    .tool { height: 50px; } .tool span.l { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="bar">
+      <button class="ib" id="btnMenu" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg>
+      </button>
+      <div class="progress"><div class="fill" id="coverFill"></div></div>
+      <div class="time" id="time">0:00</div>
+    </div>
+    <div class="sub">
+      <span class="lname" id="lvlName">Poziom 1</span>
+      <span class="chal" id="chal" hidden></span>
+      <span class="sp"></span>
+      <span class="stars" id="liveStars"></span>
+    </div>
+    <div class="opp" id="opp" hidden>
+      <span class="oname" id="oppName">Rywal</span>
+      <div class="progress small"><div class="fill" id="oppFill"></div></div>
+      <span class="oscore" id="oppScore">0 : 0</span>
+    </div>
+  </header>
+  <div id="stage">
+    <canvas id="board"></canvas>
+    <div id="combo"></div>
+    <div id="loading">Losuję planszę…</div>
+  </div>
+  <footer>
+    <button class="tool" id="btnUndo" aria-label="Cofnij">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      <span class="l">Cofnij</span>
+    </button>
+    <button class="tool hint" id="btnHint" aria-label="Podpowiedź">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" fill="#FFC800"/></svg>
+      <span class="l">Podpowiedź</span>
+      <span class="price"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#FFC800" stroke="#E6A800" stroke-width="2.5"/></svg><span id="hintPrice">10</span></span>
+    </button>
+  </footer>
+  <div id="count"></div>
+</div>
+
+<div id="banner"><div class="ic" id="bannerIc"></div><div id="bannerTx"></div></div>
+
+<div id="win" class="sheet">
+  <div class="body">
+    <div class="kicker" id="winKick">Poziom 1</div>
+    <h1 id="winTitle">Ułożone!</h1>
+    <div class="bigstars" id="winStars"></div>
+    <div class="stats" id="winStats"></div>
+    <div class="badges" id="winBadges"></div>
+  </div>
+  <div class="acts">
+    <button class="btn ghost" id="btnRetry">Popraw</button>
+    <button class="btn" id="btnNext">Dalej</button>
+  </div>
+</div>
+
+<div id="intro" class="sheet">
+  <div class="body">
+    <div class="ill" id="introIll"></div>
+    <div class="kicker" id="introKick">Nowość</div>
+    <h1 id="introTitle">Zakręty i proste</h1>
+    <p id="introText"></p>
+  </div>
+  <div class="acts"><button class="btn" id="btnIntro">Zaczynamy</button></div>
+</div>
+
+<div id="menu" class="sheet">
+  <div class="body top">
+    <div class="pills">
+      <span class="pill coin"><svg viewBox="0 0 24 24"><circle cx="12" cy="12.8" r="9" fill="#E58700"/><circle cx="12" cy="11.2" r="9" fill="#FFC800"/><circle cx="12" cy="11.2" r="5.6" fill="none" stroke="#E6A800" stroke-width="2"/></svg><span id="coins">30</span></span>
+      <span class="pill streak zero" id="streakPill"><svg viewBox="0 0 24 24"><path d="M12 2.5c1 3.2 5.5 5.6 5.5 10.6A5.5 5.5 0 0 1 12 21a5.5 5.5 0 0 1-5.5-5.5c0-2.4 1.2-3.9 2.3-5 .3 1.5 1 2.4 2 2.8C10.4 9.6 10.6 5.4 12 2.5z" fill="currentColor"/></svg><span id="streak">0</span></span>
+      <span class="pill stars"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.8 6.4.9-4.6 4.5 1.1 6.3L12 17.3l-5.7 3 1.1-6.3L2.8 9.5l6.4-.9z" fill="#FFC800" stroke="#E6A800" stroke-width="1.6" stroke-linejoin="round"/></svg><span id="starTotal">0</span></span>
+    </div>
+    <div class="kicker" id="menuWorld">Świat 1 · Łąka</div>
+    <div class="dots" id="dots"></div>
+    <div class="mlist">
+      <button class="mbtn duel" id="mDuel"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l9 9M20 4l-9 9M7 15l-3 3 2 2 3-3M17 15l3 3-2 2-3-3"/></svg></span><span><b>Pojedynek</b><small>Ta sama plansza, kto szybciej</small></span></button>
+      <button class="mbtn" id="mDaily"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg></span><span><b id="mDailyT">Dzienna łamigłówka</b><small id="mDailyS">Jedna plansza na dzień</small></span></button>
+      <button class="mbtn" id="mShop"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17c3-9 7-1 10-7s4-4 6-4"/><circle cx="5" cy="17" r="2.2" fill="currentColor"/></svg></span><span><b>Wygląd nitki</b><small>Skórki za monety</small></span></button>
+      <button class="mbtn" id="mRestart"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg></span><span><b>Od nowa</b><small>Wyczyść nitkę na tej planszy</small></span></button>
+      <div class="mrow">
+        <button class="mbtn sm" id="mSound"><span id="mSoundT">Dźwięk: wł.</span></button>
+        <button class="mbtn sm" id="mFull" hidden><span>Pełny ekran</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="acts"><button class="btn" id="mResume">Wracam do gry</button></div>
+</div>
+
+<div id="duel" class="sheet">
+  <div class="body">
+    <div id="dSetup" class="dpane">
+      <div class="kicker">Pojedynek</div>
+      <h1>Kto szybciej?</h1>
+      <p>Ta sama plansza dla was dwojga, każde na swoim telefonie. Wygrywa, kto pierwszy zakryje wszystkie pola.</p>
+      <label class="fld">Twoje imię<input id="dName" maxlength="16" autocomplete="off" autocapitalize="words" spellcheck="false"></label>
+      <div class="seg" id="dSize">
+        <button data-size="quick">Szybki<small>6×6</small></button>
+        <button data-size="normal" class="on">Normalny<small>7×7</small></button>
+        <button data-size="long">Długi<small>7×8 · portal</small></button>
+      </div>
+      <button class="btn" id="dCreate">Załóż pokój</button>
+      <div class="or">albo dołącz kodem</div>
+      <div class="joinrow"><input id="dCode" maxlength="4" placeholder="KOD" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn blue" id="dJoin">Dołącz</button></div>
+    </div>
+    <div id="dWait" class="dpane" hidden>
+      <div class="kicker">Twój pokój</div>
+      <div class="code" id="dCodeBig">ABCD</div>
+      <p>Wyślij link drugiej osobie albo podaj jej kod. Gra ruszy sama, gdy dołączy.</p>
+      <button class="btn blue" id="dShare">Wyślij link</button>
+      <div class="waiting"><span></span><span></span><span></span> Czekam na rywala</div>
+    </div>
+    <div id="dResult" class="dpane" hidden>
+      <div class="kicker" id="dRKick">Runda 1</div>
+      <h1 id="dRTitle">Wygrana!</h1>
+      <div class="score" id="dRScore">1 : 0</div>
+      <div class="dres" id="dRRows"></div>
+      <div class="badges" id="dRBadges"></div>
+      <div class="waiting" id="dRWait" hidden><span></span><span></span><span></span> <i id="dRWaitT">Czekam na rywala</i></div>
+    </div>
+  </div>
+  <div class="acts" id="dActs">
+    <button class="btn ghost" id="dLeave">Wyjdź</button>
+    <button class="btn" id="dRematch" hidden>Rewanż</button>
+  </div>
+</div>
+
+<div id="shop" class="sheet">
+  <div class="head">
+    <h2>Wygląd nitki</h2>
+    <div class="pill coin" style="cursor:default"><svg viewBox="0 0 24 24"><circle cx="12" cy="12.8" r="9" fill="#E58700"/><circle cx="12" cy="11.2" r="9" fill="#FFC800"/><circle cx="12" cy="11.2" r="5.6" fill="none" stroke="#E6A800" stroke-width="2"/></svg><span id="shopCoins">0</span></div>
+  </div>
+  <div class="grid scroll" id="shopGrid"></div>
+  <div class="acts"><button class="btn blue" id="btnShopClose">Wracam do gry</button></div>
+</div>
+
+<div id="qrcard"><button id="qrClose" aria-label="Zamknij">✕</button><div class="q" id="qr"></div><p>Zeskanuj i graj na telefonie</p></div>
+<canvas id="fx"></canvas>
+
+<script src="js/gen.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
